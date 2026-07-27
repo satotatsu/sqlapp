@@ -31,6 +31,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.jdbc.function.SQLConsumer;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableRowConsumer;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
@@ -150,6 +151,10 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 			}
 		}
 		return source.next(tableRelation);
+	}
+
+	public void readAll(TableRowConsumer consumer) throws SQLException {
+		source.readAll(consumer);
 	}
 
 	public Row newRow(Table table) throws SQLException {

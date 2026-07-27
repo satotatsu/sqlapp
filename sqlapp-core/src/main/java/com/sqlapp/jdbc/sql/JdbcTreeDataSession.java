@@ -417,13 +417,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		});
 	}
 
-	public void readAll(SQLTriConsumer<Table, Long, Row> consumer) throws SQLException {
+	public void readAll(TableRowConsumer consumer) throws SQLException {
 		TableRelation rootTableRelation = this.getRootTableRelation();
 		readResursive(rootTableRelation, consumer);
 	}
 
-	private void readResursive(TableRelation tableRelation, SQLTriConsumer<Table, Long, Row> consumer)
-			throws SQLException {
+	private void readResursive(TableRelation tableRelation, TableRowConsumer consumer) throws SQLException {
 		Table table = tableRelation.getTable();
 		if (!tableRelation.isSelectRegistered()) {
 			return;
@@ -971,6 +970,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	protected Connection getConnection() {
 		return connection;
+	}
+
+	@FunctionalInterface
+	public interface TableRowConsumer {
+
+		void accept(Table table, long rowNo, Row row) throws SQLException;
 	}
 
 }
