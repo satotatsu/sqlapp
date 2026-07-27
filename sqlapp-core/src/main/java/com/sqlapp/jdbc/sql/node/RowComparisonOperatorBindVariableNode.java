@@ -25,6 +25,7 @@ import java.util.Set;
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
+import com.sqlapp.data.db.sql.SqlSignature.RowComparisonOperator;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
@@ -40,7 +41,7 @@ import com.sqlapp.util.SqlBuilder;
  * @author satoh
  *
  */
-public class RowGreaterThanOrEqualBindVariableNode extends CommentNode {
+public class RowComparisonOperatorBindVariableNode extends CommentNode {
 	/**
 	 * serialVersionUID
 	 */
@@ -50,7 +51,17 @@ public class RowGreaterThanOrEqualBindVariableNode extends CommentNode {
 
 	private String prefix;
 
+	private RowComparisonOperator rowComparisonOperator;
+
 	private Set<String> columns;
+
+	public RowComparisonOperator getRowComparisonOperator() {
+		return rowComparisonOperator;
+	}
+
+	public void setRowComparisonOperator(RowComparisonOperator rowComparisonOperator) {
+		this.rowComparisonOperator = rowComparisonOperator;
+	}
 
 	public String getTarget() {
 		return target;
@@ -143,8 +154,8 @@ public class RowGreaterThanOrEqualBindVariableNode extends CommentNode {
 		builder.indent(1, () -> {
 			builder.lineBreak();
 			builder.space().and().space();
-			final BindParameterHolder holder = columnsHolder.addGreaterThanOrEqualParameters(getDialect(), row, prefix,
-					builder);
+			final BindParameterHolder holder = getRowComparisonOperator().addOperator(getDialect(), columnsHolder, row,
+					prefix, builder);
 			sqlParameters.add(holder);
 		});
 		sqlParameters.addSql(builder.toString());
@@ -156,7 +167,7 @@ public class RowGreaterThanOrEqualBindVariableNode extends CommentNode {
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public RowGreaterThanOrEqualBindVariableNode clone() {
-		return (RowGreaterThanOrEqualBindVariableNode) super.clone();
+	public RowComparisonOperatorBindVariableNode clone() {
+		return (RowComparisonOperatorBindVariableNode) super.clone();
 	}
 }

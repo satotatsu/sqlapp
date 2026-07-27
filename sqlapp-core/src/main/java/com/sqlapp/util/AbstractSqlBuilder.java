@@ -2187,6 +2187,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * &lt;=句を追加します
 	 * 
+	 * @return this
 	 */
 	public T lt() {
 		appendElement("<");
@@ -2196,6 +2197,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * &lt;=句を追加します
 	 * 
+	 * @return this
 	 */
 	public T lte() {
 		appendElement("<=");

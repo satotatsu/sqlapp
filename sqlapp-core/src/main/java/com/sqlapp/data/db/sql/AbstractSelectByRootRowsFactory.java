@@ -105,7 +105,7 @@ public abstract class AbstractSelectByRootRowsFactory<S extends AbstractSqlBuild
 		builder.lineBreak();
 		builder.where().true_();
 		builder.lineBreak();
-		builder._add("/*ROWS_EQUALS(");
+		builder._add("/*ROWS=(");
 		builder._add("target=ROOT;prefix=" + alias + listParents.size() + ".");
 		builder._add(")*/");
 	}

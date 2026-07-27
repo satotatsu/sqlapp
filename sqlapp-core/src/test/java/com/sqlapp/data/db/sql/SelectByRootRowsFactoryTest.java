@@ -89,8 +89,9 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 				INNER JOIN PUBLIC.CUSTOMERS AS a2
 				ON( a1.CUSTOMER_ID = a2.CUSTOMER_ID )
 				WHERE 1=1
-				/*ROWS_EQUALS(target=ROOT;prefix=a2.)*/
-									""";
+				/*ROWS=(target=ROOT;prefix=a2.)*/
+				ORDER BY a.ORDER_ID, a.LINE_NO
+				""";
 		assertEquals(expected.trim(), sqlOperation.getSqlText().trim());
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, sqlOperation);
 		SqlParameterCollection sqlParameters = sqlNode.eval(tableRelationTreeHolder.getTableRelation(orderDetailsTable),
@@ -111,7 +112,8 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 				ON( a1.CUSTOMER_ID = a2.CUSTOMER_ID )
 				WHERE 1=1
 					 AND a2.CUSTOMER_ID IN ( ?, ?, ? )
-									""";
+				ORDER BY a.ORDER_ID, a.LINE_NO
+				""";
 		assertEquals(expectedJdbc.trim(), sqlParameters.getSql().trim());
 		int i = 0;
 		BindParameterHolder bindParameterHolder = sqlParameters.getBindParameters().get(0);
