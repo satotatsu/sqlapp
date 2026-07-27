@@ -56,9 +56,10 @@ public class SelectRowsFactoryTest extends AbstractStandardFactoryTest {
 				SELECT
 				*
 				FROM "tableA"
-				WHERE 1=0
-				/*ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
-					""";
+				WHERE 1=1
+				/*ROWS=(keyType=PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
+				ORDER BY "colB"
+				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 	}
 

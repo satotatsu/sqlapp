@@ -120,7 +120,10 @@ public enum SqlType {
 	 * SELECT
 	 */
 	SELECT(SqlMetaType.DML) {
-
+		@Override
+		public boolean isSelect() {
+			return true;
+		}
 	},
 	/**
 	 * SELECT
@@ -129,6 +132,11 @@ public enum SqlType {
 		@Override
 		public SqlExecuteType getSqlExecuteType() {
 			return SqlExecuteType.ROWS;
+		}
+
+		@Override
+		public boolean isSelect() {
+			return true;
 		}
 
 		@Override
@@ -148,6 +156,11 @@ public enum SqlType {
 		}
 
 		@Override
+		public boolean isSelect() {
+			return true;
+		}
+
+		@Override
 		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
 			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
 					.apply(obj);
@@ -158,13 +171,19 @@ public enum SqlType {
 	 * SELECT
 	 */
 	SELECT_TABLE(SqlMetaType.DML) {
-
+		@Override
+		public boolean isSelect() {
+			return true;
+		}
 	},
 	/**
 	 * SELECT_FOR_APP
 	 */
 	SELECT_FOR_APP(SqlMetaType.DML) {
-
+		@Override
+		public boolean isSelect() {
+			return true;
+		}
 	},
 	/**
 	 * SEQUENCE_NEXT_VALUES
@@ -625,6 +644,14 @@ public enum SqlType {
 	 */
 	public boolean isDcl() {
 		return this.sqlMetaType == SqlMetaType.DCL;
+	}
+
+	/**
+	 * SELECTかどうか
+	 * 
+	 */
+	public boolean isSelect() {
+		return false;
 	}
 
 	public boolean isComment() {

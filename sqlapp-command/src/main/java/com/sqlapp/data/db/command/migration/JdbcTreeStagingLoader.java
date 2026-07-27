@@ -7,7 +7,6 @@ package com.sqlapp.data.db.command.migration;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -28,16 +27,19 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
-import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.JoinKey;
-import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
-import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadField;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.JoinKeyWrapper;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.LoadDataSetWrapper;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.LoadFieldWrapper;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession.HoldCursorStrategy;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /**
  * Loads persistent staging tables into a relational hierarchy through
- * {@link JdbcTreeDataSession}.
+ * {@link JdbcTreeDataCopySession}.
  */
 public class JdbcTreeStagingLoader {
 
@@ -47,9 +49,9 @@ public class JdbcTreeStagingLoader {
 
 	private final List<Table> tables;
 
-	private final LegacyMigrationLoadPlan plan;
+	private final LegacyMigrationLoadPlanWrapper plan;
 
-	private final Map<String, LoadDataSet> dataSets = new LinkedHashMap<>();
+	private final Map<String, LoadDataSetWrapper> dataSets = new LinkedHashMap<>();
 
 	private final Map<String, Table> targetTables = new LinkedHashMap<>();
 
@@ -68,7 +70,7 @@ public class JdbcTreeStagingLoader {
 			throws SQLException {
 		this.connection = connection;
 		this.tables = tables;
-		this.plan = plan;
+		this.plan = new LegacyMigrationLoadPlanWrapper(plan);
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tables.forEach(table -> table.setDialect(dialect));
 		String quote = connection.getMetaData().getIdentifierQuoteString();
@@ -92,136 +94,72 @@ public class JdbcTreeStagingLoader {
 		}
 		cleanupOrphanedStagingRows();
 		long count = 0;
-		for (LoadDataSet root : roots()) {
-			if (useHoldableRootCursor()) {
-				count += loadRootCursor(root);
-			} else {
-				long loaded;
-				do {
-					loaded = loadRootChunk(root);
-					count += loaded;
-				} while (loaded > 0);
-			}
+		for (LoadDataSetWrapper root : roots()) {
+			count += loadRoot(root);
 		}
 		return count;
 	}
 
-	private boolean useHoldableRootCursor() throws SQLException {
-		return switch (plan.getRootCursorStrategy()) {
-		case "HOLD" -> true;
-		case "REOPEN" -> false;
-		case "DIALECT" -> dialect.supportsHoldCursorsOverCommit(connection);
-		default -> throw new CommandException("Unsupported rootCursorStrategy: " + plan.getRootCursorStrategy());
-		};
-	}
-
-	private long loadRootCursor(LoadDataSet root) throws SQLException {
-		List<Map<String, Object>> pendingRoots = new ArrayList<>();
-		List<Map<String, Object>> completedRoots = new ArrayList<>();
+	private long loadRoot(LoadDataSetWrapper root) throws SQLException {
 		long loaded = 0;
-		int originalHoldability = connection.getHoldability();
-		try {
-			if (originalHoldability != ResultSet.HOLD_CURSORS_OVER_COMMIT) {
-				connection.setHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
-			}
-			try (JdbcTreeDataSession writer = createSession(root, pendingRoots, completedRoots);
-					JdbcTreeDataSession reader = createReader(root, 0)) {
-				while (reader.next(stagingTables.get(root.getId()))) {
-					copyHierarchy(reader, writer, root, pendingRoots);
-					loaded++;
-				}
-			}
-		} catch (StagingOperationException e) {
-			throw e.getSQLException();
-		} finally {
-			if (connection.getHoldability() != originalHoldability) {
-				connection.setHoldability(originalHoldability);
+		JdbcTreeDataSession reader = createReader(root);
+		JdbcTreeDataSession writer = createWriter();
+		try (JdbcTreeDataCopySession copySession = createCopySession(root, reader, writer)) {
+			while (copySession.next(stagingTables.get(root.getId()))) {
+				copyHierarchy(copySession, root);
+				loaded++;
 			}
 		}
 		return loaded;
 	}
 
-	private long loadRootChunk(LoadDataSet root) throws SQLException {
-		int maximumRows = chunkSize();
-		List<Map<String, Object>> pendingRoots = new ArrayList<>();
-		List<Map<String, Object>> completedRoots = new ArrayList<>();
-		long[] loaded = { 0 };
-		try (JdbcTreeDataSession writer = createSession(root, pendingRoots, completedRoots);
-				JdbcTreeDataSession reader = createReader(root, maximumRows)) {
-			while (reader.next(stagingTables.get(root.getId()))) {
-				copyHierarchy(reader, writer, root, pendingRoots);
-				loaded[0]++;
-			}
-		} catch (StagingOperationException e) {
-			throw e.getSQLException();
-		}
-		return loaded[0];
+	private JdbcTreeDataCopySession createCopySession(LoadDataSetWrapper root, JdbcTreeDataSession reader,
+			JdbcTreeDataSession writer) {
+		JdbcTreeDataCopySession copySession = new JdbcTreeDataCopySession(reader, writer);
+		copySession.setRootBatchSize(plan.getRootBatchSize());
+		copySession.setCommitEveryRootBatches(plan.getCommitEveryRootBatches());
+		copySession.setHoldCursorStrategy(HoldCursorStrategy.valueOf(plan.getRootCursorStrategy()));
+		copySession.setDeleteSourceRowHandler(
+				rows -> completeStagingRoots(root, rows.stream().map(row -> keyValues(root, row)).toList()));
+		return copySession;
 	}
 
-	private JdbcTreeDataSession createReader(LoadDataSet root, int maximumRows) throws SQLException {
+	private JdbcTreeDataSession createReader(LoadDataSetWrapper root) throws SQLException {
 		JdbcTreeDataSession reader = new JdbcTreeDataSession(connection, new ArrayList<>(stagingTables.values()));
 		reader.setRootBatchSize(plan.getRootBatchSize());
 		reader.setFetchSize(plan.getRootBatchSize());
 		reader.setTableOperationMode(TableOperationMode.NONE);
-		if (maximumRows > 0) {
-			boolean[] rootStatement = { true };
-			reader.setPreparedStatementBeforeExecuteHandler(statement -> {
-				if (rootStatement[0]) {
-					statement.setMaxRows(maximumRows);
-					rootStatement[0] = false;
-				}
-			});
-		}
 		reader.select(stagingTables.get(root.getId()), selectSql(root, true));
 		registerChildren(reader, root);
 		return reader;
 	}
 
-	private void registerChildren(JdbcTreeDataSession reader, LoadDataSet parent) throws SQLException {
-		for (LoadDataSet child : children(parent.getId())) {
+	private void registerChildren(JdbcTreeDataSession reader, LoadDataSetWrapper parent) throws SQLException {
+		for (LoadDataSetWrapper child : children(parent.getId())) {
 			reader.select(stagingTables.get(child.getId()));
 			registerChildren(reader, child);
 		}
 	}
 
-	private void copyHierarchy(JdbcTreeDataSession reader, JdbcTreeDataSession writer, LoadDataSet dataSet,
-			List<Map<String, Object>> pendingRoots) throws SQLException {
-		Row source = reader.getRow(stagingTables.get(dataSet.getId()));
-		Row target = writer.newRow(targetTables.get(dataSet.getId()));
+	private void copyHierarchy(JdbcTreeDataCopySession copySession, LoadDataSetWrapper dataSet) throws SQLException {
+		Row source = copySession.getRow(dataSet.getStagingTable());
+		Row target = copySession.newRow(dataSet.getTargetTable());
 		copyTargetValues(dataSet, source, target);
-		if (dataSet.getParentDataSetId() == null) {
-			pendingRoots.add(keyValues(dataSet, source));
-		}
-		for (LoadDataSet child : children(dataSet.getId())) {
+		for (LoadDataSetWrapper child : children(dataSet.getId())) {
 			Table childTable = stagingTables.get(child.getId());
-			while (reader.next(childTable)) {
-				copyHierarchy(reader, writer, child, pendingRoots);
+			while (copySession.next(childTable)) {
+				copyHierarchy(copySession, child);
 			}
 		}
 	}
 
-	private JdbcTreeDataSession createSession(LoadDataSet root, List<Map<String, Object>> pendingRoots,
-			List<Map<String, Object>> completedRoots) {
+	private JdbcTreeDataSession createWriter() {
 		JdbcTreeDataSession session = new JdbcTreeDataSession(connection, new ArrayList<>(targetTables.values()));
-		session.setRootBatchSize(plan.getRootBatchSize());
-		session.setCommitEveryRootBatches(plan.getCommitEveryRootBatches());
 		session.setTableOperationMode(TableOperationMode.valueOf(plan.getTableOperationMode()));
-		session.setAfterRootBatchHandler((batch, table, rows) -> {
-			completedRoots.addAll(pendingRoots);
-			pendingRoots.clear();
-		});
-		session.setBeforeCommitEveryRootBatchesHandler((commit, lastRoot) -> {
-			try {
-				completeStagingRoots(root, completedRoots);
-			} catch (SQLException e) {
-				throw new StagingOperationException(e);
-			}
-		});
-		session.setAfterCommitEveryRootBatchesHandler((commit, lastRoot) -> completedRoots.clear());
 		return session;
 	}
 
-	private void completeStagingRoots(LoadDataSet root, List<Map<String, Object>> rootKeys) throws SQLException {
+	private void completeStagingRoots(LoadDataSetWrapper root, List<Map<String, Object>> rootKeys) throws SQLException {
 		Map<String, PreparedStatement> statements = new LinkedHashMap<>();
 		try {
 			for (Map<String, Object> rootKey : rootKeys) {
@@ -245,11 +183,11 @@ public class JdbcTreeStagingLoader {
 		}
 	}
 
-	private String completeRootSql(LoadDataSet root, Where where) {
+	private String completeRootSql(LoadDataSetWrapper root, Where where) {
 		if (plan.isDeleteCommittedRoots()) {
-			return "DELETE FROM " + id(root.getStagingTable()) + where.sql();
+			return "DELETE FROM " + id(root.getInner().getStagingTable()) + where.sql();
 		}
-		return "UPDATE " + id(root.getStagingTable()) + " SET " + id(LOAD_STATUS_COLUMN) + "='LOADED', "
+		return "UPDATE " + id(root.getInner().getStagingTable()) + " SET " + id(LOAD_STATUS_COLUMN) + "='LOADED', "
 				+ id("SQLAPP_LOADED_AT") + "=CURRENT_TIMESTAMP" + where.sql();
 	}
 
@@ -259,19 +197,20 @@ public class JdbcTreeStagingLoader {
 		}
 		// Parent-first order makes descendants of a newly deleted orphan eligible
 		// when their level is processed.
-		for (LoadDataSet child : plan.getDataSets().stream().filter(dataSet -> dataSet.getParentDataSetId() != null)
-				.sorted(Comparator.comparingInt(LoadDataSet::getHierarchyDepth)).toList()) {
+		for (LoadDataSetWrapper child : plan.getDataSets().stream()
+				.filter(dataSet -> dataSet.getParentDataSetId() != null)
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)).toList()) {
 			deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
 		}
 		connection.commit();
 	}
 
-	private void deleteOrphans(LoadDataSet child, LoadDataSet parent) throws SQLException {
-		String childTable = id(child.getStagingTable());
-		String parentTable = id(parent.getStagingTable());
+	private void deleteOrphans(LoadDataSetWrapper child, LoadDataSetWrapper parent) throws SQLException {
+		String childTable = id(child.getInner().getStagingTable());
+		String parentTable = id(parent.getInner().getStagingTable());
 		String join = child.getParentJoinKeys().stream()
-				.map(key -> childTable + "." + id(key.getChildStagingColumn()) + "=" + parentTable + "."
-						+ id(key.getParentStagingColumn()))
+				.map(key -> childTable + "." + id(key.getInner().getChildStagingColumn()) + "=" + parentTable + "."
+						+ id(key.getInner().getParentStagingColumn()))
 				.reduce((left, right) -> left + " AND " + right).orElseThrow();
 		String sql = "DELETE FROM " + childTable + " WHERE NOT EXISTS (SELECT 1 FROM " + parentTable + " WHERE " + join
 				+ ")";
@@ -280,11 +219,11 @@ public class JdbcTreeStagingLoader {
 		}
 	}
 
-	private String selectSql(LoadDataSet dataSet, boolean root) {
+	private String selectSql(LoadDataSetWrapper dataSet, boolean root) {
 		String columns = stagingColumns(dataSet).stream().map(this::id).reduce((left, right) -> left + ", " + right)
 				.orElseThrow();
 		StringBuilder sql = new StringBuilder("SELECT ").append(columns).append(" FROM ")
-				.append(id(dataSet.getStagingTable()));
+				.append(id(dataSet.getInner().getStagingTable()));
 		if (root) {
 			sql.append(" WHERE ").append(id(LOAD_STATUS_COLUMN)).append("='PENDING'");
 			List<String> keys = dataSet.getSourceBusinessKey();
@@ -296,7 +235,7 @@ public class JdbcTreeStagingLoader {
 		return sql.toString();
 	}
 
-	private Where keyWhere(LoadDataSet root, Map<String, Object> rootKey) {
+	private Where keyWhere(LoadDataSetWrapper root, Map<String, Object> rootKey) {
 		if (rootKey.isEmpty()) {
 			throw new CommandException("Source business key is required for root data set: " + root.getId());
 		}
@@ -322,17 +261,25 @@ public class JdbcTreeStagingLoader {
 		return new Where(sql.toString(), parameters);
 	}
 
-	private void copyTargetValues(LoadDataSet dataSet, Row source, Row target) {
-		for (LoadField field : dataSet.getFields()) {
+	private void copyTargetValues(LoadDataSetWrapper dataSet, Row source, Row target) {
+		for (LoadFieldWrapper field : dataSet.getFields()) {
 			if (!field.isExtracted() || field.isTargetGenerated() || field.getTargetColumn() == null
 					|| "DROP".equals(field.getAction())) {
 				continue;
+			}
+			if (field.getTargetColumn() == null) {
+				field.setTargetColumn(
+						target.getParent().getParent().getColumns().get(field.getInner().getTargetColumn()));
+			}
+			if (field.getStagingColumn() == null) {
+				field.setStagingColumn(
+						source.getParent().getParent().getColumns().get(field.getInner().getStagingColumn()));
 			}
 			target.put(field.getTargetColumn(), source.get(field.getStagingColumn()));
 		}
 	}
 
-	private Map<String, Object> keyValues(LoadDataSet root, Row values) {
+	private Map<String, Object> keyValues(LoadDataSetWrapper root, Row values) {
 		Map<String, Object> result = new LinkedHashMap<>();
 		for (String key : root.getSourceBusinessKey()) {
 			result.put(key, values.get(key));
@@ -340,30 +287,21 @@ public class JdbcTreeStagingLoader {
 		return result;
 	}
 
-	private List<String> stagingColumns(LoadDataSet dataSet) {
+	private List<String> stagingColumns(LoadDataSetWrapper dataSet) {
 		Set<String> columns = new LinkedHashSet<>();
-		dataSet.getFields().stream().filter(LoadField::isExtracted).map(LoadField::getStagingColumn)
+		dataSet.getFields().stream().filter(LoadFieldWrapper::isExtracted).map(o -> o.getInner().getStagingColumn())
 				.filter(name -> name != null).forEach(columns::add);
 		return new ArrayList<>(columns);
 	}
 
-	private List<LoadDataSet> roots() {
+	private List<LoadDataSetWrapper> roots() {
 		return plan.getDataSets().stream().filter(dataSet -> dataSet.getParentDataSetId() == null)
-				.sorted(Comparator.comparingInt(LoadDataSet::getLoadOrder)).toList();
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)).toList();
 	}
 
-	private List<LoadDataSet> children(String parentId) {
+	private List<LoadDataSetWrapper> children(String parentId) {
 		return plan.getDataSets().stream().filter(dataSet -> parentId.equals(dataSet.getParentDataSetId()))
-				.sorted(Comparator.comparingInt(LoadDataSet::getLoadOrder)).toList();
-	}
-
-	private int chunkSize() {
-		try {
-			return Math
-					.toIntExact(Math.multiplyExact((long) plan.getRootBatchSize(), plan.getCommitEveryRootBatches()));
-		} catch (ArithmeticException e) {
-			throw new CommandException("Root chunk size exceeds JDBC setMaxRows range.", e);
-		}
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)).toList();
 	}
 
 	private void initialize() {
@@ -376,25 +314,28 @@ public class JdbcTreeStagingLoader {
 		if (plan.getRootBatchSize() <= 0 || plan.getCommitEveryRootBatches() <= 0) {
 			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");
 		}
-		for (LoadDataSet dataSet : plan.getDataSets()) {
+		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			if (dataSets.put(dataSet.getId(), dataSet) != null) {
 				throw new CommandException("Duplicate load data set id: " + dataSet.getId());
 			}
+			// Target
 			Table table = tables.stream()
-					.filter(item -> equals(item.getSchemaName(), dataSet.getTargetSchema())
-							&& equals(item.getName(), dataSet.getTargetTable()))
+					.filter(item -> equals(item.getSchemaName(), dataSet.getInner().getTargetSchema())
+							&& equals(item.getName(), dataSet.getInner().getTargetTable()))
 					.findFirst().orElseThrow(() -> new CommandException("Target table was not found: "
-							+ dataSet.getTargetSchema() + "." + dataSet.getTargetTable()));
+							+ dataSet.getInner().getTargetSchema() + "." + dataSet.getTargetTable()));
+			dataSet.setTargetTable(table);
 			targetTables.put(dataSet.getId(), table);
-			for (LoadField field : dataSet.getFields()) {
-				if (field.getTargetColumn() != null && !"DROP".equals(field.getAction())
-						&& table.getColumns().get(field.getTargetColumn()) == null) {
+			for (LoadFieldWrapper field : dataSet.getFields()) {
+				if (field.getInner().getTargetColumn() != null && !"DROP".equals(field.getAction())
+						&& table.getColumns().get(field.getInner().getTargetColumn()) == null) {
 					throw new CommandException(
 							"Target column was not found: " + dataSet.getId() + "." + field.getTargetColumn());
 				}
+				field.setTargetColumn(table.getColumns().get(field.getInner().getTargetColumn()));
 			}
 		}
-		for (LoadDataSet dataSet : plan.getDataSets()) {
+		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			if (dataSet.getParentDataSetId() != null && !dataSets.containsKey(dataSet.getParentDataSetId())) {
 				throw new CommandException("Parent load data set was not found: " + dataSet.getParentDataSetId());
 			}
@@ -413,24 +354,24 @@ public class JdbcTreeStagingLoader {
 				if (dataSet.getParentJoinKeys().isEmpty()) {
 					throw new CommandException("Parent join keys are required: " + dataSet.getId());
 				}
-				LoadDataSet parent = dataSets.get(dataSet.getParentDataSetId());
+				LoadDataSetWrapper parent = dataSets.get(dataSet.getParentDataSetId());
 				Set<String> parentColumns = stagingColumns(parent).stream().map(name -> name.toLowerCase(Locale.ROOT))
 						.collect(java.util.stream.Collectors.toSet());
-				for (JoinKey key : dataSet.getParentJoinKeys()) {
-					if (key.getParentStagingColumn() == null
-							|| !parentColumns.contains(key.getParentStagingColumn().toLowerCase(Locale.ROOT))) {
+				for (JoinKeyWrapper key : dataSet.getParentJoinKeys()) {
+					if (key.getInner().getParentStagingColumn() == null || !parentColumns
+							.contains(key.getInner().getParentStagingColumn().toLowerCase(Locale.ROOT))) {
 						throw new CommandException("Parent join staging column was not found: " + dataSet.getId() + "."
 								+ key.getParentStagingColumn());
 					}
-					if (key.getChildStagingColumn() == null
-							|| !columns.contains(key.getChildStagingColumn().toLowerCase(Locale.ROOT))) {
+					if (key.getInner().getChildStagingColumn() == null
+							|| !columns.contains(key.getInner().getChildStagingColumn().toLowerCase(Locale.ROOT))) {
 						throw new CommandException("Child join staging column was not found: " + dataSet.getId() + "."
 								+ key.getChildStagingColumn());
 					}
 				}
 			}
 			Set<String> visited = new LinkedHashSet<>();
-			LoadDataSet current = dataSet;
+			LoadDataSetWrapper current = dataSet;
 			while (current != null && current.getParentDataSetId() != null) {
 				if (!visited.add(current.getId())) {
 					throw new CommandException("Cyclic load data set hierarchy at: " + current.getId());
@@ -439,33 +380,41 @@ public class JdbcTreeStagingLoader {
 			}
 		}
 		TableOperationMode.valueOf(plan.getTableOperationMode());
+		try {
+			HoldCursorStrategy.valueOf(plan.getRootCursorStrategy());
+		} catch (IllegalArgumentException e) {
+			throw new CommandException("Unsupported rootCursorStrategy: " + plan.getRootCursorStrategy(), e);
+		}
 	}
 
 	private void initializeStagingTables() {
-		for (LoadDataSet dataSet : plan.getDataSets()) {
-			Table table = new Table(dataSet.getStagingTable());
+		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
+			Table table = new Table(dataSet.getInner().getStagingTable());
 			table.setDialect(dialect);
 			for (String name : stagingColumns(dataSet)) {
 				table.getColumns().add(new Column(name).setDataType(DataType.VARCHAR));
 			}
 			List<String> keys = dataSet.getSourceBusinessKey();
 			if (keys.isEmpty()) {
-				keys = dataSet.getParentJoinKeys().stream().map(JoinKey::getChildStagingColumn).toList();
+				keys = dataSet.getParentJoinKeys().stream().map(o -> o.getInner().getChildStagingColumn()).toList();
 			}
 			table.setPrimaryKey(("PK_" + table.getName()),
 					keys.stream().map(name -> table.getColumns().get(name)).toArray(Column[]::new));
+			dataSet.setStagingTable(table);
 			stagingTables.put(dataSet.getId(), table);
 		}
-		for (LoadDataSet child : plan.getDataSets()) {
+		for (LoadDataSetWrapper child : plan.getDataSets()) {
 			if (child.getParentDataSetId() == null) {
 				continue;
 			}
 			Table childTable = stagingTables.get(child.getId());
 			Table parentTable = stagingTables.get(child.getParentDataSetId());
 			Column[] childColumns = child.getParentJoinKeys().stream()
-					.map(key -> childTable.getColumns().get(key.getChildStagingColumn())).toArray(Column[]::new);
+					.map(key -> childTable.getColumns().get(key.getInner().getChildStagingColumn()))
+					.toArray(Column[]::new);
 			Column[] parentColumns = child.getParentJoinKeys().stream()
-					.map(key -> parentTable.getColumns().get(key.getParentStagingColumn())).toArray(Column[]::new);
+					.map(key -> parentTable.getColumns().get(key.getInner().getParentStagingColumn()))
+					.toArray(Column[]::new);
 			childTable.getConstraints().addForeignKeyConstraint(
 					"FK_" + childTable.getName() + "_" + parentTable.getName(), childColumns, parentColumns);
 		}
@@ -496,15 +445,4 @@ public class JdbcTreeStagingLoader {
 	private record Where(String sql, List<Object> parameters) {
 	}
 
-	private static class StagingOperationException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-
-		StagingOperationException(SQLException cause) {
-			super(cause);
-		}
-
-		SQLException getSQLException() {
-			return (SQLException) getCause();
-		}
-	}
 }

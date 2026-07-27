@@ -183,4 +183,9 @@ public class Hsql2_0_0 extends Hsql {
 	public boolean supportsRowValueComparison() {
 		return true;
 	}
+
+	@Override
+	public boolean supportsRowValueComparisonWithParameters() {
+		return false;
+	}
 }

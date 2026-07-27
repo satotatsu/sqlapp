@@ -52,11 +52,11 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 
 	private Function<Table, String> primaryKeyColumnNameStrategy = table -> "ID";
 
-	private Function<Table, DataType> primaryKeyDataTypeStrategy = table -> DataType.INT;
+	private Function<Table, DataType> primaryKeyDataTypeStrategy = table -> DataType.BIGINT;
 
 	/**
-	 * Receives the referenced table name and the original local foreign-key
-	 * column names.
+	 * Receives the referenced table name and the original local foreign-key column
+	 * names.
 	 */
 	private BiFunction<String, List<String>, String> foreignKeyColumnNameStrategy = (tableName,
 			columnNames) -> "PARENT_ID";
@@ -121,8 +121,7 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 				if (!table.getRows().isEmpty()) {
 					throw new CommandException("Row data conversion is not supported: table=" + table.getName());
 				}
-				TablePlan plan = new TablePlan(table, primaryKey,
-						new ArrayList<>(primaryKey.getColumns().toColumns()));
+				TablePlan plan = new TablePlan(table, primaryKey, new ArrayList<>(primaryKey.getColumns().toColumns()));
 				tablePlans.add(plan);
 				plansByTable.put(table, plan);
 			}
@@ -131,20 +130,19 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 		List<ForeignKeyPlan> foreignKeyPlans = new ArrayList<>();
 		Map<Table, Integer> convertedParentCounts = new LinkedHashMap<>();
 		for (Table table : SchemaUtils.toTables(root)) {
-			for (ForeignKeyConstraint foreignKey : new ArrayList<>(
-					table.getConstraints().getForeignKeyConstraints())) {
+			for (ForeignKeyConstraint foreignKey : new ArrayList<>(table.getConstraints().getForeignKeyConstraints())) {
 				TablePlan parentPlan = plansByTable.get(foreignKey.getRelatedTable());
 				if (parentPlan == null) {
 					continue;
 				}
-				List<String> relatedColumnNames = foreignKey.getRelatedColumns().stream()
-						.map(item -> item.getName()).toList();
+				List<String> relatedColumnNames = foreignKey.getRelatedColumns().stream().map(item -> item.getName())
+						.toList();
 				if (!sameColumnNames(relatedColumnNames, parentPlan.oldPrimaryKeyColumns)) {
 					throw new CommandException("A foreign key must reference all columns of the composite primary key: "
 							+ "table=" + table.getName() + ", foreignKey=" + foreignKey.getName());
 				}
-				ForeignKeyPlan plan = new ForeignKeyPlan(table, foreignKey,
-						new ArrayList<>(foreignKey.getColumns()), parentPlan);
+				ForeignKeyPlan plan = new ForeignKeyPlan(table, foreignKey, new ArrayList<>(foreignKey.getColumns()),
+						parentPlan);
 				foreignKeyPlans.add(plan);
 				convertedParentCounts.merge(table, 1, Integer::sum);
 			}
@@ -168,8 +166,8 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 	private void createSurrogatePrimaryKey(TablePlan plan) {
 		String name = requireName(primaryKeyColumnNameStrategy.apply(plan.table), "primaryKeyColumnNameStrategy");
 		if (plan.table.getColumns().contains(name)) {
-			throw new CommandException("Surrogate primary-key column already exists: table=" + plan.table.getName()
-					+ ", column=" + name);
+			throw new CommandException(
+					"Surrogate primary-key column already exists: table=" + plan.table.getName() + ", column=" + name);
 		}
 		DataType dataType = primaryKeyDataTypeStrategy.apply(plan.table);
 		if (dataType == null) {
@@ -181,7 +179,8 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 		} else {
 			Schema schema = plan.table.getSchema();
 			if (schema == null) {
-				throw new CommandException("SEQUENCE generation requires a Schema parent: table=" + plan.table.getName());
+				throw new CommandException(
+						"SEQUENCE generation requires a Schema parent: table=" + plan.table.getName());
 			}
 			String sequenceName = requireName(sequenceNameStrategy.apply(plan.table), "sequenceNameStrategy");
 			Sequence sequence = schema.getSequences().get(sequenceName);
@@ -200,8 +199,7 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 
 	private void replaceForeignKey(ForeignKeyPlan plan, boolean multipleParents) {
 		List<String> oldNames = plan.oldColumns.stream().map(Column::getName).toList();
-		String requestedName = requireName(
-				foreignKeyColumnNameStrategy.apply(plan.parent.table.getName(), oldNames),
+		String requestedName = requireName(foreignKeyColumnNameStrategy.apply(plan.parent.table.getName(), oldNames),
 				"foreignKeyColumnNameStrategy");
 		String name = requestedName;
 		if (multipleParents && "PARENT_ID".equalsIgnoreCase(requestedName)) {
@@ -215,14 +213,14 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 			plan.table.getColumns().remove(oldColumn);
 		}
 		if (plan.table.getColumns().contains(name)) {
-			throw new CommandException("Surrogate foreign-key column already exists: table=" + plan.table.getName()
-					+ ", column=" + name);
+			throw new CommandException(
+					"Surrogate foreign-key column already exists: table=" + plan.table.getName() + ", column=" + name);
 		}
 		Column column = new Column(name).setDataType(plan.parent.surrogateColumn.getDataType()).setNotNull(notNull);
 		plan.table.getColumns().add(column);
 		plan.table.getConstraints().remove(plan.foreignKey);
-		ForeignKeyConstraint replacement = plan.table.getConstraints().addForeignKeyConstraint(plan.foreignKey.getName(),
-				column, plan.parent.surrogateColumn);
+		ForeignKeyConstraint replacement = plan.table.getConstraints()
+				.addForeignKeyConstraint(plan.foreignKey.getName(), column, plan.parent.surrogateColumn);
 		replacement.setDeleteRule(plan.foreignKey.getDeleteRule());
 		replacement.setUpdateRule(plan.foreignKey.getUpdateRule());
 		replacement.setMatchOption(plan.foreignKey.getMatchOption());
@@ -233,8 +231,7 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 	private void replacePrimaryKey(TablePlan plan, List<ForeignKeyPlan> foreignKeyPlans) {
 		List<Column> businessKey = new ArrayList<>(plan.oldPrimaryKeyColumns);
 		for (ForeignKeyPlan foreignKeyPlan : foreignKeyPlans) {
-			if (foreignKeyPlan.table == plan.table
-					&& businessKey.containsAll(foreignKeyPlan.oldColumns)) {
+			if (foreignKeyPlan.table == plan.table && businessKey.containsAll(foreignKeyPlan.oldColumns)) {
 				businessKey.removeAll(foreignKeyPlan.oldColumns);
 				businessKey.add(0, foreignKeyPlan.surrogateColumn);
 			}
@@ -293,8 +290,7 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 		List<Map<String, Object>> tables = new ArrayList<>();
 		log.put("tables", tables);
 		for (TablePlan plan : tablePlans) {
-			List<Map<String, Object>> foreignKeys = foreignKeyPlans.stream()
-					.filter(item -> item.table == plan.table)
+			List<Map<String, Object>> foreignKeys = foreignKeyPlans.stream().filter(item -> item.table == plan.table)
 					.map(item -> mapOf("name", item.foreignKey.getName(), "oldColumns",
 							item.oldColumns.stream().map(Column::getName).toList(), "newColumn",
 							item.surrogateColumn.getName(), "referencedTable", item.parent.table.getName(),
@@ -320,8 +316,7 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 		if (fileName == null || fileName.isBlank()) {
 			String name = targetFile.getName();
 			int extensionIndex = name.lastIndexOf('.');
-			fileName = (extensionIndex > 0 ? name.substring(0, extensionIndex) : name)
-					+ "-legacy-migration.yaml";
+			fileName = (extensionIndex > 0 ? name.substring(0, extensionIndex) : name) + "-legacy-migration.yaml";
 		}
 		File file = new File(directory, fileName);
 		var mapping = new LegacyMigrationMappingBuilder().buildSurrogateKeyMapping(targetFile, outputFile, log);

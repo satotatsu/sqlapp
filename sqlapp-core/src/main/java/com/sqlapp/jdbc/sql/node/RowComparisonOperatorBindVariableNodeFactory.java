@@ -25,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.SqlSignature.RowComparisonOperator;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -33,18 +34,22 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  *
  */
-public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactory<RowsEqualsBindVariableNode> {
+public class RowComparisonOperatorBindVariableNodeFactory
+		extends AbstractCommentNodeFactory<RowComparisonOperatorBindVariableNode> {
 
 	static {
-		MATCH_PATTERNS = new Pattern[] { Pattern.compile("(?<value>\\s*/\\*ROWS=\\((?<selector>([^)]+))\\)\\*/)") };
+		MATCH_PATTERNS = new Pattern[] { Pattern
+				.compile("(?<value>\\s*/\\*ROW\\s*(?<operator>>=|>|<=|<|=)\\s*\\((?<selector>([^)]+))\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
 
 	@Override
-	protected void setNodeValue(RowsEqualsBindVariableNode node, Matcher matcher) {
+	protected void setNodeValue(RowComparisonOperatorBindVariableNode node, Matcher matcher) {
 		node.setMatchText(matcher.group("value"));
 		node.setExpression(matcher.group("selector"));
+		String operator = matcher.group("operator");
+		node.setRowComparisonOperator(RowComparisonOperator.parse(operator));
 		String[] args = node.getExpression().trim().split("\\s*;\\s*");
 		final Map<String, String> keyMap = CommonUtils.parseKeyValue(args);
 		node.setTarget(keyMap.get("target"));
@@ -65,8 +70,8 @@ public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactor
 	}
 
 	@Override
-	public RowsEqualsBindVariableNode newInstance() {
-		return new RowsEqualsBindVariableNode();
+	public RowComparisonOperatorBindVariableNode newInstance() {
+		return new RowComparisonOperatorBindVariableNode();
 	}
 
 	@Override

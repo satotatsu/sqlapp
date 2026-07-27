@@ -352,27 +352,28 @@ public class SqlSignature {
 					}
 				});
 			} else {
-				addRowValueComparisonAllPattern(dialect, rows, prefix, holder, builder);
+				addRowsValueComparisonAllPattern(dialect, rows, prefix, holder, builder);
 			}
 			return holder;
 		}
 
-		private void addRowValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
+		private void addRowsValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
 				final BindParameterHolder holder, final SqlBuilder builder) {
+			boolean supportsRowValueComparisonWithParameters = dialect.supportsRowValueComparisonWithParameters();
 			boolean supportsRowValueComparisonIn = dialect.supportsRowValueComparisonIn();
-			if (supportsRowValueComparisonIn) {
-				addRowValueComparisonIn(rows, prefix, holder, builder);
+			if (supportsRowValueComparisonIn && supportsRowValueComparisonWithParameters) {
+				addRowsValueComparisonIn(rows, prefix, holder, builder);
 				return;
 			}
 			boolean supportsRowValueComparison = dialect.supportsRowValueComparison();
-			if (supportsRowValueComparison) {
-				addRowValueComparison(rows, prefix, holder, builder);
+			if (supportsRowValueComparison && supportsRowValueComparisonWithParameters) {
+				addRowsValueComparison(rows, prefix, holder, builder);
 				return;
 			}
-			addRowValueOrComparison(rows, prefix, holder, builder);
+			addRowsValueOrComparison(rows, prefix, holder, builder);
 		}
 
-		private void addRowValueOrComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
+		private void addRowsValueOrComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
 				final SqlBuilder builder) {
 			final int size = rows.size();
 			builder.brackets(true, () -> {
@@ -398,7 +399,7 @@ public class SqlSignature {
 			});
 		}
 
-		private void addRowValueComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
+		private void addRowsValueComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
 				final SqlBuilder builder) {
 			final int size = rows.size();
 			builder.brackets(true, () -> {
@@ -429,7 +430,7 @@ public class SqlSignature {
 			});
 		}
 
-		private void addRowValueComparisonIn(final List<Row> rows, String prefix, final BindParameterHolder holder,
+		private void addRowsValueComparisonIn(final List<Row> rows, String prefix, final BindParameterHolder holder,
 				final SqlBuilder builder) {
 			final int size = rows.size();
 			builder.brackets(() -> {
@@ -471,4 +472,219 @@ public class SqlSignature {
 		return builder.toString();
 	}
 
+	public static enum RowComparisonOperator {
+		EQUAL("=") {
+			@Override
+			protected void addOperator(final SqlBuilder builder) {
+				builder.eq();
+			}
+
+			@Override
+			protected void addMultiColumnOperatorIn(ColumnsHolder columnsHolder, final Row row, String prefix,
+					final BindParameterHolder holder, final SqlBuilder builder) {
+				builder.brackets(() -> {
+					columnsHolder.forEachKeyColumn((i, column) -> {
+						builder.comma(i > 0);
+						if (!CommonUtils.isEmpty(prefix)) {
+							builder.name(prefix, column);
+						} else {
+							builder.name(column, true);
+						}
+					});
+				});
+				builder.in();
+				builder.space().brackets(() -> {
+					columnsHolder.forEachKeyColumn((j, column) -> {
+						builder.space(j == 0).comma(j > 0);
+						builder._add("?");
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setColumn(column);
+						dbParameter.setValue(row.get(column));
+						holder.getBindParameters().add(dbParameter);
+					});
+				});
+			}
+
+			@Override
+			protected void addMultiColumnOperator(ColumnsHolder columnsHolder, final Row row, String prefix,
+					final BindParameterHolder holder, final SqlBuilder builder) {
+				builder.brackets(true, () -> {
+					Column col = CommonUtils.first(columnsHolder.getKeyColumns());
+					if (!CommonUtils.isEmpty(prefix)) {
+						builder.name(prefix, col);
+					} else {
+						builder.name(col, true);
+					}
+					builder.in();
+					builder.space().brackets(() -> {
+						columnsHolder.forEachKeyColumn((i, column) -> {
+							builder.comma(i > 0);
+							if (!CommonUtils.isEmpty(prefix)) {
+								builder.name(prefix, column);
+							} else {
+								builder.name(column, true);
+							}
+							BindParameter dbParameter = new BindParameter();
+							dbParameter.setColumn(column);
+							dbParameter.setValue(row.get(column));
+							holder.getBindParameters().add(dbParameter);
+						});
+					});
+				});
+			}
+		},
+		GREATER_THAN_OR_EQUAL(">=") {
+			@Override
+			protected void addOperator(final SqlBuilder builder) {
+				builder.gte();
+			}
+		},
+		GREATER_THAN(">") {
+			@Override
+			protected void addOperator(final SqlBuilder builder) {
+				builder.gt();
+			}
+		},
+		LESS_THAN_OR_EQUAL("<=") {
+			@Override
+			protected void addOperator(final SqlBuilder builder) {
+				builder.lte();
+			}
+		},
+		LESS_THAN("<") {
+			@Override
+			protected void addOperator(final SqlBuilder builder) {
+				builder.lt();
+			}
+		};
+
+		private final String symbol;
+
+		protected void addOperator(final SqlBuilder builder) {
+
+		}
+
+		protected void addOperator(final boolean condition, final SqlBuilder builder) {
+			if (condition) {
+				addOperator(builder);
+			}
+		}
+
+		public BindParameterHolder addOperator(final Dialect dialect, ColumnsHolder columnsHolder, final Row row,
+				String prefix, final SqlBuilder builder) {
+			final BindParameterHolder holder = new BindParameterHolder();
+			if (columnsHolder.getKeyColumns().size() == 1) {
+				Column column = CommonUtils.first(columnsHolder.getKeyColumns());
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, column);
+				} else {
+					builder.name(column, true);
+				}
+				addOperator(builder);
+				builder.space()._add("?");
+				BindParameter dbParameter = new BindParameter();
+				dbParameter.setColumn(column);
+				dbParameter.setValue(row.get(column));
+				holder.getBindParameters().add(dbParameter);
+			} else {
+				addMultiColumnOperator(dialect, columnsHolder, row, prefix, holder, builder);
+			}
+			return holder;
+		}
+
+		protected void addMultiColumnOperator(final Dialect dialect, ColumnsHolder columnsHolder, final Row row,
+				String prefix, final BindParameterHolder holder, final SqlBuilder builder) {
+			boolean supportsRowValueComparisonWithParameters = dialect.supportsRowValueComparisonWithParameters();
+			boolean supportsRowValueComparisonIn = dialect.supportsRowValueComparisonIn();
+			if (supportsRowValueComparisonIn && supportsRowValueComparisonWithParameters) {
+				addMultiColumnOperatorIn(columnsHolder, row, prefix, holder, builder);
+				return;
+			}
+			addMultiColumnOperator(columnsHolder, row, prefix, holder, builder);
+		}
+
+		protected void addMultiColumnOperator(ColumnsHolder columnsHolder, final Row row, String prefix,
+				final BindParameterHolder holder, final SqlBuilder builder) {
+			final int size = columnsHolder.getKeyColumns().size();
+			builder.brackets(true, () -> {
+				Column col = CommonUtils.first(columnsHolder.getKeyColumns());
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, col);
+				} else {
+					builder.name(col, true);
+				}
+				addOperator(builder);
+				builder.space()._add("?");
+				for (int i = 1; i < size; i++) {
+					int[] cnt = new int[1];
+					cnt[0] = i;
+					builder.lineBreak();
+					builder.or().space().brackets(() -> {
+						boolean[] first = new boolean[1];
+						first[0] = true;
+						columnsHolder.forEachKeyColumn((j, column) -> {
+							if (j > cnt[0]) {
+								return;
+							}
+							builder.and(!first[0]);
+							if (!CommonUtils.isEmpty(prefix)) {
+								builder.name(prefix, column);
+							} else {
+								builder.name(column, true);
+							}
+							addOperator(j >= cnt[0], builder);
+							builder.eq(j < cnt[0]).space()._add("?");
+							BindParameter dbParameter = new BindParameter();
+							dbParameter.setColumn(column);
+							dbParameter.setValue(row.get(column));
+							holder.getBindParameters().add(dbParameter);
+							first[0] = false;
+						});
+					});
+				}
+			});
+		}
+
+		protected void addMultiColumnOperatorIn(ColumnsHolder columnsHolder, final Row row, String prefix,
+				final BindParameterHolder holder, final SqlBuilder builder) {
+			builder.brackets(() -> {
+				columnsHolder.forEachKeyColumn((i, column) -> {
+					builder.comma(i > 0);
+					if (!CommonUtils.isEmpty(prefix)) {
+						builder.name(prefix, column);
+					} else {
+						builder.name(column, true);
+					}
+				});
+			});
+			addOperator(builder);
+			builder.space().brackets(() -> {
+				columnsHolder.forEachKeyColumn((j, column) -> {
+					builder.space(j == 0).comma(j > 0);
+					builder._add("?");
+					BindParameter dbParameter = new BindParameter();
+					dbParameter.setColumn(column);
+					dbParameter.setValue(row.get(column));
+					holder.getBindParameters().add(dbParameter);
+				});
+			});
+		}
+
+		private RowComparisonOperator(String symbol) {
+			this.symbol = symbol;
+		}
+
+		public String getSymbol() {
+			return this.symbol;
+		}
+
+		public static RowComparisonOperator parse(String text) {
+			for (RowComparisonOperator enm : values()) {
+				if (enm.getSymbol().equals(text)) {
+					return enm;
+				}
+			}
+			return null;
+		}
+	}
 }

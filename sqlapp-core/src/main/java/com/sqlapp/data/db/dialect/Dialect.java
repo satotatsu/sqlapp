@@ -737,8 +737,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @throws SQLException if metadata cannot be read
 	 */
 	public boolean supportsHoldCursorsOverCommit(Connection connection) throws SQLException {
-		return connection.getMetaData()
-				.supportsResultSetHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
+		return connection.getMetaData().supportsResultSetHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
 	}
 
 	/**
@@ -1444,6 +1443,10 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	public boolean supportsRowValueComparisonIn() {
 		return false;
+	}
+
+	public boolean supportsRowValueComparisonWithParameters() {
+		return true;
 	}
 
 	public void setFetchSizeForStream(PreparedStatement statement, int fetchSize) throws SQLException {

@@ -36,6 +36,7 @@ import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
+import com.sqlapp.exceptions.MultipleRootTablesException;
 import com.sqlapp.jdbc.function.SQLRunnable;
 import com.sqlapp.jdbc.sql.StatementHolder;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -54,7 +55,7 @@ import lombok.Getter;
 @Getter
 public class TableRelationTreeHolder implements Iterable<TableRelation> {
 	private final DoubleKeyMap<String, String, TableRelation> tableMap = CommonUtils.doubleKeyMap();
-	private final List<TableRelation> rootTableList = CommonUtils.list();
+	private final TableRelation rootTableRelation;
 
 	public DoubleKeyMap<String, String, TableRelation> getRelationTree() {
 		return tableMap;
@@ -96,11 +97,17 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 					tableRelation.getForeignKeyConstraint().getRelatedTableName());
 			parentTableRelation.addChild(tableRelation);
 		}
+		List<TableRelation> rootList = CommonUtils.list();
 		for (TableRelation tableRelation : this) {
 			if (tableRelation.isRoot()) {
-				rootTableList.add(tableRelation);
+				rootList.add(tableRelation);
 			}
 		}
+		if (rootList.size() > 1) {
+			Table[] tableArray = rootList.stream().map(tr -> tr.getTable()).toArray(i -> new Table[i]);
+			throw new MultipleRootTablesException(tableArray);
+		}
+		this.rootTableRelation = rootList.getFirst();
 	}
 
 	public TableRelation getTableRelation(Table table) {
@@ -119,7 +126,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private long batchCount = 0;
 		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
 		private SqlSignature sqlSignature;
-		private PreparedStatement statement = null;
+		private PreparedStatement selectStatement = null;
 		private boolean selectRegistered = false;
 		private SqlNode selectSqlNode = null;
 
@@ -137,8 +144,12 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			batchCount = 0;
 		}
 
-		public void setStatement(PreparedStatement statement) {
-			this.statement = statement;
+		public void setSelectStatement(PreparedStatement selectStatement) {
+			this.selectStatement = selectStatement;
+		}
+
+		public PreparedStatement getSelectStatement() {
+			return selectStatement;
 		}
 
 		public void setForeignKeyConstraint(ForeignKeyConstraint foreignKeyConstraint) {
@@ -228,7 +239,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		class ParentListHandler extends NextHandler {
 			private int currentIndex = 0;
-			private List<Row> subList = CommonUtils.list();
+			private final List<Row> subList = CommonUtils.list();
 			private Row currentParentRow;
 
 			public ParentListHandler(TableRelation tableRelation, SQLRunnable afterRootBatchLoaded,
@@ -369,6 +380,9 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				}
 				readResulSetCount++;
 				this.resultSetNext = hasNext;
+				if (!hasNext) {
+					close();
+				}
 			}
 
 			@Override
@@ -587,7 +601,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				nextHandler = null;
 			}
 			this.selectRegistered = false;
-			FileUtils.close(statement);
+			FileUtils.close(selectStatement);
 			this.rows.clear();
 			this.sqlSignature = null;
 			this.row = null;

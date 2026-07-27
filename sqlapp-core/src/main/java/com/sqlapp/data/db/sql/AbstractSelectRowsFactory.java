@@ -41,7 +41,7 @@ public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>>
 		builder.lineBreak();
 		builder.where().true_();
 		builder.lineBreak();
-		builder._add("/*ROWS_EQUALS(keyType=");
+		builder._add("/*ROWS=(keyType=");
 		builder._add(strategy);
 		builder._add(")*/");
 	}

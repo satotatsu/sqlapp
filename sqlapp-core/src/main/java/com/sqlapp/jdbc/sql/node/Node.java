@@ -426,6 +426,21 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		return null;
 	}
 
+	protected Row getLastRow(final Object context) {
+		if (context instanceof Row) {
+			return (Row) context;
+		} else if (context instanceof Table) {
+			return CommonUtils.last(((Table) context).getRows());
+		} else if (context instanceof TableRelation) {
+			TableRelation tableRelation = (TableRelation) context;
+			return CommonUtils.last(tableRelation.getTable().getRows());
+		} else if (context instanceof List) {
+			List<?> list = (List<?>) context;
+			return (Row) CommonUtils.last(list);
+		}
+		return null;
+	}
+
 	public abstract boolean eval(Object context, SqlParameterCollection sqlParameters);
 
 	protected Object evalExpression(String expression, Object context) {

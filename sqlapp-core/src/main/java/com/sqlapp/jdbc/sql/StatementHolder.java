@@ -115,7 +115,13 @@ public class StatementHolder implements Closeable {
 			}
 		}
 		final int columnSize = caluculateParameterCount(sqlSignature);
-		final PreparedStatement statement = sqlParameters.createStatement(connection);
+		final PreparedStatement statement;
+		if (sqlNode.getSqlType().isSelect()) {
+			statement = sqlParameters.createStatementForQuery(connection, ResultSetType.TYPE_FORWARD_ONLY,
+					ResultSetConcurrency.CONCUR_READ_ONLY, ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
+		} else {
+			statement = sqlParameters.createStatement(connection);
+		}
 		setSqlParameters(columnSize, rowSize, sqlParameters, statement);
 		sqlParameters.setBind(statement);
 		return statement;

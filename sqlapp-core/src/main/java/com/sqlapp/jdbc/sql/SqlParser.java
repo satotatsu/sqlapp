@@ -58,6 +58,7 @@ import com.sqlapp.jdbc.sql.node.OutputVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.ParameterMarkerNodeFactory;
 import com.sqlapp.jdbc.sql.node.QueryNodeFactory;
 import com.sqlapp.jdbc.sql.node.ReplaceVariableNodeFactory;
+import com.sqlapp.jdbc.sql.node.RowComparisonOperatorBindVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.RowsEqualsBindVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.jdbc.sql.node.SqlPartNode;
@@ -81,6 +82,7 @@ public class SqlParser {
 		nodeFactoryList.add(new ValuesBindVariableNodeFactory());
 		nodeFactoryList.add(new EndNodeFactory());
 		nodeFactoryList.add(new RowsEqualsBindVariableNodeFactory());
+		nodeFactoryList.add(new RowComparisonOperatorBindVariableNodeFactory());
 		nodeFactoryList.add(new BindVariableArrayNodeFactory());
 		nodeFactoryList.add(new BindVariableNodeFactory());
 		nodeFactoryList.add(new IfNodeFactory());

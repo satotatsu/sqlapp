@@ -96,7 +96,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		executeSql(connection, """
 				CREATE TABLE TMP_COMPANY_MASTER
 				(
-					  COMPANY_ID VARCHAR(4)
+					  LEGACY_COMPANY_ID VARCHAR(4)
 					, SQLAPP_LOAD_STATUS VARCHAR(16) DEFAULT 'PENDING' NOT NULL
 					, SQLAPP_LOADED_AT TIMESTAMP
 				)
@@ -104,15 +104,15 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		executeSql(connection, """
 				CREATE TABLE TMP_EMPLOYEE_LIST
 				(
-					  COMPANY_ID VARCHAR(4)
+					  LEGACY_COMPANY_ID VARCHAR(4)
 					, EMP_ID VARCHAR(6)
 					, SQLAPP_LOADED_AT TIMESTAMP
 				)
 				""");
 		executeSql(connection,
-				"INSERT INTO TMP_COMPANY_MASTER(COMPANY_ID) VALUES ('C001'),('C002')");
+				"INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID) VALUES ('C001'),('C002')");
 		executeSql(connection, """
-				INSERT INTO TMP_EMPLOYEE_LIST(COMPANY_ID,EMP_ID)
+				INSERT INTO TMP_EMPLOYEE_LIST(LEGACY_COMPANY_ID,EMP_ID)
 				VALUES ('C001','E001'),('C001','E002'),('C002','E003')
 				""");
 		connection.commit();
@@ -124,18 +124,18 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		plan.setRootBatchSize(1);
 		plan.setCommitEveryRootBatches(2);
 		LoadDataSet company = dataSet("company", "COMPANY_MASTER", "TMP_COMPANY_MASTER", null, 0);
-		company.getSourceBusinessKey().add("COMPANY_ID");
-		company.getFields().add(field(1, "COMPANY_ID", "COMPANY_ID", true, false, "COPY"));
+		company.getSourceBusinessKey().add("LEGACY_COMPANY_ID");
+		company.getFields().add(field(1, "LEGACY_COMPANY_ID", "COMPANY_ID", true, false, "COPY"));
 		company.getFields().add(field(0, "ID", "ID", false, true, "GENERATE"));
 		plan.getDataSets().add(company);
 		LoadDataSet employee = dataSet("employee", "EMPLOYEE_LIST", "TMP_EMPLOYEE_LIST", company.getId(), 1);
-		employee.getFields().add(field(1, "COMPANY_ID", null, true, false, "DROP"));
+		employee.getFields().add(field(1, "LEGACY_COMPANY_ID", null, true, false, "DROP"));
 		employee.getFields().add(field(2, "EMP_ID", "EMP_ID", true, false, "COPY"));
 		employee.getFields().add(field(0, "ID", "ID", false, true, "GENERATE"));
 		employee.getFields().add(field(0, "PARENT_ID", "PARENT_ID", false, true, "GENERATE"));
 		JoinKey key = new JoinKey();
-		key.setParentStagingColumn("COMPANY_ID");
-		key.setChildStagingColumn("COMPANY_ID");
+		key.setParentStagingColumn("LEGACY_COMPANY_ID");
+		key.setChildStagingColumn("LEGACY_COMPANY_ID");
 		key.setTargetForeignKeyColumn("PARENT_ID");
 		employee.getParentJoinKeys().add(key);
 		plan.getDataSets().add(employee);
