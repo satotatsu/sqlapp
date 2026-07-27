@@ -19,7 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
@@ -50,7 +52,9 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 
 	private String prefix;
 
-	private Set<String> columns;
+	private Map<String, String> mapping = Collections.emptyMap();
+
+	private List<String> columns;
 
 	public String getTarget() {
 		return target;
@@ -78,12 +82,20 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		this.prefix = prefix;
 	}
 
-	public Set<String> getColumns() {
+	public List<String> getColumns() {
 		return columns;
 	}
 
-	public void setColumns(Set<String> columns) {
+	public void setColumns(List<String> columns) {
 		this.columns = columns;
+	}
+
+	public Map<String, String> getMapping() {
+		return this.mapping;
+	}
+
+	public void setMapping(Map<String, String> mapping) {
+		this.mapping = mapping;
 	}
 
 	@Override
@@ -120,15 +132,21 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		final SqlSignature sqlSignature = parentTableRelation.getOrCreateSqlSignature(rows);
 		final ColumnsHolder columnsHolder;
 		if (!CommonUtils.isEmpty(getColumns())) {
-			final Set<Column> columns = CommonUtils.linkedSet();
-			getColumns().forEach(c -> {
-				Column column = parentTableRelation.getTable().getColumns().get(c);
+			final Set<Column> target = CommonUtils.linkedSet();
+			Map<Column, String> mappingNameMap = CommonUtils.map();
+			for (int i = 0; i < columns.size(); i++) {
+				String name = columns.get(i);
+				Column column = parentTableRelation.getTable().getColumns().get(name);
 				if (column == null) {
-					throw new MissingColumnException(parentTableRelation.getTable(), c, getMatchText());
+					throw new MissingColumnException(parentTableRelation.getTable(), name, getMatchText());
 				}
-				columns.add(column);
-			});
-			columnsHolder = new ColumnsHolder(columns, rows);
+				String mappingName = this.getMapping().get(column.getName());
+				if (mappingName != null) {
+					mappingNameMap.put(column, mappingName);
+				}
+				target.add(column);
+			}
+			columnsHolder = new ColumnsHolder(target, rows, mappingNameMap);
 		} else {
 			if (getKeyType() != null) {
 				columnsHolder = getKeyType().get(sqlSignature);

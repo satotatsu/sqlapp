@@ -22,6 +22,7 @@ package com.sqlapp.data.db.sql;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -156,6 +157,8 @@ public class SqlSignature {
 		private final ColumnAnalyzer columnAnalyzer;
 		private final List<Row> rows;
 
+		private final Map<Column, String> mappingNameMap;
+
 		public static final ColumnsHolder EMPTY_COLUMN_HOLDER = new ColumnsHolder();
 
 		ColumnsHolder() {
@@ -168,9 +171,14 @@ public class SqlSignature {
 			this.foreingKeyCommonColumns = Collections.emptySet();
 			this.nullForeingKeyCommonColumns = Collections.emptySet();
 			this.rows = Collections.emptyList();
+			this.mappingNameMap = Collections.emptyMap();
 		}
 
 		public ColumnsHolder(Set<Column> keyColumns, List<Row> rows) {
+			this(keyColumns, rows, Collections.emptyMap());
+		}
+
+		public ColumnsHolder(Set<Column> keyColumns, List<Row> rows, final Map<Column, String> mappingNameMap) {
 			this.keyColumns = keyColumns;
 			Column column = CommonUtils.first(keyColumns);
 			if (column.isPrimaryKey()) {
@@ -186,6 +194,7 @@ public class SqlSignature {
 			this.allKeyColumns = toColumns(allKeyColumnsList);
 			this.foreingKeyCommonColumns = Collections.emptySet();
 			this.nullForeingKeyCommonColumns = Collections.emptySet();
+			this.mappingNameMap = mappingNameMap;
 		}
 
 		public ColumnsHolder(ColumnAnalyzer columnAnalyzer, Set<Column> keyColumns, List<Set<Column>> allKeyColumnsList,
@@ -199,6 +208,7 @@ public class SqlSignature {
 			this.allKeyColumns = toColumns(allKeyColumnsList);
 			this.foreingKeyCommonColumns = ColumnAnalyzer.and(keyColumns, foreignKeyColumns);
 			this.nullForeingKeyCommonColumns = getNullColumns(rows, foreingKeyCommonColumns);
+			this.mappingNameMap = Collections.emptyMap();
 		}
 
 		protected void reCalculate(List<Row> rows) {
@@ -219,6 +229,10 @@ public class SqlSignature {
 				consumer.accept(i, column);
 				i++;
 			}
+		}
+
+		public String getMappingName(Column column) {
+			return mappingNameMap.get(column);
 		}
 
 		public boolean isFullKey() {
@@ -336,11 +350,7 @@ public class SqlSignature {
 			final BindParameterHolder holder = new BindParameterHolder();
 			if (getKeyColumns().size() == 1) {
 				Column column = CommonUtils.first(getKeyColumns());
-				if (!CommonUtils.isEmpty(prefix)) {
-					builder.name(prefix, column);
-				} else {
-					builder.name(column, true);
-				}
+				addName(column, prefix, builder);
 				builder.in().space().brackets(() -> {
 					for (int i = 0; i < rows.size(); i++) {
 						Row row = rows.get(i);
@@ -355,6 +365,23 @@ public class SqlSignature {
 				addRowsValueComparisonAllPattern(dialect, rows, prefix, holder, builder);
 			}
 			return holder;
+		}
+
+		protected void addName(Column column, String prefix, final SqlBuilder builder) {
+			String mappingName = this.getMappingName(column);
+			if (mappingName == null) {
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, column);
+				} else {
+					builder.name(column, true);
+				}
+			} else {
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, new Column(mappingName));
+				} else {
+					builder.name(new Column(mappingName), true);
+				}
+			}
 		}
 
 		private void addRowsValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
@@ -383,11 +410,7 @@ public class SqlSignature {
 					builder.or(i > 0).space().brackets(() -> {
 						forEachKeyColumn((j, column) -> {
 							builder.and(j > 0);
-							if (!CommonUtils.isEmpty(prefix)) {
-								builder.name(prefix, column);
-							} else {
-								builder.name(column, true);
-							}
+							addName(column, prefix, builder);
 							builder.eq().space()._add("?");
 							BindParameter dbParameter = new BindParameter();
 							dbParameter.setColumn(column);
@@ -409,11 +432,7 @@ public class SqlSignature {
 					builder.brackets(() -> {
 						forEachKeyColumn((j, column) -> {
 							builder.comma(j > 0);
-							if (!CommonUtils.isEmpty(prefix)) {
-								builder.name(prefix, column);
-							} else {
-								builder.name(column, true);
-							}
+							addName(column, prefix, builder);
 						});
 					});
 					builder.space().eq().space().brackets(() -> {
@@ -436,11 +455,7 @@ public class SqlSignature {
 			builder.brackets(() -> {
 				forEachKeyColumn((i, column) -> {
 					builder.comma(i > 0);
-					if (!CommonUtils.isEmpty(prefix)) {
-						builder.name(prefix, column);
-					} else {
-						builder.name(column, true);
-					}
+					addName(column, prefix, builder);
 				});
 			});
 			builder.in().space().brackets(() -> {
@@ -485,11 +500,7 @@ public class SqlSignature {
 				builder.brackets(() -> {
 					columnsHolder.forEachKeyColumn((i, column) -> {
 						builder.comma(i > 0);
-						if (!CommonUtils.isEmpty(prefix)) {
-							builder.name(prefix, column);
-						} else {
-							builder.name(column, true);
-						}
+						columnsHolder.addName(column, prefix, builder);
 					});
 				});
 				builder.in();
@@ -510,11 +521,7 @@ public class SqlSignature {
 					final BindParameterHolder holder, final SqlBuilder builder) {
 				builder.brackets(true, () -> {
 					Column col = CommonUtils.first(columnsHolder.getKeyColumns());
-					if (!CommonUtils.isEmpty(prefix)) {
-						builder.name(prefix, col);
-					} else {
-						builder.name(col, true);
-					}
+					columnsHolder.addName(col, prefix, builder);
 					builder.in();
 					builder.space().brackets(() -> {
 						columnsHolder.forEachKeyColumn((i, column) -> {
@@ -575,11 +582,7 @@ public class SqlSignature {
 			final BindParameterHolder holder = new BindParameterHolder();
 			if (columnsHolder.getKeyColumns().size() == 1) {
 				Column column = CommonUtils.first(columnsHolder.getKeyColumns());
-				if (!CommonUtils.isEmpty(prefix)) {
-					builder.name(prefix, column);
-				} else {
-					builder.name(column, true);
-				}
+				columnsHolder.addName(column, prefix, builder);
 				addOperator(builder);
 				builder.space()._add("?");
 				BindParameter dbParameter = new BindParameter();
@@ -608,11 +611,7 @@ public class SqlSignature {
 			final int size = columnsHolder.getKeyColumns().size();
 			builder.brackets(true, () -> {
 				Column col = CommonUtils.first(columnsHolder.getKeyColumns());
-				if (!CommonUtils.isEmpty(prefix)) {
-					builder.name(prefix, col);
-				} else {
-					builder.name(col, true);
-				}
+				columnsHolder.addName(col, prefix, builder);
 				addOperator(builder);
 				builder.space()._add("?");
 				for (int i = 1; i < size; i++) {
@@ -627,11 +626,7 @@ public class SqlSignature {
 								return;
 							}
 							builder.and(!first[0]);
-							if (!CommonUtils.isEmpty(prefix)) {
-								builder.name(prefix, column);
-							} else {
-								builder.name(column, true);
-							}
+							columnsHolder.addName(column, prefix, builder);
 							addOperator(j >= cnt[0], builder);
 							builder.eq(j < cnt[0]).space()._add("?");
 							BindParameter dbParameter = new BindParameter();
@@ -650,11 +645,7 @@ public class SqlSignature {
 			builder.brackets(() -> {
 				columnsHolder.forEachKeyColumn((i, column) -> {
 					builder.comma(i > 0);
-					if (!CommonUtils.isEmpty(prefix)) {
-						builder.name(prefix, column);
-					} else {
-						builder.name(column, true);
-					}
+					columnsHolder.addName(column, prefix, builder);
 				});
 			});
 			addOperator(builder);
