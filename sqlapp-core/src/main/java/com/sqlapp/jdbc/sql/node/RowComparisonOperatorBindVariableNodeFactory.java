@@ -34,7 +34,7 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  *
  */
-public class ComparisonOperatorBindVariableNodeFactory
+public class RowComparisonOperatorBindVariableNodeFactory
 		extends AbstractCommentNodeFactory<RowComparisonOperatorBindVariableNode> {
 
 	static {
