@@ -287,4 +287,35 @@ public class SqlParserTest extends AbstractTest {
 		assertEquals(FileUtils.getResource(this, "source_result.sql"), sqlParameters.getSql());
 	}
 
+	@Test
+	public void testRows() {
+		String sql = """
+					SELECT
+					  p.ID AS PRODUCT_ID
+					FROM FLAT_ORDERS fo
+					INNER JOIN CUSTOMERS c
+					  ON (fo.CUSTOMER_NAME=c.CUSTOMER_NAME)
+					INNER JOIN PRODUCTS p
+					  ON (fo.PRODUCT_NAME=p.PRODUCT_NAME)
+					WHERE 1=1
+					  /*ROWS=(target=ROOT;columns=(CUSTOMER_ID);prefix=c.)*/
+					ORDER BY c.ID, p.ID
+				""";
+		final Node node = parser.parse(dialect, sql);
+		final ParametersContext context = new ParametersContext();
+		final SqlParameterCollection sqlParameters = node.eval(context);
+		String expected = """
+					SELECT
+					  p.ID AS PRODUCT_ID
+					FROM FLAT_ORDERS fo
+					INNER JOIN CUSTOMERS c
+					  ON (fo.CUSTOMER_NAME=c.CUSTOMER_NAME)
+					INNER JOIN PRODUCTS p
+					  ON (fo.PRODUCT_NAME=p.PRODUCT_NAME)
+					WHERE 1=1
+					ORDER BY c.ID, p.ID
+				""";
+		assertEquals(expected.trim(), sqlParameters.getSql().trim());
+	}
+
 }

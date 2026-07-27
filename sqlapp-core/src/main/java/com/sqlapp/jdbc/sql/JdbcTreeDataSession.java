@@ -138,6 +138,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 	}
 
+	public JdbcTreeDataSession(Connection connection, Table... tables) {
+		this.connection = connection;
+		this.tableRelationTreeHolder = new TableRelationTreeHolder(tables);
+		this.dialect = DialectResolver.getInstance().getDialect(connection);
+		this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+	}
+
 	public void setNewRowInitializer(Consumer<Row> newRowInitializer) {
 		this.newRowInitializer = newRowInitializer;
 	}
@@ -191,6 +198,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			selectRoot(tableRelation, sqlNode, context);
 		} else {
 			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT_BY_ROOT_ROWS, sql);
+			tableRelation.setSelectRegistered(true);
 			tableRelation.setSelectSqlNode(sqlNode);
 		}
 	}
@@ -399,6 +407,51 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					final Object value = parentRow.get(parentColumn);
 					childRow.put(column, value);
 				});
+			}
+		}
+	}
+
+	public void readAll() throws SQLException {
+		TableRelation rootTableRelation = this.getRootTableRelation();
+		readResursive(rootTableRelation, (table, rowNo, row) -> {
+		});
+	}
+
+	public void readAll(TableRowConsumer consumer) throws SQLException {
+		TableRelation rootTableRelation = this.getRootTableRelation();
+		readResursive(rootTableRelation, consumer);
+	}
+
+	private void readResursive(TableRelation tableRelation, TableRowConsumer consumer) throws SQLException {
+		Table table = tableRelation.getTable();
+		if (!tableRelation.isSelectRegistered()) {
+			return;
+		}
+		long i = 0;
+		while (next(table)) {
+			Row row = this.getRow(table);
+			consumer.accept(table, i++, row);
+			for (TableRelation child : tableRelation.getChildren()) {
+				readResursive(child, consumer);
+			}
+		}
+	}
+
+	public void readAll(SQLBiConsumer<Table, Row> consumer) throws SQLException {
+		TableRelation rootTableRelation = this.getRootTableRelation();
+		readResursive(rootTableRelation, consumer);
+	}
+
+	private void readResursive(TableRelation tableRelation, SQLBiConsumer<Table, Row> consumer) throws SQLException {
+		Table table = tableRelation.getTable();
+		if (!tableRelation.isSelectRegistered()) {
+			return;
+		}
+		while (next(table)) {
+			Row row = this.getRow(table);
+			consumer.accept(table, row);
+			for (TableRelation child : tableRelation.getChildren()) {
+				readResursive(child, consumer);
 			}
 		}
 	}
@@ -766,9 +819,11 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 							.getLoadDataKeyColumnsMatchingStrategy().apply(rootTable);
 					final SqlSignature sqlSignature = rootTableRelation.getOrCreateSqlSignature(rootRows);
-					ColumnsHolder columnsHolder = columnSelectionStrategy.get(sqlSignature);
-					if (columnsHolder.getKeyColumns().isEmpty()) {
-						return Collections.emptyList();// 親レコードが既に存在せずにキーの補填が出来ない場合
+					if (tableRelation.getSelectSqlNode() == null) {
+						ColumnsHolder columnsHolder = columnSelectionStrategy.get(sqlSignature);
+						if (columnsHolder.getKeyColumns().isEmpty()) {
+							return Collections.emptyList();// 親レコードが既に存在せずにキーの補填が出来ない場合
+						}
 					}
 					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 					if (holder == null) {
@@ -915,6 +970,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	protected Connection getConnection() {
 		return connection;
+	}
+
+	@FunctionalInterface
+	public interface TableRowConsumer {
+
+		void accept(Table table, long rowNo, Row row) throws SQLException;
 	}
 
 }

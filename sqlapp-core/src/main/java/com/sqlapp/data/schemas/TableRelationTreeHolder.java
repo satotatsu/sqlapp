@@ -24,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -70,7 +71,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		return Optional.empty();
 	}
 
-	public TableRelationTreeHolder(List<Table> tables) {
+	public TableRelationTreeHolder(Table... tables) {
+		this(List.of(tables));
+	}
+
+	public TableRelationTreeHolder(Collection<Table> tables) {
 		for (Table table : tables) {
 			final TableRelation tableRelation = new TableRelation(table);
 			tableMap.put(table.getSchemaName(), table.getName(), tableRelation);

@@ -19,8 +19,8 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +36,7 @@ import com.sqlapp.util.CommonUtils;
 public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactory<RowsEqualsBindVariableNode> {
 
 	static {
-		MATCH_PATTERNS = new Pattern[] { Pattern.compile("(?<value>\\s*/\\*ROWS=\\((?<selector>([^)]+))\\)\\*/)") };
+		MATCH_PATTERNS = new Pattern[] { Pattern.compile("(?<value>\\s*/\\*ROWS=\\((?<selector>(.+?))\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
@@ -50,9 +50,20 @@ public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactor
 		node.setTarget(keyMap.get("target"));
 		node.setKeyType(ColumnSelectionStrategy.parse(keyMap.get("keyType")));
 		node.setPrefix(keyMap.get("prefix"));
-		final String columnsArg = keyMap.get("columns");
+		final List<String> columns = parseColumns(keyMap.get("columns"));
+		if (!CommonUtils.isEmpty(columns)) {
+			node.setColumns(columns);
+		}
+		final Map<String, String> mapping = parseMapping(keyMap.get("mapping"));
+		if (!CommonUtils.isEmpty(mapping)) {
+			node.setMapping(mapping);
+		}
+	}
+
+	private List<String> parseColumns(String arg) {
+		final String columnsArg = CommonUtils.unwrap(arg, "(", ")");
 		if (!CommonUtils.isEmpty(columnsArg)) {
-			final Set<String> columns = CommonUtils.linkedSet();
+			final List<String> columns = CommonUtils.list();
 			String[] colArgs = columnsArg.split("\\s*,\\s*");
 			for (int i = 0; i < colArgs.length; i++) {
 				String colArg = CommonUtils.trim(colArgs[i]);
@@ -60,8 +71,27 @@ public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactor
 					columns.add(colArg);
 				}
 			}
-			node.setColumns(columns);
+			return columns;
 		}
+		return null;
+	}
+
+	private Map<String, String> parseMapping(String arg) {
+		final String columnsArg = CommonUtils.unwrap(arg, "(", ")");
+		if (!CommonUtils.isEmpty(columnsArg)) {
+			Map<String, String> result = CommonUtils.upperMap();
+			String[] mappingArgs = columnsArg.trim().split("\\s*,\\s*");
+			for (String mappingArg : mappingArgs) {
+				mappingArg = mappingArg.trim();
+				if (CommonUtils.isEmpty(mappingArg)) {
+					continue;
+				}
+				String[] colArgs = mappingArg.trim().split("\\s*->\\s*");
+				result.put(colArgs[0], colArgs[1]);
+			}
+			return result;
+		}
+		return null;
 	}
 
 	@Override
