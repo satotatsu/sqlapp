@@ -6,6 +6,7 @@
 package com.sqlapp.gradle.plugins;
 
 import java.util.Locale;
+import java.util.function.Predicate;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
@@ -13,6 +14,7 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
@@ -20,10 +22,12 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.normalization.GenerateNormalizationPlanCommand;
+import com.sqlapp.data.schemas.Column;
 
 @DisableCachingByDefault
-public abstract class GenerateNormalizationPlanTask
-		extends AbstractTask<GenerateNormalizationPlanCommand> {
+public abstract class GenerateNormalizationPlanTask extends AbstractTask<GenerateNormalizationPlanCommand> {
+
+	private Predicate<Column> columnFilter = c -> true;
 
 	public GenerateNormalizationPlanTask() {
 		getMinimumColumnCount().convention(2);
@@ -60,16 +64,25 @@ public abstract class GenerateNormalizationPlanTask
 	@Input
 	public abstract Property<String> getLocale();
 
+	@Internal
+	public Predicate<Column> getColumnFilter() {
+		return columnFilter;
+	}
+
+	public void setColumnFilter(Predicate<Column> columnFilter) {
+		this.columnFilter = columnFilter;
+	}
+
 	@Override
 	protected void beforeRun(GenerateNormalizationPlanCommand command) {
 		command.setTargetFile(getTargetFile().get().getAsFile());
 		if (getMigrationMappingFile().isPresent()) {
 			command.setMigrationMappingFile(getMigrationMappingFile().get().getAsFile());
 		}
+		command.setColumnFilter(columnFilter);
 		command.setOutputDirectory(getOutputDirectory().get().getAsFile());
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
-		command.setVariableCharacterMinimumLength(
-				getVariableCharacterMinimumLength().get());
+		command.setVariableCharacterMinimumLength(getVariableCharacterMinimumLength().get());
 		command.setPreviewSchemaEnabled(getPreviewSchemaEnabled().get());
 		command.setLocale(Locale.forLanguageTag(getLocale().get()));
 	}

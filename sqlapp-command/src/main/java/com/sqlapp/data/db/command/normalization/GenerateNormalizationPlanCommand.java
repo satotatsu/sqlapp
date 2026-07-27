@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -40,8 +41,7 @@ import lombok.Setter;
 @Setter
 public class GenerateNormalizationPlanCommand extends AbstractCommand {
 
-	private static final Pattern DATE_NAME = Pattern.compile(
-			"(?i).*(?:DATE|_YMD|YYYYMMDD)$");
+	private static final Pattern DATE_NAME = Pattern.compile("(?i).*(?:DATE|_YMD|YYYYMMDD)$");
 
 	private File targetFile;
 
@@ -51,6 +51,8 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 
 	private int minimumColumnCount = 2;
 
+	private Predicate<Column> columnFilter = c -> true;
+
 	private long variableCharacterMinimumLength = 20;
 
 	private boolean previewSchemaEnabled = true;
@@ -58,8 +60,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 	private Locale locale = Locale.getDefault();
 
 	public static ResourceBundle getResourceBundle(Locale locale) {
-		return ResourceBundle.getBundle(GenerateNormalizationPlanCommand.class.getPackageName()
-				+ ".messages", locale);
+		return ResourceBundle.getBundle(GenerateNormalizationPlanCommand.class.getPackageName() + ".messages", locale);
 	}
 
 	public static String getMessage(Locale locale, String key, Object... arguments) {
@@ -86,17 +87,16 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 			Map<String, Object> plan = map();
 			plan.put("format", "sqlapp-normalization-plan");
 			plan.put("version", 1);
-			plan.put("source", map("schemaFile", targetFile.getAbsolutePath(),
-					"schemaFingerprint", fingerprint(targetFile),
-					"migrationMappingFile", migrationMappingFile == null ? null
-							: migrationMappingFile.getAbsolutePath()));
-			plan.put("preview", map("schemaFile",
-					previewSchemaEnabled ? previewFile.getAbsolutePath() : null,
-					"schemaFingerprint", previewSchemaEnabled ? fingerprint(previewFile) : null,
-					"appliedCandidateCategories",
-					List.of("repeating-columns", "composite-primary-key")));
-			plan.put("configuration", map("minimumColumnCount", minimumColumnCount,
-					"variableCharacterMinimumLength", variableCharacterMinimumLength));
+			plan.put("source",
+					map("schemaFile", targetFile.getAbsolutePath(), "schemaFingerprint", fingerprint(targetFile),
+							"migrationMappingFile",
+							migrationMappingFile == null ? null : migrationMappingFile.getAbsolutePath()));
+			plan.put("preview",
+					map("schemaFile", previewSchemaEnabled ? previewFile.getAbsolutePath() : null, "schemaFingerprint",
+							previewSchemaEnabled ? fingerprint(previewFile) : null, "appliedCandidateCategories",
+							List.of("repeating-columns", "composite-primary-key")));
+			plan.put("configuration", map("minimumColumnCount", minimumColumnCount, "variableCharacterMinimumLength",
+					variableCharacterMinimumLength));
 			plan.put("candidates", candidates);
 			writeYaml(planFile, plan);
 			info(message("log.outputPlan", planFile.getAbsolutePath()));
@@ -114,87 +114,77 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 	private List<Map<String, Object>> candidates(List<Table> tables) {
 		List<Map<String, Object>> result = new ArrayList<>();
 		for (Table table : tables) {
-			var clusters = RepeatColumnClusterBuilder.of(table)
-					.minimumColumnCount(minimumColumnCount).build();
+			var clusters = RepeatColumnClusterBuilder.of(table).minimumColumnCount(minimumColumnCount)
+					.columnFilter(columnFilter).build();
 			int clusterNumber = 0;
 			for (var cluster : clusters) {
 				clusterNumber++;
 				List<Map<String, Object>> columns = new ArrayList<>();
 				for (RepeatColumn repeat : cluster) {
-					columns.add(map("target", repeat.getBaseName(),
-							"sourceColumns", repeat.getColumns().entrySet().stream()
-									.map(entry -> map("index", entry.getKey(),
-											"column", entry.getValue().getName()))
+					columns.add(map("target", repeat.getBaseName(), "sourceColumns",
+							repeat.getColumns().entrySet().stream()
+									.map(entry -> map("index", entry.getKey(), "column", entry.getValue().getName()))
 									.toList()));
 				}
 				result.add(candidate(table, "repeating-columns", "high",
-						map("operation", "split-table",
-								"targetTable", table.getName() + "_DETAIL_" + clusterNumber,
-								"sequenceColumn", "ROW_NO", "indexes", cluster.getIndexes(),
-								"columns", columns),
+						map("operation", "split-table", "targetTable", table.getName() + "_DETAIL_" + clusterNumber,
+								"sequenceColumn", "ROW_NO", "indexes", cluster.getIndexes(), "columns", columns),
 						List.of(message("question.repeatingColumns.sequenceOrder"),
-						message("question.repeatingColumns.unusedAndNull"))));
+								message("question.repeatingColumns.unusedAndNull"))));
 			}
 			if (table.getPrimaryKeyConstraint() == null) {
-				result.add(candidate(table, "missing-primary-key", "high",
-						map("operation", "review-required"),
-				List.of(message("question.missingPrimaryKey.businessKey"))));
+				result.add(candidate(table, "missing-primary-key", "high", map("operation", "review-required"),
+						List.of(message("question.missingPrimaryKey.businessKey"))));
 			} else if (table.getPrimaryKeyConstraint().getColumns().size() >= 2) {
 				result.add(candidate(table, "composite-primary-key", "high",
-						map("operation", "surrogate-key", "column", "ID",
-								"dataType", "INT", "generation", "IDENTITY",
-								"businessKey", table.getPrimaryKeyConstraint().getColumns()
-										.toColumns().stream().map(Column::getName).toList()),
-				List.of(message("question.compositePrimaryKey.keepUnique"))));
+						map("operation", "surrogate-key", "column", "ID", "dataType", "INT", "generation", "IDENTITY",
+								"businessKey", table.getPrimaryKeyConstraint().getColumns().toColumns().stream()
+										.map(Column::getName).toList()),
+						List.of(message("question.compositePrimaryKey.keepUnique"))));
 			}
 			for (Column column : table.getColumns()) {
-				if ((column.getDataType() == DataType.CHAR
-						|| column.getDataType() == DataType.VARCHAR)
+				if ((column.getDataType() == DataType.CHAR || column.getDataType() == DataType.VARCHAR)
 						&& Long.valueOf(8L).equals(column.getLength())
 						&& DATE_NAME.matcher(column.getName()).matches()) {
 					result.add(candidate(table, column, "date-like-character", "medium",
-							map("operation", "change-type", "from",
-									column.getDataType() + "(8)", "to", "DATE",
+							map("operation", "change-type", "from", column.getDataType() + "(8)", "to", "DATE",
 									"format", "yyyyMMdd"),
 							List.of(message("question.dateLikeCharacter.zeroAndBlank"),
-						message("question.dateLikeCharacter.invalidDate"))));
+									message("question.dateLikeCharacter.invalidDate"))));
 				}
 				if (column.getDataType() == DataType.CHAR && column.getLength() != null
 						&& column.getLength() >= variableCharacterMinimumLength) {
-					result.add(candidate(table, column, "char-to-varchar", "medium",
-							map("operation", "change-type", "from", "CHAR",
+					result.add(candidate(
+							table, column, "char-to-varchar", "medium", map("operation", "change-type", "from", "CHAR",
 									"to", "VARCHAR", "length", column.getLength()),
-				List.of(message("question.character.trailingSpaces"))));
-				} else if (column.getDataType() == DataType.NCHAR
-						&& column.getLength() != null
+							List.of(message("question.character.trailingSpaces"))));
+				} else if (column.getDataType() == DataType.NCHAR && column.getLength() != null
 						&& column.getLength() >= variableCharacterMinimumLength) {
-					result.add(candidate(table, column, "nchar-to-nvarchar", "medium",
-							map("operation", "change-type", "from", "NCHAR",
-									"to", "NVARCHAR", "length", column.getLength()),
-				List.of(message("question.character.trailingSpaces"))));
+					result.add(candidate(
+							table, column, "nchar-to-nvarchar", "medium", map("operation", "change-type", "from",
+									"NCHAR", "to", "NVARCHAR", "length", column.getLength()),
+							List.of(message("question.character.trailingSpaces"))));
 				}
 			}
 		}
 		return result;
 	}
 
-	private Map<String, Object> candidate(Table table, String category,
-			String confidence, Map<String, Object> proposal, List<String> questions) {
+	private Map<String, Object> candidate(Table table, String category, String confidence, Map<String, Object> proposal,
+			List<String> questions) {
 		return candidate(table, null, category, confidence, proposal, questions);
 	}
 
-	private Map<String, Object> candidate(Table table, Column column,
-			String category, String confidence, Map<String, Object> proposal,
-			List<String> questions) {
+	private Map<String, Object> candidate(Table table, Column column, String category, String confidence,
+			Map<String, Object> proposal, List<String> questions) {
 		String suffix = column == null ? "" : "-" + column.getName();
-		return map("id", ("normalize-" + table.getName() + suffix + "-" + category)
-						.toLowerCase(Locale.ROOT).replace('_', '-'),
-				"status", "proposed", "confidence", confidence, "category", category,
-				"source", map("schema", table.getSchemaName(), "table", table.getName(),
-						"column", column == null ? null : column.getName(),
-						"remarks", column == null ? table.getRemarks() : column.getRemarks()),
-				"proposal", proposal,
-				"review", map("required", true, "questions", questions));
+		return map("id",
+				("normalize-" + table.getName() + suffix + "-" + category).toLowerCase(Locale.ROOT).replace('_', '-'),
+				"status", "proposed", "confidence", confidence, "category", category, "source",
+				map("schema", table.getSchemaName(), "table", table.getName(), "column",
+						column == null ? null : column.getName(), "remarks",
+						column == null ? table.getRemarks() : column.getRemarks()),
+				"proposal", proposal, "review", map("required", true, "questions", questions));
 	}
 
 	private void writePreview(File previewFile) throws IOException {
@@ -207,8 +197,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 		command.setMigrationMappingEnabled(false);
 		command.run();
 		File generated = new File(work, targetFile.getName());
-		Files.move(generated.toPath(), previewFile.toPath(),
-				StandardCopyOption.REPLACE_EXISTING);
+		Files.move(generated.toPath(), previewFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 		Files.deleteIfExists(work.toPath());
 	}
 
@@ -216,8 +205,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 		File temporary = new File(file.getParentFile(), file.getName() + ".tmp");
 		new YamlConverter().writeJsonValue(temporary, value);
 		try {
-			Files.move(temporary.toPath(), file.toPath(),
-					StandardCopyOption.REPLACE_EXISTING);
+			Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
 			throw new CommandException(message("error.writePlan", file), e);
 		} finally {
