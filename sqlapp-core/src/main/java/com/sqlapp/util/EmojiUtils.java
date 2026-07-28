@@ -43,7 +43,7 @@ public final class EmojiUtils {
 	}
 
 	public static String getUniqueKey() {
-		return "🔑";
+		return "⭐";
 	}
 
 	public static String getUniqueKeyFull() {
@@ -59,7 +59,7 @@ public final class EmojiUtils {
 	}
 
 	public static String getIndex() {
-		return "⚡";
+		return "🔍";
 	}
 
 	public static String getIndexFull() {
@@ -154,7 +154,7 @@ public final class EmojiUtils {
 		private String caluculated;
 		private String caluculatedFull;
 
-		private static final String SPACE = "⠀ ";
+		private static final String SPACE = "";
 
 		public ColumnEmojiHolder(final Column column) {
 			this.column = column;
@@ -181,29 +181,21 @@ public final class EmojiUtils {
 			if (primaryKey != null) {
 				if (foreignKey != null) {
 					builder.append(foreignKey);
-				} else {
-					builder.append(SPACE);
 				}
 				builder.append(primaryKey);
 			} else if (uniqueKey != null) {
 				if (foreignKey != null) {
 					builder.append(foreignKey);
-				} else {
-					builder.append(SPACE);
 				}
 				builder.append(uniqueKey);
 			} else {
-				builder.append(SPACE);
 				if (foreignKey != null) {
 					builder.append(foreignKey);
-				} else {
-					builder.append(SPACE);
-					builder.append(SPACE);
 				}
 			}
-//			if (index != null) {
-//				return index;
-//			}
+			if (index != null) {
+				builder.append(index);
+			}
 			return builder.toString();
 		}
 

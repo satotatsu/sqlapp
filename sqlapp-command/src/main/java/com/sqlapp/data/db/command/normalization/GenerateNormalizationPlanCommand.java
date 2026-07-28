@@ -23,6 +23,8 @@ import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.migration.LegacyMigrationMappingValidator;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.RepeatColumn;
 import com.sqlapp.data.schemas.RepeatColumnClusterBuilder;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -138,8 +140,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 			} else if (table.getPrimaryKeyConstraint().getColumns().size() >= 2) {
 				result.add(candidate(table, "composite-primary-key", "high",
 						map("operation", "surrogate-key", "column", "ID", "dataType", "INT", "generation", "IDENTITY",
-								"businessKey", table.getPrimaryKeyConstraint().getColumns().toColumns().stream()
-										.map(Column::getName).toList()),
+								"businessKey", proposedBusinessKey(table)),
 						List.of(message("question.compositePrimaryKey.keepUnique"))));
 			}
 			for (Column column : table.getColumns()) {
@@ -168,6 +169,41 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 			}
 		}
 		return result;
+	}
+
+	private List<String> proposedBusinessKey(Table table) {
+		List<Column> primaryKeyColumns = table.getPrimaryKeyConstraint().getColumns().toColumns();
+		List<String> result = new ArrayList<>(primaryKeyColumns.stream().map(Column::getName).toList());
+		List<ForeignKeyConstraint> convertedForeignKeys = table.getConstraints().getForeignKeyConstraints().stream()
+				.filter(this::referencesCompositePrimaryKey).toList();
+		boolean multipleParents = convertedForeignKeys.size() > 1;
+		for (ForeignKeyConstraint foreignKey : convertedForeignKeys) {
+			List<Column> localColumns = new ArrayList<>(foreignKey.getColumns());
+			if (!primaryKeyColumns.containsAll(localColumns)) {
+				continue;
+			}
+			List<String> localNames = localColumns.stream().map(Column::getName).toList();
+			result.removeIf(name -> localNames.stream().anyMatch(local -> local.equalsIgnoreCase(name)));
+			String parentId = multipleParents ? foreignKey.getRelatedTable().getName() + "_ID" : "PARENT_ID";
+			result.add(0, parentId);
+		}
+		return result;
+	}
+
+	private boolean referencesCompositePrimaryKey(ForeignKeyConstraint foreignKey) {
+		Table relatedTable = foreignKey.getRelatedTable();
+		if (relatedTable == null || relatedTable.getPrimaryKeyConstraint() == null
+				|| relatedTable.getPrimaryKeyConstraint().getColumns().size() < 2) {
+			return false;
+		}
+		List<String> relatedNames = foreignKey.getRelatedColumns().stream().map(ReferenceColumn::getName).toList();
+		List<Column> primaryKeyColumns = relatedTable.getPrimaryKeyConstraint().getColumns().toColumns();
+		if (relatedNames.size() != primaryKeyColumns.size()) {
+			return false;
+		}
+		return java.util.stream.IntStream.range(0, relatedNames.size())
+				.allMatch(index -> relatedNames.get(index) == null
+						|| relatedNames.get(index).equalsIgnoreCase(primaryKeyColumns.get(index).getName()));
 	}
 
 	private Map<String, Object> candidate(Table table, String category, String confidence, Map<String, Object> proposal,
