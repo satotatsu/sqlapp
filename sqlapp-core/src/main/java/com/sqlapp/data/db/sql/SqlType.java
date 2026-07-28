@@ -128,7 +128,7 @@ public enum SqlType {
 	/**
 	 * SELECT
 	 */
-	SELECT_ROWS(SqlMetaType.DML) {
+	SELECT_BY_ROWS(SqlMetaType.DML) {
 		@Override
 		public SqlExecuteType getSqlExecuteType() {
 			return SqlExecuteType.ROWS;

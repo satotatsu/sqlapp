@@ -37,7 +37,7 @@ public class SelectRowsFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.SELECT_ROWS);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.SELECT_BY_ROWS);
 	}
 
 	@Test

@@ -56,7 +56,7 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		this.columnMappingMap.clear();
 	}
 
-	private SQLConsumer<List<Row>> deleteSourceRowHandler = rows -> {
+	private SQLConsumer<List<Row>> processedRootHandler = rows -> {
 		final TableRelation tableRelation = source.getRootTableRelation();
 		source.deleteByRows(tableRelation, rows);
 	};
@@ -76,8 +76,8 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 	 * @param deleteSourceRowHandler handler invoked for successfully copied source
 	 *                               root rows
 	 */
-	public void setDeleteSourceRowHandler(SQLConsumer<List<Row>> deleteSourceRowHandler) {
-		this.deleteSourceRowHandler = Objects.requireNonNull(deleteSourceRowHandler);
+	public void setProcessedRootHandler(SQLConsumer<List<Row>> processedRootHandler) {
+		this.processedRootHandler = Objects.requireNonNull(processedRootHandler);
 	}
 
 	public void setRootBatchSize(int rootBatchSize) {
@@ -105,15 +105,13 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 	public JdbcTreeDataCopySession(JdbcTreeDataSession source, JdbcTreeDataSession target) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
-		this.source = source;
-		this.target = target;
 		setRootBatchSize(this.rootBatchSize);
 		final List<Row> sourceRows = CommonUtils.list();
 		this.source.setAfterRootBatchHandler((i, t, rows) -> {
 			sourceRows.addAll(rows);
 		});
 		this.target.setAfterRootBatchHandler((i, t, rows) -> {
-			deleteSourceRows(sourceRows);
+			handleProcessedRoot(sourceRows);
 		});
 		this.target.setAfterCommitEveryRootBatchesHandler((i, row) -> {
 			if (!source.isSameConnection(target)) {
@@ -123,11 +121,11 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		});
 	}
 
-	private void deleteSourceRows(final List<Row> sourceRows) throws SQLException {
+	private void handleProcessedRoot(final List<Row> sourceRows) throws SQLException {
 		if (sourceRows.isEmpty()) {
 			return;
 		}
-		deleteSourceRowHandler.accept(sourceRows);
+		processedRootHandler.accept(sourceRows);
 		sourceRows.clear();
 	}
 
