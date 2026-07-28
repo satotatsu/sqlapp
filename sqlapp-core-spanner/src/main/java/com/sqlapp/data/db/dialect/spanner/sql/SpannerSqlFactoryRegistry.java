@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.spanner.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 
 public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
@@ -36,6 +37,8 @@ public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
 		registerSqlFactory(Table.class, SqlType.CREATE,
 				SpannerCreateTableFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE,
+				SpannerCreateIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SpannerCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, SpannerTruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SpannerTruncateTemporaryTableFactory.class);

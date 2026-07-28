@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.spanner.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -30,6 +32,9 @@ import com.sqlapp.util.AbstractSqlBuilder;
  */
 public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
+	public static final String ALLOW_COMMIT_TIMESTAMP =
+			"ALLOW_COMMIT_TIMESTAMP";
+
 	public SpannerSqlBuilder(Dialect dialect) {
 		super(dialect);
 	}
@@ -38,6 +43,25 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
+	@Override
+	public SpannerSqlBuilder definition(final Column column,
+			final boolean withRemarks) {
+		super.definition(column, withRemarks);
+		final Boolean allowCommitTimestamp = column.getSpecifics().get(
+				ALLOW_COMMIT_TIMESTAMP, Boolean.class);
+		if (Boolean.TRUE.equals(allowCommitTimestamp)) {
+			if (column.getDataType() != DataType.TIMESTAMP) {
+				throw new IllegalArgumentException(
+						"Cloud Spanner allow_commit_timestamp requires "
+								+ "a TIMESTAMP column: " + column.getName());
+			}
+			space()._add("OPTIONS").space()._add("(")
+					._add("allow_commit_timestamp=true")
+					._add(")");
+		}
+		return this;
+	}
 
 	
 	@Override

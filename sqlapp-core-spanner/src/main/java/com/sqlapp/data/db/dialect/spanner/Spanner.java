@@ -111,6 +111,7 @@ public class Spanner extends Dialect {
 		// Timestamp
 		getDbDataTypes().addTimestamp("TIMESTAMP", type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setCreateFormat("TIMESTAMP");
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// FLOAT64

@@ -133,7 +133,6 @@ deferred.
 ### Cloud Spanner
 
 - interleaved-table parent, `ON DELETE` behavior and key ordering
-- conversion of logical unique constraints into Spanner unique indexes
 - change streams and their tracked-object configuration
 - property graphs, graph node/edge tables and labels
 - search indexes, vector indexes and embedding options
