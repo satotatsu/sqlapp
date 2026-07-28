@@ -8,6 +8,8 @@ package com.sqlapp.data.db.dialect.oracle;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.oracle.sql.Oracle21cSqlFactoryRegistry;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * Oracle Database 21c dialect.
@@ -26,5 +28,10 @@ public class Oracle21c extends Oracle19c {
 		getDbDataTypes().addJsonType(type -> {
 			type.setCreateFormat("JSON");
 		});
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new Oracle21cSqlFactoryRegistry(this);
 	}
 }

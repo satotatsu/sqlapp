@@ -14,10 +14,15 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.FunctionType;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.VectorDistanceType;
+import com.sqlapp.data.db.dialect.oracle.metadata.OracleFunctionReader;
+import com.sqlapp.data.db.dialect.oracle.metadata.OracleSequenceReader;
 
 class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 
@@ -113,6 +118,94 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 				() -> oracle21.createSqlFactoryRegistry().createSql(table, SqlType.CREATE));
 	}
 
+	@Test
+	void testScalableAndSessionSequences() {
+		final Sequence scalable = new Sequence("ORDER_SEQ");
+		scalable.setDialect(dialect);
+		scalable.getSpecifics().put(OracleSequenceReader.SCALE, true);
+		scalable.getSpecifics().put(OracleSequenceReader.EXTEND, true);
+		final String scalableSql = sqlFactoryRegistry
+				.createSql(scalable, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(scalableSql.contains("SCALE EXTEND"), scalableSql);
+
+		final Sequence session = new Sequence("TEMP_ROW_SEQ");
+		session.setDialect(dialect);
+		session.getSpecifics().put(OracleSequenceReader.SESSION, true);
+		final String sessionSql = sqlFactoryRegistry
+				.createSql(session, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(sessionSql.contains(" SESSION"), sessionSql);
+	}
+
+	@Test
+	void testSequenceVersionBoundary() {
+		final Sequence scalable = new Sequence("ORDER_SEQ");
+		scalable.getSpecifics().put(OracleSequenceReader.SCALE, true);
+
+		final var oracle12 = DialectResolver.getInstance()
+				.getDialect("Oracle", 12, 2, 0);
+		scalable.setDialect(oracle12);
+		final String oracle12Sql = oracle12.createSqlFactoryRegistry()
+				.createSql(scalable, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(!oracle12Sql.contains("SCALE"), oracle12Sql);
+
+		final var oracle18 = DialectResolver.getInstance()
+				.getDialect("Oracle", 18, 0, 0);
+		scalable.setDialect(oracle18);
+		final String oracle18Sql = oracle18.createSqlFactoryRegistry()
+				.createSql(scalable, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(oracle18Sql.contains("SCALE NOEXTEND"), oracle18Sql);
+	}
+
+	@Test
+	void testScalarAndTableSqlMacros() {
+		final Function scalar = createSqlMacro("NORMALIZE_CODE",
+				FunctionType.Scalar, "RETURN 'UPPER(code)';");
+		final String scalarSql = sqlFactoryRegistry
+				.createSql(scalar, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(scalarSql.contains("SQL_MACRO(SCALAR)"), scalarSql);
+
+		final Function table = createSqlMacro("ACTIVE_ORDERS",
+				FunctionType.Table, "RETURN 'SELECT * FROM ORDERS WHERE ACTIVE = 1';");
+		final String tableSql = sqlFactoryRegistry
+				.createSql(table, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(tableSql.contains("SQL_MACRO(TABLE)"), tableSql);
+	}
+
+	@Test
+	void testSqlMacroVersionBoundary() {
+		final var oracle19 = DialectResolver.getInstance()
+				.getDialect("Oracle", 19, 0, 0);
+		final Function tableMacro = createSqlMacro("ACTIVE_ORDERS",
+				FunctionType.Table,
+				"RETURN 'SELECT * FROM ORDERS WHERE ACTIVE = 1';");
+		tableMacro.setDialect(oracle19);
+		final String oracle19Sql = oracle19.createSqlFactoryRegistry()
+				.createSql(tableMacro, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(oracle19Sql.contains("SQL_MACRO"), oracle19Sql);
+		assertTrue(!oracle19Sql.contains("SQL_MACRO(TABLE)"), oracle19Sql);
+
+		final Function scalarMacro = createSqlMacro("NORMALIZE_CODE",
+				FunctionType.Scalar, "RETURN 'UPPER(code)';");
+		scalarMacro.setDialect(oracle19);
+		assertThrows(IllegalArgumentException.class,
+				() -> oracle19.createSqlFactoryRegistry()
+						.createSql(scalarMacro, SqlType.CREATE));
+
+		final var oracle21 = DialectResolver.getInstance()
+				.getDialect("Oracle", 21, 0, 0);
+		scalarMacro.setDialect(oracle21);
+		final String oracle21Sql = oracle21.createSqlFactoryRegistry()
+				.createSql(scalarMacro, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(oracle21Sql.contains("SQL_MACRO(SCALAR)"), oracle21Sql);
+	}
+
 	private Table createVectorTable() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
@@ -121,5 +214,17 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 				.setVectorDimension(768)
 				.setVectorElementDataType(DataType.REAL));
 		return table;
+	}
+
+	private Function createSqlMacro(final String name,
+			final FunctionType functionType, final String statement) {
+		final Function function = new Function(name);
+		function.setDialect(dialect);
+		function.setFunctionType(functionType);
+		function.getReturning().setDataType(DataType.VARCHAR);
+		function.getReturning().setLength(4000);
+		function.setStatement(statement);
+		function.getSpecifics().put(OracleFunctionReader.SQL_MACRO, true);
+		return function;
 	}
 }

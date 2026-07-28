@@ -7,17 +7,18 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Function;
 
-public class Oracle23aiSqlFactoryRegistry extends Oracle21cSqlFactoryRegistry {
+public class Oracle21cSqlFactoryRegistry extends Oracle19cSqlFactoryRegistry {
 
-	public Oracle23aiSqlFactoryRegistry(final Dialect dialect) {
+	public Oracle21cSqlFactoryRegistry(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Index.class, SqlType.CREATE, Oracle23aiCreateIndexFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE,
+				Oracle21cCreateFunctionFactory.class);
 	}
 }

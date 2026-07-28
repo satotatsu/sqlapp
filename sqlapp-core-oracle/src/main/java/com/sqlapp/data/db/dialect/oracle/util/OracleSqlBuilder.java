@@ -36,6 +36,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -154,27 +155,201 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	}
 
 	private String getVectorElementType(final Column column) {
-		if (column.getVectorElementDataType() == null) {
+		return getVectorElementType(column.getVectorElementDataType(),
+				column.getVectorDimension(), column.getName());
+	}
+
+	private String getVectorElementType(final DataType elementDataType,
+			final Integer dimension, final String objectName) {
+		if (elementDataType == null) {
 			return null;
 		}
-		if (column.getVectorElementDataType() == DataType.REAL) {
+		if (elementDataType == DataType.REAL) {
 			return "FLOAT32";
 		}
-		if (column.getVectorElementDataType() == DataType.DOUBLE) {
+		if (elementDataType == DataType.DOUBLE) {
 			return "FLOAT64";
 		}
-		if (column.getVectorElementDataType() == DataType.TINYINT) {
+		if (elementDataType == DataType.TINYINT) {
 			return "INT8";
 		}
-		if (column.getVectorElementDataType() == DataType.BINARY) {
-			if (column.getVectorDimension() != null && column.getVectorDimension() % 8 != 0) {
+		if (elementDataType == DataType.BINARY) {
+			if (dimension != null && dimension % 8 != 0) {
 				throw new IllegalArgumentException("Oracle BINARY VECTOR dimension must be a multiple of 8: "
-						+ column.getName());
+						+ objectName);
 			}
 			return "BINARY";
 		}
 		throw new IllegalArgumentException("Unsupported Oracle VECTOR element data type: "
-				+ column.getVectorElementDataType());
+				+ elementDataType);
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_DISTANCE expression.
+	 *
+	 * @param leftExpression left vector SQL expression
+	 * @param rightExpression right vector SQL expression
+	 * @param distanceType distance metric, or {@code null} for Oracle's default
+	 */
+	public OracleSqlBuilder vectorDistance(final CharSequence leftExpression,
+			final CharSequence rightExpression,
+			final VectorDistanceType distanceType) {
+		checkVectorSearchSupport();
+		checkExpression(leftExpression, "leftExpression");
+		checkExpression(rightExpression, "rightExpression");
+		_add("VECTOR_DISTANCE")._add("(")._add(leftExpression.toString());
+		comma()._add(rightExpression.toString());
+		if (distanceType != null) {
+			comma()._add(toOracleVectorDistance(distanceType));
+		}
+		_add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle shorthand vector-distance operator expression.
+	 */
+	public OracleSqlBuilder vectorDistanceOperator(
+			final CharSequence leftExpression,
+			final CharSequence rightExpression,
+			final VectorDistanceType distanceType) {
+		checkVectorSearchSupport();
+		checkExpression(leftExpression, "leftExpression");
+		checkExpression(rightExpression, "rightExpression");
+		final String operator;
+		if (distanceType == VectorDistanceType.Euclidean) {
+			operator = "<->";
+		} else if (distanceType == VectorDistanceType.Cosine) {
+			operator = "<=>";
+		} else if (distanceType == VectorDistanceType.DotProduct
+				|| distanceType == VectorDistanceType.InnerProduct) {
+			operator = "<#>";
+		} else {
+			throw new IllegalArgumentException(
+					"Oracle has no shorthand operator for vector distance: "
+							+ distanceType);
+		}
+		_add(leftExpression.toString()).space()._add(operator).space()
+				._add(rightExpression.toString());
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle TO_VECTOR conversion expression.
+	 */
+	public OracleSqlBuilder toVector(final CharSequence expression,
+			final Integer dimension, final DataType elementDataType) {
+		checkVectorSearchSupport();
+		checkExpression(expression, "expression");
+		if (dimension != null && (dimension <= 0 || dimension > 65535)) {
+			throw new IllegalArgumentException(
+					"Oracle VECTOR dimension must be between 1 and 65535: "
+							+ dimension);
+		}
+		final String elementType = getVectorElementType(elementDataType,
+				dimension, "TO_VECTOR");
+		_add("TO_VECTOR")._add("(")._add(expression.toString());
+		if (dimension != null || elementType != null) {
+			comma()._add(dimension == null ? "*" : dimension);
+		}
+		if (elementType != null) {
+			comma()._add(elementType);
+		}
+		_add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle FROM_VECTOR conversion expression.
+	 */
+	public OracleSqlBuilder fromVector(final CharSequence expression) {
+		checkVectorSearchSupport();
+		checkExpression(expression, "expression");
+		_add("FROM_VECTOR")._add("(")._add(expression.toString())._add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an approximate vector-search row limiting clause.
+	 */
+	public OracleSqlBuilder fetchApproximateFirst(final int rowCount,
+			final Integer targetAccuracy) {
+		return fetchApproximateFirst(rowCount, targetAccuracy, null, null);
+	}
+
+	/**
+	 * Adds an approximate vector-search row limiting clause with HNSW/IVF
+	 * search parameters. Accuracy and explicit parameters are alternatives.
+	 */
+	public OracleSqlBuilder fetchApproximateFirst(final int rowCount,
+			final Integer targetAccuracy, final Integer efSearch,
+			final Integer neighborPartitionProbes) {
+		checkVectorSearchSupport();
+		if (rowCount <= 0) {
+			throw new IllegalArgumentException("rowCount must be greater than zero");
+		}
+		if (targetAccuracy != null
+				&& (targetAccuracy <= 0 || targetAccuracy > 100)) {
+			throw new IllegalArgumentException(
+					"targetAccuracy must be between 1 and 100");
+		}
+		if (efSearch != null && efSearch <= 0) {
+			throw new IllegalArgumentException("efSearch must be greater than zero");
+		}
+		if (neighborPartitionProbes != null && neighborPartitionProbes <= 0) {
+			throw new IllegalArgumentException(
+					"neighborPartitionProbes must be greater than zero");
+		}
+		if (targetAccuracy != null
+				&& (efSearch != null || neighborPartitionProbes != null)) {
+			throw new IllegalArgumentException(
+					"targetAccuracy and search parameters are alternatives");
+		}
+		fetch().space()._add("APPROXIMATE FIRST").space()._add(rowCount)
+				.space()._add("ROWS ONLY");
+		if (targetAccuracy != null) {
+			space()._add("WITH TARGET ACCURACY").space()
+					._add(targetAccuracy);
+		} else if (efSearch != null || neighborPartitionProbes != null) {
+			space()._add("WITH TARGET ACCURACY PARAMETERS").space()._add("(");
+			boolean comma = false;
+			if (efSearch != null) {
+				_add("EFSEARCH").space()._add(efSearch);
+				comma = true;
+			}
+			if (neighborPartitionProbes != null) {
+				comma(comma)._add("NEIGHBOR PARTITION PROBES").space()
+						._add(neighborPartitionProbes);
+			}
+			_add(")");
+		}
+		return instance();
+	}
+
+	private void checkVectorSearchSupport() {
+		if (getDialect().getDbDataTypes().getDbTypeStrict(DataType.VECTOR) == null) {
+			throw new IllegalArgumentException(
+					"Oracle AI Vector Search requires Oracle Database 23ai or later");
+		}
+	}
+
+	private void checkExpression(final CharSequence expression,
+			final String argumentName) {
+		if (expression == null || expression.toString().isBlank()) {
+			throw new IllegalArgumentException(argumentName + " must not be empty");
+		}
+	}
+
+	private String toOracleVectorDistance(
+			final VectorDistanceType distanceType) {
+		if (distanceType == VectorDistanceType.EuclideanSquared) {
+			return "EUCLIDEAN_SQUARED";
+		}
+		if (distanceType == VectorDistanceType.DotProduct
+				|| distanceType == VectorDistanceType.InnerProduct) {
+			return "DOT";
+		}
+		return distanceType.getSqlValue();
 	}
 	
 	/**

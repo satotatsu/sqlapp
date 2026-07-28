@@ -8,6 +8,8 @@ package com.sqlapp.data.db.dialect.oracle;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.oracle.sql.Oracle18cSqlFactoryRegistry;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * Oracle Database 18c dialect.
@@ -18,5 +20,10 @@ public class Oracle18c extends Oracle12c {
 
 	protected Oracle18c(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new Oracle18cSqlFactoryRegistry(this);
 	}
 }
