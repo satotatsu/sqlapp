@@ -38,6 +38,7 @@ import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
 import com.sqlapp.data.db.command.migration.LegacyMigrationMappingOutput;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
+import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.AbstractColumnConstraint;
 import com.sqlapp.data.schemas.Column;
@@ -49,6 +50,7 @@ import com.sqlapp.data.schemas.RepeatColumnClusterBuilder;
 import com.sqlapp.data.schemas.RepeatColumnClusterBuilder.RepeatColumnCluster;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
 
@@ -66,13 +68,16 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class FirstNormalFormCommand extends AbstractCommand implements TargetFileProperty, OutputDirectoryProperty {
+public class FirstNormalFormCommand extends AbstractCommand
+		implements TargetFileProperty, OutputDirectoryProperty, ForeignKeyDefinitionDirectoryProperty {
 
 	/** Input schema XML file. */
 	private File targetFile;
 
 	/** Output directory. */
 	private File outputDirectory = new File("./");
+
+	private File foreignKeyDefinitionDirectory;
 
 	/** Determines the name of the sequence key column added to a child table. */
 	private Function<Table, String> childKeyColumnNameStrategy = table -> "ROW_NO";
@@ -123,6 +128,7 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 		new LegacyMigrationMappingOutput().validateInput(migrationMappingFile, targetFile);
 		execute(() -> {
 			DbCommonObject<?> root = SchemaUtils.readXml(targetFile);
+			new VirtualForeignKeyLoader().loadTables(SchemaUtils.toTables(root), foreignKeyDefinitionDirectory);
 			Map<String, Object> normalizationLog = normalize(root);
 			if (convertCompositePrimaryKey) {
 				CompositePrimaryKeyToSurrogateKeyCommand converter = new CompositePrimaryKeyToSurrogateKeyCommand();

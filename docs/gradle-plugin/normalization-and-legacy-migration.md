@@ -34,6 +34,7 @@ documentation and ER diagrams can be compared.
 |---|---|---:|---|---|
 | `targetFile` | `RegularFileProperty` | yes | — | Source Schema XML |
 | `migrationMappingFile` | `RegularFileProperty` | no | — | Existing migration mapping to augment |
+| `foreignKeyDefinitionDirectory` | `DirectoryProperty` | no | — | External virtual-FK definitions used to recognize logical parent-child relationships |
 | `outputDirectory` | `DirectoryProperty` | yes | — | Plan and preview output directory |
 | `minimumColumnCount` | `Property<Integer>` | yes | `2` | Minimum repeating-column count considered a candidate |
 | `variableCharacterMinimumLength` | `Property<Long>` | yes | `20` | Character-length threshold used by type recommendations |
@@ -64,6 +65,7 @@ composite primary keys with surrogate keys.
 |---|---|---:|---|---|
 | `targetFile` | `RegularFileProperty` | yes | — | Source Schema XML |
 | `outputDirectory` | `DirectoryProperty` | yes | — | Normalized Schema XML directory |
+| `foreignKeyDefinitionDirectory` | `DirectoryProperty` | no | — | External virtual-FK definitions to load before normalization |
 | `minimumColumnCount` | `Property<Integer>` | yes | `2` | Repeating-column cluster threshold |
 | `migrationMappingEnabled` | `Property<Boolean>` | yes | `true` | Generate or update migration mapping |
 | `convertCompositePrimaryKey` | `Property<Boolean>` | yes | `false` | Convert composite primary keys to surrogate keys |
@@ -71,6 +73,10 @@ composite primary keys with surrogate keys.
 | `migrationMappingDirectory` | `DirectoryProperty` | no | command default | Mapping output directory |
 | `migrationMappingFileName` | `Property<String>` | no | command default | Mapping output filename |
 | `migrationMappingFile` | `RegularFileProperty` | no | — | Existing migration mapping |
+
+Converted virtual relationships are written into the normalized Schema XML.
+Do not apply the original pre-normalization virtual-FK definitions again when
+generating documentation from that normalized XML.
 
 Advanced naming and datatype strategies are Java/Groovy closures exposed as
 task properties:

@@ -23,9 +23,11 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.normalization.GenerateNormalizationPlanCommand;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 
 @DisableCachingByDefault
-public abstract class GenerateNormalizationPlanTask extends AbstractTask<GenerateNormalizationPlanCommand> {
+public abstract class GenerateNormalizationPlanTask extends AbstractTask<GenerateNormalizationPlanCommand>
+		implements ForeignKeyDefinitionDirectoryTaskProperty {
 
 	private Predicate<Column> columnFilter = c -> true;
 
@@ -80,6 +82,9 @@ public abstract class GenerateNormalizationPlanTask extends AbstractTask<Generat
 			command.setMigrationMappingFile(getMigrationMappingFile().get().getAsFile());
 		}
 		command.setColumnFilter(columnFilter);
+		if (getForeignKeyDefinitionDirectory().isPresent()) {
+			command.setForeignKeyDefinitionDirectory(getForeignKeyDefinitionDirectory().get().getAsFile());
+		}
 		command.setOutputDirectory(getOutputDirectory().get().getAsFile());
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setVariableCharacterMinimumLength(getVariableCharacterMinimumLength().get());

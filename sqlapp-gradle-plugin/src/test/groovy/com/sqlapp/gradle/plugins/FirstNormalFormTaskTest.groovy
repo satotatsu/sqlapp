@@ -83,7 +83,11 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		project.plugins.apply(DbPlugin)
 
 		FirstNormalFormTask task = project.tasks.named("firstNormalForm", FirstNormalFormTask).get()
+		File foreignKeyDirectory = new File(testProjectDir, "foreignkey")
+		assertTrue(foreignKeyDirectory.mkdirs())
+		task.foreignKeyDefinitionDirectory.set(foreignKeyDirectory)
 		assertNotNull(task)
+		assertEquals(foreignKeyDirectory, task.foreignKeyDefinitionDirectory.get().asFile)
 		assertEquals(2, task.minimumColumnCount.get())
 		assertTrue(task.migrationMappingEnabled.get())
 		assertFalse(task.convertCompositePrimaryKey.get())
