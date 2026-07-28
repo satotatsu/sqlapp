@@ -60,6 +60,9 @@ public class MariadbTable10_27Reader extends MySqlTable564Reader {
 		if (createOptions != null && !createOptions.isBlank()) {
 			table.getSpecifics().put("CREATE_OPTIONS", createOptions);
 		}
+		if ("SYSTEM VERSIONED".equalsIgnoreCase(getString(rs, "TABLE_TYPE"))) {
+			table.toSystemVersioning().setImplicit(true);
+		}
 		return table;
 	}
 }

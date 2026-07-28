@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mariadb.sql.MariadbSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.mariadb.util.MariadbSqlBuilder;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
@@ -35,5 +36,10 @@ public class Mariadb10_30 extends Mariadb10_27 {
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new MariadbSqlFactoryRegistry(this);
+	}
+
+	@Override
+	public MariadbSqlBuilder createSqlBuilder() {
+		return new MariadbSqlBuilder(this);
 	}
 }

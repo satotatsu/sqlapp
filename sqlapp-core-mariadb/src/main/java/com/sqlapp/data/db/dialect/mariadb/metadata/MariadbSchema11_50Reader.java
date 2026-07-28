@@ -11,7 +11,7 @@ import com.sqlapp.data.db.metadata.SequenceReader;
 /**
  * MariaDB 11.5 schema reader.
  */
-public class MariadbSchema11_50Reader extends MariadbSchema10_27Reader {
+public class MariadbSchema11_50Reader extends MariadbSchema11_40Reader {
 
 	public MariadbSchema11_50Reader(Dialect dialect) {
 		super(dialect);

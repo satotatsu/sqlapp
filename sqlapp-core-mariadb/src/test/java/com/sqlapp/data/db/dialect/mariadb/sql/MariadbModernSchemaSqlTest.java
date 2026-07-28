@@ -17,7 +17,10 @@ import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.data.schemas.SystemVersioning;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriod;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 
 class MariadbModernSchemaSqlTest extends AbstractMariadbSqlFactoryTest {
 
@@ -100,5 +103,42 @@ class MariadbModernSchemaSqlTest extends AbstractMariadbSqlFactoryTest {
 		assertTrue(sql.contains("PAGE_COMPRESSION_LEVEL=6"), sql);
 		assertTrue(sql.contains("STATS_PERSISTENT=1"), sql);
 		assertTrue(!sql.toLowerCase(java.util.Locale.ROOT).contains(" partitioned"), sql);
+	}
+
+	@Test
+	void testImplicitSystemVersioning() {
+		Table table = new Table("AUDIT_LOG");
+		table.setDialect(dialect);
+		table.getColumns().add("ID", column -> column.setDataType(DataType.INT));
+		table.setSystemVersioning(new SystemVersioning().setImplicit(true));
+
+		SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
+		String sql = factory.createSql(table).get(0).getSqlText();
+		assertTrue(sql.contains("WITH SYSTEM VERSIONING"), sql);
+	}
+
+	@Test
+	void testExplicitSystemVersioning() {
+		Table table = new Table("AUDIT_LOG");
+		table.setDialect(dialect);
+		table.getColumns().add("ID", column -> column.setDataType(DataType.INT));
+		table.getColumns().add("ROW_START",
+				column -> column.setDataType(DataType.TIMESTAMP).setScale(6));
+		table.getColumns().add("ROW_END",
+				column -> column.setDataType(DataType.TIMESTAMP).setScale(6));
+		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
+				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+				.setStartColumnName("ROW_START")
+				.setEndColumnName("ROW_END"));
+		table.setSystemVersioning(new SystemVersioning().setPeriodName("SYSTEM_TIME"));
+
+		SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
+		String sql = factory.createSql(table).get(0).getSqlText();
+		String normalizedSql = sql.replaceAll("\\s+", " ");
+		assertTrue(normalizedSql.contains("GENERATED ALWAYS AS ROW START"), sql);
+		assertTrue(normalizedSql.contains("GENERATED ALWAYS AS ROW END"), sql);
+		assertTrue(normalizedSql.contains("PERIOD FOR `SYSTEM_TIME`"), sql);
+		assertTrue(normalizedSql.contains("`ROW_START`, `ROW_END`"), sql);
+		assertTrue(normalizedSql.contains("WITH SYSTEM VERSIONING"), sql);
 	}
 }
