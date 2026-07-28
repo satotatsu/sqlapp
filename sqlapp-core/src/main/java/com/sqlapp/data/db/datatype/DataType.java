@@ -1784,6 +1784,18 @@ public enum DataType {
 			return java.util.UUID.randomUUID();
 		}
 	},
+	/** ベクトル型 */
+	VECTOR(java.sql.JDBCType.OTHER, "VECTOR", String.class, MetaType.OTHER) {
+		@Override
+		public DataType getSurrogate() {
+			return VARCHAR;
+		}
+
+		@Override
+		public boolean isJdbcBaseType() {
+			return false;
+		}
+	},
 	/**
 	 * 緯度経度型 GPS の緯度経度座標などの楕円体 (球体地球) データ
 	 */

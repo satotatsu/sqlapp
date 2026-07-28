@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.db2.Db2_1110;
 import com.sqlapp.data.db.dialect.db2.Db2_1150;
 import com.sqlapp.data.db.dialect.db2.Db2_1210;
@@ -53,8 +54,10 @@ public class DialectResolverTest {
 		assertTrue(dialect instanceof Db2_1150);
 		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 1, 0);
 		assertTrue(dialect instanceof Db2_1210);
+		assertTrue(dialect.getDbDataTypes().getDbTypeStrict(DataType.VECTOR) == null);
 		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 1, 2);
 		assertTrue(dialect instanceof Db2_1212);
+		assertTrue(dialect.getDbDataTypes().getDbTypeStrict(DataType.VECTOR) != null);
 		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 1, 5);
 		assertTrue(dialect instanceof Db2_1215);
 	}

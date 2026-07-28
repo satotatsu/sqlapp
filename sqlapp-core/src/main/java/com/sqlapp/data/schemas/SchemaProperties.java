@@ -2409,6 +2409,61 @@ public enum SchemaProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	VECTOR_ELEMENT_DATA_TYPE() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return VectorElementDataTypeProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof VectorElementDataTypeProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((VectorElementDataTypeProperty<?>) obj).setVectorElementDataType(DataType.valueOf(toString(value)));
+			return true;
+		}
+
+		@Override
+		public DataType getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((VectorElementDataTypeProperty<?>) obj).getVectorElementDataType();
+			}
+			return null;
+		}
+	},
+	VECTOR_DIMENSION() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return VectorDimensionProperty.class;
+		}
+
+		@Override
+		public Class<?> getValueClass() {
+			return Integer.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof VectorDimensionProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((VectorDimensionProperty<?>) obj).setVectorDimension(toInteger(value));
+			return true;
+		}
+
+		@Override
+		public Integer getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((VectorDimensionProperty<?>) obj).getVectorDimension();
+			}
+			return null;
+		}
+	},
 	NOT_NULL() {
 		@Override
 		public final Class<?> getPropertyClass() {

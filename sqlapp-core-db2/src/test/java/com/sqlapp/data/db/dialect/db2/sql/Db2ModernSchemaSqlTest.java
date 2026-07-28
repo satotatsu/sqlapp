@@ -24,8 +24,18 @@ import com.sqlapp.data.schemas.TemporalPeriodType;
 class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 
 	@Override
+	protected int getMajorVersion() {
+		return 12;
+	}
+
+	@Override
 	protected int getMinorVersion() {
-		return 5;
+		return 1;
+	}
+
+	@Override
+	protected int getRevision() {
+		return 2;
 	}
 
 	@Test
@@ -37,6 +47,27 @@ class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
 		final String sql = factory.createSql(table).get(0).getSqlText();
 		assertTrue(sql.replaceAll("\\s+", " ").contains("ENABLED BOOLEAN"), sql);
+	}
+
+	@Test
+	void testVector() {
+		final Table table = new Table("DOCUMENTS");
+		table.setDialect(dialect);
+		table.getColumns().add("FLOAT_EMBEDDING", column -> column
+				.setDataType(DataType.VECTOR)
+				.setVectorDimension(768)
+				.setVectorElementDataType(DataType.REAL));
+		table.getColumns().add("BYTE_EMBEDDING", column -> column
+				.setDataType(DataType.VECTOR)
+				.setVectorDimension(300)
+				.setVectorElementDataType(DataType.TINYINT));
+
+		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
+		final String sql = factory.createSql(table).get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(sql.matches(".*FLOAT_EMBEDDING\\s+VECTOR\\(768,\\s*FLOAT32\\s*\\).*"), sql);
+		assertTrue(sql.matches(".*BYTE_EMBEDDING\\s+VECTOR\\(300,\\s*INT8\\s*\\).*"), sql);
+		assertEquals(DataType.VECTOR,
+				dialect.getDbDataTypes().getDbType(DataType.VECTOR).getDataType());
 	}
 
 	@Test
