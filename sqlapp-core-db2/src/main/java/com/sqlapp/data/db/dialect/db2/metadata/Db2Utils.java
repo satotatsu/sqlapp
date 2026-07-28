@@ -42,6 +42,7 @@ public class Db2Utils {
 	static {
 		INDEX_TYPE_MAP.put("REG", IndexType.BTree);
 		INDEX_TYPE_MAP.put("CLUS", IndexType.Clustered);
+		INDEX_TYPE_MAP.put("VANN", IndexType.Vector);
 	}
 
 	public static IndexType getIndexType(String indexType) {

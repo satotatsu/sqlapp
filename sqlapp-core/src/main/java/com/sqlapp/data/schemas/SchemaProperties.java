@@ -1211,6 +1211,37 @@ public enum SchemaProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	VECTOR_DISTANCE_TYPE() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return VectorDistanceTypeProperty.class;
+		}
+
+		@Override
+		public Class<?> getValueClass() {
+			return VectorDistanceType.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof VectorDistanceTypeProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((VectorDistanceTypeProperty<?>) obj).setVectorDistanceType(
+					converters.convertObject(value, VectorDistanceType.class));
+			return true;
+		}
+
+		@Override
+		public VectorDistanceType getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((VectorDistanceTypeProperty<?>) obj).getVectorDistanceType();
+			}
+			return null;
+		}
+	},
 	FUNCTION_TYPE() {
 		@Override
 		public final Class<?> getPropertyClass() {
