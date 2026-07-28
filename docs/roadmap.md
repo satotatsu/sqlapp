@@ -127,7 +127,8 @@ deferred.
   currently supported HNSW DDL
 - graph workspaces and knowledge-graph objects
 - JSON document collections as objects distinct from relational tables
-- full-text and fuzzy-search configuration beyond the existing index model
+- HANA Cloud fuzzy-search indexes and search-mode configuration; HANA 2.0
+  FULLTEXT indexes use the existing index model
 - workload classes, remote sources and virtual tables
 
 ### Cloud Spanner

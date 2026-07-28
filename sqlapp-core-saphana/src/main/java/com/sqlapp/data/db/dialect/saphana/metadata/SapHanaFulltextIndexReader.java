@@ -30,6 +30,7 @@ import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -80,6 +81,7 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 	protected Index createIndex(final Connection connection, ExResultSet rs)
 			throws SQLException {
 		Index obj = new Index(getString(rs, INDEX_NAME));
+		obj.setIndexType(IndexType.FullText);
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setTableName(getString(rs, TABLE_NAME));
 		setDbSpecificInfo(rs, obj);

@@ -16,11 +16,19 @@ class VirticaModernDataTypeTest {
 
 	@Test
 	void testNativeUuidAndProductName() {
-		final Virtica dialect = (Virtica) DialectHolder.defaultDialect80;
+		final Virtica dialect = (Virtica) DialectHolder.defaultDialect90;
 		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("UUID");
 		assertEquals(DataType.UUID, column.getDataType());
 		assertEquals("Vertica", dialect.getProductName());
+	}
+
+	@Test
+	void testUuidIsNotNativeBeforeVersion9() {
+		final Column column = new Column();
+		column.setDialect(DialectHolder.defaultDialect80);
+		column.setDataTypeName("UUID");
+		assertEquals(DataType.OTHER, column.getDataType());
 	}
 }
