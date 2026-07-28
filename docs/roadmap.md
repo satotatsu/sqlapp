@@ -123,7 +123,8 @@ deferred.
 
 - `HALF_VECTOR` element precision; the shared vector model currently has no
   half-precision element type
-- vector indexes and vector search configuration
+- vector-index metadata round trips and future index algorithms beyond the
+  currently supported HNSW DDL
 - graph workspaces and knowledge-graph objects
 - JSON document collections as objects distinct from relational tables
 - full-text and fuzzy-search configuration beyond the existing index model
@@ -132,6 +133,7 @@ deferred.
 ### Cloud Spanner
 
 - interleaved-table parent, `ON DELETE` behavior and key ordering
+- conversion of logical unique constraints into Spanner unique indexes
 - change streams and their tracked-object configuration
 - property graphs, graph node/edge tables and labels
 - search indexes, vector indexes and embedding options

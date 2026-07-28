@@ -24,7 +24,7 @@ class H2ModernSchemaSqlTest extends AbstractH2SqlFactoryTest {
 				new Column("PAYLOAD").setDataType(DataType.JSON));
 		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE)
 				.get(0).getSqlText().replaceAll("\\s+", " ");
-		assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS [EVENTS]"), sql);
-		assertTrue(sql.contains("[PAYLOAD] JSON"), sql);
+		assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS EVENTS"), sql);
+		assertTrue(sql.contains("PAYLOAD JSON"), sql);
 	}
 }

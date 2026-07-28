@@ -16,15 +16,16 @@ class SapHanaVectorSqlBuilderTest {
 
 	@Test
 	void testVectorFunctions() {
-		final SapHanaSqlBuilder builder = (SapHanaSqlBuilder)
-				DialectHolder.defaultDialect.createSqlBuilder();
 		assertEquals("COSINE_SIMILARITY(EMBEDDING, ?)",
-				builder.cosineSimilarity("EMBEDDING", "?").toString());
-		builder.clear();
+				builder().cosineSimilarity("EMBEDDING", "?").toString());
 		assertEquals("L2DISTANCE(EMBEDDING, ?)",
-				builder.l2Distance("EMBEDDING", "?").toString());
-		builder.clear();
+				builder().l2Distance("EMBEDDING", "?").toString());
 		assertEquals("TO_REAL_VECTOR(?)",
-				builder.toRealVector("?").toString());
+				builder().toRealVector("?").toString());
+	}
+
+	private SapHanaSqlBuilder builder() {
+		return (SapHanaSqlBuilder) DialectHolder.defaultDialect
+				.createSqlBuilder();
 	}
 }
