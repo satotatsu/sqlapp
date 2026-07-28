@@ -36,7 +36,7 @@ class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
 		final String sql = factory.createSql(table).get(0).getSqlText();
-		assertTrue(sql.replaceAll("\\s+", " ").contains("\"ENABLED\" BOOLEAN"), sql);
+		assertTrue(sql.replaceAll("\\s+", " ").contains("ENABLED BOOLEAN"), sql);
 	}
 
 	@Test
@@ -46,11 +46,11 @@ class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 		table.setDialect(dialect);
 		table.getColumns().add("ID", column -> column.setDataType(DataType.INT));
 		table.getColumns().add("ROW_START",
-				column -> column.setDataType(DataType.TIMESTAMP).setScale(12).setNullable(false));
+				column -> column.setDataType(DataType.TIMESTAMP).setLength(12).setNullable(false));
 		table.getColumns().add("ROW_END",
-				column -> column.setDataType(DataType.TIMESTAMP).setScale(12).setNullable(false));
+				column -> column.setDataType(DataType.TIMESTAMP).setLength(12).setNullable(false));
 		table.getColumns().add("TRANSACTION_ID",
-				column -> column.setDataType(DataType.TIMESTAMP).setScale(12));
+				column -> column.setDataType(DataType.TIMESTAMP).setLength(12));
 		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
 				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
 				.setStartColumnName("ROW_START")
@@ -65,12 +65,12 @@ class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 		final List<SqlOperation> operations = factory.createSql(table);
 		assertEquals(2, operations.size());
 		final String createSql = operations.get(0).getSqlText().replaceAll("\\s+", " ");
-		assertTrue(createSql.contains("\"ROW_START\" TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN"), createSql);
-		assertTrue(createSql.contains("\"ROW_END\" TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END"), createSql);
+		assertTrue(createSql.contains("ROW_START TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW BEGIN"), createSql);
+		assertTrue(createSql.contains("ROW_END TIMESTAMP(12) NOT NULL GENERATED ALWAYS AS ROW END"), createSql);
 		assertTrue(createSql.contains("GENERATED ALWAYS AS TRANSACTION START ID"), createSql);
-		assertTrue(createSql.contains("PERIOD SYSTEM_TIME ( \"ROW_START\", \"ROW_END\")"), createSql);
+		assertTrue(createSql.contains("PERIOD SYSTEM_TIME ( ROW_START, ROW_END )"), createSql);
 		final String alterSql = operations.get(1).getSqlText().replaceAll("\\s+", " ");
-		assertTrue(alterSql.contains("ALTER TABLE \"APP\".\"AUDIT_LOG\" ADD VERSIONING USE HISTORY TABLE"), alterSql);
-		assertTrue(alterSql.contains("\"HISTORY\".\"AUDIT_LOG_HISTORY\""), alterSql);
+		assertTrue(alterSql.contains("ALTER TABLE APP.AUDIT_LOG ADD VERSIONING USE HISTORY TABLE"), alterSql);
+		assertTrue(alterSql.contains("HISTORY.AUDIT_LOG_HISTORY"), alterSql);
 	}
 }

@@ -63,7 +63,7 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 	protected void addConstraintDefinitions(final Table table, final Db2SqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
 		for (final TemporalPeriod period : table.getTemporalPeriods()) {
-			builder.lineBreak().comma()._add("PERIOD")._add(period.getName());
+			builder.lineBreak().comma()._add("PERIOD").space()._add(period.getName());
 			builder.space().brackets(() -> {
 				builder.name(period.getStartColumnName());
 				builder.comma().name(period.getEndColumnName());
@@ -81,7 +81,7 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 		}
 		final Db2SqlBuilder builder = createSqlBuilder();
 		builder.alter().table().name(table, this.getOptions().isDecorateSchemaName());
-		builder.add()._add("VERSIONING USE HISTORY TABLE");
+		builder.add().space()._add("VERSIONING USE HISTORY TABLE").space();
 		final Table historyTable = new Table(versioning.getHistoryTableName());
 		historyTable.setSchemaName(versioning.getHistoryTableSchemaName());
 		builder.name(historyTable, this.getOptions().isDecorateSchemaName());

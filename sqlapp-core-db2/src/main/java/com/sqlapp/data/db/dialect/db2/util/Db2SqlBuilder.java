@@ -106,15 +106,15 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 				continue;
 			}
 			if (CommonUtils.eqIgnoreCase(period.getStartColumnName(), column.getName())) {
-				generated().always().as().row()._add("BEGIN");
+				generated().always().as().row().space()._add("BEGIN");
 			} else if (CommonUtils.eqIgnoreCase(period.getEndColumnName(), column.getName())) {
-				generated().always().as().row()._add("END");
+				generated().always().as().row().space()._add("END");
 			}
 		}
 		final SystemVersioning versioning = table.getSystemVersioning();
 		if (versioning != null
 				&& CommonUtils.eqIgnoreCase(versioning.getTransactionIdColumnName(), column.getName())) {
-			generated().always().as().transaction()._add("START ID");
+			generated().always().as().transaction().space()._add("START ID");
 		}
 		return instance();
 	}
