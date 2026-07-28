@@ -37,6 +37,8 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Virtica", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Virtica);
+		dialect = DialectResolver.getInstance().getDialect("Vertica", 12, 0, 0);
+		assertTrue(dialect instanceof Virtica);
 	}
 
 	@Test

@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.saphana.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -42,6 +44,32 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 	@Override
 	public SapHanaSqlBuilder clone(){
 		return (SapHanaSqlBuilder)super.clone();
+	}
+
+	@Override
+	protected SapHanaSqlBuilder typeDefinition(final Column column) {
+		if (column.getDataType() != DataType.VECTOR) {
+			return super.typeDefinition(column);
+		}
+		if (column.getVectorElementDataType() != null
+				&& column.getVectorElementDataType() != DataType.REAL) {
+			throw new IllegalArgumentException(
+					"SAP HANA REAL_VECTOR requires REAL elements: "
+					+ column.getName());
+		}
+		final Integer dimension = column.getVectorDimension();
+		if (dimension != null
+				&& (dimension.intValue() <= 0
+						|| dimension.intValue() > 65000)) {
+			throw new IllegalArgumentException(
+					"SAP HANA REAL_VECTOR dimension must be between 1 "
+					+ "and 65000: " + column.getName());
+		}
+		_add("REAL_VECTOR");
+		if (dimension != null) {
+			brackets(() -> _add(dimension));
+		}
+		return instance();
 	}
 
 }

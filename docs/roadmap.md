@@ -103,3 +103,58 @@ Duality-view definitions remain in the existing `View.statement` property.
 Oracle-only flags and discovered metadata remain in `View.specifics`. A shared
 structured model should be introduced only if another database exposes an
 equivalent feature or sqlapp needs to transform individual definition nodes.
+
+## Less-covered database dialects
+
+The H2, SAP HANA, Cloud Spanner and Vertica dialects now cover additional
+modern scalar types that already fit the shared Schema model. Further features
+below need shared modeling or a larger cross-database design and are therefore
+deferred.
+
+### H2
+
+- row types and nested row fields
+- enum labels as first-class schema objects
+- multiset element definitions
+- declared aggregate definitions and Java alias implementation details
+- compatibility-mode-specific identifiers, types and DDL behavior
+
+### SAP HANA
+
+- `HALF_VECTOR` element precision; the shared vector model currently has no
+  half-precision element type
+- vector indexes and vector search configuration
+- graph workspaces and knowledge-graph objects
+- JSON document collections as objects distinct from relational tables
+- full-text and fuzzy-search configuration beyond the existing index model
+- workload classes, remote sources and virtual tables
+
+### Cloud Spanner
+
+- interleaved-table parent, `ON DELETE` behavior and key ordering
+- change streams and their tracked-object configuration
+- property graphs, graph node/edge tables and labels
+- search indexes, vector indexes and embedding options
+- locality groups, placement keys and table/index locality
+- named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
+- `STRUCT`, `PROTO`, named enum and graph value definitions
+- generated UUID primary-key strategies and bit-reversed sequences as
+  structured identity-generation policies
+
+### Vertica
+
+- projections, superprojections, segmentation, sort order and `KSAFE`
+- flex tables and their key/value materialization
+- complex `ARRAY`, `SET`, `MAP` and `ROW` element/field definitions
+- external tables and COPY/parser/reject-data configuration
+- text indexes and user-defined transform or analytic functions
+- storage policies, resource pools and fault-group topology
+
+### Shared design requirements
+
+Before implementing these items, compare equivalent concepts in the other
+supported databases and add only reusable concepts to `sqlapp-core`. Vendor
+syntax that does not affect object identity may remain in dialect-specific
+`specifics`, but parent/child references, rename-sensitive column references,
+ordered keys, nested fields and dependency relationships need typed Schema
+objects with XML round-trip tests.

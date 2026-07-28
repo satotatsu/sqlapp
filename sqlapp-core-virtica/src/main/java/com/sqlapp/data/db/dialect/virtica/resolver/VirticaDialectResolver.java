@@ -27,7 +27,7 @@ import com.sqlapp.data.db.dialect.virtica.DialectHolder;
 public class VirticaDialectResolver extends ProductNameDialectResolver {
 
 	public VirticaDialectResolver() {
-		super(".*virtica", new VirticaVersionResolver());
+		super(".*(vertica|virtica)", new VirticaVersionResolver());
 	}
 
 	/**
