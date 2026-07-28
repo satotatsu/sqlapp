@@ -209,6 +209,9 @@ class FirstNormalFormCommandTest {
 		assertPrimaryKey(child, "ID");
 		assertNotNull(child.getColumns().get("PARENT_ID"));
 		assertNotNull(child.getColumns().get("ROW_NO"));
+		assertEquals("ID", child.getColumns().get(0).getName());
+		assertEquals("PARENT_ID", child.getColumns().get(1).getName());
+		assertEquals("ROW_NO", child.getColumns().get(2).getName());
 		assertNull(child.getColumns().get("TENANT_CODE"));
 		assertNull(child.getColumns().get("ORDER_NO"));
 

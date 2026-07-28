@@ -206,6 +206,8 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 			name = plan.parent.table.getName() + "_ID";
 		}
 		boolean notNull = plan.oldColumns.stream().allMatch(Column::isNotNull);
+		int insertionIndex = plan.oldColumns.stream().mapToInt(plan.table.getColumns()::indexOf)
+				.filter(index -> index >= 0).min().orElse(plan.table.getColumns().size());
 		for (Column oldColumn : plan.oldColumns) {
 			if (!plan.table.getColumns().contains(oldColumn.getName())) {
 				continue;
@@ -217,7 +219,7 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 					"Surrogate foreign-key column already exists: table=" + plan.table.getName() + ", column=" + name);
 		}
 		Column column = new Column(name).setDataType(plan.parent.surrogateColumn.getDataType()).setNotNull(notNull);
-		plan.table.getColumns().add(column);
+		plan.table.getColumns().add(insertionIndex, column);
 		plan.table.getConstraints().remove(plan.foreignKey);
 		ForeignKeyConstraint replacement = plan.table.getConstraints()
 				.addForeignKeyConstraint(plan.foreignKey.getName(), column, plan.parent.surrogateColumn);
