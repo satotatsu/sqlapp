@@ -50,6 +50,7 @@ import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.jdbc.sql.node.CommentNode;
@@ -80,6 +81,8 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	private Table table;
 	/** tableRelation */
 	private TableRelation tableRelation;
+	/** row */
+	private Row row;
 	/** SqlSignature */
 	private SqlSignature sqlSignature;
 	/**
@@ -174,6 +177,14 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 			}
 		}
 		return result;
+	}
+
+	public Row getRow() {
+		return row;
+	}
+
+	public void setRow(Row row) {
+		this.row = row;
 	}
 
 	public void setTableRelation(TableRelation tableRelation) {
