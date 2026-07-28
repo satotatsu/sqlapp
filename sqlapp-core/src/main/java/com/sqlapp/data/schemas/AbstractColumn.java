@@ -47,6 +47,8 @@ import com.sqlapp.data.schemas.properties.IdentityStepProperty;
 import com.sqlapp.data.schemas.properties.NotNullProperty;
 import com.sqlapp.data.schemas.properties.StringUnitsProperty;
 import com.sqlapp.data.schemas.properties.ValuesProperty;
+import com.sqlapp.data.schemas.properties.VectorDimensionProperty;
+import com.sqlapp.data.schemas.properties.VectorElementDataTypeProperty;
 import com.sqlapp.data.schemas.properties.complex.SequenceProperty;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.EqualsUtils;
@@ -62,7 +64,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 		IdentityProperty<T>, SequenceProperty<T>, IdentityStartValueProperty<T>, IdentityMaxValueProperty<T>,
 		IdentityMinValueProperty<T>, IdentityStepProperty<T>, IdentityLastValueProperty<T>, IdentityCacheProperty<T>,
 		IdentityCacheSizeProperty<T>, IdentityCycleProperty<T>, IdentityOrderProperty<T>,
-		IdentityGenerationTypeProperty<T>, StringUnitsProperty<T>, FormulaProperty<T>, FormulaPersistedProperty<T> {
+		IdentityGenerationTypeProperty<T>, StringUnitsProperty<T>, FormulaProperty<T>, FormulaPersistedProperty<T>,
+		VectorElementDataTypeProperty<T>, VectorDimensionProperty<T> {
 	/** serialVersionUID */
 	private static final long serialVersionUID = 8775419796577781694L;
 
@@ -122,6 +125,10 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 	private int arrayDimensionLowerBound = (int) SchemaProperties.ARRAY_DIMENSION_LOWER_BOUND.getDefaultValue();
 	/** 配列(1次元)の上限 */
 	private int arrayDimensionUpperBound = (int) SchemaProperties.ARRAY_DIMENSION_UPPER_BOUND.getDefaultValue();
+	/** VECTOR型の要素型 */
+	private DataType vectorElementDataType;
+	/** VECTOR型の次元数 */
+	private Integer vectorDimension;
 	/** ENUM、SET型の値のセット */
 	private Set<String> values = linkedSet();
 	/** DB2 String unit(eg. CODEUNITS16) */
@@ -295,6 +302,12 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 			return false;
 		}
 		if (!equals(SchemaProperties.ARRAY_DIMENSION_UPPER_BOUND, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaProperties.VECTOR_ELEMENT_DATA_TYPE, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaProperties.VECTOR_DIMENSION, val, equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaProperties.VALUES, val, equalsHandler)) {
@@ -722,6 +735,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 			builder.add(SchemaProperties.ARRAY_DIMENSION_LOWER_BOUND, this.arrayDimensionLowerBound);
 			builder.add(SchemaProperties.ARRAY_DIMENSION_UPPER_BOUND, this.arrayDimensionUpperBound);
 		}
+		builder.add(SchemaProperties.VECTOR_ELEMENT_DATA_TYPE, this.vectorElementDataType);
+		builder.add(SchemaProperties.VECTOR_DIMENSION, this.vectorDimension);
 		builder.add(SchemaProperties.VALUES, this.getValues());
 		builder.add(SchemaProperties.FORMULA, this.formula);
 		if (!isEmpty(formula)) {
@@ -795,6 +810,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 						this.getArrayDimensionUpperBound());
 			}
 		}
+		stax.writeAttribute(SchemaProperties.VECTOR_ELEMENT_DATA_TYPE.getLabel(), this.getVectorElementDataType());
+		stax.writeAttribute(SchemaProperties.VECTOR_DIMENSION.getLabel(), this.getVectorDimension());
 		stax.writeAttribute(SchemaProperties.FORMULA.getLabel(), this.getFormula());
 		if (!isEmpty(this.getFormula())) {
 			if (this.isFormulaPersisted()) {
@@ -924,6 +941,28 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 	@Override
 	public T setArrayDimension(int arrayDimension) {
 		this.arrayDimension = arrayDimension;
+		return instance();
+	}
+
+	@Override
+	public DataType getVectorElementDataType() {
+		return vectorElementDataType;
+	}
+
+	@Override
+	public T setVectorElementDataType(DataType vectorElementDataType) {
+		this.vectorElementDataType = vectorElementDataType;
+		return instance();
+	}
+
+	@Override
+	public Integer getVectorDimension() {
+		return vectorDimension;
+	}
+
+	@Override
+	public T setVectorDimension(Integer vectorDimension) {
+		this.vectorDimension = vectorDimension;
 		return instance();
 	}
 

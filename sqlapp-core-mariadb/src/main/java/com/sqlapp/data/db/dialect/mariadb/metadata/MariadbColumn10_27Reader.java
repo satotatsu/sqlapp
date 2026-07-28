@@ -39,4 +39,11 @@ public class MariadbColumn10_27Reader extends MySqlColumn570Reader {
 		}
 	}
 
+	@Override
+	protected Column createColumn(Connection connection, ExResultSet rs) throws java.sql.SQLException {
+		Column column = super.createColumn(connection, rs);
+		String extra = getString(rs, "EXTRA");
+		column.setHidden(extra != null && extra.toUpperCase().contains("INVISIBLE"));
+		return column;
+	}
 }

@@ -489,6 +489,14 @@ public class DbDataTypeCollection implements Serializable {
 	}
 
 	/**
+	 * VECTOR型を追加します
+	 */
+	public void addVector() {
+		VectorType type = new VectorType();
+		register(type);
+	}
+
+	/**
 	 * CHAR型を追加します
 	 * 
 	 * @param maxLength 最大長

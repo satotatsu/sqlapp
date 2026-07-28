@@ -27,7 +27,12 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.dialect.db2.Db2_1010;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.db2.Db2_1110;
+import com.sqlapp.data.db.dialect.db2.Db2_1150;
+import com.sqlapp.data.db.dialect.db2.Db2_1210;
+import com.sqlapp.data.db.dialect.db2.Db2_1212;
+import com.sqlapp.data.db.dialect.db2.Db2_1215;
 import com.sqlapp.data.db.dialect.db2.Db2_970;
 import com.sqlapp.data.db.dialect.db2.Db2_980;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
@@ -42,9 +47,19 @@ public class DialectResolverTest {
 		dialect = DialectResolver.getInstance().getDialect("DB2", 9, 9, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Db2_980);
-		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 0, 0);
+		dialect = DialectResolver.getInstance().getDialect("DB2", 11, 1, 0);
 		System.out.println(dialect);
-		assertTrue(dialect instanceof Db2_1010);
+		assertTrue(dialect instanceof Db2_1110);
+		dialect = DialectResolver.getInstance().getDialect("DB2", 11, 5, 0);
+		assertTrue(dialect instanceof Db2_1150);
+		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 1, 0);
+		assertTrue(dialect instanceof Db2_1210);
+		assertTrue(dialect.getDbDataTypes().getDbTypeStrict(DataType.VECTOR) == null);
+		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 1, 2);
+		assertTrue(dialect instanceof Db2_1212);
+		assertTrue(dialect.getDbDataTypes().getDbTypeStrict(DataType.VECTOR) != null);
+		dialect = DialectResolver.getInstance().getDialect("DB2", 12, 1, 5);
+		assertTrue(dialect instanceof Db2_1215);
 	}
 
 	@Test

@@ -1211,6 +1211,37 @@ public enum SchemaProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	VECTOR_DISTANCE_TYPE() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return VectorDistanceTypeProperty.class;
+		}
+
+		@Override
+		public Class<?> getValueClass() {
+			return VectorDistanceType.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof VectorDistanceTypeProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((VectorDistanceTypeProperty<?>) obj).setVectorDistanceType(
+					converters.convertObject(value, VectorDistanceType.class));
+			return true;
+		}
+
+		@Override
+		public VectorDistanceType getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((VectorDistanceTypeProperty<?>) obj).getVectorDistanceType();
+			}
+			return null;
+		}
+	},
 	FUNCTION_TYPE() {
 		@Override
 		public final Class<?> getPropertyClass() {
@@ -2405,6 +2436,68 @@ public enum SchemaProperties implements ISchemaProperty {
 		public Integer getValue(final Object obj) {
 			if (isGetterInstanceof(obj)) {
 				return ((ArrayDimensionUpperBoundProperty<?>) obj).getArrayDimensionUpperBound();
+			}
+			return null;
+		}
+	},
+	VECTOR_ELEMENT_DATA_TYPE() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return VectorElementDataTypeProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof VectorElementDataTypeProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			final VectorElementDataTypeProperty<?> property = (VectorElementDataTypeProperty<?>) obj;
+			if (value instanceof DataType) {
+				property.setVectorElementDataType((DataType) value);
+			} else if (value instanceof Integer) {
+				property.setVectorElementDataType(DataType.valueOf((Integer) value));
+			} else {
+				property.setVectorElementDataType(converters.convertObject(value, DataType.class));
+			}
+			return true;
+		}
+
+		@Override
+		public DataType getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((VectorElementDataTypeProperty<?>) obj).getVectorElementDataType();
+			}
+			return null;
+		}
+	},
+	VECTOR_DIMENSION() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return VectorDimensionProperty.class;
+		}
+
+		@Override
+		public Class<?> getValueClass() {
+			return Integer.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof VectorDimensionProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((VectorDimensionProperty<?>) obj).setVectorDimension(toInteger(value));
+			return true;
+		}
+
+		@Override
+		public Integer getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((VectorDimensionProperty<?>) obj).getVectorDimension();
 			}
 			return null;
 		}
@@ -5236,6 +5329,232 @@ public enum SchemaProperties implements ISchemaProperty {
 		public PermissionSet getValue(final Object obj) {
 			if (isGetterInstanceof(obj)) {
 				return ((PermissionSetProperty<?>) obj).getPermissionSet();
+			}
+			return null;
+		}
+	},
+	PERIOD_TYPE() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return PeriodTypeProperty.class;
+		}
+
+		@Override
+		public Class<?> getValueClass() {
+			return TemporalPeriodType.class;
+		}
+
+		@Override
+		public TemporalPeriodType getDefaultValue() {
+			return TemporalPeriodType.APPLICATION_TIME;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof PeriodTypeProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((PeriodTypeProperty<?>) obj).setPeriodType(
+					converters.convertObject(value, TemporalPeriodType.class));
+			return true;
+		}
+
+		@Override
+		public TemporalPeriodType getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((PeriodTypeProperty<?>) obj).getPeriodType();
+			}
+			return null;
+		}
+	},
+	START_COLUMN_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return StartColumnNameProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof StartColumnNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((StartColumnNameProperty<?>) obj).setStartColumnName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((StartColumnNameProperty<?>) obj).getStartColumnName();
+			}
+			return null;
+		}
+	},
+	END_COLUMN_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return EndColumnNameProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof EndColumnNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((EndColumnNameProperty<?>) obj).setEndColumnName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((EndColumnNameProperty<?>) obj).getEndColumnName();
+			}
+			return null;
+		}
+	},
+	IMPLICIT() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return ImplicitProperty.class;
+		}
+
+		@Override
+		public Class<?> getValueClass() {
+			return boolean.class;
+		}
+
+		@Override
+		public Boolean getDefaultValue() {
+			return Boolean.FALSE;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof ImplicitProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((ImplicitProperty<?>) obj).setImplicit(toBoolean(value));
+			return true;
+		}
+
+		@Override
+		public Boolean getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((ImplicitProperty<?>) obj).isImplicit();
+			}
+			return null;
+		}
+	},
+	PERIOD_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return PeriodNameProperty.class;
+		}
+
+		@Override
+		public String getDefaultValue() {
+			return "SYSTEM_TIME";
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof PeriodNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((PeriodNameProperty<?>) obj).setPeriodName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((PeriodNameProperty<?>) obj).getPeriodName();
+			}
+			return null;
+		}
+	},
+	HISTORY_TABLE_SCHEMA_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return HistoryTableSchemaNameProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof HistoryTableSchemaNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((HistoryTableSchemaNameProperty<?>) obj).setHistoryTableSchemaName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((HistoryTableSchemaNameProperty<?>) obj).getHistoryTableSchemaName();
+			}
+			return null;
+		}
+	},
+	HISTORY_TABLE_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return HistoryTableNameProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof HistoryTableNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((HistoryTableNameProperty<?>) obj).setHistoryTableName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((HistoryTableNameProperty<?>) obj).getHistoryTableName();
+			}
+			return null;
+		}
+	},
+	TRANSACTION_ID_COLUMN_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return TransactionIdColumnNameProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof TransactionIdColumnNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((TransactionIdColumnNameProperty<?>) obj).setTransactionIdColumnName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((TransactionIdColumnNameProperty<?>) obj).getTransactionIdColumnName();
 			}
 			return null;
 		}

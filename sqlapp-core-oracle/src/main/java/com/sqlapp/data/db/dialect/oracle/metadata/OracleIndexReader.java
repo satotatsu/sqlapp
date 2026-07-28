@@ -80,8 +80,8 @@ public class OracleIndexReader extends IndexReader {
 					index = new Index(name);
 					index.setSchemaName(getString(rs, "OWNER"));
 					index.setTableName(getString(rs, TABLE_NAME));
-					dialact.getIndexType(indexType);
 					index.setIndexType(dialact.getIndexType(indexType));
+					setIndexType(rs, index, indexType);
 					if ("UNIQUE".equals(uniqueness)) {
 						index.setUnique(true);
 					} else {
@@ -118,6 +118,10 @@ public class OracleIndexReader extends IndexReader {
 			}
 		});
 		return result;
+	}
+
+	protected void setIndexType(final ExResultSet rs, final Index index,
+			final String productIndexType) throws SQLException {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {

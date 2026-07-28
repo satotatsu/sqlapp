@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Event;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.Index;
@@ -65,6 +66,8 @@ public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.LOCK, MySqlLockTableFactory.class);
 		// UniqueConstraint
 		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, MySqlCreateUniqueConstraintFactory.class);
+		// CheckConstraint
+		registerSqlFactory(CheckConstraint.class, SqlType.CREATE, MySqlCreateCheckConstraintFactory.class);
 		// ForeignKeyConstraint
 		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE, MySqlForeignKeyConstraintFactory.class);
 		// Trigger

@@ -21,9 +21,15 @@ package com.sqlapp.data.db.dialect.mariadb;
 
 public class DialectHolder {
 
-	public final static Mariadb10_27 mariadb10_27Dialect = new Mariadb10_27(() -> null);
+	public final static Mariadb12_10 mariadb12_10Dialect = new Mariadb12_10(() -> null);
+	public final static Mariadb11_80 mariadb11_80Dialect = new Mariadb11_80(() -> mariadb12_10Dialect);
+	public final static Mariadb11_50 mariadb11_50Dialect = new Mariadb11_50(() -> mariadb11_80Dialect);
+	public final static Mariadb11_40 mariadb11_40Dialect = new Mariadb11_40(() -> mariadb11_50Dialect);
+	public final static Mariadb10_30 mariadb10_30Dialect = new Mariadb10_30(() -> mariadb11_40Dialect);
+	public final static Mariadb10_27 mariadb10_27Dialect = new Mariadb10_27(() -> mariadb10_30Dialect);
 	public final static Mariadb10_25 mariadb10_25Dialect = new Mariadb10_25(() -> mariadb10_27Dialect);
-	public final static Mariadb10_00 mariadb10_00Dialect = new Mariadb10_00(() -> mariadb10_25Dialect);
+	public final static Mariadb10_20 mariadb10_20Dialect = new Mariadb10_20(() -> mariadb10_25Dialect);
+	public final static Mariadb10_00 mariadb10_00Dialect = new Mariadb10_00(() -> mariadb10_20Dialect);
 	public final static Mariadb defaultDialect = new Mariadb(() -> mariadb10_00Dialect);
 
 }

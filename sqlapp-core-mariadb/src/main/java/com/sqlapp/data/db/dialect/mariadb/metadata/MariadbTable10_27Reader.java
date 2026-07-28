@@ -23,6 +23,9 @@ package com.sqlapp.data.db.dialect.mariadb.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.metadata.MySqlTable564Reader;
 import com.sqlapp.data.db.metadata.ColumnReader;
+import com.sqlapp.data.db.metadata.CheckConstraintReader;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
 
 public class MariadbTable10_27Reader extends MySqlTable564Reader {
 
@@ -39,5 +42,27 @@ public class MariadbTable10_27Reader extends MySqlTable564Reader {
 	@Override
 	protected ColumnReader newColumnReader() {
 		return new MariadbColumn10_27Reader(this.getDialect());
+	}
+
+	@Override
+	protected CheckConstraintReader newCheckConstraintReader() {
+		return new MariadbCheckConstraintReader(getDialect());
+	}
+
+	@Override
+	protected Table createTable(ExResultSet rs) throws java.sql.SQLException {
+		Table table = super.createTable(rs);
+		String rowFormat = getString(rs, "ROW_FORMAT");
+		if (rowFormat != null) {
+			table.getSpecifics().put("ROW_FORMAT", rowFormat);
+		}
+		String createOptions = getString(rs, "CREATE_OPTIONS");
+		if (createOptions != null && !createOptions.isBlank()) {
+			table.getSpecifics().put("CREATE_OPTIONS", createOptions);
+		}
+		if ("SYSTEM VERSIONED".equalsIgnoreCase(getString(rs, "TABLE_TYPE"))) {
+			table.toSystemVersioning().setImplicit(true);
+		}
+		return table;
 	}
 }

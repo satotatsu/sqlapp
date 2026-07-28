@@ -34,6 +34,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.AbstractDbObjectCollection;
@@ -47,6 +48,8 @@ import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObject;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Operator;
 import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Partitioning;
@@ -268,6 +271,36 @@ public class HtmlUtils {
 			return "";
 		}
 		return obj.toString();
+	}
+
+	public static boolean isVectorColumn(final Column column) {
+		return column != null && column.getDataType() == DataType.VECTOR;
+	}
+
+	public static boolean isVectorIndex(final Index index) {
+		return index != null && index.getIndexType() == IndexType.Vector;
+	}
+
+	public static boolean hasVector(final Table table) {
+		if (table == null) {
+			return false;
+		}
+		return hasVectorColumns(table) || hasVectorIndexes(table);
+	}
+
+	public static boolean hasVectorColumns(final Table table) {
+		return table != null && table.getColumns().stream().anyMatch(HtmlUtils::isVectorColumn);
+	}
+
+	public static boolean hasVectorIndexes(final Table table) {
+		return table != null && table.getIndexes().stream().anyMatch(HtmlUtils::isVectorIndex);
+	}
+
+	public static int countVectorTables(final Collection<Table> tables) {
+		if (tables == null) {
+			return 0;
+		}
+		return (int) tables.stream().filter(HtmlUtils::hasVector).count();
 	}
 
 	private static Locale locale = Locale.getDefault();

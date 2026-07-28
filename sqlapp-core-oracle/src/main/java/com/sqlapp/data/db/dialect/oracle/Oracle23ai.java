@@ -22,6 +22,10 @@ package com.sqlapp.data.db.dialect.oracle;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.oracle.metadata.Oracle23aiCatalogReader;
+import com.sqlapp.data.db.dialect.oracle.sql.Oracle23aiSqlFactoryRegistry;
+import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * Oracle固有情報クラス
@@ -29,7 +33,7 @@ import com.sqlapp.data.db.dialect.Dialect;
  * @author SATOH
  * 
  */
-public class Oracle23ai extends Oracle12c {
+public class Oracle23ai extends Oracle21c {
 
 	/**
 	 * serialVersionUID
@@ -44,6 +48,16 @@ public class Oracle23ai extends Oracle12c {
 	}
 
 	@Override
+	protected void registerDataType() {
+		super.registerDataType();
+		getDbDataTypes().addBoolean("BOOLEAN", type -> {
+			type.setDefaultValueLiteral("FALSE");
+		});
+		getDbDataTypes().addVector();
+		setIndexTypeName("VECTOR", com.sqlapp.data.schemas.IndexType.Vector);
+	}
+
+	@Override
 	public String getSelectDummyTableName() {
 		return null;
 	}
@@ -51,5 +65,15 @@ public class Oracle23ai extends Oracle12c {
 	@Override
 	public boolean supportsValues() {
 		return true;
+	}
+
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new Oracle23aiCatalogReader(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new Oracle23aiSqlFactoryRegistry(this);
 	}
 }

@@ -36,6 +36,7 @@ import com.sqlapp.data.schemas.properties.IndexTypeProperty;
 import com.sqlapp.data.schemas.properties.PartitioningProperty;
 import com.sqlapp.data.schemas.properties.TableNameProperty;
 import com.sqlapp.data.schemas.properties.UniqueProperty;
+import com.sqlapp.data.schemas.properties.VectorDistanceTypeProperty;
 import com.sqlapp.data.schemas.properties.WhereProperty;
 import com.sqlapp.data.schemas.properties.complex.TableSpaceProperty;
 import com.sqlapp.data.schemas.properties.object.ReferenceColumnsProperty;
@@ -60,6 +61,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	,IndexTypeProperty<Index>
 	,PartitioningProperty<Index>
 	,WhereProperty<Index>
+	,VectorDistanceTypeProperty<Index>
 	,TableSpaceProperty<Index> {
 	/**
 	 * serialVersionUID
@@ -69,6 +71,8 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	private boolean unique = (Boolean)SchemaProperties.UNIQUE.getDefaultValue();
 	/** インデックスタイプ */
 	private IndexType indexType = null;
+	/** VECTORインデックスの距離尺度 */
+	private VectorDistanceType vectorDistanceType = null;
 	/** 圧縮 */
 	private boolean compression = (Boolean)SchemaProperties.COMPRESSION.getDefaultValue();
 	/** 圧縮タイプ */
@@ -151,6 +155,17 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		return this;
 	}
 
+	@Override
+	public VectorDistanceType getVectorDistanceType() {
+		return vectorDistanceType;
+	}
+
+	@Override
+	public Index setVectorDistanceType(final VectorDistanceType vectorDistanceType) {
+		this.vectorDistanceType = vectorDistanceType;
+		return this;
+	}
+
 	/**
 	 * インデックスの属するテーブルの取得
 	 * 
@@ -180,6 +195,9 @@ public final class Index extends AbstractSchemaObject<Index> implements
 			return false;
 		}
 		if (!equals(SchemaProperties.INDEX_TYPE, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaProperties.VECTOR_DISTANCE_TYPE, val, equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaObjectProperties.REFERENCE_COLUMNS, val, equalsHandler)) {
@@ -233,6 +251,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	protected void toStringDetail(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.UNIQUE, this.isUnique());
 		builder.add(SchemaProperties.INDEX_TYPE, this.getIndexType());
+		builder.add(SchemaProperties.VECTOR_DISTANCE_TYPE, this.getVectorDistanceType());
 		if (!CommonUtils.isEmpty(this.getColumns())) {
 			builder.add(SchemaObjectProperties.REFERENCE_COLUMNS, this.getColumns().toStringSimple());
 		}
@@ -390,6 +409,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.UNIQUE.getLabel(), this.isUnique());
 		stax.writeAttribute(SchemaProperties.INDEX_TYPE.getLabel(), this.getIndexType());
+		stax.writeAttribute(SchemaProperties.VECTOR_DISTANCE_TYPE.getLabel(), this.getVectorDistanceType());
 		if (this.isCompression()) {
 			stax.writeAttribute(SchemaProperties.COMPRESSION.getLabel(), this.isCompression());
 			stax.writeAttribute(SchemaProperties.COMPRESSION_TYPE.getLabel(), this.getCompressionType());

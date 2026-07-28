@@ -19,8 +19,15 @@
 
 package com.sqlapp.data.db.dialect.db2.sql;
 
+import java.util.List;
+
 import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.SystemVersioning;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriod;
+import com.sqlapp.util.CommonUtils;
 
 public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 
@@ -50,6 +57,35 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 				builder.value().compression();
 			}
 		}
+	}
+
+	@Override
+	protected void addConstraintDefinitions(final Table table, final Db2SqlBuilder builder) {
+		super.addConstraintDefinitions(table, builder);
+		for (final TemporalPeriod period : table.getTemporalPeriods()) {
+			builder.lineBreak().comma()._add("PERIOD").space()._add(period.getName());
+			builder.space().brackets(() -> {
+				builder.name(period.getStartColumnName());
+				builder.comma().name(period.getEndColumnName());
+			});
+		}
+	}
+
+	@Override
+	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
+		super.addOtherDefinitions(table, result);
+		final SystemVersioning versioning = table.getSystemVersioning();
+		if (versioning == null || !versioning.isEnable()
+				|| CommonUtils.isEmpty(versioning.getHistoryTableName())) {
+			return;
+		}
+		final Db2SqlBuilder builder = createSqlBuilder();
+		builder.alter().table().name(table, this.getOptions().isDecorateSchemaName());
+		builder.add().space()._add("VERSIONING USE HISTORY TABLE").space();
+		final Table historyTable = new Table(versioning.getHistoryTableName());
+		historyTable.setSchemaName(versioning.getHistoryTableSchemaName());
+		builder.name(historyTable, this.getOptions().isDecorateSchemaName());
+		add(result, createOperation(builder.toString(), SqlType.ALTER, table));
 	}
 
 	

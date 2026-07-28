@@ -578,6 +578,19 @@ public final class Column extends AbstractColumn<Column>
 						changeReferenceColumnName(origianlName, name, p.getPartitioningColumns());
 						changeReferenceColumnName(origianlName, name, p.getSubPartitioningColumns());
 					});
+			// change temporal period columns
+			table.getTemporalPeriods().forEach(period -> {
+				if (CommonUtils.eq(period.getStartColumnName(), origianlName)) {
+					period.setStartColumnName(name);
+				}
+				if (CommonUtils.eq(period.getEndColumnName(), origianlName)) {
+					period.setEndColumnName(name);
+				}
+			});
+			if (table.getSystemVersioning() != null
+					&& CommonUtils.eq(table.getSystemVersioning().getTransactionIdColumnName(), origianlName)) {
+				table.getSystemVersioning().setTransactionIdColumnName(name);
+			}
 		}
 		super.setName(name);
 		return instance();

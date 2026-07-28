@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.db2.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Mask;
+import com.sqlapp.data.schemas.Table;
 
 public class Db2_1010SqlFactoryRegistry extends Db2_980SqlFactoryRegistry {
 
@@ -38,6 +39,8 @@ public class Db2_1010SqlFactoryRegistry extends Db2_980SqlFactoryRegistry {
 				Db2_1010CreateMaskFactory.class);
 		registerSqlFactory(Mask.class, SqlType.ALTER,
 				Db2_1010CreateMaskFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE,
+				Db2_1010CreateTableFactory.class);
 	}
 	
 }

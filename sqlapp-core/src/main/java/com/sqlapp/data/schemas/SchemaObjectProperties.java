@@ -1696,6 +1696,94 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	TEMPORAL_PERIODS {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return TemporalPeriodsProperty.class;
+		}
+
+		@Override
+		public final Class<TemporalPeriodsGetter> getGetterPropertyClass() {
+			return TemporalPeriodsGetter.class;
+		}
+
+		@Override
+		public Class<TemporalPeriodCollection> getValueClass() {
+			return TemporalPeriodCollection.class;
+		}
+
+		@Override
+		public TemporalPeriodCollection getDefaultValue() {
+			return this.getValueClass().cast(super.getDefaultValue());
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof TemporalPeriodsProperty;
+		}
+
+		@Override
+		public boolean isGetterInstanceof(final Object obj) {
+			return obj instanceof TemporalPeriodsGetter;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			final TemporalPeriodsProperty<?> property = (TemporalPeriodsProperty<?>) obj;
+			if ((value instanceof TemporalPeriodCollection) || value == null) {
+				property.setTemporalPeriods((TemporalPeriodCollection) value);
+				return true;
+			}
+			return false;
+		}
+
+		@Override
+		public TemporalPeriodCollection getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((TemporalPeriodsGetter) obj).getTemporalPeriods();
+			}
+			return null;
+		}
+	},
+	SYSTEM_VERSIONING() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return SystemVersioningProperty.class;
+		}
+
+		@Override
+		public Class<SystemVersioning> getValueClass() {
+			return SystemVersioning.class;
+		}
+
+		@Override
+		public SystemVersioning getDefaultValue() {
+			return SchemaUtils.newInstanceAtSchemas(getValueClass());
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof SystemVersioningProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			final SystemVersioningProperty<?> property = (SystemVersioningProperty<?>) obj;
+			if ((value instanceof SystemVersioning) || value == null) {
+				property.setSystemVersioning((SystemVersioning) value);
+				return true;
+			}
+			return false;
+		}
+
+		@Override
+		public SystemVersioning getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((SystemVersioningProperty<?>) obj).getSystemVersioning();
+			}
+			return null;
+		}
+	},
 	PARTITIONING() {
 		@Override
 		public final Class<?> getPropertyClass() {

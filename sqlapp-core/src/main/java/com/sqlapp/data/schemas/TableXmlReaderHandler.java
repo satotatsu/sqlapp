@@ -71,6 +71,28 @@ class TableXmlReaderHandler extends AbstractNamedObjectXmlReaderHandler<Table> {
 				});
 		registerChild(handler);
 		//
+		handler = new TemporalPeriodCollectionXmlReaderHandler();
+		register(handler.getLocalName(),
+				new AbstractSetValue<Table, TemporalPeriodCollection>() {
+					@Override
+					public void setValue(Table target, String name,
+							TemporalPeriodCollection setValue) throws XMLStreamException {
+						target.setTemporalPeriods(setValue);
+					}
+				});
+		registerChild(handler);
+		//
+		handler = new SystemVersioningXmlReaderHandler();
+		register(handler.getLocalName(),
+				new AbstractSetValue<Table, SystemVersioning>() {
+					@Override
+					public void setValue(Table target, String name,
+							SystemVersioning setValue) throws XMLStreamException {
+						target.setSystemVersioning(setValue);
+					}
+				});
+		registerChild(handler);
+		//
 		handler = new DummyTableCollectionXmlReaderHandler(){
 			@Override
 			public String getLocalName(){

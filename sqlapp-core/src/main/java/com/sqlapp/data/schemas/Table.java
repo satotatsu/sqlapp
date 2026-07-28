@@ -76,6 +76,8 @@ import com.sqlapp.data.schemas.properties.object.IndexesProperty;
 import com.sqlapp.data.schemas.properties.object.InheritsProperty;
 import com.sqlapp.data.schemas.properties.object.PartitionParentProperty;
 import com.sqlapp.data.schemas.properties.object.RowsProperty;
+import com.sqlapp.data.schemas.properties.object.SystemVersioningProperty;
+import com.sqlapp.data.schemas.properties.object.TemporalPeriodsProperty;
 import com.sqlapp.data.schemas.rowiterator.ResultSetRowIteratorHandler;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.EqualsUtils;
@@ -93,7 +95,8 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		InheritsProperty<Table>, TableSpaceProperty<Table>, IndexTableSpaceProperty<Table>,
 		LobTableSpaceProperty<Table>, TableTypeProperty<Table>, TableDataStoreTypeProperty<Table>,
 		PartitioningProperty<Table>, ReadonlyProperty<Table>, CompressionProperty<Table>,
-		CompressionTypeProperty<Table>, UnloggedProperty<Table>, PartitionParentProperty<Table> {
+		CompressionTypeProperty<Table>, UnloggedProperty<Table>, PartitionParentProperty<Table>,
+		TemporalPeriodsProperty<Table>, SystemVersioningProperty<Table> {
 	/**
 	 * serialVersionUID
 	 */
@@ -121,6 +124,10 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	private String compressionType = null;
 	/** パーティション情報 */
 	private Partitioning partitioning = null;
+	/** Temporal periods */
+	private TemporalPeriodCollection temporalPeriods = new TemporalPeriodCollection(this);
+	/** System-versioning configuration */
+	private SystemVersioning systemVersioning = null;
 	/** テーブルスペース */
 	@SuppressWarnings("unused")
 	private final TableSpace tableSpace = null;
@@ -181,6 +188,22 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		return () -> new Table();
 	}
 
+	@Override
+	public Table setName(String name) {
+		String originalName = this.getName();
+		TableCollection tables = this.getParent();
+		if (tables != null) {
+			tables.forEach(table -> {
+				SystemVersioning versioning = table.getSystemVersioning();
+				if (versioning != null
+						&& CommonUtils.eq(versioning.getHistoryTableName(), originalName)) {
+					versioning.setHistoryTableName(name);
+				}
+			});
+		}
+		return super.setName(name);
+	}
+
 	/**
 	 * @return the inherits
 	 */
@@ -217,6 +240,12 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 			return false;
 		}
 		if (!equals(SchemaObjectProperties.PARTITIONING, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaObjectProperties.TEMPORAL_PERIODS, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaObjectProperties.SYSTEM_VERSIONING, val, equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaObjectProperties.PARTITION_PARENT, val, equalsHandler)) {
@@ -769,6 +798,42 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	}
 
 	@Override
+	public TemporalPeriodCollection getTemporalPeriods() {
+		return temporalPeriods;
+	}
+
+	@Override
+	public Table setTemporalPeriods(TemporalPeriodCollection temporalPeriods) {
+		this.temporalPeriods = temporalPeriods == null ? new TemporalPeriodCollection(this) : temporalPeriods;
+		this.temporalPeriods.setParent(this);
+		return this;
+	}
+
+	@Override
+	public SystemVersioning getSystemVersioning() {
+		return systemVersioning;
+	}
+
+	@Override
+	public Table setSystemVersioning(SystemVersioning systemVersioning) {
+		if (this.systemVersioning != null) {
+			this.systemVersioning.setParent(null);
+		}
+		this.systemVersioning = systemVersioning;
+		if (systemVersioning != null) {
+			systemVersioning.setParent(this);
+		}
+		return this;
+	}
+
+	public SystemVersioning toSystemVersioning() {
+		if (systemVersioning == null) {
+			setSystemVersioning(new SystemVersioning());
+		}
+		return systemVersioning;
+	}
+
+	@Override
 	public Table setPartitionParent(final PartitionParent partitionParent) {
 		if (this.partitionParent != null) {
 			final Table parent = this.partitionParent.getParent();
@@ -968,6 +1033,12 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		if (!isEmpty(getPartitioning())) {
 			getPartitioning().writeXml(stax);
 		}
+		if (!isEmpty(getTemporalPeriods())) {
+			getTemporalPeriods().writeXml(stax);
+		}
+		if (getSystemVersioning() != null) {
+			getSystemVersioning().writeXml(stax);
+		}
 		if (!isEmpty(getInherits())) {
 			getInherits().writeXml(stax);
 		}
@@ -1073,6 +1144,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		if (partitioning != null) {
 			partitioning.setCaseSensitive(caseSensitive);
 		}
+		temporalPeriods.setCaseSensitive(caseSensitive);
 		return super.setCaseSensitive(caseSensitive);
 	}
 
@@ -1349,6 +1421,12 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		if (this.getPartitioning() != null) {
 			getPartitioning().setParent(this);
 			getPartitioning().validate();
+		}
+		getTemporalPeriods().setParent(this);
+		getTemporalPeriods().validate();
+		if (getSystemVersioning() != null) {
+			getSystemVersioning().setParent(this);
+			getSystemVersioning().validate();
 		}
 		if (this.getPartitionParent() != null) {
 			getPartitionParent().setParent(this);

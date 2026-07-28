@@ -97,7 +97,7 @@ public class MySqlTableReader extends TableReader {
 		}
 		this.setStatistics("ROW_FORMAT", format, table);
 		final String createOption=getString(rs, "CREATE_OPTIONS");
-		if ("partitioned".equalsIgnoreCase(createOption)){
+		if (createOption != null && createOption.toLowerCase(java.util.Locale.ROOT).contains("partitioned")){
 			table.toPartitioning();
 		}
 		return table;
@@ -127,7 +127,9 @@ public class MySqlTableReader extends TableReader {
 				final String tableName=getString(rs,
 						TABLE_NAME);
 				final Table table=tables.get(schemaName, tableName);
-				setPartition(rs, table);
+				if (table != null) {
+					setPartition(rs, table);
+				}
 			}
 		});
 	}

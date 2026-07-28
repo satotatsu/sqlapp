@@ -147,6 +147,8 @@ public enum IndexType implements EnumProperties {
 	 * 
 	 */
 	FullText("FULLTEXT", "FULL*.*TEXT"),
+	/** Vector approximate nearest-neighbor index. */
+	Vector("VECTOR", "(VECTOR|VANN)"),
 	/**
 	 * 
 	 */
