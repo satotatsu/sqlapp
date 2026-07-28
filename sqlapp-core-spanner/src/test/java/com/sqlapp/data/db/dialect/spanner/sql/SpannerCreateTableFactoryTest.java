@@ -5,6 +5,8 @@
  */
 package com.sqlapp.data.db.dialect.spanner.sql;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -38,5 +40,48 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 		assertTrue(sql.contains("SINGER_ID UUID"), sql);
 		assertTrue(sql.contains(
 				") PRIMARY KEY ( SHARD_ID, SINGER_ID DESC )"), sql);
+	}
+
+	@Test
+	void testUniqueConstraintAsUniqueIndex() {
+		final Table table = new Table("USERS");
+		table.setDialect(dialect);
+		final Column id = new Column("ID")
+				.setDataType(DataType.BIGINT).setNotNull(true);
+		final Column email = new Column("EMAIL")
+				.setDataType(DataType.VARCHAR).setLength(320)
+				.setNotNull(true);
+		table.getColumns().add(id);
+		table.getColumns().add(email);
+		table.getConstraints().addPrimaryKeyConstraint("PK_USERS", id);
+		table.getConstraints().addUniqueConstraint("UK_USERS_EMAIL", email);
+
+		final var operations = sqlFactoryRegistry.createSql(table,
+				SqlType.CREATE);
+		assertEquals(2, operations.size());
+		final String tableSql = operations.get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		final String indexSql = operations.get(1).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(!tableSql.contains("UNIQUE"), tableSql);
+		assertTrue(indexSql.contains(
+				"CREATE UNIQUE INDEX IF NOT EXISTS UK_USERS_EMAIL ON USERS ( EMAIL )"),
+				indexSql);
+	}
+
+	@Test
+	void testRejectUnnamedUniqueConstraint() {
+		final Table table = new Table("USERS");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.BIGINT);
+		final Column email = new Column("EMAIL")
+				.setDataType(DataType.VARCHAR).setLength(320);
+		table.getColumns().add(id);
+		table.getColumns().add(email);
+		table.getConstraints().addPrimaryKeyConstraint("PK_USERS", id);
+		table.getConstraints().addUniqueConstraint(null, email);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
 	}
 }
