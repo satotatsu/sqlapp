@@ -14,6 +14,8 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Deferrability;
+import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.FunctionType;
 import com.sqlapp.data.schemas.Index;
@@ -127,6 +129,60 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 		assertTrue(sql.contains("PARAMETERS ('DATASTORE DOC_DATASTORE "
 				+ "FILTER CTXSYS.AUTO_FILTER LEXER DOC_LEXER "
 				+ "MODEL DOC_MODEL VECTOR_IDXTYPE IVF')"), sql);
+	}
+
+	@Test
+	void testCreateAndDropDataUseCaseDomain() {
+		final Domain domain = new Domain("EMAIL_ADDRESS");
+		domain.setDialect(dialect);
+		domain.setDataType(DataType.VARCHAR);
+		domain.setLength(320L);
+		domain.setDefaultValue("'unknown@example.com'");
+		domain.setNotNull(true);
+		domain.setCheck("REGEXP_LIKE(VALUE, '^[^@]+@[^@]+$')");
+		domain.setDeferrability(Deferrability.InitiallyDeferred);
+		domain.getSpecifics().put(Oracle23aiCreateDomainFactory.STRICT, true);
+		domain.getSpecifics().put(
+				Oracle23aiCreateDomainFactory.DEFAULT_ON_NULL, true);
+		domain.getSpecifics().put(
+				Oracle23aiCreateDomainFactory.CONSTRAINT_NAME,
+				"CK_EMAIL_ADDRESS");
+		domain.getSpecifics().put(Oracle23aiCreateDomainFactory.DISPLAY,
+				"LOWER(VALUE)");
+		domain.getSpecifics().put(Oracle23aiCreateDomainFactory.ORDER,
+				"LOWER(VALUE)");
+
+		final String createSql = sqlFactoryRegistry
+				.createSql(domain, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(createSql.contains(
+				"CREATE DOMAIN EMAIL_ADDRESS AS VARCHAR2(320) STRICT"),
+				createSql);
+		assertTrue(createSql.contains(
+				"DEFAULT ON NULL 'unknown@example.com' NOT NULL"),
+				createSql);
+		assertTrue(createSql.contains("CONSTRAINT CK_EMAIL_ADDRESS "
+				+ "CHECK (REGEXP_LIKE(VALUE, '^[^@]+@[^@]+$')) "
+				+ "INITIALLY DEFERRED"), createSql);
+		assertTrue(createSql.contains(
+				"DISPLAY LOWER(VALUE) ORDER LOWER(VALUE)"), createSql);
+
+		final String dropSql = sqlFactoryRegistry
+				.createSql(domain, SqlType.DROP).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(dropSql.contains("DROP DOMAIN EMAIL_ADDRESS"), dropSql);
+	}
+
+	@Test
+	void testRejectCollectionTypeAsDataUseCaseDomain() {
+		final Domain domain = new Domain("NUMBER_LIST");
+		domain.setDialect(dialect);
+		domain.setDataType(DataType.INT);
+		domain.setArrayDimension(1);
+		domain.setArrayDimensionUpperBound(100);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(domain, SqlType.CREATE));
 	}
 
 	@Test
