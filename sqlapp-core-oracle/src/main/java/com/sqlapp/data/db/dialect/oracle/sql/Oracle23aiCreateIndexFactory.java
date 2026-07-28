@@ -25,13 +25,13 @@ import com.sqlapp.util.CommonUtils;
 public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 
 	public static final String ORGANIZATION = Oracle23aiIndexReader.ORGANIZATION;
-	public static final String TARGET_ACCURACY = "TARGET_ACCURACY";
-	public static final String NEIGHBORS = "NEIGHBORS";
-	public static final String EFCONSTRUCTION = "EFCONSTRUCTION";
-	public static final String NEIGHBOR_PARTITIONS = "NEIGHBOR_PARTITIONS";
-	public static final String SAMPLES_PER_PARTITION = "SAMPLES_PER_PARTITION";
-	public static final String MIN_VECTORS_PER_PARTITION = "MIN_VECTORS_PER_PARTITION";
-	public static final String PARALLEL = "PARALLEL";
+	public static final String TARGET_ACCURACY = Oracle23aiIndexReader.TARGET_ACCURACY;
+	public static final String NEIGHBORS = Oracle23aiIndexReader.NEIGHBORS;
+	public static final String EFCONSTRUCTION = Oracle23aiIndexReader.EFCONSTRUCTION;
+	public static final String NEIGHBOR_PARTITIONS = Oracle23aiIndexReader.NEIGHBOR_PARTITIONS;
+	public static final String SAMPLES_PER_PARTITION = Oracle23aiIndexReader.SAMPLES_PER_PARTITION;
+	public static final String MIN_VECTORS_PER_PARTITION = Oracle23aiIndexReader.MIN_VECTORS_PER_PARTITION;
+	public static final String PARALLEL = Oracle23aiIndexReader.PARALLEL;
 
 	@Override
 	public void addObjectDetail(final Index index, final Table table,

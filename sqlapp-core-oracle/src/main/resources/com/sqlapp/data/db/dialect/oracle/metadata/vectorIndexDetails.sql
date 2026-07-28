@@ -1,0 +1,12 @@
+SELECT JSON_SERIALIZE(VI.IDX_PARAMS RETURNING VARCHAR2(4000)) AS IDX_PARAMS
+FROM VECSYS.VECTOR$INDEX VI
+INNER JOIN ALL_OBJECTS AO
+  ON (AO.OBJECT_ID = VI.IDX_OBJN
+  AND AO.OBJECT_TYPE = 'INDEX')
+WHERE 1 = 1
+  /*if isNotEmpty(schemaName)*/
+  AND AO.OWNER IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(indexName)*/
+  AND VI.IDX_NAME IN /*indexName*/('%')
+  /*end*/
