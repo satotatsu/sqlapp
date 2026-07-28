@@ -66,6 +66,8 @@ public class H2 extends Dialect {
 	protected void registerDataType() {
 		// ARRAY
 		getDbDataTypes().addArray();
+		// ENUM
+		getDbDataTypes().addEnum();
 		// CHAR
 		getDbDataTypes().addChar(CHAR_SIZE_MAX);
 		// VARCHAR

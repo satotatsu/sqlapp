@@ -34,6 +34,8 @@ public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 
+		registerSqlFactory(Table.class, SqlType.CREATE,
+				SpannerCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SpannerCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, SpannerTruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SpannerTruncateTemporaryTableFactory.class);

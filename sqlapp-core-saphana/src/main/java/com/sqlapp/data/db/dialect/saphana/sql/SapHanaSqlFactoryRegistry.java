@@ -25,6 +25,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Index;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -39,6 +40,8 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SapHahaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SapHanaTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE,
+				SapHanaCreateIndexFactory.class);
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF, SapHanaDdlAutoCommitOffFactory.class);
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON, SapHanaDdlAutoCommitOnFactory.class);
 		//

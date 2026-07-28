@@ -33,6 +33,10 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Table.class, SqlType.CREATE,
+				VirticaCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP,
+				VirticaDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, VirticaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, VirticaTruncateTemporaryTableFactory.class);
 	}

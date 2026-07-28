@@ -72,4 +72,27 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 		return instance();
 	}
 
+	public SapHanaSqlBuilder cosineSimilarity(final CharSequence left,
+			final CharSequence right) {
+		return binaryVectorFunction("COSINE_SIMILARITY", left, right);
+	}
+
+	public SapHanaSqlBuilder l2Distance(final CharSequence left,
+			final CharSequence right) {
+		return binaryVectorFunction("L2DISTANCE", left, right);
+	}
+
+	public SapHanaSqlBuilder toRealVector(final CharSequence expression) {
+		_add("TO_REAL_VECTOR")._add("(")._add(expression.toString())
+				._add(")");
+		return instance();
+	}
+
+	private SapHanaSqlBuilder binaryVectorFunction(final String function,
+			final CharSequence left, final CharSequence right) {
+		_add(function)._add("(")._add(left.toString()).comma()
+				._add(right.toString())._add(")");
+		return instance();
+	}
+
 }

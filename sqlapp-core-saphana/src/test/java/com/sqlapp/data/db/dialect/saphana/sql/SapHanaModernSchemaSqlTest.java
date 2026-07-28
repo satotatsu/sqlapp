@@ -13,7 +13,10 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VectorDistanceType;
 
 class SapHanaModernSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 
@@ -41,5 +44,38 @@ class SapHanaModernSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 		metadataColumn.setDialect(dialect);
 		metadataColumn.setDataTypeName("REAL_VECTOR");
 		assertEquals(DataType.VECTOR, metadataColumn.getDataType());
+	}
+
+	@Test
+	void testCreateHnswVectorIndex() {
+		final Table table = new Table("DOCUMENTS");
+		table.setDialect(dialect);
+		final Column embedding = new Column("EMBEDDING")
+				.setDataType(DataType.VECTOR)
+				.setVectorElementDataType(DataType.REAL)
+				.setVectorDimension(768);
+		table.getColumns().add(embedding);
+		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", embedding)
+				.setIndexType(IndexType.Vector)
+				.setVectorDistanceType(VectorDistanceType.Cosine);
+		index.getSpecifics().put(
+				SapHanaCreateIndexFactory.BUILD_CONFIGURATION,
+				"{\"M\":64,\"efConstruction\":128}");
+		index.getSpecifics().put(
+				SapHanaCreateIndexFactory.SEARCH_CONFIGURATION,
+				"{\"efSearch\":64}");
+		index.getSpecifics().put(SapHanaCreateIndexFactory.ONLINE, true);
+		table.getIndexes().add(index);
+
+		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(sql.contains("CREATE HNSW VECTOR INDEX "
+				+ "IDX_DOCUMENTS_EMBEDDING ON DOCUMENTS"), sql);
+		assertTrue(sql.contains("SIMILARITY FUNCTION COSINE_SIMILARITY"),
+				sql);
+		assertTrue(sql.contains("BUILD CONFIGURATION "
+				+ "'{\"M\":64,\"efConstruction\":128}'"), sql);
+		assertTrue(sql.contains("SEARCH CONFIGURATION "
+				+ "'{\"efSearch\":64}' ONLINE"), sql);
 	}
 }

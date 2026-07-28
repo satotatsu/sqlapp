@@ -18,6 +18,7 @@ class H2ModernDataTypeTest {
 	void testModernDataTypesAndCurrentFunctions() {
 		final H2 dialect = (H2) DialectHolder.defaultDialect;
 		assertType(dialect, "JSON", DataType.JSON);
+		assertType(dialect, "ENUM", DataType.ENUM);
 		assertType(dialect, "DECFLOAT", DataType.DECIMALFLOAT);
 		assertType(dialect, "TIME WITH TIME ZONE",
 				DataType.TIME_WITH_TIMEZONE);
