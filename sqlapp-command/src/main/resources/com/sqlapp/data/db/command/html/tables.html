@@ -5,12 +5,16 @@ int parentsCount=0;
 int childenCount=0;
 int excludeConsCount=0;
 int constraintsColspan=1;
+int temporalCount=0;
 for(obj : list){
 	uniqueConsCount=uniqueConsCount+obj.constraints.uniqueConstraints.size();
 	checkConsCount=checkConsCount+obj.constraints.checkConstraints.size();
 	parentsCount=parentsCount+obj.constraints.foreignKeyConstraints.size();
 	childenCount=childenCount+obj.childRelations.size();
 	excludeConsCount=excludeConsCount+obj.constraints.excludeConstraints.size();
+	if (obj.temporalPeriods.size()>0||obj.systemVersioning!=null){
+		temporalCount++;
+	}
 }
 if (checkConsCount>0){
 	constraintsColspan++;
@@ -52,6 +56,9 @@ int no=1;
 				@end{}
 				@if{_prefix.partitioningCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>@{getMessage("Partitioning")}</th>
+				@end{}
+				@if{temporalCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Temporal")}>@{getMessage("Temporal")}</th>
 				@end{}
 				@if{_prefix.statementCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
@@ -103,6 +110,9 @@ int no=1;
 				@if{_prefix.partitioningCount>0}
 				<td @{renderOptions.tableHeaderColAttr("Partitioning")}>@{zeroToEmpty(partitioningCount)}</td>
 				@end{}
+				@if{temporalCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Temporal")}>@{zeroToEmpty(temporalCount)}</td>
+				@end{}
 				@if{_prefix.statementCount>0}
 				<td @{renderOptions.tableHeaderColAttr("Statement")}>@{zeroToEmpty(statementCount)}</td>
 				@end{}
@@ -143,6 +153,9 @@ int no=1;
 				@end{}
 				@if{_prefix.partitioningCount>0}
 				<td @{renderOptions.tableBodyColAttr("Partitioning")}>@{renderOptions.checkIcon(obj.partitioning!=null)}</td>
+				@end{}
+				@if{temporalCount>0}
+				<td @{renderOptions.tableBodyColAttr("Temporal")}>@{renderOptions.checkIcon(obj.temporalPeriods.size()>0||obj.systemVersioning!=null)}</td>
 				@end{}
 				@if{_prefix.statementCount>0}
 				<td @{renderOptions.tableBodyColAttr("Statement")}>@{zeroToEmpty(obj.statement.size())}</td>

@@ -34,6 +34,10 @@ import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.SystemVersioning;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriod;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoint;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
 
@@ -105,6 +109,51 @@ public class GenerateHtmlDocsCommandTest {
 		try (var paths = java.nio.file.Files.list(new File(outputDir, "tables").toPath())) {
 			assertTrue(paths.anyMatch(path -> path.getFileName().toString().contains("CUSTOMERS")));
 		}
+	}
+
+	@Test
+	public void testTemporalTableDocumentation() throws IOException {
+		File outputDir = new File(testProjectDir, "temporal-html");
+		Catalog catalog = new Catalog("CATALOG");
+		Schema schema = new Schema("PUBLIC");
+		Table table = new Table("AUDIT_LOG");
+		catalog.getSchemas().add(schema);
+		schema.getTables().add(table);
+		table.getColumns().add("ID");
+		table.getColumns().add("ROW_START");
+		table.getColumns().add("ROW_END");
+		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
+				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+				.setStartColumnName("ROW_START")
+				.setEndColumnName("ROW_END"));
+		table.setSystemVersioning(new SystemVersioning()
+				.setPeriodName("SYSTEM_TIME")
+				.setHistoryTableName("AUDIT_LOG_HISTORY")
+				.setTransactionIdColumnName("TRANSACTION_ID"));
+
+		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
+		command.setCatalog(catalog);
+		command.setOutputDirectory(outputDir);
+		command.setMultiThread(false);
+		command.run();
+
+		String tablesHtml = Files.readString(new File(outputDir, "tables.html").toPath());
+		assertTrue(tablesHtml.contains("AUDIT_LOG"));
+		assertTrue(tablesHtml.contains("Temporal") || tablesHtml.contains("テンポラル"));
+
+		Path tablePath;
+		try (var paths = Files.list(new File(outputDir, "tables").toPath())) {
+			tablePath = paths.filter(path -> path.getFileName().toString().contains("AUDIT_LOG"))
+					.findFirst().orElseThrow();
+		}
+		String tableHtml = Files.readString(tablePath);
+		assertTrue(tableHtml.contains("href=\"#Temporal\""));
+		assertTrue(tableHtml.contains("id=\"Temporal\""));
+		assertTrue(tableHtml.contains("SYSTEM_TIME"));
+		assertTrue(tableHtml.contains("ROW_START"));
+		assertTrue(tableHtml.contains("ROW_END"));
+		assertTrue(tableHtml.contains("AUDIT_LOG_HISTORY"));
+		assertTrue(tableHtml.contains("TRANSACTION_ID"));
 	}
 
 }
