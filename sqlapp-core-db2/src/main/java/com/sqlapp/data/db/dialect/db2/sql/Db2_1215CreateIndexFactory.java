@@ -38,7 +38,7 @@ public class Db2_1215CreateIndexFactory extends CreateIndexFactory {
 			return;
 		}
 		validateVectorIndex(index, table);
-		builder._add("VECTOR").index().space().name(index, false).on();
+		builder.space()._add("VECTOR").index().space().name(index, false).on();
 		if (index.getSchemaName() != null && table.getSchemaName() != null
 				&& !CommonUtils.eq(index.getSchemaName(), table.getSchemaName())) {
 			builder.name(table, true);
