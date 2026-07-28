@@ -94,8 +94,8 @@ class MariadbModernSchemaSqlTest extends AbstractMariadbSqlFactoryTest {
 		String sql = factory.createSql(table).get(0).getSqlText();
 		assertTrue(sql.contains("`VECTOR`"), sql);
 		assertTrue(sql.contains("`SYSTEM_TIME`"), sql);
-		assertTrue(sql.contains("ENGINE=InnoDB"), sql);
-		assertTrue(sql.contains("ROW_FORMAT=DYNAMIC"), sql);
+		assertTrue(sql.contains("ENGINE =InnoDB"), sql);
+		assertTrue(sql.contains("ROW_FORMAT =DYNAMIC"), sql);
 		assertTrue(sql.contains("PAGE_COMPRESSED=1"), sql);
 		assertTrue(sql.contains("PAGE_COMPRESSION_LEVEL=6"), sql);
 		assertTrue(sql.contains("STATS_PERSISTENT=1"), sql);
