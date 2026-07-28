@@ -27,7 +27,8 @@ public final class OracleJsonDualityViewUtils {
 
 	public static boolean isJsonRelationalDualityView(final View view) {
 		return Boolean.TRUE.equals(
-				view.getSpecifics().get(JSON_RELATIONAL_DUALITY_VIEW));
+				view.getSpecifics().get(JSON_RELATIONAL_DUALITY_VIEW,
+						Boolean.class));
 	}
 
 	public static View setJsonRelationalDualityView(final View view,

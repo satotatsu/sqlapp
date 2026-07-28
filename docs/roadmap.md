@@ -75,3 +75,31 @@ Before adding 26ai-only SQL:
 - add a 23ai/26ai boundary test
 - distinguish features introduced by a 26ai release update when the JDBC
   product version provides enough information
+
+## Oracle modern feature follow-up
+
+The current Oracle 23ai/26ai scope includes native JSON, Boolean and Vector
+types, AI Vector Search SQL and indexes, SQL macros, scalable and session
+sequences, single-column data use case domains, schema annotations, supported
+existence clauses, JSON relational duality view DDL, and the corresponding
+metadata readers where Oracle exposes suitable catalog views.
+
+The following work is intentionally deferred:
+
+- JSON relational duality view logical-replication DDL and metadata
+- Oracle 26ai duality-view table and column detail metadata from
+  `ALL_JSON_DUALITY_VIEW_TABS` and related views
+- structured modeling of duality-view GraphQL fields, nested objects,
+  generated or hidden fields, flex columns and field-level directives
+- broader schema-annotation coverage beyond the currently supported table,
+  column, index and domain objects
+- existence-clause support for additional Oracle object factories where the
+  exact database-version boundary and syntax have been verified
+- remaining advanced data use case domain forms listed above
+- integration tests against real Oracle 23ai and 26ai instances for DDL,
+  metadata permissions and Schema XML/DDL round trips
+
+Duality-view definitions remain in the existing `View.statement` property.
+Oracle-only flags and discovered metadata remain in `View.specifics`. A shared
+structured model should be introduced only if another database exposes an
+equivalent feature or sqlapp needs to transform individual definition nodes.
