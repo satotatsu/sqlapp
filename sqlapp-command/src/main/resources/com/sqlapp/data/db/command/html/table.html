@@ -24,6 +24,9 @@ boolean first=true;
 			@if{obj.temporalPeriods.size()>0||obj.systemVersioning!=null}
 			<li><a href="#Temporal">@{getMessage("Temporal")}</a></li>
 			@end{}
+			@if{hasVector(obj)}
+			<li><a href="#Vector">@{getMessage("Vector")}</a></li>
+			@end{}
 			@if{obj.tableSpace!=null||obj.indexTableSpace!=null||obj.lobTableSpace!=null}
 			<li><a href="#TableSpace">@{getMessage("TableSpace")}</a></li>
 			@end{}
@@ -543,6 +546,67 @@ boolean first=true;
 								<td @{renderOptions.tableBodyColAttr("StartColumnName")}>@{escape(period.startColumnName)}</td>
 								<td @{renderOptions.tableBodyColAttr("EndColumnName")}>@{escape(period.endColumnName)}</td>
 							</tr>
+						@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+		</div>
+		@end{}
+
+		@if{hasVector(obj)}
+		<div id="Vector">
+			@if{hasVectorColumns(obj)}
+			<div class="panel panel-default">
+				<div class="header">@{getMessage("VectorColumns")}</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+						<thead>
+							<tr>
+								<th @{renderOptions.tableHeaderColAttr("#")}>#</th>
+								<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th @{renderOptions.tableHeaderColAttr("ElementDataType")}>@{getMessage("ElementDataType")}</th>
+								<th @{renderOptions.tableHeaderColAttr("Dimension")}>@{getMessage("Dimension")}</th>
+							</tr>
+						</thead>
+						@code{no=1;}
+						<tbody class="tbody_class">@foreach{column : obj.columns}
+							@if{isVectorColumn(column)}
+							<tr>
+								<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+								<td @{renderOptions.tableBodyColAttr("Name")}>@{escape(column.name)}</td>
+								<td @{renderOptions.tableBodyColAttr("ElementDataType")}>@{escape(column.vectorElementDataType)}</td>
+								<td @{renderOptions.tableBodyColAttr("Dimension")}>@{escape(column.vectorDimension)}</td>
+							</tr>
+							@end{}
+						@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			@if{hasVectorIndexes(obj)}
+			<div class="panel panel-default">
+				<div class="header">@{getMessage("VectorIndexes")}</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+						<thead>
+							<tr>
+								<th @{renderOptions.tableHeaderColAttr("#")}>#</th>
+								<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
+								<th @{renderOptions.tableHeaderColAttr("DistanceType")}>@{getMessage("DistanceType")}</th>
+							</tr>
+						</thead>
+						@code{no=1;}
+						<tbody class="tbody_class">@foreach{index : obj.indexes}
+							@if{isVectorIndex(index)}
+							<tr>
+								<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+								<td @{renderOptions.tableBodyColAttr("Name")}>@{escape(index.name)}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{escapeNamesOnly(index.columns, '<br/>')}</td>
+								<td @{renderOptions.tableBodyColAttr("DistanceType")}>@{escape(index.vectorDistanceType)}</td>
+							</tr>
+							@end{}
 						@end{}</tbody>
 					</table>
 				</div>

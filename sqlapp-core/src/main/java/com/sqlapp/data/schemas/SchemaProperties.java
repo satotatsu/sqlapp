@@ -2453,7 +2453,14 @@ public enum SchemaProperties implements ISchemaProperty {
 
 		@Override
 		protected final boolean setValueInternal(final Object obj, final Object value) {
-			((VectorElementDataTypeProperty<?>) obj).setVectorElementDataType(DataType.valueOf(toString(value)));
+			final VectorElementDataTypeProperty<?> property = (VectorElementDataTypeProperty<?>) obj;
+			if (value instanceof DataType) {
+				property.setVectorElementDataType((DataType) value);
+			} else if (value instanceof Integer) {
+				property.setVectorElementDataType(DataType.valueOf((Integer) value));
+			} else {
+				property.setVectorElementDataType(converters.convertObject(value, DataType.class));
+			}
 			return true;
 		}
 
