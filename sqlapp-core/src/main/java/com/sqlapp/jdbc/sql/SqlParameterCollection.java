@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,6 +52,7 @@ import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.jdbc.sql.node.CommentNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
@@ -110,6 +112,12 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	private Object outputStream;
 
+	private Map<CommentNode, String> sqlParts = CommonUtils.linkedMap();
+
+	public Map<CommentNode, String> getSqlParts() {
+		return sqlParts;
+	}
+
 	public SqlParameterCollection() {
 	}
 
@@ -123,6 +131,49 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 
 	public TableRelation getTableRelation() {
 		return tableRelation;
+	}
+
+	public void fixed() {
+		for (BindParameterHolder holder : this.parameters) {
+			holder.fixed();
+		}
+	}
+
+	public BindParameter getBindParameter(CommentNode node) {
+		for (BindParameterHolder holder : this.parameters) {
+			if (holder.getBindParameter() != null) {
+				if (holder.getBindParameter().getCommentNode() == node) {
+					return holder.getBindParameter();
+				}
+			}
+			if (holder.getBindParameters() != null) {
+				for (BindParameter bindParameter : holder.getBindParameters()) {
+					if (bindParameter.getCommentNode() == node) {
+						return bindParameter;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	public List<BindParameter> getBindParameters(CommentNode node) {
+		List<BindParameter> result = CommonUtils.list();
+		for (BindParameterHolder holder : this.parameters) {
+			if (holder.getBindParameter() != null) {
+				if (holder.getBindParameter().getCommentNode() == node) {
+					result.add(holder.getBindParameter());
+				}
+			}
+			if (holder.getBindParameters() != null) {
+				for (BindParameter bindParameter : holder.getBindParameters()) {
+					if (bindParameter.getCommentNode() == node) {
+						result.add(bindParameter);
+					}
+				}
+			}
+		}
+		return result;
 	}
 
 	public void setTableRelation(TableRelation tableRelation) {

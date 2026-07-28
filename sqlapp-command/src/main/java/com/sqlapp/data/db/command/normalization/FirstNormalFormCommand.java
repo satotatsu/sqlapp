@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -77,10 +78,12 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	private Function<Table, String> childKeyColumnNameStrategy = table -> "ROW_NO";
 
 	/** Determines the child table name from the source table and cluster number. */
-	private BiFunction<Table, Integer, String> childTableNameStrategy = (table,
-			clusterNumber) -> table.getName() + "_DETAIL_" + clusterNumber;
+	private BiFunction<Table, Integer, String> childTableNameStrategy = (table, clusterNumber) -> table.getName()
+			+ "_DETAIL_" + clusterNumber;
 
-	/** Minimum number of repeating column types required to create a child table. */
+	/**
+	 * Minimum number of repeating column types required to create a child table.
+	 */
 	private int minimumColumnCount = 2;
 
 	/** Whether to write the versioned migration mapping artifact. */
@@ -92,7 +95,10 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	/** Migration mapping file name. Derived from targetFile when null. */
 	private String migrationMappingFileName;
 
-	/** Existing mapping to extend. When no output location is set, it is replaced atomically. */
+	/**
+	 * Existing mapping to extend. When no output location is set, it is replaced
+	 * atomically.
+	 */
 	private File migrationMappingFile;
 
 	/** Whether composite primary keys are converted after first normalization. */
@@ -104,6 +110,8 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 
 	private BiFunction<String, List<String>, String> surrogateForeignKeyColumnNameStrategy = (tableName,
 			columnNames) -> "PARENT_ID";
+
+	private Predicate<Column> columnFilter = c -> true;
 
 	private SurrogateKeyGenerationType surrogateKeyGenerationType = SurrogateKeyGenerationType.IDENTITY;
 
@@ -185,14 +193,13 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 		Map<String, Object> log = linkedMap();
 		log.put("formatVersion", 1);
 		log.put("source", mapOf("file", targetFile.getName(), "rootType", root.getClass().getSimpleName()));
-		log.put("configuration",
-				mapOf("minimumColumnCount", minimumColumnCount, "childKeyColumn",
-						mapOf("resolvedPerGeneratedTable", true)));
+		log.put("configuration", mapOf("minimumColumnCount", minimumColumnCount, "childKeyColumn",
+				mapOf("resolvedPerGeneratedTable", true)));
 		List<Map<String, Object>> tableLogs = new ArrayList<>();
 		log.put("tables", tableLogs);
 		for (Table table : new ArrayList<>(SchemaUtils.toTables(root))) {
 			List<RepeatColumnCluster> clusters = RepeatColumnClusterBuilder.of(table)
-					.minimumColumnCount(minimumColumnCount).build();
+					.minimumColumnCount(minimumColumnCount).columnFilter(columnFilter).build();
 			if (clusters.isEmpty()) {
 				continue;
 			}
@@ -200,8 +207,8 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 			if (primaryKey == null) {
 				info("Skip normalization because the table has no primary key: " + table.getName());
 				tableLogs.add(mapOf("sourceTable", sourceTableLog(table), "result", "skipped", "reason",
-						mapOf("code", "NO_PRIMARY_KEY",
-								"message", "A primary key is required to generate the child-table relationship.")));
+						mapOf("code", "NO_PRIMARY_KEY", "message",
+								"A primary key is required to generate the child-table relationship.")));
 				continue;
 			}
 			if (!table.getRows().isEmpty()) {
@@ -244,9 +251,8 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 			childPrimaryKeyColumns.add(childColumn);
 		}
 		if (childTable.getColumns().contains(childKeyColumnName)) {
-			throw new CommandException(
-					"Child key column conflicts with a source primary key: table=" + sourceTable.getName()
-							+ ", column=" + childKeyColumnName);
+			throw new CommandException("Child key column conflicts with a source primary key: table="
+					+ sourceTable.getName() + ", column=" + childKeyColumnName);
 		}
 		Column childKeyColumn = new Column(childKeyColumnName).setDataType(DataType.INT).setNotNull(true);
 		childTable.getColumns().add(childKeyColumn);
@@ -285,8 +291,8 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 		return result;
 	}
 
-	private Map<String, Object> generatedTableLog(Table sourceTable, Table childTable, UniqueConstraint sourcePrimaryKey,
-			RepeatColumnCluster cluster) {
+	private Map<String, Object> generatedTableLog(Table sourceTable, Table childTable,
+			UniqueConstraint sourcePrimaryKey, RepeatColumnCluster cluster) {
 		List<String> parentColumns = sourcePrimaryKey.getColumns().toColumns().stream().map(Column::getName).toList();
 		String childKeyName = childKeyColumnNameStrategy.apply(sourceTable);
 		Map<String, Object> result = linkedMap();
@@ -297,9 +303,8 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 		result.put("primaryKey", mapOf("name", childTable.getPrimaryKeyConstraint().getName(), "columns",
 				childTable.getPrimaryKeyConstraint().getColumns().toColumns().stream().map(Column::getName).toList()));
 		var foreignKey = childTable.getConstraints().getForeignKeyConstraints().getFirst();
-		result.put("foreignKey",
-				mapOf("name", foreignKey.getName(), "sourceColumns", parentColumns, "targetTable",
-						qualifiedName(sourceTable), "targetColumns", parentColumns));
+		result.put("foreignKey", mapOf("name", foreignKey.getName(), "sourceColumns", parentColumns, "targetTable",
+				qualifiedName(sourceTable), "targetColumns", parentColumns));
 		List<Map<String, Object>> columnMappings = new ArrayList<>();
 		for (RepeatColumn repeatColumn : cluster) {
 			List<Map<String, Object>> sourceColumns = new ArrayList<>();
@@ -318,15 +323,13 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 			columnMappings.add(columnMapping);
 		}
 		result.put("columnMappings", columnMappings);
-		result.put("migrationGuidance",
-				mapOf("rowIdentity",
-						"One source " + sourceTable.getName() + " row becomes multiple " + childTable.getName()
-								+ " rows. " + childKeyName
-								+ " corresponds to the numeric suffix of the legacy column.",
-						"joinCondition", parentColumns.stream()
-								.map(column -> childTable.getName() + "." + column + " = " + sourceTable.getName() + "."
-										+ column)
-								.toList()));
+		result.put("migrationGuidance", mapOf(
+				"rowIdentity", "One source " + sourceTable.getName() + " row becomes multiple " + childTable.getName()
+						+ " rows. " + childKeyName + " corresponds to the numeric suffix of the legacy column.",
+				"joinCondition",
+				parentColumns.stream().map(
+						column -> childTable.getName() + "." + column + " = " + sourceTable.getName() + "." + column)
+						.toList()));
 		return result;
 	}
 

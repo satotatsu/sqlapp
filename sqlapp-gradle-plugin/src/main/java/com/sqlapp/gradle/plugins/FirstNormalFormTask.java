@@ -21,6 +21,7 @@ package com.sqlapp.gradle.plugins;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
@@ -38,6 +39,7 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.normalization.FirstNormalFormCommand;
 import com.sqlapp.data.db.command.normalization.SurrogateKeyGenerationType;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
@@ -51,8 +53,8 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	private Function<Table, String> childKeyColumnNameStrategy = table -> "ROW_NO";
 
-	private BiFunction<Table, Integer, String> childTableNameStrategy = (table,
-			clusterNumber) -> table.getName() + "_DETAIL_" + clusterNumber;
+	private BiFunction<Table, Integer, String> childTableNameStrategy = (table, clusterNumber) -> table.getName()
+			+ "_DETAIL_" + clusterNumber;
 
 	private Function<Table, String> surrogatePrimaryKeyColumnNameStrategy = table -> "ID";
 
@@ -60,6 +62,8 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	private BiFunction<String, java.util.List<String>, String> surrogateForeignKeyColumnNameStrategy = (tableName,
 			columnNames) -> "PARENT_ID";
+
+	private Predicate<Column> columnFilter = c -> true;
 
 	private Function<Table, String> surrogateSequenceNameStrategy = table -> "SEQ_" + table.getName();
 
@@ -118,6 +122,15 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	}
 
 	@Internal
+	public Predicate<Column> getColumnFilter() {
+		return columnFilter;
+	}
+
+	public void setColumnFilter(Predicate<Column> columnFilter) {
+		this.columnFilter = columnFilter;
+	}
+
+	@Internal
 	public Function<Table, String> getSurrogatePrimaryKeyColumnNameStrategy() {
 		return surrogatePrimaryKeyColumnNameStrategy;
 	}
@@ -132,8 +145,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		return surrogatePrimaryKeyDataTypeStrategy;
 	}
 
-	public void setSurrogatePrimaryKeyDataTypeStrategy(
-			Function<Table, DataType> surrogatePrimaryKeyDataTypeStrategy) {
+	public void setSurrogatePrimaryKeyDataTypeStrategy(Function<Table, DataType> surrogatePrimaryKeyDataTypeStrategy) {
 		this.surrogatePrimaryKeyDataTypeStrategy = surrogatePrimaryKeyDataTypeStrategy;
 	}
 

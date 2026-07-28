@@ -24,7 +24,9 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +40,8 @@ public class RepeatColumnClusterBuilder {
 	private final Table table;
 
 	private int minimumColumnCount = 2;
+
+	private Predicate<Column> columnFilter = c -> true;
 
 	private RepeatColumnClusterBuilder(Table table) {
 		this.table = table;
@@ -55,6 +59,12 @@ public class RepeatColumnClusterBuilder {
 		return this;
 	}
 
+	public RepeatColumnClusterBuilder columnFilter(Predicate<Column> columnFilter) {
+		this.columnFilter = Objects.requireNonNull(columnFilter, "columnFilter");
+		this.columnFilter = columnFilter;
+		return this;
+	}
+
 	public List<RepeatColumnCluster> build() {
 		List<RepeatColumn> list = buildRepeatColumn();
 		return clustering(list);
@@ -63,6 +73,9 @@ public class RepeatColumnClusterBuilder {
 	private List<RepeatColumn> buildRepeatColumn() {
 		Map<String, RepeatColumn> map = new LinkedHashMap<>();
 		for (Column column : table.getColumns()) {
+			if (!columnFilter.test(column)) {
+				continue;
+			}
 			Matcher matcher = PATTERN.matcher(column.getName());
 			if (!matcher.matches()) {
 				continue;

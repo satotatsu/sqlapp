@@ -37,9 +37,9 @@ public class OutputVariableNode extends CommentNode implements Cloneable {
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
 		Object val = evalExpression(this.getExpression(), context);
 		if (val != null) {
-			String strVal = Converters.getDefault().convertString(val,
-					val.getClass());
-			sqlParameters.addSql(sanitizeSimple(strVal));
+			String strVal = Converters.getDefault().convertString(val, val.getClass());
+			String sql = sanitizeSimple(strVal);
+			sqlParameters.addSql(sql);
 		}
 		return true;
 	}
@@ -51,16 +51,13 @@ public class OutputVariableNode extends CommentNode implements Cloneable {
 	 */
 	protected String sanitizeSimple(final String text) {
 		if (text.startsWith("'") && text.endsWith("'")) {
-			return "'"
-					+ sanitizeSimpleInternal(text.substring(1,
-							text.length() - 1)) + "'";
+			return "'" + sanitizeSimpleInternal(text.substring(1, text.length() - 1)) + "'";
 		}
 		return sanitizeSimpleInternal(text);
 	}
 
 	private String sanitizeSimpleInternal(final String text) {
-		return text.replace("--", "").replace(";", "").replace("\\", "")
-				.replace("%", "").replace("?", "");
+		return text.replace("--", "").replace(";", "").replace("\\", "").replace("%", "").replace("?", "");
 	}
 
 	/*

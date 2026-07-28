@@ -541,6 +541,9 @@ public class TableOptions extends AbstractBean implements Serializable {
 
 	private TableFunction<List<Row>> tableRowsStrategy = (t) -> t.getRows();
 
+	private TableFunction<RowComparisonOperator> selectByRowComparisonOperatorStrategy = (
+			t) -> RowComparisonOperator.EQUAL;
+
 	public <T> T useTableRowStrategy(TableFunction<List<Row>> tableRowsStrategy, SQLExceptionSupplier<T> supplier)
 			throws SQLException {
 		TableFunction<List<Row>> current = this.tableRowsStrategy;

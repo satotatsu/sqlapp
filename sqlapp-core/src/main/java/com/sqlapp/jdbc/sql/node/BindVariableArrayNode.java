@@ -68,15 +68,27 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 	 * @param val
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context, final Object val) {
+		final String operatorText = this.getColumnOperator(bindParameter.getName(), context);
+		final List<BindParameter> parameters = getParameters(sqlParameters, context, val, operatorText);
+		buildColumnOperator(operatorText, parameters, sqlParameters);
+	}
+
+	private List<BindParameter> getParameters(final SqlParameterCollection sqlParameters, final Object context,
+			final Object val, final String operatorText) {
+		List<BindParameter> list = sqlParameters.getBindParameters(this);
+		if (!list.isEmpty()) {
+			return list;
+		}
 		final BindParameter originalParameter = this.bindParameter;
 		final Column column = this.getColumn(context, originalParameter.getName());
-		final String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		final List<BindParameter> parameters = CommonUtils.list();
 		final SqlComparisonOperator operator = SqlComparisonOperator.parse(operatorText);
+		BindVariableArrayNode own = this;
 		final AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 			@Override
 			protected void handle(final Object obj, final int index) {
 				final BindParameter parameter = originalParameter.clone();
+				parameter.setCommentNode(own);
 				Object val;
 				if (column != null) {
 					parameter.setDataType(column.getDataType());
@@ -105,7 +117,7 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 		if (parameters.size() > 1) {
 			Collections.sort(parameters);
 		}
-		buildColumnOperator(operatorText, parameters, sqlParameters);
+		return parameters;
 	}
 
 	private void buildColumnOperator(final String operatorText, final List<BindParameter> parameters,
