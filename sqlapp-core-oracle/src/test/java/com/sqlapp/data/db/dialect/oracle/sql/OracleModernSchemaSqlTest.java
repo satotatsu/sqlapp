@@ -105,6 +105,47 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 	}
 
 	@Test
+	void testCreateHybridVectorIndex() {
+		final Table table = new Table("DOCUMENTS");
+		table.setDialect(dialect);
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.CLOB));
+		final Index index = new Index("IDX_DOCUMENTS_HYBRID",
+				table.getColumns().get("CONTENT")).setIndexType(IndexType.Vector);
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.HYBRID, true);
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.DATASTORE, "DOC_DATASTORE");
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.FILTER, "CTXSYS.AUTO_FILTER");
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.LEXER, "DOC_LEXER");
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.MODEL, "DOC_MODEL");
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.VECTOR_IDXTYPE, "IVF");
+		table.getIndexes().add(index);
+
+		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(sql.contains(
+				"CREATE HYBRID VECTOR INDEX IDX_DOCUMENTS_HYBRID ON DOCUMENTS ( CONTENT )"),
+				sql);
+		assertTrue(sql.contains("PARAMETERS ('DATASTORE DOC_DATASTORE "
+				+ "FILTER CTXSYS.AUTO_FILTER LEXER DOC_LEXER "
+				+ "MODEL DOC_MODEL VECTOR_IDXTYPE IVF')"), sql);
+	}
+
+	@Test
+	void testRejectInvalidHybridVectorIndex() {
+		final Table table = new Table("DOCUMENTS");
+		table.setDialect(dialect);
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.CLOB));
+		final Index index = new Index("IDX_DOCUMENTS_HYBRID",
+				table.getColumns().get("CONTENT")).setIndexType(IndexType.Vector);
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.HYBRID, true);
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.MODEL, "DOC_MODEL");
+		index.getSpecifics().put(Oracle23aiCreateIndexFactory.VECTOR_IDXTYPE, "INVALID");
+		table.getIndexes().add(index);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(index, SqlType.CREATE));
+	}
+
+	@Test
 	void testRejectVectorBeforeOracle23ai() {
 		final var oracle21 = DialectResolver.getInstance().getDialect("Oracle", 21, 0, 0);
 		final Table table = new Table("DOCUMENTS");

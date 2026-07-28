@@ -49,6 +49,47 @@ import com.sqlapp.util.CommonUtils;
  */
 public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 
+	public enum VectorChunkUnit {
+		Characters("CHARACTERS"),
+		Words("WORDS"),
+		Vocabulary("VOCABULARY");
+
+		private final String sqlValue;
+
+		VectorChunkUnit(final String sqlValue) {
+			this.sqlValue = sqlValue;
+		}
+	}
+
+	public enum VectorChunkSplit {
+		None("NONE"),
+		Newline("NEWLINE"),
+		Blankline("BLANKLINE"),
+		Space("SPACE"),
+		Recursively("RECURSIVELY"),
+		Sentence("SENTENCE");
+
+		private final String sqlValue;
+
+		VectorChunkSplit(final String sqlValue) {
+			this.sqlValue = sqlValue;
+		}
+	}
+
+	public enum VectorChunkNormalization {
+		None("NONE"),
+		All("ALL"),
+		Punctuation("PUNCTUATION"),
+		Whitespace("WHITESPACE"),
+		Widechar("WIDECHAR");
+
+		private final String sqlValue;
+
+		VectorChunkNormalization(final String sqlValue) {
+			this.sqlValue = sqlValue;
+		}
+	}
+
 	public OracleSqlBuilder(Dialect dialect) {
 		super(dialect);
 	}
@@ -267,6 +308,141 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 		checkExpression(expression, "expression");
 		_add("FROM_VECTOR")._add("(")._add(expression.toString())._add(")");
 		return instance();
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_EMBEDDING expression.
+	 *
+	 * @param modelName imported embedding model name
+	 * @param expression input SQL expression
+	 */
+	public OracleSqlBuilder vectorEmbedding(final CharSequence modelName,
+			final CharSequence expression) {
+		return vectorEmbedding(modelName, expression, null);
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_EMBEDDING expression using all relevant attributes.
+	 */
+	public OracleSqlBuilder vectorEmbeddingUsingAll(
+			final CharSequence modelName) {
+		checkVectorSearchSupport();
+		checkExpression(modelName, "modelName");
+		_add("VECTOR_EMBEDDING")._add("(")._add(modelName.toString())
+				.space()._add("USING *")._add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_EMBEDDING expression with a mining attribute alias.
+	 */
+	public OracleSqlBuilder vectorEmbedding(final CharSequence modelName,
+			final CharSequence expression, final CharSequence alias) {
+		checkVectorSearchSupport();
+		checkExpression(modelName, "modelName");
+		checkExpression(expression, "expression");
+		_add("VECTOR_EMBEDDING")._add("(")._add(modelName.toString())
+				.space()._add("USING").space()._add(expression.toString());
+		if (alias != null) {
+			checkExpression(alias, "alias");
+			space().as().space()._add(alias.toString());
+		}
+		_add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_CHUNKS table function using default chunking.
+	 */
+	public OracleSqlBuilder vectorChunks(final CharSequence expression) {
+		return vectorChunks(expression, null, null, null, null, null, null,
+				false);
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_CHUNKS table function.
+	 */
+	public OracleSqlBuilder vectorChunks(final CharSequence expression,
+			final VectorChunkUnit unit, final Integer maximum,
+			final Integer overlap, final VectorChunkSplit split,
+			final CharSequence language,
+			final VectorChunkNormalization normalization,
+			final boolean extended) {
+		checkVectorSearchSupport();
+		checkExpression(expression, "expression");
+		validateVectorChunks(unit, maximum, overlap, split, language);
+		_add("VECTOR_CHUNKS")._add("(")._add(expression.toString());
+		if (unit != null) {
+			space()._add("BY").space()._add(unit.sqlValue);
+		}
+		if (maximum != null) {
+			space()._add("MAX").space()._add(maximum);
+		}
+		if (overlap != null) {
+			space()._add("OVERLAP").space()._add(overlap);
+		}
+		if (split != null) {
+			space()._add("SPLIT BY").space()._add(split.sqlValue);
+		}
+		if (language != null) {
+			space()._add("LANGUAGE").space()._add(language.toString());
+		}
+		if (normalization != null) {
+			space()._add("NORMALIZE").space()
+					._add(normalization.sqlValue);
+		}
+		if (extended) {
+			space()._add("EXTENDED");
+		}
+		_add(")");
+		return instance();
+	}
+
+	private void validateVectorChunks(final VectorChunkUnit unit,
+			final Integer maximum, final Integer overlap,
+			final VectorChunkSplit split, final CharSequence language) {
+		final VectorChunkUnit effectiveUnit = unit == null
+				? VectorChunkUnit.Words : unit;
+		final int effectiveMaximum = maximum == null ? 100 : maximum;
+		final int minimumMaximum = effectiveUnit == VectorChunkUnit.Characters
+				? 50 : 10;
+		final int maximumMaximum = effectiveUnit == VectorChunkUnit.Characters
+				? 4000 : 1000;
+		if (effectiveMaximum < minimumMaximum
+				|| effectiveMaximum > maximumMaximum) {
+			throw new IllegalArgumentException("VECTOR_CHUNKS MAX for "
+					+ effectiveUnit.sqlValue + " must be between "
+					+ minimumMaximum + " and " + maximumMaximum + ": "
+					+ effectiveMaximum);
+		}
+		if (overlap != null) {
+			if (overlap < 0) {
+				throw new IllegalArgumentException(
+						"VECTOR_CHUNKS OVERLAP must not be negative: "
+								+ overlap);
+			}
+			if (overlap > 0
+					&& (overlap * 100 < effectiveMaximum * 5
+							|| overlap * 100 > effectiveMaximum * 20)) {
+				throw new IllegalArgumentException(
+						"VECTOR_CHUNKS OVERLAP must be zero or between "
+								+ "5% and 20% of MAX: " + overlap);
+			}
+		}
+		if (split == VectorChunkSplit.Sentence
+				&& effectiveUnit == VectorChunkUnit.Characters) {
+			throw new IllegalArgumentException(
+					"VECTOR_CHUNKS SPLIT BY SENTENCE is not valid with "
+							+ "BY CHARACTERS");
+		}
+		if (language != null) {
+			checkExpression(language, "language");
+			final String value = language.toString();
+			if (value.indexOf('\r') >= 0 || value.indexOf('\n') >= 0) {
+				throw new IllegalArgumentException(
+						"language must not contain line breaks");
+			}
+		}
 	}
 
 	/**
