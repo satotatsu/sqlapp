@@ -79,4 +79,26 @@ class MariadbModernSchemaSqlTest extends AbstractMariadbSqlFactoryTest {
 		assertNotNull(dialect.getDbDataTypes().getDbType(DataType.JSON, null));
 		assertNotNull(dialect.getDbDataTypes().getDbType(DataType.UUID, null));
 	}
+
+	@Test
+	void testMariaDbTableOptionsAndReservedIdentifiers() {
+		Table table = new Table("VECTOR");
+		table.setDialect(dialect);
+		table.getColumns().add("SYSTEM_TIME", column -> column.setDataType(DataType.INT));
+		table.getSpecifics().put("ENGINE", "InnoDB");
+		table.getSpecifics().put("ROW_FORMAT", "DYNAMIC");
+		table.getSpecifics().put("CREATE_OPTIONS",
+				"partitioned PAGE_COMPRESSED=1 PAGE_COMPRESSION_LEVEL=6 STATS_PERSISTENT=1");
+
+		SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
+		String sql = factory.createSql(table).get(0).getSqlText();
+		assertTrue(sql.contains("`VECTOR`"), sql);
+		assertTrue(sql.contains("`SYSTEM_TIME`"), sql);
+		assertTrue(sql.contains("ENGINE=InnoDB"), sql);
+		assertTrue(sql.contains("ROW_FORMAT=DYNAMIC"), sql);
+		assertTrue(sql.contains("PAGE_COMPRESSED=1"), sql);
+		assertTrue(sql.contains("PAGE_COMPRESSION_LEVEL=6"), sql);
+		assertTrue(sql.contains("STATS_PERSISTENT=1"), sql);
+		assertTrue(!sql.toLowerCase(java.util.Locale.ROOT).contains(" partitioned"), sql);
+	}
 }
