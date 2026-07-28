@@ -14,6 +14,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,6 +24,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.YamlConverter;
 
 class GenerateNormalizationPlanCommandTest {
 
@@ -100,5 +102,73 @@ class GenerateNormalizationPlanCommandTest {
 		assertEquals("連番は行の順序を表しますか？",
 				GenerateNormalizationPlanCommand.getMessage(Locale.JAPANESE,
 						"question.repeatingColumns.sequenceOrder"));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void testGenerateHierarchyBusinessKeys() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table tab = table("TAB", "A", "B", "C");
+		schema.getTables().add(tab);
+		Table tab1 = table("TAB1", "A", "B", "C", "D");
+		schema.getTables().add(tab1);
+		tab1.getConstraints().addForeignKeyConstraint("FK_TAB1_TAB",
+				new Column[] { tab1.getColumns().get("A"), tab1.getColumns().get("B"),
+						tab1.getColumns().get("C") },
+				new Column[] { tab.getColumns().get("A"), tab.getColumns().get("B"), tab.getColumns().get("C") });
+		Table tab11 = table("TAB1_1", "A", "B", "C", "D", "E");
+		schema.getTables().add(tab11);
+		tab11.getConstraints().addForeignKeyConstraint("FK_TAB1_1_TAB1",
+				new Column[] { tab11.getColumns().get("A"), tab11.getColumns().get("B"),
+						tab11.getColumns().get("C"), tab11.getColumns().get("D") },
+				new Column[] { tab1.getColumns().get("A"), tab1.getColumns().get("B"),
+						tab1.getColumns().get("C"), tab1.getColumns().get("D") });
+		File source = new File(temporaryDirectory, "hierarchy.xml");
+		schema.writeXml(source);
+		File output = new File(temporaryDirectory, "hierarchy-plan");
+
+		GenerateNormalizationPlanCommand command = new GenerateNormalizationPlanCommand();
+		command.setTargetFile(source);
+		command.setOutputDirectory(output);
+		command.run();
+
+		Map<String, Object> plan = new YamlConverter().fromJsonString(
+				Files.readString(new File(output, "hierarchy-normalization-plan.yaml").toPath()), Map.class);
+		List<Map<String, Object>> candidates = (List<Map<String, Object>>) plan.get("candidates");
+		assertEquals(List.of("A", "B", "C"), businessKey(candidates, "TAB"));
+		assertEquals(List.of("PARENT_ID", "D"), businessKey(candidates, "TAB1"));
+		assertEquals(List.of("PARENT_ID", "E"), businessKey(candidates, "TAB1_1"));
+
+		Schema preview = (Schema) SchemaUtils
+				.readXml(new File(output, "hierarchy-normalization-preview.xml"));
+		assertUnique(preview.getTables().get("TAB"), "A", "B", "C");
+		assertUnique(preview.getTables().get("TAB1"), "PARENT_ID", "D");
+		assertUnique(preview.getTables().get("TAB1_1"), "PARENT_ID", "E");
+	}
+
+	@SuppressWarnings("unchecked")
+	private List<String> businessKey(List<Map<String, Object>> candidates, String table) {
+		return candidates.stream()
+				.filter(candidate -> "composite-primary-key".equals(candidate.get("category")))
+				.filter(candidate -> table.equals(((Map<String, Object>) candidate.get("source")).get("table")))
+				.map(candidate -> (Map<String, Object>) candidate.get("proposal"))
+				.map(proposal -> (List<String>) proposal.get("businessKey")).findFirst().orElseThrow();
+	}
+
+	private Table table(String name, String... primaryKeyNames) {
+		Table table = new Table(name);
+		for (String columnName : primaryKeyNames) {
+			table.getColumns().add(new Column(columnName).setDataType(DataType.VARCHAR).setLength(32).setNotNull(true));
+		}
+		table.setPrimaryKey("PK_" + name,
+				java.util.Arrays.stream(primaryKeyNames).map(columnName -> table.getColumns().get(columnName))
+						.toArray(Column[]::new));
+		return table;
+	}
+
+	private void assertUnique(Table table, String... names) {
+		assertTrue(table.getConstraints().getUniqueConstraints(constraint -> !constraint.isPrimaryKey()).stream()
+				.anyMatch(constraint -> constraint.getColumns().toColumns().stream().map(Column::getName).toList()
+						.equals(List.of(names))));
 	}
 }
