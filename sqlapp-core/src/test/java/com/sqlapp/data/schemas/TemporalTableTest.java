@@ -33,6 +33,7 @@ class TemporalTableTest {
 				.setEndColumnName("VALID_TO"));
 		table.setSystemVersioning(new SystemVersioning()
 				.setPeriodName("SYSTEM_TIME")
+				.setHistoryTableSchemaName("ARCHIVE")
 				.setHistoryTableName("ORDERS_HISTORY")
 				.setTransactionIdColumnName("VALID_TO"));
 		Table cloned = table.clone();
@@ -59,6 +60,7 @@ class TemporalTableTest {
 		assertEquals("SYSTEM_VALID_TO", restoredTable.getTemporalPeriods().get(0).getEndColumnName());
 		assertNotNull(restoredTable.getSystemVersioning());
 		assertEquals("ORDERS_HISTORY_ARCHIVE", restoredTable.getSystemVersioning().getHistoryTableName());
+		assertEquals("ARCHIVE", restoredTable.getSystemVersioning().getHistoryTableSchemaName());
 		assertEquals(table, restoredTable);
 	}
 }

@@ -32,7 +32,7 @@ import com.sqlapp.data.schemas.Column;
  * @author satoh
  * 
  */
-public class Db2_1050ColumnReader extends Db2ColumnReader {
+public class Db2_1050ColumnReader extends Db2_1010ColumnReader {
 
 	protected Db2_1050ColumnReader(Dialect dialect) {
 		super(dialect);

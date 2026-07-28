@@ -20,7 +20,11 @@
 package com.sqlapp.data.db.dialect.db2;
 
 public class DialectHolder {
-	public final static Db2_1110 Db2_1110Dialect = new Db2_1110(() -> null);
+	public final static Db2_1215 Db2_1215Dialect = new Db2_1215(() -> null);
+	public final static Db2_1212 Db2_1212Dialect = new Db2_1212(() -> Db2_1215Dialect);
+	public final static Db2_1210 Db2_1210Dialect = new Db2_1210(() -> Db2_1212Dialect);
+	public final static Db2_1150 Db2_1150Dialect = new Db2_1150(() -> Db2_1210Dialect);
+	public final static Db2_1110 Db2_1110Dialect = new Db2_1110(() -> Db2_1150Dialect);
 	public final static Db2_1050 Db2_1050Dialect = new Db2_1050(() -> Db2_1110Dialect);
 	public final static Db2_1010 Db2_1010Dialect = new Db2_1010(() -> Db2_1050Dialect);
 	public final static Db2_980 Db2_980Dialect = new Db2_980(() -> Db2_1010Dialect);

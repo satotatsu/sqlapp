@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.db2.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.metadata.ColumnReader;
 
 public class Db2_1050TableReader extends Db2_1010TableReader {
 
@@ -27,4 +28,8 @@ public class Db2_1050TableReader extends Db2_1010TableReader {
 		super(dialect);
 	}
 
+	@Override
+	protected ColumnReader newColumnReader() {
+		return new Db2_1050ColumnReader(this.getDialect());
+	}
 }

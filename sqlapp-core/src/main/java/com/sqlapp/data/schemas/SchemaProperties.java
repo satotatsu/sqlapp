@@ -5391,6 +5391,31 @@ public enum SchemaProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	HISTORY_TABLE_SCHEMA_NAME() {
+		@Override
+		public final Class<?> getPropertyClass() {
+			return HistoryTableSchemaNameProperty.class;
+		}
+
+		@Override
+		public boolean isInstanceof(final Object obj) {
+			return obj instanceof HistoryTableSchemaNameProperty;
+		}
+
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value) {
+			((HistoryTableSchemaNameProperty<?>) obj).setHistoryTableSchemaName(toString(value));
+			return true;
+		}
+
+		@Override
+		public String getValue(final Object obj) {
+			if (isGetterInstanceof(obj)) {
+				return ((HistoryTableSchemaNameProperty<?>) obj).getHistoryTableSchemaName();
+			}
+			return null;
+		}
+	},
 	HISTORY_TABLE_NAME() {
 		@Override
 		public final Class<?> getPropertyClass() {

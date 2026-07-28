@@ -20,9 +20,15 @@
 package com.sqlapp.data.db.dialect.db2.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.SystemVersioning;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriod;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * DB2用のSQLビルダー
@@ -85,6 +91,31 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 		}
 		this.typeDefinition(obj);
 		argumentAfter(obj);
+		return instance();
+	}
+
+	@Override
+	public Db2SqlBuilder definition(final Column column, final boolean withRemarks) {
+		super.definition(column, withRemarks);
+		final Table table = column.getTable();
+		if (table == null) {
+			return instance();
+		}
+		for (final TemporalPeriod period : table.getTemporalPeriods()) {
+			if (period.getPeriodType() != TemporalPeriodType.SYSTEM_TIME) {
+				continue;
+			}
+			if (CommonUtils.eqIgnoreCase(period.getStartColumnName(), column.getName())) {
+				generated().always().as().row()._add("BEGIN");
+			} else if (CommonUtils.eqIgnoreCase(period.getEndColumnName(), column.getName())) {
+				generated().always().as().row()._add("END");
+			}
+		}
+		final SystemVersioning versioning = table.getSystemVersioning();
+		if (versioning != null
+				&& CommonUtils.eqIgnoreCase(versioning.getTransactionIdColumnName(), column.getName())) {
+			generated().always().as().transaction()._add("START ID");
+		}
 		return instance();
 	}
 	

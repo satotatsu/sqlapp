@@ -11,6 +11,7 @@ import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.EnableProperty;
 import com.sqlapp.data.schemas.properties.HistoryTableNameProperty;
+import com.sqlapp.data.schemas.properties.HistoryTableSchemaNameProperty;
 import com.sqlapp.data.schemas.properties.ImplicitProperty;
 import com.sqlapp.data.schemas.properties.PeriodNameProperty;
 import com.sqlapp.data.schemas.properties.TransactionIdColumnNameProperty;
@@ -25,6 +26,7 @@ public class SystemVersioning extends AbstractDbObject<SystemVersioning>
 		, EnableProperty<SystemVersioning>
 		, ImplicitProperty<SystemVersioning>
 		, PeriodNameProperty<SystemVersioning>
+		, HistoryTableSchemaNameProperty<SystemVersioning>
 		, HistoryTableNameProperty<SystemVersioning>
 		, TransactionIdColumnNameProperty<SystemVersioning> {
 
@@ -33,6 +35,7 @@ public class SystemVersioning extends AbstractDbObject<SystemVersioning>
 	private boolean enable = (Boolean) SchemaProperties.ENABLE.getDefaultValue();
 	private boolean implicit = (Boolean) SchemaProperties.IMPLICIT.getDefaultValue();
 	private String periodName = (String) SchemaProperties.PERIOD_NAME.getDefaultValue();
+	private String historyTableSchemaName;
 	private String historyTableName;
 	private String transactionIdColumnName;
 
@@ -80,6 +83,17 @@ public class SystemVersioning extends AbstractDbObject<SystemVersioning>
 	}
 
 	@Override
+	public String getHistoryTableSchemaName() {
+		return historyTableSchemaName;
+	}
+
+	@Override
+	public SystemVersioning setHistoryTableSchemaName(String historyTableSchemaName) {
+		this.historyTableSchemaName = historyTableSchemaName;
+		return this;
+	}
+
+	@Override
 	public String getHistoryTableName() {
 		return historyTableName;
 	}
@@ -111,6 +125,7 @@ public class SystemVersioning extends AbstractDbObject<SystemVersioning>
 			stax.writeAttribute(SchemaProperties.IMPLICIT, this);
 		}
 		stax.writeAttribute(SchemaProperties.PERIOD_NAME, this);
+		stax.writeAttribute(SchemaProperties.HISTORY_TABLE_SCHEMA_NAME, this);
 		stax.writeAttribute(SchemaProperties.HISTORY_TABLE_NAME, this);
 		stax.writeAttribute(SchemaProperties.TRANSACTION_ID_COLUMN_NAME, this);
 	}
@@ -120,6 +135,7 @@ public class SystemVersioning extends AbstractDbObject<SystemVersioning>
 		builder.add(SchemaProperties.ENABLE, this.isEnable());
 		builder.add(SchemaProperties.IMPLICIT, this.isImplicit());
 		builder.add(SchemaProperties.PERIOD_NAME, this.getPeriodName());
+		builder.add(SchemaProperties.HISTORY_TABLE_SCHEMA_NAME, this.getHistoryTableSchemaName());
 		builder.add(SchemaProperties.HISTORY_TABLE_NAME, this.getHistoryTableName());
 		builder.add(SchemaProperties.TRANSACTION_ID_COLUMN_NAME, this.getTransactionIdColumnName());
 		super.toString(builder);
@@ -141,6 +157,9 @@ public class SystemVersioning extends AbstractDbObject<SystemVersioning>
 			return false;
 		}
 		if (!equals(SchemaProperties.PERIOD_NAME, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaProperties.HISTORY_TABLE_SCHEMA_NAME, val, equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaProperties.HISTORY_TABLE_NAME, val, equalsHandler)) {

@@ -57,7 +57,18 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion >= 11) {
+			if (majorVersion >= 12) {
+				final int modPack = revision == null ? 0 : revision.intValue();
+				if (modPack >= 5) {
+					return DialectHolder.Db2_1215Dialect;
+				} else if (modPack >= 2) {
+					return DialectHolder.Db2_1212Dialect;
+				}
+				return DialectHolder.Db2_1210Dialect;
+			} else if (majorVersion >= 11) {
+				if (minorVersion >= 5) {
+					return DialectHolder.Db2_1150Dialect;
+				}
 				return DialectHolder.Db2_1110Dialect;
 			} else if (majorVersion >= 10) {
 				if (minorVersion >= 5) {

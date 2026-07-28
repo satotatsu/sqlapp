@@ -54,6 +54,9 @@ public class Db2_1110 extends Db2_1050 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		getDbDataTypes().addBoolean("BOOLEAN", type -> {
+			type.setDefaultValueLiteral("FALSE");
+		});
 	}
 
 	/*
