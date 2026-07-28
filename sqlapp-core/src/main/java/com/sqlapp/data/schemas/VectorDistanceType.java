@@ -12,7 +12,10 @@ public enum VectorDistanceType implements EnumProperties {
 	Euclidean("EUCLIDEAN"),
 	EuclideanSquared("EUCLIDEAN_SQUARED"),
 	InnerProduct("INNER_PRODUCT"),
-	DotProduct("DOT_PRODUCT");
+	DotProduct("DOT_PRODUCT"),
+	Manhattan("MANHATTAN"),
+	Hamming("HAMMING"),
+	Jaccard("JACCARD");
 
 	private final String sqlValue;
 

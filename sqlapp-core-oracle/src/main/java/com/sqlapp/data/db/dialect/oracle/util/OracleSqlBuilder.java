@@ -32,6 +32,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.TimesTen;
 import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.NamedArgument;
@@ -120,6 +121,60 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	public OracleSqlBuilder rowid() {
 		appendElement("ROWID");
 		return instance();
+	}
+
+	@Override
+	protected OracleSqlBuilder typeDefinition(final Column column) {
+		if (column.getDataType() != DataType.VECTOR) {
+			return super.typeDefinition(column);
+		}
+		if (getDialect().getDbDataTypes().getDbTypeStrict(DataType.VECTOR) == null) {
+			throw new IllegalArgumentException("Oracle VECTOR requires Oracle Database 23ai or later");
+		}
+		final Integer dimension = column.getVectorDimension();
+		if (dimension != null && (dimension.intValue() <= 0 || dimension.intValue() > 65535)) {
+			throw new IllegalArgumentException("Oracle VECTOR dimension must be between 1 and 65535: "
+					+ column.getName());
+		}
+		final String elementType = getVectorElementType(column);
+		_add("VECTOR");
+		if (dimension != null || elementType != null) {
+			brackets(() -> {
+				if (dimension == null) {
+					_add("*");
+				} else {
+					_add(dimension);
+				}
+				if (elementType != null) {
+					comma()._add(elementType);
+				}
+			});
+		}
+		return instance();
+	}
+
+	private String getVectorElementType(final Column column) {
+		if (column.getVectorElementDataType() == null) {
+			return null;
+		}
+		if (column.getVectorElementDataType() == DataType.REAL) {
+			return "FLOAT32";
+		}
+		if (column.getVectorElementDataType() == DataType.DOUBLE) {
+			return "FLOAT64";
+		}
+		if (column.getVectorElementDataType() == DataType.TINYINT) {
+			return "INT8";
+		}
+		if (column.getVectorElementDataType() == DataType.BINARY) {
+			if (column.getVectorDimension() != null && column.getVectorDimension() % 8 != 0) {
+				throw new IllegalArgumentException("Oracle BINARY VECTOR dimension must be a multiple of 8: "
+						+ column.getName());
+			}
+			return "BINARY";
+		}
+		throw new IllegalArgumentException("Unsupported Oracle VECTOR element data type: "
+				+ column.getVectorElementDataType());
 	}
 	
 	/**

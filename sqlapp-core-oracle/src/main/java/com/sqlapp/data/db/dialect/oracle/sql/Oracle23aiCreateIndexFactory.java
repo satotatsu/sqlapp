@@ -1,0 +1,171 @@
+/*
+ * Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com>
+ *
+ * This file is part of sqlapp-core-oracle.
+ */
+package com.sqlapp.data.db.dialect.oracle.sql;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.oracle.metadata.Oracle23aiIndexReader;
+import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VectorDistanceType;
+import com.sqlapp.util.CommonUtils;
+
+/**
+ * CREATE INDEX factory for Oracle Database 23ai vector indexes.
+ */
+public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
+
+	public static final String ORGANIZATION = Oracle23aiIndexReader.ORGANIZATION;
+	public static final String TARGET_ACCURACY = "TARGET_ACCURACY";
+	public static final String NEIGHBORS = "NEIGHBORS";
+	public static final String EFCONSTRUCTION = "EFCONSTRUCTION";
+	public static final String NEIGHBOR_PARTITIONS = "NEIGHBOR_PARTITIONS";
+	public static final String SAMPLES_PER_PARTITION = "SAMPLES_PER_PARTITION";
+	public static final String MIN_VECTORS_PER_PARTITION = "MIN_VECTORS_PER_PARTITION";
+	public static final String PARALLEL = "PARALLEL";
+
+	@Override
+	public void addObjectDetail(final Index index, final Table table,
+			final OracleSqlBuilder builder) {
+		if (index.getIndexType() != IndexType.Vector) {
+			super.addObjectDetail(index, table, builder);
+			return;
+		}
+		final String organization = validateVectorIndex(index, table);
+		builder.space()._add("VECTOR").index().space().name(index, false).on();
+		if (index.getSchemaName() != null && table.getSchemaName() != null
+				&& !CommonUtils.eq(index.getSchemaName(), table.getSchemaName())) {
+			builder.name(table, true);
+		} else {
+			builder.name(table, false);
+		}
+		builder.space()._add("(").name(index.getColumns().get(0)).space()._add(")");
+		builder.space()._add("ORGANIZATION").space();
+		if ("HNSW".equals(organization)) {
+			builder._add("INMEMORY NEIGHBOR GRAPH");
+		} else {
+			builder._add("NEIGHBOR PARTITIONS");
+		}
+		if (index.getVectorDistanceType() != null) {
+			builder.space()._add("DISTANCE").space()
+					._add(toOracleDistance(index.getVectorDistanceType()));
+		}
+		final Integer targetAccuracy = positiveInteger(index, TARGET_ACCURACY);
+		if (targetAccuracy != null) {
+			if (targetAccuracy > 100) {
+				throw new IllegalArgumentException("TARGET_ACCURACY must be between 1 and 100: "
+						+ targetAccuracy);
+			}
+			builder.space()._add("WITH TARGET ACCURACY").space()._add(targetAccuracy);
+		}
+		addParameters(index, organization, builder);
+		final Integer parallel = positiveInteger(index, PARALLEL);
+		if (parallel != null) {
+			builder.space()._add("PARALLEL").space()._add(parallel);
+		}
+	}
+
+	private String validateVectorIndex(final Index index, final Table table) {
+		if (table == null) {
+			throw new IllegalArgumentException("VECTOR index requires a parent table: " + index.getName());
+		}
+		if (index.getColumns().size() != 1) {
+			throw new IllegalArgumentException("VECTOR index requires exactly one column: " + index.getName());
+		}
+		final Column column = table.getColumns().get(index.getColumns().get(0).getName());
+		if (column == null || column.getDataType() != DataType.VECTOR) {
+			throw new IllegalArgumentException("VECTOR index column must have VECTOR data type: "
+					+ index.getColumns().get(0).getName());
+		}
+		final String organizationValue = CommonUtils.trim(index.getSpecifics().get(ORGANIZATION));
+		final String organization = organizationValue == null ? null
+				: organizationValue.toUpperCase(Locale.ROOT);
+		if (!"HNSW".equals(organization) && !"IVF".equals(organization)) {
+			throw new IllegalArgumentException("Oracle VECTOR index ORGANIZATION must be HNSW or IVF: "
+					+ index.getName());
+		}
+		return organization;
+	}
+
+	private void addParameters(final Index index, final String organization,
+			final OracleSqlBuilder builder) {
+		final List<String> parameters = new ArrayList<>();
+		parameters.add("type " + organization);
+		if ("HNSW".equals(organization)) {
+			addPositiveParameter(index, parameters, NEIGHBORS, "neighbors");
+			addPositiveParameter(index, parameters, EFCONSTRUCTION, "efconstruction");
+			rejectOption(index, NEIGHBOR_PARTITIONS, organization);
+			rejectOption(index, SAMPLES_PER_PARTITION, organization);
+			rejectOption(index, MIN_VECTORS_PER_PARTITION, organization);
+		} else {
+			addPositiveParameter(index, parameters, NEIGHBOR_PARTITIONS, "neighbor partitions");
+			addPositiveParameter(index, parameters, SAMPLES_PER_PARTITION, "samples_per_partition");
+			addNonNegativeParameter(index, parameters, MIN_VECTORS_PER_PARTITION,
+					"min_vectors_per_partition");
+			rejectOption(index, NEIGHBORS, organization);
+			rejectOption(index, EFCONSTRUCTION, organization);
+		}
+		if (parameters.size() == 1) {
+			return;
+		}
+		builder.space()._add("PARAMETERS").space()._add("(");
+		for (int i = 0; i < parameters.size(); i++) {
+			builder.comma(i > 0)._add(parameters.get(i));
+		}
+		builder.space()._add(")");
+	}
+
+	private void addPositiveParameter(final Index index, final List<String> parameters,
+			final String key, final String sqlName) {
+		final Integer value = positiveInteger(index, key);
+		if (value != null) {
+			parameters.add(sqlName + " " + value);
+		}
+	}
+
+	private void addNonNegativeParameter(final Index index, final List<String> parameters,
+			final String key, final String sqlName) {
+		final Integer value = index.getSpecifics().get(key, Integer.class);
+		if (value != null) {
+			if (value < 0) {
+				throw new IllegalArgumentException(key + " must be zero or greater: " + value);
+			}
+			parameters.add(sqlName + " " + value);
+		}
+	}
+
+	private Integer positiveInteger(final Index index, final String key) {
+		final Integer value = index.getSpecifics().get(key, Integer.class);
+		if (value != null && value <= 0) {
+			throw new IllegalArgumentException(key + " must be greater than zero: " + value);
+		}
+		return value;
+	}
+
+	private void rejectOption(final Index index, final String key, final String organization) {
+		if (index.getSpecifics().get(key) != null) {
+			throw new IllegalArgumentException(key + " is not valid for " + organization
+					+ " VECTOR indexes");
+		}
+	}
+
+	private String toOracleDistance(final VectorDistanceType distance) {
+		if (distance == VectorDistanceType.EuclideanSquared) {
+			return "EUCLIDEAN SQUARED";
+		}
+		if (distance == VectorDistanceType.DotProduct
+				|| distance == VectorDistanceType.InnerProduct) {
+			return "DOT";
+		}
+		return distance.getSqlValue();
+	}
+}

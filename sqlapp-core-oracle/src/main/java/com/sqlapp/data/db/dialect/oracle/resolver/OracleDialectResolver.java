@@ -62,7 +62,13 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
 			if (majorVersion >= 23) {
-				return DialectHolder.oracle23cDialect;
+				return DialectHolder.oracle23aiDialect;
+			} else if (majorVersion >= 21) {
+				return DialectHolder.oracle21cDialect;
+			} else if (majorVersion >= 19) {
+				return DialectHolder.oracle19cDialect;
+			} else if (majorVersion >= 18) {
+				return DialectHolder.oracle18cDialect;
 			} else if (majorVersion >= 12) {
 				return DialectHolder.oracle12cDialect;
 			} else if (majorVersion >= 11) {
