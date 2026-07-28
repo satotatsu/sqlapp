@@ -57,20 +57,30 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion == 10) {
-				if (minorVersion >= 2) {
-					if (revision >= 7) {
+			if (majorVersion >= 12) {
+				return DialectHolder.mariadb12_10Dialect;
+			} else if (majorVersion == 11) {
+				if (minorVersion >= 8) {
+					return DialectHolder.mariadb11_80Dialect;
+				}
+				return DialectHolder.mariadb11_40Dialect;
+			} else if (majorVersion == 10) {
+				if (minorVersion > 2) {
+					return DialectHolder.mariadb10_27Dialect;
+				} else if (minorVersion == 2) {
+					if (revision != null && revision >= 7) {
 						return DialectHolder.mariadb10_27Dialect;
-					} else {
+					} else if (revision != null && revision >= 5) {
 						return DialectHolder.mariadb10_25Dialect;
 					}
+					return DialectHolder.mariadb10_20Dialect;
 				} else {
 					return DialectHolder.mariadb10_00Dialect;
 				}
 			} else if (majorVersion < 10) {
 				return DialectHolder.defaultDialect;
 			}
-			return DialectHolder.mariadb10_27Dialect;
+			return DialectHolder.defaultDialect;
 		}
 
 	}

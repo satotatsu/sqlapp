@@ -42,6 +42,16 @@ public class Mariadb10_00 extends MySql564 {
 		super(nextVersionDialectSupplier);
 	}
 
+	@Override
+	public String getProductName() {
+		return "MariaDB";
+	}
+
+	@Override
+	public String getSimpleName() {
+		return "mariadb";
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

@@ -29,6 +29,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.mysql.MySql564;
 import com.sqlapp.data.db.dialect.mysql.MySql800;
+import com.sqlapp.data.db.dialect.mysql.MySql840;
+import com.sqlapp.data.db.dialect.mysql.MySql900;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
@@ -38,8 +40,12 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("MySql", 5, 6, 4);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof MySql564);
-		dialect = DialectResolver.getInstance().getDialect("MySql", 5, 8, 0);
+		dialect = DialectResolver.getInstance().getDialect("MySql", 8, 0, 0);
 		assertTrue(dialect instanceof MySql800);
+		dialect = DialectResolver.getInstance().getDialect("MySql", 8, 4, 3);
+		assertTrue(dialect instanceof MySql840);
+		dialect = DialectResolver.getInstance().getDialect("MySql", 9, 7, 0);
+		assertTrue(dialect instanceof MySql900);
 	}
 
 	@Test

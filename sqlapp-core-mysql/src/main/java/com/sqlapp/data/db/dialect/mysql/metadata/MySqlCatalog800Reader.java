@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.metadata.SchemaReader;
 
 /**
  * MySqlのカタログ読み込みクラス
@@ -33,4 +34,8 @@ public class MySqlCatalog800Reader extends MySqlCatalog570Reader {
 		super(dialect);
 	}
 
+	@Override
+	protected SchemaReader newSchemaReader() {
+		return new MySqlSchema800Reader(getDialect());
+	}
 }

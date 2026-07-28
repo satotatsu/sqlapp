@@ -24,6 +24,7 @@ import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.db.sql.AddTableObjectDetailFactory;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 
 public class MySqlCreateIndexFactory extends
@@ -57,10 +58,30 @@ public class MySqlCreateIndexFactory extends
 			builder.name(table);
 		}
 		builder.space()._add("(");
-		builder.names(obj.getColumns());
+		Table indexTable = table == null ? obj.getTable() : table;
+		for (int i = 0; i < obj.getColumns().size(); i++) {
+			ReferenceColumn column = obj.getColumns().get(i);
+			builder.comma(i > 0);
+			if (column.getColumn() != null
+					|| (indexTable != null && indexTable.getColumns().contains(column.getName()))) {
+				builder.names(column);
+			} else {
+				builder._add("(")._add(column.getName())._add(")");
+				if (column.getOrder() == com.sqlapp.data.schemas.Order.Desc) {
+					builder.space()._add("DESC");
+				}
+			}
+		}
 		builder.space()._add(")");
 		if (obj.getRemarks()!=null){
 			builder.comment().space().sqlChar(obj.getRemarks());
+		}
+		if (!obj.isEnable()) {
+			if ("MariaDB".equalsIgnoreCase(getDialect().getProductName())) {
+				builder.space()._add("IGNORED");
+			} else {
+				builder.space()._add("INVISIBLE");
+			}
 		}
 	}
 

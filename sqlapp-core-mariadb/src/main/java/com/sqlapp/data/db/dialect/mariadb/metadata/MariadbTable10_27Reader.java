@@ -23,6 +23,7 @@ package com.sqlapp.data.db.dialect.mariadb.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.metadata.MySqlTable564Reader;
 import com.sqlapp.data.db.metadata.ColumnReader;
+import com.sqlapp.data.db.metadata.CheckConstraintReader;
 
 public class MariadbTable10_27Reader extends MySqlTable564Reader {
 
@@ -39,5 +40,10 @@ public class MariadbTable10_27Reader extends MySqlTable564Reader {
 	@Override
 	protected ColumnReader newColumnReader() {
 		return new MariadbColumn10_27Reader(this.getDialect());
+	}
+
+	@Override
+	protected CheckConstraintReader newCheckConstraintReader() {
+		return new MariadbCheckConstraintReader(getDialect());
 	}
 }

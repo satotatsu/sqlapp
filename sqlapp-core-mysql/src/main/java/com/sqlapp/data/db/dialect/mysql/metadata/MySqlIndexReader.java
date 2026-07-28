@@ -26,7 +26,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -66,6 +65,7 @@ public class MySqlIndexReader extends IndexReader {
 				String schema_name = getString(rs, TABLE_SCHEMA);
 				String name = getString(rs, INDEX_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
+				String expression = getString(rs, "EXPRESSION");
 				String indexType = getString(rs, "INDEX_TYPE");
 				Index index = map.get(catalog_name, schema_name, name);
 				Long subPart=getLong(rs, "SUB_PART");
@@ -82,16 +82,24 @@ public class MySqlIndexReader extends IndexReader {
 				}
 				String visible=getString(rs, "IS_VISIBLE");
 				if (visible!=null) {
-					Boolean bool=Converters.getDefault().convertObject(visible, Boolean.class);
-					if (!bool.booleanValue()) {
-						
-					}
+					index.setEnable("YES".equalsIgnoreCase(visible));
+				}
+				String ignored = getString(rs, "IGNORED");
+				if (ignored != null) {
+					index.setEnable(!"YES".equalsIgnoreCase(ignored));
 				}
 				// index.setCompression("DISABLED".equalsIgnoreCase(getString(rs,
 				// "COMPRESSION")));
 				// setDbSpecificInfo(rs, "LOGGING", index);
-				index.getColumns().add(new Column(columnName),
-						Order.parse(getString(rs, "ASC_OR_DESC"))).setLength(subPart);
+				com.sqlapp.data.schemas.ReferenceColumn referenceColumn;
+				if (columnName == null && expression != null) {
+					referenceColumn = index.getColumns().add(expression);
+					referenceColumn.setOrder(Order.parse(getString(rs, "ASC_OR_DESC")));
+				} else {
+					referenceColumn = index.getColumns().add(new Column(columnName),
+							Order.parse(getString(rs, "ASC_OR_DESC")));
+				}
+				referenceColumn.setLength(subPart);
 			}
 		});
 		return result;

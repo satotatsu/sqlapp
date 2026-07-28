@@ -49,6 +49,24 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	}
 
 	@Override
+	public MySqlSqlBuilder definition(Column column, boolean withRemarks) {
+		super.definition(column, withRemarks);
+		if (column.isHidden()) {
+			space()._add("INVISIBLE");
+		}
+		return instance();
+	}
+
+	@Override
+	public MySqlSqlBuilder definitionForAlterColumn(Column column) {
+		super.definitionForAlterColumn(column);
+		if (column.isHidden()) {
+			space()._add("INVISIBLE");
+		}
+		return instance();
+	}
+
+	@Override
 	protected MySqlSqlBuilder autoIncrement(AbstractColumn<?> column) {
 		space()._add("AUTO_INCREMENT");
 		return instance();
