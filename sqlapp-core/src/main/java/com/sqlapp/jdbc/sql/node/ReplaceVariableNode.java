@@ -23,6 +23,7 @@ import static com.sqlapp.util.CommonUtils.parseKeyValue;
 import static com.sqlapp.util.CommonUtils.trim;
 
 import java.util.Map;
+import java.util.Objects;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParameterDefinition;
@@ -48,6 +49,10 @@ public class ReplaceVariableNode extends CommentNode {
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		if (sqlParameters.getSqlParts().containsKey(this)) {
+			sqlParameters.addSql(sqlParameters.getSqlParts().get(this));
+			return true;
+		}
 		Object val = evalExpression(this.getExpression(), context);
 		if (val != null) {
 			String text = sanitize(val.toString());
@@ -57,6 +62,9 @@ public class ReplaceVariableNode extends CommentNode {
 			sqlParameters.addSql(text);
 			if (this.length != null) {
 				sqlParameters.addSql(this.replaceString);
+				sqlParameters.getSqlParts().put(this, text + this.replaceString);
+			} else {
+				sqlParameters.getSqlParts().put(this, text);
 			}
 		}
 		return true;
@@ -116,5 +124,10 @@ public class ReplaceVariableNode extends CommentNode {
 	@Override
 	public ReplaceVariableNode clone() {
 		return (ReplaceVariableNode) super.clone();
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.getClass(), this.getSql(), this.getChildNodes().size(), replaceString);
 	}
 }

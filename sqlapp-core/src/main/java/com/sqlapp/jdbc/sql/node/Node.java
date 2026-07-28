@@ -224,8 +224,10 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		for (final BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
 			if (bindParameterHolder.getBindParameter() != null) {
 				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
-				final Object value = evalValueAndSetDataType(context, bindParameter);
-				bindParameter.setValue(value);
+				if (!bindParameter.isFixed()) {
+					final Object value = evalValueAndSetDataType(context, bindParameter);
+					bindParameter.setValue(value);
+				}
 				cnt++;
 			} else {
 				final List<Row> rows = getRowList(context);
@@ -608,6 +610,24 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.getClass(), sql, this.getChildNodes().size());
+		return Objects.hash(this.getClass(), sql, this.getChildNodes().size(), index);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) {
+			return true;
+		}
+		if (!(obj instanceof Node)) {
+			return false;
+		}
+		Node node = (Node) obj;
+		if (this.index != node.index) {
+			return false;
+		}
+		if (!Objects.equals(this.getClass(), obj.getClass())) {
+			return false;
+		}
+		return true;
 	}
 }

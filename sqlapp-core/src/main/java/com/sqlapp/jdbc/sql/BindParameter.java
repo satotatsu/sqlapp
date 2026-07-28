@@ -26,6 +26,7 @@ import java.io.Serializable;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.jdbc.sql.node.CommentNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
@@ -56,7 +57,7 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	/**
 	 * パラメタ値
 	 */
-	private Object value = null;
+	private Object value = NULL_VALUE;
 	/**
 	 * パラメタ位置
 	 */
@@ -69,6 +70,12 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	 * パラメタ入出力方向
 	 */
 	private ParameterDirection direction = ParameterDirection.Input;
+	/**
+	 * パラメタの固定化
+	 */
+	private boolean fixed = false;
+
+	private CommentNode commentNode;
 
 	public String getName() {
 		return name;
@@ -87,7 +94,14 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	}
 
 	public Object getValue() {
+		if (NULL_VALUE == value) {
+			return null;
+		}
 		return value;
+	}
+
+	public boolean isDefault() {
+		return NULL_VALUE == value;
 	}
 
 	public void setValue(final Object value) {
@@ -96,6 +110,14 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 
 	public int getOrdinal() {
 		return ordinal;
+	}
+
+	public CommentNode getCommentNode() {
+		return commentNode;
+	}
+
+	public void setCommentNode(CommentNode commentNode) {
+		this.commentNode = commentNode;
 	}
 
 	public void setOrdinal(final int ordinal) {
@@ -126,6 +148,16 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 		this.column = column;
 		this.setName(column.getName());
 		this.setDataType(column.getDataType());
+	}
+
+	public boolean isFixed() {
+		return fixed;
+	}
+
+	public void fixed() {
+		if (!isDefault()) {
+			this.fixed = true;
+		}
 	}
 
 	/*
@@ -224,4 +256,6 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 			FileUtils.close((Closeable) value);
 		}
 	}
+
+	private static final Object NULL_VALUE = new Object();
 }

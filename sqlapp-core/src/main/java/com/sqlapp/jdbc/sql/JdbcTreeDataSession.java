@@ -195,6 +195,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		if (tableRelation.isRoot()) {
 			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT, sql);
+			tableRelation.setSelectSqlNode(sqlNode);
 			selectRoot(tableRelation, sqlNode, context);
 		} else {
 			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT_BY_ROOT_ROWS, sql);
@@ -210,11 +211,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
 			sqlParam.setTable(table);
 		});
+		sqlParameters.fixed();
 		final PreparedStatement statement = sqlParameters.createStatementForQuery(connection,
 				ResultSetType.TYPE_FORWARD_ONLY, ResultSetConcurrency.CONCUR_READ_ONLY,
 				ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
 		statement.setFetchSize(this.getRootBatchSize());
-		sqlParameters.setBind(statement);
+		tableRelation.setSelectSqlParameters(sqlParameters);
 		tableRelation.setSelectStatement(statement);
 		preparedStatementBeforeExecuteHandler.accept(statement);
 		reSelectRoot();
@@ -222,7 +224,11 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	protected void reSelectRoot() throws SQLException {
 		TableRelation tableRelation = this.tableRelationTreeHolder.getRootTableRelation();
-		tableRelation.setResultSet(tableRelation.getSelectStatement().executeQuery(), this.getRootBatchSize(), () -> {
+		tableRelation.setResultSet(() -> {
+			tableRelation.getSelectSqlNode().reEval(tableRelation, null);
+			tableRelation.getSelectSqlParameters().setBind(tableRelation.getSelectStatement());
+			return tableRelation.getSelectStatement().executeQuery();
+		}, this.getRootBatchSize(), () -> {
 			for (TableRelation tabRelation : tableRelationTreeHolder) {
 				if (tabRelation.isRoot() || !tabRelation.isSelectRegistered()) {
 					continue;

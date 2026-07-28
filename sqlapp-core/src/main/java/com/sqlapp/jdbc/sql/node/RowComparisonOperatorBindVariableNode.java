@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.RowComparisonOperator;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
-import com.sqlapp.data.db.sql.SqlSignature.RowComparisonOperator;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;

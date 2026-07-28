@@ -39,6 +39,8 @@ import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
 import com.sqlapp.exceptions.MultipleRootTablesException;
 import com.sqlapp.jdbc.function.SQLRunnable;
+import com.sqlapp.jdbc.function.SQLSupplier;
+import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.StatementHolder;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -131,6 +133,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private long batchCount = 0;
 		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
 		private SqlSignature sqlSignature;
+		private SqlParameterCollection selectSqlParameters;
 		private PreparedStatement selectStatement = null;
 		private boolean selectRegistered = false;
 		private SqlNode selectSqlNode = null;
@@ -147,6 +150,14 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public void resetBatchCount() {
 			batchCount = 0;
+		}
+
+		public SqlParameterCollection getSelectSqlParameters() {
+			return selectSqlParameters;
+		}
+
+		public void setSelectSqlParameters(SqlParameterCollection selectSqlParameters) {
+			this.selectSqlParameters = selectSqlParameters;
 		}
 
 		public void setSelectStatement(PreparedStatement selectStatement) {
@@ -200,9 +211,9 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return true;
 		}
 
-		public void setResultSet(ResultSet resultSet, int batchSize, SQLRunnable afterRootBatchLoaded,
-				SQLRunnable beforeNextRootBatch) {
-			this.nextHandler = new ResultSetNextHandler(this, resultSet, batchSize, afterRootBatchLoaded,
+		public void setResultSet(SQLSupplier<ResultSet> resultSetSupplier, int batchSize,
+				SQLRunnable afterRootBatchLoaded, SQLRunnable beforeNextRootBatch) {
+			this.nextHandler = new ResultSetNextHandler(this, resultSetSupplier, batchSize, afterRootBatchLoaded,
 					beforeNextRootBatch);
 		}
 
@@ -292,15 +303,16 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		}
 
 		class ResultSetNextHandler extends NextHandler {
-			public ResultSetNextHandler(TableRelation tableRelation, ResultSet resultSet, int batchSize,
-					SQLRunnable afterRootBatchLoaded, SQLRunnable beforeNextRootBatch) {
+			public ResultSetNextHandler(TableRelation tableRelation, SQLSupplier<ResultSet> resultSetSupplier,
+					int batchSize, SQLRunnable afterRootBatchLoaded, SQLRunnable beforeNextRootBatch) {
 				super(afterRootBatchLoaded, beforeNextRootBatch);
-				this.resultSet = resultSet;
+				this.resultSetSupplier = resultSetSupplier;
 				this.batchSize = batchSize;
 			}
 
 			private final int batchSize;
-			private final ResultSet resultSet;
+			private final SQLSupplier<ResultSet> resultSetSupplier;
+			private ResultSet resultSet = null;
 			private int currentIndex = 0;
 			private boolean resultSetNext = true;
 			private final List<Row> loadedList = CommonUtils.list();
@@ -348,6 +360,9 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			}
 
 			private void readFromResultSet() throws SQLException {
+				if (this.resultSet == null) {
+					this.resultSet = this.resultSetSupplier.get();
+				}
 				if (resultSetColumns.isEmpty()) {
 					ResultSetMetaData metadata = resultSet.getMetaData();
 					int count = metadata.getColumnCount();

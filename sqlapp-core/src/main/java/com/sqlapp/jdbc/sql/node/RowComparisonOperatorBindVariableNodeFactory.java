@@ -25,7 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
-import com.sqlapp.data.db.sql.SqlSignature.RowComparisonOperator;
+import com.sqlapp.data.db.sql.RowComparisonOperator;
 import com.sqlapp.util.CommonUtils;
 
 /**

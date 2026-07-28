@@ -63,6 +63,17 @@ public class BindParameterHolder implements Closeable {
 		}
 	}
 
+	public void fixed() {
+		if (bindParameter != null) {
+			bindParameter.fixed();
+		}
+		if (bindParameters != null) {
+			for (BindParameter params : bindParameters) {
+				params.fixed();
+			}
+		}
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
