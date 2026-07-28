@@ -17,6 +17,7 @@ public class Oracle23aiDropDomainFactory extends OracleDropDomainFactory {
 	protected void addDropObject(final Domain domain,
 			final OracleSqlBuilder builder) {
 		builder.drop().space()._add("DOMAIN").space();
+		builder.ifExists(this.getOptions().isDropIfExists()).space();
 		builder.name(domain, this.getOptions().isDecorateSchemaName());
 	}
 }

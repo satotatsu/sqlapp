@@ -52,5 +52,6 @@ gradlew build
 - [Schema viewpoints](docs/schema-viewpoints.md)
 - [Architecture](docs/architecture.md)
 - [Build and testing](docs/build-and-test.md)
+- [Roadmap](docs/roadmap.md)
 
 ## License

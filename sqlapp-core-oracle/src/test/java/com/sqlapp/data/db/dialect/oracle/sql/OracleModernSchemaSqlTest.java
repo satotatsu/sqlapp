@@ -23,6 +23,7 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.VectorDistanceType;
+import com.sqlapp.data.schemas.View;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleFunctionReader;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleSequenceReader;
 
@@ -31,6 +32,48 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 	@Override
 	protected int getMajorVersion() {
 		return 23;
+	}
+
+	@Test
+	void testCreateAndDropJsonRelationalDualityView() {
+		final View view = new View("CUSTOMER_DV");
+		view.setDialect(dialect);
+		view.setStatement("""
+				CUSTOMERS @insert @update @delete {
+				  _id: ID,
+				  name: NAME,
+				  orders: ORDERS @insert @update {
+				    orderId: ID,
+				    total: TOTAL
+				  }
+				}""");
+		OracleJsonDualityViewUtils.setJsonRelationalDualityView(view, true);
+
+		final String createSql = sqlFactoryRegistry
+				.createSql(view, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(createSql.contains("CREATE JSON RELATIONAL DUALITY VIEW "
+				+ "IF NOT EXISTS CUSTOMER_DV AS"), createSql);
+		assertTrue(createSql.contains(
+				"CUSTOMERS @insert @update @delete"), createSql);
+		assertTrue(createSql.contains("orders: ORDERS @insert @update"),
+				createSql);
+
+		final String dropSql = sqlFactoryRegistry
+				.createSql(view, SqlType.DROP).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(dropSql.contains("DROP VIEW IF EXISTS CUSTOMER_DV"),
+				dropSql);
+	}
+
+	@Test
+	void testRejectJsonRelationalDualityViewWithoutStatement() {
+		final View view = new View("EMPTY_DV");
+		view.setDialect(dialect);
+		OracleJsonDualityViewUtils.setJsonRelationalDualityView(view, true);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(view, SqlType.CREATE));
 	}
 
 	@Test
@@ -75,6 +118,8 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 		index.getSpecifics().put(Oracle23aiCreateIndexFactory.TARGET_ACCURACY, "95");
 		index.getSpecifics().put(Oracle23aiCreateIndexFactory.NEIGHBORS, "40");
 		index.getSpecifics().put(Oracle23aiCreateIndexFactory.EFCONSTRUCTION, "500");
+		OracleAnnotationUtils.setAnnotation(index, "Purpose",
+				"Semantic search");
 		table.getIndexes().add(index);
 
 		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE)
@@ -85,6 +130,8 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 		assertTrue(sql.contains("WITH TARGET ACCURACY 95"), sql);
 		assertTrue(sql.matches(".*PARAMETERS\\s*\\(\\s*type HNSW\\s*,\\s*neighbors 40\\s*,\\s*efconstruction 500\\s*\\).*"),
 				sql);
+		assertTrue(sql.contains(
+				"ANNOTATIONS ( \"Purpose\" 'Semantic search')"), sql);
 	}
 
 	@Test
@@ -151,12 +198,14 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 				"LOWER(VALUE)");
 		domain.getSpecifics().put(Oracle23aiCreateDomainFactory.ORDER,
 				"LOWER(VALUE)");
+		OracleAnnotationUtils.setAnnotation(domain, "Display",
+				"Email address");
 
 		final String createSql = sqlFactoryRegistry
 				.createSql(domain, SqlType.CREATE).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
 		assertTrue(createSql.contains(
-				"CREATE DOMAIN EMAIL_ADDRESS AS VARCHAR2(320) STRICT"),
+				"CREATE DOMAIN IF NOT EXISTS EMAIL_ADDRESS AS VARCHAR2(320) STRICT"),
 				createSql);
 		assertTrue(createSql.contains(
 				"DEFAULT ON NULL 'unknown@example.com' NOT NULL"),
@@ -166,11 +215,50 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 				+ "INITIALLY DEFERRED"), createSql);
 		assertTrue(createSql.contains(
 				"DISPLAY LOWER(VALUE) ORDER LOWER(VALUE)"), createSql);
+		assertTrue(createSql.contains(
+				"ANNOTATIONS ( \"Display\" 'Email address')"), createSql);
 
 		final String dropSql = sqlFactoryRegistry
 				.createSql(domain, SqlType.DROP).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(dropSql.contains("DROP DOMAIN EMAIL_ADDRESS"), dropSql);
+		assertTrue(dropSql.contains(
+				"DROP DOMAIN IF EXISTS EMAIL_ADDRESS"), dropSql);
+	}
+
+	@Test
+	void testTableAndColumnAnnotationsAndExistenceClauses() {
+		final Table table = new Table("CUSTOMERS");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.INT);
+		table.getColumns().add(id);
+		OracleAnnotationUtils.setAnnotation(table, "Display",
+				"Customer table");
+		OracleAnnotationUtils.setAnnotation(id, "Identity", null);
+		OracleAnnotationUtils.setAnnotation(id, "Display", "Customer ID");
+
+		final var operations = sqlFactoryRegistry.createSql(table,
+				SqlType.CREATE);
+		final var operationSql = operations.stream()
+				.map(operation -> operation.getSqlText()
+						.replaceAll("\\s+", " "))
+				.toList();
+		final String createSql = operations.get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(createSql.contains(
+				"CREATE TABLE IF NOT EXISTS CUSTOMERS"), createSql);
+		assertTrue(operationSql.stream().anyMatch(sql -> sql.contains(
+						"ALTER TABLE CUSTOMERS ANNOTATIONS "
+						+ "( \"Display\" 'Customer table')")),
+				operationSql.toString());
+		assertTrue(operationSql.stream().anyMatch(sql ->
+				sql.contains("ALTER TABLE CUSTOMERS MODIFY ID")
+				&& sql.contains("\"Identity\"")
+				&& sql.contains("\"Display\" 'Customer ID'")),
+				operationSql.toString());
+
+		final String dropSql = sqlFactoryRegistry.createSql(table, SqlType.DROP)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(dropSql.contains("DROP TABLE IF EXISTS CUSTOMERS"), dropSql);
 	}
 
 	@Test

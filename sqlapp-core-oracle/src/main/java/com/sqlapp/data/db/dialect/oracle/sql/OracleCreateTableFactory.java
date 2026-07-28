@@ -45,6 +45,9 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 		}
 		boolean hasProperty=false;
 		for(Map.Entry<String, String> entry:map.entrySet()){
+			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())){
+				continue;
+			}
 			if (entry.getValue()!=null){
 				hasProperty=true;
 			}
@@ -54,6 +57,9 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 		}
 		boolean hasStorage=false;
 		for(Map.Entry<String, String> entry:map.entrySet()){
+			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())){
+				continue;
+			}
 			if (entry.getValue()==null){
 				continue;
 			}
@@ -68,6 +74,9 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 			builder.lineBreak()._add("(");
 			builder.appendIndent(1);
 			for(Map.Entry<String, String> entry:map.entrySet()){
+				if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())){
+					continue;
+				}
 				if (entry.getValue()==null){
 					continue;
 				}

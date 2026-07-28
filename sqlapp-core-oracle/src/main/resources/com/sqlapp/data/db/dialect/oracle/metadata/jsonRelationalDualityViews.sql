@@ -1,0 +1,18 @@
+SELECT
+  V.VIEW_OWNER
+, V.VIEW_NAME
+, V.JSON_COLUMN_NAME
+, V.ROOT_TABLE_OWNER
+, V.ROOT_TABLE_NAME
+, V.ALLOW_INSERT
+, V.ALLOW_UPDATE
+, V.ALLOW_DELETE
+FROM ALL_JSON_DUALITY_VIEWS V
+WHERE 1=1
+  /*if isNotEmpty(schemaName)*/
+  AND V.VIEW_OWNER IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND V.VIEW_NAME IN /*tableName*/('%')
+  /*end*/
+ORDER BY V.VIEW_OWNER, V.VIEW_NAME

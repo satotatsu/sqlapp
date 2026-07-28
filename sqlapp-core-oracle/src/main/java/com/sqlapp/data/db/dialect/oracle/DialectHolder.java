@@ -23,7 +23,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
 
-	public final static Dialect oracle23aiDialect = new Oracle23ai(() -> null);
+	public final static Dialect oracle26aiDialect = new Oracle26ai(() -> null);
+	public final static Dialect oracle23aiDialect = new Oracle23ai(() -> oracle26aiDialect);
 	/**
 	 * @deprecated use {@link #oracle23aiDialect}.
 	 */

@@ -37,6 +37,7 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 	public static final String FILTER = "FILTER";
 	public static final String LEXER = "LEXER";
 	public static final String MODEL = "MODEL";
+	public static final String VECTORIZER = "VECTORIZER";
 	public static final String VECTOR_IDXTYPE = "VECTOR_IDXTYPE";
 
 	@Override
@@ -44,6 +45,7 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 			final OracleSqlBuilder builder) {
 		if (index.getIndexType() != IndexType.Vector) {
 			super.addObjectDetail(index, table, builder);
+			OracleAnnotationUtils.addAnnotations(builder, index);
 			return;
 		}
 		if (isHybrid(index)) {
@@ -82,6 +84,7 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 		if (parallel != null) {
 			builder.space()._add("PARALLEL").space()._add(parallel);
 		}
+		OracleAnnotationUtils.addAnnotations(builder, index);
 	}
 
 	private boolean isHybrid(final Index index) {
@@ -105,8 +108,10 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 		addHybridParameter(index, parameters, FILTER);
 		addHybridParameter(index, parameters, LEXER);
 		addHybridParameter(index, parameters, MODEL);
+		addHybridParameter(index, parameters, VECTORIZER);
 		addHybridParameter(index, parameters, VECTOR_IDXTYPE);
 		builder._add(String.join(" ", parameters))._add("')");
+		OracleAnnotationUtils.addAnnotations(builder, index);
 	}
 
 	private void validateHybridVectorIndex(final Index index, final Table table) {
@@ -125,9 +130,23 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 					+ index.getColumns().get(0).getName());
 		}
 		final String model = hybridParameter(index, MODEL);
-		if (model == null) {
-			throw new IllegalArgumentException("HYBRID VECTOR index requires MODEL: "
+		final String vectorizer = hybridParameter(index, VECTORIZER);
+		if (model == null && vectorizer == null) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index requires MODEL or VECTORIZER: "
 					+ index.getName());
+		}
+		if (model != null && vectorizer != null) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index MODEL and VECTORIZER are alternatives: "
+							+ index.getName());
+		}
+		if (vectorizer != null
+				&& hybridParameter(index, VECTOR_IDXTYPE) != null) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index VECTORIZER and VECTOR_IDXTYPE "
+							+ "cannot be specified together: "
+							+ index.getName());
 		}
 		final String vectorIndexType = hybridParameter(index, VECTOR_IDXTYPE);
 		if (vectorIndexType != null

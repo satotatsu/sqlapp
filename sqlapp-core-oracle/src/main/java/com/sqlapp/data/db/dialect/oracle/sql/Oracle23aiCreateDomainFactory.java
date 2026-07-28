@@ -25,6 +25,7 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 			final OracleSqlBuilder builder) {
 		validate(domain);
 		builder.create().space()._add("DOMAIN").space();
+		builder.ifNotExists(this.getOptions().isCreateIfNotExists()).space();
 		builder.name(domain, this.getOptions().isDecorateSchemaName());
 		builder.space().as().space();
 		builder.typeDefinition(domain.getDataType(), domain.getDataTypeName(),
@@ -59,6 +60,7 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 		}
 		addExpression(domain, builder, DISPLAY);
 		addExpression(domain, builder, ORDER);
+		OracleAnnotationUtils.addAnnotations(builder, domain);
 	}
 
 	private void addExpression(final Domain domain,
