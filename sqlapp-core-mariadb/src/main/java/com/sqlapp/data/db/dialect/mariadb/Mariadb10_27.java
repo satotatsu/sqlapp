@@ -41,6 +41,13 @@ public class Mariadb10_27 extends Mariadb10_25 {
 		super(nextVersionDialectSupplier);
 	}
 
+	@Override
+	protected void registerDataType() {
+		super.registerDataType();
+		getDbDataTypes().addJsonType(type -> {
+		});
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

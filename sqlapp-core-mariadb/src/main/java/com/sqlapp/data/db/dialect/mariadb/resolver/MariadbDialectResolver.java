@@ -62,11 +62,13 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 			} else if (majorVersion == 11) {
 				if (minorVersion >= 8) {
 					return DialectHolder.mariadb11_80Dialect;
+				} else if (minorVersion >= 5) {
+					return DialectHolder.mariadb11_50Dialect;
 				}
 				return DialectHolder.mariadb11_40Dialect;
 			} else if (majorVersion == 10) {
-				if (minorVersion > 2) {
-					return DialectHolder.mariadb10_27Dialect;
+				if (minorVersion >= 3) {
+					return DialectHolder.mariadb10_30Dialect;
 				} else if (minorVersion == 2) {
 					if (revision != null && revision >= 7) {
 						return DialectHolder.mariadb10_27Dialect;
