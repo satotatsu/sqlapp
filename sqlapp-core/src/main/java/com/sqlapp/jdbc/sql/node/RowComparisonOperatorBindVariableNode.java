@@ -115,7 +115,7 @@ public class RowComparisonOperatorBindVariableNode extends CommentNode {
 	 * @param context
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
-		final Row row = getLastRow(context);
+		final Row row = sqlParameters.getRow();
 		if (CommonUtils.isEmpty(row)) {
 			return;
 		}

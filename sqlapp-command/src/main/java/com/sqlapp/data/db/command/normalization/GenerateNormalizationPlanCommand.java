@@ -192,6 +192,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 		FirstNormalFormCommand command = new FirstNormalFormCommand();
 		command.setTargetFile(targetFile);
 		command.setOutputDirectory(work);
+		command.setColumnFilter(columnFilter);
 		command.setMinimumColumnCount(minimumColumnCount);
 		command.setConvertCompositePrimaryKey(true);
 		command.setMigrationMappingEnabled(false);

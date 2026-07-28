@@ -35,6 +35,7 @@ import java.util.function.Function;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.RowComparisonOperator;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
@@ -191,10 +192,10 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return commitCountHandler.getCommitSize();
 	}
 
-	public void select(Table table, String sql, Object context) throws SQLException {
+	public void select(Table table, String sql, Object context) {
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		if (tableRelation.isRoot()) {
-			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT, sql);
+			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT_BY_ROW, sql);
 			tableRelation.setSelectSqlNode(sqlNode);
 			selectRoot(tableRelation, sqlNode, context);
 		} else {
@@ -204,28 +205,31 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 	}
 
-	private void selectRoot(final TableRelation tableRelation, final SqlNode sqlNode, Object context)
-			throws SQLException {
+	private void selectRoot(final TableRelation tableRelation, final SqlNode sqlNode, Object context) {
 		tableRelation.setSelectRegistered(true);
 		final Table table = tableRelation.getTable();
-		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
-			sqlParam.setTable(table);
-		});
+		final SqlParameterCollection sqlParameters = this.getTableOptions()
+				.useSelectByRowComparisonOperatorStrategy(tbl -> RowComparisonOperator.GREATER_THAN, () -> {
+					return sqlNode.eval(context, sqlParam -> {
+						sqlParam.setTable(table);
+					});
+				});
 		sqlParameters.fixed();
-		final PreparedStatement statement = sqlParameters.createStatementForQuery(connection,
-				ResultSetType.TYPE_FORWARD_ONLY, ResultSetConcurrency.CONCUR_READ_ONLY,
-				ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
-		statement.setFetchSize(this.getRootBatchSize());
 		tableRelation.setSelectSqlParameters(sqlParameters);
-		tableRelation.setSelectStatement(statement);
-		preparedStatementBeforeExecuteHandler.accept(statement);
 		reSelectRoot();
 	}
 
-	protected void reSelectRoot() throws SQLException {
+	protected void reSelectRoot() {
 		TableRelation tableRelation = this.tableRelationTreeHolder.getRootTableRelation();
 		tableRelation.setResultSet(() -> {
-			tableRelation.getSelectSqlNode().reEval(tableRelation, null);
+			final SqlParameterCollection sqlParameters = tableRelation.getSelectSqlParameters();
+			final PreparedStatement statement = sqlParameters.createStatementForQuery(connection,
+					ResultSetType.TYPE_FORWARD_ONLY, ResultSetConcurrency.CONCUR_READ_ONLY,
+					ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
+			statement.setFetchSize(this.getRootBatchSize());
+			tableRelation.setSelectStatement(statement);
+			preparedStatementBeforeExecuteHandler.accept(statement);
+			// tableRelation.getSelectSqlNode().reEval(tableRelation, null);
 			tableRelation.getSelectSqlParameters().setBind(tableRelation.getSelectStatement());
 			return tableRelation.getSelectStatement().executeQuery();
 		}, this.getRootBatchSize(), () -> {
@@ -246,15 +250,16 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		});
 	}
 
-	public void select(Table table, String sql) throws SQLException {
+	public void select(Table table, String sql) {
 		select(table, sql, CommonUtils.map());
 	}
 
-	public void select(Table table) throws SQLException {
+	public void select(Table table) {
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		tableRelation.setSelectRegistered(true);
 		if (tableRelation.isRoot()) {
-			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), SqlType.SELECT_ROWS);
+			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(),
+					SqlType.SELECT_BY_ROWS);
 			for (final SqlNode sqlNode : sqlNodes) {
 				registerStatementHolder(tableRelation, sqlNode);
 			}
@@ -507,7 +512,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		INSERT_IGNORE {
 			@Override
 			public SqlType[] getSqlTypes() {
-				return new SqlType[] { SqlType.SELECT_ROWS, SqlType.INSERT };
+				return new SqlType[] { SqlType.SELECT_BY_ROWS, SqlType.INSERT };
 			}
 
 			@Override
@@ -869,7 +874,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	private List<Row> loadParentRowDatas(final TableRelation tableRelation) throws SQLException {
-		SqlType sqlType = SqlType.SELECT_ROWS;
+		SqlType sqlType = SqlType.SELECT_BY_ROWS;
 		final Table table = tableRelation.getTable();
 		final List<Row> rows = tableRelation.getRows();
 		List<Row> parentRows = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
@@ -927,7 +932,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	private List<Row> getNotExistsRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
-		SqlType sqlType = SqlType.SELECT_ROWS;
+		SqlType sqlType = SqlType.SELECT_BY_ROWS;
 		final Table table = tableRelation.getTable();
 		final List<Row> list = CommonUtils.list();
 		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);

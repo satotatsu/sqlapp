@@ -29,10 +29,10 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractSelectFactory<S> {
+public abstract class AbstractSelectByRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractSelectFactory<S> {
 
 	protected SqlType getSqlType() {
-		return SqlType.SELECT_ROWS;
+		return SqlType.SELECT_BY_ROWS;
 	}
 
 	@Override

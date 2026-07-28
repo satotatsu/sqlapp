@@ -119,7 +119,7 @@ public class JdbcTreeStagingLoader {
 		copySession.setRootBatchSize(plan.getRootBatchSize());
 		copySession.setCommitEveryRootBatches(plan.getCommitEveryRootBatches());
 		copySession.setHoldCursorStrategy(HoldCursorStrategy.valueOf(plan.getRootCursorStrategy()));
-		copySession.setDeleteSourceRowHandler(
+		copySession.setProcessedRootHandler(
 				rows -> completeStagingRoots(root, rows.stream().map(row -> keyValues(root, row)).toList()));
 		return copySession;
 	}

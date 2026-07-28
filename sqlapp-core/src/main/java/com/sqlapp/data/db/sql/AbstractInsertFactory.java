@@ -43,18 +43,15 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 		final S builder = createSqlBuilder();
 		final List<Column> list = addInsertIntoTable(table, builder);
 		builder.lineBreak();
-		builder.brackets(() -> {
-			builder.indent(() -> {
-				int i = 0;
-				for (final Column column : list) {
-					final String def = this.getValueDefinitionForInsert(column);
-					builder.lineBreak();
-					builder.comma(i > 0).space(2, i == 0);
-					builder._add(def);
-					i++;
-				}
-			});
-			builder.lineBreak();
+		builder.brackets(true, () -> {
+			int i = 0;
+			for (final Column column : list) {
+				final String def = this.getValueDefinitionForInsert(column);
+				builder.lineBreak(i > 0);
+				builder.comma(i > 0).space(2, i == 0);
+				builder._add(def);
+				i++;
+			}
 		});
 		addSql(sqlList, builder, SqlType.INSERT, table);
 		return sqlList;
@@ -82,8 +79,7 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 							builder.lineBreak();
 							builder.comma(i > 0).space(2, i == 0);
 							builder.name(column);
-							final String comment = this.getTableOptions().getInsertColumnComment()
-									.apply(column);
+							final String comment = this.getTableOptions().getInsertColumnComment().apply(column);
 							if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 								builder.space().addComment(comment);
 							}
@@ -94,8 +90,7 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 						builder.lineBreak();
 						builder.comma(i > 0).space(2, i == 0);
 						builder.name(column);
-						final String comment = this.getTableOptions().getInsertColumnComment()
-								.apply(column);
+						final String comment = this.getTableOptions().getInsertColumnComment().apply(column);
 						if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 							builder.space().addComment(comment);
 						}

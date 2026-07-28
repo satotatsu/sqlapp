@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Row;
@@ -543,6 +544,15 @@ public class TableOptions extends AbstractBean implements Serializable {
 
 	private TableFunction<RowComparisonOperator> selectByRowComparisonOperatorStrategy = (
 			t) -> RowComparisonOperator.EQUAL;
+
+	public <T> T useSelectByRowComparisonOperatorStrategy(
+			TableFunction<RowComparisonOperator> selectByRowComparisonOperatorStrategy, Supplier<T> supplier) {
+		TableFunction<RowComparisonOperator> current = this.selectByRowComparisonOperatorStrategy;
+		this.selectByRowComparisonOperatorStrategy = selectByRowComparisonOperatorStrategy;
+		T ret = supplier.get();
+		this.selectByRowComparisonOperatorStrategy = current;
+		return ret;
+	}
 
 	public <T> T useTableRowStrategy(TableFunction<List<Row>> tableRowsStrategy, SQLExceptionSupplier<T> supplier)
 			throws SQLException {
