@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.migration.LegacyMigrationMappingValidator;
+import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
@@ -29,6 +30,7 @@ import com.sqlapp.data.schemas.RepeatColumn;
 import com.sqlapp.data.schemas.RepeatColumnClusterBuilder;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.YamlConverter;
 
@@ -41,7 +43,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateNormalizationPlanCommand extends AbstractCommand {
+public class GenerateNormalizationPlanCommand extends AbstractCommand
+		implements ForeignKeyDefinitionDirectoryProperty {
 
 	private static final Pattern DATE_NAME = Pattern.compile("(?i).*(?:DATE|_YMD|YYYYMMDD)$");
 
@@ -50,6 +53,8 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 	private File migrationMappingFile;
 
 	private File outputDirectory = new File("./");
+
+	private File foreignKeyDefinitionDirectory;
 
 	private int minimumColumnCount = 2;
 
@@ -79,6 +84,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 		validateProperties();
 		try {
 			var root = SchemaUtils.readXml(targetFile);
+			new VirtualForeignKeyLoader().loadTables(SchemaUtils.toTables(root), foreignKeyDefinitionDirectory);
 			String baseName = baseName(targetFile.getName());
 			File planFile = new File(outputDirectory, baseName + "-normalization-plan.yaml");
 			File previewFile = new File(outputDirectory, baseName + "-normalization-preview.xml");
@@ -230,6 +236,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 		command.setOutputDirectory(work);
 		command.setColumnFilter(columnFilter);
 		command.setMinimumColumnCount(minimumColumnCount);
+		command.setForeignKeyDefinitionDirectory(foreignKeyDefinitionDirectory);
 		command.setConvertCompositePrimaryKey(true);
 		command.setMigrationMappingEnabled(false);
 		command.run();

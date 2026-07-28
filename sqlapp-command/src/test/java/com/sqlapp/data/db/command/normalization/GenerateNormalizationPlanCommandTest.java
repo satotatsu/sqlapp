@@ -112,23 +112,20 @@ class GenerateNormalizationPlanCommandTest {
 		schema.getTables().add(tab);
 		Table tab1 = table("TAB1", "A", "B", "C", "D");
 		schema.getTables().add(tab1);
-		tab1.getConstraints().addForeignKeyConstraint("FK_TAB1_TAB",
-				new Column[] { tab1.getColumns().get("A"), tab1.getColumns().get("B"),
-						tab1.getColumns().get("C") },
-				new Column[] { tab.getColumns().get("A"), tab.getColumns().get("B"), tab.getColumns().get("C") });
 		Table tab11 = table("TAB1_1", "A", "B", "C", "D", "E");
 		schema.getTables().add(tab11);
-		tab11.getConstraints().addForeignKeyConstraint("FK_TAB1_1_TAB1",
-				new Column[] { tab11.getColumns().get("A"), tab11.getColumns().get("B"),
-						tab11.getColumns().get("C"), tab11.getColumns().get("D") },
-				new Column[] { tab1.getColumns().get("A"), tab1.getColumns().get("B"),
-						tab1.getColumns().get("C"), tab1.getColumns().get("D") });
 		File source = new File(temporaryDirectory, "hierarchy.xml");
 		schema.writeXml(source);
+		File foreignKeyDirectory = new File(temporaryDirectory, "foreignkey");
+		assertTrue(foreignKeyDirectory.mkdirs());
+		Files.writeString(new File(foreignKeyDirectory, "hierarchy.def").toPath(),
+				"TAB1(A,B,C)->TAB(A,B,C)\n"
+						+ "TAB1_1(A,B,C,D)->TAB1(A,B,C,D)\n");
 		File output = new File(temporaryDirectory, "hierarchy-plan");
 
 		GenerateNormalizationPlanCommand command = new GenerateNormalizationPlanCommand();
 		command.setTargetFile(source);
+		command.setForeignKeyDefinitionDirectory(foreignKeyDirectory);
 		command.setOutputDirectory(output);
 		command.run();
 
@@ -144,6 +141,8 @@ class GenerateNormalizationPlanCommandTest {
 		assertUnique(preview.getTables().get("TAB"), "A", "B", "C");
 		assertUnique(preview.getTables().get("TAB1"), "PARENT_ID", "D");
 		assertUnique(preview.getTables().get("TAB1_1"), "PARENT_ID", "E");
+		assertTrue(preview.getTables().get("TAB1").getConstraints().getForeignKeyConstraints().get(0).isVirtual());
+		assertTrue(preview.getTables().get("TAB1_1").getConstraints().getForeignKeyConstraints().get(0).isVirtual());
 	}
 
 	@SuppressWarnings("unchecked")

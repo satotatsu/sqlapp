@@ -21,7 +21,11 @@ class GenerateNormalizationPlanTaskTest extends AbstractTaskTest {
 
 		GenerateNormalizationPlanTask task = project.tasks.named(
 				"generateNormalizationPlan", GenerateNormalizationPlanTask).get()
+		File foreignKeyDirectory = new File(testProjectDir, "foreignkey")
+		assertTrue(foreignKeyDirectory.mkdirs())
+		task.foreignKeyDefinitionDirectory.set(foreignKeyDirectory)
 		assertNotNull(task)
+		assertEquals(foreignKeyDirectory, task.foreignKeyDefinitionDirectory.get().asFile)
 		assertEquals(2, task.minimumColumnCount.get())
 		assertEquals(20L, task.variableCharacterMinimumLength.get())
 		assertTrue(task.previewSchemaEnabled.get())

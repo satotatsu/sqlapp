@@ -43,13 +43,14 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 
 /**
  * Gradle task for converting a schema XML document to first normal form.
  */
 @DisableCachingByDefault
 public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCommand>
-		implements TargetFileTaskProperty, OutputDirectoryTaskProperty {
+		implements TargetFileTaskProperty, OutputDirectoryTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty {
 
 	private Function<Table, String> childKeyColumnNameStrategy = table -> "ROW_NO";
 
@@ -173,6 +174,9 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
+		if (getForeignKeyDefinitionDirectory().isPresent()) {
+			command.setForeignKeyDefinitionDirectory(getForeignKeyDefinitionDirectory().get().getAsFile());
+		}
 		command.setMigrationMappingEnabled(getMigrationMappingEnabled().get());
 		command.setConvertCompositePrimaryKey(getConvertCompositePrimaryKey().get());
 		command.setSurrogateKeyGenerationType(getSurrogateKeyGenerationType().get());
