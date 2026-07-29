@@ -32,6 +32,7 @@ import com.sqlapp.data.db.metadata.RoutineArgumentReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.FunctionReturning;
+import com.sqlapp.data.schemas.FunctionType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -45,6 +46,8 @@ import com.sqlapp.util.DoubleKeyMap;
  * 
  */
 public class OracleFunctionReader extends FunctionReader {
+
+	public static final String SQL_MACRO = "SQL_MACRO";
 
 	protected OracleFunctionReader(Dialect dialect) {
 		super(dialect);
@@ -72,10 +75,24 @@ public class OracleFunctionReader extends FunctionReader {
 		List<Function> result= map.toList();
 		ParametersContext cnt = new ParametersContext();
 		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
+		final boolean detectSqlMacroFromSource =
+				productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() == 19;
 		for(Function obj:result){
 			List<String> source=routines.get(obj.getSchemaName(), obj.getName());
+			if (detectSqlMacroFromSource
+					&& !Boolean.parseBoolean(obj.getSpecifics().get(SQL_MACRO))
+					&& containsSqlMacro(source)) {
+				obj.getSpecifics().put(SQL_MACRO, Boolean.TRUE);
+				obj.setFunctionType(FunctionType.Table);
+			}
 			String def=OracleMetadataUtils.getFunctionStatement(obj, source);
 			if (def!=null){
+				if (Boolean.parseBoolean(obj.getSpecifics().get(SQL_MACRO))) {
+					def = def.replaceFirst(
+							"(?is)^\\s*SQL_MACRO(?:\\s*\\(\\s*(?:SCALAR|TABLE)\\s*\\))?\\s*",
+							"");
+				}
 				obj.setStatement(def);
 			} else{
 				obj.setDefinition(source);
@@ -85,6 +102,10 @@ public class OracleFunctionReader extends FunctionReader {
 	}
 	
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 21) {
+			return getSqlNodeCache().getString("functions21c.sql");
+		}
 		return getSqlNodeCache().getString("functions.sql");
 	}
 
@@ -100,6 +121,13 @@ public class OracleFunctionReader extends FunctionReader {
 		String characterSetName=getString(rs, "CHARACTER_SET_NAME");
 		routine.setDeterministic("YES".equalsIgnoreCase(getString(rs, "DETERMINISTIC")));
 		routine.setParallel("YES".equalsIgnoreCase(getString(rs, "PARALLEL")));
+		final String sqlMacro = getString(rs, SQL_MACRO);
+		if ("SCALAR".equalsIgnoreCase(sqlMacro)
+				|| "TABLE".equalsIgnoreCase(sqlMacro)) {
+			routine.getSpecifics().put(SQL_MACRO, Boolean.TRUE);
+			routine.setFunctionType("TABLE".equalsIgnoreCase(sqlMacro)
+					? FunctionType.Table : FunctionType.Scalar);
+		}
 		obj.setCharacterSet(characterSetName);
 		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
 		if ("OBJECT".equals(productDataType)){
@@ -110,6 +138,19 @@ public class OracleFunctionReader extends FunctionReader {
 		}
 		routine.setReturning(obj);
 		return routine;
+	}
+
+	private boolean containsSqlMacro(final List<String> source) {
+		if (source == null) {
+			return false;
+		}
+		for (final String line : source) {
+			if (line != null && line.toUpperCase(java.util.Locale.ROOT)
+					.contains("SQL_MACRO")) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	@Override

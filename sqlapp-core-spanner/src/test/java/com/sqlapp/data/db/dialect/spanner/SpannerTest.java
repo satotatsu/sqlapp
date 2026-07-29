@@ -39,6 +39,14 @@ public class SpannerTest {
 		assertEquals(DataType.BIGINT, column.getDataType());
 		column = getColumn("FLOAT64");
 		assertEquals(DataType.DOUBLE, column.getDataType());
+		column = getColumn("FLOAT32");
+		assertEquals(DataType.REAL, column.getDataType());
+		column = getColumn("NUMERIC");
+		assertEquals(DataType.NUMERIC, column.getDataType());
+		column = getColumn("JSON");
+		assertEquals(DataType.JSON, column.getDataType());
+		column = getColumn("UUID");
+		assertEquals(DataType.UUID, column.getDataType());
 		column = getColumn("STRING(10)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		column = getColumn("STRING(MAX)");

@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.saphana.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -42,6 +44,55 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 	@Override
 	public SapHanaSqlBuilder clone(){
 		return (SapHanaSqlBuilder)super.clone();
+	}
+
+	@Override
+	protected SapHanaSqlBuilder typeDefinition(final Column column) {
+		if (column.getDataType() != DataType.VECTOR) {
+			return super.typeDefinition(column);
+		}
+		if (column.getVectorElementDataType() != null
+				&& column.getVectorElementDataType() != DataType.REAL) {
+			throw new IllegalArgumentException(
+					"SAP HANA REAL_VECTOR requires REAL elements: "
+					+ column.getName());
+		}
+		final Integer dimension = column.getVectorDimension();
+		if (dimension != null
+				&& (dimension.intValue() <= 0
+						|| dimension.intValue() > 65000)) {
+			throw new IllegalArgumentException(
+					"SAP HANA REAL_VECTOR dimension must be between 1 "
+					+ "and 65000: " + column.getName());
+		}
+		_add("REAL_VECTOR");
+		if (dimension != null) {
+			brackets(() -> _add(dimension));
+		}
+		return instance();
+	}
+
+	public SapHanaSqlBuilder cosineSimilarity(final CharSequence left,
+			final CharSequence right) {
+		return binaryVectorFunction("COSINE_SIMILARITY", left, right);
+	}
+
+	public SapHanaSqlBuilder l2Distance(final CharSequence left,
+			final CharSequence right) {
+		return binaryVectorFunction("L2DISTANCE", left, right);
+	}
+
+	public SapHanaSqlBuilder toRealVector(final CharSequence expression) {
+		_add("TO_REAL_VECTOR")._add("(")._add(expression.toString())
+				._add(")");
+		return instance();
+	}
+
+	private SapHanaSqlBuilder binaryVectorFunction(final String function,
+			final CharSequence left, final CharSequence right) {
+		_add(function)._add("(")._add(left.toString()).comma()
+				._add(right.toString())._add(")");
+		return instance();
 	}
 
 }

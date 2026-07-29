@@ -66,6 +66,8 @@ public class H2 extends Dialect {
 	protected void registerDataType() {
 		// ARRAY
 		getDbDataTypes().addArray();
+		// ENUM
+		getDbDataTypes().addEnum();
 		// CHAR
 		getDbDataTypes().addChar(CHAR_SIZE_MAX);
 		// VARCHAR
@@ -134,7 +136,10 @@ public class H2 extends Dialect {
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID", type -> {
-			type.setLiteral("'", "'").setDefaultValueLiteral("RANDOM_UUID(");
+			type.setLiteral("'", "'").setDefaultValueLiteral("RANDOM_UUID()");
+		});
+		// JSON
+		getDbDataTypes().addJsonType(type -> {
 		});
 		// Real
 		getDbDataTypes().addReal(type -> {
@@ -170,6 +175,11 @@ public class H2 extends Dialect {
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
+		});
+		// Timestamp WITH TIME ZONE
+		getDbDataTypes().addTimestampWithTimeZone(type -> {
+			type.setDefaultValueLiteral(
+					getCurrentTimestampWithTimeZoneFunction());
 		});
 		// GEOMETRY
 		GeometryUtils.run(new Runnable() {
@@ -274,7 +284,7 @@ public class H2 extends Dialect {
 	 */
 	@Override
 	public String getCurrentDateFunction() {
-		return null;
+		return "CURRENT_DATE";
 	}
 
 	/**
@@ -282,7 +292,7 @@ public class H2 extends Dialect {
 	 */
 	@Override
 	public String getCurrentDateTimeFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -290,7 +300,7 @@ public class H2 extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimestampFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -298,7 +308,7 @@ public class H2 extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimestampWithTimeZoneFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -306,7 +316,7 @@ public class H2 extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimeFunction() {
-		return null;
+		return "CURRENT_TIME";
 	}
 
 	@Override

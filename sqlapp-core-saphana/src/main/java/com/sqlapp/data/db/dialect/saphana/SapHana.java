@@ -58,6 +58,10 @@ public class SapHana extends Dialect {
 	 */
 	@Override
 	protected void registerDataType() {
+		// ARRAY
+		getDbDataTypes().addArray();
+		// BOOLEAN
+		getDbDataTypes().addBoolean();
 		// VARCHAR
 		getDbDataTypes().addVarchar(5000);
 		// NVARCHAR

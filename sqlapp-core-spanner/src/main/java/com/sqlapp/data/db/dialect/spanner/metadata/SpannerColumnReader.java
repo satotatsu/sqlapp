@@ -70,6 +70,7 @@ public class SpannerColumnReader extends ColumnReader {
 		obj.setNullable(nullable);
 		this.getDialect().setDbType(data_type,
 				null, null, obj);
+		setSpecifics(rs, "ALLOW_COMMIT_TIMESTAMP", obj);
 		return obj;
 	}
 

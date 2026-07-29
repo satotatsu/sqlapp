@@ -70,7 +70,7 @@ public class SqpHanaCreateTemporaryTableSqlFactoryTest extends AbstractSapHanaSq
 					, "colc" VARCHAR(50)
 					, "cold" SECONDDATE
 					, "cole" ENUM('a','b','c')
-					, "colf" TINYINT
+					, "colf" BOOLEAN
 					, "colg" CHAR(15)
 					, "colh" BPCHAR(30)
 				)""";

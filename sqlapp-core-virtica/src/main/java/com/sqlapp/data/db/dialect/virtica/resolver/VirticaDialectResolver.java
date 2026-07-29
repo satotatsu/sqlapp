@@ -27,7 +27,7 @@ import com.sqlapp.data.db.dialect.virtica.DialectHolder;
 public class VirticaDialectResolver extends ProductNameDialectResolver {
 
 	public VirticaDialectResolver() {
-		super(".*virtica", new VirticaVersionResolver());
+		super(".*(vertica|virtica)", new VirticaVersionResolver());
 	}
 
 	/**
@@ -57,7 +57,9 @@ public class VirticaDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion >= 8) {
+			if (majorVersion >= 9) {
+				return DialectHolder.defaultDialect90;
+			} else if (majorVersion >= 8) {
 				return DialectHolder.defaultDialect80;
 			} else if (majorVersion >= 7) {
 				if (minorVersion > 1) {

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.h2.H2;
+import com.sqlapp.data.db.dialect.h2.H2_200;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
@@ -37,6 +38,9 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("H2", 1, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof H2);
+		assertTrue(!(dialect instanceof H2_200));
+		dialect = DialectResolver.getInstance().getDialect("H2", 2, 0, 0);
+		assertTrue(dialect instanceof H2_200);
 	}
 
 	@Test

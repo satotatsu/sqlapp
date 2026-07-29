@@ -32,12 +32,24 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 	public static final String SAMPLES_PER_PARTITION = Oracle23aiIndexReader.SAMPLES_PER_PARTITION;
 	public static final String MIN_VECTORS_PER_PARTITION = Oracle23aiIndexReader.MIN_VECTORS_PER_PARTITION;
 	public static final String PARALLEL = Oracle23aiIndexReader.PARALLEL;
+	public static final String HYBRID = "HYBRID";
+	public static final String DATASTORE = "DATASTORE";
+	public static final String FILTER = "FILTER";
+	public static final String LEXER = "LEXER";
+	public static final String MODEL = "MODEL";
+	public static final String VECTORIZER = "VECTORIZER";
+	public static final String VECTOR_IDXTYPE = "VECTOR_IDXTYPE";
 
 	@Override
 	public void addObjectDetail(final Index index, final Table table,
 			final OracleSqlBuilder builder) {
 		if (index.getIndexType() != IndexType.Vector) {
 			super.addObjectDetail(index, table, builder);
+			OracleAnnotationUtils.addAnnotations(builder, index);
+			return;
+		}
+		if (isHybrid(index)) {
+			addHybridVectorIndex(index, table, builder);
 			return;
 		}
 		final String organization = validateVectorIndex(index, table);
@@ -72,6 +84,102 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 		if (parallel != null) {
 			builder.space()._add("PARALLEL").space()._add(parallel);
 		}
+		OracleAnnotationUtils.addAnnotations(builder, index);
+	}
+
+	private boolean isHybrid(final Index index) {
+		return Boolean.TRUE.equals(index.getSpecifics().get(HYBRID, Boolean.class));
+	}
+
+	private void addHybridVectorIndex(final Index index, final Table table,
+			final OracleSqlBuilder builder) {
+		validateHybridVectorIndex(index, table);
+		builder.space()._add("HYBRID VECTOR").index().space().name(index, false).on();
+		if (index.getSchemaName() != null && table.getSchemaName() != null
+				&& !CommonUtils.eq(index.getSchemaName(), table.getSchemaName())) {
+			builder.name(table, true);
+		} else {
+			builder.name(table, false);
+		}
+		builder.space()._add("(").name(index.getColumns().get(0)).space()._add(")");
+		builder.space()._add("PARAMETERS").space()._add("('");
+		final List<String> parameters = new ArrayList<>();
+		addHybridParameter(index, parameters, DATASTORE);
+		addHybridParameter(index, parameters, FILTER);
+		addHybridParameter(index, parameters, LEXER);
+		addHybridParameter(index, parameters, MODEL);
+		addHybridParameter(index, parameters, VECTORIZER);
+		addHybridParameter(index, parameters, VECTOR_IDXTYPE);
+		builder._add(String.join(" ", parameters))._add("')");
+		OracleAnnotationUtils.addAnnotations(builder, index);
+	}
+
+	private void validateHybridVectorIndex(final Index index, final Table table) {
+		if (table == null) {
+			throw new IllegalArgumentException("HYBRID VECTOR index requires a parent table: "
+					+ index.getName());
+		}
+		if (index.getColumns().size() != 1) {
+			throw new IllegalArgumentException("HYBRID VECTOR index requires exactly one column: "
+					+ index.getName());
+		}
+		final Column column = table.getColumns().get(index.getColumns().get(0).getName());
+		if (column == null || !isHybridVectorSourceType(column.getDataType())) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index column must have VARCHAR, CLOB, or BLOB data type: "
+					+ index.getColumns().get(0).getName());
+		}
+		final String model = hybridParameter(index, MODEL);
+		final String vectorizer = hybridParameter(index, VECTORIZER);
+		if (model == null && vectorizer == null) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index requires MODEL or VECTORIZER: "
+					+ index.getName());
+		}
+		if (model != null && vectorizer != null) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index MODEL and VECTORIZER are alternatives: "
+							+ index.getName());
+		}
+		if (vectorizer != null
+				&& hybridParameter(index, VECTOR_IDXTYPE) != null) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index VECTORIZER and VECTOR_IDXTYPE "
+							+ "cannot be specified together: "
+							+ index.getName());
+		}
+		final String vectorIndexType = hybridParameter(index, VECTOR_IDXTYPE);
+		if (vectorIndexType != null
+				&& !"HNSW".equalsIgnoreCase(vectorIndexType)
+				&& !"IVF".equalsIgnoreCase(vectorIndexType)) {
+			throw new IllegalArgumentException(
+					"HYBRID VECTOR index VECTOR_IDXTYPE must be HNSW or IVF: "
+					+ index.getName());
+		}
+	}
+
+	private boolean isHybridVectorSourceType(final DataType dataType) {
+		return dataType == DataType.VARCHAR
+				|| dataType == DataType.CLOB
+				|| dataType == DataType.BLOB;
+	}
+
+	private void addHybridParameter(final Index index, final List<String> parameters,
+			final String key) {
+		final String value = hybridParameter(index, key);
+		if (value != null) {
+			parameters.add(key + " " + value);
+		}
+	}
+
+	private String hybridParameter(final Index index, final String key) {
+		final String value = CommonUtils.trim(index.getSpecifics().get(key));
+		if (value != null && (value.indexOf('\'') >= 0
+				|| value.indexOf('\r') >= 0 || value.indexOf('\n') >= 0)) {
+			throw new IllegalArgumentException(key
+					+ " must not contain quotes or line breaks: " + index.getName());
+		}
+		return value;
 	}
 
 	private String validateVectorIndex(final Index index, final Table table) {

@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.oracle.sql.Oracle23aiCreateIndexFactory;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
@@ -32,6 +33,7 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	public static final String PARALLEL = "PARALLEL";
 
 	private boolean vectorIndexDetailUnavailable;
+	private boolean hybridVectorIndexDetailUnavailable;
 
 	public Oracle23aiIndexReader(final Dialect dialect) {
 		super(dialect);
@@ -59,7 +61,12 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	protected void setMetadataDetail(final Connection connection, final Index index)
 			throws SQLException {
 		super.setMetadataDetail(connection, index);
-		if (index.getIndexType() != IndexType.Vector || vectorIndexDetailUnavailable) {
+		if (index.getIndexType() == IndexType.Domain) {
+			setHybridVectorIndexDetail(connection, index);
+			return;
+		}
+		if (index.getIndexType() != IndexType.Vector
+				|| vectorIndexDetailUnavailable) {
 			return;
 		}
 		final SqlNode node = getSqlNodeCache().getString("vectorIndexDetails.sql");
@@ -81,6 +88,43 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 			logger.warn("Oracle VECTOR index detail metadata is unavailable or not permitted; "
 					+ "skipping VECSYS.VECTOR$INDEX details. Basic ALL_INDEXES metadata is retained. "
 					+ sqlExceptionMessage(e));
+		}
+	}
+
+	private void setHybridVectorIndexDetail(final Connection connection,
+			final Index index) {
+		if (hybridVectorIndexDetailUnavailable) {
+			return;
+		}
+		final SqlNode node = getSqlNodeCache().getString(
+				"hybridVectorIndexDetails.sql");
+		final ParametersContext context = newParametersContext(connection,
+				null, index.getSchemaName());
+		context.put("indexName",
+				nativeCaseString(connection, index.getName()));
+		try {
+			execute(connection, node, context, new ResultSetNextHandler() {
+				@Override
+				public void handleResultSetNext(final ExResultSet rs)
+						throws SQLException {
+					index.setIndexType(IndexType.Vector);
+					index.getSpecifics().put(
+							Oracle23aiCreateIndexFactory.HYBRID, true);
+					final String key = getString(rs, "IXO_CLASS");
+					final String value = getString(rs, "IXO_OBJECT");
+					if (key != null && value != null) {
+						index.getSpecifics().put(key, value);
+					}
+				}
+			});
+		} catch (final RuntimeException e) {
+			if (!isVectorIndexDetailUnavailable(e)) {
+				throw e;
+			}
+			hybridVectorIndexDetailUnavailable = true;
+			logger.warn("Oracle hybrid vector index metadata is unavailable "
+					+ "or not permitted; basic domain-index metadata is "
+					+ "retained. " + sqlExceptionMessage(e));
 		}
 	}
 

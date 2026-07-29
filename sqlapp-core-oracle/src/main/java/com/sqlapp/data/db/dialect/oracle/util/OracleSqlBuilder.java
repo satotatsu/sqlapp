@@ -36,6 +36,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -47,6 +48,47 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
+
+	public enum VectorChunkUnit {
+		Characters("CHARACTERS"),
+		Words("WORDS"),
+		Vocabulary("VOCABULARY");
+
+		private final String sqlValue;
+
+		VectorChunkUnit(final String sqlValue) {
+			this.sqlValue = sqlValue;
+		}
+	}
+
+	public enum VectorChunkSplit {
+		None("NONE"),
+		Newline("NEWLINE"),
+		Blankline("BLANKLINE"),
+		Space("SPACE"),
+		Recursively("RECURSIVELY"),
+		Sentence("SENTENCE");
+
+		private final String sqlValue;
+
+		VectorChunkSplit(final String sqlValue) {
+			this.sqlValue = sqlValue;
+		}
+	}
+
+	public enum VectorChunkNormalization {
+		None("NONE"),
+		All("ALL"),
+		Punctuation("PUNCTUATION"),
+		Whitespace("WHITESPACE"),
+		Widechar("WIDECHAR");
+
+		private final String sqlValue;
+
+		VectorChunkNormalization(final String sqlValue) {
+			this.sqlValue = sqlValue;
+		}
+	}
 
 	public OracleSqlBuilder(Dialect dialect) {
 		super(dialect);
@@ -154,27 +196,336 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	}
 
 	private String getVectorElementType(final Column column) {
-		if (column.getVectorElementDataType() == null) {
+		return getVectorElementType(column.getVectorElementDataType(),
+				column.getVectorDimension(), column.getName());
+	}
+
+	private String getVectorElementType(final DataType elementDataType,
+			final Integer dimension, final String objectName) {
+		if (elementDataType == null) {
 			return null;
 		}
-		if (column.getVectorElementDataType() == DataType.REAL) {
+		if (elementDataType == DataType.REAL) {
 			return "FLOAT32";
 		}
-		if (column.getVectorElementDataType() == DataType.DOUBLE) {
+		if (elementDataType == DataType.DOUBLE) {
 			return "FLOAT64";
 		}
-		if (column.getVectorElementDataType() == DataType.TINYINT) {
+		if (elementDataType == DataType.TINYINT) {
 			return "INT8";
 		}
-		if (column.getVectorElementDataType() == DataType.BINARY) {
-			if (column.getVectorDimension() != null && column.getVectorDimension() % 8 != 0) {
+		if (elementDataType == DataType.BINARY) {
+			if (dimension != null && dimension % 8 != 0) {
 				throw new IllegalArgumentException("Oracle BINARY VECTOR dimension must be a multiple of 8: "
-						+ column.getName());
+						+ objectName);
 			}
 			return "BINARY";
 		}
 		throw new IllegalArgumentException("Unsupported Oracle VECTOR element data type: "
-				+ column.getVectorElementDataType());
+				+ elementDataType);
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_DISTANCE expression.
+	 *
+	 * @param leftExpression left vector SQL expression
+	 * @param rightExpression right vector SQL expression
+	 * @param distanceType distance metric, or {@code null} for Oracle's default
+	 */
+	public OracleSqlBuilder vectorDistance(final CharSequence leftExpression,
+			final CharSequence rightExpression,
+			final VectorDistanceType distanceType) {
+		checkVectorSearchSupport();
+		checkExpression(leftExpression, "leftExpression");
+		checkExpression(rightExpression, "rightExpression");
+		_add("VECTOR_DISTANCE")._add("(")._add(leftExpression.toString());
+		comma()._add(rightExpression.toString());
+		if (distanceType != null) {
+			comma()._add(toOracleVectorDistance(distanceType));
+		}
+		_add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle shorthand vector-distance operator expression.
+	 */
+	public OracleSqlBuilder vectorDistanceOperator(
+			final CharSequence leftExpression,
+			final CharSequence rightExpression,
+			final VectorDistanceType distanceType) {
+		checkVectorSearchSupport();
+		checkExpression(leftExpression, "leftExpression");
+		checkExpression(rightExpression, "rightExpression");
+		final String operator;
+		if (distanceType == VectorDistanceType.Euclidean) {
+			operator = "<->";
+		} else if (distanceType == VectorDistanceType.Cosine) {
+			operator = "<=>";
+		} else if (distanceType == VectorDistanceType.DotProduct
+				|| distanceType == VectorDistanceType.InnerProduct) {
+			operator = "<#>";
+		} else {
+			throw new IllegalArgumentException(
+					"Oracle has no shorthand operator for vector distance: "
+							+ distanceType);
+		}
+		_add(leftExpression.toString()).space()._add(operator).space()
+				._add(rightExpression.toString());
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle TO_VECTOR conversion expression.
+	 */
+	public OracleSqlBuilder toVector(final CharSequence expression,
+			final Integer dimension, final DataType elementDataType) {
+		checkVectorSearchSupport();
+		checkExpression(expression, "expression");
+		if (dimension != null && (dimension <= 0 || dimension > 65535)) {
+			throw new IllegalArgumentException(
+					"Oracle VECTOR dimension must be between 1 and 65535: "
+							+ dimension);
+		}
+		final String elementType = getVectorElementType(elementDataType,
+				dimension, "TO_VECTOR");
+		_add("TO_VECTOR")._add("(")._add(expression.toString());
+		if (dimension != null || elementType != null) {
+			comma()._add(dimension == null ? "*" : dimension);
+		}
+		if (elementType != null) {
+			comma()._add(elementType);
+		}
+		_add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle FROM_VECTOR conversion expression.
+	 */
+	public OracleSqlBuilder fromVector(final CharSequence expression) {
+		checkVectorSearchSupport();
+		checkExpression(expression, "expression");
+		_add("FROM_VECTOR")._add("(")._add(expression.toString())._add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_EMBEDDING expression.
+	 *
+	 * @param modelName imported embedding model name
+	 * @param expression input SQL expression
+	 */
+	public OracleSqlBuilder vectorEmbedding(final CharSequence modelName,
+			final CharSequence expression) {
+		return vectorEmbedding(modelName, expression, null);
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_EMBEDDING expression using all relevant attributes.
+	 */
+	public OracleSqlBuilder vectorEmbeddingUsingAll(
+			final CharSequence modelName) {
+		checkVectorSearchSupport();
+		checkExpression(modelName, "modelName");
+		_add("VECTOR_EMBEDDING")._add("(")._add(modelName.toString())
+				.space()._add("USING *")._add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_EMBEDDING expression with a mining attribute alias.
+	 */
+	public OracleSqlBuilder vectorEmbedding(final CharSequence modelName,
+			final CharSequence expression, final CharSequence alias) {
+		checkVectorSearchSupport();
+		checkExpression(modelName, "modelName");
+		checkExpression(expression, "expression");
+		_add("VECTOR_EMBEDDING")._add("(")._add(modelName.toString())
+				.space()._add("USING").space()._add(expression.toString());
+		if (alias != null) {
+			checkExpression(alias, "alias");
+			space().as().space()._add(alias.toString());
+		}
+		_add(")");
+		return instance();
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_CHUNKS table function using default chunking.
+	 */
+	public OracleSqlBuilder vectorChunks(final CharSequence expression) {
+		return vectorChunks(expression, null, null, null, null, null, null,
+				false);
+	}
+
+	/**
+	 * Adds an Oracle VECTOR_CHUNKS table function.
+	 */
+	public OracleSqlBuilder vectorChunks(final CharSequence expression,
+			final VectorChunkUnit unit, final Integer maximum,
+			final Integer overlap, final VectorChunkSplit split,
+			final CharSequence language,
+			final VectorChunkNormalization normalization,
+			final boolean extended) {
+		checkVectorSearchSupport();
+		checkExpression(expression, "expression");
+		validateVectorChunks(unit, maximum, overlap, split, language);
+		_add("VECTOR_CHUNKS")._add("(")._add(expression.toString());
+		if (unit != null) {
+			space()._add("BY").space()._add(unit.sqlValue);
+		}
+		if (maximum != null) {
+			space()._add("MAX").space()._add(maximum);
+		}
+		if (overlap != null) {
+			space()._add("OVERLAP").space()._add(overlap);
+		}
+		if (split != null) {
+			space()._add("SPLIT BY").space()._add(split.sqlValue);
+		}
+		if (language != null) {
+			space()._add("LANGUAGE").space()._add(language.toString());
+		}
+		if (normalization != null) {
+			space()._add("NORMALIZE").space()
+					._add(normalization.sqlValue);
+		}
+		if (extended) {
+			space()._add("EXTENDED");
+		}
+		_add(")");
+		return instance();
+	}
+
+	private void validateVectorChunks(final VectorChunkUnit unit,
+			final Integer maximum, final Integer overlap,
+			final VectorChunkSplit split, final CharSequence language) {
+		final VectorChunkUnit effectiveUnit = unit == null
+				? VectorChunkUnit.Words : unit;
+		final int effectiveMaximum = maximum == null ? 100 : maximum;
+		final int minimumMaximum = effectiveUnit == VectorChunkUnit.Characters
+				? 50 : 10;
+		final int maximumMaximum = effectiveUnit == VectorChunkUnit.Characters
+				? 4000 : 1000;
+		if (effectiveMaximum < minimumMaximum
+				|| effectiveMaximum > maximumMaximum) {
+			throw new IllegalArgumentException("VECTOR_CHUNKS MAX for "
+					+ effectiveUnit.sqlValue + " must be between "
+					+ minimumMaximum + " and " + maximumMaximum + ": "
+					+ effectiveMaximum);
+		}
+		if (overlap != null) {
+			if (overlap < 0) {
+				throw new IllegalArgumentException(
+						"VECTOR_CHUNKS OVERLAP must not be negative: "
+								+ overlap);
+			}
+			if (overlap > 0
+					&& (overlap * 100 < effectiveMaximum * 5
+							|| overlap * 100 > effectiveMaximum * 20)) {
+				throw new IllegalArgumentException(
+						"VECTOR_CHUNKS OVERLAP must be zero or between "
+								+ "5% and 20% of MAX: " + overlap);
+			}
+		}
+		if (split == VectorChunkSplit.Sentence
+				&& effectiveUnit == VectorChunkUnit.Characters) {
+			throw new IllegalArgumentException(
+					"VECTOR_CHUNKS SPLIT BY SENTENCE is not valid with "
+							+ "BY CHARACTERS");
+		}
+		if (language != null) {
+			checkExpression(language, "language");
+			final String value = language.toString();
+			if (value.indexOf('\r') >= 0 || value.indexOf('\n') >= 0) {
+				throw new IllegalArgumentException(
+						"language must not contain line breaks");
+			}
+		}
+	}
+
+	/**
+	 * Adds an approximate vector-search row limiting clause.
+	 */
+	public OracleSqlBuilder fetchApproximateFirst(final int rowCount,
+			final Integer targetAccuracy) {
+		return fetchApproximateFirst(rowCount, targetAccuracy, null, null);
+	}
+
+	/**
+	 * Adds an approximate vector-search row limiting clause with HNSW/IVF
+	 * search parameters. Accuracy and explicit parameters are alternatives.
+	 */
+	public OracleSqlBuilder fetchApproximateFirst(final int rowCount,
+			final Integer targetAccuracy, final Integer efSearch,
+			final Integer neighborPartitionProbes) {
+		checkVectorSearchSupport();
+		if (rowCount <= 0) {
+			throw new IllegalArgumentException("rowCount must be greater than zero");
+		}
+		if (targetAccuracy != null
+				&& (targetAccuracy <= 0 || targetAccuracy > 100)) {
+			throw new IllegalArgumentException(
+					"targetAccuracy must be between 1 and 100");
+		}
+		if (efSearch != null && efSearch <= 0) {
+			throw new IllegalArgumentException("efSearch must be greater than zero");
+		}
+		if (neighborPartitionProbes != null && neighborPartitionProbes <= 0) {
+			throw new IllegalArgumentException(
+					"neighborPartitionProbes must be greater than zero");
+		}
+		if (targetAccuracy != null
+				&& (efSearch != null || neighborPartitionProbes != null)) {
+			throw new IllegalArgumentException(
+					"targetAccuracy and search parameters are alternatives");
+		}
+		fetch().space()._add("APPROXIMATE FIRST").space()._add(rowCount)
+				.space()._add("ROWS ONLY");
+		if (targetAccuracy != null) {
+			space()._add("WITH TARGET ACCURACY").space()
+					._add(targetAccuracy);
+		} else if (efSearch != null || neighborPartitionProbes != null) {
+			space()._add("WITH TARGET ACCURACY PARAMETERS").space()._add("(");
+			boolean comma = false;
+			if (efSearch != null) {
+				_add("EFSEARCH").space()._add(efSearch);
+				comma = true;
+			}
+			if (neighborPartitionProbes != null) {
+				comma(comma)._add("NEIGHBOR PARTITION PROBES").space()
+						._add(neighborPartitionProbes);
+			}
+			_add(")");
+		}
+		return instance();
+	}
+
+	private void checkVectorSearchSupport() {
+		if (getDialect().getDbDataTypes().getDbTypeStrict(DataType.VECTOR) == null) {
+			throw new IllegalArgumentException(
+					"Oracle AI Vector Search requires Oracle Database 23ai or later");
+		}
+	}
+
+	private void checkExpression(final CharSequence expression,
+			final String argumentName) {
+		if (expression == null || expression.toString().isBlank()) {
+			throw new IllegalArgumentException(argumentName + " must not be empty");
+		}
+	}
+
+	private String toOracleVectorDistance(
+			final VectorDistanceType distanceType) {
+		if (distanceType == VectorDistanceType.EuclideanSquared) {
+			return "EUCLIDEAN_SQUARED";
+		}
+		if (distanceType == VectorDistanceType.DotProduct
+				|| distanceType == VectorDistanceType.InnerProduct) {
+			return "DOT";
+		}
+		return distanceType.getSqlValue();
 	}
 	
 	/**

@@ -69,10 +69,6 @@ public class Virtica extends Dialect {
 		getDbDataTypes().addLongVarchar("LONG VARCHAR", SIZE_MAX2, type -> {
 			type.setDefaultLength(1).setCreateFormat("LONG VARCHAR");
 		});
-		// UUID
-		getDbDataTypes().addUUID("BINARY(16)", type -> {
-			type.setLiteral("'", "'").setAsBinaryType();
-		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
 		// BINARY
@@ -135,7 +131,7 @@ public class Virtica extends Dialect {
 	 */
 	@Override
 	public String getProductName() {
-		return "Virtica";
+		return "Vertica";
 	}
 
 	/**

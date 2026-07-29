@@ -78,6 +78,10 @@ public class Spanner extends Dialect {
 			type.addColumnTypeMatcher("BOOLEAN");
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
+		// JSON
+		getDbDataTypes().addJsonType(type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("BYTES", SIZE_MAX2 - 1, type -> {
 			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
@@ -91,6 +95,13 @@ public class Spanner extends Dialect {
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt("INT64", type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+		});
+		// UUID
+		getDbDataTypes().addUUID("UUID", type -> {
+			type.setLiteral("'", "'")
+					.setDefaultValueLiteral("NEW_UUID()");
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -100,10 +111,21 @@ public class Spanner extends Dialect {
 		// Timestamp
 		getDbDataTypes().addTimestamp("TIMESTAMP", type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setCreateFormat("TIMESTAMP");
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// FLOAT64
 		getDbDataTypes().addDouble("FLOAT64", type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+		});
+		// FLOAT32
+		getDbDataTypes().addReal("FLOAT32", type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+		});
+		// NUMERIC
+		getDbDataTypes().addNumeric("NUMERIC", type -> {
+			type.setDefaultPrecision(38).setDefaultScale(9)
+					.setMaxPrecision(38).setMaxScale(9);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 	}
@@ -113,7 +135,7 @@ public class Spanner extends Dialect {
 	 */
 	@Override
 	public String getProductName() {
-		return "Virtica";
+		return "Cloud Spanner";
 	}
 
 	/**
@@ -121,7 +143,7 @@ public class Spanner extends Dialect {
 	 */
 	@Override
 	public String getSimpleName() {
-		return "virtica";
+		return "spanner";
 	}
 
 	@Override

@@ -43,6 +43,10 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  */
 public class OracleSequenceReader extends SequenceReader {
 
+	public static final String SCALE = "SCALE";
+	public static final String EXTEND = "EXTEND";
+	public static final String SESSION = "SESSION";
+
 	protected OracleSequenceReader(Dialect dialect) {
 		super(dialect);
 	}
@@ -64,6 +68,10 @@ public class OracleSequenceReader extends SequenceReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 18) {
+			return getSqlNodeCache().getString("sequences18c.sql");
+		}
 		return getSqlNodeCache().getString("sequences.sql");
 	}
 
@@ -88,6 +96,14 @@ public class OracleSequenceReader extends SequenceReader {
 			sequence.setOrder(true);
 		} else {
 			sequence.setOrder(false);
+		}
+		if ("Y".equalsIgnoreCase(getString(rs, "SCALE_FLAG"))) {
+			sequence.getSpecifics().put(SCALE, Boolean.TRUE);
+			sequence.getSpecifics().put(EXTEND,
+					"Y".equalsIgnoreCase(getString(rs, "EXTEND_FLAG")));
+		}
+		if ("Y".equalsIgnoreCase(getString(rs, "SESSION_FLAG"))) {
+			sequence.getSpecifics().put(SESSION, Boolean.TRUE);
 		}
 		return sequence;
 	}

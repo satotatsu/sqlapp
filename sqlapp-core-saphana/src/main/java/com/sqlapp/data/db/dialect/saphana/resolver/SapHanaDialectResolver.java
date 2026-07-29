@@ -63,6 +63,9 @@ public class SapHanaDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
+			if (majorVersion >= 4) {
+				return DialectHolder.cloudDialect;
+			}
 			return DialectHolder.defaultDialect;
 		}
 	}

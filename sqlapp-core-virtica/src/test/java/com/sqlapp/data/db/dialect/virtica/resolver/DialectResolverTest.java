@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.virtica.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.ServiceLoader;
 
@@ -29,6 +30,9 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.virtica.Virtica;
+import com.sqlapp.data.db.dialect.virtica.Virtica80;
+import com.sqlapp.data.db.dialect.virtica.Virtica90;
+import com.sqlapp.data.db.datatype.DataType;
 
 public class DialectResolverTest {
 
@@ -37,6 +41,17 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Virtica", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Virtica);
+		dialect = DialectResolver.getInstance().getDialect("Vertica", 12, 0, 0);
+		assertTrue(dialect instanceof Virtica90);
+		dialect = DialectResolver.getInstance().getDialect("Vertica", 8, 1, 0);
+		assertTrue(dialect instanceof Virtica80);
+		assertFalse(dialect instanceof Virtica90);
+		assertFalse("UUID".equals(dialect.getDbDataTypes()
+				.getDbType(DataType.UUID).getTypeName()));
+		dialect = DialectResolver.getInstance().getDialect("Vertica", 9, 0, 0);
+		assertTrue(dialect instanceof Virtica90);
+		assertTrue("UUID".equals(dialect.getDbDataTypes()
+				.getDbType(DataType.UUID).getTypeName()));
 	}
 
 	@Test

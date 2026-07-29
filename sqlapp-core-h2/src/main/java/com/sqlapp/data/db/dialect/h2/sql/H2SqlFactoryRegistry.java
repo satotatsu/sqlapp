@@ -37,6 +37,8 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Table.class, SqlType.CREATE,
+				H2CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, H2CreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, H2TruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, H2DropTableFactory.class);
