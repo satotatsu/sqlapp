@@ -160,11 +160,6 @@ public class SpannerCreateIndexFactory
 					"Cloud Spanner SEARCH index requires a parent table: "
 							+ index.getName());
 		}
-		if (index.isUnique()) {
-			throw new IllegalArgumentException(
-					"Cloud Spanner SEARCH index cannot be unique: "
-							+ index.getName());
-		}
 		if (index.getColumns().isEmpty()) {
 			throw new IllegalArgumentException(
 					"Cloud Spanner SEARCH index requires a TOKENLIST column: "
@@ -187,11 +182,6 @@ public class SpannerCreateIndexFactory
 		if (table == null) {
 			throw new IllegalArgumentException(
 					"Cloud Spanner VECTOR index requires a parent table: "
-							+ index.getName());
-		}
-		if (index.isUnique()) {
-			throw new IllegalArgumentException(
-					"Cloud Spanner VECTOR index cannot be unique: "
 							+ index.getName());
 		}
 		if (index.getColumns().isEmpty()) {

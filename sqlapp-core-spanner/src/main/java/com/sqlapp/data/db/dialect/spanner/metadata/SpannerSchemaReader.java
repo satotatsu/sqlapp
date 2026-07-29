@@ -118,7 +118,7 @@ public class SpannerSchemaReader extends SchemaReader {
 
 	@Override
 	protected SequenceReader newSequenceReader() {
-		return null;
+		return new SpannerSequenceReader(this.getDialect());
 	}
 
 	@Override

@@ -147,6 +147,8 @@ deferred.
 - generated UUID primary-key strategies
 - generated identity behavior that does not map to the shared identity
   properties or Spanner-specific options
+- sequence ALTER operations and dependency-aware sequence default-expression
+  modeling; CREATE and metadata round trips use the existing Sequence model
 
 ### Vertica
 
