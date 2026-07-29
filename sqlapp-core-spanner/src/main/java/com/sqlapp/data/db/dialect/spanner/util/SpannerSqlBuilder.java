@@ -25,6 +25,7 @@ import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * Spanner用のSQLビルダー
@@ -61,6 +62,16 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 	public SpannerSqlBuilder definition(final Column column,
 			final boolean withRemarks) {
 		super.definition(column, withRemarks);
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			space().as().space()._add("(")._add(column.getFormula())
+					._add(")");
+			if (column.isFormulaPersisted()) {
+				space()._add("STORED");
+			}
+		}
+		if (column.isHidden()) {
+			space()._add("HIDDEN");
+		}
 		final Boolean allowCommitTimestamp = column.getSpecifics().get(
 				ALLOW_COMMIT_TIMESTAMP, Boolean.class);
 		if (Boolean.TRUE.equals(allowCommitTimestamp)) {
@@ -107,6 +118,12 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 					._add(vectorLength)._add(")");
 		}
 		return this;
+	}
+
+	@Override
+	protected void onUpdateDefinition(final Column column) {
+		space().on().space()._add("UPDATE").space()._add("(")
+				._add(column.getOnUpdate())._add(")");
 	}
 
 	@Override

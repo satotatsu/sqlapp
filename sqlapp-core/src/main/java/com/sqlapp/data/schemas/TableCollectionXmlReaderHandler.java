@@ -55,7 +55,7 @@ AbstractNamedObjectCollectionXmlReaderHandler<TableCollection> {
 	/**
 	 * 制約のカラムをTableのカラムに変更する
 	 * 
-	 * @param table
+	 * @param tables
 	 */
 	private void setConstraints(TableCollection tables) {
 		int size = tables.size();

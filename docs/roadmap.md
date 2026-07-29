@@ -136,7 +136,9 @@ deferred.
 - interleaved-table parent, `ON DELETE` behavior and key ordering
 - change streams and their tracked-object configuration
 - property graphs, graph node/edge tables and labels
-- search indexes and their token-column, partition and sharding definitions
+- search-index partitioning, ordering and interleaving definitions; basic
+  TOKENLIST-column, STORING, WHERE and sharding-option DDL uses the existing
+  column and full-text index model
 - vector-index metadata round trips and mutable index options; CREATE DDL
   uses the existing vector-index model and Spanner-specific tree options
 - locality groups, placement keys and table/index locality

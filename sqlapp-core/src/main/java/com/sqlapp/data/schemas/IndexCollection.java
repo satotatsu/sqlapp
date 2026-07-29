@@ -43,7 +43,7 @@ public final class IndexCollection extends
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param table
+	 * @param jobTable
 	 */
 	protected IndexCollection() {
 	}

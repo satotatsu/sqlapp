@@ -72,6 +72,16 @@ public class SpannerColumnReader extends ColumnReader {
 		obj.setNullable(nullable);
 		this.getDialect().setDbType(data_type,
 				null, null, obj);
+		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
+		obj.setOnUpdate(getString(rs, "ON_UPDATE_EXPRESSION"));
+		if ("ALWAYS".equalsIgnoreCase(
+				getString(rs, "IS_GENERATED"))) {
+			obj.setFormula(getString(rs, "GENERATION_EXPRESSION"));
+			obj.setFormulaPersisted("YES".equalsIgnoreCase(
+					getString(rs, "IS_STORED")));
+		}
+		obj.setHidden("TRUE".equalsIgnoreCase(
+				getString(rs, "IS_HIDDEN")));
 		setSpecifics(rs, "ALLOW_COMMIT_TIMESTAMP", obj);
 		if ("YES".equalsIgnoreCase(getString(rs, "IS_IDENTITY"))) {
 			obj.setIdentity(true);

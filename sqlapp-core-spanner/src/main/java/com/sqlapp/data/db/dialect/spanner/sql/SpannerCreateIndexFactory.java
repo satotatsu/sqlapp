@@ -27,12 +27,17 @@ public class SpannerCreateIndexFactory
 	public static final String NUM_LEAVES = "NUM_LEAVES";
 	public static final String NUM_BRANCHES = "NUM_BRANCHES";
 	public static final String DISABLE_SEARCH = "DISABLE_SEARCH";
+	public static final String SORT_ORDER_SHARDING = "SORT_ORDER_SHARDING";
 
 	@Override
 	public void addObjectDetail(final Index index, final Table table,
 			final SpannerSqlBuilder builder) {
 		if (index.getIndexType() == IndexType.Vector) {
 			addVectorIndex(index, table, builder);
+			return;
+		}
+		if (index.getIndexType() == IndexType.FullText) {
+			addSearchIndex(index, table, builder);
 			return;
 		}
 		builder.unique(index.isUnique());
@@ -112,6 +117,70 @@ public class SpannerCreateIndexFactory
 					._add(disableSearch.booleanValue());
 		}
 		builder._add(")");
+	}
+
+	private void addSearchIndex(final Index index, final Table table,
+			final SpannerSqlBuilder builder) {
+		validateSearchIndex(index, table);
+		builder.space()._add("SEARCH").space().index()
+				.space().name(index, false).on()
+				.name(table, getOptions().isDecorateSchemaName())
+				.space()._add("(");
+		int i = 0;
+		for (ReferenceColumn column : index.getColumns()) {
+			builder.comma(i > 0).name(column);
+			i++;
+		}
+		builder.space()._add(")");
+		if (!index.getIncludes().isEmpty()) {
+			builder.space()._add("STORING").space()._add("(");
+			i = 0;
+			for (ReferenceColumn column : index.getIncludes()) {
+				builder.comma(i > 0).name(column);
+				i++;
+			}
+			builder.space()._add(")");
+		}
+		if (index.getWhere() != null && !index.getWhere().isBlank()) {
+			builder.space().where().space()._add(index.getWhere());
+		}
+		final Boolean sortOrderSharding = index.getSpecifics().get(
+				SORT_ORDER_SHARDING, Boolean.class);
+		if (sortOrderSharding != null) {
+			builder.space()._add("OPTIONS").space()._add("(")
+					._add("sort_order_sharding = ")
+					._add(sortOrderSharding.booleanValue())
+					.space()._add(")");
+		}
+	}
+
+	private void validateSearchIndex(final Index index, final Table table) {
+		if (table == null) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner SEARCH index requires a parent table: "
+							+ index.getName());
+		}
+		if (index.isUnique()) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner SEARCH index cannot be unique: "
+							+ index.getName());
+		}
+		if (index.getColumns().isEmpty()) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner SEARCH index requires a TOKENLIST column: "
+							+ index.getName());
+		}
+		for (ReferenceColumn reference : index.getColumns()) {
+			final Column column = table.getColumns().get(reference.getName());
+			if (column == null || column.getDataType() != DataType.OTHER
+					|| !"TOKENLIST".equalsIgnoreCase(
+							column.getDataTypeName())) {
+				throw new IllegalArgumentException(
+						"Cloud Spanner SEARCH index columns must have "
+								+ "TOKENLIST data type: "
+								+ reference.getName());
+			}
+		}
 	}
 
 	private void validateVectorIndex(final Index index, final Table table) {

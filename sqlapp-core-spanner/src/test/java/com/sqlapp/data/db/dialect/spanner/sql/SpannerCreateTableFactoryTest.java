@@ -149,6 +149,31 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 	}
 
 	@Test
+	void testOnUpdateExpression() {
+		final Table table = new Table("EVENTS");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.BIGINT);
+		final Column updatedAt = new Column("UPDATED_AT")
+				.setDataType(DataType.TIMESTAMP)
+				.setDefaultValue("(PENDING_COMMIT_TIMESTAMP())")
+				.setOnUpdate("PENDING_COMMIT_TIMESTAMP()");
+		updatedAt.getSpecifics().put(
+				SpannerSqlBuilder.ALLOW_COMMIT_TIMESTAMP, true);
+		table.getColumns().add(id);
+		table.getColumns().add(updatedAt);
+		table.getConstraints().addPrimaryKeyConstraint("PK_EVENTS", id);
+
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(sql.contains(
+				"DEFAULT (PENDING_COMMIT_TIMESTAMP())"), sql);
+		assertTrue(sql.contains(
+				"ON UPDATE (PENDING_COMMIT_TIMESTAMP())"), sql);
+		assertTrue(sql.contains(
+				"OPTIONS (allow_commit_timestamp=true)"), sql);
+	}
+
+	@Test
 	void testBitReversedIdentity() {
 		final Table table = new Table("SINGERS");
 		table.setDialect(dialect);
@@ -253,6 +278,64 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 		index.getSpecifics().put(SpannerCreateIndexFactory.TREE_DEPTH, 2);
 		index.getSpecifics().put(SpannerCreateIndexFactory.NUM_BRANCHES, 10);
 		table.getIndexes().add(index);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+	}
+
+	@Test
+	void testCreateSearchIndexAndTokenListColumn() {
+		final Table table = new Table("ARTICLES");
+		table.setDialect(dialect);
+		final Column body = new Column("BODY")
+				.setDataType(DataType.VARCHAR).setLength(1000);
+		final Column bodyTokens = new Column("BODY_TOKENS")
+				.setDataType(DataType.OTHER)
+				.setDataTypeName("TOKENLIST")
+				.setFormula("TOKENIZE_FULLTEXT(BODY)")
+				.setHidden(true);
+		final Column title = new Column("TITLE")
+				.setDataType(DataType.VARCHAR).setLength(200);
+		table.getColumns().add(body);
+		table.getColumns().add(bodyTokens);
+		table.getColumns().add(title);
+		final Index index = new Index("IDX_ARTICLES_SEARCH", bodyTokens)
+				.setIndexType(IndexType.FullText)
+				.setWhere("BODY_TOKENS IS NOT NULL");
+		index.getIncludes().add(title);
+		index.getSpecifics().put(
+				SpannerCreateIndexFactory.SORT_ORDER_SHARDING, false);
+		table.getIndexes().add(index);
+
+		final var operations = sqlFactoryRegistry.createSql(table,
+				SqlType.CREATE);
+		final String tableSql = operations.get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		final String indexSql = operations.get(1).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(tableSql.contains(
+				"BODY_TOKENS TOKENLIST AS"), tableSql);
+		assertTrue(tableSql.contains(
+				"TOKENIZE_FULLTEXT(BODY)"), tableSql);
+		assertTrue(tableSql.contains("HIDDEN"), tableSql);
+		assertTrue(indexSql.contains(
+				"CREATE SEARCH INDEX IDX_ARTICLES_SEARCH ON ARTICLES"),
+				indexSql);
+		assertTrue(indexSql.contains("STORING"), indexSql);
+		assertTrue(indexSql.contains("BODY_TOKENS IS NOT NULL"), indexSql);
+		assertTrue(indexSql.contains(
+				"sort_order_sharding = false"), indexSql);
+	}
+
+	@Test
+	void testRejectSearchIndexOnNonTokenListColumn() {
+		final Table table = new Table("ARTICLES");
+		table.setDialect(dialect);
+		final Column body = new Column("BODY")
+				.setDataType(DataType.VARCHAR).setLength(1000);
+		table.getColumns().add(body);
+		table.getIndexes().add(new Index("IDX_ARTICLES_SEARCH", body)
+				.setIndexType(IndexType.FullText));
 
 		assertThrows(IllegalArgumentException.class,
 				() -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
