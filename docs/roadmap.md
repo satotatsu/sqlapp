@@ -164,6 +164,9 @@ deferred.
 - storage policies, resource pools and fault-group topology
 - temporary-view lifetime and structured schema-privilege inheritance
   (`INCLUDE/EXCLUDE SCHEMA PRIVILEGES`) shared with other databases
+- exact IDENTITY start-value round trips after rows have been generated;
+  Vertica exposes the current distributed value but not the original start
+  value in its sequence catalog
 
 ### Shared design requirements
 
