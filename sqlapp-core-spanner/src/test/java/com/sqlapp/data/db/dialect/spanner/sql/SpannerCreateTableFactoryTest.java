@@ -328,6 +328,53 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 	}
 
 	@Test
+	void testTableColumnAndIndexStorageOptions() {
+		final Table table = new Table("EVENTS");
+		table.setDialect(dialect);
+		table.getSpecifics().put(
+				SpannerCreateTableFactory.LOCALITY_GROUP, "hot");
+		table.getSpecifics().put(
+				SpannerCreateTableFactory.COLUMNAR_POLICY, "columnar");
+		table.getSpecifics().put(
+				SpannerCreateTableFactory.FULLTEXT_DICTIONARY_TABLE, true);
+		table.getSpecifics().put(
+				SpannerCreateTableFactory.FULLTEXT_DICTIONARY_STALENESS,
+				"15m");
+		final Column id = new Column("ID").setDataType(DataType.BIGINT);
+		final Column payload = new Column("PAYLOAD")
+				.setDataType(DataType.VARCHAR).setLength(1000);
+		payload.getSpecifics().put(
+				SpannerSqlBuilder.LOCALITY_GROUP, "cold");
+		table.getColumns().add(id);
+		table.getColumns().add(payload);
+		table.getConstraints().addPrimaryKeyConstraint("PK_EVENTS", id);
+		final Index index = new Index("IDX_EVENTS_PAYLOAD", payload);
+		index.getSpecifics().put(
+				SpannerCreateIndexFactory.LOCALITY_GROUP, "hot");
+		index.getSpecifics().put(
+				SpannerCreateIndexFactory.COLUMNAR_POLICY, "columnar");
+		table.getIndexes().add(index);
+
+		final var operations = sqlFactoryRegistry.createSql(table,
+				SqlType.CREATE);
+		final String tableSql = operations.get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		final String indexSql = operations.get(1).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(tableSql.contains("locality_group = 'cold'"), tableSql);
+		assertTrue(tableSql.contains("locality_group = 'hot'"), tableSql);
+		assertTrue(tableSql.contains(
+				"columnar_policy = 'columnar'"), tableSql);
+		assertTrue(tableSql.contains(
+				"fulltext_dictionary_table = true"), tableSql);
+		assertTrue(tableSql.contains(
+				"fulltext_dictionary_staleness = '15m'"), tableSql);
+		assertTrue(indexSql.contains("locality_group = 'hot'"), indexSql);
+		assertTrue(indexSql.contains(
+				"columnar_policy = 'columnar'"), indexSql);
+	}
+
+	@Test
 	void testRejectSearchIndexOnNonTokenListColumn() {
 		final Table table = new Table("ARTICLES");
 		table.setDialect(dialect);

@@ -94,7 +94,7 @@ public class SpannerTableReader extends TableReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
-		return null;
+		return new SpannerIndexReader(this.getDialect());
 	}
 
 	@Override

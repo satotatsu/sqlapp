@@ -22,6 +22,13 @@ import com.sqlapp.util.CommonUtils;
 public class SpannerCreateTableFactory
 		extends AbstractCreateTableFactory<SpannerSqlBuilder> {
 
+	public static final String LOCALITY_GROUP = "LOCALITY_GROUP";
+	public static final String COLUMNAR_POLICY = "COLUMNAR_POLICY";
+	public static final String FULLTEXT_DICTIONARY_TABLE =
+			"FULLTEXT_DICTIONARY_TABLE";
+	public static final String FULLTEXT_DICTIONARY_STALENESS =
+			"FULLTEXT_DICTIONARY_STALENESS";
+
 	@Override
 	protected void addCreateObject(final Table table,
 			final SpannerSqlBuilder builder) {
@@ -89,6 +96,49 @@ public class SpannerCreateTableFactory
 				}
 				i++;
 			}
+		}
+		builder.space()._add(")");
+		addTableOptions(table, builder);
+	}
+
+	private void addTableOptions(final Table table,
+			final SpannerSqlBuilder builder) {
+		final String localityGroup = table.getSpecifics().get(
+				LOCALITY_GROUP);
+		final String columnarPolicy = table.getSpecifics().get(
+				COLUMNAR_POLICY);
+		final Boolean dictionary = table.getSpecifics().get(
+				FULLTEXT_DICTIONARY_TABLE, Boolean.class);
+		final String staleness = table.getSpecifics().get(
+				FULLTEXT_DICTIONARY_STALENESS);
+		if (CommonUtils.isEmpty(localityGroup)
+				&& CommonUtils.isEmpty(columnarPolicy)
+				&& dictionary == null
+				&& CommonUtils.isEmpty(staleness)) {
+			return;
+		}
+		builder.space()._add("OPTIONS").space()._add("(");
+		int count = 0;
+		if (!CommonUtils.isEmpty(localityGroup)) {
+			builder.comma(count > 0)._add("locality_group = ")
+					.sqlChar(localityGroup);
+			count++;
+		}
+		if (!CommonUtils.isEmpty(columnarPolicy)) {
+			builder.comma(count > 0)._add("columnar_policy = ")
+					.sqlChar(columnarPolicy);
+			count++;
+		}
+		if (dictionary != null) {
+			builder.comma(count > 0)._add(
+					"fulltext_dictionary_table = ")
+					._add(dictionary.booleanValue());
+			count++;
+		}
+		if (!CommonUtils.isEmpty(staleness)) {
+			builder.comma(count > 0)._add(
+					"fulltext_dictionary_staleness = ")
+					.sqlChar(staleness);
 		}
 		builder.space()._add(")");
 	}

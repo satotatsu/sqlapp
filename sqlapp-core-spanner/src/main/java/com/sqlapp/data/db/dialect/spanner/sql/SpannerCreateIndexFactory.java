@@ -28,6 +28,8 @@ public class SpannerCreateIndexFactory
 	public static final String NUM_BRANCHES = "NUM_BRANCHES";
 	public static final String DISABLE_SEARCH = "DISABLE_SEARCH";
 	public static final String SORT_ORDER_SHARDING = "SORT_ORDER_SHARDING";
+	public static final String LOCALITY_GROUP = "LOCALITY_GROUP";
+	public static final String COLUMNAR_POLICY = "COLUMNAR_POLICY";
 
 	@Override
 	public void addObjectDetail(final Index index, final Table table,
@@ -76,6 +78,30 @@ public class SpannerCreateIndexFactory
 			}
 			builder.space()._add(")");
 		}
+		addStorageOptions(index, builder);
+	}
+
+	private void addStorageOptions(final Index index,
+			final SpannerSqlBuilder builder) {
+		final String localityGroup = index.getSpecifics().get(
+				LOCALITY_GROUP);
+		final String columnarPolicy = index.getSpecifics().get(
+				COLUMNAR_POLICY);
+		if ((localityGroup == null || localityGroup.isBlank())
+				&& (columnarPolicy == null || columnarPolicy.isBlank())) {
+			return;
+		}
+		builder.space()._add("OPTIONS").space()._add("(");
+		int count = 0;
+		if (localityGroup != null && !localityGroup.isBlank()) {
+			builder._add("locality_group = ").sqlChar(localityGroup);
+			count++;
+		}
+		if (columnarPolicy != null && !columnarPolicy.isBlank()) {
+			builder.comma(count > 0)._add("columnar_policy = ")
+					.sqlChar(columnarPolicy);
+		}
+		builder.space()._add(")");
 	}
 
 	private void addVectorIndex(final Index index, final Table table,

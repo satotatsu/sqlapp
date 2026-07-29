@@ -48,6 +48,7 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 			"IDENTITY_SKIP_RANGE_MAX";
 
 	public static final String VECTOR_LENGTH = "VECTOR_LENGTH";
+	public static final String LOCALITY_GROUP = "LOCALITY_GROUP";
 
 	public SpannerSqlBuilder(Dialect dialect) {
 		super(dialect);
@@ -74,6 +75,9 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 		}
 		final Boolean allowCommitTimestamp = column.getSpecifics().get(
 				ALLOW_COMMIT_TIMESTAMP, Boolean.class);
+		final String localityGroup = column.getSpecifics().get(
+				LOCALITY_GROUP);
+		boolean hasOption = false;
 		if (Boolean.TRUE.equals(allowCommitTimestamp)) {
 			if (column.getDataType() != DataType.TIMESTAMP) {
 				throw new IllegalArgumentException(
@@ -81,8 +85,20 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 								+ "a TIMESTAMP column: " + column.getName());
 			}
 			space()._add("OPTIONS").space()._add("(")
-					._add("allow_commit_timestamp=true")
-					._add(")");
+					._add("allow_commit_timestamp=true");
+			hasOption = true;
+		}
+		if (!CommonUtils.isEmpty(localityGroup)) {
+			if (!hasOption) {
+				space()._add("OPTIONS").space()._add("(");
+			} else {
+				comma();
+			}
+			_add("locality_group = ").sqlChar(localityGroup);
+			hasOption = true;
+		}
+		if (hasOption) {
+			_add(')');
 		}
 		return this;
 	}

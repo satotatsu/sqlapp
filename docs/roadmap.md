@@ -141,7 +141,8 @@ deferred.
   column and full-text index model
 - vector-index metadata round trips and mutable index options; CREATE DDL
   uses the existing vector-index model and Spanner-specific tree options
-- locality groups, placement keys and table/index locality
+- locality-group objects, placement keys and storage-option metadata round
+  trips; table, column and regular-index option DDL uses dialect specifics
 - named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
 - `STRUCT`, `PROTO`, named enum and graph value definitions
 - generated UUID primary-key strategies
@@ -149,6 +150,9 @@ deferred.
   properties or Spanner-specific options
 - sequence ALTER operations and dependency-aware sequence default-expression
   modeling; CREATE and metadata round trips use the existing Sequence model
+- view dependency extraction and structured security semantics shared with
+  other databases; Spanner CREATE and metadata round trips currently preserve
+  the security type in dialect specifics
 
 ### Vertica
 
