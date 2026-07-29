@@ -46,6 +46,8 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 	public static final String IDENTITY_SKIP_RANGE_MAX =
 			"IDENTITY_SKIP_RANGE_MAX";
 
+	public static final String VECTOR_LENGTH = "VECTOR_LENGTH";
+
 	public SpannerSqlBuilder(Dialect dialect) {
 		super(dialect);
 	}
@@ -70,6 +72,39 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 			space()._add("OPTIONS").space()._add("(")
 					._add("allow_commit_timestamp=true")
 					._add(")");
+		}
+		return this;
+	}
+
+	@Override
+	protected SpannerSqlBuilder typeDefinition(final Column column) {
+		if (column.getArrayDimension() == 0) {
+			return super.typeDefinition(column);
+		}
+		if (column.getArrayDimension() != 1) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner supports only one-dimensional arrays: "
+							+ column.getName());
+		}
+		_add("ARRAY<");
+		super.typeDefinition(column);
+		_add(">");
+		final Integer vectorLength = column.getSpecifics().get(
+				VECTOR_LENGTH, Integer.class);
+		if (vectorLength != null) {
+			if (column.getDataType() != DataType.REAL
+					&& column.getDataType() != DataType.DOUBLE) {
+				throw new IllegalArgumentException(
+						"Cloud Spanner vector_length requires a FLOAT32 "
+								+ "or FLOAT64 array: " + column.getName());
+			}
+			if (vectorLength.intValue() < 0) {
+				throw new IllegalArgumentException(
+						"Cloud Spanner vector_length must not be negative: "
+								+ column.getName());
+			}
+			space()._add("(")._add("vector_length=>")
+					._add(vectorLength)._add(")");
 		}
 		return this;
 	}

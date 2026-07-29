@@ -16,8 +16,10 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 
 class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
@@ -192,6 +194,66 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 				SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN, 200L);
 		id.getSpecifics().put(
 				SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX, 100L);
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+	}
+
+	@Test
+	void testCreateVectorIndex() {
+		final Table table = new Table("DOCUMENTS");
+		table.setDialect(dialect);
+		final Column embedding = new Column("EMBEDDING")
+				.setDataType(DataType.REAL).setArrayDimension(1);
+		embedding.getSpecifics().put(SpannerSqlBuilder.VECTOR_LENGTH, 768);
+		final Column category = new Column("CATEGORY")
+				.setDataType(DataType.VARCHAR).setLength(100);
+		table.getColumns().add(embedding);
+		table.getColumns().add(category);
+		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", embedding)
+				.setIndexType(IndexType.Vector)
+				.setVectorDistanceType(VectorDistanceType.Cosine)
+				.setWhere("EMBEDDING IS NOT NULL");
+		index.getIncludes().add(category);
+		index.getSpecifics().put(SpannerCreateIndexFactory.TREE_DEPTH, 3);
+		index.getSpecifics().put(SpannerCreateIndexFactory.NUM_BRANCHES, 100);
+		index.getSpecifics().put(SpannerCreateIndexFactory.NUM_LEAVES, 1000);
+		table.getIndexes().add(index);
+
+		final var operations = sqlFactoryRegistry.createSql(table,
+				SqlType.CREATE);
+		final String tableSql = operations.get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		final String indexSql = operations.get(1).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(tableSql.contains(
+				"EMBEDDING ARRAY<FLOAT32>"), tableSql);
+		assertTrue(tableSql.contains("vector_length=>768"), tableSql);
+		assertTrue(indexSql.contains(
+				"CREATE VECTOR INDEX IF NOT EXISTS IDX_DOCUMENTS_EMBEDDING"),
+				indexSql);
+		assertTrue(indexSql.contains("STORING"), indexSql);
+		assertTrue(indexSql.contains("EMBEDDING IS NOT NULL"), indexSql);
+		assertTrue(indexSql.contains("distance_type = 'COSINE'"), indexSql);
+		assertTrue(indexSql.contains("tree_depth = 3"), indexSql);
+		assertTrue(indexSql.contains("num_branches = 100"), indexSql);
+		assertTrue(indexSql.contains("num_leaves = 1000"), indexSql);
+	}
+
+	@Test
+	void testRejectInvalidVectorIndex() {
+		final Table table = new Table("DOCUMENTS");
+		table.setDialect(dialect);
+		final Column embedding = new Column("EMBEDDING")
+				.setDataType(DataType.REAL).setArrayDimension(1);
+		embedding.getSpecifics().put(SpannerSqlBuilder.VECTOR_LENGTH, 128);
+		table.getColumns().add(embedding);
+		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", embedding)
+				.setIndexType(IndexType.Vector)
+				.setVectorDistanceType(VectorDistanceType.Cosine);
+		index.getSpecifics().put(SpannerCreateIndexFactory.TREE_DEPTH, 2);
+		index.getSpecifics().put(SpannerCreateIndexFactory.NUM_BRANCHES, 10);
+		table.getIndexes().add(index);
+
 		assertThrows(IllegalArgumentException.class,
 				() -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
 	}

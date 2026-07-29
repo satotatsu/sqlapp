@@ -136,7 +136,9 @@ deferred.
 - interleaved-table parent, `ON DELETE` behavior and key ordering
 - change streams and their tracked-object configuration
 - property graphs, graph node/edge tables and labels
-- search indexes, vector indexes and embedding options
+- search indexes and their token-column, partition and sharding definitions
+- vector-index metadata round trips and mutable index options; CREATE DDL
+  uses the existing vector-index model and Spanner-specific tree options
 - locality groups, placement keys and table/index locality
 - named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
 - `STRUCT`, `PROTO`, named enum and graph value definitions
