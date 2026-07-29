@@ -589,7 +589,7 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 		if (this.getSequence() == null) {
 			this.setSequence(new Sequence());
 		}
-		this.getSequence().setStartValue(value);
+		this.getSequence().setCacheSize(value);
 		return instance();
 	}
 

@@ -31,6 +31,18 @@ import com.sqlapp.util.DateUtils;
 
 public class TableTest extends AbstractDbObjectTest<Table> {
 
+	@Test
+	public void testIdentityCacheSizeDoesNotOverwriteStartValue() {
+		final Column column = new Column("ID")
+				.setIdentity(true)
+				.setIdentityStartValue(100)
+				.setIdentityStep(10)
+				.setIdentityCacheSize(1000);
+		assertEquals(100L, column.getIdentityStartValue());
+		assertEquals(10L, column.getIdentityStep());
+		assertEquals(1000, column.getIdentityCacheSize());
+	}
+
 	public static Table getTable(final String tableName) {
 		final Table table = new Table(tableName);
 		table.setCharacterSemantics(CharacterSemantics.Char);

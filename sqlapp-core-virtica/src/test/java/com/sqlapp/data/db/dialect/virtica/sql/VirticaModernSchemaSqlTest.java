@@ -41,6 +41,23 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 	}
 
 	@Test
+	void testIdentityColumn() {
+		final Table table = new Table("EVENTS");
+		table.setDialect(dialect);
+		table.getColumns().add(new Column("ID")
+				.setDataType(DataType.BIGINT)
+				.setIdentity(true)
+				.setIdentityStartValue(100)
+				.setIdentityStep(10)
+				.setIdentityCacheSize(1000));
+		final String sql = sqlFactoryRegistry
+				.createSql(table, SqlType.CREATE).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(sql.contains("ID BIGINT IDENTITY (100, 10, 1000)"),
+				sql);
+	}
+
+	@Test
 	void testCreateSequence() {
 		final Sequence sequence = new Sequence("ORDER_SEQ");
 		sequence.setDialect(dialect);
