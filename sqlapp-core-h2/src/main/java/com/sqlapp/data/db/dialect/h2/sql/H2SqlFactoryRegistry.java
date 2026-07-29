@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
@@ -48,5 +49,9 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, H2CreateSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, H2SequenceNextValuesFactory.class);
+		registerSqlFactory(Domain.class, SqlType.CREATE,
+				H2CreateDomainFactory.class);
+		registerSqlFactory(Domain.class, SqlType.DROP,
+				H2DropDomainFactory.class);
 	}
 }
