@@ -62,15 +62,6 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addArray();
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
-		// JSON
-		getDbDataTypes().addJsonType(type -> {
-		});
-		// REAL_VECTOR
-		getDbDataTypes().addVector();
-		getDbDataTypes().getDbTypeStrict(
-				com.sqlapp.data.db.datatype.DataType.VECTOR)
-				.addPetternColumnTypeMatcher(
-						"REAL_VECTOR(?:\\s*\\(\\s*\\d+\\s*\\))?");
 		// VARCHAR
 		getDbDataTypes().addVarchar(5000);
 		// NVARCHAR

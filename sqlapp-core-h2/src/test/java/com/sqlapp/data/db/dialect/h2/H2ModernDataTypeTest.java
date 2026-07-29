@@ -16,7 +16,7 @@ class H2ModernDataTypeTest {
 
 	@Test
 	void testModernDataTypesAndCurrentFunctions() {
-		final H2 dialect = (H2) DialectHolder.defaultDialect;
+		final H2 dialect = (H2) DialectHolder.defaultDialect200;
 		assertType(dialect, "JSON", DataType.JSON);
 		assertType(dialect, "ENUM('OPEN','CLOSED')", DataType.ENUM);
 		assertType(dialect, "DECFLOAT", DataType.DECIMALFLOAT);
@@ -28,6 +28,15 @@ class H2ModernDataTypeTest {
 		assertEquals("CURRENT_TIME", dialect.getCurrentTimeFunction());
 		assertEquals("CURRENT_TIMESTAMP",
 				dialect.getCurrentTimestampFunction());
+	}
+
+	@Test
+	void testVersion2DataTypesAreNotResolvedByVersion1() {
+		final H2 dialect = (H2) DialectHolder.defaultDialect;
+		assertType(dialect, "DECFLOAT", DataType.OTHER);
+		assertType(dialect, "TIME WITH TIME ZONE", DataType.OTHER);
+		assertType(dialect, "JSON", DataType.JSON);
+		assertType(dialect, "ENUM('A','B')", DataType.ENUM);
 	}
 
 	private void assertType(final H2 dialect, final String typeName,

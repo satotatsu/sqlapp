@@ -176,12 +176,6 @@ public class H2 extends Dialect {
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
 		});
-		// DECFLOAT
-		getDbDataTypes().addDecimalFloat("DECFLOAT");
-		// Time WITH TIME ZONE
-		getDbDataTypes().addTimeWithTimeZone(type -> {
-			type.setDefaultValueLiteral(getCurrentTimeFunction());
-		});
 		// Timestamp WITH TIME ZONE
 		getDbDataTypes().addTimestampWithTimeZone(type -> {
 			type.setDefaultValueLiteral(

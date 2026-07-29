@@ -29,6 +29,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.saphana.SapHana;
+import com.sqlapp.data.db.dialect.saphana.SapHanaCloud;
 
 public class SapHanaDialectResolverTest {
 
@@ -37,6 +38,9 @@ public class SapHanaDialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("HDB", 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof SapHana);
+		assertTrue(!(dialect instanceof SapHanaCloud));
+		dialect = DialectResolver.getInstance().getDialect("HDB", 4, 0);
+		assertTrue(dialect instanceof SapHanaCloud);
 	}
 
 	@Test

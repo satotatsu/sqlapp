@@ -22,5 +22,8 @@ package com.sqlapp.data.db.dialect.saphana;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect defaultDialect = new SapHana(() -> null);
+	public final static Dialect cloudDialect =
+			new SapHanaCloud(() -> null);
+	public final static Dialect defaultDialect =
+			new SapHana(() -> cloudDialect);
 }
