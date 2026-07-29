@@ -127,8 +127,8 @@ deferred.
   currently supported HNSW DDL
 - graph workspaces and knowledge-graph objects
 - JSON document collections as objects distinct from relational tables
-- HANA Cloud fuzzy-search indexes and search-mode configuration; HANA 2.0
-  FULLTEXT indexes use the existing index model
+- HANA Cloud fuzzy-search index search-mode metadata round trips from
+  `M_FUZZY_SEARCH_INDEXES`; DDL uses the existing full-text index model
 - workload classes, remote sources and virtual tables
 
 ### Cloud Spanner
@@ -140,8 +140,9 @@ deferred.
 - locality groups, placement keys and table/index locality
 - named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
 - `STRUCT`, `PROTO`, named enum and graph value definitions
-- generated UUID primary-key strategies and bit-reversed sequences as
-  structured identity-generation policies
+- generated UUID primary-key strategies
+- generated identity behavior that does not map to the shared identity
+  properties or Spanner-specific options
 
 ### Vertica
 

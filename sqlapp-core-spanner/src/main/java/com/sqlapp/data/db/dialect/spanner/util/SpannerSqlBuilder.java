@@ -21,7 +21,9 @@ package com.sqlapp.data.db.dialect.spanner.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -34,6 +36,15 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
 	public static final String ALLOW_COMMIT_TIMESTAMP =
 			"ALLOW_COMMIT_TIMESTAMP";
+
+	public static final String IDENTITY_BIT_REVERSED_POSITIVE =
+			"IDENTITY_BIT_REVERSED_POSITIVE";
+
+	public static final String IDENTITY_SKIP_RANGE_MIN =
+			"IDENTITY_SKIP_RANGE_MIN";
+
+	public static final String IDENTITY_SKIP_RANGE_MAX =
+			"IDENTITY_SKIP_RANGE_MAX";
 
 	public SpannerSqlBuilder(Dialect dialect) {
 		super(dialect);
@@ -59,6 +70,66 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 			space()._add("OPTIONS").space()._add("(")
 					._add("allow_commit_timestamp=true")
 					._add(")");
+		}
+		return this;
+	}
+
+	@Override
+	protected SpannerSqlBuilder autoIncrement(
+			final AbstractColumn<?> column) {
+		if (column.getDataType() != DataType.BIGINT) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner identity requires an INT64 column: "
+							+ column.getName());
+		}
+		final IdentityGenerationType generationType =
+				column.getIdentityGenerationType() == null
+						? IdentityGenerationType.ByDefault
+						: column.getIdentityGenerationType();
+		space().generated().space()._add(generationType).space().as()
+				.space().identity();
+
+		final Boolean bitReversed = column.getSpecifics().get(
+				IDENTITY_BIT_REVERSED_POSITIVE, Boolean.class);
+		final Long start = column.getIdentityStartValue();
+		final Long skipMin = column.getSpecifics().get(
+				IDENTITY_SKIP_RANGE_MIN, Long.class);
+		final Long skipMax = column.getSpecifics().get(
+				IDENTITY_SKIP_RANGE_MAX, Long.class);
+		if ((skipMin == null) != (skipMax == null)) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner identity skip range requires both "
+							+ "minimum and maximum values: "
+							+ column.getName());
+		}
+		if (skipMin != null && skipMin.longValue() > skipMax.longValue()) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner identity skip range minimum must not "
+							+ "exceed maximum: " + column.getName());
+		}
+		if (start != null && start.longValue() <= 0L) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner identity start counter must be positive: "
+							+ column.getName());
+		}
+		if (Boolean.TRUE.equals(bitReversed) || start != null
+				|| skipMin != null) {
+			space()._add("(");
+			boolean delimiter = false;
+			if (Boolean.TRUE.equals(bitReversed)) {
+				_add("BIT_REVERSED_POSITIVE");
+				delimiter = true;
+			}
+			if (start != null) {
+				space(delimiter)._add("START COUNTER WITH").space()
+						._add(start);
+				delimiter = true;
+			}
+			if (skipMin != null) {
+				space(delimiter)._add("SKIP RANGE").space()._add(skipMin)
+						._add(",").space()._add(skipMax);
+			}
+			space()._add(")");
 		}
 		return this;
 	}
