@@ -64,6 +64,34 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 	}
 
 	@Test
+	void testAlterAndDropSequence() {
+		final Sequence sequence = new Sequence("ORDER_SEQ");
+		sequence.setDialect(dialect);
+		sequence.setStartValue(BigInteger.valueOf(500));
+		sequence.setIncrementBy(BigInteger.valueOf(5));
+		sequence.setMinValue(BigInteger.ONE);
+		sequence.setMaxValue(BigInteger.valueOf(999999));
+		sequence.setCacheSize(50);
+		sequence.setCycle(true);
+		final String alterSql = sqlFactoryRegistry
+				.createSql(sequence, SqlType.ALTER).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(alterSql.contains("ALTER SEQUENCE ORDER_SEQ"),
+				alterSql);
+		assertTrue(alterSql.contains("INCREMENT BY 5"), alterSql);
+		assertTrue(alterSql.contains("MINVALUE 1"), alterSql);
+		assertTrue(alterSql.contains("MAXVALUE 999999"), alterSql);
+		assertTrue(alterSql.contains("RESTART WITH 500"), alterSql);
+		assertTrue(alterSql.contains("CACHE 50"), alterSql);
+		assertTrue(alterSql.contains("CYCLE"), alterSql);
+		final String dropSql = sqlFactoryRegistry
+				.createSql(sequence, SqlType.DROP).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
+		assertTrue(dropSql.contains(
+				"DROP SEQUENCE IF EXISTS ORDER_SEQ"), dropSql);
+	}
+
+	@Test
 	void testSequenceNextValues() {
 		final Sequence sequence = new Sequence("ORDER_SEQ");
 		new Schema("PUBLIC").getSequences().add(sequence);
