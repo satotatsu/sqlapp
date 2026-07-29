@@ -23,7 +23,9 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.View;
 
 public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -39,6 +41,14 @@ public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 				SpannerCreateTableFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				SpannerCreateIndexFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE,
+				SpannerCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
+				SpannerSequenceNextValuesFactory.class);
+		registerSqlFactory(View.class, SqlType.CREATE,
+				SpannerCreateViewFactory.class);
+		registerSqlFactory(View.class, SqlType.DROP,
+				SpannerDropViewFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SpannerCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, SpannerTruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SpannerTruncateTemporaryTableFactory.class);

@@ -59,7 +59,7 @@ public class VirticaCreateTemporaryTableFactoryTest extends VirticaSqlFactoryTes
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
-				CREATE LOCAL TEMPORARY TABLE "tableA"
+				CREATE LOCAL TEMPORARY TABLE IF NOT EXISTS "tableA"
 				(
 					  "cola" BIGINT
 					, "colb" BIGINT

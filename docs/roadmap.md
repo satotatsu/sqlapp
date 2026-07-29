@@ -111,6 +111,9 @@ modern scalar types that already fit the shared Schema model. Further features
 below need shared modeling or a larger cross-database design and are therefore
 deferred.
 
+Implementation status, verification commands, and the ordered continuation
+plan are recorded in `docs/dialect-enhancement-continuation.md`.
+
 ### H2
 
 - row types and nested row fields
@@ -127,8 +130,8 @@ deferred.
   currently supported HNSW DDL
 - graph workspaces and knowledge-graph objects
 - JSON document collections as objects distinct from relational tables
-- HANA Cloud fuzzy-search indexes and search-mode configuration; HANA 2.0
-  FULLTEXT indexes use the existing index model
+- HANA Cloud fuzzy-search index search-mode metadata round trips from
+  `M_FUZZY_SEARCH_INDEXES`; DDL uses the existing full-text index model
 - workload classes, remote sources and virtual tables
 
 ### Cloud Spanner
@@ -136,12 +139,23 @@ deferred.
 - interleaved-table parent, `ON DELETE` behavior and key ordering
 - change streams and their tracked-object configuration
 - property graphs, graph node/edge tables and labels
-- search indexes, vector indexes and embedding options
-- locality groups, placement keys and table/index locality
+- search-index partitioning, ordering and interleaving definitions; basic
+  TOKENLIST-column, STORING, WHERE and sharding-option DDL uses the existing
+  column and full-text index model
+- vector-index metadata round trips and mutable index options; CREATE DDL
+  uses the existing vector-index model and Spanner-specific tree options
+- locality-group objects, placement keys and storage-option metadata round
+  trips; table, column and regular-index option DDL uses dialect specifics
 - named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
 - `STRUCT`, `PROTO`, named enum and graph value definitions
-- generated UUID primary-key strategies and bit-reversed sequences as
-  structured identity-generation policies
+- generated UUID primary-key strategies
+- generated identity behavior that does not map to the shared identity
+  properties or Spanner-specific options
+- sequence ALTER operations and dependency-aware sequence default-expression
+  modeling; CREATE and metadata round trips use the existing Sequence model
+- view dependency extraction and structured security semantics shared with
+  other databases; Spanner CREATE and metadata round trips currently preserve
+  the security type in dialect specifics
 
 ### Vertica
 
@@ -151,6 +165,11 @@ deferred.
 - external tables and COPY/parser/reject-data configuration
 - text indexes and user-defined transform or analytic functions
 - storage policies, resource pools and fault-group topology
+- temporary-view lifetime and structured schema-privilege inheritance
+  (`INCLUDE/EXCLUDE SCHEMA PRIVILEGES`) shared with other databases
+- exact IDENTITY start-value round trips after rows have been generated;
+  Vertica exposes the current distributed value but not the original start
+  value in its sequence catalog
 
 ### Shared design requirements
 

@@ -77,6 +77,14 @@ public class VirticaColumnReader extends ColumnReader {
 		obj.setIdentity(identity);
 		if (identity){
 			obj.setSequenceName(getString(rs, "SEQUENCE_NAME"));
+			obj.setIdentityStep(getLong(rs, "INCREMENT_BY"));
+			obj.setIdentityCacheSize(getInteger(rs,
+					"SESSION_CACHE_COUNT"));
+			obj.setIdentityMinValue(getLong(rs, "MINIMUM"));
+			obj.setIdentityMaxValue(getLong(rs, "MAXIMUM"));
+			obj.setIdentityLastValue(getLong(rs, "CURRENT_VALUE"));
+			obj.setIdentityCycle(toBoolean(getString(rs,
+					"ALLOW_CYCLE")));
 		}
 		this.getDialect().setDbType(data_type,
 				max(char_maxlength, numeric_precision, datetime_precision), numeric_scale, obj);

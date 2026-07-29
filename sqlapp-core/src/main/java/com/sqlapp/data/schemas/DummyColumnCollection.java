@@ -35,7 +35,7 @@ final class DummyColumnCollection extends
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param table
+	 * @param jobTable
 	 */
 	protected DummyColumnCollection() {
 	}

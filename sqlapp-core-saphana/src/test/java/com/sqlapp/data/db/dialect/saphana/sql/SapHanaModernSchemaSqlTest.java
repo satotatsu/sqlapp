@@ -7,7 +7,6 @@ package com.sqlapp.data.db.dialect.saphana.sql;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -86,7 +85,7 @@ class SapHanaModernSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 	}
 
 	@Test
-	void testRejectPlatformFullTextIndexOnCloud() {
+	void testCreateCloudFuzzyTextIndex() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
 		final Column content = new Column("CONTENT")
@@ -94,10 +93,24 @@ class SapHanaModernSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 		table.getColumns().add(content);
 		final Index index = new Index("IDX_DOCUMENTS_TEXT", content)
 				.setIndexType(IndexType.FullText);
+		index.getSpecifics().put(
+				SapHanaCloudCreateIndexFactory.SEARCH_MODE, "TEXT");
+		index.getSpecifics().put(
+				SapHanaCloudCreateIndexFactory.TOKEN_SEPARATORS,
+				"/,.-");
+		index.getSpecifics().put(SapHanaCreateIndexFactory.ONLINE, true);
+		index.getSpecifics().put(
+				SapHanaCloudCreateIndexFactory.ONLINE_PREFERRED, true);
 		table.getIndexes().add(index);
 
-		assertThrows(IllegalArgumentException.class,
-				() -> sqlFactoryRegistry.createSql(index, SqlType.CREATE));
+		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(sql.contains(
+				"CREATE FUZZY SEARCH INDEX IDX_DOCUMENTS_TEXT "
+						+ "ON DOCUMENTS ( CONTENT) SEARCH MODE TEXT"),
+				sql);
+		assertTrue(sql.contains("TOKEN SEPARATORS '/,.-'"), sql);
+		assertTrue(sql.contains("ONLINE PREFERRED"), sql);
 	}
 
 }

@@ -1,5 +1,6 @@
 SELECT
 *
+, NULL AS DOMAIN_ON_UPDATE
 FROM information_schema.domains
 WHERE TRUE
   /*if isNotEmpty(catalogName)*/

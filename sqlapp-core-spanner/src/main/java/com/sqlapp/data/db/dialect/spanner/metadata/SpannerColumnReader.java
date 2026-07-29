@@ -30,9 +30,11 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 
 /**
@@ -70,7 +72,43 @@ public class SpannerColumnReader extends ColumnReader {
 		obj.setNullable(nullable);
 		this.getDialect().setDbType(data_type,
 				null, null, obj);
+		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
+		obj.setOnUpdate(getString(rs, "ON_UPDATE_EXPRESSION"));
+		if ("ALWAYS".equalsIgnoreCase(
+				getString(rs, "IS_GENERATED"))) {
+			obj.setFormula(getString(rs, "GENERATION_EXPRESSION"));
+			obj.setFormulaPersisted("YES".equalsIgnoreCase(
+					getString(rs, "IS_STORED")));
+		}
+		obj.setHidden("TRUE".equalsIgnoreCase(
+				getString(rs, "IS_HIDDEN")));
 		setSpecifics(rs, "ALLOW_COMMIT_TIMESTAMP", obj);
+		if ("YES".equalsIgnoreCase(getString(rs, "IS_IDENTITY"))) {
+			obj.setIdentity(true);
+			obj.setIdentityGenerationType(IdentityGenerationType.parse(
+					getString(rs, "IDENTITY_GENERATION")));
+			final Long start = getLong(rs, "IDENTITY_START_WITH_COUNTER");
+			if (start != null) {
+				obj.setIdentityStartValue(start);
+			}
+			if (getString(rs, "IDENTITY_KIND") != null) {
+				obj.getSpecifics().put(
+						SpannerSqlBuilder.IDENTITY_BIT_REVERSED_POSITIVE,
+						true);
+			}
+			final Long skipMin = getLong(rs, "IDENTITY_SKIP_RANGE_MIN");
+			final Long skipMax = getLong(rs, "IDENTITY_SKIP_RANGE_MAX");
+			if (skipMin != null) {
+				obj.getSpecifics().put(
+						SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN,
+						skipMin);
+			}
+			if (skipMax != null) {
+				obj.getSpecifics().put(
+						SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX,
+						skipMax);
+			}
+		}
 		return obj;
 	}
 

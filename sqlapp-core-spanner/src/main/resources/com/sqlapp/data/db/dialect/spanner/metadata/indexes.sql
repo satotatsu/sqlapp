@@ -1,26 +1,28 @@
 SELECT
-  c.*
+, i.*
 , cc.COLUMN_NAME
+, cc.ORDINAL_POSITION
 , cc.COLUMN_ORDERING
 , cc.IS_NULLABLE
 , cc.SPANNER_TYPE
-FROM INFORMATION_SCHEMA.INDEX_COLUMNS c
+FROM INFORMATION_SCHEMA.INDEXES i
 INNER JOIN INFORMATION_SCHEMA.INDEX_COLUMNS cc
-  ON (c.TABLE_SCHEMA=cc.TABLE_SCHEMA
+  ON (i.TABLE_SCHEMA=cc.TABLE_SCHEMA
   AND
-  c.TABLE_NAME=cc.TABLE_NAME
+  i.TABLE_NAME=cc.TABLE_NAME
   AND
-  c.INDEX_NAME=cc.INDEX_NAME
+  i.INDEX_NAME=cc.INDEX_NAME
   )
 WHERE 1=1
-  AND c.INDEX_TYPE IN ('INDEX')
+  AND i.INDEX_TYPE IN ('INDEX')
   /*if isNotEmpty(schemaName)*/
-  AND c.TABLE_SCHEMA IN /*schemaName*/('%')
+  AND i.TABLE_SCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND c.TABLE_NAME IN /*tableName*/('%')
+  AND i.TABLE_NAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(constraintName)*/
-  AND c.INDEX_NAME IN /*constraintName*/('%')
+  AND i.INDEX_NAME IN /*constraintName*/('%')
   /*end*/
-ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.INDEX_NAME, cc.ORDINAL_POSITION
+ORDER BY i.TABLE_SCHEMA, i.TABLE_NAME, i.INDEX_NAME,
+  cc.ORDINAL_POSITION

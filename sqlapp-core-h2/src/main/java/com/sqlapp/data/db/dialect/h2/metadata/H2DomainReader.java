@@ -64,6 +64,7 @@ public class H2DomainReader extends DomainReader {
 				String isNullable = getString(rs, "IS_NULLABLE");
 				domain.setNullable("YES".equalsIgnoreCase(isNullable));
 				domain.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
+				domain.setOnUpdate(getString(rs, "DOMAIN_ON_UPDATE"));
 				String productDataType = getString(rs, "TYPE_NAME");
 				domain.setLength(rs.getInt("PRECISION"));
 				domain.setScale(rs.getInt("SCALE"));
@@ -80,6 +81,11 @@ public class H2DomainReader extends DomainReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("domains_200.sql");
+		}
 		return getSqlNodeCache().getString("domains.sql");
 	}
 

@@ -73,6 +73,11 @@ public class H2TableReader extends TableReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("tables_200.sql");
+		}
 		return getSqlNodeCache().getString("tables.sql");
 	}
 

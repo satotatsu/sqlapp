@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateIndexFactory;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -71,11 +72,18 @@ public class SpannerIndexReader extends IndexReader {
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(rs.getBoolean("IS_UNIQUE"));
+					index.getSpecifics().put(
+							SpannerCreateIndexFactory.IS_NULL_FILTERED,
+							rs.getBoolean("IS_NULL_FILTERED"));
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
 				}
-				index.getColumns().add(new Column(columnName),
-						Order.parse(getString(rs, "COLUMN_ORDERING")));
+				if (getLong(rs, "ORDINAL_POSITION") == null) {
+					index.getIncludes().add(new Column(columnName));
+				} else {
+					index.getColumns().add(new Column(columnName),
+							Order.parse(getString(rs, "COLUMN_ORDERING")));
+				}
 			}
 		});
 		return result;

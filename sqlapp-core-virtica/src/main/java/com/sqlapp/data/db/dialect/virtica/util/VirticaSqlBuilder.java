@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.virtica.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -38,6 +39,27 @@ public class VirticaSqlBuilder extends AbstractSqlBuilder<VirticaSqlBuilder> {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
+	@Override
+	protected VirticaSqlBuilder autoIncrement(
+			final AbstractColumn<?> column) {
+		identity();
+		final Long start = column.getIdentityStartValue();
+		final Long step = column.getIdentityStep();
+		final Integer cache = column.getIdentityCacheSize();
+		if (start != null || step != null) {
+			space()._add('(')._add(start != null ? start : 1L)
+					.comma().space()
+					._add(step != null ? step : 1L);
+			if (cache != null) {
+				comma().space()._add(cache);
+			}
+			_add(')');
+		} else if (cache != null) {
+			space()._add('(')._add(cache)._add(')');
+		}
+		return this;
+	}
 
 	
 	@Override

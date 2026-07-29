@@ -35,7 +35,8 @@ public class VirticaCreateTemporaryTableFactory extends AbstractCreateTemporaryT
 	protected void addCreateObject(final Table obj, final VirticaSqlBuilder builder) {
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
-		builder.create().local().temporary().table();
+		builder.create().local().temporary().table()
+				.ifNotExists(this.getOptions().isCreateIfNotExists());
 		builder.space()._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
 	}
