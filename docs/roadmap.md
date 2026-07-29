@@ -111,6 +111,9 @@ modern scalar types that already fit the shared Schema model. Further features
 below need shared modeling or a larger cross-database design and are therefore
 deferred.
 
+Implementation status, verification commands, and the ordered continuation
+plan are recorded in `docs/dialect-enhancement-continuation.md`.
+
 ### H2
 
 - row types and nested row fields
