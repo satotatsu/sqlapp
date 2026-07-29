@@ -22,7 +22,9 @@ package com.sqlapp.data.db.dialect.virtica.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.View;
 
 public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -39,6 +41,14 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 				VirticaDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, VirticaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, VirticaTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE,
+				VirticaCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
+				VirticaSequenceNextValuesFactory.class);
+		registerSqlFactory(View.class, SqlType.CREATE,
+				VirticaCreateViewFactory.class);
+		registerSqlFactory(View.class, SqlType.DROP,
+				VirticaDropViewFactory.class);
 	}
 
 }

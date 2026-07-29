@@ -162,6 +162,8 @@ deferred.
 - external tables and COPY/parser/reject-data configuration
 - text indexes and user-defined transform or analytic functions
 - storage policies, resource pools and fault-group topology
+- temporary-view lifetime and structured schema-privilege inheritance
+  (`INCLUDE/EXCLUDE SCHEMA PRIVILEGES`) shared with other databases
 
 ### Shared design requirements
 
