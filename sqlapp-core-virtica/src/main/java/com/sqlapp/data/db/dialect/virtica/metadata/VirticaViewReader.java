@@ -69,10 +69,15 @@ public class VirticaViewReader extends ViewReader {
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		String comment = getString(rs, "REMARKS");
 		Table view = createTable(getString(rs, TABLE_NAME));
+		view.setDialect(getDialect());
 		view.setSchemaName(getString(rs, TABLE_SCHEMA));
+		view.setId(getString(rs, "TABLE_ID"));
+		view.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		String statement=getString(rs, "VIEW_DEFINITION");
 		view.setStatement(statement);
 		view.setRemarks(comment);
+		setSpecifics(rs, "IS_LOCAL_TEMP_VIEW", view);
+		setSpecifics(rs, "INHERIT_PRIVILEGES", view);
 		return view;
 	}
 	

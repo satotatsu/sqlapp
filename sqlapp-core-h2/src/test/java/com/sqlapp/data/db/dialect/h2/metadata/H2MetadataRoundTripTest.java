@@ -61,9 +61,22 @@ public class H2MetadataRoundTripTest {
 
 	@Test
 	void testDomainTableAndColumnRoundTrip() throws Exception {
-		try (Connection connection = DriverManager.getConnection(
+		try (Connection linkedConnection = DriverManager.getConnection(
+				"jdbc:h2:mem:metadata-link-target;DB_CLOSE_DELAY=-1",
+				"sa", "");
+				Statement linkedStatement =
+						linkedConnection.createStatement();
+				Connection connection = DriverManager.getConnection(
 				"jdbc:h2:mem:metadata-round-trip;DB_CLOSE_DELAY=-1");
 				Statement statement = connection.createStatement()) {
+			linkedStatement.execute(
+					"CREATE TABLE REMOTE_TABLE (ID BIGINT PRIMARY KEY)");
+			statement.execute("""
+					CREATE LINKED TABLE LINKED_REMOTE
+					('org.h2.Driver',
+					 'jdbc:h2:mem:metadata-link-target',
+					 'sa', '', 'REMOTE_TABLE')
+					""");
 			statement.execute("""
 					CREATE DOMAIN POSITIVE_AMOUNT AS DECIMAL(18,2)
 					DEFAULT 0 CHECK (VALUE >= 0)
@@ -135,6 +148,7 @@ public class H2MetadataRoundTripTest {
 			assertTrue(domain.getCheck().contains("VALUE >= 0"),
 					domain.getCheck());
 			assertNotNull(schema.getConstants().get("APP_VERSION"));
+			assertNotNull(schema.getTableLinks().get("LINKED_REMOTE"));
 
 			final Sequence sequence = schema.getSequences()
 					.get("ORDER_SEQ");

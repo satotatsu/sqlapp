@@ -27,8 +27,12 @@ and Vertica enhancement task. Read this file together with the
 - H2 2.x Dialect split and modern scalar types.
 - JSON, ENUM, existence clauses, and modern current-value functions.
 - Domain CREATE/DROP DDL using the shared `Domain` model.
-- Version-specific H2 2.x Domain, Column, and Table metadata SQL:
-  `domains_200.sql`, `columns_200.sql`, and `tables_200.sql`.
+- H2 2.x metadata round-trip coverage for Domain, Constant, Sequence, Table,
+  Column, View, Index, UniqueConstraint, CheckConstraint, ForeignKey,
+  Function/argument, Trigger, and linked-table objects.
+- Version-specific H2 2.x metadata SQL for Domain, Column, Table, Setting,
+  Constant, Sequence, Index, UniqueConstraint, CheckConstraint, ForeignKey,
+  Function/argument, Trigger, and TableLink readers.
 - H2 1.x metadata SQL remains selected for pre-2.x servers.
 
 ### SAP HANA
@@ -37,6 +41,9 @@ and Vertica enhancement task. Read this file together with the
 - HANA Cloud version split.
 - Vector functions and HNSW vector-index DDL.
 - Platform full-text indexes and Cloud fuzzy-search indexes.
+- HANA Cloud `VECTOR_INDEXES` metadata reader with index type, distance type,
+  and build/search configuration recovery.
+- Fixed unique and compressed index-type recovery from `INDEXES`.
 
 ### Cloud Spanner
 
@@ -47,6 +54,11 @@ and Vertica enhancement task. Read this file together with the
 - Sequence CREATE/read/next-values support.
 - View CREATE/read/drop with INVOKER/DEFINER security behavior.
 - Table, column, and index storage/locality options.
+- Reader recovery for search/vector index types and index options.
+- Reader recovery for commit timestamp, vector length, identity, generated
+  columns, table/column locality, columnar policy, and full-text dictionary
+  options.
+- Fixed invalid Index metadata SQL and Column filter/parent identity handling.
 - Unsupported generic options are ignored.
 
 ### Vertica
@@ -57,6 +69,10 @@ and Vertica enhancement task. Read this file together with the
 - Vertica IDENTITY syntax including start, increment, and cache.
 - IDENTITY metadata recovery from `V_CATALOG.SEQUENCES`.
 - Fixed the column metadata joins and column-name filter.
+- Corrected current `V_CATALOG` Table, View, ViewColumn, UniqueConstraint, and
+  ForeignKey queries and object recovery.
+- Table/View comments, IDs, timestamps, temporary/inheritance properties, and
+  constraint comments/enabled state are retained where exposed.
 
 ### Shared bug fix
 
@@ -64,48 +80,25 @@ and Vertica enhancement task. Read this file together with the
 start value. It now writes the cache size, with a regression test in
 `TableTest`.
 
-## Next work, in priority order
+## Next work requiring database environments
 
-### 1. Add real H2 2.x metadata round-trip tests
+### 1. Verify SAP HANA metadata against real Platform and Cloud systems
 
-The normal H2 test suite passes, but the new metadata queries need a focused
-integration test that:
+Verify `FULLTEXT_INDEXES`, `VECTOR_INDEXES`, and normal `INDEXES` recovery.
+The unit tests cover type mapping, but no SAP HANA server is available in the
+normal test environment.
 
-1. creates a Domain;
-2. creates a table using normal, generated, and IDENTITY columns;
-3. reads the Schema through `H2SchemaReader`;
-4. asserts Domain, Table, Column, identity, generation expression, comments,
-   default, and ON UPDATE values;
-5. regenerates DDL from the result.
-
-Use this test to correct any actual H2 2.x
-`INFORMATION_SCHEMA` column-name differences.
-
-### 2. Audit the remaining H2 2.x metadata readers
-
-Review View, ViewColumn, Sequence, Index, UniqueConstraint, CheckConstraint,
-ForeignKey, Trigger, and Function readers. Several still use H2 1.x
-`INFORMATION_SCHEMA` layouts. Add `_200.sql` resources only where the layout
-changed, and retain the old query for H2 1.x.
-
-### 3. Add metadata round trips for SAP HANA features
-
-DDL tests exist for vector and text-search features. Add Reader coverage for
-the properties that current HANA catalogs expose without a shared-model
-change. Keep the deferred items in `docs/roadmap.md`.
-
-### 4. Add Cloud Spanner metadata integration coverage
+### 2. Add Cloud Spanner metadata integration coverage
 
 Verify round trips for search/vector indexes, locality/storage options,
 sequences, identity, generated columns, commit timestamps, and view security.
 Use emulator-compatible tests where possible. Do not model interleaving,
 change streams, or property graphs until the shared design is agreed.
 
-### 5. Complete the Vertica metadata audit
+### 3. Verify Vertica metadata against a real current catalog
 
-Verify the corrected `columns.sql` against a real Vertica catalog. Then audit
-Table, View, Sequence, constraint, and index readers for current catalog
-columns. Projection, segmentation, KSAFE, flex-table, and external-table work
+Verify the corrected Table, View, Column, ViewColumn, Sequence, and constraint
+queries. Projection, segmentation, KSAFE, flex-table, and external-table work
 remains deferred because it needs shared Schema design.
 
 ## Verification commands
@@ -125,8 +118,12 @@ The interactive user can run the commands with their normal Gradle cache.
 
 ## Known limitations
 
-- H2 2.x metadata SQL has passed the module tests but does not yet have the
-  focused metadata round-trip described above.
+- H2 2.x exposes linked-table identity through `INFORMATION_SCHEMA.TABLES`,
+  but not its connection definition. The Reader recovers the TableLink object;
+  driver, URL, credentials, and remote table name remain unavailable.
+- SAP HANA, Cloud Spanner, and Vertica metadata queries have unit/module
+  coverage but have not been executed against real database catalogs in this
+  workspace.
 - Vertica does not expose the original IDENTITY start value after values have
   been generated; only the current distributed value is available.
 - Features requiring new shared objects are listed in `docs/roadmap.md` and

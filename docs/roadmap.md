@@ -126,8 +126,8 @@ plan are recorded in `docs/dialect-enhancement-continuation.md`.
 
 - `HALF_VECTOR` element precision; the shared vector model currently has no
   half-precision element type
-- vector-index metadata round trips and future index algorithms beyond the
-  currently supported HNSW DDL
+- future vector-index algorithms beyond the currently supported HNSW DDL and
+  `VECTOR_INDEXES` metadata
 - graph workspaces and knowledge-graph objects
 - JSON document collections as objects distinct from relational tables
 - HANA Cloud fuzzy-search index search-mode metadata round trips from
@@ -142,10 +142,10 @@ plan are recorded in `docs/dialect-enhancement-continuation.md`.
 - search-index partitioning, ordering and interleaving definitions; basic
   TOKENLIST-column, STORING, WHERE and sharding-option DDL uses the existing
   column and full-text index model
-- vector-index metadata round trips and mutable index options; CREATE DDL
-  uses the existing vector-index model and Spanner-specific tree options
-- locality-group objects, placement keys and storage-option metadata round
-  trips; table, column and regular-index option DDL uses dialect specifics
+- mutable vector-index operations; CREATE and metadata recovery use the
+  existing vector-index model and Spanner-specific tree options
+- locality-group objects and placement keys; table, column and index
+  locality/storage options are preserved in dialect specifics
 - named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
 - `STRUCT`, `PROTO`, named enum and graph value definitions
 - generated UUID primary-key strategies
