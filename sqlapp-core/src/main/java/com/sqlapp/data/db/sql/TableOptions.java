@@ -248,6 +248,24 @@ public class TableOptions extends AbstractBean implements Serializable {
 	}
 
 	/**
+	 * RETURNING句での旧行の別名。
+	 */
+	private TableStringFunction returningOldAlias = (table -> null);
+
+	public void setReturningOldAlias(final String value) {
+		returningOldAlias = (table -> value);
+	}
+
+	/**
+	 * RETURNING句での新行の別名。
+	 */
+	private TableStringFunction returningNewAlias = (table -> null);
+
+	public void setReturningNewAlias(final String value) {
+		returningNewAlias = (table -> value);
+	}
+
+	/**
 	 * MERGE ROWS時にDELETEをするか?
 	 */
 	private TablePredicate mergeRowsWithDelete = (table -> false);

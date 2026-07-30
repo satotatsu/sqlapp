@@ -39,10 +39,14 @@ public class Postgres170MergeFactory extends Postgres150MergeFactory {
 			throw new IllegalArgumentException("MERGE RETURNING requires at least one selected column.");
 		}
 		builder.lineBreak()._add("RETURNING").space();
+		addReturningQualifier(table, builder);
 		int i = 0;
 		for (final var column : columns) {
 			builder.comma(i > 0).name(targetTableAlias + ".", column);
 			i++;
 		}
+	}
+
+	protected void addReturningQualifier(final Table table, final PostgresSqlBuilder builder) {
 	}
 }
