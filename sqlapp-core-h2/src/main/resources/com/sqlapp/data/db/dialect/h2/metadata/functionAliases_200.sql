@@ -1,0 +1,19 @@
+SELECT
+  r.ROUTINE_CATALOG AS ALIAS_CATALOG
+, r.ROUTINE_SCHEMA AS ALIAS_SCHEMA
+, r.ROUTINE_NAME AS ALIAS_NAME
+, CAST(NULL AS VARCHAR) AS JAVA_CLASS
+, r.EXTERNAL_NAME AS JAVA_METHOD
+, r.REMARKS
+FROM INFORMATION_SCHEMA.ROUTINES r
+WHERE r.ROUTINE_TYPE = 'FUNCTION'
+  /*if isNotEmpty(catalogName)*/
+  AND r.ROUTINE_CATALOG IN /*catalogName*/('%')
+  /*end*/
+  /*if isNotEmpty(schemaName) */
+  AND r.ROUTINE_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(functionName) */
+  AND r.ROUTINE_NAME IN /*functionName*/('%')
+  /*end*/
+ORDER BY r.ROUTINE_CATALOG, r.ROUTINE_SCHEMA, r.ROUTINE_NAME

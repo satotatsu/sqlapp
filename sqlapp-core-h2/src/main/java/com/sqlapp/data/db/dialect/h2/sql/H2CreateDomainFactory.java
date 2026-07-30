@@ -31,7 +31,6 @@ public class H2CreateDomainFactory
 		if (!CommonUtils.isEmpty(obj.getOnUpdate())) {
 			builder.on().update().space()._add(obj.getOnUpdate());
 		}
-		builder.notNull(obj.isNotNull());
 		if (!CommonUtils.isEmpty(obj.getCheck())) {
 			builder.check().space()._add('(')
 					._add(obj.getCheck())._add(')');

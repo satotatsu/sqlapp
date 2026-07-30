@@ -51,7 +51,7 @@ public class H2FunctionReader extends FunctionReader {
 	protected List<Function> doGetAll(Connection connection,
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNodeCache().getString("functionAliases.sql");
+		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -72,6 +72,17 @@ public class H2FunctionReader extends FunctionReader {
 			}
 		});
 		return result;
+	}
+
+	protected SqlNode getSqlSqlNode(
+			ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString(
+					"functionAliases_200.sql");
+		}
+		return getSqlNodeCache().getString("functionAliases.sql");
 	}
 
 	/*

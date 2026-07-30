@@ -72,8 +72,10 @@ public class H2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 				String fk_columnName = getString(rs, "FKCOLUMN_NAME");
 				String fk_name = getString(rs, "FK_NAME");
 				// String pk_name = getString(rs, "PK_NAME");
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(fk_table_catalog,
+						fk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(
+						fk_table_catalog, fk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setCatalogName(fk_table_catalog);
@@ -101,6 +103,12 @@ public class H2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString(
+					"foreignKeyConstraints_200.sql");
+		}
 		return getSqlNodeCache().getString("foreignKeyConstraints.sql");
 	}
 }

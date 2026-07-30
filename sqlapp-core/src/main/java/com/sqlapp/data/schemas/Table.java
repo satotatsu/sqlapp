@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -89,14 +90,14 @@ import com.sqlapp.util.ToStringBuilder;
  * テーブルに相当するオブジェクト
  * 
  */
-public class Table extends AbstractSchemaObject<Table> implements CollationProperty<Table>, CharacterSetProperty<Table>,
-		CharacterSemanticsProperty<Table>, HasParent<TableCollection>, Mergeable<Table>, RowIteratorHandlerProperty,
-		ColumnsProperty<Table>, RowsProperty<Table>, ConstraintsProperty<Table>, IndexesProperty<Table>,
-		InheritsProperty<Table>, TableSpaceProperty<Table>, IndexTableSpaceProperty<Table>,
-		LobTableSpaceProperty<Table>, TableTypeProperty<Table>, TableDataStoreTypeProperty<Table>,
-		PartitioningProperty<Table>, ReadonlyProperty<Table>, CompressionProperty<Table>,
-		CompressionTypeProperty<Table>, UnloggedProperty<Table>, PartitionParentProperty<Table>,
-		TemporalPeriodsProperty<Table>, SystemVersioningProperty<Table> {
+public class Table extends AbstractSchemaObject<Table>
+		implements CollationProperty<Table>, CharacterSetProperty<Table>, CharacterSemanticsProperty<Table>,
+		HasParent<TableCollection>, Mergeable<Table>, RowIteratorHandlerProperty, ColumnsProperty<Table>,
+		RowsProperty<Table>, ConstraintsProperty<Table>, IndexesProperty<Table>, InheritsProperty<Table>,
+		TableSpaceProperty<Table>, IndexTableSpaceProperty<Table>, LobTableSpaceProperty<Table>,
+		TableTypeProperty<Table>, TableDataStoreTypeProperty<Table>, PartitioningProperty<Table>,
+		ReadonlyProperty<Table>, CompressionProperty<Table>, CompressionTypeProperty<Table>, UnloggedProperty<Table>,
+		PartitionParentProperty<Table>, TemporalPeriodsProperty<Table>, SystemVersioningProperty<Table> {
 	/**
 	 * serialVersionUID
 	 */
@@ -195,8 +196,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		if (tables != null) {
 			tables.forEach(table -> {
 				SystemVersioning versioning = table.getSystemVersioning();
-				if (versioning != null
-						&& CommonUtils.eq(versioning.getHistoryTableName(), originalName)) {
+				if (versioning != null && CommonUtils.eq(versioning.getHistoryTableName(), originalName)) {
 					versioning.setHistoryTableName(name);
 				}
 			});
@@ -477,6 +477,18 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	 * @param resultSet
 	 */
 	public void readData(final ResultSet resultSet) {
+		readData(resultSet, row -> {
+			this.getRows().add(row);
+		});
+	}
+
+	/**
+	 * ResultSetからデータの読み込み
+	 * 
+	 * @param resultSet
+	 * @param rowHandler 読み込んだRowのハンドラー
+	 */
+	public void readData(final ResultSet resultSet, Consumer<Row> rowHandler) {
 		try {
 			final ResultSetMetaData metadata = resultSet.getMetaData();
 			final Column[] columns = new Column[metadata.getColumnCount()];
@@ -511,7 +523,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 					final Object obj = resultSet.getObject(i);
 					row.put(column, obj);
 				}
-				this.getRows().add(row);
+				rowHandler.accept(row);
 			}
 		} catch (final SQLException e) {
 			close(resultSet);

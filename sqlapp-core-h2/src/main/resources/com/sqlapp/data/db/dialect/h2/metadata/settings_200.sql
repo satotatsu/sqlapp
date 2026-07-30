@@ -1,0 +1,9 @@
+SELECT
+  s.SETTING_NAME AS "NAME"
+, s.SETTING_VALUE AS "VALUE"
+FROM INFORMATION_SCHEMA.SETTINGS s
+WHERE 1=1
+  /*if isNotEmpty(settingName) */
+  AND s.SETTING_NAME IN /*settingName*/('%')
+  /*end*/
+ORDER BY s.SETTING_NAME
