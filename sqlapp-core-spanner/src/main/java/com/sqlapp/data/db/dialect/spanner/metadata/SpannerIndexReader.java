@@ -32,8 +32,10 @@ import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -72,9 +74,31 @@ public class SpannerIndexReader extends IndexReader {
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(rs.getBoolean("IS_UNIQUE"));
+					index.setIndexType(toIndexType(
+							getString(rs, "INDEX_TYPE")));
+					index.setVectorDistanceType(toVectorDistanceType(
+							getString(rs, "DISTANCE_TYPE")));
 					index.getSpecifics().put(
 							SpannerCreateIndexFactory.IS_NULL_FILTERED,
 							rs.getBoolean("IS_NULL_FILTERED"));
+					setSpecifics(rs, SpannerCreateIndexFactory.TREE_DEPTH,
+							index);
+					setSpecifics(rs, SpannerCreateIndexFactory.NUM_LEAVES,
+							index);
+					setSpecifics(rs, SpannerCreateIndexFactory.NUM_BRANCHES,
+							index);
+					setSpecifics(rs,
+							SpannerCreateIndexFactory.DISABLE_SEARCH,
+							index);
+					setSpecifics(rs,
+							SpannerCreateIndexFactory.SORT_ORDER_SHARDING,
+							index);
+					setSpecifics(rs,
+							SpannerCreateIndexFactory.LOCALITY_GROUP,
+							index);
+					setSpecifics(rs,
+							SpannerCreateIndexFactory.COLUMNAR_POLICY,
+							index);
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
 				}
@@ -87,6 +111,30 @@ public class SpannerIndexReader extends IndexReader {
 			}
 		});
 		return result;
+	}
+
+	static IndexType toIndexType(final String productIndexType) {
+		if ("SEARCH".equalsIgnoreCase(productIndexType)) {
+			return IndexType.FullText;
+		}
+		if ("VECTOR".equalsIgnoreCase(productIndexType)) {
+			return IndexType.Vector;
+		}
+		return IndexType.BTree;
+	}
+
+	static VectorDistanceType toVectorDistanceType(
+			final String distanceType) {
+		if ("COSINE".equalsIgnoreCase(distanceType)) {
+			return VectorDistanceType.Cosine;
+		}
+		if ("DOT_PRODUCT".equalsIgnoreCase(distanceType)) {
+			return VectorDistanceType.DotProduct;
+		}
+		if ("EUCLIDEAN".equalsIgnoreCase(distanceType)) {
+			return VectorDistanceType.Euclidean;
+		}
+		return null;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {

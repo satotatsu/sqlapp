@@ -48,16 +48,23 @@ public class SapHanaUtils {
         index.setTableName(getString(rs, TABLE_NAME));
         index.setId(""+rs.getLong("INDEX_OID"));
         String type=getString(rs, INDEX_TYPE);
-        boolean unique=type.contains("UNIQUE");
-        index.setUnique(unique);
-        type=type.replace(" UNIQUE", "");
-        index.setIndexType(IndexType.parse(type));
-        index.setCompression(type.startsWith("CP"));
-        index.setUnique(type.contains("UNIQUE"));
+        setIndexType(type, index);
 		setSpecifics(dialect, rs, "BTREE_FILL_FACTOR", index);
 		setSpecifics(dialect, rs, "BTREE_SPLIT_TYPE", index);
 		setSpecifics(dialect, rs, "BTREE_SPLIT_POSITION", index);
         return index;
+	}
+
+	static void setIndexType(final String productIndexType,
+			final Index index) {
+		final boolean unique = productIndexType != null
+				&& productIndexType.contains("UNIQUE");
+		final String type = productIndexType == null ? null
+				: productIndexType.replace(" UNIQUE", "")
+						.replace("_UNIQUE", "");
+		index.setUnique(unique);
+		index.setIndexType(IndexType.parse(type));
+		index.setCompression(type != null && type.startsWith("CP"));
 	}
 
 	protected static String getString(ResultSet rs, String columnLabel) throws SQLException{
