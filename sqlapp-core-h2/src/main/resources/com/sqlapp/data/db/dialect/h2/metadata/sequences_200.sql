@@ -1,0 +1,25 @@
+SELECT
+  s.SEQUENCE_CATALOG
+, s.SEQUENCE_SCHEMA
+, s.SEQUENCE_NAME
+, s.START_VALUE
+, s.MINIMUM_VALUE
+, s.MAXIMUM_VALUE
+, s.INCREMENT
+, s.CYCLE_OPTION
+, s.BASE_VALUE AS CURRENT_VALUE
+, s.CACHE
+, FALSE AS IS_GENERATED
+, s.REMARKS
+FROM INFORMATION_SCHEMA.SEQUENCES s
+WHERE TRUE
+  /*if isNotEmpty(catalogName)*/
+  AND s.SEQUENCE_CATALOG IN /*catalogName*/('%')
+  /*end*/
+  /*if isNotEmpty(schemaName) */
+  AND s.SEQUENCE_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(sequenceName) */
+  AND s.SEQUENCE_NAME IN /*sequenceName*/('%')
+  /*end*/
+ORDER BY s.SEQUENCE_CATALOG, s.SEQUENCE_SCHEMA, s.SEQUENCE_NAME
