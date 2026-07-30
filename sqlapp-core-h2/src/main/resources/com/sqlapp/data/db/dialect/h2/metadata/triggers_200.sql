@@ -1,0 +1,23 @@
+SELECT
+  t.TRIGGER_CATALOG
+, t.TRIGGER_SCHEMA
+, t.TRIGGER_NAME
+, t.ACTION_TIMING AS BEFORE
+, t.EVENT_MANIPULATION AS TRIGGER_TYPE
+, t.EVENT_OBJECT_SCHEMA AS TABLE_SCHEMA
+, t.EVENT_OBJECT_TABLE AS TABLE_NAME
+, t.JAVA_CLASS
+, CAST(NULL AS VARCHAR) AS "SQL"
+, t.REMARKS
+FROM INFORMATION_SCHEMA.TRIGGERS t
+WHERE TRUE
+  /*if isNotEmpty(catalogName) */
+  AND t.TRIGGER_CATALOG IN /*catalogName*/('%')
+  /*end*/
+  /*if isNotEmpty(schemaName) */
+  AND t.TRIGGER_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(triggerName) */
+  AND t.TRIGGER_NAME IN /*triggerName*/('%')
+  /*end*/
+ORDER BY t.TRIGGER_CATALOG, t.TRIGGER_SCHEMA, t.TRIGGER_NAME

@@ -52,6 +52,9 @@ public class H2FunctionReader extends FunctionReader {
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final boolean modern = productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Function> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -67,6 +70,10 @@ public class H2FunctionReader extends FunctionReader {
 				obj.setSchemaName(alias_Schema);
 				obj.setClassName(java_class);
 				obj.setMethodName(java_method);
+				if (modern) {
+					obj.setSpecificName(getString(rs,
+							"SPECIFIC_NAME"));
+				}
 				obj.setRemarks(remarks);
 				result.add(obj);
 			}

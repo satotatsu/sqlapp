@@ -11,9 +11,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.junit.jupiter.api.Test;
+import org.h2.api.Trigger;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
@@ -27,7 +29,35 @@ import com.sqlapp.util.CommonUtils;
 /**
  * H2 2.x catalog metadata round trip.
  */
-class H2MetadataRoundTripTest {
+public class H2MetadataRoundTripTest {
+
+	public static long doubleValue(final long value) {
+		return value * 2;
+	}
+
+	public static class MetadataTrigger implements Trigger {
+
+		@Override
+		public void init(final Connection connection,
+				final String schemaName, final String triggerName,
+				final String tableName, final boolean before,
+				final int type) {
+		}
+
+		@Override
+		public void fire(final Connection connection,
+				final Object[] oldRow, final Object[] newRow)
+				throws SQLException {
+		}
+
+		@Override
+		public void close() {
+		}
+
+		@Override
+		public void remove() {
+		}
+	}
 
 	@Test
 	void testDomainTableAndColumnRoundTrip() throws Exception {
@@ -40,6 +70,8 @@ class H2MetadataRoundTripTest {
 					""");
 			statement.execute(
 					"COMMENT ON DOMAIN POSITIVE_AMOUNT IS 'Positive amount'");
+			statement.execute(
+					"CREATE CONSTANT APP_VERSION VALUE '1.0'");
 			statement.execute("""
 					CREATE SEQUENCE ORDER_SEQ START WITH 50
 					INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000
@@ -59,6 +91,7 @@ class H2MetadataRoundTripTest {
 						, UPDATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 						    ON UPDATE CURRENT_TIMESTAMP
 						, PARENT_ID BIGINT
+						, CONSTRAINT UK_METADATA_NAME UNIQUE (NAME)
 						, CONSTRAINT CK_METADATA_NAME CHECK (NAME <> '')
 						, CONSTRAINT FK_METADATA_PARENT FOREIGN KEY (PARENT_ID)
 						    REFERENCES PARENT_TABLE(ID)
@@ -71,6 +104,15 @@ class H2MetadataRoundTripTest {
 			statement.execute("""
 					CREATE VIEW METADATA_VIEW AS
 					SELECT ID, NAME FROM METADATA_ROUND_TRIP
+					""");
+			statement.execute("""
+					CREATE ALIAS DOUBLE_VALUE FOR
+					'com.sqlapp.data.db.dialect.h2.metadata.H2MetadataRoundTripTest.doubleValue'
+					""");
+			statement.execute("""
+					CREATE TRIGGER METADATA_TRIGGER BEFORE INSERT
+					ON METADATA_ROUND_TRIP FOR EACH ROW
+					CALL 'com.sqlapp.data.db.dialect.h2.metadata.H2MetadataRoundTripTest$MetadataTrigger'
 					""");
 			statement.execute(
 					"COMMENT ON TABLE METADATA_ROUND_TRIP IS 'Round trip table'");
@@ -92,6 +134,7 @@ class H2MetadataRoundTripTest {
 			assertEquals("0", domain.getDefaultValue());
 			assertTrue(domain.getCheck().contains("VALUE >= 0"),
 					domain.getCheck());
+			assertNotNull(schema.getConstants().get("APP_VERSION"));
 
 			final Sequence sequence = schema.getSequences()
 					.get("ORDER_SEQ");
@@ -109,10 +152,17 @@ class H2MetadataRoundTripTest {
 			assertEquals("Round trip table", table.getRemarks());
 			assertNotNull(table.getIndexes().get("IDX_METADATA_NAME"));
 			assertNotNull(table.getConstraints()
+					.get("UK_METADATA_NAME"));
+			assertNotNull(table.getConstraints()
 					.get("CK_METADATA_NAME"));
 			assertNotNull(table.getConstraints()
 					.get("FK_METADATA_PARENT"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
+			final var function = schema.getFunctions()
+					.get("DOUBLE_VALUE");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertNotNull(schema.getTriggers().get("METADATA_TRIGGER"));
 
 			final Column id = table.getColumns().get("ID");
 			assertTrue(id.isIdentity());
