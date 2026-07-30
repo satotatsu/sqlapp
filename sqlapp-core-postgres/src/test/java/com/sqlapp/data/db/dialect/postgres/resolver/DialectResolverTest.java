@@ -33,6 +33,8 @@ import com.sqlapp.data.db.dialect.postgres.Postgres130;
 import com.sqlapp.data.db.dialect.postgres.Postgres140;
 import com.sqlapp.data.db.dialect.postgres.Postgres150;
 import com.sqlapp.data.db.dialect.postgres.Postgres160;
+import com.sqlapp.data.db.dialect.postgres.Postgres170;
+import com.sqlapp.data.db.dialect.postgres.Postgres180;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
@@ -59,7 +61,10 @@ public class DialectResolverTest {
 		assertTrue(dialect instanceof Postgres160);
 		dialect = DialectResolver.getInstance().getDialect("Postgres", 17, 0, 0);
 		System.out.println(dialect);
-		assertTrue(dialect instanceof Postgres160);
+		assertTrue(dialect instanceof Postgres170);
+		dialect = DialectResolver.getInstance().getDialect("Postgres", 18, 0, 0);
+		System.out.println(dialect);
+		assertTrue(dialect instanceof Postgres180);
 	}
 
 	@Test

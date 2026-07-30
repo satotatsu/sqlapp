@@ -496,6 +496,18 @@ public class DbDataTypeCollection implements Serializable {
 		register(type);
 	}
 
+	public void addRange(String dataTypeName, Consumer<RangeType> cons) {
+		RangeType type = new RangeType(dataTypeName);
+		cons.accept(type);
+		register(type);
+	}
+
+	public void addMultirange(String dataTypeName, Consumer<MultirangeType> cons) {
+		MultirangeType type = new MultirangeType(dataTypeName);
+		cons.accept(type);
+		register(type);
+	}
+
 	/**
 	 * CHAR型を追加します
 	 * 

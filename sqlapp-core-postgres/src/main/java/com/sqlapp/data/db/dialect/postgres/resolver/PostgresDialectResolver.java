@@ -63,7 +63,11 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion >= 16) {
+			if (majorVersion >= 18) {
+				return DialectHolder.postgreSQL180;
+			} else if (majorVersion >= 17) {
+				return DialectHolder.postgreSQL170;
+			} else if (majorVersion >= 16) {
 				return DialectHolder.postgreSQL160;
 			} else if (majorVersion >= 15) {
 				return DialectHolder.postgreSQL150;

@@ -27,7 +27,7 @@ import com.sqlapp.data.db.dialect.postgres.sql.Postgres160SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
-public class Postgres160 extends Postgres140 {
+public class Postgres160 extends Postgres150 {
 
 	/**
 	 * serialVersionUID

@@ -1796,6 +1796,30 @@ public enum DataType {
 			return false;
 		}
 	},
+	/** Range type. */
+	RANGE(java.sql.JDBCType.OTHER, "RANGE", String.class, MetaType.OTHER) {
+		@Override
+		public DataType getSurrogate() {
+			return VARCHAR;
+		}
+
+		@Override
+		public boolean isJdbcBaseType() {
+			return false;
+		}
+	},
+	/** Multirange type containing ordered, non-overlapping ranges. */
+	MULTIRANGE(java.sql.JDBCType.OTHER, "MULTIRANGE", String.class, MetaType.OTHER) {
+		@Override
+		public DataType getSurrogate() {
+			return RANGE;
+		}
+
+		@Override
+		public boolean isJdbcBaseType() {
+			return false;
+		}
+	},
 	/**
 	 * 緯度経度型 GPS の緯度経度座標などの楕円体 (球体地球) データ
 	 */

@@ -70,6 +70,8 @@ import com.sqlapp.data.db.dialect.postgres.sql.PostgresSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresJdbcHandler;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlSplitter;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
@@ -98,11 +100,28 @@ public class Postgres extends Dialect {
 		super(nextVersionDialectSupplier);
 	}
 
+	@Override
+	public boolean setDbType(final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final DataTypeLengthProperties<?> column) {
+		boolean matched = super.setDbType(productDataType, lengthOrPrecision, scale, column);
+		if (matched && (column.getDataType() == DataType.RANGE
+				|| column.getDataType() == DataType.MULTIRANGE)) {
+			column.setDataTypeName(productDataType);
+		}
+		return matched;
+	}
+
 	/**
 	 * データ型の登録
 	 */
 	@Override
 	protected void registerDataType() {
+		getDbDataTypes().addRange("RANGE", type -> {
+			type.setCreateFormat("RANGE");
+			type.addPetternColumnTypeMatcher(
+					"(?<dataTypeName>INT4RANGE|INT8RANGE|NUMRANGE|TSRANGE|TSTZRANGE|DATERANGE)",
+					(matcher, information) -> information.setDataTypeName(matcher.group("dataTypeName")));
+		});
 		// CHAR
 		getDbDataTypes().addChar(32672, type -> {
 			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("(CHAR(ACTER)?|BPCHAR)", ""));

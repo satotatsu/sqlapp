@@ -45,6 +45,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.TripleKeyMap;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresCreateIndexFactory;
 
 /**
  * Postgresのインデックス読み込み
@@ -119,11 +120,18 @@ public class PostgresIndexReader extends IndexReader {
 						}
 					}
 					index.setUnique(isUnique);
+					if (rs.getBoolean("indnullsnotdistinct")) {
+						index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
+					}
 					index.setRemarks(remarks);
 					map.put(schema_name, table_name, index_name, index);
 					result.add(index);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
+				if (rs.getInt("num") > rs.getInt("indnkeyatts")) {
+					index.getIncludes().add(columnName);
+					return;
+				}
 				String columns = columnsMap.get(index.getName());
 				int pos = min(
 						columnName.length() + columns.indexOf(columnName),
@@ -140,6 +148,14 @@ public class PostgresIndexReader extends IndexReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 15) {
+			return getSqlNodeCache().getString("indexes150.sql");
+		}
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 11) {
+			return getSqlNodeCache().getString("indexes110.sql");
+		}
 		return getSqlNodeCache().getString("indexes.sql");
 	}
 

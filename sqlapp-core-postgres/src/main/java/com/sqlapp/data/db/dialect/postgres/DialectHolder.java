@@ -22,7 +22,9 @@ package com.sqlapp.data.db.dialect.postgres;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect postgreSQL160 = new Postgres160(() -> null);
+	public final static Dialect postgreSQL180 = new Postgres180(() -> null);
+	public final static Dialect postgreSQL170 = new Postgres170(() -> postgreSQL180);
+	public final static Dialect postgreSQL160 = new Postgres160(() -> postgreSQL170);
 	public final static Dialect postgreSQL150 = new Postgres150(() -> postgreSQL160);
 	public final static Dialect postgreSQL140 = new Postgres140(() -> postgreSQL150);
 	public final static Dialect postgreSQL130 = new Postgres130(() -> postgreSQL140);
