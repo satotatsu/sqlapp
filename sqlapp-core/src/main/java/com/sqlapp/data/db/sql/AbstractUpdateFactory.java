@@ -77,6 +77,11 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 			});
 		}
 		addKeyColumnsCondition(obj, sqlSignature, builder);
+		addUpdateAfter(obj, sqlSignature, builder);
+	}
+
+	protected void addUpdateAfter(final Table table,
+			final SqlSignature sqlSignature, final S builder) {
 	}
 
 	protected void addKeyColumnsCondition(final Table table, SqlSignature sqlSignature, S builder) {

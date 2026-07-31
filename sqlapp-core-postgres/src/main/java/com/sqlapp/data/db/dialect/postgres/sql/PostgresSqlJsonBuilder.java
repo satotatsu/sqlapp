@@ -44,6 +44,320 @@ public class PostgresSqlJsonBuilder {
 		return "JSON_SERIALIZE(" + expression + " RETURNING " + returningType + ")";
 	}
 
+	public String json(String expression, boolean formatJson, boolean uniqueKeys) {
+		checkVersion();
+		require(expression, "expression");
+		StringBuilder builder = new StringBuilder("JSON(").append(expression);
+		if (formatJson) {
+			builder.append(" FORMAT JSON");
+		}
+		if (uniqueKeys) {
+			builder.append(" WITH UNIQUE KEYS");
+		}
+		return builder.append(")").toString();
+	}
+
+	public String jsonScalar(String expression) {
+		checkVersion();
+		require(expression, "expression");
+		return "JSON_SCALAR(" + expression + ")";
+	}
+
+	public JsonObjectExpression jsonObject() {
+		return new JsonObjectExpression();
+	}
+
+	public JsonArrayExpression jsonArray() {
+		return new JsonArrayExpression();
+	}
+
+	public JsonArrayAggregateExpression jsonArrayAgg(String valueExpression) {
+		return new JsonArrayAggregateExpression(valueExpression);
+	}
+
+	public JsonObjectAggregateExpression jsonObjectAgg(String keyExpression,
+			String valueExpression) {
+		return new JsonObjectAggregateExpression(keyExpression, valueExpression);
+	}
+
+	public IsJsonPredicate isJson(String expression) {
+		return new IsJsonPredicate(expression);
+	}
+
+	public final class JsonObjectExpression {
+		private final List<JsonObjectEntry> entries = new ArrayList<>();
+		private boolean absentOnNull;
+		private boolean uniqueKeys;
+		private String returningType;
+
+		public JsonObjectExpression entry(String keyExpression, String valueExpression) {
+			return entry(keyExpression, valueExpression, false);
+		}
+
+		public JsonObjectExpression entry(String keyExpression, String valueExpression,
+				boolean formatJson) {
+			require(keyExpression, "keyExpression");
+			require(valueExpression, "valueExpression");
+			entries.add(new JsonObjectEntry(keyExpression, valueExpression, formatJson));
+			return this;
+		}
+
+		public JsonObjectExpression absentOnNull(boolean value) {
+			this.absentOnNull = value;
+			return this;
+		}
+
+		public JsonObjectExpression uniqueKeys(boolean value) {
+			this.uniqueKeys = value;
+			return this;
+		}
+
+		public JsonObjectExpression returning(String sqlType) {
+			this.returningType = sqlType;
+			return this;
+		}
+
+		public String build() {
+			checkConstructorVersion();
+			StringBuilder builder = new StringBuilder("JSON_OBJECT(");
+			for (int i = 0; i < entries.size(); i++) {
+				if (i > 0) {
+					builder.append(", ");
+				}
+				JsonObjectEntry entry = entries.get(i);
+				builder.append(entry.keyExpression).append(" VALUE ")
+						.append(entry.valueExpression);
+				if (entry.formatJson) {
+					builder.append(" FORMAT JSON");
+				}
+			}
+			if (absentOnNull) {
+				builder.append(" ABSENT ON NULL");
+			}
+			if (uniqueKeys) {
+				builder.append(" WITH UNIQUE KEYS");
+			}
+			if (!CommonUtils.isEmpty(returningType)) {
+				builder.append(" RETURNING ").append(returningType);
+			}
+			return builder.append(")").toString();
+		}
+	}
+
+	public final class JsonArrayExpression {
+		private final List<JsonArrayEntry> entries = new ArrayList<>();
+		private String queryExpression;
+		private boolean absentOnNull;
+		private String returningType;
+
+		public JsonArrayExpression value(String expression) {
+			return value(expression, false);
+		}
+
+		public JsonArrayExpression value(String expression, boolean formatJson) {
+			require(expression, "expression");
+			if (!CommonUtils.isEmpty(queryExpression)) {
+				throw new IllegalArgumentException(
+						"JSON_ARRAY cannot combine values with a query expression.");
+			}
+			entries.add(new JsonArrayEntry(expression, formatJson));
+			return this;
+		}
+
+		public JsonArrayExpression query(String expression) {
+			require(expression, "query expression");
+			if (!entries.isEmpty()) {
+				throw new IllegalArgumentException(
+						"JSON_ARRAY cannot combine a query expression with values.");
+			}
+			this.queryExpression = expression;
+			return this;
+		}
+
+		public JsonArrayExpression absentOnNull(boolean value) {
+			this.absentOnNull = value;
+			return this;
+		}
+
+		public JsonArrayExpression returning(String sqlType) {
+			this.returningType = sqlType;
+			return this;
+		}
+
+		public String build() {
+			checkConstructorVersion();
+			StringBuilder builder = new StringBuilder("JSON_ARRAY(");
+			if (!CommonUtils.isEmpty(queryExpression)) {
+				builder.append(queryExpression);
+			} else {
+				for (int i = 0; i < entries.size(); i++) {
+					if (i > 0) {
+						builder.append(", ");
+					}
+					JsonArrayEntry entry = entries.get(i);
+					builder.append(entry.expression);
+					if (entry.formatJson) {
+						builder.append(" FORMAT JSON");
+					}
+				}
+			}
+			if (absentOnNull) {
+				builder.append(" ABSENT ON NULL");
+			}
+			if (!CommonUtils.isEmpty(returningType)) {
+				builder.append(" RETURNING ").append(returningType);
+			}
+			return builder.append(")").toString();
+		}
+	}
+
+	public final class JsonArrayAggregateExpression {
+		private final String valueExpression;
+		private String orderBy;
+		private boolean absentOnNull;
+		private String returningType;
+
+		private JsonArrayAggregateExpression(String valueExpression) {
+			require(valueExpression, "valueExpression");
+			this.valueExpression = valueExpression;
+		}
+
+		public JsonArrayAggregateExpression orderBy(String expression) {
+			require(expression, "orderBy");
+			this.orderBy = expression;
+			return this;
+		}
+
+		public JsonArrayAggregateExpression absentOnNull(boolean value) {
+			this.absentOnNull = value;
+			return this;
+		}
+
+		public JsonArrayAggregateExpression returning(String sqlType) {
+			require(sqlType, "sqlType");
+			this.returningType = sqlType;
+			return this;
+		}
+
+		public String build() {
+			checkConstructorVersion();
+			StringBuilder builder = new StringBuilder("JSON_ARRAYAGG(")
+					.append(valueExpression);
+			if (!CommonUtils.isEmpty(orderBy)) {
+				builder.append(" ORDER BY ").append(orderBy);
+			}
+			if (absentOnNull) {
+				builder.append(" ABSENT ON NULL");
+			}
+			appendReturning(builder, returningType);
+			return builder.append(")").toString();
+		}
+	}
+
+	public final class JsonObjectAggregateExpression {
+		private final String keyExpression;
+		private final String valueExpression;
+		private String orderBy;
+		private boolean absentOnNull;
+		private boolean uniqueKeys;
+		private String returningType;
+
+		private JsonObjectAggregateExpression(String keyExpression,
+				String valueExpression) {
+			require(keyExpression, "keyExpression");
+			require(valueExpression, "valueExpression");
+			this.keyExpression = keyExpression;
+			this.valueExpression = valueExpression;
+		}
+
+		public JsonObjectAggregateExpression orderBy(String expression) {
+			require(expression, "orderBy");
+			this.orderBy = expression;
+			return this;
+		}
+
+		public JsonObjectAggregateExpression absentOnNull(boolean value) {
+			this.absentOnNull = value;
+			return this;
+		}
+
+		public JsonObjectAggregateExpression uniqueKeys(boolean value) {
+			this.uniqueKeys = value;
+			return this;
+		}
+
+		public JsonObjectAggregateExpression returning(String sqlType) {
+			require(sqlType, "sqlType");
+			this.returningType = sqlType;
+			return this;
+		}
+
+		public String build() {
+			checkConstructorVersion();
+			StringBuilder builder = new StringBuilder("JSON_OBJECTAGG(")
+					.append(keyExpression).append(" VALUE ").append(valueExpression);
+			if (!CommonUtils.isEmpty(orderBy)) {
+				builder.append(" ORDER BY ").append(orderBy);
+			}
+			if (absentOnNull) {
+				builder.append(" ABSENT ON NULL");
+			}
+			if (uniqueKeys) {
+				builder.append(" WITH UNIQUE KEYS");
+			}
+			appendReturning(builder, returningType);
+			return builder.append(")").toString();
+		}
+	}
+
+	public final class IsJsonPredicate {
+		private final String expression;
+		private boolean not;
+		private String type;
+		private Boolean uniqueKeys;
+
+		private IsJsonPredicate(String expression) {
+			require(expression, "expression");
+			this.expression = expression;
+		}
+
+		public IsJsonPredicate not(boolean value) {
+			this.not = value;
+			return this;
+		}
+
+		/**
+		 * VALUE, SCALAR, ARRAY or OBJECT.
+		 */
+		public IsJsonPredicate type(String value) {
+			require(value, "type");
+			this.type = value;
+			return this;
+		}
+
+		public IsJsonPredicate uniqueKeys(boolean value) {
+			this.uniqueKeys = value;
+			return this;
+		}
+
+		public String build() {
+			checkConstructorVersion();
+			StringBuilder builder = new StringBuilder(expression).append(" IS ");
+			if (not) {
+				builder.append("NOT ");
+			}
+			builder.append("JSON");
+			if (!CommonUtils.isEmpty(type)) {
+				builder.append(" ").append(type);
+			}
+			if (uniqueKeys != null) {
+				builder.append(uniqueKeys ? " WITH UNIQUE KEYS"
+						: " WITHOUT UNIQUE KEYS");
+			}
+			return builder.toString();
+		}
+	}
+
 	public final class JsonExpression {
 		private final String function;
 		private final String contextItem;
@@ -157,6 +471,20 @@ public class PostgresSqlJsonBuilder {
 		}
 	}
 
+	private void appendReturning(StringBuilder builder, String value) {
+		if (!CommonUtils.isEmpty(value)) {
+			builder.append(" RETURNING ").append(value);
+		}
+	}
+
+	private void checkConstructorVersion() {
+		Dialect postgres16 = DialectHolder.postgreSQL160;
+		if (dialect.compareTo(postgres16) < 0) {
+			throw new IllegalArgumentException(
+					"SQL/JSON constructors and predicates require PostgreSQL 16 or later.");
+		}
+	}
+
 	private void checkVersion() {
 		Dialect postgres17 = DialectHolder.postgreSQL170;
 		if (dialect.compareTo(postgres17) < 0) {
@@ -181,6 +509,27 @@ public class PostgresSqlJsonBuilder {
 		private PassingValue(String expression, String name) {
 			this.expression = expression;
 			this.name = name;
+		}
+	}
+
+	private static final class JsonObjectEntry {
+		private final String keyExpression;
+		private final String valueExpression;
+		private final boolean formatJson;
+		private JsonObjectEntry(String keyExpression, String valueExpression,
+				boolean formatJson) {
+			this.keyExpression = keyExpression;
+			this.valueExpression = valueExpression;
+			this.formatJson = formatJson;
+		}
+	}
+
+	private static final class JsonArrayEntry {
+		private final String expression;
+		private final boolean formatJson;
+		private JsonArrayEntry(String expression, boolean formatJson) {
+			this.expression = expression;
+			this.formatJson = formatJson;
 		}
 	}
 }

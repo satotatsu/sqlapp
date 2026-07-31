@@ -218,6 +218,33 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		return c;
 	}
 
+	public NotNullConstraint addNotNullConstraint(final String constraintName,
+			final Column column) {
+		final NotNullConstraint constraint = new NotNullConstraint(
+				constraintName, column);
+		add(constraint);
+		return constraint;
+	}
+
+	public void add(final NotNullConstraint constraint) {
+		super.add(constraint);
+		if (getTable() != null) {
+			constraint.setTableName(null);
+			constraint.resetColumn(getTable());
+			sort();
+		}
+	}
+
+	public List<NotNullConstraint> getNotNullConstraints() {
+		final List<NotNullConstraint> result = list();
+		for (Constraint constraint : this) {
+			if (constraint instanceof NotNullConstraint) {
+				result.add((NotNullConstraint) constraint);
+			}
+		}
+		return result;
+	}
+
 	/**
 	 * 外部キー制約を追加します
 	 * 
@@ -344,6 +371,8 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 			((ForeignKeyConstraint) c).validate();
 		} else if (c instanceof ExcludeConstraint) {
 			resetColumns((ExcludeConstraint) c);
+		} else if (c instanceof NotNullConstraint) {
+			((NotNullConstraint) c).resetColumn(getTable());
 		}
 	}
 
@@ -661,6 +690,8 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 			} else if (constraint instanceof ForeignKeyConstraint) {
 				final ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
 				fc.validate();
+			} else if (constraint instanceof NotNullConstraint) {
+				((NotNullConstraint) constraint).resetColumn(getTable());
 			}
 		}
 		sort();

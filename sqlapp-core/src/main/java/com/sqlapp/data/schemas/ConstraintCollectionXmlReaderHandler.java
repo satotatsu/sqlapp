@@ -39,6 +39,7 @@ class ConstraintCollectionXmlReaderHandler extends AbstractNamedObjectCollection
 		this.setAlias(primaryKeyHandler.getLocalName(),
 				SchemaProperties.PRIMARY_KEY.getLabel());
 		setChild(new UniqueConstraint().getDbObjectXmlReaderHandler());
+		setChild(new NotNullConstraint().getDbObjectXmlReaderHandler());
 		setChild(new ExcludeConstraint().getDbObjectXmlReaderHandler());
 		setChild(new CheckConstraint().getDbObjectXmlReaderHandler());
 		setChild(new ForeignKeyConstraint().getDbObjectXmlReaderHandler());

@@ -74,6 +74,8 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 					c.setDeferrability(Deferrability.getDeferrability(
 							rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
+					PostgresTemporalConstraintMetadata.apply(c,
+							getString(rs, "consrc"));
 					result.add(c);
 					map.put(schema_name, table_name, constraint_name, c);
 				}

@@ -157,6 +157,37 @@ boolean first=true;
 					</table>
 				</div>
 			</div>
+
+			@if{obj.constraints.notNullConstraints.size()>0}
+			<div class="panel panel-default">
+				<div class="header">@{getMessage("NotNullConstraintName")}</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
+						<thead>
+							<tr>
+								<th @{renderOptions.tableHeaderColAttr("#")}>#</th>
+								<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
+								<th @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th @{renderOptions.tableHeaderColAttr("NoInherit")}>NO INHERIT</th>
+								<th @{renderOptions.tableHeaderColAttr("Validated")}>Validated</th>
+							</tr>
+						</thead>
+						@code{no=1;}
+						<tbody class="tbody_class">@foreach{cons : obj.constraints.notNullConstraints}
+							<tr>
+								<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+								<td @{renderOptions.tableBodyColAttr("Name")}>@{escape(cons.name)}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{escape(cons.columnName)}</td>
+								<td @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
+								<td @{renderOptions.tableBodyColAttr("NoInherit")}>@{renderOptions.checkIcon(cons.noInherit)}</td>
+								<td @{renderOptions.tableBodyColAttr("Validated")}>@{renderOptions.checkIcon(cons.validated)}</td>
+							</tr>
+						@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
 			
 			@code{
 			_prefix=analyzeAllProperties(obj.constraints.uniqueConstraints);

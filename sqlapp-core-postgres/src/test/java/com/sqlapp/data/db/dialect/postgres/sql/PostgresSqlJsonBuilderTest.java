@@ -53,4 +53,84 @@ class PostgresSqlJsonBuilderTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> postgres16.jsonValue("payload", "$.id").build());
 	}
+
+	@Test
+	void testJsonConstructors() {
+		assertEquals("JSON(payload FORMAT JSON WITH UNIQUE KEYS)",
+				builder.json("payload", true, true));
+		assertEquals("JSON_SCALAR(CURRENT_TIMESTAMP)",
+				builder.jsonScalar("CURRENT_TIMESTAMP"));
+		assertEquals(
+				"JSON_OBJECT('id' VALUE id, 'payload' VALUE payload FORMAT JSON ABSENT ON NULL WITH UNIQUE KEYS RETURNING JSONB)",
+				builder.jsonObject()
+						.entry("'id'", "id")
+						.entry("'payload'", "payload", true)
+						.absentOnNull(true)
+						.uniqueKeys(true)
+						.returning("JSONB")
+						.build());
+		assertEquals(
+				"JSON_ARRAY(id, payload FORMAT JSON ABSENT ON NULL RETURNING JSONB)",
+				builder.jsonArray()
+						.value("id")
+						.value("payload", true)
+						.absentOnNull(true)
+						.returning("JSONB")
+						.build());
+		assertEquals("JSON_ARRAY(SELECT id FROM orders RETURNING JSONB)",
+				builder.jsonArray().query("SELECT id FROM orders")
+						.returning("JSONB").build());
+	}
+
+	@Test
+	void testRejectMixedJsonArraySources() {
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.jsonArray().value("id").query("SELECT id FROM orders"));
+	}
+
+	@Test
+	void testJsonAggregates() {
+		assertEquals(
+				"JSON_ARRAYAGG(payload ORDER BY created_at DESC ABSENT ON NULL RETURNING JSONB)",
+				builder.jsonArrayAgg("payload")
+						.orderBy("created_at DESC")
+						.absentOnNull(true)
+						.returning("JSONB")
+						.build());
+		assertEquals(
+				"JSON_OBJECTAGG(code VALUE payload ORDER BY code ABSENT ON NULL WITH UNIQUE KEYS RETURNING JSONB)",
+				builder.jsonObjectAgg("code", "payload")
+						.orderBy("code")
+						.absentOnNull(true)
+						.uniqueKeys(true)
+						.returning("JSONB")
+						.build());
+	}
+
+	@Test
+	void testIsJsonPredicate() {
+		assertEquals("payload IS JSON OBJECT WITH UNIQUE KEYS",
+				builder.isJson("payload").type("OBJECT").uniqueKeys(true).build());
+		assertEquals("payload IS NOT JSON ARRAY WITHOUT UNIQUE KEYS",
+				builder.isJson("payload").not(true).type("ARRAY")
+						.uniqueKeys(false).build());
+	}
+
+	@Test
+	void testPostgres16ConstructorBoundary() {
+		PostgresSqlJsonBuilder postgres16 =
+				new PostgresSqlJsonBuilder(DialectHolder.postgreSQL160);
+		assertEquals("JSON_ARRAY(id)", postgres16.jsonArray().value("id").build());
+		assertEquals("JSON_ARRAYAGG(id)", postgres16.jsonArrayAgg("id").build());
+		assertEquals("payload IS JSON", postgres16.isJson("payload").build());
+
+		PostgresSqlJsonBuilder postgres15 =
+				new PostgresSqlJsonBuilder(DialectHolder.postgreSQL150);
+		assertThrows(IllegalArgumentException.class,
+				() -> postgres15.jsonArray().value("id").build());
+		assertThrows(IllegalArgumentException.class,
+				() -> postgres15.jsonArrayAgg("id").build());
+		assertThrows(IllegalArgumentException.class,
+				() -> postgres15.isJson("payload").build());
+	}
 }

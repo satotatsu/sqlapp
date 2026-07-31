@@ -73,6 +73,7 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 					c.setTableName(table_name);
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
+					PostgresTemporalConstraintMetadata.apply(c, expression);
 					colMap.put(schema_name, table_name, constraint_name, columnList);
 					map.put(schema_name, table_name, constraint_name, c);
 				}

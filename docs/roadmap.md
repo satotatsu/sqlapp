@@ -3,6 +3,32 @@
 This document records deferred features that need cross-database design or a
 larger extension of the shared Schema model. It is not a release commitment.
 
+## Constraint lifecycle state
+
+`NotNullConstraint` represents a named `NOT NULL` constraint in the
+shared Schema model. PostgreSQL 18 DDL, metadata, XML, and HTML documentation
+use this property.
+
+Validation and trust state still needs a cross-database design. PostgreSQL has
+`NOT VALID` and `convalidated`, Oracle has ENABLE/DISABLE with
+VALIDATE/NOVALIDATE, SQL Server distinguishes disabled and untrusted
+constraints, and DB2 exposes enforcement and validation-related states.
+
+Before adding a shared property:
+
+1. Separate enabled/enforced, validated/trusted, and inherited state.
+2. Apply the model consistently to check, foreign-key, unique, and named
+   `NOT NULL` constraints.
+3. Define XML defaults that preserve existing documents.
+4. Add HTML rendering only when a non-default state exists.
+5. Add per-dialect metadata and DDL mappings with explicit version boundaries.
+
+Named `NOT NULL` inheritance and PostgreSQL's catalog validation state are
+retained by `NotNullConstraint.noInherit` and
+`NotNullConstraint.validated`. These properties are intentionally scoped to
+the named `NOT NULL` object; a common lifecycle contract for every constraint
+type remains deferred.
+
 ## Data use case domains
 
 ### Current scope
