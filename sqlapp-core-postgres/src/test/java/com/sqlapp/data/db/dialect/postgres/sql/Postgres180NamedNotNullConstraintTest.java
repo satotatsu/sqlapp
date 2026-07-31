@@ -37,6 +37,7 @@ class Postgres180NamedNotNullConstraintTest {
 		assertTrue(sql.contains(
 				"CONSTRAINT \"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\""),
 				sql);
+		assertFalse(sql.contains("\"CUSTOMER_ID\" BIGINT NOT NULL"), sql);
 		assertTrue(column.isNotNull());
 	}
 

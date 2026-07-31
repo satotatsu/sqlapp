@@ -139,8 +139,7 @@ public class RowComparisonOperatorBindVariableNodeTest {
 				AND (
 						a."colBA" < ?
 						OR ( a."colBA" = ? AND a."colBE" < ? )
-					)
-								""";
+					)""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(2, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();

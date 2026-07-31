@@ -212,6 +212,16 @@ public abstract class Constraint extends AbstractSchemaObject<Constraint>
 			} else {
 				return -1;
 			}
+		} else if (this instanceof NotNullConstraint) {
+			if (o instanceof UniqueConstraint
+					|| o instanceof ExcludeConstraint
+					|| o instanceof CheckConstraint) {
+				return 1;
+			} else if (o instanceof NotNullConstraint) {
+				return compareTo((Constraint) this, o);
+			} else {
+				return -1;
+			}
 		} else if (this instanceof ForeignKeyConstraint) {
 			if (o instanceof ForeignKeyConstraint) {
 				return compareTo((Constraint) this, o);

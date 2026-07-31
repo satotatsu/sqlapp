@@ -10,6 +10,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.NotNullConstraint;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
 public class Postgres180SqlFactoryRegistry extends Postgres170SqlFactoryRegistry {
@@ -32,5 +33,7 @@ public class Postgres180SqlFactoryRegistry extends Postgres170SqlFactoryRegistry
 				Postgres180CreateForeignKeyConstraintFactory.class);
 		registerSqlFactory(CheckConstraint.class, SqlType.CREATE,
 				Postgres180CreateCheckConstraintFactory.class);
+		registerSqlFactory(NotNullConstraint.class, SqlType.CREATE,
+				Postgres180CreateNotNullConstraintFactory.class);
 	}
 }

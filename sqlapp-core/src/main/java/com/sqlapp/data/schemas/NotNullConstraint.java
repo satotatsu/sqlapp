@@ -56,6 +56,10 @@ public final class NotNullConstraint extends Constraint
 		return columns.isEmpty() ? null : columns.get(0).getName();
 	}
 
+	public Table getTable() {
+		return getParent() == null ? null : getParent().getTable();
+	}
+
 	public NotNullConstraint setColumn(Column column) {
 		columns.clear();
 		if (column != null) {
