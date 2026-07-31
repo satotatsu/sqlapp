@@ -28,6 +28,13 @@ Run only the SQL Server JDBC tree session test:
   --tests com.sqlapp.data.db.dialect.test.sqlserver.SqlServerJdbcTreeDataSessionTest
 ```
 
+Run only the PostgreSQL JDBC tree session test:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests com.sqlapp.data.db.dialect.test.postgres.PostgresJdbcTreeDataSessionTest
+```
+
 Docker must be available to the Gradle process. The first execution downloads
 the pinned database image and therefore takes longer.
 
@@ -55,6 +62,10 @@ The first test category exercises `JdbcTreeDataSession`, including generated
 keys, parent-key propagation, and executing hierarchical inserts while a
 SELECT cursor remains open on the same JDBC connection. Dialect-specific
 metadata and SQL gaps form the second category.
+
+PostgreSQL coverage also verifies multiple generated keys across root batch
+boundaries, uneven child counts (including a parent without children), and the
+final partial-batch commit performed when a session closes.
 
 SQL Server uses the image documented by Testcontainers:
 `mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is
