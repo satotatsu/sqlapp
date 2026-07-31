@@ -32,8 +32,8 @@ publishing {
 				}
 				developers {
 					developer {
-						id = project.mavenCentralUsername
-						name = project.sonatypeFullname
+						id = project.developerId
+						name = project.developerName
 						email = project.developerEmail
 						url = project.developerUrl
 					}

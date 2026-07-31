@@ -1,0 +1,61 @@
+# sqlapp-core-dialect-test
+
+This project contains opt-in integration tests that run sqlapp dialects
+against real database engines provided by Testcontainers.
+
+## Test separation
+
+Docker tests use the `dockerTest` source set and task. They are intentionally
+not dependencies of `test`, `check`, or `build`, so a normal repository build
+does not start Docker or pull database images.
+
+Compile the Docker tests without starting containers:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava
+```
+
+Run all Docker tests explicitly:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest
+```
+
+Run only the SQL Server JDBC tree session test:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests com.sqlapp.data.db.dialect.test.sqlserver.SqlServerJdbcTreeDataSessionTest
+```
+
+Docker must be available to the Gradle process. The first execution downloads
+the pinned database image and therefore takes longer.
+
+When using Rancher Desktop on native Windows, select `moby (dockerd)` as the
+container engine. The `dockerTest` task supplies Rancher Desktop's documented
+`DOCKER_HOST=npipe:////./pipe/docker_engine` default when `DOCKER_HOST` is not
+already set. Confirm the engine is ready before running Gradle:
+
+```powershell
+docker info
+```
+
+If `docker info` cannot display the server section, restart Rancher Desktop and
+wait until the engine is ready. A Testcontainers `Bad chunk header` error at
+environment discovery time indicates this Docker API connection problem; it
+occurs before any sqlapp test or SQL Server container is started.
+
+## Coverage order
+
+The planned order is SQL Server, PostgreSQL, Oracle, MySQL, and then other
+supported databases. H2 and HSQLDB are included only when an actual
+version-dependent behavior needs an additional integration test.
+
+The first test category exercises `JdbcTreeDataSession`, including generated
+keys, parent-key propagation, and executing hierarchical inserts while a
+SELECT cursor remains open on the same JDBC connection. Dialect-specific
+metadata and SQL gaps form the second category.
+
+SQL Server uses the image documented by Testcontainers:
+`mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is
+accepted explicitly in the test code.

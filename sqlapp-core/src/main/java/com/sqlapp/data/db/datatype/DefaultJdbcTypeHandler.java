@@ -133,9 +133,10 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 		} else {
 			if (statementConverter instanceof JdbcConvertObject) {
 				stmt.setObject(parameterIndex,
-						((JdbcConvertObject<?>) statementConverter).convertObject(x, stmt.getConnection()), jdbcType);
+						((JdbcConvertObject<?>) statementConverter).convertObject(x, stmt.getConnection()),
+						jdbcType.getVendorTypeNumber());
 			} else {
-				stmt.setObject(parameterIndex, statementConverter.convertObject(x), jdbcType);
+				stmt.setObject(parameterIndex, statementConverter.convertObject(x), jdbcType.getVendorTypeNumber());
 			}
 		}
 	}
