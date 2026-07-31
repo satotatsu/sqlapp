@@ -119,6 +119,7 @@ dependencies {
 	testImplementation('org.junit.jupiter:junit-jupiter-api')
 	dockerTestImplementation(platform('org.testcontainers:testcontainers-bom:2.0.5'))
 	dockerTestImplementation('org.testcontainers:testcontainers-junit-jupiter')
+	dockerTestImplementation('org.testcontainers:testcontainers-mysql')
 	dockerTestImplementation('org.testcontainers:testcontainers-mssqlserver')
 	dockerTestImplementation('org.testcontainers:testcontainers-oracle-free')
 	dockerTestImplementation('org.testcontainers:testcontainers-postgresql')

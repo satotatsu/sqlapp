@@ -36,6 +36,11 @@ public class MySqlTest {
 	Dialect dialect = DialectResolver.getInstance().getDialect("mysql", 5, 1);
 
 	@Test
+	public void testIdentityInsertDefaultValue() {
+		assertEquals("default", dialect.getIdentityInsertDefaultValue(new Column("id")));
+	}
+
+	@Test
 	public void testToType() {
 		Column column = createColumn();
 		column.setDataTypeName("enum('a','b','c')");

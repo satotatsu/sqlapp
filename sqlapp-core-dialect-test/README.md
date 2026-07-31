@@ -42,6 +42,13 @@ Run only the Oracle JDBC tree session test:
   --tests com.sqlapp.data.db.dialect.test.oracle.OracleJdbcTreeDataSessionTest
 ```
 
+Run only the MySQL JDBC tree session test:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests com.sqlapp.data.db.dialect.test.mysql.MySqlJdbcTreeDataSessionTest
+```
+
 Docker must be available to the Gradle process. The first execution downloads
 the pinned database image and therefore takes longer.
 
@@ -84,6 +91,15 @@ identity values, rejection of explicit `ALWAYS` identity values, multiple root
 batches, uneven child counts, and an open SELECT cursor during hierarchical
 inserts. It also covers intermediate commit visibility and the final partial
 batch committed when the session closes.
+
+MySQL coverage uses MySQL 8.4 and verifies generic one-column generated-key
+result sets from Connector/J, parent-key propagation across multiple root
+batches, uneven child counts, explicit AUTO_INCREMENT values, and rejection of
+mixed generated and explicit values within one SQL signature. It also covers
+an open SELECT result set, intermediate commit visibility, the final partial
+batch committed on close, and schema loading through the dialect catalog
+reader because MySQL's JDBC catalog name differs from INFORMATION_SCHEMA's
+catalog name.
 
 SQL Server uses the image documented by Testcontainers:
 `mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is

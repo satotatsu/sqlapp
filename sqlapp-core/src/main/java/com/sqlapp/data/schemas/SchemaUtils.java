@@ -1143,7 +1143,7 @@ public class SchemaUtils {
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final CatalogReader catalogReader = dialect.getCatalogReader();
 		final SchemaReader schemaReader = catalogReader.getSchemaReader();
-		final String catalogName = connection.getCatalog();
+		final String catalogName = catalogReader.getCurrentCatalogName(connection);
 		schemaReader.setCatalogName(catalogName);
 		if (schemaName != null) {
 			schemaReader.setSchemaName(schemaName);

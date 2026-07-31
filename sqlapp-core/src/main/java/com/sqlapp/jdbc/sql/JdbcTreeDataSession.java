@@ -641,10 +641,14 @@ public class JdbcTreeDataSession implements AutoCloseable {
 				keys = Collections.emptyList();
 				capturedKeys = dialect.getBatchExecuteGeneratedKeys(connection, table, identityColumn);
 			} else if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
-				keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect).stream()
+				final List<GeneratedKeyInfo> generatedKeys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
+				final List<GeneratedKeyInfo> namedKeys = generatedKeys.stream()
 						.filter(key -> identityColumn.getName().equalsIgnoreCase(key.getColumnLabel())
 								|| identityColumn.getName().equalsIgnoreCase(key.getColumnName()))
 						.toList();
+				keys = !namedKeys.isEmpty() ? namedKeys
+						: generatedKeys.stream().allMatch(key -> key.getColumnNo() == 0) ? generatedKeys
+								: Collections.emptyList();
 				capturedKeys = Collections.emptyList();
 			} else {
 				keys = Collections.emptyList();
