@@ -170,37 +170,32 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			int loop = 3;
 			try (session) {
 				for (int i = 0; i < loop; i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
-																	// hierarchy exceeds the rootBatchSize, automatic
-																	// JDBC
-																	// batch processing will occur.
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																// hierarchy exceeds the rootBatchSize, automatic
+																// JDBC
+																// batch processing will occur.
 					row.put("UK", "UK" + i);
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j);
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
 							row.put("UK", "UK" + k);
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k);
 						}
 					}
 					for (int j = 0; j < 4; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j);
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
 							row.put("UK", "UK" + k);
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k);
 						}
 					}
 				}
@@ -292,37 +287,32 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			// ColumnSelectionStrategy.UNIQUE_KEY);
 			try (session) {
 				for (i = 0; i < (loop + 1); i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
-																					// method in the root
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
+																				// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.
 					row.put("UK", "UK" + i);
 					for (int j = 0; j < 3; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j + "_UPDATED");
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k + "_UPDATED");
 							row.put("UK", "UK" + k);
 						}
 					}
 					for (int j = 0; j < 5; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j + "_UPDATED");
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k + "_UPDATED");
 							row.put("UK", "UK" + k);
 						}
 					}
@@ -415,38 +405,33 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			// ColumnSelectionStrategy.UNIQUE_KEY);
 			try (session) {
 				for (i = 0; i < (loop + 1); i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_INSERT_IGNORE");// If the number of calls to
-																						// this
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i + "_INSERT_IGNORE");// If the number of calls to
+																					// this
 					// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.
 					row.put("UK", "UK" + i);
 					for (int j = 0; j < 3; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_IGNORE");
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j + "_INSERT_IGNORE");
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_IGNORE");
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k + "_INSERT_IGNORE");
 							row.put("UK", "UK" + k);
 						}
 					}
 					for (int j = 0; j < 5; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_IGNORE");
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j + "_INSERT_IGNORE");
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_IGNORE");
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k + "_INSERT_IGNORE");
 							row.put("UK", "UK" + k);
 						}
 					}

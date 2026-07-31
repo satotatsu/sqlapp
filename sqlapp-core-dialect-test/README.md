@@ -82,7 +82,8 @@ Oracle coverage uses Oracle Database Free 23 and verifies Oracle's named-column
 generated-key retrieval, parent-key propagation, explicit `BY DEFAULT`
 identity values, rejection of explicit `ALWAYS` identity values, multiple root
 batches, uneven child counts, and an open SELECT cursor during hierarchical
-inserts.
+inserts. It also covers intermediate commit visibility and the final partial
+batch committed when the session closes.
 
 SQL Server uses the image documented by Testcontainers:
 `mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is

@@ -37,6 +37,60 @@ class OracleJdbcTreeDataSessionTest {
 	private static final OracleContainer ORACLE = new OracleContainer(IMAGE);
 
 	@Test
+	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
+		try (Connection writer = ORACLE.createConnection("");
+				Connection observer = ORACLE.createConnection("")) {
+			writer.setAutoCommit(false);
+			createTables(writer, "BY DEFAULT");
+			Schema schema = loadSchema(writer);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setCommitEveryRootBatches(1);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				addParent(session, parent, "parent-3");
+				addChild(session, child, "child-3");
+				addParent(session, parent, "parent-4");
+				addChild(session, child, "child-4");
+
+				addParent(session, parent, "parent-5");
+				assertEquals(4, count(observer, "PARENT_TABLE"));
+				assertEquals(2, count(observer, "CHILD_TABLE"));
+				addChild(session, child, "child-5");
+			}
+
+			assertEquals(5, count(observer, "PARENT_TABLE"));
+			assertEquals(3, count(observer, "CHILD_TABLE"));
+		}
+	}
+
+	@Test
+	void testCloseCommitsFinalPartialBatch() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(10);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				addParent(session, parent, "parent-3");
+				addChild(session, child, "child-3");
+			}
+
+			assertEquals(3, count(connection, "PARENT_TABLE"));
+			assertEquals(1, count(connection, "CHILD_TABLE"));
+			connection.rollback();
+			assertEquals(3, count(connection, "PARENT_TABLE"));
+			assertEquals(1, count(connection, "CHILD_TABLE"));
+		}
+	}
+
+	@Test
 	void testSelectCursorRemainsUsableDuringHierarchicalInsert() throws SQLException {
 		try (Connection connection = ORACLE.createConnection("")) {
 			connection.setAutoCommit(false);
@@ -201,10 +255,14 @@ class OracleJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
-				Row row = addParent(session, parent, "parent-100");
-				row.put("ID", 100L);
+				Row first = addParent(session, parent, "parent-100");
+				first.put("ID", 100L);
 				addChild(session, child, "child-100");
+				Row second = addParent(session, parent, "parent-200");
+				second.put("ID", 200L);
+				addChild(session, child, "child-200");
 			}
 
 			try (Statement statement = connection.createStatement();
@@ -212,11 +270,12 @@ class OracleJdbcTreeDataSessionTest {
 							SELECT p.id, c.parent_id
 							FROM parent_table p
 							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id = 100
+							WHERE p.id IN (100, 200)
+							ORDER BY p.id
 							""")) {
-				assertTrue(resultSet.next());
-				assertEquals(100L, resultSet.getLong(1));
-				assertEquals(100L, resultSet.getLong(2));
+				assertIdentityPair(resultSet, 100L);
+				assertIdentityPair(resultSet, 200L);
+				assertFalse(resultSet.next());
 			}
 		}
 	}
@@ -264,6 +323,20 @@ class OracleJdbcTreeDataSessionTest {
 		assertTrue(resultSet.next());
 		assertEquals(parentText, resultSet.getString(1));
 		assertEquals(childText, resultSet.getString(2));
+	}
+
+	private void assertIdentityPair(final ResultSet resultSet, final long identity) throws SQLException {
+		assertTrue(resultSet.next());
+		assertEquals(identity, resultSet.getLong(1));
+		assertEquals(identity, resultSet.getLong(2));
+	}
+
+	private int count(final Connection connection, final String tableName) throws SQLException {
+		try (Statement statement = connection.createStatement();
+				ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
+			resultSet.next();
+			return resultSet.getInt(1);
+		}
 	}
 
 	private void createTables(final Connection connection, final String identityGeneration) throws SQLException {

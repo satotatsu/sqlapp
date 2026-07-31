@@ -144,21 +144,18 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 			int loop = 10;
 			try (session) {
 				for (int i = 0; i < loop; i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
-																	// hierarchy exceeds the rootBatchSize, automatic
-																	// JDBC
-																	// batch processing will occur.
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																// hierarchy exceeds the rootBatchSize, automatic
+																// JDBC
+																// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k);
 						}
 					}
 				}
@@ -213,10 +210,6 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 			this.dropTables(connection, "TAB_1");
 			this.dropTables(connection, "TAB");
 		});
-	}
-
-	private String readTableName(byte[] dataBuffer) {
-		return CREATE_TABLE;
 	}
 
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)

@@ -160,32 +160,27 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			int loop = 3;
 			try (session) {
 				for (int i = 0; i < loop; i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
-																	// hierarchy exceeds the rootBatchSize, automatic
-																	// JDBC
-																	// batch processing will occur.
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																// hierarchy exceeds the rootBatchSize, automatic
+																// JDBC
+																// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k);
 						}
 					}
 					for (int j = 0; j < 4; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k);
 						}
 					}
 				}
@@ -275,33 +270,28 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			session.setTableOperationMode(TableOperationMode.UPDATE);
 			try (session) {
 				for (i = 0; i < (loop + 1); i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
-																					// method in the root
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
+																				// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j + "_UPDATED");
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k + "_UPDATED");
 						}
 					}
 					for (int j = 0; j < 4; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k + "_UPDATED");
 						}
 					}
 				}
