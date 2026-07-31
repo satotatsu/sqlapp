@@ -3,6 +3,19 @@
 This document records deferred features that need cross-database design or a
 larger extension of the shared Schema model. It is not a release commitment.
 
+## Collation schema objects
+
+Columns and catalogs currently retain a collation name, but the shared Schema
+model does not represent a collation definition as an independent object.
+PostgreSQL 18 `PG_UNICODE_FAST` creation and removal is therefore available
+through the PostgreSQL dialect SQL builder, while full metadata/XML/HTML
+round trips remain deferred.
+
+Before adding a shared collation object, compare provider, locale,
+determinism, rules and version concepts across PostgreSQL, DB2, Oracle,
+SQL Server and MySQL-family databases, and define rename-safe references from
+columns and indexes.
+
 ## Constraint lifecycle state
 
 `NotNullConstraint` represents a named `NOT NULL` constraint in the

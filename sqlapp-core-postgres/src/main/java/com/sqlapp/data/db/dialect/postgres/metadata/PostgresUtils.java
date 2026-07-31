@@ -100,13 +100,18 @@ public class PostgresUtils extends ReaderUtils {
 		}
 		column.setArrayDimension(arrayDimension);
 		String expression = rs.getString("adsrc");
+		setGeneratedExpression(column, expression, generatedType);
+		column.setRemarks(rs.getString("remarks"));
+	}
+
+	static void setGeneratedExpression(AbstractColumn<?> column,
+			String expression, String generatedType) {
 		if (!isEmpty(generatedType)) {
 			column.setFormula(expression);
 			column.setFormulaPersisted("s".equals(generatedType));
 		} else {
 			column.setDefaultValue(expression);
 		}
-		column.setRemarks(rs.getString("remarks"));
 	}
 
 	private static Map<String, WeakReference<NamedArgument>> TYPE_CACHE = new HashMap<>();

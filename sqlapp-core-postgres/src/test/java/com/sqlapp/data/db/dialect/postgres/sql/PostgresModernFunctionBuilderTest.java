@@ -41,6 +41,27 @@ class PostgresModernFunctionBuilderTest {
 	}
 
 	@Test
+	void testWeekAndRomanNumberFunctions() {
+		assertEquals("EXTRACT(WEEK FROM occurred_at)",
+				builder.extractWeek("occurred_at"));
+		assertEquals("to_number(roman_value, 'RN')",
+				builder.toNumberRoman("roman_value"));
+	}
+
+	@Test
+	void testAclFunctions() {
+		assertEquals("pg_get_acl(classid, objid, objsubid)",
+				builder.pgGetAcl("classid", "objid", "objsubid"));
+		assertEquals("has_largeobject_privilege(large_object_oid, 'SELECT')",
+				builder.hasLargeObjectPrivilege(
+						"large_object_oid", "'SELECT'"));
+		assertEquals(
+				"has_largeobject_privilege(current_user, large_object_oid, 'UPDATE')",
+				builder.hasLargeObjectPrivilege(
+						"current_user", "large_object_oid", "'UPDATE'"));
+	}
+
+	@Test
 	void testStripNullArrayElements() {
 		assertEquals("json_strip_nulls(payload, true)",
 				builder.jsonStripNulls("payload", true));
@@ -61,6 +82,14 @@ class PostgresModernFunctionBuilderTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> postgres17.gamma("value"));
 		assertThrows(IllegalArgumentException.class,
+				() -> postgres17.extractWeek("occurred_at"));
+		assertThrows(IllegalArgumentException.class,
+				() -> postgres17.toNumberRoman("roman_value"));
+		assertThrows(IllegalArgumentException.class,
+				() -> postgres17.pgGetAcl("classid", "objid", "0"));
+		assertThrows(IllegalArgumentException.class,
+				() -> postgres17.hasLargeObjectPrivilege("loid", "'SELECT'"));
+		assertThrows(IllegalArgumentException.class,
 				() -> postgres17.integerToBytea("event_id"));
 		assertThrows(IllegalArgumentException.class,
 				() -> postgres17.jsonbStripNulls("payload", true));
@@ -74,5 +103,13 @@ class PostgresModernFunctionBuilderTest {
 				() -> builder.jsonStripNulls(null, true));
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.byteaToInteger("", "integer"));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.extractWeek(""));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.toNumberRoman(""));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.pgGetAcl("", "objid", "0"));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.hasLargeObjectPrivilege("loid", ""));
 	}
 }
