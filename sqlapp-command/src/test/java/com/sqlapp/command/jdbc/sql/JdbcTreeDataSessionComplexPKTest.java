@@ -36,7 +36,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.zaxxer.hikari.HikariDataSource;
@@ -140,23 +139,20 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			int i;
 			try (session) {
 				for (i = 0; i < 3; i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
-					row.put("TXT", current.getName() + "_TXT_" + i);
+					Row row = session.newRow(tab);
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
+					row.put("TXT", tab.getName() + "_TXT_" + i);
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current);
-						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
+						row = session.newRow(tab1);
+						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row.put("TXT", tab1.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current);
-							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
+							row = session.newRow(tab1_1);
+							row.put("PK_COL4A", tab1_1.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k);
 						}
 					}
 				}
@@ -219,23 +215,20 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			session.setTableOperationMode(TableOperationMode.UPDATE);
 			try (session) {
 				for (i = 0; i < 4; i++) { // 3 rows -> 4 rows
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");
+					Row row = session.newRow(tab);
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
+					row.put("TXT", tab.getName() + "_TXT_" + i + "_UPDATED");
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current);
-						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
+						row = session.newRow(tab1);
+						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
-						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
+						row.put("TXT", tab1.getName() + "_TXT_" + j + "_UPDATED");
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current);
-							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
+							row = session.newRow(tab1_1);
+							row.put("PK_COL4A", tab1_1.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k + "_UPDATED");
 						}
 					}
 				}
@@ -298,23 +291,20 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			session.setTableOperationMode(TableOperationMode.MERGE);
 			try (session) {
 				for (i = 0; i < 4; i++) {// 3 rows-> 4 rows
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_MERGE");
+					Row row = session.newRow(tab);
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
+					row.put("TXT", tab.getName() + "_TXT_" + i + "_MERGE");
 					for (int j = 0; j < 3; j++) {// 2 rows-> 3 rows
-						current = tab1;
-						row = session.newRow(current);
-						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
+						row = session.newRow(tab1);
+						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
-						row.put("TXT", current.getName() + "_TXT_" + j + "_MERGE");
+						row.put("TXT", tab1.getName() + "_TXT_" + j + "_MERGE");
 						for (int k = 0; k < 4; k++) {// 3 rows-> 4 rows
-							current = tab1_1;
-							row = session.newRow(current);
-							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
+							row = session.newRow(tab1_1);
+							row.put("PK_COL4A", tab1_1.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
-							row.put("TXT", current.getName() + "_TXT_" + k + "_MERGE");
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k + "_MERGE");
 						}
 					}
 				}
@@ -377,23 +367,20 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			session.setTableOperationMode(TableOperationMode.INSERT_IGNORE);
 			try (session) {
 				for (i = 0; i < 5; i++) {// 4 rows-> 5 rows
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_NOT_EXISTS");
+					Row row = session.newRow(tab);
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
+					row.put("TXT", tab.getName() + "_TXT_" + i + "_NOT_EXISTS");
 					for (int j = 0; j < 4; j++) { // 3 rows-> 4 rows
-						current = tab1;
-						row = session.newRow(current);
-						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
+						row = session.newRow(tab1);
+						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
-						row.put("TXT", current.getName() + "_TXT_" + j + "_NOT_EXISTS");
+						row.put("TXT", tab1.getName() + "_TXT_" + j + "_NOT_EXISTS");
 						for (int k = 0; k < 5; k++) {// 4 rows-> 5 rows
-							current = tab1_1;
-							row = session.newRow(current);
-							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
+							row = session.newRow(tab1_1);
+							row.put("PK_COL4A", tab1_1.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
-							row.put("TXT", current.getName() + "_TXT_" + k + "_NOT_EXISTS");
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k + "_NOT_EXISTS");
 						}
 					}
 				}
@@ -472,14 +459,6 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 				assertEquals((String) parentRow.get("PK_COL3"), (String) row.get("PK_COL3A"));
 				i++;
 			}
-		}
-	}
-
-	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
-			throws SQLException {
-		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
-			cons.accept(conn);
-			// finCons.accept(conn);
 		}
 	}
 

@@ -355,7 +355,16 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		StatementHolder statementHolder = tableRelation.getStatementHolder(sqlNode.getSqlType());
 		if (statementHolder == null) {
 			statementHolder = new StatementHolder(sqlNode);
-			statementHolder.setSqlHandler(sqlHandler);
+			statementHolder.setSqlHandler((table, sqlType, sql) -> {
+				String handledSql = sqlHandler.apply(table, sqlType, sql);
+				if (sqlType == SqlType.INSERT && dialect.supportsBatchExecuteGeneratedKeysCapture()) {
+					Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
+					if (identityColumn != null) {
+						handledSql = dialect.handleBatchExecuteGeneratedKeysSql(table, identityColumn, handledSql);
+					}
+				}
+				return handledSql;
+			});
 			tableRelation.addStatementHolder(statementHolder);
 		}
 		return statementHolder;
@@ -597,6 +606,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 		final Table table = tableRelation.getTable();
 		final int[] ret = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
+			final Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
+			final boolean captureGeneratedKeys = sqlType == SqlType.INSERT && identityColumn != null
+					&& !dialect.supportsBatchExecuteGeneratedKeys()
+					&& dialect.supportsBatchExecuteGeneratedKeysCapture();
+			if (captureGeneratedKeys) {
+				dialect.prepareBatchExecuteGeneratedKeys(connection, table, identityColumn);
+			}
 			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			sqlSignature.setColumnSelectionStrategy(
 					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
@@ -610,7 +626,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			for (Row obj : rows) {
 				if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
 					statement = holder.createStatement(connection, sqlSignature, rowSize, obj,
-							tableRelation.isIdentity());
+							tableRelation.isIdentity() && !captureGeneratedKeys, dialect);
 					statement.setFetchSize(fetchSize);
 				} else {
 					statement = holder.getStatement(sqlSignature, rowSize, obj);
@@ -620,24 +636,40 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			preparedStatementBeforeExecuteHandler.accept(statement);
 			int[] result = statement.executeBatch();
 			final List<GeneratedKeyInfo> keys;
-			if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
-				keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
+			final List<Object> capturedKeys;
+			if (captureGeneratedKeys) {
+				keys = Collections.emptyList();
+				capturedKeys = dialect.getBatchExecuteGeneratedKeys(connection, table, identityColumn);
+			} else if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
+				final List<GeneratedKeyInfo> generatedKeys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
+				final List<GeneratedKeyInfo> namedKeys = generatedKeys.stream()
+						.filter(key -> identityColumn.getName().equalsIgnoreCase(key.getColumnLabel())
+								|| identityColumn.getName().equalsIgnoreCase(key.getColumnName()))
+						.toList();
+				keys = !namedKeys.isEmpty() ? namedKeys
+						: generatedKeys.stream().allMatch(key -> key.getColumnNo() == 0) ? generatedKeys
+								: Collections.emptyList();
+				capturedKeys = Collections.emptyList();
 			} else {
 				keys = Collections.emptyList();
+				capturedKeys = Collections.emptyList();
 			}
 			statement.clearBatch();
 			if (sqlType == SqlType.INSERT) {
-				if (!keys.isEmpty()) {
-					Column column = null;
+				if (!capturedKeys.isEmpty()) {
+					int cnt = 0;
+					for (int i = 0; i < result.length; i++) {
+						if (result[i] > 0) {
+							rows.get(i).put(identityColumn, capturedKeys.get(cnt++));
+						}
+					}
+				} else if (!keys.isEmpty()) {
 					int cnt = 0;
 					for (int i = 0; i < result.length; i++) {
 						Row row = rows.get(i);
 						if (result[i] > 0) {
 							GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
-							if (column == null) {
-								column = row.getTable().getColumns().get(generatedKeyInfo.getColumnLabel());
-							}
-							row.put(column, generatedKeyInfo.getValue());
+							row.put(identityColumn, generatedKeyInfo.getValue());
 						}
 					}
 				}

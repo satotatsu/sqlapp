@@ -3,6 +3,19 @@
 This document records deferred features that need cross-database design or a
 larger extension of the shared Schema model. It is not a release commitment.
 
+## Collation schema objects
+
+Columns and catalogs currently retain a collation name, but the shared Schema
+model does not represent a collation definition as an independent object.
+PostgreSQL 18 `PG_UNICODE_FAST` creation and removal is therefore available
+through the PostgreSQL dialect SQL builder, while full metadata/XML/HTML
+round trips remain deferred.
+
+Before adding a shared collation object, compare provider, locale,
+determinism, rules and version concepts across PostgreSQL, DB2, Oracle,
+SQL Server and MySQL-family databases, and define rename-safe references from
+columns and indexes.
+
 ## Constraint lifecycle state
 
 `NotNullConstraint` represents a named `NOT NULL` constraint in the
@@ -28,6 +41,48 @@ retained by `NotNullConstraint.noInherit` and
 `NotNullConstraint.validated`. These properties are intentionally scoped to
 the named `NOT NULL` object; a common lifecycle contract for every constraint
 type remains deferred.
+
+## PostgreSQL modern feature follow-up
+
+The PostgreSQL dialect currently has explicit version boundaries through
+PostgreSQL 18. The implemented PostgreSQL 18 scope includes virtual generated
+columns, temporal and named `NOT NULL` constraints, `OLD`/`NEW` returning,
+modern `COPY`, logical replication additions, optimizer-statistics operations,
+modern built-in functions, `postgres_fdw`, `dblink_fdw`, `file_fdw`,
+`amcheck`, and `pg_buffercache` SQL support.
+
+The PostgreSQL 18 table metadata reader retains `pg_class.relallfrozen` and the
+new cumulative vacuum/analyze timing columns. Its catalog SQL does not depend
+on the removed `pg_attribute.attcacheoff` column.
+
+The following enhancements are candidates for future work, not release
+commitments:
+
+- PostgreSQL 18 integration tests against a real server for complete metadata
+  loading, including tables, columns, constraints, indexes, generated columns
+  and statistics
+- `pgcrypto` additions: `sha256crypt`, `sha512crypt`, CFB encryption mode and
+  `fips_mode()`
+- monitoring access for `pg_aios`, `pg_stat_get_backend_io()`,
+  `pg_stat_get_backend_wal()`, `pg_stat_reset_backend_stats()`, and the new
+  `pg_stat_statements` parallel/WAL fields
+- `pg_buffercache_evict()` result handling for the PostgreSQL 18
+  `buffer_flushed` output, complementing the supported relation/all operations
+- optional support for `pg_logicalinspect`, `pg_overexplain`,
+  `pg_get_loaded_modules()`, and NUMA-related functions and views
+- PostgreSQL 18 database-management behavior such as
+  `CREATE DATABASE ... STRATEGY=FILE_COPY` and validation of unsupported
+  unlogged partitioned tables
+- optional extension settings such as `passwordcheck.min_password_length`
+
+Command-line applications such as `pg_dump`, `pg_upgrade`, `vacuumdb`,
+`pg_createsubscriber`, and `pg_recvlogical`, as well as `psql` commands and
+server configuration for OAuth, TLS and asynchronous I/O, are outside the
+core dialect scope unless sqlapp later introduces a dedicated PostgreSQL
+administration-command module.
+
+Shared collation objects and cross-database constraint lifecycle state remain
+covered by their dedicated roadmap sections above.
 
 ## Data use case domains
 

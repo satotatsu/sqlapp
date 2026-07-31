@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
@@ -97,20 +98,37 @@ public class StatementHolder implements Closeable {
 
 	public PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
 			boolean identity) throws SQLException {
-		return createStatement(connection, sqlSignature, rowSize, obj, identity, params -> {
+		return createStatement(connection, sqlSignature, rowSize, obj, identity, null, params -> {
+		});
+	}
+
+	public PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
+			boolean identity, Dialect dialect) throws SQLException {
+		return createStatement(connection, sqlSignature, rowSize, obj, identity, dialect, params -> {
 		});
 	}
 
 	public PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
 			boolean identity, Consumer<SqlParameterCollection> cons) throws SQLException {
+		return createStatement(connection, sqlSignature, rowSize, obj, identity, null, cons);
+	}
+
+	private PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
+			boolean identity, Dialect dialect, Consumer<SqlParameterCollection> cons) throws SQLException {
 		SqlParameterCollection sqlParameters = getSqlNode().eval(obj, params -> {
 			params.setSqlSignature(sqlSignature);
 			params.setSqlType(getSqlNode().getSqlType());
 			params.setSqlHandler(sqlHandler);
 			cons.accept(params);
 		});
-		if (sqlNode.getSqlType() == SqlType.INSERT) {
-			if (identity) {
+		String[] generatedKeyColumnNames = null;
+		if (sqlNode.getSqlType() == SqlType.INSERT && identity) {
+			if (dialect != null) {
+				Table table = sqlSignature.getTable();
+				generatedKeyColumnNames = table.getColumns().stream().filter(c -> c.isIdentity()).findFirst()
+						.map(column -> dialect.getGeneratedKeyColumnNames(table, column)).orElse(null);
+			}
+			if (CommonUtils.isEmpty(generatedKeyColumnNames)) {
 				sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
 			}
 		}
@@ -119,6 +137,8 @@ public class StatementHolder implements Closeable {
 		if (sqlNode.getSqlType().isSelect()) {
 			statement = sqlParameters.createStatementForQuery(connection, ResultSetType.TYPE_FORWARD_ONLY,
 					ResultSetConcurrency.CONCUR_READ_ONLY, ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
+		} else if (!CommonUtils.isEmpty(generatedKeyColumnNames)) {
+			statement = connection.prepareStatement(sqlParameters.getSql(), generatedKeyColumnNames);
 		} else {
 			statement = sqlParameters.createStatement(connection);
 		}

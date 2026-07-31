@@ -43,6 +43,7 @@ import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -207,7 +208,7 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
-	public String getIdentityInsertString() {
+	public String getIdentityInsertDefaultValue(Column column) {
 		return "default";
 	}
 

@@ -22,7 +22,15 @@ package com.sqlapp.data.db.dialect.sqlserver;
 import static com.sqlapp.util.CommonUtils.LEN_1GB;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -31,6 +39,8 @@ import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2005SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 
 /**
@@ -40,10 +50,54 @@ import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
  * 
  */
 public class SqlServer2005 extends SqlServer2000 {
+	private static final String GENERATED_KEYS_TABLE = "#SQLAPP_GENERATED_KEYS";
+	private static final Pattern VALUES_PATTERN = Pattern.compile("(?i)\\b(?:DEFAULT\\s+)?VALUES\\b");
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -6574415406411255507L;
+
+	@Override
+	public boolean supportsBatchExecuteGeneratedKeysCapture() {
+		return true;
+	}
+
+	@Override
+	public void prepareBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
+			throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('tempdb.." + GENERATED_KEYS_TABLE + "') IS NULL "
+					+ "CREATE TABLE " + GENERATED_KEYS_TABLE + " ("
+					+ "ROW_NO BIGINT IDENTITY(1,1) PRIMARY KEY, GENERATED_KEY SQL_VARIANT NOT NULL) "
+					+ "ELSE TRUNCATE TABLE " + GENERATED_KEYS_TABLE);
+		}
+	}
+
+	@Override
+	public String handleBatchExecuteGeneratedKeysSql(Table table, Column identityColumn, String sql) {
+		Matcher matcher = VALUES_PATTERN.matcher(sql);
+		if (!matcher.find()) {
+			throw new IllegalArgumentException("Unable to add SQL Server generated-key capture to INSERT SQL: " + sql);
+		}
+		return sql.substring(0, matcher.start())
+				+ " OUTPUT INSERTED." + getObjectFullName(identityColumn.getName())
+				+ " INTO " + GENERATED_KEYS_TABLE + "(GENERATED_KEY) "
+				+ sql.substring(matcher.start());
+	}
+
+	@Override
+	public List<Object> getBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
+			throws SQLException {
+		List<Object> keys = new ArrayList<>();
+		try (Statement statement = connection.createStatement();
+				ResultSet resultSet = statement.executeQuery(
+						"SELECT GENERATED_KEY FROM " + GENERATED_KEYS_TABLE + " ORDER BY ROW_NO")) {
+			while (resultSet.next()) {
+				keys.add(resultSet.getObject(1));
+			}
+		}
+		return keys;
+	}
 
 	protected SqlServer2005(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);

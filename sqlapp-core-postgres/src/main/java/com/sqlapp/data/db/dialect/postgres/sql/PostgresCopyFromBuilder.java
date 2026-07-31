@@ -30,6 +30,8 @@ public class PostgresCopyFromBuilder {
 	private Long rejectLimit;
 	private boolean forceNullAll;
 	private boolean forceNotNullAll;
+	private boolean freeze;
+	private boolean foreignTable;
 	private String format;
 
 	public PostgresCopyFromBuilder(Dialect dialect, String tableName) {
@@ -58,6 +60,19 @@ public class PostgresCopyFromBuilder {
 
 	public PostgresCopyFromBuilder header(boolean value) {
 		return option("HEADER", Boolean.toString(value));
+	}
+
+	public PostgresCopyFromBuilder freeze(boolean value) {
+		this.freeze = value;
+		return this;
+	}
+
+	/**
+	 * Marks the target as a foreign table for version-specific validation.
+	 */
+	public PostgresCopyFromBuilder foreignTable(boolean value) {
+		this.foreignTable = value;
+		return this;
 	}
 
 	public PostgresCopyFromBuilder delimiter(String value) {
@@ -153,9 +168,13 @@ public class PostgresCopyFromBuilder {
 		}
 		builder.append(" FROM STDIN");
 		if (!options.isEmpty() || !CommonUtils.isEmpty(onError)
-				|| !CommonUtils.isEmpty(logVerbosity) || rejectLimit != null) {
+				|| !CommonUtils.isEmpty(logVerbosity) || rejectLimit != null
+				|| freeze || forceNullAll || forceNotNullAll) {
 			builder.append(" WITH (");
 			List<String> allOptions = new ArrayList<>(options);
+			if (freeze) {
+				allOptions.add("FREEZE true");
+			}
 			if (!CommonUtils.isEmpty(onError)) {
 				allOptions.add("ON_ERROR " + onError);
 			}
@@ -214,6 +233,11 @@ public class PostgresCopyFromBuilder {
 				&& !"csv".equalsIgnoreCase(format)) {
 			throw new IllegalArgumentException(
 					"COPY all-column FORCE options require FORMAT csv.");
+		}
+		if (freeze && foreignTable
+				&& dialect.compareTo(DialectHolder.postgreSQL180) >= 0) {
+			throw new IllegalArgumentException(
+					"COPY FREEZE is not supported for foreign tables on PostgreSQL 18 or later.");
 		}
 	}
 

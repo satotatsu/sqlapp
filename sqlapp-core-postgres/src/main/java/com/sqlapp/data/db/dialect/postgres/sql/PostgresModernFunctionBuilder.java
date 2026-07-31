@@ -57,6 +57,47 @@ public class PostgresModernFunctionBuilder {
 		return unary("lgamma", numericExpression);
 	}
 
+	public String extractWeek(String temporalExpression) {
+		checkPostgres18();
+		require(temporalExpression, "temporalExpression");
+		return "EXTRACT(WEEK FROM " + temporalExpression + ")";
+	}
+
+	public String toNumberRoman(String textExpression) {
+		checkPostgres18();
+		require(textExpression, "textExpression");
+		return "to_number(" + textExpression + ", 'RN')";
+	}
+
+	public String pgGetAcl(String classIdExpression, String objectIdExpression,
+			String subObjectIdExpression) {
+		checkPostgres18();
+		require(classIdExpression, "classIdExpression");
+		require(objectIdExpression, "objectIdExpression");
+		require(subObjectIdExpression, "subObjectIdExpression");
+		return "pg_get_acl(" + classIdExpression + ", " + objectIdExpression
+				+ ", " + subObjectIdExpression + ")";
+	}
+
+	public String hasLargeObjectPrivilege(String largeObjectExpression,
+			String privilegeExpression) {
+		checkPostgres18();
+		require(largeObjectExpression, "largeObjectExpression");
+		require(privilegeExpression, "privilegeExpression");
+		return "has_largeobject_privilege(" + largeObjectExpression + ", "
+				+ privilegeExpression + ")";
+	}
+
+	public String hasLargeObjectPrivilege(String userExpression,
+			String largeObjectExpression, String privilegeExpression) {
+		checkPostgres18();
+		require(userExpression, "userExpression");
+		require(largeObjectExpression, "largeObjectExpression");
+		require(privilegeExpression, "privilegeExpression");
+		return "has_largeobject_privilege(" + userExpression + ", "
+				+ largeObjectExpression + ", " + privilegeExpression + ")";
+	}
+
 	public String integerToBytea(String integerExpression) {
 		checkPostgres18();
 		return cast(integerExpression, "bytea");

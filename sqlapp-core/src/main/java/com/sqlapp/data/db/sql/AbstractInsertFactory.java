@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -41,12 +42,13 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
+		final SqlSignature sqlSignature = createSqlSignature(table);
 		final List<Column> list = addInsertIntoTable(table, builder);
 		builder.lineBreak();
 		builder.brackets(true, () -> {
 			int i = 0;
 			for (final Column column : list) {
-				final String def = this.getValueDefinitionForInsert(column);
+				final String def = this.getValueDefinitionForInsert(column, sqlSignature);
 				builder.lineBreak(i > 0);
 				builder.comma(i > 0).space(2, i == 0);
 				builder._add(def);
@@ -62,6 +64,10 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 	}
 
 	protected List<Column> addInsertIntoTable(final Table obj, final S builder) {
+		return addInsertIntoTable(obj, createSqlSignature(obj), builder);
+	}
+
+	protected List<Column> addInsertIntoTable(final Table obj, final SqlSignature sqlSignature, final S builder) {
 		final List<Column> list = CommonUtils.list();
 		builder.insert().into().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
@@ -79,7 +85,14 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 					}
 					if (this.isAutoIncrementColumn(column)) {
 						final Dialect dialect = builder.getDialect();
-						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
+						final String identityDefault = dialect.getIdentityInsertDefaultValue(column);
+						if (CommonUtils.isEmpty(identityDefault)
+								&& column.getIdentityGenerationType() == IdentityGenerationType.Always
+								&& sqlSignature.hasNonNullValue(column)) {
+							throw new IllegalArgumentException("Identity column '" + column.getName()
+									+ "' is GENERATED ALWAYS and does not accept explicit values.");
+						}
+						if (!CommonUtils.isEmpty(identityDefault)) {
 							builder.lineBreak();
 							builder.comma(i > 0).space(2, i == 0);
 							builder.name(column);

@@ -26,6 +26,9 @@ import com.sqlapp.data.db.dialect.oracle.metadata.Oracle12cCatalogReader;
 import com.sqlapp.data.db.dialect.oracle.sql.Oracle12cOperationFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.Table;
 
 /**
  * Oracle固有情報クラス
@@ -45,6 +48,19 @@ public class Oracle12c extends Oracle11gR2 {
 	 */
 	protected Oracle12c(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
+	}
+
+	@Override
+	public String getIdentityInsertDefaultValue(final Column column) {
+		if (column.getIdentityGenerationType() == IdentityGenerationType.ByDefault) {
+			return "default";
+		}
+		return null;
+	}
+
+	@Override
+	public String[] getGeneratedKeyColumnNames(final Table table, final Column identityColumn) {
+		return new String[] { identityColumn.getName() };
 	}
 
 	/**

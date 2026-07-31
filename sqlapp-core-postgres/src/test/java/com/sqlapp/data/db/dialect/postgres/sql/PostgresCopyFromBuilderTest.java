@@ -15,6 +15,37 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 class PostgresCopyFromBuilderTest {
 
 	@Test
+	void testCopyFreezeForLocalTable() {
+		assertEquals(
+				"COPY events FROM STDIN WITH (FREEZE true)",
+				new PostgresCopyFromBuilder(
+						DialectHolder.postgreSQL180, "events")
+						.freeze(true)
+						.build());
+	}
+
+	@Test
+	void testRejectCopyFreezeForForeignTableOnPostgres18() {
+		PostgresCopyFromBuilder builder = new PostgresCopyFromBuilder(
+				DialectHolder.postgreSQL180, "foreign_events")
+				.foreignTable(true)
+				.freeze(true);
+
+		assertThrows(IllegalArgumentException.class, builder::build);
+	}
+
+	@Test
+	void testKeepPre18ForeignTableFreezeCompatibility() {
+		assertEquals(
+				"COPY foreign_events FROM STDIN WITH (FREEZE true)",
+				new PostgresCopyFromBuilder(
+						DialectHolder.postgreSQL170, "foreign_events")
+						.foreignTable(true)
+						.freeze(true)
+						.build());
+	}
+
+	@Test
 	void testCopyFromStdinWithPostgres17ErrorHandling() {
 		assertEquals(
 				"COPY public.orders (id, payload) FROM STDIN WITH (FORMAT csv, HEADER true, DELIMITER ',', NULL '', ENCODING 'UTF8', ON_ERROR ignore, LOG_VERBOSITY verbose)",

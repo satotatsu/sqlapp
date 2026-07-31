@@ -38,6 +38,7 @@ import com.sqlapp.data.db.dialect.derby.util.DerbySqlBuilder;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Column;
 
 /**
  * Derby固有情報クラス
@@ -183,7 +184,7 @@ public class Derby extends Dialect {
 	}
 
 	@Override
-	public String getIdentityInsertString() {
+	public String getIdentityInsertDefaultValue(Column column) {
 		return "default";
 	}
 

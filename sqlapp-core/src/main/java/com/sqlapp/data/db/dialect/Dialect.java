@@ -488,11 +488,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
-	 * IDENTITYのINSERT時の文字列表現
-	 * 
-	 * @return IDENTITYのINSERT時の文字列表現
+	 * Returns the default value expression used when an identity column is part
+	 * of an INSERT. Dialects may vary this by the column's generation type.
+	 *
+	 * @param column identity column
+	 * @return identity value expression, or {@code null} when the column must be omitted
 	 */
-	public String getIdentityInsertString() {
+	public String getIdentityInsertDefaultValue(Column column) {
 		return null;
 	}
 
@@ -725,6 +727,39 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 */
 	public boolean supportsBatchExecuteGeneratedKeys() {
 		return false;
+	}
+
+	/**
+	 * Returns column names to pass to
+	 * {@link Connection#prepareStatement(String, String[])} when generated keys
+	 * must be requested by name.
+	 */
+	public String[] getGeneratedKeyColumnNames(final Table table, final Column identityColumn) {
+		return null;
+	}
+
+	/**
+	 * Returns whether generated keys can be captured by a dialect-specific
+	 * mechanism while retaining {@link java.sql.Statement#executeBatch()}.
+	 */
+	public boolean supportsBatchExecuteGeneratedKeysCapture() {
+		return false;
+	}
+
+	/** Prepares dialect-specific generated-key capture for the next batch. */
+	public void prepareBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
+			throws SQLException {
+	}
+
+	/** Adds dialect-specific generated-key capture to an INSERT statement. */
+	public String handleBatchExecuteGeneratedKeysSql(Table table, Column identityColumn, String sql) {
+		return sql;
+	}
+
+	/** Returns the keys captured by the most recently executed batch. */
+	public List<Object> getBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
+			throws SQLException {
+		return Collections.emptyList();
 	}
 
 	/**

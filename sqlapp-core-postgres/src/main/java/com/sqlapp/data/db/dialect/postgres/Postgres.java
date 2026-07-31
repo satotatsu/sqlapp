@@ -75,6 +75,8 @@ import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
@@ -85,6 +87,13 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * 
  */
 public class Postgres extends Dialect {
+	@Override
+	public String getIdentityInsertDefaultValue(Column column) {
+		if (column.getIdentityGenerationType() == IdentityGenerationType.ByDefault) {
+			return "default";
+		}
+		return null;
+	}
 	/**
 	 * serialVersionUID
 	 */

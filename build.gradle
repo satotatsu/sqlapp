@@ -182,8 +182,8 @@ sourceSets {
 
 nmcpAggregation {
 	centralPortal {
-		username.set("${mavenCentralUsername}")
-		password.set("${mavenCentralPassword}")
+		username.set(providers.gradleProperty("mavenCentralUsername"))
+		password.set(providers.gradleProperty("mavenCentralPassword"))
 		publishingType = "USER_MANAGED"
 //		publishingType = "AUTOMATIC"
 	}
