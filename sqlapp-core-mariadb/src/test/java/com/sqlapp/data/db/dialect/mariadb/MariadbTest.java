@@ -35,6 +35,12 @@ public class MariadbTest {
 
 	Dialect dialect = DialectResolver.getInstance().getDialect("mariadb", 10,
 			0);
+
+	@Test
+	public void testIdentityInsertDefaultValue() {
+		assertEquals("default", dialect.getIdentityInsertDefaultValue(new Column("id")));
+	}
+
 	@Test
 	public void testToType() {
 		Column column = new Column();

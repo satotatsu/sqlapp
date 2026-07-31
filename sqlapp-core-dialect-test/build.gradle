@@ -105,6 +105,7 @@ dependencies {
 	testImplementation('org.postgresql:postgresql:42.7.11')
 	//mysql
 	testImplementation('com.mysql:mysql-connector-j:9.7.0')
+	testImplementation('org.mariadb.jdbc:mariadb-java-client:3.5.9')
 	//sqlite
 	testImplementation('org.xerial:sqlite-jdbc:3.53.1.0')
 	//SQL Server
@@ -119,6 +120,7 @@ dependencies {
 	testImplementation('org.junit.jupiter:junit-jupiter-api')
 	dockerTestImplementation(platform('org.testcontainers:testcontainers-bom:2.0.5'))
 	dockerTestImplementation('org.testcontainers:testcontainers-junit-jupiter')
+	dockerTestImplementation('org.testcontainers:testcontainers-mariadb')
 	dockerTestImplementation('org.testcontainers:testcontainers-mysql')
 	dockerTestImplementation('org.testcontainers:testcontainers-mssqlserver')
 	dockerTestImplementation('org.testcontainers:testcontainers-oracle-free')

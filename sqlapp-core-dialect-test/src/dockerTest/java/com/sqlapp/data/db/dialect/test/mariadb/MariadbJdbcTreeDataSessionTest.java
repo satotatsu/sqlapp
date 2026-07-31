@@ -3,7 +3,7 @@
  *
  * This file is part of sqlapp-core-dialect-test.
  */
-package com.sqlapp.data.db.dialect.test.mysql;
+package com.sqlapp.data.db.dialect.test.mariadb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,7 +18,7 @@ import java.sql.Statement;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mysql.MySQLContainer;
+import org.testcontainers.mariadb.MariaDBContainer;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
@@ -27,24 +27,85 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
-/** MySQL 8.4 integration coverage for hierarchical JDBC batch writes. */
+/** MariaDB 11.8 integration coverage for hierarchical JDBC batch writes. */
 @Testcontainers
-class MySqlJdbcTreeDataSessionTest {
-	private static final String IMAGE = "mysql:8.4";
+class MariadbJdbcTreeDataSessionTest {
+	private static final String IMAGE = "mariadb:11.8";
 
 	@Container
-	private static final MySQLContainer MYSQL = new MySQLContainer(IMAGE);
+	private static final MariaDBContainer MARIADB = new MariaDBContainer(IMAGE);
+
+	@Test
+	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				addParent(session, parent, "parent-3");
+				addChild(session, child, "child-3");
+				addParent(session, parent, "parent-4");
+				addChild(session, child, "child-4");
+			}
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.txt, c.txt FROM parent_table p
+							JOIN child_table c ON c.parent_id = p.id
+							WHERE p.txt IN ('parent-3', 'parent-4') ORDER BY p.id
+							""")) {
+				assertParentChild(resultSet, "parent-3", "child-3");
+				assertParentChild(resultSet, "parent-4", "child-4");
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
+	void testGeneratedKeysRemainAlignedWithUnevenChildCounts() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(3);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				addParent(session, parent, "parent-3");
+				addChild(session, child, "child-3a");
+				addChild(session, child, "child-3b");
+				addParent(session, parent, "parent-4");
+				addParent(session, parent, "parent-5");
+				addChild(session, child, "child-5");
+			}
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.txt, c.txt FROM parent_table p
+							LEFT JOIN child_table c ON c.parent_id = p.id
+							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+							ORDER BY p.id, c.id
+							""")) {
+				assertParentChild(resultSet, "parent-3", "child-3a");
+				assertParentChild(resultSet, "parent-3", "child-3b");
+				assertParentChild(resultSet, "parent-4", null);
+				assertParentChild(resultSet, "parent-5", "child-5");
+				assertFalse(resultSet.next());
+			}
+		}
+	}
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
-		try (Connection writer = MYSQL.createConnection("");
-				Connection observer = MYSQL.createConnection("")) {
+		try (Connection writer = MARIADB.createConnection(""); Connection observer = MARIADB.createConnection("")) {
 			writer.setAutoCommit(false);
 			createTables(writer);
 			Schema schema = loadSchema(writer);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
 				session.setRootBatchSize(2);
 				session.setCommitEveryRootBatches(1);
@@ -53,13 +114,11 @@ class MySqlJdbcTreeDataSessionTest {
 				addChild(session, child, "child-3");
 				addParent(session, parent, "parent-4");
 				addChild(session, child, "child-4");
-
 				addParent(session, parent, "parent-5");
 				assertEquals(4, count(observer, "parent_table"));
 				assertEquals(2, count(observer, "child_table"));
 				addChild(session, child, "child-5");
 			}
-
 			assertEquals(5, count(observer, "parent_table"));
 			assertEquals(3, count(observer, "child_table"));
 		}
@@ -67,20 +126,18 @@ class MySqlJdbcTreeDataSessionTest {
 
 	@Test
 	void testCloseCommitsFinalPartialBatch() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
+		try (Connection connection = MARIADB.createConnection("")) {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(10);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
 				addChild(session, child, "child-3");
 			}
-
 			assertEquals(3, count(connection, "parent_table"));
 			assertEquals(1, count(connection, "child_table"));
 			connection.rollback();
@@ -91,13 +148,12 @@ class MySqlJdbcTreeDataSessionTest {
 
 	@Test
 	void testSelectResultSetRemainsUsableDuringHierarchicalInsert() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
+		try (Connection connection = MARIADB.createConnection("")) {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-
 			try (Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
 					ResultSet.CONCUR_READ_ONLY);
 					ResultSet resultSet = statement.executeQuery("SELECT id, txt FROM parent_table ORDER BY id")) {
@@ -114,8 +170,41 @@ class MySqlJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testGeneratedKeysRemainAlignedAcrossRootBatches() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				for (int i = 3; i <= 7; i++) {
+					addParent(session, parent, "parent-" + i);
+					addChild(session, child, "child-" + i);
+				}
+			}
+
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.txt, c.txt
+							FROM parent_table p
+							JOIN child_table c ON c.parent_id = p.id
+							ORDER BY p.id
+							""")) {
+				for (int i = 3; i <= 7; i++) {
+					assertParentChild(resultSet, "parent-" + i, "child-" + i);
+				}
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
 	void testAutoIncrementAcceptsExplicitValues() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
+		try (Connection connection = MARIADB.createConnection("")) {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = loadSchema(connection);
@@ -150,7 +239,7 @@ class MySqlJdbcTreeDataSessionTest {
 
 	@Test
 	void testAutoIncrementRejectsMixedExplicitAndGeneratedValues() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
+		try (Connection connection = MARIADB.createConnection("")) {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = loadSchema(connection);
@@ -171,112 +260,9 @@ class MySqlJdbcTreeDataSessionTest {
 		}
 	}
 
-	@Test
-	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
-			connection.setAutoCommit(false);
-			createTables(connection);
-			Schema schema = loadSchema(connection);
-			Table parent = schema.getTables().get("parent_table");
-			Table child = schema.getTables().get("child_table");
-
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
-				session.setRootBatchSize(2);
-				session.setTableOperationMode(TableOperationMode.INSERT);
-				addParent(session, parent, "parent-3");
-				addChild(session, child, "child-3");
-				addParent(session, parent, "parent-4");
-				addChild(session, child, "child-4");
-			}
-
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4')
-							ORDER BY p.id
-							""")) {
-				assertParentChild(resultSet, "parent-3", "child-3");
-				assertParentChild(resultSet, "parent-4", "child-4");
-				assertFalse(resultSet.next());
-			}
-		}
-	}
-
-	@Test
-	void testGeneratedKeysRemainAlignedAcrossRootBatches() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
-			connection.setAutoCommit(false);
-			createTables(connection);
-			Schema schema = loadSchema(connection);
-			Table parent = schema.getTables().get("parent_table");
-			Table child = schema.getTables().get("child_table");
-
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
-				session.setRootBatchSize(2);
-				session.setTableOperationMode(TableOperationMode.INSERT);
-				for (int i = 3; i <= 7; i++) {
-					addParent(session, parent, "parent-" + i);
-					addChild(session, child, "child-" + i);
-				}
-			}
-
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
-				for (int i = 3; i <= 7; i++) {
-					assertParentChild(resultSet, "parent-" + i, "child-" + i);
-				}
-				assertFalse(resultSet.next());
-			}
-		}
-	}
-
-	@Test
-	void testGeneratedKeysRemainAlignedWithUnevenChildCounts() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("")) {
-			connection.setAutoCommit(false);
-			createTables(connection);
-			Schema schema = loadSchema(connection);
-			Table parent = schema.getTables().get("parent_table");
-			Table child = schema.getTables().get("child_table");
-
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
-				session.setRootBatchSize(3);
-				session.setTableOperationMode(TableOperationMode.INSERT);
-				addParent(session, parent, "parent-3");
-				addChild(session, child, "child-3a");
-				addChild(session, child, "child-3b");
-				addParent(session, parent, "parent-4");
-				addParent(session, parent, "parent-5");
-				addChild(session, child, "child-5");
-			}
-
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							LEFT JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
-							ORDER BY p.id, c.id
-							""")) {
-				assertParentChild(resultSet, "parent-3", "child-3a");
-				assertParentChild(resultSet, "parent-3", "child-3b");
-				assertParentChild(resultSet, "parent-4", null);
-				assertParentChild(resultSet, "parent-5", "child-5");
-				assertFalse(resultSet.next());
-			}
-		}
-	}
-
 	private Schema loadSchema(final Connection connection) throws SQLException {
-		return SchemaUtils.getSchema(connection, MYSQL.getDatabaseName(), "parent_table", "child_table")
-				.orElseThrow(() -> new AssertionError("MySQL test schema was not loaded."));
+		return SchemaUtils.getSchema(connection, MARIADB.getDatabaseName(), "parent_table", "child_table")
+				.orElseThrow(() -> new AssertionError("MariaDB test schema was not loaded."));
 	}
 
 	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text) throws SQLException {
