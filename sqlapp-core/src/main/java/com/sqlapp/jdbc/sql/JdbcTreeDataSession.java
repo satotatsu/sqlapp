@@ -626,7 +626,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			for (Row obj : rows) {
 				if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
 					statement = holder.createStatement(connection, sqlSignature, rowSize, obj,
-							tableRelation.isIdentity() && !captureGeneratedKeys);
+							tableRelation.isIdentity() && !captureGeneratedKeys, dialect);
 					statement.setFetchSize(fetchSize);
 				} else {
 					statement = holder.getStatement(sqlSignature, rowSize, obj);

@@ -730,6 +730,15 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns column names to pass to
+	 * {@link Connection#prepareStatement(String, String[])} when generated keys
+	 * must be requested by name.
+	 */
+	public String[] getGeneratedKeyColumnNames(final Table table, final Column identityColumn) {
+		return null;
+	}
+
+	/**
 	 * Returns whether generated keys can be captured by a dialect-specific
 	 * mechanism while retaining {@link java.sql.Statement#executeBatch()}.
 	 */

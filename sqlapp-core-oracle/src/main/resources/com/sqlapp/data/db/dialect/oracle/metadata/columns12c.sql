@@ -4,6 +4,14 @@ SELECT
   , tic.GENERATION_TYPE
   , tic.IDENTITY_OPTIONS
 FROM all_tab_cols tc
+LEFT OUTER JOIN all_col_comments cc
+ON (
+     tc.OWNER=cc.OWNER
+     AND
+     tc.TABLE_NAME=cc.TABLE_NAME
+     AND
+     tc.COLUMN_NAME=cc.COLUMN_NAME
+    )
 LEFT OUTER JOIN all_tab_identity_cols tic
 ON (
      tc.OWNER=tic.OWNER
