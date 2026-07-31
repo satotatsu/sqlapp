@@ -47,7 +47,7 @@ public class Db2_1050ColumnReader extends Db2_1010ColumnReader {
 			Integer stringunitLength=getInteger(rs, "STRINGUNITSLENGTH");
 			if (stringunitLength!=null){
 				obj.setLength(stringunitLength);
-				this.getDialect().setDbType(obj.getDataTypeName(), stringunitLength.longValue(), null, obj);
+				this.getDialect().setDbType(getString(rs, "TYPENAME"), stringunitLength.longValue(), null, obj);
 			}
 		}
 		return obj;

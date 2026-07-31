@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.db2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,11 +29,21 @@ import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.CommonUtils;
 
 public class DB2Test {
 
 	Dialect dialect = DialectResolver.getInstance().getDialect("DB2", 12, 0, 0);
+
+	@Test
+	public void testIdentityInsertDefaultValue() {
+		Column column = new Column("id").setIdentity(true)
+				.setIdentityGenerationType(IdentityGenerationType.ByDefault);
+		assertEquals("default", dialect.getIdentityInsertDefaultValue(column));
+		column.setIdentityGenerationType(IdentityGenerationType.Always);
+		assertNull(dialect.getIdentityInsertDefaultValue(column));
+	}
 
 	@Test
 	public void testToType() {

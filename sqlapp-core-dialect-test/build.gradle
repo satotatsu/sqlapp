@@ -103,6 +103,8 @@ dependencies {
 	//testCompile group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk17', version: '2.2.10'
 	//postgres
 	testImplementation('org.postgresql:postgresql:42.7.11')
+	//DB2
+	testImplementation('com.ibm.db2:jcc:12.1.4.0')
 	//mysql
 	testImplementation('com.mysql:mysql-connector-j:9.7.0')
 	testImplementation('org.mariadb.jdbc:mariadb-java-client:3.5.9')
@@ -120,6 +122,7 @@ dependencies {
 	testImplementation('org.junit.jupiter:junit-jupiter-api')
 	dockerTestImplementation(platform('org.testcontainers:testcontainers-bom:2.0.5'))
 	dockerTestImplementation('org.testcontainers:testcontainers-junit-jupiter')
+	dockerTestImplementation('org.testcontainers:testcontainers-db2')
 	dockerTestImplementation('org.testcontainers:testcontainers-mariadb')
 	dockerTestImplementation('org.testcontainers:testcontainers-mysql')
 	dockerTestImplementation('org.testcontainers:testcontainers-mssqlserver')

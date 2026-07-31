@@ -6,7 +6,14 @@ FROM
 	  , a.TYPENAME AS type_name
 	  , a.ATTR_NAME AS column_name
 	  , a.ATTR_TYPENAME AS data_type
-	  , a.*
+	  , a.LENGTH
+	  , a.SCALE
+	  , a.CODEPAGE
+	  , a.COLLATIONSCHEMA
+	  , a.COLLATIONNAME
+	  , a.LOGGED
+	  , a.COMPACT
+	  , a.ORDINAL
 	FROM SYSCAT.ATTRIBUTES a
 	WHERE 1=1
 	  /*if isNotEmpty(schemaName) */
