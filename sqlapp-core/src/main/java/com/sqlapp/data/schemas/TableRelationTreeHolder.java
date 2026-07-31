@@ -137,6 +137,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private PreparedStatement selectStatement = null;
 		private boolean selectRegistered = false;
 		private SqlNode selectSqlNode = null;
+		private boolean deleteOnCascade = false;
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -172,6 +173,15 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			this.foreignKeyConstraint = foreignKeyConstraint;
 			columns = foreignKeyConstraint.getColumns();
 			relatedColumns = getRelatedColumns(foreignKeyConstraint);
+			if (foreignKeyConstraint.getDeleteRule() == CascadeRule.Cascade) {
+				this.deleteOnCascade = true;
+				return;
+			}
+			this.deleteOnCascade = false;
+		}
+
+		public boolean isDeleteOnCascade() {
+			return deleteOnCascade;
 		}
 
 		public SqlNode getSelectSqlNode() {
@@ -377,12 +387,17 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				boolean hasNext = false;
 				while (resultSet.next()) {
 					Row row = table.newRow();
-					if (parentTableRelation != null) {
-						row.setParentRow(parentTableRelation.getRow());
-					}
 					if (table.getDialect().getCorrelationStrategy().isReturnSourceRowid()) {
 						// for SQL Server
 						SchemaUtils.setInternalRowId(row, (int) batchCount);
+					}
+					boolean isDeleted = false;
+					if (parentTableRelation != null) {
+						Row parentRow = parentTableRelation.getRow();
+						row.setParentRow(parentRow);
+						if (parentRow.isDelete() && isDeleteOnCascade()) {
+							isDeleted = true;
+						}
 					}
 					for (int j = 0; j < resultSetColumns.size(); j++) {
 						Column column = resultSetColumns.get(j);
@@ -391,7 +406,9 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 						}
 						row.put(column, resultSet.getObject(j + 1));
 					}
-					loadedList.add(row);
+					if (!isDeleted) {
+						loadedList.add(row);
+					}
 					i++;
 					if (i >= batchSize) {
 						hasNext = true;
