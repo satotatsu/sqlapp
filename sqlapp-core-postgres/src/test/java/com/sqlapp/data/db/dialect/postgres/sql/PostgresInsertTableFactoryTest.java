@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.text.ParseException;
 import java.util.List;
@@ -32,6 +34,8 @@ import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -75,6 +79,72 @@ public class PostgresInsertTableFactoryTest extends AbstractPostgresSqlFactoryTe
 					, CAST( /*colf*/'' AS JSONB )
 				)""";
 		assertEquals(expected, operation.getSqlText());
+	}
+
+	@Test
+	public void testByDefaultIdentityUsesDefaultWhenValuesAreMissing() {
+		Table table = createIdentityTable(IdentityGenerationType.ByDefault);
+		Row row = addRow(table);
+		row.put("txt", "generated");
+
+		String sql = CommonUtils.first(sqlFactory.createSql(table)).getSqlText();
+
+		assertTrue(sql.contains("id"));
+		assertTrue(sql.contains("default"));
+	}
+
+	@Test
+	public void testByDefaultIdentityUsesExplicitValues() {
+		Table table = createIdentityTable(IdentityGenerationType.ByDefault);
+		Row row = addRow(table);
+		row.put("id", 100L);
+		row.put("txt", "explicit");
+
+		String sql = CommonUtils.first(sqlFactory.createSql(table)).getSqlText();
+
+		assertTrue(sql.contains("/*id*/0"));
+	}
+
+	@Test
+	public void testByDefaultIdentityRejectsMixedValues() {
+		Table table = createIdentityTable(IdentityGenerationType.ByDefault);
+		addRow(table).put("txt", "generated");
+		Row explicit = addRow(table);
+		explicit.put("id", 100L);
+		explicit.put("txt", "explicit");
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> sqlFactory.createSql(table));
+
+		assertTrue(exception.getMessage().contains("cannot mix"));
+	}
+
+	@Test
+	public void testAlwaysIdentityRejectsExplicitValues() {
+		Table table = createIdentityTable(IdentityGenerationType.Always);
+		Row row = addRow(table);
+		row.put("id", 100L);
+		row.put("txt", "explicit");
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> sqlFactory.createSql(table));
+
+		assertTrue(exception.getMessage().contains("GENERATED ALWAYS"));
+	}
+
+	private Table createIdentityTable(IdentityGenerationType generationType) {
+		Table table = getTable("identity_table");
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT)
+				.setIdentity(true).setIdentityGenerationType(generationType));
+		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(50));
+		table.setPrimaryKey(table.getColumns().get("id"));
+		return table;
+	}
+
+	private Row addRow(Table table) {
+		Row row = table.newRow();
+		table.getRows().add(row);
+		return row;
 	}
 
 	private Table getTable1(String tableName) throws ParseException {
