@@ -546,6 +546,11 @@ public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> imp
 	}
 
 	protected String getValueDefinitionForInsert(final Column column) {
+		return getValueDefinitionForInsert(column,
+				new SqlSignature(column.getTable(), column.getTable().getRows()));
+	}
+
+	protected String getValueDefinitionForInsert(final Column column, final SqlSignature sqlSignature) {
 		if (this.isFormulaColumn(column)) {
 			return null;
 		}
@@ -562,7 +567,15 @@ public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> imp
 		final String columnDefault = column.getDefaultValue();
 		final String _default = CommonUtils.coalesce(columnDefault, dbTypeDefault);
 		if (this.isAutoIncrementColumn(column)) {
-			return this.getDialect().getIdentityInsertString();
+			final boolean hasNullValue = sqlSignature.hasNullValue(column);
+			final boolean hasNonNullValue = sqlSignature.hasNonNullValue(column);
+			if (hasNullValue && hasNonNullValue) {
+				throw new IllegalArgumentException("Identity column '" + column.getName()
+						+ "' cannot mix default-generated and explicit values in one SQL signature.");
+			}
+			if (!hasNonNullValue) {
+				return this.getDialect().getIdentityInsertDefaultValue(column);
+			}
 		} else if (isOptimisticLockColumn(column)) {
 			return _default;
 		} else if (isCreatedAtColumn(column)) {
@@ -724,7 +737,7 @@ public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> imp
 		if (this.isAutoIncrementColumn(column)) {
 			if (value == null) {
 				return tableOption.getInsertRowSqlValue().apply(row, column,
-						this.getDialect().getIdentityInsertString());
+						this.getDialect().getIdentityInsertDefaultValue(column));
 			}
 		} else if (isUpdatedAtColumn(column)) {
 			if (value == null) {

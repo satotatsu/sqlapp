@@ -173,7 +173,7 @@ public abstract class AbstractMergeTableFactory<S extends AbstractSqlBuilder<?>>
 						}
 						final String comment = this.getTableOptions().getInsertColumnComment().apply(column);
 						if (column.isIdentity()) {
-							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
+							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertDefaultValue(column))) {
 								insertColumns.add(column);
 								builder.lineBreak().comma(i > 0).name(column);
 								if (!CommonUtils.isEmpty(comment)

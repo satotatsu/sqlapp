@@ -104,6 +104,14 @@ public class SqlSignature {
 		return false;
 	}
 
+	public boolean hasNullValue(Column column) {
+		return rows.stream().anyMatch(row -> row.get(column) == null);
+	}
+
+	public boolean hasNonNullValue(Column column) {
+		return rows.stream().anyMatch(row -> row.get(column) != null);
+	}
+
 	public void reCalculate(List<Row> rows) {
 		this.rows = rows;
 		this.primaryKey.reCalculate(rows);

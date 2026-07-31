@@ -488,11 +488,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
-	 * IDENTITYのINSERT時の文字列表現
-	 * 
-	 * @return IDENTITYのINSERT時の文字列表現
+	 * Returns the default value expression used when an identity column is part
+	 * of an INSERT. Dialects may vary this by the column's generation type.
+	 *
+	 * @param column identity column
+	 * @return identity value expression, or {@code null} when the column must be omitted
 	 */
-	public String getIdentityInsertString() {
+	public String getIdentityInsertDefaultValue(Column column) {
 		return null;
 	}
 

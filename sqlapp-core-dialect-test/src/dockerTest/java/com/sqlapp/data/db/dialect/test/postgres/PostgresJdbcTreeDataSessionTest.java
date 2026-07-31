@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.test.postgres;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -33,6 +34,120 @@ class PostgresJdbcTreeDataSessionTest {
 
 	@Container
 	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(IMAGE);
+
+	@Test
+	void testAlwaysIdentityRejectsExplicitValues() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "ALWAYS");
+			Schema schema = loadPublicSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+
+			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+					session.setTableOperationMode(TableOperationMode.INSERT);
+					Row row = addParent(session, parent, "parent-100");
+					row.put("id", 100L);
+				}
+			});
+			assertTrue(exception.getMessage().contains("GENERATED ALWAYS"));
+			connection.rollback();
+			assertEquals(2, count(connection, "parent_table"));
+		}
+	}
+
+	@Test
+	void testByDefaultIdentityRejectsMixedExplicitAndGeneratedValues() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadPublicSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+
+			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+					session.setRootBatchSize(2);
+					session.setTableOperationMode(TableOperationMode.INSERT);
+					addParent(session, parent, "generated-parent");
+					Row explicitParent = addParent(session, parent, "explicit-parent");
+					explicitParent.put("id", 100L);
+				}
+			});
+			assertTrue(exception.getMessage().contains("cannot mix"));
+			connection.rollback();
+			assertEquals(2, count(connection, "parent_table"));
+		}
+	}
+
+	@Test
+	void testExplicitByDefaultIdentityValuesPropagateToChildren() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadPublicSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				Row firstParent = addParent(session, parent, "parent-100");
+				firstParent.put("id", 100L);
+				addChild(session, child, "child-100");
+				Row secondParent = addParent(session, parent, "parent-200");
+				secondParent.put("id", 200L);
+				addChild(session, child, "child-200");
+			}
+
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.id, c.parent_id, c.txt
+							FROM parent_table p
+							JOIN child_table c ON c.parent_id = p.id
+							WHERE p.id IN (100, 200)
+							ORDER BY p.id
+							""")) {
+				assertIdentityChild(resultSet, 100L, "child-100");
+				assertIdentityChild(resultSet, 200L, "child-200");
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
+	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
+		try (Connection writer = POSTGRES.createConnection("");
+				Connection observer = POSTGRES.createConnection("")) {
+			writer.setAutoCommit(false);
+			createTables(writer);
+			Schema schema = loadPublicSchema(writer);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setCommitEveryRootBatches(1);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				addParent(session, parent, "parent-3");
+				addChild(session, child, "child-3");
+				addParent(session, parent, "parent-4");
+				addChild(session, child, "child-4");
+
+				// Starting the next root flushes and commits the completed two-row batch.
+				addParent(session, parent, "parent-5");
+				assertEquals(4, count(observer, "parent_table"));
+				assertEquals(2, count(observer, "child_table"));
+				addChild(session, child, "child-5");
+				assertEquals(4, count(observer, "parent_table"));
+				assertEquals(2, count(observer, "child_table"));
+			}
+
+			assertEquals(5, count(observer, "parent_table"));
+			assertEquals(3, count(observer, "child_table"));
+		}
+	}
 
 	@Test
 	void testCloseCommitsFinalPartialBatch() throws SQLException {
@@ -236,15 +351,26 @@ class PostgresJdbcTreeDataSessionTest {
 		assertEquals(childText, resultSet.getString(2));
 	}
 
+	private void assertIdentityChild(ResultSet resultSet, long parentId, String childText) throws SQLException {
+		assertTrue(resultSet.next());
+		assertEquals(parentId, resultSet.getLong(1));
+		assertEquals(parentId, resultSet.getLong(2));
+		assertEquals(childText, resultSet.getString(3));
+	}
+
 	private void createTables(Connection connection) throws SQLException {
+		createTables(connection, "BY DEFAULT");
+	}
+
+	private void createTables(Connection connection, String identityGeneration) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS child_table");
 			statement.execute("DROP TABLE IF EXISTS parent_table");
 			statement.execute("""
 					CREATE TABLE parent_table (
-						id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+						id BIGINT GENERATED %s AS IDENTITY PRIMARY KEY,
 						txt VARCHAR(256)
-					)""");
+					)""".formatted(identityGeneration));
 			statement.execute("""
 					CREATE TABLE child_table (
 						id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
