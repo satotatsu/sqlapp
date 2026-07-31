@@ -3991,6 +3991,29 @@ public final class CommonUtils {
 	}
 
 	/**
+	 * 文字列のsubstring結果を返します
+	 * 
+	 * @param text       対象の文字列
+	 * @param beginIndex 開始位置
+	 * @param endIndex   終了位置
+	 * @return 文字列のsubstring結果
+	 */
+	public static String substring(final StringBuilder text, final int beginIndex, final int endIndex) {
+		if (text == null) {
+			return null;
+		}
+		final int startPos = beginIndex;
+		int endPos = endIndex;
+		if (beginIndex >= endIndex) {
+			return null;
+		}
+		if (text.length() <= endIndex) {
+			endPos = text.length();
+		}
+		return text.substring(startPos, endPos);
+	}
+
+	/**
 	 * 対応するプリミティブクラスを取得します。
 	 * 
 	 * @param clazz
