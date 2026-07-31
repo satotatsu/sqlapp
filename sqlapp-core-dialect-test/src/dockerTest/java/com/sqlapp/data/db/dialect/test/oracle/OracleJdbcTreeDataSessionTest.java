@@ -37,6 +37,128 @@ class OracleJdbcTreeDataSessionTest {
 	private static final OracleContainer ORACLE = new OracleContainer(IMAGE);
 
 	@Test
+	void testSelectCursorRemainsUsableDuringHierarchicalInsert() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+
+			try (Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+					ResultSet.CONCUR_READ_ONLY)) {
+				statement.setFetchSize(1);
+				try (ResultSet cursor = statement.executeQuery("SELECT id, txt FROM parent_table ORDER BY id")) {
+					assertTrue(cursor.next());
+
+					try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+						session.setRootBatchSize(1);
+						session.setTableOperationMode(TableOperationMode.INSERT);
+						addParent(session, parent, "parent-3");
+						addChild(session, child, "child-3");
+					}
+
+					assertTrue(cursor.next(),
+							"The open Oracle SELECT cursor must remain usable after a hierarchical INSERT.");
+				}
+			}
+		}
+	}
+
+	@Test
+	void testGeneratedKeysRemainAlignedAcrossRootBatches() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				for (int i = 3; i <= 7; i++) {
+					addParent(session, parent, "parent-" + i);
+					addChild(session, child, "child-" + i);
+				}
+			}
+
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.txt, c.txt
+							FROM parent_table p
+							JOIN child_table c ON c.parent_id = p.id
+							ORDER BY p.id
+							""")) {
+				for (int i = 3; i <= 7; i++) {
+					assertParentChild(resultSet, "parent-" + i, "child-" + i);
+				}
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
+	void testGeneratedKeysRemainAlignedWithUnevenChildCounts() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(3);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				addParent(session, parent, "parent-3");
+				addChild(session, child, "child-3a");
+				addChild(session, child, "child-3b");
+				addParent(session, parent, "parent-4");
+				addParent(session, parent, "parent-5");
+				addChild(session, child, "child-5");
+			}
+
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.txt, c.txt
+							FROM parent_table p
+							LEFT JOIN child_table c ON c.parent_id = p.id
+							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+							ORDER BY p.id, c.id
+							""")) {
+				assertParentChild(resultSet, "parent-3", "child-3a");
+				assertParentChild(resultSet, "parent-3", "child-3b");
+				assertParentChild(resultSet, "parent-4", null);
+				assertParentChild(resultSet, "parent-5", "child-5");
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
+	void testByDefaultIdentityRejectsMixedExplicitAndGeneratedValues() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+
+			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+					session.setRootBatchSize(2);
+					session.setTableOperationMode(TableOperationMode.INSERT);
+					addParent(session, parent, "generated-parent");
+					Row explicit = addParent(session, parent, "explicit-parent");
+					explicit.put("ID", 100L);
+				}
+			});
+
+			assertTrue(exception.getMessage().contains("cannot mix"));
+		}
+	}
+
+	@Test
 	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
 		try (Connection connection = ORACLE.createConnection("")) {
 			connection.setAutoCommit(false);
