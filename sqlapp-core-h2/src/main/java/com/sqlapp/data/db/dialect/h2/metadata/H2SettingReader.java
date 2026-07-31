@@ -63,6 +63,11 @@ public class H2SettingReader extends SettingReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("settings_200.sql");
+		}
 		return getSqlNodeCache().getString("settings.sql");
 	}
 

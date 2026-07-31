@@ -89,6 +89,8 @@ public class PostgresForeignKeyConstraintReader extends
 							rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
 					c.setMatchOption(getString(rs, "match_option"));
+					PostgresTemporalConstraintMetadata.apply(c,
+							getString(rs, "consrc"));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
 					tColMap.put(pk_table_catalog, pk_table_schema, fk_name,

@@ -12,7 +12,7 @@ WHERE 1=1
   /*if isNotEmpty(tableName)*/
   AND cc.TABLE_NAME IN /*tableName*/('%')
   /*end*/
-  /*if isNotEmpty(columnName)*/
-  AND cc.COLUMN_NAME IN /*columnName*/('%')
+  /*if isNotEmpty(constraintName)*/
+  AND cc.CONSTRAINT_NAME IN /*constraintName*/('%')
   /*end*/
 ORDER BY cc.TABLE_SCHEMA, cc.TABLE_NAME, cc.CONSTRAINT_NAME, cc.ORDINAL_POSITION

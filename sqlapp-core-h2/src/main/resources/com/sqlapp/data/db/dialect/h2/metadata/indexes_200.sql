@@ -1,0 +1,33 @@
+SELECT
+  i.TABLE_CATALOG
+, i.TABLE_SCHEMA
+, i.TABLE_NAME
+, i.INDEX_NAME
+, ic.COLUMN_NAME
+, ic.ORDINAL_POSITION
+, NOT ic.IS_UNIQUE AS NON_UNIQUE
+, CASE ic.ORDERING_SPECIFICATION
+    WHEN 'DESCENDING' THEN 'DESC'
+    ELSE 'ASC'
+  END AS ASC_OR_DESC
+, CAST(NULL AS VARCHAR) AS FILTER_CONDITION
+FROM INFORMATION_SCHEMA.INDEXES i
+JOIN INFORMATION_SCHEMA.INDEX_COLUMNS ic
+  ON  i.INDEX_CATALOG = ic.INDEX_CATALOG
+  AND i.INDEX_SCHEMA = ic.INDEX_SCHEMA
+  AND i.INDEX_NAME = ic.INDEX_NAME
+WHERE NOT i.IS_GENERATED
+  /*if isNotEmpty(catalogName)*/
+  AND i.TABLE_CATALOG IN /*catalogName*/('%')
+  /*end*/
+  /*if isNotEmpty(schemaName)*/
+  AND i.TABLE_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND i.TABLE_NAME IN /*tableName*/('%')
+  /*end*/
+  /*if isNotEmpty(indexName)*/
+  AND i.INDEX_NAME IN /*indexName*/('%')
+  /*end*/
+ORDER BY i.TABLE_CATALOG, i.TABLE_SCHEMA, i.TABLE_NAME,
+  i.INDEX_NAME, ic.ORDINAL_POSITION

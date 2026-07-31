@@ -239,6 +239,33 @@ public class TableOptions extends AbstractBean implements Serializable {
 	}
 
 	/**
+	 * MERGE TABLEにRETURNING句を付けるか?
+	 */
+	private TablePredicate mergeTableWithReturning = (table -> false);
+
+	public void setMergeTableWithReturning(final boolean bool) {
+		mergeTableWithReturning = (table -> bool);
+	}
+
+	/**
+	 * RETURNING句での旧行の別名。
+	 */
+	private TableStringFunction returningOldAlias = (table -> null);
+
+	public void setReturningOldAlias(final String value) {
+		returningOldAlias = (table -> value);
+	}
+
+	/**
+	 * RETURNING句での新行の別名。
+	 */
+	private TableStringFunction returningNewAlias = (table -> null);
+
+	public void setReturningNewAlias(final String value) {
+		returningNewAlias = (table -> value);
+	}
+
+	/**
 	 * MERGE ROWS時にDELETEをするか?
 	 */
 	private TablePredicate mergeRowsWithDelete = (table -> false);

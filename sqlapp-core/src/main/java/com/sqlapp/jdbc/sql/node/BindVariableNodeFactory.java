@@ -20,22 +20,37 @@
 package com.sqlapp.jdbc.sql.node;
 
 import java.util.regex.Pattern;
+
 /**
  * バインド変数のノードのファクトリ
+ * 
  * @author satoh
  *
  */
-public class BindVariableNodeFactory extends AbstractColumnNodeFactory<BindVariableNode>{
+public class BindVariableNodeFactory extends AbstractColumnNodeFactory<BindVariableNode> {
 
-	protected final Pattern[] MATCH_PATTERNS=new Pattern[]{
-		  Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(N'.+?'|'.+?'))", Pattern.CASE_INSENSITIVE)
-		, Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TRUE|False))", Pattern.CASE_INSENSITIVE)
-		, Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TIME\\s*'.*?'|TIMESTAMP\\s*'.*?'|TIMESTAMP\\s+WITH\\s+TIMEZONE\\s*'.*?'|DATE\\s*'.*?'|DATETIME\\s*'.*?'))", Pattern.CASE_INSENSITIVE)
-		, Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOUND)\\s*(//([0-9]+//)){0,1}\\s*TO\\s+(MONTH|DAY|HOUR|MINUTE|SECOUND)))", Pattern.CASE_INSENSITIVE)
-		, Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOUND)(//([0-9]+//)){0,1}))", Pattern.CASE_INSENSITIVE)
-		, Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'))", Pattern.CASE_INSENSITIVE)
-		, Pattern.compile(OPEREATOR_PATTERN+"(?<value>\\s*/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/([^()\\r\\t\\n\\f\\s,]+))", Pattern.CASE_INSENSITIVE)
-	};
+	protected final Pattern[] MATCH_PATTERNS = new Pattern[] {
+			Pattern.compile(OPEREATOR_PATTERN + "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(N'.+?'|'.+?'))",
+					Pattern.CASE_INSENSITIVE),
+			Pattern.compile(OPEREATOR_PATTERN + "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TRUE|False))",
+					Pattern.CASE_INSENSITIVE),
+			Pattern.compile(OPEREATOR_PATTERN
+					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TIME\\s*'.*?'|TIMESTAMP\\s*'.*?'|TIMESTAMP\\s+WITH\\s+TIMEZONE\\s*'.*?'|DATE\\s*'.*?'|DATETIME\\s*'.*?'))",
+					Pattern.CASE_INSENSITIVE),
+			Pattern.compile(OPEREATOR_PATTERN
+					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOUND)\\s*(//([0-9]+//)){0,1}\\s*TO\\s+(MONTH|DAY|HOUR|MINUTE|SECOUND)))",
+					Pattern.CASE_INSENSITIVE),
+			Pattern.compile(OPEREATOR_PATTERN
+					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOUND)(//([0-9]+//)){0,1}))",
+					Pattern.CASE_INSENSITIVE),
+			Pattern.compile(
+					OPEREATOR_PATTERN
+							+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'))",
+					Pattern.CASE_INSENSITIVE),
+			Pattern.compile(
+					OPEREATOR_PATTERN
+							+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/([^()\\r\\t\\n\\f\\s,]+))",
+					Pattern.CASE_INSENSITIVE) };
 
 	@Override
 	public BindVariableNode newInstance() {

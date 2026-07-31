@@ -74,8 +74,9 @@ public class H2TableLinkReader extends TableLinkReader {
 				tableLink.setCatalogName(table_Catalog);
 				tableLink.setSchemaName(table_Schema);
 				// tableLink.setCreated(toTimestamp(lastMod));
-				Matcher matcher = tableLinkPattern.matcher(definition);
-				if (matcher.matches()) {
+				Matcher matcher = definition == null ? null
+						: tableLinkPattern.matcher(definition);
+				if (matcher != null && matcher.matches()) {
 					int i = 2;
 					String driverClassName = StringUtils.getGroupString(
 							matcher, i++);
@@ -96,6 +97,11 @@ public class H2TableLinkReader extends TableLinkReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("tableLinks_200.sql");
+		}
 		return getSqlNodeCache().getString("tableLinks.sql");
 	}
 }

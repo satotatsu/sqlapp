@@ -67,6 +67,11 @@ public class H2ConstantReader extends ConstantReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("constants_200.sql");
+		}
 		return getSqlNodeCache().getString("constants.sql");
 	}
 

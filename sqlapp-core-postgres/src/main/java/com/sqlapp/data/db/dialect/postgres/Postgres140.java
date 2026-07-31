@@ -46,6 +46,12 @@ public class Postgres140 extends Postgres130 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		getDbDataTypes().addMultirange("MULTIRANGE", type -> {
+			type.setCreateFormat("MULTIRANGE");
+			type.addPetternColumnTypeMatcher(
+					"(?<dataTypeName>INT4MULTIRANGE|INT8MULTIRANGE|NUMMULTIRANGE|TSMULTIRANGE|TSTZMULTIRANGE|DATEMULTIRANGE)",
+					(matcher, information) -> information.setDataTypeName(matcher.group("dataTypeName")));
+		});
 	}
 
 	/*

@@ -36,6 +36,10 @@ public class Postgres100ColumnReader extends Postgres93ColumnReader {
 
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 12) {
+			return getSqlNodeCache().getString("columns120.sql");
+		}
 		return getSqlNodeCache().getString("columns100.sql");
 	}
 }

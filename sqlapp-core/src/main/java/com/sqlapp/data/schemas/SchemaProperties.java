@@ -2447,6 +2447,11 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 
 		@Override
+		public Class<?> getValueClass() {
+			return DataType.class;
+		}
+
+		@Override
 		public boolean isInstanceof(final Object obj) {
 			return obj instanceof VectorElementDataTypeProperty;
 		}
@@ -2459,7 +2464,8 @@ public enum SchemaProperties implements ISchemaProperty {
 			} else if (value instanceof Integer) {
 				property.setVectorElementDataType(DataType.valueOf((Integer) value));
 			} else {
-				property.setVectorElementDataType(converters.convertObject(value, DataType.class));
+				property.setVectorElementDataType(
+						converters.convertObject(value, DataType.class));
 			}
 			return true;
 		}

@@ -3,6 +3,32 @@
 This document records deferred features that need cross-database design or a
 larger extension of the shared Schema model. It is not a release commitment.
 
+## Constraint lifecycle state
+
+`NotNullConstraint` represents a named `NOT NULL` constraint in the
+shared Schema model. PostgreSQL 18 DDL, metadata, XML, and HTML documentation
+use this property.
+
+Validation and trust state still needs a cross-database design. PostgreSQL has
+`NOT VALID` and `convalidated`, Oracle has ENABLE/DISABLE with
+VALIDATE/NOVALIDATE, SQL Server distinguishes disabled and untrusted
+constraints, and DB2 exposes enforcement and validation-related states.
+
+Before adding a shared property:
+
+1. Separate enabled/enforced, validated/trusted, and inherited state.
+2. Apply the model consistently to check, foreign-key, unique, and named
+   `NOT NULL` constraints.
+3. Define XML defaults that preserve existing documents.
+4. Add HTML rendering only when a non-default state exists.
+5. Add per-dialect metadata and DDL mappings with explicit version boundaries.
+
+Named `NOT NULL` inheritance and PostgreSQL's catalog validation state are
+retained by `NotNullConstraint.noInherit` and
+`NotNullConstraint.validated`. These properties are intentionally scoped to
+the named `NOT NULL` object; a common lifecycle contract for every constraint
+type remains deferred.
+
 ## Data use case domains
 
 ### Current scope
@@ -126,8 +152,8 @@ plan are recorded in `docs/dialect-enhancement-continuation.md`.
 
 - `HALF_VECTOR` element precision; the shared vector model currently has no
   half-precision element type
-- vector-index metadata round trips and future index algorithms beyond the
-  currently supported HNSW DDL
+- future vector-index algorithms beyond the currently supported HNSW DDL and
+  `VECTOR_INDEXES` metadata
 - graph workspaces and knowledge-graph objects
 - JSON document collections as objects distinct from relational tables
 - HANA Cloud fuzzy-search index search-mode metadata round trips from
@@ -142,10 +168,10 @@ plan are recorded in `docs/dialect-enhancement-continuation.md`.
 - search-index partitioning, ordering and interleaving definitions; basic
   TOKENLIST-column, STORING, WHERE and sharding-option DDL uses the existing
   column and full-text index model
-- vector-index metadata round trips and mutable index options; CREATE DDL
-  uses the existing vector-index model and Spanner-specific tree options
-- locality-group objects, placement keys and storage-option metadata round
-  trips; table, column and regular-index option DDL uses dialect specifics
+- mutable vector-index operations; CREATE and metadata recovery use the
+  existing vector-index model and Spanner-specific tree options
+- locality-group objects and placement keys; table, column and index
+  locality/storage options are preserved in dialect specifics
 - named schemas for PostgreSQL-dialect databases versus GoogleSQL databases
 - `STRUCT`, `PROTO`, named enum and graph value definitions
 - generated UUID primary-key strategies

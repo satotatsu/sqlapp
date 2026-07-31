@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.saphana.SapHanaCloud;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -46,10 +47,14 @@ import com.sqlapp.util.TripleKeyMap;
 public class SapHanaIndexReader extends IndexReader {
 
 	private SapHanaFulltextIndexReader sapHanaFulltextIndexReader;
+	private SapHanaVectorIndexReader sapHanaVectorIndexReader;
 
 	public SapHanaIndexReader(Dialect dialect) {
 		super(dialect);
 		sapHanaFulltextIndexReader = new SapHanaFulltextIndexReader(dialect);
+		if (dialect instanceof SapHanaCloud) {
+			sapHanaVectorIndexReader = new SapHanaVectorIndexReader(dialect);
+		}
 	}
 
 	@Override
@@ -58,6 +63,11 @@ public class SapHanaIndexReader extends IndexReader {
 			final ProductVersionInfo productVersionInfo) {
 		sapHanaFulltextIndexReader.setReaderOptions(this.getReaderOptions());
 		sapHanaFulltextIndexReader.setReadDbObjectPredicate(this.getReadDbObjectPredicate());
+		if (sapHanaVectorIndexReader != null) {
+			sapHanaVectorIndexReader.setReaderOptions(this.getReaderOptions());
+			sapHanaVectorIndexReader.setReadDbObjectPredicate(
+					this.getReadDbObjectPredicate());
+		}
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -87,6 +97,9 @@ public class SapHanaIndexReader extends IndexReader {
 		List<Index> ftList = sapHanaFulltextIndexReader.getAll(connection,
 				context);
 		list.addAll(ftList);
+		if (sapHanaVectorIndexReader != null) {
+			list.addAll(sapHanaVectorIndexReader.getAll(connection, context));
+		}
 		return list;
 	}
 
@@ -98,12 +111,18 @@ public class SapHanaIndexReader extends IndexReader {
 	public void setIndexName(String indexName) {
 		super.setIndexName(indexName);
 		sapHanaFulltextIndexReader.setIndexName(indexName);
+		if (sapHanaVectorIndexReader != null) {
+			sapHanaVectorIndexReader.setIndexName(indexName);
+		}
 	}
 
 	@Override
 	public void setSchemaName(String schemaName) {
 		super.setSchemaName(schemaName);
 		sapHanaFulltextIndexReader.setSchemaName(schemaName);
+		if (sapHanaVectorIndexReader != null) {
+			sapHanaVectorIndexReader.setSchemaName(schemaName);
+		}
 	}
 
 	protected Index createIndex(final Connection connection, ExResultSet rs)

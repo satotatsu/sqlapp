@@ -4,6 +4,8 @@ SELECT
 , ci.relname AS index_name
 , ti.relname AS table_name
 , i.indnatts
+, i.indnatts AS indnkeyatts
+, false AS indnullsnotdistinct
 , i.indisunique AS is_unique
 , i.indisprimary AS is_primary
 , i.indexprs

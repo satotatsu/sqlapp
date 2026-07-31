@@ -66,6 +66,7 @@ public class H2CheckConstraintReader extends CheckConstraintReader {
 				if (c == null) {
 					c = new CheckConstraint(constraint_name, expression);
 					c.setRemarks(getString(rs, REMARKS));
+					c.setCatalogName(catalog_name);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					map.put(catalog_name, schema_name, constraint_name, c);
@@ -76,6 +77,12 @@ public class H2CheckConstraintReader extends CheckConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString(
+					"checkConstraints_200.sql");
+		}
 		return getSqlNodeCache().getString("checkConstraints.sql");
 	}
 }

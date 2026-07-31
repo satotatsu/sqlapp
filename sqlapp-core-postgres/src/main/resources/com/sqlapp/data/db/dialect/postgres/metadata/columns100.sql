@@ -22,6 +22,8 @@ SELECT
 	,seq.seqmax AS identity_maximum
 	,seq.seqmin AS identity_minimum
 	,seq.seqcycle AS identity_cycle
+	,a.attidentity
+	,'' AS attgenerated
 	,CASE WHEN a.atttypid IN (1042, 1043) /*CHAR,VARCHAR*/
 	 THEN a.atttypmod -4
 	 WHEN a.atttypid IN (1560, 1562) /*BIT,VARBIT*/

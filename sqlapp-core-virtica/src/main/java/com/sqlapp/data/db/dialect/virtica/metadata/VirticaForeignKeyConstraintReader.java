@@ -81,6 +81,7 @@ public class VirticaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 					c.setCatalogName(fk_table_catalog);
 					c.setSchemaName(fk_table_schema);
 					c.setTableName(fk_table_name);
+					c.setRemarks(getString(rs, "REMARKS"));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
 					tColMap.put(fk_table_catalog, fk_table_schema, fk_name,

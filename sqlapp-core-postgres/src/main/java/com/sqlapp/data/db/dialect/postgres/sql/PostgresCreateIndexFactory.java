@@ -37,6 +37,7 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
+	public static final String NULLS_NOT_DISTINCT = "nullsNotDistinct";
 
 	@Override
 	public void addCreateObject(final Index obj, final PostgresSqlBuilder builder) {

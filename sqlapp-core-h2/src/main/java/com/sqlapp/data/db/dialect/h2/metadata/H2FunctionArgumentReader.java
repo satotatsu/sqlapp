@@ -48,11 +48,14 @@ public class H2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final boolean modern = productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<NamedArgument> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				NamedArgument obj = createNamedArgument(rs);
+				NamedArgument obj = createNamedArgument(rs, modern);
 				result.add(obj);
 			}
 		});
@@ -60,18 +63,31 @@ public class H2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString(
+					"functionArguments_200.sql");
+		}
 		return getSqlNodeCache().getString("functionArguments.sql");
 	}
 
 	protected NamedArgument createNamedArgument(ExResultSet rs)
 			throws SQLException {
+		return createNamedArgument(rs, false);
+	}
+
+	protected NamedArgument createNamedArgument(ExResultSet rs,
+			final boolean modern) throws SQLException {
 		Function routine = new Function();
 		routine.setDialect(this.getDialect());
 		NamedArgument obj = createObject(COLUMN_NAME);
 		routine.setCatalogName(getString(rs, "ALIAS_CATALOG"));
 		routine.setSchemaName(getString(rs, "ALIAS_SCHEMA"));
 		routine.setName(getString(rs, "ALIAS_NAME"));
-		routine.setSpecificName(getString(rs, "ALIAS_NAME"));
+		routine.setSpecificName(modern
+				? getString(rs, "SPECIFIC_NAME")
+				: getString(rs, "ALIAS_NAME"));
 		obj.setCatalogName(getString(rs, "ALIAS_CATALOG"));
 		obj.setSchemaName(getString(rs, "ALIAS_SCHEMA"));
 		obj.setSchemaName(getString(rs, "ALIAS_SCHEMA"));
@@ -79,12 +95,17 @@ public class H2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 		SchemaUtils.setRoutine(obj, routine);
 		Long precision = getLong(rs, "PRECISION");
 		Integer scale = getInteger(rs, "SCALE");
-		DataType type=DataType.valueOf(rs.getInt("DATA_TYPE"));
 		obj.setNotNull(!nullable);
-		obj.setDataType(type);
-		obj.setDataTypeName(type.toString());
-		obj.setLength(precision);
-		obj.setScale(scale);
+		if (modern) {
+			this.getDialect().setDbType(getString(rs, "TYPE_NAME"),
+					precision, scale, obj);
+		} else {
+			DataType type=DataType.valueOf(rs.getInt("DATA_TYPE"));
+			obj.setDataType(type);
+			obj.setDataTypeName(type.toString());
+			obj.setLength(precision);
+			obj.setScale(scale);
+		}
 		return obj;
 	}
 

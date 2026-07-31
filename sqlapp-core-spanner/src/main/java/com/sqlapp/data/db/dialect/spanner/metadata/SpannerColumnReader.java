@@ -67,6 +67,9 @@ public class SpannerColumnReader extends ColumnReader {
 
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column obj = new Column(getString(rs, COLUMN_NAME));
+		obj.setCatalogName(getString(rs, TABLE_CATALOG));
+		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
+		obj.setTableName(getString(rs, TABLE_NAME));
 		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE"));
 		String data_type = getString(rs, "SPANNER_TYPE");
 		obj.setNullable(nullable);
@@ -83,6 +86,8 @@ public class SpannerColumnReader extends ColumnReader {
 		obj.setHidden("TRUE".equalsIgnoreCase(
 				getString(rs, "IS_HIDDEN")));
 		setSpecifics(rs, "ALLOW_COMMIT_TIMESTAMP", obj);
+		setSpecifics(rs, SpannerSqlBuilder.VECTOR_LENGTH, obj);
+		setSpecifics(rs, SpannerSqlBuilder.LOCALITY_GROUP, obj);
 		if ("YES".equalsIgnoreCase(getString(rs, "IS_IDENTITY"))) {
 			obj.setIdentity(true);
 			obj.setIdentityGenerationType(IdentityGenerationType.parse(

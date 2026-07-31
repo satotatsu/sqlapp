@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.postgres.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Index;
 
 public class Postgres150SqlFactoryRegistry extends Postgres140SqlFactoryRegistry {
 
@@ -51,5 +52,6 @@ public class Postgres150SqlFactoryRegistry extends Postgres140SqlFactoryRegistry
 		super.initializeAllSqls();
 		// Table
 		registerSqlFactory(Table.class, SqlType.MERGE, Postgres150MergeFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE, Postgres150CreateIndexFactory.class);
 	}
 }

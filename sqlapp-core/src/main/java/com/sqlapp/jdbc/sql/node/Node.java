@@ -185,6 +185,21 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	/**
+	 * evalした結果のパラメタを取得します
+	 * 
+	 * @param context
+	 * @param rows
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection eval(TableRelation obj, Row row) {
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		sqlParameters.setTableRelation(obj);
+		sqlParameters.setRow(row);
+		this.eval(null, sqlParameters);
+		return sqlParameters;
+	}
+
+	/**
 	 * evalの結果を取得します
 	 * 
 	 * @param context

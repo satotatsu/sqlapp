@@ -58,8 +58,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 					final Column column = table.getColumns().get(i);
 					builder.lineBreak();
 					builder.comma(i > 0).space(2, i == 0);
-					builder.name(column).space().definition(column,
-							this.getTableOptions().getWithColumnRemarks().test(column));
+					addColumnDefinition(column, builder);
 				}
 				addIndexDefinitions(table, builder);
 				addConstraintDefinitions(table, builder);
@@ -71,6 +70,15 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 		addIndexDefinitions(table, sqlList);
 		addOtherDefinitions(table, sqlList);
 		return sqlList;
+	}
+
+	/**
+	 * Adds a column definition. Dialects can override this hook for
+	 * version-specific column constraints.
+	 */
+	protected void addColumnDefinition(final Column column, final S builder) {
+		builder.name(column).space().definition(column,
+				this.getTableOptions().getWithColumnRemarks().test(column));
 	}
 
 	@Override

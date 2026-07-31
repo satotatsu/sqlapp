@@ -51,11 +51,14 @@ public class H2SequenceReader extends SequenceReader {
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final boolean modern = productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Sequence> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Sequence sequence = createSequence(rs);
+				Sequence sequence = createSequence(rs, modern);
 				result.add(sequence);
 			}
 		});
@@ -63,10 +66,16 @@ public class H2SequenceReader extends SequenceReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null
+				&& productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("sequences_200.sql");
+		}
 		return getSqlNodeCache().getString("sequences.sql");
 	}
 
-	protected Sequence createSequence(ExResultSet rs) throws SQLException {
+	protected Sequence createSequence(ExResultSet rs,
+			final boolean modern) throws SQLException {
 		Sequence obj = new Sequence(getString(rs, SEQUENCE_NAME));
 		obj.setDialect(this.getDialect());
 		obj.setCatalogName(getString(rs, "SEQUENCE_CATALOG"));
@@ -75,6 +84,14 @@ public class H2SequenceReader extends SequenceReader {
 		obj.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 		obj.setCacheSize(rs.getBigDecimal("CACHE"));
 		this.setStatistics(rs, "IS_GENERATED", obj);
+		if (modern) {
+			obj.setStartValue(rs.getBigDecimal("START_VALUE"));
+			obj.setMinValue(rs.getBigDecimal("MINIMUM_VALUE"));
+			obj.setMaxValue(rs.getBigDecimal("MAXIMUM_VALUE"));
+			obj.setCycle("YES".equalsIgnoreCase(
+					getString(rs, "CYCLE_OPTION")));
+			obj.setRemarks(getString(rs, REMARKS));
+		}
 		return obj;
 	}
 }

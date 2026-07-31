@@ -71,6 +71,8 @@ public class VirticaUniqueConstraintReader extends UniqueConstraintReader {
 					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
+					c.setEnable(rs.getBoolean("IS_ENABLED"));
+					c.setRemarks(getString(rs, "REMARKS"));
 					map.put(catalogName, schemaName, tableName, constraint_name, c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));

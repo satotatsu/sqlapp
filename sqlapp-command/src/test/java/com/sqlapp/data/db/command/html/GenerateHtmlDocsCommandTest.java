@@ -34,6 +34,7 @@ import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.NotNullConstraint;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Schema;
@@ -159,6 +160,39 @@ public class GenerateHtmlDocsCommandTest {
 		assertTrue(tableHtml.contains("ROW_END"));
 		assertTrue(tableHtml.contains("AUDIT_LOG_HISTORY"));
 		assertTrue(tableHtml.contains("TRANSACTION_ID"));
+	}
+
+	@Test
+	public void testNamedNotNullConstraintDocumentation() throws IOException {
+		File outputDir = new File(testProjectDir, "named-not-null-html");
+		Catalog catalog = new Catalog("CATALOG");
+		Schema schema = new Schema("PUBLIC");
+		Table table = new Table("CUSTOMERS");
+		Column column = new Column("CUSTOMER_ID")
+				.setDataType(DataType.BIGINT).setNotNull(true);
+		catalog.getSchemas().add(schema);
+		schema.getTables().add(table);
+		table.getColumns().add(column);
+		table.getConstraints().add(new NotNullConstraint(
+				"NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true));
+
+		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
+		command.setCatalog(catalog);
+		command.setOutputDirectory(outputDir);
+		command.setMultiThread(false);
+		command.run();
+
+		Path tablePath;
+		try (var paths = Files.list(new File(outputDir, "tables").toPath())) {
+			tablePath = paths
+					.filter(path -> path.getFileName().toString()
+							.contains("CUSTOMERS"))
+					.findFirst().orElseThrow();
+		}
+		String tableHtml = Files.readString(tablePath);
+		assertTrue(tableHtml.contains("NN_CUSTOMERS_CUSTOMER_ID"));
+		assertTrue(tableHtml.contains("NOT NULL Constraint")
+				|| tableHtml.contains("NOT NULL制約名"));
 	}
 
 	@Test

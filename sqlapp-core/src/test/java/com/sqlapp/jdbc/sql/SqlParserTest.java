@@ -318,4 +318,44 @@ public class SqlParserTest extends AbstractTest {
 		assertEquals(expected.trim(), sqlParameters.getSql().trim());
 	}
 
+	@Test
+	public void testInsert() {
+		String sql = """
+					INSERT INTO TABA
+					(
+					    ID
+					    , TXT
+					)
+					SELECT
+					   /*ID*/1
+					   , /*TXT*/''
+					WHERE NOT EXISTS
+					  (
+
+					     SELECT *
+					     FROM TABA
+					     WHERE ID=/*ID*/1
+					  )
+				""";
+		final Node node = parser.parse(dialect, sql);
+		final ParametersContext context = new ParametersContext();
+		final SqlParameterCollection sqlParameters = node.eval(context);
+		String expected = """
+				INSERT INTO TABA
+					(
+					    ID
+					    , TXT
+					)
+					SELECT ?
+					   ,?
+					WHERE NOT EXISTS
+					  (
+
+					     SELECT *
+					     FROM TABA
+					     WHERE ID = ?
+					  )
+					""";
+		assertEquals(expected.trim(), sqlParameters.getSql().trim());
+	}
 }

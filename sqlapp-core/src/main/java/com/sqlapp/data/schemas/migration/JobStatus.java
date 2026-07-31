@@ -3,7 +3,7 @@ package com.sqlapp.data.schemas.migration;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-public class CopyStatus {
+public class JobStatus {
 	private String jobName;
 	private String rootTableName;
 	private Long rootSequence;

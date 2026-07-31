@@ -64,7 +64,7 @@ public class SpannerCreateTemporaryTableFactoryTest extends SpannerSqlFactoryTes
 					  "cola" INT64
 					, "colb" INT64
 					, "colc" STRING(50)
-					, "cold" TIMESTAMP(0)
+					, "cold" TIMESTAMP
 				)""";
 		assertEquals(expected, operation.getSqlText());
 	}

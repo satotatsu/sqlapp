@@ -41,6 +41,7 @@ import com.sqlapp.data.db.metadata.ReaderUtils;
 import com.sqlapp.data.db.metadata.SqlNodeCache;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.jdbc.ExResultSet;
@@ -78,6 +79,13 @@ public class PostgresUtils extends ReaderUtils {
 		String sequenceName = rs.getString("sequence_name");
 		boolean nullable = !rs.getBoolean("attnotnull");
 		boolean autoIncrement = !isEmpty(sequenceName);
+		String identityType = rs.getString("attidentity");
+		String generatedType = rs.getString("attgenerated");
+		if (!isEmpty(identityType)) {
+			autoIncrement = true;
+			column.setIdentityGenerationType("a".equals(identityType)
+					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
+		}
 		column.setNullable(nullable);
 		column.setIdentity(autoIncrement);
 		dialect.setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision)
@@ -91,7 +99,13 @@ public class PostgresUtils extends ReaderUtils {
 			column.setSequence(sequence);
 		}
 		column.setArrayDimension(arrayDimension);
-		column.setDefaultValue(rs.getString("adsrc"));
+		String expression = rs.getString("adsrc");
+		if (!isEmpty(generatedType)) {
+			column.setFormula(expression);
+			column.setFormulaPersisted("s".equals(generatedType));
+		} else {
+			column.setDefaultValue(expression);
+		}
 		column.setRemarks(rs.getString("remarks"));
 	}
 

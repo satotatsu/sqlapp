@@ -2009,6 +2009,38 @@ public enum DbObjects {
 			return new CheckConstraint();
 		}
 	},
+	NOT_NULL_CONSTRAINTS("constraints", ConstraintCollection.class) {
+		@Override
+		public boolean isCollection() {
+			return true;
+		}
+
+		@Override
+		public DbObjects getParentType() {
+			return TABLE;
+		}
+
+		@Override
+		public ConstraintCollection newInstance() {
+			return new ConstraintCollection();
+		}
+	},
+	NOT_NULL_CONSTRAINT(NotNullConstraint.class) {
+		@Override
+		public DbObjects getCollectionType() {
+			return NOT_NULL_CONSTRAINTS;
+		}
+
+		@Override
+		public DbObjects[] getDepends() {
+			return array(TABLE, COLUMN);
+		}
+
+		@Override
+		public NotNullConstraint newInstance() {
+			return new NotNullConstraint();
+		}
+	},
 	EXCLUDE_CONSTRAINTS("constraints", ConstraintCollection.class) {
 		@Override
 		public boolean isCollection() {
@@ -2095,6 +2127,49 @@ public enum DbObjects {
 		@Override
 		public Partitioning newInstance() {
 			return new Partitioning();
+		}
+	},
+	SYSTEM_VERSIONING(SystemVersioning.class) {
+		@Override
+		public DbObjects[] getDepends() {
+			return array(TABLE, COLUMN);
+		}
+
+		@Override
+		public SystemVersioning newInstance() {
+			return new SystemVersioning();
+		}
+	},
+	TEMPORAL_PERIODS(TemporalPeriodCollection.class) {
+		@Override
+		public boolean isCollection() {
+			return true;
+		}
+
+		@Override
+		public DbObjects getParentType() {
+			return TABLE;
+		}
+
+		@Override
+		public TemporalPeriodCollection newInstance() {
+			return new TemporalPeriodCollection();
+		}
+	},
+	TEMPORAL_PERIOD(TemporalPeriod.class) {
+		@Override
+		public DbObjects getCollectionType() {
+			return TEMPORAL_PERIODS;
+		}
+
+		@Override
+		public DbObjects[] getDepends() {
+			return array(TABLE, COLUMN);
+		}
+
+		@Override
+		public TemporalPeriod newInstance() {
+			return new TemporalPeriod();
 		}
 	},
 	PARTITIONS(PartitionCollection.class) {

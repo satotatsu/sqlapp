@@ -341,8 +341,25 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		parameter.setBindingName("?");
 		parameter.setOrdinal(pos);
 		parameters.add(new BindParameterHolder(parameter));
-		addSql(parameter.getBindingName());
+		appendSqlPart(parameter.getBindingName());
 		parameterSize++;
+	}
+
+	private void appendSqlPart(final String value) {
+		if (isEmpty(value)) {
+			return;
+		}
+		if (sql.length() != 0) {
+			final char c = sql.charAt(sql.length() - 1);
+			if (c == '(' || c == ' ' || c == ',' || c == '\n' || c == '\t') {
+				addSql(value);
+			} else {
+				addSql(" ");
+				addSql(value);
+			}
+		} else {
+			addSql(value);
+		}
 	}
 
 	/**

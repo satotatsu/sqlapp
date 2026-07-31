@@ -75,7 +75,6 @@ public class VirticaTableReader extends TableReader {
 		Table obj = createTable(getString(rs, TABLE_NAME));
 		obj.setDialect(getDialect());
 		obj.setSchemaName(getString(rs, "TABLE_SCHEMA"));
-		obj.setRemarks(getString(rs, "remarks"));
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		obj.setId(rs.getString("TABLE_ID"));
 		if (rs.getBoolean("IS_TEMP_TABLE")){
@@ -87,7 +86,11 @@ public class VirticaTableReader extends TableReader {
 		obj.setTableDataStoreType(TableDataStoreType.Column);
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		obj.setRemarks(this.getString(rs, "COMMENT"));
-		setSpecifics(rs, "commit_action", obj);
+		setSpecifics(rs, "COMMIT_ACTION", obj);
+		setSpecifics(rs, "IS_SHARED", obj);
+		setSpecifics(rs, "HAS_AGGREGATE_PROJECTION", obj);
+		setSpecifics(rs, "RECOVER_PRIORITY", obj);
+		setSpecifics(rs, "IMMUTABLE_ROWS_SINCE_EPOCH", obj);
 		setSpecifics(rs, "PARTITION_EXPRESSION", obj);
 		setSpecifics(rs, "TABLE_DEFINITION", obj);
 		return obj;
