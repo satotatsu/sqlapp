@@ -641,7 +641,10 @@ public class JdbcTreeDataSession implements AutoCloseable {
 				keys = Collections.emptyList();
 				capturedKeys = dialect.getBatchExecuteGeneratedKeys(connection, table, identityColumn);
 			} else if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
-				keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
+				keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect).stream()
+						.filter(key -> identityColumn.getName().equalsIgnoreCase(key.getColumnLabel())
+								|| identityColumn.getName().equalsIgnoreCase(key.getColumnName()))
+						.toList();
 				capturedKeys = Collections.emptyList();
 			} else {
 				keys = Collections.emptyList();
@@ -657,16 +660,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 						}
 					}
 				} else if (!keys.isEmpty()) {
-					Column column = null;
 					int cnt = 0;
 					for (int i = 0; i < result.length; i++) {
 						Row row = rows.get(i);
 						if (result[i] > 0) {
 							GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
-							if (column == null) {
-								column = row.getTable().getColumns().get(generatedKeyInfo.getColumnLabel());
-							}
-							row.put(column, generatedKeyInfo.getValue());
+							row.put(identityColumn, generatedKeyInfo.getValue());
 						}
 					}
 				}

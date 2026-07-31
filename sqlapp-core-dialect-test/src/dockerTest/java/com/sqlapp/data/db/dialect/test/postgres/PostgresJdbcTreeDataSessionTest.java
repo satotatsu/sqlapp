@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.test.postgres;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -34,12 +35,51 @@ class PostgresJdbcTreeDataSessionTest {
 	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(IMAGE);
 
 	@Test
+	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadPublicSchema(connection);
+			Table parent = schema.getTables().get("parent_table");
+			Table child = schema.getTables().get("child_table");
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(2);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+
+				Row firstParent = session.newRow(parent);
+				firstParent.put("txt", "parent-3");
+				Row firstChild = session.newRow(child);
+				firstChild.put("txt", "child-3");
+
+				Row secondParent = session.newRow(parent);
+				secondParent.put("txt", "parent-4");
+				Row secondChild = session.newRow(child);
+				secondChild.put("txt", "child-4");
+			}
+
+			assertEquals(4, count(connection, "parent_table"));
+			assertEquals(2, count(connection, "child_table"));
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.txt, c.txt
+							FROM parent_table p
+							JOIN child_table c ON c.parent_id = p.id
+							ORDER BY p.id
+							""")) {
+				assertParentChild(resultSet, "parent-3", "child-3");
+				assertParentChild(resultSet, "parent-4", "child-4");
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
 	void testSelectCursorRemainsUsableDuringHierarchicalInsert() throws SQLException {
 		try (Connection connection = POSTGRES.createConnection("")) {
 			connection.setAutoCommit(false);
 			createTables(connection);
-			Schema schema = SchemaUtils.getSchema(connection, "public")
-					.orElseThrow(() -> new AssertionError("PostgreSQL public schema was not loaded."));
+			Schema schema = loadPublicSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
@@ -74,6 +114,17 @@ class PostgresJdbcTreeDataSessionTest {
 				assertTrue(resultSet.getLong(1) > 0);
 			}
 		}
+	}
+
+	private Schema loadPublicSchema(Connection connection) throws SQLException {
+		return SchemaUtils.getSchema(connection, "public")
+				.orElseThrow(() -> new AssertionError("PostgreSQL public schema was not loaded."));
+	}
+
+	private void assertParentChild(ResultSet resultSet, String parentText, String childText) throws SQLException {
+		assertTrue(resultSet.next());
+		assertEquals(parentText, resultSet.getString(1));
+		assertEquals(childText, resultSet.getString(2));
 	}
 
 	private void createTables(Connection connection) throws SQLException {
