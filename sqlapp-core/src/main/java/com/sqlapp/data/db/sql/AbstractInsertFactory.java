@@ -43,7 +43,7 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
 		final SqlSignature sqlSignature = createSqlSignature(table);
-		final List<Column> list = addInsertIntoTable(table, sqlSignature, builder);
+		final List<Column> list = addInsertIntoTable(table, builder);
 		builder.lineBreak();
 		builder.brackets(true, () -> {
 			int i = 0;
@@ -61,6 +61,10 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 	}
 
 	protected void addInsertAfter(final Table table, final S builder) {
+	}
+
+	protected List<Column> addInsertIntoTable(final Table obj, final S builder) {
+		return addInsertIntoTable(obj, createSqlSignature(obj), builder);
 	}
 
 	protected List<Column> addInsertIntoTable(final Table obj, final SqlSignature sqlSignature, final S builder) {

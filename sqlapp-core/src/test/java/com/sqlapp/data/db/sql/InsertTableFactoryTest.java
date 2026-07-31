@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -30,6 +31,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
 public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
@@ -63,6 +65,26 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		assertEquals(sql, commandText.getSqlText());
+	}
+
+	@Test
+	public void testLegacyAddInsertIntoTableOverrideRemainsExtensionPoint() {
+		LegacyInsertFactory factory = new LegacyInsertFactory();
+		factory.setSqlFactoryRegistry(sqlFactoryRegistry);
+
+		factory.createSql(createTable());
+
+		assertTrue(factory.legacyOverrideCalled);
+	}
+
+	private static class LegacyInsertFactory extends InsertFactory {
+		private boolean legacyOverrideCalled;
+
+		@Override
+		protected List<Column> addInsertIntoTable(Table table, AbstractSqlBuilder<?> builder) {
+			legacyOverrideCalled = true;
+			return super.addInsertIntoTable(table, builder);
+		}
 	}
 
 	private Table createTable() {
