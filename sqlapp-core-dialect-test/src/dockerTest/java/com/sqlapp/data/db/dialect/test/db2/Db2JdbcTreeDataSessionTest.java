@@ -11,12 +11,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.testcontainers.containers.ContainerLaunchException;
 import org.testcontainers.db2.Db2Container;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -34,7 +37,40 @@ class Db2JdbcTreeDataSessionTest {
 	private static final String IMAGE = "icr.io/db2_community/db2:11.5.8.0";
 
 	@Container
-	private static final Db2Container DB2 = new Db2Container(IMAGE).acceptLicense();
+	private static final Db2Container DB2 = new SqlReadyDb2Container(IMAGE);
+
+	/** Rancher Desktop can miss the image's one-shot setup-complete log line. */
+	private static final class SqlReadyDb2Container extends Db2Container {
+		private SqlReadyDb2Container(final String image) {
+			super(image);
+			acceptLicense();
+		}
+
+		@Override
+		protected void waitUntilContainerStarted() {
+			DriverManager.setLoginTimeout(2);
+			final long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(10);
+			SQLException lastException = null;
+			while (System.nanoTime() < deadline) {
+				try (Connection connection = DriverManager.getConnection(getJdbcUrl(), getUsername(), getPassword());
+						Statement statement = connection.createStatement();
+						ResultSet resultSet = statement.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1")) {
+					if (resultSet.next()) {
+						return;
+					}
+				} catch (SQLException e) {
+					lastException = e;
+				}
+				try {
+					Thread.sleep(1000L);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new ContainerLaunchException("Interrupted while waiting for Db2 readiness.", e);
+				}
+			}
+			throw new ContainerLaunchException("Db2 did not accept JDBC connections within 10 minutes.", lastException);
+		}
+	}
 
 	@Test
 	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
