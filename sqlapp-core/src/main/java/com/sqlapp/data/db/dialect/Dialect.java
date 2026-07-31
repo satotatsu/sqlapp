@@ -728,6 +728,30 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns whether generated keys can be captured by a dialect-specific
+	 * mechanism while retaining {@link java.sql.Statement#executeBatch()}.
+	 */
+	public boolean supportsBatchExecuteGeneratedKeysCapture() {
+		return false;
+	}
+
+	/** Prepares dialect-specific generated-key capture for the next batch. */
+	public void prepareBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
+			throws SQLException {
+	}
+
+	/** Adds dialect-specific generated-key capture to an INSERT statement. */
+	public String handleBatchExecuteGeneratedKeysSql(Table table, Column identityColumn, String sql) {
+		return sql;
+	}
+
+	/** Returns the keys captured by the most recently executed batch. */
+	public List<Object> getBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
+			throws SQLException {
+		return Collections.emptyList();
+	}
+
+	/**
 	 * Returns whether a forward-only, read-only cursor can remain open across a
 	 * commit for the current connection. Dialects may override this when a driver
 	 * does not report its capability correctly.
