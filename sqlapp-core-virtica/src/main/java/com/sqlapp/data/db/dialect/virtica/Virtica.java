@@ -147,6 +147,21 @@ public class Virtica extends Dialect {
 		return true;
 	}
 
+	@Override
+	public boolean supportsIdentity() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public boolean requiresExplicitIdentityValuesForGeneratedKeys() {
+		return true;
+	}
+
 	/**
 	 * 現在日付の取得関数
 	 */

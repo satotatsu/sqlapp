@@ -618,12 +618,16 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final Table table = tableRelation.getTable();
 		final int[] ret = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
 			final Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
+			final Column sequenceColumn = table.getColumns().stream()
+					.filter(column -> !column.isIdentity() && column.getSequenceName() != null)
+					.findFirst().orElse(null);
 			final boolean generatedIdentityRequired = sqlType == SqlType.INSERT && identityColumn != null
 					&& rows.stream().anyMatch(row -> row.get(identityColumn) == null);
 			if (generatedIdentityRequired && dialect.requiresExplicitIdentityValuesForGeneratedKeys()) {
 				throw new SQLException("Dialect " + dialect.getProductName() + " cannot return all generated identity values for "
 						+ identityColumn.getTable().getName() + "." + identityColumn.getName()
-						+ " from a batch safely; provide explicit identity values.");
+						+ " from a batch safely; provide explicit key values or use a non-identity key column"
+						+ " associated with an explicit sequence.");
 			}
 			final boolean captureGeneratedKeys = generatedIdentityRequired
 					&& !dialect.supportsBatchExecuteGeneratedKeys()
@@ -631,7 +635,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			if (captureGeneratedKeys) {
 				dialect.prepareBatchExecuteGeneratedKeys(connection, table, identityColumn);
 			}
-			final boolean identitySequencePreallocated = preallocateIdentityValues(sqlType, identityColumn, rows);
+			final boolean identitySequencePreallocated = preallocateGeneratedValues(sqlType,
+					identityColumn != null ? identityColumn : sequenceColumn, rows);
 			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			sqlSignature.setColumnSelectionStrategy(
 					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
@@ -723,9 +728,11 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return ret;
 	}
 
-	private boolean preallocateIdentityValues(final SqlType sqlType, final Column identityColumn, final List<Row> rows)
+	private boolean preallocateGeneratedValues(final SqlType sqlType, final Column identityColumn, final List<Row> rows)
 			throws SQLException {
-		if (sqlType != SqlType.INSERT || identityColumn == null || !dialect.supportsIdentitySequencePreallocation()) {
+		if (sqlType != SqlType.INSERT || identityColumn == null
+				|| (identityColumn.isIdentity() && !dialect.supportsIdentitySequencePreallocation())
+				|| (!identityColumn.isIdentity() && !dialect.supportsSequencePreallocation())) {
 			return false;
 		}
 		final boolean hasNull = rows.stream().anyMatch(row -> row.get(identityColumn) == null);
@@ -736,7 +743,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					+ identityColumn.getTable().getName() + "." + identityColumn.getName()
 					+ "; associate an explicit sequence with the identity column.");
 		}
-		if (identityColumn.getIdentityGenerationType() == IdentityGenerationType.Always
+		if ((identityColumn.isIdentity()
+				&& identityColumn.getIdentityGenerationType() == IdentityGenerationType.Always)
 				|| identityColumn.getSequenceName() == null) {
 			return false;
 		}

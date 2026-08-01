@@ -560,6 +560,12 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
+	/** Returns whether values for a non-identity sequence-backed column may be
+	 * allocated before a multi-row INSERT. */
+	public boolean supportsSequencePreallocation() {
+		return false;
+	}
+
 	/**
 	 * Returns whether generated identity values require an explicitly associated
 	 * sequence because the dialect cannot return all generated keys.

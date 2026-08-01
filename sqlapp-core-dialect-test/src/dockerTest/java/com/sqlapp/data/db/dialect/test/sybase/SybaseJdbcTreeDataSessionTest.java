@@ -65,7 +65,7 @@ class SybaseJdbcTreeDataSessionTest {
 					row.put("txt", "row-1");
 				}
 			});
-			assertTrue(exception.getMessage().contains("provide explicit identity values"), exception::getMessage);
+			assertTrue(exception.getMessage().contains("provide explicit key values"), exception::getMessage);
 		}
 	}
 }
