@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.mariadb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -30,6 +32,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 
 public class MariadbTest {
 
@@ -39,6 +42,20 @@ public class MariadbTest {
 	@Test
 	public void testIdentityInsertDefaultValue() {
 		assertEquals("default", dialect.getIdentityInsertDefaultValue(new Column("id")));
+	}
+
+	@Test
+	public void testInsertRowsReturningSupportStartsAt105() {
+		Dialect mariadb103 = DialectResolver.getInstance().getDialect("mariadb", 10, 4, 0);
+		Dialect mariadb105 = DialectResolver.getInstance().getDialect("mariadb", 10, 5, 0);
+		Table table = new Table("tableA");
+		Column identity = table.newColumn().setName("id");
+
+		assertFalse(mariadb103.supportsInsertReturningResultSet());
+		assertTrue(mariadb105.supportsInsertReturningResultSet());
+		assertTrue(mariadb105.supportsValues());
+		assertEquals("INSERT INTO `tableA` VALUES (?, ?)\nRETURNING id",
+				mariadb105.handleInsertReturningSql(table, identity, "INSERT INTO `tableA` VALUES (?, ?)"));
 	}
 
 	@Test
