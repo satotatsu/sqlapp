@@ -718,13 +718,21 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	private boolean preallocateIdentityValues(final SqlType sqlType, final Column identityColumn, final List<Row> rows)
 			throws SQLException {
-		if (sqlType != SqlType.INSERT || identityColumn == null || !dialect.supportsIdentitySequencePreallocation()
-				|| identityColumn.getIdentityGenerationType() == IdentityGenerationType.Always
-				|| identityColumn.getSequenceName() == null) {
+		if (sqlType != SqlType.INSERT || identityColumn == null || !dialect.supportsIdentitySequencePreallocation()) {
 			return false;
 		}
 		final boolean hasNull = rows.stream().anyMatch(row -> row.get(identityColumn) == null);
 		final boolean hasValue = rows.stream().anyMatch(row -> row.get(identityColumn) != null);
+		if (hasNull && dialect.requiresIdentitySequenceForGeneratedKeys()
+				&& identityColumn.getSequenceName() == null) {
+			throw new SQLException("Dialect " + dialect.getProductName() + " cannot return generated identity values for "
+					+ identityColumn.getTable().getName() + "." + identityColumn.getName()
+					+ "; associate an explicit sequence with the identity column.");
+		}
+		if (identityColumn.getIdentityGenerationType() == IdentityGenerationType.Always
+				|| identityColumn.getSequenceName() == null) {
+			return false;
+		}
 		if (hasNull && hasValue) {
 			throw new IllegalArgumentException("Identity column '" + identityColumn.getName()
 					+ "' cannot mix default-generated and explicit values in one SQL signature.");

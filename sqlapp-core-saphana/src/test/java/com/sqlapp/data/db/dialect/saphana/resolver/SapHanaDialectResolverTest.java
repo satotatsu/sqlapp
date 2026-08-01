@@ -41,6 +41,7 @@ public class SapHanaDialectResolverTest {
 		assertTrue(dialect instanceof SapHana);
 		assertTrue(!(dialect instanceof SapHanaCloud));
 		assertTrue(dialect.supportsIdentitySequencePreallocation());
+		assertTrue(dialect.requiresIdentitySequenceForGeneratedKeys());
 		assertEquals("DUMMY", dialect.getSelectDummyTableName());
 		dialect = DialectResolver.getInstance().getDialect("HDB", 4, 0);
 		assertTrue(dialect instanceof SapHanaCloud);

@@ -561,6 +561,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns whether generated identity values require an explicitly associated
+	 * sequence because the dialect cannot return all generated keys.
+	 */
+	public boolean requiresIdentitySequenceForGeneratedKeys() {
+		return false;
+	}
+
+	/**
 	 * カラムでの式をサポートするかを返します
 	 * 
 	 * @return カラムでの式をサポート

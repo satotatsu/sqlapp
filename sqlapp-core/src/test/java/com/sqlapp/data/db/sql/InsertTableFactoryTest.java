@@ -106,7 +106,7 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 	}
 
 	@Test
-	public void testInsertRowsBindsEveryRowInOneStatement() {
+	public void testInsertRowsBindsSelectedColumnsForEveryRowInOneStatement() {
 		Table table = createTable();
 		for (int i = 0; i < 2; i++) {
 			Row row = table.newRow();
@@ -118,9 +118,10 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 		SqlParameterCollection parameters = CommonUtils
 				.first(sqlFactoryRegistry.createSqlNodes(table, SqlType.INSERT_ROWS)).eval(table.getRows());
 
-		assertEquals(8, parameters.getParameterSize());
-		assertTrue(parameters.getSql().contains("SELECT ?,?,?,? FROM (VALUES(0))\nUNION ALL\n"
-				+ "SELECT ?,?,?,? FROM (VALUES(0))"), parameters.getSql());
+		assertEquals(6, parameters.getParameterSize());
+		String normalizedSql = parameters.getSql().replaceAll("\\s+", " ").trim();
+		assertTrue(normalizedSql.contains("SELECT ? ,? ,? , CURRENT_TIMESTAMP FROM (VALUES(0)) UNION ALL "
+				+ "SELECT ? ,? ,? , CURRENT_TIMESTAMP FROM (VALUES(0))"), parameters.getSql());
 	}
 
 	private static class LegacyInsertFactory extends InsertFactory {
