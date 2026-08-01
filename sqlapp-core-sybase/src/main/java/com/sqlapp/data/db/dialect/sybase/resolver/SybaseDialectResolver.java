@@ -33,7 +33,7 @@ import com.sqlapp.data.db.dialect.sybase.DialectHolder;
 public class SybaseDialectResolver extends ProductNameDialectResolver {
 
 	public SybaseDialectResolver() {
-		super("Sybase.*|Adaptive.*Server.*|ACE", new SybaseVersionResolver());
+		super("Sybase.*|Adaptive.*Server.*|ACE|ASE", new SybaseVersionResolver());
 	}
 
 	/**

@@ -20,12 +20,14 @@
 package com.sqlapp.data.db.dialect.spanner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 
 public class SpannerTest {
 
@@ -85,5 +87,18 @@ public class SpannerTest {
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals("STRING", column.getDataTypeName());
 		assertEquals(Long.valueOf(10), column.getLength());
+	}
+
+	@Test
+	public void testInsertReturningIdentity() {
+		Table table = new Table("parent_table");
+		Column identity = new Column("id").setDataType(DataType.BIGINT).setIdentity(true);
+		table.getColumns().add(identity);
+		assertTrue(dialect.supportsIdentity());
+		assertTrue(dialect.supportsInsertReturningResultSet());
+		assertEquals(950, dialect.getMaxStatementParameterCount());
+		assertEquals("INSERT INTO parent_table(txt) VALUES (?)\nTHEN RETURN `id`",
+				dialect.handleInsertReturningSql(table, identity,
+						"INSERT INTO parent_table(txt) VALUES (?)"));
 	}
 }

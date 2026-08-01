@@ -96,10 +96,12 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-saphana')
+	implementation project(':sqlapp-core-spanner')
 	implementation project(':sqlapp-core-sqlite')
 	implementation project(':sqlapp-core-sqlserver')
 	implementation project(':sqlapp-core-sybase')
 	implementation project(':sqlapp-core-symfoware')
+	implementation project(':sqlapp-core-virtica')
 	implementation fileTree(dir: 'lib', include: '*.jar')
 	//derby
 	testImplementation('org.apache.derby:derby:10.17.1.0')
@@ -119,12 +121,16 @@ dependencies {
 	//sqlite
 	testImplementation('org.xerial:sqlite-jdbc:3.53.1.0')
 	//SQL Server
-	//implementation group: 'net.sourceforge.jtds', name: 'jtds', version: '1.3.1'
+	testImplementation('net.sourceforge.jtds:jtds:1.3.1')
 	testImplementation('com.microsoft.sqlserver:mssql-jdbc:13.4.0.jre11')
 	// https://mvnrepository.com/artifact/com.sap.cloud.db.jdbc/ngdbc
 	implementation('com.oracle.database.jdbc:ojdbc11:23.26.2.0.0')
 	//
 	testImplementation('com.sap.cloud.db.jdbc:ngdbc:2.29.7')
+	// Cloud Spanner
+	testImplementation('com.google.cloud:google-cloud-spanner-jdbc:2.41.0')
+	// Vertica
+	testImplementation('com.vertica.jdbc:vertica-jdbc:25.3.0-0')
 	testImplementation(platform('org.junit:junit-bom:5.11.3'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testImplementation('org.junit.jupiter:junit-jupiter-api')

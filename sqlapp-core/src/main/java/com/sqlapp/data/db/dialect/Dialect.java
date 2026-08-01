@@ -569,6 +569,15 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns whether INSERT rows requiring generated identity values must be
+	 * rejected because the dialect cannot return every generated value safely in
+	 * input order.
+	 */
+	public boolean requiresExplicitIdentityValuesForGeneratedKeys() {
+		return false;
+	}
+
+	/**
 	 * カラムでの式をサポートするかを返します
 	 * 
 	 * @return カラムでの式をサポート

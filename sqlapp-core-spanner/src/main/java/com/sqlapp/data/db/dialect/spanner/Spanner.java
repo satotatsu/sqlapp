@@ -32,6 +32,7 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -208,13 +209,43 @@ public class Spanner extends Dialect {
 	@Override
 	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
-		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
+		builder.append(getOpenQuote()).append(target.replace("`", "``")).append(getCloseQuote());
 		return builder.toString();
+	}
+
+	@Override
+	public char getOpenQuote() {
+		return '`';
+	}
+
+	@Override
+	public char getCloseQuote() {
+		return '`';
 	}
 
 	@Override
 	public boolean supportsValues() {
 		return true;
+	}
+
+	@Override
+	public boolean supportsIdentity() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsInsertReturningResultSet() {
+		return true;
+	}
+
+	@Override
+	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		return sql + "\nTHEN RETURN " + getObjectFullName(identityColumn.getName());
+	}
+
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 950;
 	}
 
 	@Override

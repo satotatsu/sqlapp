@@ -618,7 +618,14 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final Table table = tableRelation.getTable();
 		final int[] ret = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
 			final Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
-			final boolean captureGeneratedKeys = sqlType == SqlType.INSERT && identityColumn != null
+			final boolean generatedIdentityRequired = sqlType == SqlType.INSERT && identityColumn != null
+					&& rows.stream().anyMatch(row -> row.get(identityColumn) == null);
+			if (generatedIdentityRequired && dialect.requiresExplicitIdentityValuesForGeneratedKeys()) {
+				throw new SQLException("Dialect " + dialect.getProductName() + " cannot return all generated identity values for "
+						+ identityColumn.getTable().getName() + "." + identityColumn.getName()
+						+ " from a batch safely; provide explicit identity values.");
+			}
+			final boolean captureGeneratedKeys = generatedIdentityRequired
 					&& !dialect.supportsBatchExecuteGeneratedKeys()
 					&& dialect.supportsBatchExecuteGeneratedKeysCapture();
 			if (captureGeneratedKeys) {
@@ -628,8 +635,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			sqlSignature.setColumnSelectionStrategy(
 					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
-			final boolean insertReturning = !identitySequencePreallocated && sqlType == SqlType.INSERT && identityColumn != null
-					&& tableRelation.isIdentity() && dialect.supportsInsertReturningResultSet();
+			final boolean insertReturning = !identitySequencePreallocated && generatedIdentityRequired
+					&& dialect.supportsInsertReturningResultSet();
 			final boolean insertRows = insertReturning || identitySequencePreallocated;
 			final SqlType statementSqlType = insertRows ? SqlType.INSERT_ROWS : sqlType;
 			StatementHolder holder = tableRelation.getStatementHolder(statementSqlType);
@@ -662,7 +669,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			for (Row obj : rows) {
 				if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
 					statement = holder.createStatement(connection, sqlSignature, rowSize, obj,
-							tableRelation.isIdentity() && !captureGeneratedKeys, dialect);
+							generatedIdentityRequired && !captureGeneratedKeys, dialect);
 					statement.setFetchSize(fetchSize);
 				} else {
 					statement = holder.getStatement(sqlSignature, rowSize, obj);
@@ -676,7 +683,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			if (captureGeneratedKeys) {
 				keys = Collections.emptyList();
 				capturedKeys = dialect.getBatchExecuteGeneratedKeys(connection, table, identityColumn);
-			} else if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
+			} else if (generatedIdentityRequired) {
 				final List<GeneratedKeyInfo> generatedKeys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 				final List<GeneratedKeyInfo> namedKeys = generatedKeys.stream()
 						.filter(key -> identityColumn.getName().equalsIgnoreCase(key.getColumnLabel())

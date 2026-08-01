@@ -59,12 +59,12 @@ public class SpannerCreateTemporaryTableFactoryTest extends SpannerSqlFactoryTes
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
-				CREATE TEMPORARY TABLE "tableA"
+				CREATE TEMPORARY TABLE `tableA`
 				(
-					  "cola" INT64
-					, "colb" INT64
-					, "colc" STRING(50)
-					, "cold" TIMESTAMP
+					  `cola` INT64
+					, `colb` INT64
+					, `colc` STRING(50)
+					, `cold` TIMESTAMP
 				)""";
 		assertEquals(expected, operation.getSqlText());
 	}

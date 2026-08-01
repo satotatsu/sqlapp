@@ -178,7 +178,17 @@ public class Sybase extends Dialect {
 	 */
 	@Override
 	public String getProductName() {
-		return "SQL Server";
+		return "Adaptive Server Enterprise";
+	}
+
+	@Override
+	public boolean supportsIdentity() {
+		return true;
+	}
+
+	@Override
+	public boolean requiresExplicitIdentityValuesForGeneratedKeys() {
+		return true;
 	}
 
 	/*
