@@ -30,7 +30,9 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -75,6 +77,50 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 		factory.createSql(createTable());
 
 		assertTrue(factory.legacyOverrideCalled);
+	}
+
+	@Test
+	public void testGetInsertRowsSql() {
+		SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.INSERT_ROWS);
+		factory.getTableOptions().setCreatedAtColumn(c -> "colD".equalsIgnoreCase(c.getName()));
+		String sql = """
+				INSERT INTO "tableA"
+				(
+					  "colA"
+					, "colB"
+					, "colC"
+					, "colD"
+				)
+				/*VALUES*/VALUES
+				(
+					  /*colA*/0
+					, /*colB*/0
+					, /*colC*/'0'
+					, CURRENT_TIMESTAMP
+				)/*END*/""";
+
+		SqlOperation operation = CommonUtils.first(factory.createSql(createTable()));
+
+		assertEquals(SqlType.INSERT_ROWS, operation.getSqlType());
+		assertEquals(sql, operation.getSqlText());
+	}
+
+	@Test
+	public void testInsertRowsBindsEveryRowInOneStatement() {
+		Table table = createTable();
+		for (int i = 0; i < 2; i++) {
+			Row row = table.newRow();
+			row.put("colA", i);
+			row.put("colB", (long) i);
+			row.put("colC", "row-" + i);
+			table.getRows().add(row);
+		}
+		SqlParameterCollection parameters = CommonUtils
+				.first(sqlFactoryRegistry.createSqlNodes(table, SqlType.INSERT_ROWS)).eval(table.getRows());
+
+		assertEquals(8, parameters.getParameterSize());
+		assertTrue(parameters.getSql().contains("SELECT ?,?,?,? FROM (VALUES(0))\nUNION ALL\n"
+				+ "SELECT ?,?,?,? FROM (VALUES(0))"), parameters.getSql());
 	}
 
 	private static class LegacyInsertFactory extends InsertFactory {

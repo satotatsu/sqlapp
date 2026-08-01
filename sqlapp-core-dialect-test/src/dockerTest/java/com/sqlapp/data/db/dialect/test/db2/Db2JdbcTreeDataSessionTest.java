@@ -100,6 +100,7 @@ class Db2JdbcTreeDataSessionTest {
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertFalse(resultSet.next());
 			}
+			connection.rollback();
 		}
 	}
 
@@ -133,6 +134,7 @@ class Db2JdbcTreeDataSessionTest {
 				assertIdentityPair(resultSet, 200L);
 				assertFalse(resultSet.next());
 			}
+			connection.rollback();
 		}
 	}
 

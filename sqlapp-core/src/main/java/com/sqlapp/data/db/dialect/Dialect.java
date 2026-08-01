@@ -763,6 +763,20 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns whether a multi-row INSERT can expose its changed rows as a result
+	 * set. This avoids JDBC batch generated-key limitations without executing rows
+	 * individually.
+	 */
+	public boolean supportsInsertReturningResultSet() {
+		return false;
+	}
+
+	/** Wraps a multi-row INSERT so that its generated identity values are returned. */
+	public String handleInsertReturningSql(Table table, Column identityColumn, String sql) {
+		return sql;
+	}
+
+	/**
 	 * Returns whether a forward-only, read-only cursor can remain open across a
 	 * commit for the current connection. Dialects may override this when a driver
 	 * does not report its capability correctly.

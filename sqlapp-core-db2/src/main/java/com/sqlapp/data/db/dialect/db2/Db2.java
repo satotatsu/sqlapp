@@ -242,6 +242,17 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
+	public boolean supportsInsertReturningResultSet() {
+		return true;
+	}
+
+	@Override
+	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		return "SELECT " + getObjectFullName(identityColumn.getName()) + " FROM FINAL TABLE (" + sql
+				+ ") ORDER BY INPUT SEQUENCE";
+	}
+
+	@Override
 	public String getSequenceNextValString(final String sequenceName) {
 		return "values nextval for " + sequenceName;
 	}

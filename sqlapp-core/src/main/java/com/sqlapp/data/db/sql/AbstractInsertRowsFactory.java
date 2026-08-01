@@ -19,14 +19,8 @@
 
 package com.sqlapp.data.db.sql;
 
-import static com.sqlapp.util.CommonUtils.list;
-
-import java.util.List;
-
-import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * INSERT ROWS生成クラス
@@ -34,43 +28,20 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public abstract class AbstractInsertRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
+public abstract class AbstractInsertRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractInsertFactory<S> {
 
 	@Override
-	public List<SqlOperation> createSql(final Table table) {
-		final List<SqlOperation> sqlList = list();
-		final S builder = createSqlBuilder();
-		final List<Column> list = addInsertIntoTable(table, builder);
-		builder.lineBreak();
-		builder.brackets(() -> {
-			builder.indent(() -> {
-				int i = 0;
-				for (final Column column : list) {
-					final String def = this.getValueDefinitionForInsert(column);
-					builder.lineBreak();
-					builder.comma(i > 0).space(2, i == 0);
-					builder._add(def);
-					i++;
-				}
-			});
-			builder.lineBreak();
-		});
-		addSql(sqlList, builder, SqlType.INSERT, table);
-		return sqlList;
+	protected SqlType getSqlType() {
+		return SqlType.INSERT_ROWS;
 	}
 
-	protected List<Column> addInsertIntoTable(final Table obj, final S builder) {
-		final List<Column> list = CommonUtils.list();
-		builder.insert().into().space();
-		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		this.addTableComment(obj, builder);
-		builder.lineBreak();
-		builder.brackets(() -> {
-			builder.space()._add("/*VALUES*/").values().space();
-			builder._add(createRowValue(obj, obj.getColumns()));
-			builder._add("/*END*/");
-		});
-		builder.lineBreak().values();
-		return list;
+	@Override
+	protected void addValues(final S builder) {
+		builder.lineBreak()._add("/*VALUES*/").values();
+	}
+
+	@Override
+	protected void addInsertAfter(final Table table, final S builder) {
+		builder._add("/*END*/");
 	}
 }

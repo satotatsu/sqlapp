@@ -45,15 +45,20 @@ public class StatementHolder implements Closeable {
 	private final SqlNode sqlNode;
 	private BatchExecResult batchExecResult;
 
-	private final DoubleKeyMap<Integer, Integer, ParameterAndStatementHolder> holders = CommonUtils.doubleKeyMap();
+	private final DoubleKeyMap<Object, Integer, ParameterAndStatementHolder> holders = CommonUtils.doubleKeyMap();
 	private TriFunction<Table, SqlType, String, String> sqlHandler = (t, sqlType, sql) -> {
 		return sql;
 	};
 
 	public void setSqlParameters(int columnSize, int rowSize, SqlParameterCollection sqlParameters,
 			PreparedStatement statement) {
+		setSqlParameters((Object) columnSize, rowSize, sqlParameters, statement);
+	}
+
+	private void setSqlParameters(Object statementKey, int rowSize, SqlParameterCollection sqlParameters,
+			PreparedStatement statement) {
 		final ParameterAndStatementHolder holder = new ParameterAndStatementHolder(sqlParameters, statement);
-		holders.put(columnSize, rowSize, holder);
+		holders.put(statementKey, rowSize, holder);
 	}
 
 	public SqlParameterCollection getSqlParameters(int columnSize, List<?> rows) {
@@ -142,7 +147,7 @@ public class StatementHolder implements Closeable {
 		} else {
 			statement = sqlParameters.createStatement(connection);
 		}
-		setSqlParameters(columnSize, rowSize, sqlParameters, statement);
+		setSqlParameters(sqlSignature.getStatementCacheKey(), rowSize, sqlParameters, statement);
 		sqlParameters.setBind(statement);
 		return statement;
 	}
@@ -182,13 +187,17 @@ public class StatementHolder implements Closeable {
 	}
 
 	public PreparedStatement getStatement(SqlSignature sqlSignature, List<?> rows) throws SQLException {
-		final int columnSize = caluculateParameterCount(sqlSignature);
-		return getStatement(columnSize, rows.size(), rows);
+		return getStatement(sqlSignature, rows.size(), rows);
 	}
 
 	public PreparedStatement getStatement(SqlSignature sqlSignature, int rowSize, Object obj) throws SQLException {
-		final int columnSize = caluculateParameterCount(sqlSignature);
-		return getStatement(columnSize, rowSize, obj);
+		final ParameterAndStatementHolder holder = holders.get(sqlSignature.getStatementCacheKey(), rowSize);
+		if (holder == null) {
+			return null;
+		}
+		getSqlNode().reEval(obj, holder.getSqlParameters());
+		holder.getSqlParameters().setBind(holder.getStatement());
+		return holder.getStatement();
 	}
 
 	@Getter

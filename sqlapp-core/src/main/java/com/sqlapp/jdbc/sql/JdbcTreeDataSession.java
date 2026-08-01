@@ -357,7 +357,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			statementHolder = new StatementHolder(sqlNode);
 			statementHolder.setSqlHandler((table, sqlType, sql) -> {
 				String handledSql = sqlHandler.apply(table, sqlType, sql);
-				if (sqlType == SqlType.INSERT && dialect.supportsBatchExecuteGeneratedKeysCapture()) {
+				if (sqlType == SqlType.INSERT_ROWS && dialect.supportsInsertReturningResultSet()) {
+					Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
+					if (identityColumn != null) {
+						handledSql = dialect.handleInsertReturningSql(table, identityColumn, handledSql);
+					}
+				} else if (sqlType == SqlType.INSERT && dialect.supportsBatchExecuteGeneratedKeysCapture()) {
 					Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
 					if (identityColumn != null) {
 						handledSql = dialect.handleBatchExecuteGeneratedKeysSql(table, identityColumn, handledSql);
@@ -616,10 +621,42 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			sqlSignature.setColumnSelectionStrategy(
 					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
-			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			final boolean insertReturning = sqlType == SqlType.INSERT && identityColumn != null
+					&& tableRelation.isIdentity() && dialect.supportsInsertReturningResultSet();
+			final SqlType statementSqlType = insertReturning ? SqlType.INSERT_ROWS : sqlType;
+			StatementHolder holder = tableRelation.getStatementHolder(statementSqlType);
 			if (holder == null) {
-				initialize(tableRelation, sqlType);
-				holder = tableRelation.getStatementHolder(sqlType);
+				initialize(tableRelation, statementSqlType);
+				holder = tableRelation.getStatementHolder(statementSqlType);
+			}
+			if (insertReturning) {
+				final int rowSize = rows.size();
+				PreparedStatement statement = holder.getStatement(sqlSignature, rowSize, rows);
+				if (statement == null) {
+					statement = holder.createStatement(connection, sqlSignature, rowSize, rows, false, dialect);
+				}
+				{
+					statement.setFetchSize(fetchSize);
+					preparedStatementBeforeExecuteHandler.accept(statement);
+					final int[] result = new int[rowSize];
+					try (ResultSet resultSet = statement.executeQuery()) {
+						int index = 0;
+						while (resultSet.next()) {
+							if (index >= rowSize) {
+								throw new SQLException(
+										"The INSERT returned more identity values than input rows for table "
+												+ table.getName() + ".");
+							}
+							rows.get(index).put(identityColumn, resultSet.getObject(1));
+							result[index++] = 1;
+						}
+						if (index != rowSize) {
+							throw new SQLException("The INSERT returned " + index + " identity values for " + rowSize
+									+ " input rows in table " + table.getName() + ".");
+						}
+					}
+					return result;
+				}
 			}
 			final int rowSize = 1;
 			PreparedStatement statement = null;

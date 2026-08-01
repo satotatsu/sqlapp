@@ -28,8 +28,13 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.util.CommonUtils;
 
 public class DB2Test {
@@ -43,6 +48,52 @@ public class DB2Test {
 		assertEquals("default", dialect.getIdentityInsertDefaultValue(column));
 		column.setIdentityGenerationType(IdentityGenerationType.Always);
 		assertNull(dialect.getIdentityInsertDefaultValue(column));
+	}
+
+	@Test
+	public void testHandleInsertReturningSql() {
+		Table table = new Table("parent_table");
+		Column identity = new Column("id").setIdentity(true);
+		table.getColumns().add(identity);
+		String insert = "INSERT INTO parent_table(txt) VALUES (?), (?)";
+
+		assertEquals("SELECT \"id\" FROM FINAL TABLE (" + insert + ") ORDER BY INPUT SEQUENCE",
+				dialect.handleInsertReturningSql(table, identity, insert));
+	}
+
+	@Test
+	public void testInsertRowsForFinalTable() {
+		Table table = new Table("parent_table");
+		Column identity = new Column("id").setDataType(DataType.BIGINT).setIdentity(true)
+				.setIdentityGenerationType(IdentityGenerationType.ByDefault);
+		table.getColumns().add(identity);
+		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR));
+		for (int i = 0; i < 2; i++) {
+			Row row = table.newRow();
+			row.put("txt", "row-" + i);
+			table.getRows().add(row);
+		}
+		SqlFactoryRegistry registry = dialect.createSqlFactoryRegistry();
+		SqlParameterCollection parameters = CommonUtils.first(registry.createSqlNodes(table, SqlType.INSERT_ROWS))
+				.eval(table.getRows());
+		String sql = dialect.handleInsertReturningSql(table, identity, parameters.getSql());
+
+		assertEquals(2, parameters.getParameterSize());
+		assertEquals("""
+				SELECT \"id\" FROM FINAL TABLE (INSERT INTO \"parent_table\"
+				(
+					  \"id\"
+					, \"txt\"
+				)
+				VALUES
+				  (
+					  default
+					,?
+				)
+				, (
+					  default
+					,?
+				)) ORDER BY INPUT SEQUENCE""", sql);
 	}
 
 	@Test

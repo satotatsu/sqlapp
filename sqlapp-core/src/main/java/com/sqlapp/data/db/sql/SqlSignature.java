@@ -112,6 +112,24 @@ public class SqlSignature {
 		return rows.stream().anyMatch(row -> row.get(column) != null);
 	}
 
+	/**
+	 * Returns a stable key for SQL shapes whose selected expressions depend on
+	 * null/non-null values, such as generated identity columns.
+	 */
+	public String getStatementCacheKey() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(columnSelectionStrategy).append('|');
+		if (selectedColumnsHolder != null) {
+			selectedColumnsHolder.getKeyColumns().forEach(column -> builder.append(column.getName()).append(','));
+		}
+		builder.append('|');
+		for (Column column : table.getColumns()) {
+			builder.append(column.getName()).append(':').append(hasNullValue(column) ? 'N' : '-')
+					.append(hasNonNullValue(column) ? 'V' : '-').append(';');
+		}
+		return builder.toString();
+	}
+
 	public void reCalculate(List<Row> rows) {
 		this.rows = rows;
 		this.primaryKey.reCalculate(rows);

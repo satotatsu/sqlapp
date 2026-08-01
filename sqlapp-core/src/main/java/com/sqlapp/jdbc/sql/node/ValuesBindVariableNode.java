@@ -70,34 +70,43 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 		boolean hasRowNo = hasRowNo(rows);
 		final String questionText;
 		if (hasRowNo) {
-			questionText = getQuestionText(size + 1);
+			questionText = getQuestionText(columns.size() + 1);
 		} else {
-			questionText = getQuestionText(size);
+			questionText = getQuestionText(columns.size());
 		}
 		final BindParameterHolder holder = new BindParameterHolder();
 		if (supportsValues) {
 			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n, ");
-			builder.setStart(this.getExpression() + "\n  ");
-			builder.setOpenQuate("(").setCloseQuate(")");
-			for (int i = 0; i < size; i++) {
-				Row row = rows.get(i);
-				if (hasRowNo) {
-					BindParameter rowNoParameter = createRowNo(row);
-					holder.getBindParameters().add(rowNoParameter);
+			builder.setStart("\n" + this.getExpression() + "\n  ");
+			final SqlParameterCollection firstRowParameters = evalRow(rows.get(0), sqlParameters);
+			if (firstRowParameters.getParameterSize() > 0) {
+				for (Row row : rows) {
+					final SqlParameterCollection rowParameters = evalRow(row, sqlParameters);
+					builder.add(rowParameters.getSql().trim());
+					rowParameters.getBindParameters().forEach(parameter -> parameter.stream()
+							.forEach(holder.getBindParameters()::add));
 				}
-				for (Column column : columns) {
-					BindParameter dbParameter = new BindParameter();
-					dbParameter.setName("row(" + column.getName() + ")");
-					dbParameter.setValue(row.get(column));
-					dbParameter.setDataType(column.getDataType());
-					holder.getBindParameters().add(dbParameter);
+			} else {
+				builder.setOpenQuate("(").setCloseQuate(")");
+				for (Row row : rows) {
+					if (hasRowNo) {
+						holder.getBindParameters().add(createRowNo(row));
+					}
+					for (Column column : columns) {
+						BindParameter parameter = new BindParameter();
+						parameter.setName("row(" + column.getName() + ")");
+						parameter.setValue(row.get(column));
+						parameter.setDataType(column.getDataType());
+						holder.getBindParameters().add(parameter);
+					}
+					builder.add(questionText);
 				}
-				builder.add(questionText);
 			}
 			sqlParameters.addSql(builder.toString());
 		} else {
 			String dummyTable = getDummyTableNamme(sqlParameters.getDialect());
 			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n" + UNION_ALL + "\n");
+			builder.setStart("\n");
 			for (int i = 0; i < size; i++) {
 				Row row = rows.get(i);
 				if (hasRowNo) {
@@ -117,6 +126,14 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 			sqlParameters.addSql(builder.toString());
 		}
 		sqlParameters.add(holder);
+	}
+
+	private SqlParameterCollection evalRow(final Row row, final SqlParameterCollection sqlParameters) {
+		final SqlParameterCollection rowParameters = new SqlParameterCollection(sqlParameters.getDialect());
+		rowParameters.setTable(sqlParameters.getTable());
+		rowParameters.setSqlSignature(sqlParameters.getSqlSignature());
+		super.evalChilds(row, rowParameters);
+		return rowParameters;
 	}
 
 	private String createSelectText(String questionText, String dummyTable) {
