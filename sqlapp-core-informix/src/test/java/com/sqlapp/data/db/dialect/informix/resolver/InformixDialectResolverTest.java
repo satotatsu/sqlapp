@@ -35,6 +35,8 @@ public class InformixDialectResolverTest {
 	@Test
 	public void testGetDialectStringIntInt() {
 		assertEquals("Informix Dynamic Server", resolver.getDialect("Informix", 0, 0).getProductName());
+		assertEquals("Informix Dynamic Server",
+				resolver.getDialect("IBM Informix Dynamic Server", 14, 10).getProductName());
 	}
 
 	@Test

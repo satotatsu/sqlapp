@@ -24,6 +24,8 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.informix.metadata.InformixCatalogReader;
+import com.sqlapp.data.db.metadata.CatalogReader;
 
 /**
  * Informix固有情報クラス
@@ -79,6 +81,8 @@ public class Informix extends Dialect {
 		});
 		// Serial
 		getDbDataTypes().addSerial(type -> {
+			type.addColumnTypeMatcher("SERIAL");
+			type.setCreateFormat("SERIAL");
 		});
 		// BigSerial
 		getDbDataTypes().addBigSerial(type -> {
@@ -159,18 +163,18 @@ public class Informix extends Dialect {
 	}
 
 	@Override
+	public boolean supportsBatchExecuteGeneratedKeys() {
+		return true;
+	}
+
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new InformixCatalogReader(this);
+	}
+
+	@Override
 	public String getIdentityColumnString() {
 		return "IDENTITY NOT NULL";
-	}
-
-	@Override
-	public char getCloseQuote() {
-		return ']';
-	}
-
-	@Override
-	public char getOpenQuote() {
-		return '[';
 	}
 
 	@Override
