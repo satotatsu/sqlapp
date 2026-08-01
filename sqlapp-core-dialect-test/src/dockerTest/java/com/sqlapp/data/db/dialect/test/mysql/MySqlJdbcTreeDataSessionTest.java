@@ -11,9 +11,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -222,15 +227,23 @@ class MySqlJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
+			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
+			AtomicInteger executions = new AtomicInteger();
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
-				for (int i = 3; i <= 7; i++) {
+				session.setPreparedStatementBeforeExecuteHandler(statement -> {
+					statements.add(statement);
+					executions.incrementAndGet();
+				});
+				for (int i = 3; i <= 8; i++) {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
 			}
+			assertEquals(2, statements.size());
+			assertEquals(6, executions.get());
 
 			try (Statement statement = connection.createStatement();
 					ResultSet resultSet = statement.executeQuery("""
@@ -239,7 +252,7 @@ class MySqlJdbcTreeDataSessionTest {
 							JOIN child_table c ON c.parent_id = p.id
 							ORDER BY p.id
 							""")) {
-				for (int i = 3; i <= 7; i++) {
+				for (int i = 3; i <= 8; i++) {
 					assertParentChild(resultSet, "parent-" + i, "child-" + i);
 				}
 				assertFalse(resultSet.next());

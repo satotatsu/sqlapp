@@ -39,6 +39,7 @@ import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 
 /**
  * Derby固有情報クラス
@@ -180,12 +181,27 @@ public class Derby extends Dialect {
 
 	@Override
 	public boolean supportsWith() {
+		return false;
+	}
+
+	@Override
+	public boolean supportsValues() {
 		return true;
 	}
 
 	@Override
 	public String getIdentityInsertDefaultValue(Column column) {
-		return "default";
+		return column.getIdentityGenerationType() == IdentityGenerationType.ByDefault ? "default" : null;
+	}
+
+	@Override
+	public boolean supportsIdentitySequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public boolean requiresIdentitySequenceForGeneratedKeys() {
+		return true;
 	}
 
 	@Override
