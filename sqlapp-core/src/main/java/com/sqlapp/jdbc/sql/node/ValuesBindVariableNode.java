@@ -94,9 +94,8 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 					}
 					for (Column column : columns) {
 						BindParameter parameter = new BindParameter();
-						parameter.setName("row(" + column.getName() + ")");
+						parameter.setColumn(column);
 						parameter.setValue(row.get(column));
-						parameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(parameter);
 					}
 					builder.add(questionText);

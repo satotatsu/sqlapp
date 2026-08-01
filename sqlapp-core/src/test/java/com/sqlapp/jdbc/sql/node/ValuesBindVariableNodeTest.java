@@ -214,6 +214,34 @@ public class ValuesBindVariableNodeTest {
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+
+		Table nextTable = getTable();
+		nextTable.getRows().get(0).put("colA", 10);
+		nextTable.getRows().get(1).put("colA", 11);
+		nextTable.getRows().get(2).put("colA", 12);
+		node.reEval(nextTable, sqlParameterCollection);
+		assertEquals(10, bindParameters.get(0).getValue());
+		assertEquals(11, bindParameters.get(3).getValue());
+		assertEquals(12, bindParameters.get(6).getValue());
+	}
+
+	@Test
+	public void testReEvalColumnCommentParameters() {
+		Node node = SqlParser.getInstance().parse(getCustomDialect(),
+				"/*VALUES*/VALUES(/*colA*/0,/*colB*/'',/*colC*/'')/*END*/");
+		Table table = getTable();
+		SqlParameterCollection parameters = node.eval(table);
+		List<BindParameter> bindParameters = parameters.getBindParameters().get(0).getBindParameters();
+
+		Table nextTable = getTable();
+		nextTable.getRows().get(0).put("colA", 10);
+		nextTable.getRows().get(1).put("colA", 11);
+		nextTable.getRows().get(2).put("colA", 12);
+		node.reEval(nextTable, parameters);
+
+		assertEquals(10, bindParameters.get(0).getValue());
+		assertEquals(11, bindParameters.get(3).getValue());
+		assertEquals(12, bindParameters.get(6).getValue());
 	}
 
 	private Table getTable() {
