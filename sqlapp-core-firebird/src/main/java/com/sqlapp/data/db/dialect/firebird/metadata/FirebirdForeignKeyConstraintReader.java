@@ -78,28 +78,28 @@ public class FirebirdForeignKeyConstraintReader extends ForeignKeyConstraintRead
 				String fk_columnName = trim(getString(rs, "FKCOLUMN_NAME"));
 				String fk_name = trim(getString(rs, "FK_NAME"));
 				// String pk_name = trim(getString(rs, "PK_NAME"));
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(fk_table_catalog, fk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog, fk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
-					c.setSchemaName(pk_table_schema);
-					c.setTableName(pk_table_name);
+					c.setSchemaName(fk_table_schema);
+					c.setTableName(fk_table_name);
 					c.setUpdateRule(CascadeRule.parse(trim(getString(rs, "UPDATE_RULE"))));
 					c.setDeleteRule(CascadeRule.parse(trim(getString(rs, "DELETE_RULE"))));
 					c.setDeferrability(
 							Deferrability.getDeferrability(!"NO".equalsIgnoreCase(trim(getString(rs, "DEFERRABLE"))),
 									!"NO".equalsIgnoreCase(trim(getString(rs, "INITIALLY_DEFERRED")))));
 					colList = new FlexList<ColumnPair>();
-					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
-					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
+					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
+					tColMap.put(fk_table_catalog, fk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();
-				cPair.refCatalogName = fk_table_catalog;
-				cPair.refSchemaName = fk_table_schema;
-				cPair.refTableName = fk_table_name;
-				cPair.refColumnName = fk_columnName;
-				cPair.columnName = pk_columnName;
+				cPair.refCatalogName = pk_table_catalog;
+				cPair.refSchemaName = pk_table_schema;
+				cPair.refTableName = pk_table_name;
+				cPair.refColumnName = pk_columnName;
+				cPair.columnName = fk_columnName;
 				colList.add(cPair);
 			}
 		});

@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.dialect.saphana.resolver;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ServiceLoader;
@@ -39,6 +40,8 @@ public class SapHanaDialectResolverTest {
 		System.out.println(dialect);
 		assertTrue(dialect instanceof SapHana);
 		assertTrue(!(dialect instanceof SapHanaCloud));
+		assertTrue(dialect.supportsIdentitySequencePreallocation());
+		assertEquals("DUMMY", dialect.getSelectDummyTableName());
 		dialect = DialectResolver.getInstance().getDialect("HDB", 4, 0);
 		assertTrue(dialect instanceof SapHanaCloud);
 	}

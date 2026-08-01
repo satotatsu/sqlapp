@@ -172,6 +172,16 @@ public class SapHana extends Dialect {
 	}
 
 	@Override
+	public boolean supportsIdentitySequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public String getSelectDummyTableName() {
+		return "DUMMY";
+	}
+
+	@Override
 	public boolean supportsDefaultValueFunction() {
 		return false;
 	}

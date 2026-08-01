@@ -244,6 +244,26 @@ public class ValuesBindVariableNodeTest {
 		assertEquals(12, bindParameters.get(6).getValue());
 	}
 
+	@Test
+	public void testEvalWithoutValuesUsesEvaluatedColumns() {
+		Node node = SqlParser.getInstance().parse(dialect,
+				"/*VALUES*/VALUES(/*colB*/'',/*colC*/'')/*END*/");
+		SqlParameterCollection parameters = node.eval(getTable());
+		String expected = """
+				SELECT ?,? FROM (VALUES(0))
+				UNION ALL
+				SELECT ?,? FROM (VALUES(0))
+				UNION ALL
+				SELECT ?,? FROM (VALUES(0))
+				""";
+		assertEquals(expected.trim(), parameters.getSql().trim());
+		List<BindParameter> bindParameters = parameters.getBindParameters().get(0).getBindParameters();
+		assertEquals(6, bindParameters.size());
+		assertEquals("colB+0", bindParameters.get(0).getValue());
+		assertEquals(DataType.VARCHAR, bindParameters.get(0).getDataType());
+		assertEquals(DataType.DATETIME, bindParameters.get(1).getDataType());
+	}
+
 	private Table getTable() {
 		return getTable(false);
 	}

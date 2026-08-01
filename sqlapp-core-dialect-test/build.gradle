@@ -106,7 +106,7 @@ dependencies {
 	//hsql
 	testImplementation('org.hsqldb:hsqldb:2.7.4')
 	//firebird
-	//testCompile group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk17', version: '2.2.10'
+	testImplementation('org.firebirdsql.jdbc:jaybird:6.0.5')
 	//postgres
 	testImplementation('org.postgresql:postgresql:42.7.11')
 	//DB2

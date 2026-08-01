@@ -23,9 +23,11 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 
 public class Firebird30ColumnReader extends FirebirdColumnReader {
 
@@ -35,6 +37,13 @@ public class Firebird30ColumnReader extends FirebirdColumnReader {
 
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column obj = super.createColumn(rs);
+		Integer identityType = getInteger(rs, "IDENTITY_TYPE");
+		if (identityType != null) {
+			obj.setIdentity(true);
+			obj.setIdentityGenerationType(identityType == 0 ? IdentityGenerationType.Always
+					: IdentityGenerationType.ByDefault);
+			obj.setSequenceName(CommonUtils.trim(getString(rs, "GENERATOR_NAME")));
+		}
 		return obj;
 
 	}

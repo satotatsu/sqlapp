@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.firebird.Firebird20;
 import com.sqlapp.data.db.dialect.firebird.Firebird25;
 import com.sqlapp.data.db.dialect.firebird.Firebird30;
+import com.sqlapp.data.db.dialect.firebird.Firebird50;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
@@ -45,6 +46,11 @@ public class DialectResolverTest {
 		dialect = DialectResolver.getInstance().getDialect("Firebird", 3, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Firebird30);
+		dialect = DialectResolver.getInstance().getDialect("Firebird", 4, 0, 0);
+		assertTrue(dialect instanceof Firebird30);
+		dialect = DialectResolver.getInstance().getDialect("Firebird", 5, 0, 0);
+		assertTrue(dialect instanceof Firebird50);
+		assertTrue(dialect.supportsInsertReturningResultSet());
 	}
 
 	@Test

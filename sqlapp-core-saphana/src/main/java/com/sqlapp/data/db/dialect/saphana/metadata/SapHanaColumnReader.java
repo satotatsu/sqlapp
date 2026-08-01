@@ -29,6 +29,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -74,6 +75,14 @@ public class SapHanaColumnReader extends ColumnReader {
 		obj.setTableName(getString(rs, TABLE_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDefaultValue(getString(rs, "DEFAULT_VALUE"));
+		String generationType = getString(rs, "GENERATION_TYPE");
+		if ("ALWAYS AS IDENTITY".equalsIgnoreCase(generationType)) {
+			obj.setIdentity(true);
+			obj.setIdentityGenerationType(IdentityGenerationType.Always);
+		} else if ("BY DEFAULT AS IDENTITY".equalsIgnoreCase(generationType)) {
+			obj.setIdentity(true);
+			obj.setIdentityGenerationType(IdentityGenerationType.ByDefault);
+		}
 		obj.setRemarks(getString(rs, "COMMENTS"));
 		return obj;
 	}

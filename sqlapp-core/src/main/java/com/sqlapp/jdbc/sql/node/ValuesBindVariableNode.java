@@ -106,21 +106,31 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 			String dummyTable = getDummyTableNamme(sqlParameters.getDialect());
 			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n" + UNION_ALL + "\n");
 			builder.setStart("\n");
-			for (int i = 0; i < size; i++) {
-				Row row = rows.get(i);
-				if (hasRowNo) {
-					BindParameter rowNoParameter = createRowNo(row);
-					holder.getBindParameters().add(rowNoParameter);
+			final SqlParameterCollection firstRowParameters = evalRow(rows.get(0), sqlParameters);
+			if (firstRowParameters.getParameterSize() > 0) {
+				for (Row row : rows) {
+					final SqlParameterCollection rowParameters = evalRow(row, sqlParameters);
+					builder.add(createSelectText(unwrapRowExpression(rowParameters.getSql()), dummyTable));
+					rowParameters.getBindParameters().forEach(parameter -> parameter.stream()
+							.forEach(holder.getBindParameters()::add));
 				}
-				for (Column column : columns) {
-					BindParameter dbParameter = new BindParameter();
-					dbParameter.setName("row(" + column.getName() + ")");
-					dbParameter.setValue(row.get(column));
-					dbParameter.setDataType(column.getDataType());
-					dbParameter.setColumn(column);
-					holder.getBindParameters().add(dbParameter);
+			} else {
+				for (int i = 0; i < size; i++) {
+					Row row = rows.get(i);
+					if (hasRowNo) {
+						BindParameter rowNoParameter = createRowNo(row);
+						holder.getBindParameters().add(rowNoParameter);
+					}
+					for (Column column : columns) {
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setName("row(" + column.getName() + ")");
+						dbParameter.setValue(row.get(column));
+						dbParameter.setDataType(column.getDataType());
+						dbParameter.setColumn(column);
+						holder.getBindParameters().add(dbParameter);
+					}
+					builder.add(createSelectText(questionText, dummyTable));
 				}
-				builder.add(createSelectText(questionText, dummyTable));
 			}
 			sqlParameters.addSql(builder.toString());
 		}
@@ -133,6 +143,14 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 		rowParameters.setSqlSignature(sqlParameters.getSqlSignature());
 		super.evalChilds(row, rowParameters);
 		return rowParameters;
+	}
+
+	private String unwrapRowExpression(final String sql) {
+		final String text = sql.trim();
+		if (text.length() >= 2 && text.charAt(0) == '(' && text.charAt(text.length() - 1) == ')') {
+			return text.substring(1, text.length() - 1).trim();
+		}
+		return text;
 	}
 
 	private String createSelectText(String questionText, String dummyTable) {
