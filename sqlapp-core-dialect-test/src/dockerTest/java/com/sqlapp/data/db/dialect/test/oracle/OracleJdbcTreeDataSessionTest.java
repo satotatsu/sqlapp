@@ -14,7 +14,11 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -55,6 +59,7 @@ class OracleJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(writer);
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
+			assertTrue(parent.getColumns().get("ID").getSequenceName().startsWith("ISEQ$$_"));
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
 				session.setRootBatchSize(2);
@@ -137,15 +142,24 @@ class OracleJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
+			Set<Object> preparedStatements = Collections.newSetFromMap(new IdentityHashMap<>());
+			AtomicInteger executions = new AtomicInteger();
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
+				session.setPreparedStatementBeforeExecuteHandler(statement -> {
+					preparedStatements.add(statement);
+					executions.incrementAndGet();
+				});
 				for (int i = 3; i <= 7; i++) {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
 			}
+			assertEquals(6, executions.get());
+			assertEquals(4, preparedStatements.size(),
+					"Two-row batches must reuse their prepared statements; only final one-row shapes differ.");
 
 			try (Statement statement = connection.createStatement();
 					ResultSet resultSet = statement.executeQuery("""

@@ -553,6 +553,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns whether identity values may be allocated from the sequence associated
+	 * with the identity column before a multi-row INSERT.
+	 */
+	public boolean supportsIdentitySequencePreallocation() {
+		return false;
+	}
+
+	/**
 	 * カラムでの式をサポートするかを返します
 	 * 
 	 * @return カラムでの式をサポート

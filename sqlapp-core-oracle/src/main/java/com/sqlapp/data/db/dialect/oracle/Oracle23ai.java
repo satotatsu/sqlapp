@@ -68,6 +68,11 @@ public class Oracle23ai extends Oracle21c {
 	}
 
 	@Override
+	public boolean supportsIdentitySequencePreallocation() {
+		return true;
+	}
+
+	@Override
 	public CatalogReader getCatalogReader() {
 		return new Oracle23aiCatalogReader(this);
 	}
