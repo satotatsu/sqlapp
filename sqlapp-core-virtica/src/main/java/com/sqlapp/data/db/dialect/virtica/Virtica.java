@@ -134,6 +134,11 @@ public class Virtica extends Dialect {
 		return "Vertica";
 	}
 
+	@Override
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
 	/**
 	 * DB製品名(シンプル名)
 	 */
