@@ -18,11 +18,11 @@ import java.sql.Statement;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.ContainerLaunchException;
 import org.testcontainers.db2.Db2Container;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
@@ -30,20 +30,33 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 
 /** Db2 11.5 integration coverage for hierarchical JDBC batch writes. */
-@Testcontainers
 class Db2JdbcTreeDataSessionTest {
 	private static final String IMAGE = "icr.io/db2_community/db2:11.5.8.0";
+	private static final boolean REUSE = ReusableTestcontainers.isReuseEnabled();
 
-	@Container
-	private static final Db2Container DB2 = new SqlReadyDb2Container(IMAGE);
+	private static final Db2Container DB2 = new SqlReadyDb2Container(IMAGE, REUSE);
+
+	@BeforeAll
+	static void startContainer() {
+		DB2.start();
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		if (!REUSE) {
+			DB2.stop();
+		}
+	}
 
 	/** Rancher Desktop can miss the image's one-shot setup-complete log line. */
 	private static final class SqlReadyDb2Container extends Db2Container {
-		private SqlReadyDb2Container(final String image) {
+		private SqlReadyDb2Container(final String image, final boolean reuse) {
 			super(image);
 			acceptLicense();
+			withReuse(reuse);
 		}
 
 		@Override
@@ -88,16 +101,22 @@ class Db2JdbcTreeDataSessionTest {
 				addChild(session, child, "child-3");
 				addParent(session, parent, "parent-4");
 				addChild(session, child, "child-4");
+				addParent(session, parent, "parent-5");
+				addChild(session, child, "child-5");
+				addParent(session, parent, "parent-6");
+				addChild(session, child, "child-6");
 			}
 
 			try (Statement statement = connection.createStatement();
 					ResultSet resultSet = statement.executeQuery("""
 							SELECT p.txt, c.txt FROM parent_table p
 							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4') ORDER BY p.id
+							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5', 'parent-6') ORDER BY p.id
 							""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
+				assertParentChild(resultSet, "parent-5", "child-5");
+				assertParentChild(resultSet, "parent-6", "child-6");
 				assertFalse(resultSet.next());
 			}
 			connection.rollback();

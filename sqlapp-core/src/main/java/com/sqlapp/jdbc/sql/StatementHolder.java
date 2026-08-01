@@ -120,12 +120,7 @@ public class StatementHolder implements Closeable {
 
 	private PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
 			boolean identity, Dialect dialect, Consumer<SqlParameterCollection> cons) throws SQLException {
-		SqlParameterCollection sqlParameters = getSqlNode().eval(obj, params -> {
-			params.setSqlSignature(sqlSignature);
-			params.setSqlType(getSqlNode().getSqlType());
-			params.setSqlHandler(sqlHandler);
-			cons.accept(params);
-		});
+		SqlParameterCollection sqlParameters = createSqlParameters(sqlSignature, obj, cons);
 		String[] generatedKeyColumnNames = null;
 		if (sqlNode.getSqlType() == SqlType.INSERT && identity) {
 			if (dialect != null) {
@@ -150,6 +145,21 @@ public class StatementHolder implements Closeable {
 		setSqlParameters(sqlSignature.getStatementCacheKey(), rowSize, sqlParameters, statement);
 		sqlParameters.setBind(statement);
 		return statement;
+	}
+
+	public int getParameterCount(SqlSignature sqlSignature, Object obj) {
+		return createSqlParameters(sqlSignature, obj, params -> {
+		}).getParameterSize();
+	}
+
+	private SqlParameterCollection createSqlParameters(SqlSignature sqlSignature, Object obj,
+			Consumer<SqlParameterCollection> cons) {
+		return getSqlNode().eval(obj, params -> {
+			params.setSqlSignature(sqlSignature);
+			params.setSqlType(getSqlNode().getSqlType());
+			params.setSqlHandler(sqlHandler);
+			cons.accept(params);
+		});
 	}
 
 	public PreparedStatement createStatement(Connection connection, int columnSize, int rowSize, Object obj,

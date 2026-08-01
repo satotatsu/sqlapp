@@ -62,6 +62,11 @@ public class DB2Test {
 	}
 
 	@Test
+	public void testMaxStatementParameterCount() {
+		assertEquals(32767, dialect.getMaxStatementParameterCount());
+	}
+
+	@Test
 	public void testInsertRowsForFinalTable() {
 		Table table = new Table("parent_table");
 		Column identity = new Column("id").setDataType(DataType.BIGINT).setIdentity(true)

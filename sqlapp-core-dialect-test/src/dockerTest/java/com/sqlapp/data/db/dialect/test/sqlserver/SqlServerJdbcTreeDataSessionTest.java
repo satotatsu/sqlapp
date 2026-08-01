@@ -13,11 +13,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mssqlserver.MSSQLServerContainer;
 
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -29,14 +30,22 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
  * Verifies that SQL Server can keep a cursor open while
  * {@link JdbcTreeDataSession} executes inserts on the same connection.
  */
-@Testcontainers
 class SqlServerJdbcTreeDataSessionTest {
 	private static final String IMAGE =
 			"mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
 
-	@Container
 	private static final MSSQLServerContainer SQL_SERVER =
-			new MSSQLServerContainer(IMAGE).acceptLicense();
+			ReusableTestcontainers.configure(new MSSQLServerContainer(IMAGE).acceptLicense());
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(SQL_SERVER);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(SQL_SERVER);
+	}
 
 	@Test
 	void testSelectCursorRemainsUsableDuringHierarchicalInsert()

@@ -15,11 +15,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -28,12 +29,21 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** MySQL 8.4 integration coverage for hierarchical JDBC batch writes. */
-@Testcontainers
 class MySqlJdbcTreeDataSessionTest {
 	private static final String IMAGE = "mysql:8.4";
 
-	@Container
-	private static final MySQLContainer MYSQL = new MySQLContainer(IMAGE);
+	private static final MySQLContainer MYSQL =
+			ReusableTestcontainers.configure(new MySQLContainer(IMAGE));
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(MYSQL);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(MYSQL);
+	}
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {

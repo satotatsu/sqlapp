@@ -16,11 +16,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Locale;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.oracle.OracleContainer;
 
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -29,12 +30,21 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** Oracle Database Free integration coverage for hierarchical JDBC writes. */
-@Testcontainers
 class OracleJdbcTreeDataSessionTest {
 	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
 
-	@Container
-	private static final OracleContainer ORACLE = new OracleContainer(IMAGE);
+	private static final OracleContainer ORACLE =
+			ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(ORACLE);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(ORACLE);
+	}
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {

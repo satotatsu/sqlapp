@@ -253,6 +253,11 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
+	public int getMaxStatementParameterCount() {
+		return 32767;
+	}
+
+	@Override
 	public String getSequenceNextValString(final String sequenceName) {
 		return "values nextval for " + sequenceName;
 	}

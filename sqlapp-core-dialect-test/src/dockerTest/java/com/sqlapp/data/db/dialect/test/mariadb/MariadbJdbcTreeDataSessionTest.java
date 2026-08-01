@@ -15,11 +15,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mariadb.MariaDBContainer;
 
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -28,12 +29,21 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** MariaDB 11.8 integration coverage for hierarchical JDBC batch writes. */
-@Testcontainers
 class MariadbJdbcTreeDataSessionTest {
 	private static final String IMAGE = "mariadb:11.8";
 
-	@Container
-	private static final MariaDBContainer MARIADB = new MariaDBContainer(IMAGE);
+	private static final MariaDBContainer MARIADB =
+			ReusableTestcontainers.configure(new MariaDBContainer(IMAGE));
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(MARIADB);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(MARIADB);
+	}
 
 	@Test
 	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {

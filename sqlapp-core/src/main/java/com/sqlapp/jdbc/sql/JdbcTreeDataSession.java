@@ -630,33 +630,22 @@ public class JdbcTreeDataSession implements AutoCloseable {
 				holder = tableRelation.getStatementHolder(statementSqlType);
 			}
 			if (insertReturning) {
-				final int rowSize = rows.size();
-				PreparedStatement statement = holder.getStatement(sqlSignature, rowSize, rows);
-				if (statement == null) {
-					statement = holder.createStatement(connection, sqlSignature, rowSize, rows, false, dialect);
+				final int parametersPerRow = holder.getParameterCount(sqlSignature, rows.subList(0, 1));
+				final int maxRows = parametersPerRow == 0 ? rows.size()
+						: dialect.getMaxStatementParameterCount() / parametersPerRow;
+				if (maxRows < 1) {
+					throw new SQLException("One row requires " + parametersPerRow
+							+ " parameters, exceeding the dialect limit of " + dialect.getMaxStatementParameterCount()
+							+ " for table " + table.getName() + ".");
 				}
-				{
-					statement.setFetchSize(fetchSize);
-					preparedStatementBeforeExecuteHandler.accept(statement);
-					final int[] result = new int[rowSize];
-					try (ResultSet resultSet = statement.executeQuery()) {
-						int index = 0;
-						while (resultSet.next()) {
-							if (index >= rowSize) {
-								throw new SQLException(
-										"The INSERT returned more identity values than input rows for table "
-												+ table.getName() + ".");
-							}
-							rows.get(index).put(identityColumn, resultSet.getObject(1));
-							result[index++] = 1;
-						}
-						if (index != rowSize) {
-							throw new SQLException("The INSERT returned " + index + " identity values for " + rowSize
-									+ " input rows in table " + table.getName() + ".");
-						}
-					}
-					return result;
+				final int[] result = new int[rows.size()];
+				for (int offset = 0; offset < rows.size(); offset += maxRows) {
+					final int end = Math.min(offset + maxRows, rows.size());
+					final int[] chunkResult = executeInsertReturning(holder, sqlSignature, identityColumn,
+							rows.subList(offset, end));
+					System.arraycopy(chunkResult, 0, result, offset, chunkResult.length);
 				}
+				return result;
 			}
 			final int rowSize = 1;
 			PreparedStatement statement = null;
@@ -715,6 +704,34 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		});
 		tableRelation.resetBatchCount();
 		return ret;
+	}
+
+	private int[] executeInsertReturning(final StatementHolder holder, final SqlSignature sqlSignature,
+			final Column identityColumn, final List<Row> rows) throws SQLException {
+		final int rowSize = rows.size();
+		PreparedStatement statement = holder.getStatement(sqlSignature, rowSize, rows);
+		if (statement == null) {
+			statement = holder.createStatement(connection, sqlSignature, rowSize, rows, false, dialect);
+			statement.setFetchSize(fetchSize);
+		}
+		preparedStatementBeforeExecuteHandler.accept(statement);
+		final int[] result = new int[rowSize];
+		try (ResultSet resultSet = statement.executeQuery()) {
+			int index = 0;
+			while (resultSet.next()) {
+				if (index >= rowSize) {
+					throw new SQLException("The INSERT returned more identity values than input rows for table "
+							+ identityColumn.getTable().getName() + ".");
+				}
+				rows.get(index).put(identityColumn, resultSet.getObject(1));
+				result[index++] = 1;
+			}
+			if (index != rowSize) {
+				throw new SQLException("The INSERT returned " + index + " identity values for " + rowSize
+						+ " input rows in table " + identityColumn.getTable().getName() + ".");
+			}
+		}
+		return result;
 	}
 
 	private boolean handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,

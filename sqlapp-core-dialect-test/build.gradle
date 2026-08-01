@@ -39,6 +39,12 @@ tasks.register('dockerTest', Test) {
 	classpath = sourceSets.dockerTest.runtimeClasspath
 	useJUnitPlatform()
 	shouldRunAfter tasks.named('test')
+	def testcontainersReuse = providers.gradleProperty('testcontainersReuse')
+		.map { it.toBoolean() }.orElse(false)
+	systemProperty 'sqlapp.testcontainers.reuse', testcontainersReuse.get()
+	if (testcontainersReuse.get()) {
+		environment 'TESTCONTAINERS_REUSE_ENABLE', 'true'
+	}
 	if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
 			&& !System.getenv('DOCKER_HOST')) {
 		// Rancher Desktop's documented endpoint for native Windows clients.

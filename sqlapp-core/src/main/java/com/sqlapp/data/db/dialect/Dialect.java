@@ -776,6 +776,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return sql;
 	}
 
+	/** Maximum parameter markers accepted in one prepared statement. */
+	public int getMaxStatementParameterCount() {
+		return Integer.MAX_VALUE;
+	}
+
 	/**
 	 * Returns whether a forward-only, read-only cursor can remain open across a
 	 * commit for the current connection. Dialects may override this when a driver
