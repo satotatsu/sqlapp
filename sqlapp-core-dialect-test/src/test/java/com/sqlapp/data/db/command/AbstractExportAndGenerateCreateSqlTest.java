@@ -135,7 +135,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 			FileUtils.writeText(outputSqlFileName, "UTF8", text);
 		} finally {
 			DbUtils.close(connection);
-			DbUtils.close(dataSource);
+			FileUtils.close(dataSource);
 		}
 	}
 
