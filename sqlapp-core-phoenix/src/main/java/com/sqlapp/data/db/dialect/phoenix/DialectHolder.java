@@ -22,5 +22,6 @@ package com.sqlapp.data.db.dialect.phoenix;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect defaultDialect = new Phoenix(() -> null);
+	public final static Dialect defaultDialect5_3_1 = new Phoenix5_3_1(() -> null);
+	public final static Dialect defaultDialect = new Phoenix(() -> defaultDialect5_3_1);
 }

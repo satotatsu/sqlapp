@@ -47,6 +47,12 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 		appendElement("COUNT_BIG");
 		return instance();
 	}
+
+	@Override
+	public PhoenixSqlBuilder insert() {
+		appendElement("UPSERT");
+		return instance();
+	}
 	
 	
 	@Override

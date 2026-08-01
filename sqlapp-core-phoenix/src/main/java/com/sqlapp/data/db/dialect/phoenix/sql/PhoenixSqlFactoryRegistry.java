@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.phoenix.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 
 public class PhoenixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
@@ -36,5 +37,7 @@ public class PhoenixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.LOCK,
 				PhoenixLockTableFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
+				PhoenixSequenceNextValuesFactory.class);
 	}
 }

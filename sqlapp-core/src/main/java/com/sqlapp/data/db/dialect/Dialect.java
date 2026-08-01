@@ -566,6 +566,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
+	/** Expands values returned by a dialect-specific sequence reservation. */
+	public List<Object> expandSequenceValues(final Sequence sequence, final List<Object> values, final int count) {
+		return values;
+	}
+
 	/**
 	 * Returns whether generated identity values require an explicitly associated
 	 * sequence because the dialect cannot return all generated keys.
