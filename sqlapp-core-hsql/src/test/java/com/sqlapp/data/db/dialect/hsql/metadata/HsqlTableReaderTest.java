@@ -75,7 +75,7 @@ class HsqlTableReaderTest extends AbstractTest {
 			String exptected = """
 					<table xml:space="preserve" name="TAB1" readonly="false" tableType="Memory" catalogName="PUBLIC" schemaName="PUBLIC">
 						<columns>
-							<column name="ID" dataType="INT" notNull="true" identity="true" identityStartValue="1" identityMaxValue="2147483647" identityMinValue="-2147483648" identityStep="1"/>
+							<column name="ID" dataType="INT" notNull="true" identity="true" identityStartValue="1" identityMaxValue="2147483647" identityMinValue="-2147483648" identityStep="1" identityGenerationType="ByDefault"/>
 							<column name="CODE" dataType="CHAR" length="5"/>
 							<column name="TITLE" dataType="VARCHAR" length="40"/>
 							<column name="DATETIME_COL" dataType="TIMESTAMP" length="4" notNull="true"/>

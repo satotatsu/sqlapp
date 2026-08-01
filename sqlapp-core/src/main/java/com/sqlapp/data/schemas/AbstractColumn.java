@@ -142,6 +142,12 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 		return this.dataTypeName;
 	}
 
+	@Override
+	protected void cloneProperties(final T clone) {
+		super.cloneProperties(clone);
+		clone.setSequence(this.getSequence() == null ? null : this.getSequence().clone());
+	}
+
 	/**
 	 * @param characterSet the characterSet to set
 	 */

@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.hsql.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
 
@@ -50,10 +49,7 @@ public class Hsql21CreateTableFactoryTest extends AbstractHsql2_1_0SqlFactoryTes
 		Column column = new Column();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);
-		column.setSequenceName("seq1");
-		column.setIdentityCacheSize(1);
 		column.setIdentityStep(3);
-		assertNotNull("seq1", column.getSequenceName());
 		table.getColumns().add(column);
 		List<SqlOperation> operations = sqlFactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(operations);

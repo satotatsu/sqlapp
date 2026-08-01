@@ -1,5 +1,6 @@
 /.gradle/
 /.gradle-user-home/
+/.gradle-codex/
 /build/
 /bin/
 /.settings/

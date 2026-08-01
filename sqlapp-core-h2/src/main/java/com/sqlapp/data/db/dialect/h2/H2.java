@@ -249,6 +249,11 @@ public class H2 extends Dialect {
 		return true;
 	}
 
+	@Override
+	public boolean supportsBatchExecuteGeneratedKeys() {
+		return true;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

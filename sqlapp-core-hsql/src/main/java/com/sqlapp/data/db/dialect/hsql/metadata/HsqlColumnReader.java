@@ -32,6 +32,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.jdbc.ExResultSet;
@@ -107,6 +108,9 @@ public class HsqlColumnReader extends ColumnReader {
 	}
 
 	protected void setIdentityInfo(ExResultSet rs, Column obj) throws SQLException {
+		String identity_generation = getString(rs, "IDENTITY_GENERATION");
+		obj.setIdentityGenerationType("ALWAYS".equalsIgnoreCase(identity_generation)
+				? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
 		String sequence_name = getString(rs, "SEQUENCE_NAME");
 		if (sequence_name != null) {
 			String sequence_data_type = getString(rs, "SEQUENCE_DATA_TYPE");
@@ -116,14 +120,13 @@ public class HsqlColumnReader extends ColumnReader {
 			Sequence sequence = new Sequence(sequence_name);
 			// sequence.setDataTypeName(sequence_data_type);
 			sequence.setDataType(seqColumn.getDataType());
-			sequence.setStartValue(getLong(rs, "SATART_WITH"));
+			sequence.setStartValue(getLong(rs, "START_WITH"));
 			sequence.setIncrementBy(getLong(rs, "INCREMENT"));
 			sequence.setMaxValue(getLong(rs, "MAXIMUM_VALUE"));
 			sequence.setMinValue(getLong(rs, "MINIMUM_VALUE"));
 			sequence.setLastValue(getLong(rs, "NEXT_VALUE"));
 			obj.setSequence(sequence);
 		} else {
-			String identity_generation = getString(rs, "IDENTITY_GENERATION");
 			Long identity_start = getLong(rs, "IDENTITY_START");
 			Long identity_increment = getLong(rs, "IDENTITY_INCREMENT");
 			Long identity_maximum = getLong(rs, "IDENTITY_MAXIMUM");
@@ -136,7 +139,6 @@ public class HsqlColumnReader extends ColumnReader {
 			obj.setIdentityMaxValue(identity_maximum);
 			obj.setIdentityMinValue(identity_miniimum);
 			obj.setIdentityCycle(identity_cycle);
-			obj.setDefaultValue(identity_generation);
 		}
 	}
 

@@ -47,7 +47,7 @@ public interface SequenceProperty<T extends DbCommonObject<?>>
 
 	@SuppressWarnings("unchecked")
 	default T setSequence(Sequence value) {
-		if (this instanceof DbCommonObject) {
+		if (value != null && !CommonUtils.isEmpty(value.getName()) && this instanceof DbCommonObject) {
 			value = SchemaUtils.getSequenceFromParent(value, (DbCommonObject<?>) this);
 		}
 		SimpleBeanUtils.setField(this, SchemaProperties.SEQUENCE_NAME.getLabel().replaceAll("Name", ""), value);
