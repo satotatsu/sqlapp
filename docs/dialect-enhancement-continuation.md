@@ -154,8 +154,13 @@ the JDBC driver cannot return every generated key in input order.
   project does not publish an official ready-to-run Docker image; only SQL
   generation, version resolution, and sequence-block expansion have module
   coverage.
-- HiRDB and Symfoware are intentionally outside this generated-key pass. MDB is
-  deferred with its existing ODBC implementation.
+- HiRDB and Symfoware are intentionally outside this generated-key pass.
+- MDB/Access now uses UCanAccess 5.1.6 instead of the removed JDBC-ODBC bridge.
+  UCanAccess metadata is adapted to Access's schema-less catalog and its
+  requirement that index and key metadata be read per table. AutoNumber key
+  retrieval is covered against a newly created Access 2010 database. The
+  supplied `AccessSample.accdb` is metadata-read tested, but its Japanese index
+  collation is read-only with the current Jackcess version.
 
 - H2 2.x exposes linked-table identity through `INFORMATION_SCHEMA.TABLES`,
   but not its connection definition. The Reader recovers the TableLink object;

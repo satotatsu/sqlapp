@@ -21,6 +21,8 @@ module com.sqlapp.core.mdb{
 	requires java.xml;
 	requires java.sql;
 	requires com.sqlapp.core;
+	requires io.github.spannm.ucanaccess;
+	requires io.github.spannm.jackcess;
 	exports com.sqlapp.data.db.dialect.mdb;
 //	exports com.sqlapp.data.db.dialect.mdb.metadata;
 	exports com.sqlapp.data.db.dialect.mdb.resolver;

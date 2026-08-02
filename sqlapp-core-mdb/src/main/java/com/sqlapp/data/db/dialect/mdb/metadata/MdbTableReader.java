@@ -11,7 +11,9 @@ import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
+import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.TableObjectReader;
+import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Table;
 
@@ -20,6 +22,16 @@ public class MdbTableReader extends JdbcTableReader {
 
 	public MdbTableReader(final Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected ColumnReader newColumnReader() {
+		return new MdbColumnReader(this.getDialect());
+	}
+
+	@Override
+	protected UniqueConstraintReader newUniqueConstraintReader() {
+		return new MdbPrimaryKeyConstraintReader(this.getDialect());
 	}
 
 	@Override

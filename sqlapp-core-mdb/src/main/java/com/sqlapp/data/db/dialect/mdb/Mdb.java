@@ -28,7 +28,11 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mdb.metadata.MdbCatalogReader;
+import com.sqlapp.data.db.dialect.mdb.sql.MdbSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.mdb.util.MdbSqlBuilder;
 import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.CascadeRule;
 
 /**
  * Microsoft JET固有情報クラス
@@ -55,31 +59,39 @@ public class Mdb extends Dialect {
 	@Override
 	protected void registerDataType() {
 		// CHAR
-		// getDataTypeCollection().addChar(255);
+		getDbDataTypes().addChar("TEXT", 255, type -> {
+			type.setLiteral("'", "'");
+		});
 		// VARCHAR
-		// getDataTypeCollection().addVarchar(255);
+		getDbDataTypes().addVarchar("TEXT", 255, type -> {
+			type.setLiteral("'", "'");
+		});
 		// LONGVARCHAR
-		// getDataTypeCollection().addLongVarchar("LONGTEXT", LEN_1GB)
-		// .setCreateFormat("LONGTEXT");
+		getDbDataTypes().addLongVarchar("MEMO", LEN_1GB, type -> {
+			type.setColumnTypeMatcher("LONGTEXT", "MEMO");
+			type.setLiteral("'", "'").setCreateFormat("MEMO");
+		});
 		// NCHAR
-		getDbDataTypes().addNChar(255, type -> {
+		getDbDataTypes().addNChar("TEXT", 255, type -> {
 			type.setLiteral("'", "'");
 		});
 		// NVARCHAR
-		getDbDataTypes().addNVarchar("TEXT", LEN_1GB, type -> {
+		getDbDataTypes().addNVarchar("TEXT", 255, type -> {
 			type.setLiteral("'", "'");
 		});
 		// LONGNVARCHAR
-		getDbDataTypes().addLongNVarchar("LONGTEXT", LEN_1GB, type -> {
+		getDbDataTypes().addLongNVarchar("MEMO", LEN_1GB, type -> {
 			type.setColumnTypeMatcher("LONGTEXT", "MEMO");
-			type.setLiteral("'", "'").setCreateFormat("LONGTEXT");
+			type.setLiteral("'", "'").setCreateFormat("MEMO");
 		});
 		// NCLOB
-		getDbDataTypes().addNClob("LONGTEXT", LEN_1GB, type -> {
+		getDbDataTypes().addNClob("MEMO", LEN_1GB, type -> {
+			type.setCreateFormat("MEMO");
 		});
 		// BLOB
-		getDbDataTypes().addBlob("IMAGE", LEN_2GB, type -> {
-			type.setCreateFormat("IMAGE").setLiteral("0x", "");
+		getDbDataTypes().addBlob("OLE", LEN_2GB, type -> {
+			type.setColumnTypeMatcher("OLE", "OLEOBJECT");
+			type.setCreateFormat("OLE").setLiteral("0x", "");
 		});
 		// Boolean
 		getDbDataTypes().addBoolean(type -> {
@@ -176,6 +188,31 @@ public class Mdb extends Dialect {
 	}
 
 	@Override
+	public String getIdentityColumnString() {
+		return "COUNTER";
+	}
+
+	@Override
+	public String getCurrentDateFunction() {
+		return "DATE()";
+	}
+
+	@Override
+	public String getCurrentDateTimeFunction() {
+		return "NOW()";
+	}
+
+	@Override
+	public String getCurrentTimestampFunction() {
+		return "NOW()";
+	}
+
+	@Override
+	public String getCurrentTimeFunction() {
+		return "TIME()";
+	}
+
+	@Override
 	public boolean supportsDefaultValueFunction() {
 		return false;
 	}
@@ -192,6 +229,32 @@ public class Mdb extends Dialect {
 
 	@Override
 	public boolean supportsDropCascade() {
+		return false;
+	}
+
+	@Override
+	public boolean supportsCascadeDelete() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade
+				|| rule == CascadeRule.SetNull;
+	}
+
+	@Override
+	public boolean supportsCascadeUpdate() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade;
+	}
+
+	@Override
+	public boolean storesMixedCaseIdentifiers() {
 		return true;
 	}
 
@@ -205,6 +268,16 @@ public class Mdb extends Dialect {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new MdbCatalogReader(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new MdbSqlFactoryRegistry(this);
+	}
+
+	@Override
+	public MdbSqlBuilder createSqlBuilder() {
+		return new MdbSqlBuilder(this);
 	}
 
 	/*
