@@ -33,7 +33,7 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 public class MdbDialectResolver extends ProductNameDialectResolver {
 
 	public MdbDialectResolver() {
-		super("MS *Jet", new MdbVersionResolver());
+		super(".*(MS *Jet|UCanAccess).*", new MdbVersionResolver());
 	}
 
 	/**

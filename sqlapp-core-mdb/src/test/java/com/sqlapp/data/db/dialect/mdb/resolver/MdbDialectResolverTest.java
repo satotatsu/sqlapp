@@ -35,6 +35,7 @@ public class MdbDialectResolverTest {
 	@Test
 	public void testGetDialectStringIntInt() {
 		assertEquals("MS Jet", resolver.getDialect("MS Jet", 0, 0).getProductName());
+		assertEquals("MS Jet", resolver.getDialect("UCanAccess", 5, 1).getProductName());
 	}
 
 	@Test

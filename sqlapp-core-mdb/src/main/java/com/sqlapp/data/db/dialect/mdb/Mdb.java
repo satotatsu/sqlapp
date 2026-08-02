@@ -27,6 +27,8 @@ import java.util.function.Supplier;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.mdb.metadata.MdbCatalogReader;
+import com.sqlapp.data.db.metadata.CatalogReader;
 
 /**
  * Microsoft JET固有情報クラス
@@ -198,6 +200,11 @@ public class Mdb extends Dialect {
 	 */
 	public boolean supportsIndexNameTableScope() {
 		return true;
+	}
+
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new MdbCatalogReader(this);
 	}
 
 	/*
