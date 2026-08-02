@@ -27,7 +27,7 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 public class PhoenixDialectResolver extends ProductNameDialectResolver {
 
 	public PhoenixDialectResolver() {
-		super("Apache Phoenix", new PhoenixVersionResolver());
+		super(".*Phoenix.*", new PhoenixVersionResolver());
 	}
 
 	/**
@@ -57,6 +57,10 @@ public class PhoenixDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
+			if (majorVersion > 5 || (majorVersion == 5 && (minorVersion > 3
+					|| (minorVersion == 3 && revision != null && revision >= 1)))) {
+				return DialectHolder.defaultDialect5_3_1;
+			}
 			return DialectHolder.defaultDialect;
 		}
 	}

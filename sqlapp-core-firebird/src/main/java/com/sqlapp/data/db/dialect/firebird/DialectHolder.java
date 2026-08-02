@@ -21,7 +21,8 @@ package com.sqlapp.data.db.dialect.firebird;
 
 public class DialectHolder {
 
-	public final static Firebird30 defaultDialect30 = new Firebird30(() -> null);
+	public final static Firebird50 defaultDialect50 = new Firebird50(() -> null);
+	public final static Firebird30 defaultDialect30 = new Firebird30(() -> defaultDialect50);
 	public final static Firebird25 defaultDialect25 = new Firebird25(() -> defaultDialect30);
 	public final static Firebird20 defaultDialect20 = new Firebird20(() -> defaultDialect25);
 	public final static Firebird defaultDialect = new Firebird(() -> defaultDialect20);

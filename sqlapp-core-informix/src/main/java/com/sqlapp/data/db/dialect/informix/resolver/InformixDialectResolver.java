@@ -33,7 +33,7 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 public class InformixDialectResolver extends ProductNameDialectResolver {
 
 	public InformixDialectResolver() {
-		super("Informix", new InformixVersionResolver());
+		super(".*Informix.*", new InformixVersionResolver());
 	}
 
 	/**

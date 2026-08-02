@@ -29,6 +29,7 @@ import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
@@ -119,6 +120,16 @@ public class Sqlite extends Dialect {
 	@Override
 	public boolean supportsIdentity() {
 		return true;
+	}
+
+	@Override
+	public boolean supportsInsertReturningResultSet() {
+		return true;
+	}
+
+	@Override
+	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		return sql + "\nRETURNING " + getObjectFullName(identityColumn.getName());
 	}
 
 	@Override

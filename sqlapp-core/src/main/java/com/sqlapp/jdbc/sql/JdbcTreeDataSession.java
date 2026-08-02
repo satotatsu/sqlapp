@@ -26,7 +26,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -42,6 +44,7 @@ import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowOperation;
 import com.sqlapp.data.schemas.Table;
@@ -68,6 +71,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	private SQLConsumer<Connection> commitHandler = conn -> conn.commit();
 	private final TableRelationTreeHolder tableRelationTreeHolder;
 	private final CommitCountHolder commitCountHandler = new CommitCountHolder(Long.MAX_VALUE, this.commitHandler);
+	private final Map<Column, SequenceGenerator> identitySequenceGenerators = new IdentityHashMap<>();
 
 	private long batchUpdateCounter = 0;
 
@@ -357,7 +361,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			statementHolder = new StatementHolder(sqlNode);
 			statementHolder.setSqlHandler((table, sqlType, sql) -> {
 				String handledSql = sqlHandler.apply(table, sqlType, sql);
-				if (sqlType == SqlType.INSERT && dialect.supportsBatchExecuteGeneratedKeysCapture()) {
+				if (sqlType == SqlType.INSERT_ROWS && dialect.supportsInsertReturningResultSet()) {
+					Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
+					if (identityColumn != null) {
+						handledSql = dialect.handleInsertReturningSql(table, identityColumn, handledSql);
+					}
+				} else if (sqlType == SqlType.INSERT && dialect.supportsBatchExecuteGeneratedKeysCapture()) {
 					Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
 					if (identityColumn != null) {
 						handledSql = dialect.handleBatchExecuteGeneratedKeysSql(table, identityColumn, handledSql);
@@ -495,6 +504,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
 			tableRelation.close();
 		}
+		identitySequenceGenerators.values().forEach(SequenceGenerator::close);
+		identitySequenceGenerators.clear();
 		commitCountHandler.reset();
 		lastRow = null;
 		batchUpdateCounter = 0;
@@ -607,26 +618,63 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final Table table = tableRelation.getTable();
 		final int[] ret = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
 			final Column identityColumn = table.getColumns().stream().filter(Column::isIdentity).findFirst().orElse(null);
-			final boolean captureGeneratedKeys = sqlType == SqlType.INSERT && identityColumn != null
+			final Column sequenceColumn = table.getColumns().stream()
+					.filter(column -> !column.isIdentity() && column.getSequenceName() != null)
+					.findFirst().orElse(null);
+			final boolean generatedIdentityRequired = sqlType == SqlType.INSERT && identityColumn != null
+					&& rows.stream().anyMatch(row -> row.get(identityColumn) == null);
+			if (generatedIdentityRequired && dialect.requiresExplicitIdentityValuesForGeneratedKeys()) {
+				throw new SQLException("Dialect " + dialect.getProductName() + " cannot return all generated identity values for "
+						+ identityColumn.getTable().getName() + "." + identityColumn.getName()
+						+ " from a batch safely; provide explicit key values or use a non-identity key column"
+						+ " associated with an explicit sequence.");
+			}
+			final boolean captureGeneratedKeys = generatedIdentityRequired
 					&& !dialect.supportsBatchExecuteGeneratedKeys()
 					&& dialect.supportsBatchExecuteGeneratedKeysCapture();
 			if (captureGeneratedKeys) {
 				dialect.prepareBatchExecuteGeneratedKeys(connection, table, identityColumn);
 			}
+			final boolean identitySequencePreallocated = preallocateGeneratedValues(sqlType,
+					identityColumn != null ? identityColumn : sequenceColumn, rows);
 			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			sqlSignature.setColumnSelectionStrategy(
 					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
-			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			final boolean insertReturning = !identitySequencePreallocated && generatedIdentityRequired
+					&& dialect.supportsInsertReturningResultSet();
+			final boolean insertRows = insertReturning || identitySequencePreallocated;
+			final SqlType statementSqlType = insertRows ? SqlType.INSERT_ROWS : sqlType;
+			StatementHolder holder = tableRelation.getStatementHolder(statementSqlType);
 			if (holder == null) {
-				initialize(tableRelation, sqlType);
-				holder = tableRelation.getStatementHolder(sqlType);
+				initialize(tableRelation, statementSqlType);
+				holder = tableRelation.getStatementHolder(statementSqlType);
+			}
+			if (insertRows) {
+				final int parametersPerRow = holder.getParameterCount(sqlSignature, rows.subList(0, 1));
+				final int maxRows = parametersPerRow == 0 ? rows.size()
+						: dialect.getMaxStatementParameterCount() / parametersPerRow;
+				if (maxRows < 1) {
+					throw new SQLException("One row requires " + parametersPerRow
+							+ " parameters, exceeding the dialect limit of " + dialect.getMaxStatementParameterCount()
+							+ " for table " + table.getName() + ".");
+				}
+				final int[] result = new int[rows.size()];
+				for (int offset = 0; offset < rows.size(); offset += maxRows) {
+					final int end = Math.min(offset + maxRows, rows.size());
+					final List<Row> chunk = rows.subList(offset, end);
+					final int[] chunkResult = insertReturning
+							? executeInsertReturning(holder, sqlSignature, identityColumn, chunk)
+							: executeInsertRows(holder, sqlSignature, chunk);
+					System.arraycopy(chunkResult, 0, result, offset, chunkResult.length);
+				}
+				return result;
 			}
 			final int rowSize = 1;
 			PreparedStatement statement = null;
 			for (Row obj : rows) {
 				if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
 					statement = holder.createStatement(connection, sqlSignature, rowSize, obj,
-							tableRelation.isIdentity() && !captureGeneratedKeys, dialect);
+							generatedIdentityRequired && !captureGeneratedKeys, dialect);
 					statement.setFetchSize(fetchSize);
 				} else {
 					statement = holder.getStatement(sqlSignature, rowSize, obj);
@@ -640,7 +688,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			if (captureGeneratedKeys) {
 				keys = Collections.emptyList();
 				capturedKeys = dialect.getBatchExecuteGeneratedKeys(connection, table, identityColumn);
-			} else if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
+			} else if (generatedIdentityRequired) {
 				final List<GeneratedKeyInfo> generatedKeys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 				final List<GeneratedKeyInfo> namedKeys = generatedKeys.stream()
 						.filter(key -> identityColumn.getName().equalsIgnoreCase(key.getColumnLabel())
@@ -678,6 +726,92 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		});
 		tableRelation.resetBatchCount();
 		return ret;
+	}
+
+	private boolean preallocateGeneratedValues(final SqlType sqlType, final Column identityColumn, final List<Row> rows)
+			throws SQLException {
+		if (sqlType != SqlType.INSERT || identityColumn == null
+				|| (identityColumn.isIdentity() && !dialect.supportsIdentitySequencePreallocation())
+				|| (!identityColumn.isIdentity() && !dialect.supportsSequencePreallocation())) {
+			return false;
+		}
+		final boolean hasNull = rows.stream().anyMatch(row -> row.get(identityColumn) == null);
+		final boolean hasValue = rows.stream().anyMatch(row -> row.get(identityColumn) != null);
+		if (hasNull && dialect.requiresIdentitySequenceForGeneratedKeys()
+				&& identityColumn.getSequenceName() == null) {
+			throw new SQLException("Dialect " + dialect.getProductName() + " cannot return generated identity values for "
+					+ identityColumn.getTable().getName() + "." + identityColumn.getName()
+					+ "; associate an explicit sequence with the identity column.");
+		}
+		if ((identityColumn.isIdentity()
+				&& identityColumn.getIdentityGenerationType() == IdentityGenerationType.Always)
+				|| identityColumn.getSequenceName() == null) {
+			return false;
+		}
+		if (hasNull && hasValue) {
+			throw new IllegalArgumentException("Identity column '" + identityColumn.getName()
+					+ "' cannot mix default-generated and explicit values in one SQL signature.");
+		}
+		if (!hasNull) {
+			return false;
+		}
+		final SequenceGenerator generator = identitySequenceGenerators.computeIfAbsent(identityColumn,
+				column -> new SequenceGenerator(connection, dialect, column.getSequence()));
+		final List<Object> values = generator.get(rows.size());
+		if (values.size() != rows.size()) {
+			throw new SQLException("The identity sequence returned " + values.size() + " values for " + rows.size()
+					+ " input rows in table " + identityColumn.getTable().getName() + ".");
+		}
+		for (int i = 0; i < rows.size(); i++) {
+			rows.get(i).put(identityColumn, values.get(i));
+		}
+		return true;
+	}
+
+	private int[] executeInsertReturning(final StatementHolder holder, final SqlSignature sqlSignature,
+			final Column identityColumn, final List<Row> rows) throws SQLException {
+		final int rowSize = rows.size();
+		PreparedStatement statement = holder.getStatement(sqlSignature, rowSize, rows);
+		if (statement == null) {
+			statement = holder.createStatement(connection, sqlSignature, rowSize, rows, false, dialect);
+			statement.setFetchSize(fetchSize);
+		}
+		preparedStatementBeforeExecuteHandler.accept(statement);
+		final int[] result = new int[rowSize];
+		try (ResultSet resultSet = statement.executeQuery()) {
+			int index = 0;
+			while (resultSet.next()) {
+				if (index >= rowSize) {
+					throw new SQLException("The INSERT returned more identity values than input rows for table "
+							+ identityColumn.getTable().getName() + ".");
+				}
+				rows.get(index).put(identityColumn, resultSet.getObject(1));
+				result[index++] = 1;
+			}
+			if (index != rowSize) {
+				throw new SQLException("The INSERT returned " + index + " identity values for " + rowSize
+						+ " input rows in table " + identityColumn.getTable().getName() + ".");
+			}
+		}
+		return result;
+	}
+
+	private int[] executeInsertRows(final StatementHolder holder, final SqlSignature sqlSignature,
+			final List<Row> rows) throws SQLException {
+		final int rowSize = rows.size();
+		PreparedStatement statement = holder.getStatement(sqlSignature, rowSize, rows);
+		if (statement == null) {
+			statement = holder.createStatement(connection, sqlSignature, rowSize, rows, false, dialect);
+			statement.setFetchSize(fetchSize);
+		}
+		preparedStatementBeforeExecuteHandler.accept(statement);
+		final int count = statement.executeUpdate();
+		if (count != rowSize) {
+			throw new SQLException("The INSERT affected " + count + " rows for " + rowSize + " input rows.");
+		}
+		final int[] result = new int[rowSize];
+		Arrays.fill(result, 1);
+		return result;
 	}
 
 	private boolean handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,

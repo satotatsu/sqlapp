@@ -31,6 +31,7 @@ import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -98,6 +99,8 @@ public class H2ColumnReader extends ColumnReader {
 				getString(rs, "IS_IDENTITY"));
 		column.setIdentity(identity);
 		if (identity) {
+			column.setIdentityGenerationType("ALWAYS".equalsIgnoreCase(getString(rs, "IDENTITY_GENERATION"))
+					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
 			column.setIdentityStartValue(getLong(rs,
 					"IDENTITY_START"));
 			column.setIdentityStep(getLong(rs,

@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Sequence;
 
 public class DerbySqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -36,6 +37,8 @@ public class DerbySqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.LOCK,
 				DerbyLockTableFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
+				DerbySequenceNextValuesFactory.class);
 	}
 	
 }

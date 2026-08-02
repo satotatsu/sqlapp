@@ -209,6 +209,11 @@ public class Hsql extends Dialect {
 		return true;
 	}
 
+	@Override
+	public boolean supportsBatchExecuteGeneratedKeys() {
+		return true;
+	}
+
 	/**
 	 * IDENTITYカラム作成時の構文
 	 * 

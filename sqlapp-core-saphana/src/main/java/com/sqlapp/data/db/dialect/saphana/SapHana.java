@@ -30,6 +30,8 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlBuilder;
 import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
@@ -169,6 +171,26 @@ public class SapHana extends Dialect {
 	@Override
 	public boolean supportsIdentity() {
 		return true;
+	}
+
+	@Override
+	public boolean supportsIdentitySequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public boolean requiresIdentitySequenceForGeneratedKeys() {
+		return true;
+	}
+
+	@Override
+	public String getIdentityInsertDefaultValue(final Column column) {
+		return column.getIdentityGenerationType() == IdentityGenerationType.ByDefault ? "DEFAULT" : null;
+	}
+
+	@Override
+	public String getSelectDummyTableName() {
+		return "DUMMY";
 	}
 
 	@Override

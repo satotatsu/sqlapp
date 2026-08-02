@@ -147,6 +147,11 @@ public class Firebird extends Dialect {
 	}
 
 	@Override
+	public String getSelectDummyTableName() {
+		return "RDB$DATABASE";
+	}
+
+	@Override
 	public boolean supportsWith() {
 		return true;
 	}

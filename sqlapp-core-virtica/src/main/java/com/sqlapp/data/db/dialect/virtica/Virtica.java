@@ -134,6 +134,11 @@ public class Virtica extends Dialect {
 		return "Vertica";
 	}
 
+	@Override
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
 	/**
 	 * DB製品名(シンプル名)
 	 */
@@ -144,6 +149,21 @@ public class Virtica extends Dialect {
 
 	@Override
 	public boolean supportsWith() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsIdentity() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public boolean requiresExplicitIdentityValuesForGeneratedKeys() {
 		return true;
 	}
 

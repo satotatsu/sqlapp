@@ -553,6 +553,42 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Returns whether identity values may be allocated from the sequence associated
+	 * with the identity column before a multi-row INSERT.
+	 */
+	public boolean supportsIdentitySequencePreallocation() {
+		return false;
+	}
+
+	/** Returns whether values for a non-identity sequence-backed column may be
+	 * allocated before a multi-row INSERT. */
+	public boolean supportsSequencePreallocation() {
+		return false;
+	}
+
+	/** Expands values returned by a dialect-specific sequence reservation. */
+	public List<Object> expandSequenceValues(final Sequence sequence, final List<Object> values, final int count) {
+		return values;
+	}
+
+	/**
+	 * Returns whether generated identity values require an explicitly associated
+	 * sequence because the dialect cannot return all generated keys.
+	 */
+	public boolean requiresIdentitySequenceForGeneratedKeys() {
+		return false;
+	}
+
+	/**
+	 * Returns whether INSERT rows requiring generated identity values must be
+	 * rejected because the dialect cannot return every generated value safely in
+	 * input order.
+	 */
+	public boolean requiresExplicitIdentityValuesForGeneratedKeys() {
+		return false;
+	}
+
+	/**
 	 * カラムでの式をサポートするかを返します
 	 * 
 	 * @return カラムでの式をサポート
@@ -760,6 +796,25 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	public List<Object> getBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
 			throws SQLException {
 		return Collections.emptyList();
+	}
+
+	/**
+	 * Returns whether a multi-row INSERT can expose its changed rows as a result
+	 * set. This avoids JDBC batch generated-key limitations without executing rows
+	 * individually.
+	 */
+	public boolean supportsInsertReturningResultSet() {
+		return false;
+	}
+
+	/** Wraps a multi-row INSERT so that its generated identity values are returned. */
+	public String handleInsertReturningSql(Table table, Column identityColumn, String sql) {
+		return sql;
+	}
+
+	/** Maximum parameter markers accepted in one prepared statement. */
+	public int getMaxStatementParameterCount() {
+		return Integer.MAX_VALUE;
 	}
 
 	/**

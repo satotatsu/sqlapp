@@ -49,6 +49,13 @@ Run only the MySQL JDBC tree session test:
   --tests com.sqlapp.data.db.dialect.test.mysql.MySqlJdbcTreeDataSessionTest
 ```
 
+Run only the MariaDB JDBC tree session test:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests com.sqlapp.data.db.dialect.test.mariadb.MariadbJdbcTreeDataSessionTest
+```
+
 Docker must be available to the Gradle process. The first execution downloads
 the pinned database image and therefore takes longer.
 
@@ -100,6 +107,10 @@ an open SELECT result set, intermediate commit visibility, the final partial
 batch committed on close, and schema loading through the dialect catalog
 reader because MySQL's JDBC catalog name differs from INFORMATION_SCHEMA's
 catalog name.
+
+MariaDB coverage uses MariaDB 11.8 with Connector/J 3.5 and verifies the same
+generated-key alignment, AUTO_INCREMENT signature, cursor, and transaction
+boundaries as the MySQL coverage.
 
 SQL Server uses the image documented by Testcontainers:
 `mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is

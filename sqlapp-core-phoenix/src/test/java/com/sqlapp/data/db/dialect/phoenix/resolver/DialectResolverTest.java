@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.phoenix.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.ServiceLoader;
 
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.phoenix.Phoenix;
+import com.sqlapp.data.db.dialect.phoenix.Phoenix5_3_1;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
@@ -37,6 +39,12 @@ public class DialectResolverTest {
 		final Dialect dialect = DialectResolver.getInstance().getDialect("Apache Phoenix", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Phoenix);
+		assertFalse(dialect.supportsValues());
+		final Dialect previous = DialectResolver.getInstance().getDialect("Phoenix", 5, 3, 0);
+		assertFalse(previous.supportsValues());
+		final Dialect modern = DialectResolver.getInstance().getDialect("Apache Phoenix", 5, 3, 1);
+		assertTrue(modern instanceof Phoenix5_3_1);
+		assertTrue(modern.supportsValues());
 	}
 
 	@Test

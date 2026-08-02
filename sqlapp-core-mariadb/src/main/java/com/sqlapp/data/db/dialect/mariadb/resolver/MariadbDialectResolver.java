@@ -67,7 +67,9 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 				}
 				return DialectHolder.mariadb11_40Dialect;
 			} else if (majorVersion == 10) {
-				if (minorVersion >= 3) {
+				if (minorVersion >= 5) {
+					return DialectHolder.mariadb10_50Dialect;
+				} else if (minorVersion >= 3) {
 					return DialectHolder.mariadb10_30Dialect;
 				} else if (minorVersion == 2) {
 					if (revision != null && revision >= 7) {

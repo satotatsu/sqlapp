@@ -20,17 +20,34 @@
 package com.sqlapp.data.db.dialect.postgres;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
 public class PostgresTest {
 
 	private Dialect dialect = DialectHolder.defaultDialect;
+
+	@Test
+	public void testInsertRowsReturningSupportStartsAt82() {
+		Dialect postgres81 = new Postgres(() -> null);
+		Dialect postgres82 = new Postgres82(() -> null);
+		Table table = new Table("tableA");
+		Column identity = table.newColumn().setName("id");
+
+		assertFalse(postgres81.supportsInsertReturningResultSet());
+		assertTrue(postgres82.supportsInsertReturningResultSet());
+		assertEquals("INSERT INTO \"tableA\" VALUES (?, ?)\nRETURNING id",
+				postgres82.handleInsertReturningSql(table, identity, "INSERT INTO \"tableA\" VALUES (?, ?)"));
+		assertEquals(65535, postgres82.getMaxStatementParameterCount());
+	}
 
 	@Test
 	public void testToType() {

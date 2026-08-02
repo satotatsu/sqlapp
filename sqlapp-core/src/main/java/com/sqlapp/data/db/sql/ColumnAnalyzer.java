@@ -393,7 +393,7 @@ public enum ColumnAnalyzer {
 		if (uk == null) {
 			return CommonUtils.linkedSet();
 		}
-		List<Column> list = uk.getColumns().stream().map(c -> c.getColumn()).toList();
+		List<Column> list = uk.getColumns().stream().map(c -> c.getColumn()).filter(c -> c != null).toList();
 		return CommonUtils.linkedSet(list);
 	}
 

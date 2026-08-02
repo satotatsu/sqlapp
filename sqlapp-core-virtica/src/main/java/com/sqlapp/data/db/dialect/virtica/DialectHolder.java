@@ -22,7 +22,8 @@ package com.sqlapp.data.db.dialect.virtica;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect defaultDialect90 = new Virtica90(() -> null);
+	public final static Dialect defaultDialect11_1_1 = new Virtica11_1_1(() -> null);
+	public final static Dialect defaultDialect90 = new Virtica90(() -> defaultDialect11_1_1);
 	public final static Dialect defaultDialect80 =
 			new Virtica80(() -> defaultDialect90);
 	public final static Dialect defaultDialect72 = new Virtica72(() -> defaultDialect80);

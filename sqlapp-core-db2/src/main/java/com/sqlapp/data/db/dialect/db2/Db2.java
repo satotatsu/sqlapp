@@ -44,6 +44,7 @@ import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -209,7 +210,7 @@ public class Db2 extends Dialect {
 
 	@Override
 	public String getIdentityInsertDefaultValue(Column column) {
-		return "default";
+		return column.getIdentityGenerationType() == IdentityGenerationType.ByDefault ? "default" : null;
 	}
 
 	@Override
@@ -238,6 +239,22 @@ public class Db2 extends Dialect {
 		} else {
 			return "select identity_val_local()";
 		}
+	}
+
+	@Override
+	public boolean supportsInsertReturningResultSet() {
+		return true;
+	}
+
+	@Override
+	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		return "SELECT " + getObjectFullName(identityColumn.getName()) + " FROM FINAL TABLE (" + sql
+				+ ") ORDER BY INPUT SEQUENCE";
+	}
+
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 32767;
 	}
 
 	@Override

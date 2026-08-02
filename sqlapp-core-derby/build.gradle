@@ -5,6 +5,7 @@ plugins {
 dependencies {
 	implementation project(':sqlapp-core')
 	testImplementation project(':sqlapp-core-test')
+	testImplementation('org.apache.derby:derby:10.17.1.0')
 }
 
 javadoc {

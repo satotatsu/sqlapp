@@ -38,7 +38,9 @@ public class SapHanaSequenceNextValuesFactory
 			builder._add(" ");
 			builder._add(1);
 			builder.comma();
-			builder._add(getColumnParameterExpression(getCountParameterName(obj), "1"));
+			builder._add(1);
+			builder.comma();
+			builder._add(getColumnParameterExpression(getCountParameterName(obj), "1"))._add(" + 1");
 		});
 	}
 }

@@ -47,6 +47,8 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 		if (generationType!=null){
 			column.setIdentity(true);
 			column.setIdentityGenerationType(generationType);
+			column.setSequenceSchemaName(getString(rs, "OWNER"));
+			column.setSequenceName(getString(rs, "SEQUENCE_NAME"));
 			String identityOptions = getString(rs, "IDENTITY_OPTIONS");
 			setIdentityOptions(column, identityOptions);
 		}

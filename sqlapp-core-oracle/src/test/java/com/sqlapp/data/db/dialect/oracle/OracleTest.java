@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.oracle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +32,13 @@ import com.sqlapp.data.schemas.Column;
 public class OracleTest {
 
 	private Dialect dialect = DialectHolder.defaultDialect;
+
+	@Test
+	public void testIdentitySequencePreallocationStartsAt23ai() {
+		assertFalse(DialectHolder.oracle21cDialect.supportsIdentitySequencePreallocation());
+		assertTrue(DialectHolder.oracle23aiDialect.supportsIdentitySequencePreallocation());
+		assertTrue(DialectHolder.oracle26aiDialect.supportsIdentitySequencePreallocation());
+	}
 
 	@Test
 	public void testTimestampWithTimezone() {

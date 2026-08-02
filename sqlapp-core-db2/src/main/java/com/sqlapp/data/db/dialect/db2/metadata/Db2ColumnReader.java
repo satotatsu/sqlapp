@@ -35,6 +35,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Sequence;
 
@@ -74,6 +75,8 @@ public class Db2ColumnReader extends ColumnReader {
 		obj.setNullable("Y".equals(getString(rs, "NULLS")));
 		obj.setIdentity("Y".equals(getString(rs, "IDENTITY")));
 		if (obj.isIdentity()) {
+			obj.setIdentityGenerationType("A".equalsIgnoreCase(getString(rs, "GENERATED"))
+					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
 			obj.setSequence(new Sequence());
 			obj.setIdentityStep(rs.getBigDecimal("INCREMENT"));
 			obj.setIdentityStartValue(rs.getBigDecimal("START"));

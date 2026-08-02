@@ -26,6 +26,8 @@ import com.sqlapp.data.db.dialect.postgres.metadata.Postgres82CatalogReader;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres82SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 
 public class Postgres82 extends Postgres {
 	/**
@@ -59,6 +61,21 @@ public class Postgres82 extends Postgres {
 	@Override
 	public boolean supportsWithRecursive() {
 		return false;
+	}
+
+	@Override
+	public boolean supportsInsertReturningResultSet() {
+		return true;
+	}
+
+	@Override
+	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		return sql + "\nRETURNING " + getObjectFullName(identityColumn.getName());
+	}
+
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 65535;
 	}
 
 	@Override

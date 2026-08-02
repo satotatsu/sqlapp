@@ -20,6 +20,7 @@
 package com.sqlapp.data.schemas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -85,6 +86,25 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 		assertEquals(array[i++], "");
 		assertEquals(array[i++], "b");
 		assertEquals(array[i++], "c");
+	}
+
+	@Test
+	public void testClonePreservesIdentitySequenceProperties() {
+		final Column column = new Column("ID");
+		column.setIdentity(true);
+		column.setIdentityStartValue(10);
+		column.setIdentityStep(3);
+		column.setIdentityCacheSize(20);
+		final Table table = new Table("TABLE1");
+		table.getColumns().add(column);
+
+		final Column clone = column.clone();
+
+		assertNotSame(column.getSequence(), clone.getSequence());
+		assertEquals(10L, clone.getIdentityStartValue());
+		assertEquals(3L, clone.getIdentityStep());
+		assertEquals(20, clone.getIdentityCacheSize());
+		assertEquals(3L, table.clone().getColumns().get("ID").getIdentityStep());
 	}
 
 	@Override

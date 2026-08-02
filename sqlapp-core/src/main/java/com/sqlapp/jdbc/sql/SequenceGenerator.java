@@ -85,7 +85,7 @@ public class SequenceGenerator implements Closeable {
 				list.add(val);
 			}
 		}
-		return list;
+		return dialect.expandSequenceValues(sequence, list, size);
 	}
 
 	@Override

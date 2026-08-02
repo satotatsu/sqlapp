@@ -14,13 +14,18 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.oracle.OracleContainer;
 
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -29,12 +34,21 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** Oracle Database Free integration coverage for hierarchical JDBC writes. */
-@Testcontainers
 class OracleJdbcTreeDataSessionTest {
 	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
 
-	@Container
-	private static final OracleContainer ORACLE = new OracleContainer(IMAGE);
+	private static final OracleContainer ORACLE =
+			ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(ORACLE);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(ORACLE);
+	}
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
@@ -45,6 +59,7 @@ class OracleJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(writer);
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
+			assertTrue(parent.getColumns().get("ID").getSequenceName().startsWith("ISEQ$$_"));
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
 				session.setRootBatchSize(2);
@@ -127,15 +142,24 @@ class OracleJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
+			Set<Object> preparedStatements = Collections.newSetFromMap(new IdentityHashMap<>());
+			AtomicInteger executions = new AtomicInteger();
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
+				session.setPreparedStatementBeforeExecuteHandler(statement -> {
+					preparedStatements.add(statement);
+					executions.incrementAndGet();
+				});
 				for (int i = 3; i <= 7; i++) {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
 			}
+			assertEquals(6, executions.get());
+			assertEquals(4, preparedStatements.size(),
+					"Two-row batches must reuse their prepared statements; only final one-row shapes differ.");
 
 			try (Statement statement = connection.createStatement();
 					ResultSet resultSet = statement.executeQuery("""

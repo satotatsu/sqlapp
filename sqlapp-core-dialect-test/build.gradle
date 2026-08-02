@@ -39,6 +39,12 @@ tasks.register('dockerTest', Test) {
 	classpath = sourceSets.dockerTest.runtimeClasspath
 	useJUnitPlatform()
 	shouldRunAfter tasks.named('test')
+	def testcontainersReuse = providers.gradleProperty('testcontainersReuse')
+		.map { it.toBoolean() }.orElse(false)
+	systemProperty 'sqlapp.testcontainers.reuse', testcontainersReuse.get()
+	if (testcontainersReuse.get()) {
+		environment 'TESTCONTAINERS_REUSE_ENABLE', 'true'
+	}
 	if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
 			&& !System.getenv('DOCKER_HOST')) {
 		// Rancher Desktop's documented endpoint for native Windows clients.
@@ -90,35 +96,48 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-saphana')
+	implementation project(':sqlapp-core-spanner')
 	implementation project(':sqlapp-core-sqlite')
 	implementation project(':sqlapp-core-sqlserver')
 	implementation project(':sqlapp-core-sybase')
 	implementation project(':sqlapp-core-symfoware')
+	implementation project(':sqlapp-core-virtica')
 	implementation fileTree(dir: 'lib', include: '*.jar')
 	//derby
 	testImplementation('org.apache.derby:derby:10.17.1.0')
 	//hsql
 	testImplementation('org.hsqldb:hsqldb:2.7.4')
 	//firebird
-	//testCompile group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk17', version: '2.2.10'
+	testImplementation('org.firebirdsql.jdbc:jaybird:6.0.5')
 	//postgres
 	testImplementation('org.postgresql:postgresql:42.7.11')
+	//DB2
+	testImplementation('com.ibm.db2:jcc:12.1.4.0')
+	//Informix
+	testImplementation('com.ibm.informix:jdbc:15.0.1.2')
 	//mysql
 	testImplementation('com.mysql:mysql-connector-j:9.7.0')
+	testImplementation('org.mariadb.jdbc:mariadb-java-client:3.5.9')
 	//sqlite
 	testImplementation('org.xerial:sqlite-jdbc:3.53.1.0')
 	//SQL Server
-	//implementation group: 'net.sourceforge.jtds', name: 'jtds', version: '1.3.1'
+	testImplementation('net.sourceforge.jtds:jtds:1.3.1')
 	testImplementation('com.microsoft.sqlserver:mssql-jdbc:13.4.0.jre11')
 	// https://mvnrepository.com/artifact/com.sap.cloud.db.jdbc/ngdbc
 	implementation('com.oracle.database.jdbc:ojdbc11:23.26.2.0.0')
 	//
 	testImplementation('com.sap.cloud.db.jdbc:ngdbc:2.29.7')
+	// Cloud Spanner
+	testImplementation('com.google.cloud:google-cloud-spanner-jdbc:2.41.0')
+	// Vertica
+	testImplementation('com.vertica.jdbc:vertica-jdbc:25.3.0-0')
 	testImplementation(platform('org.junit:junit-bom:5.11.3'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testImplementation('org.junit.jupiter:junit-jupiter-api')
 	dockerTestImplementation(platform('org.testcontainers:testcontainers-bom:2.0.5'))
 	dockerTestImplementation('org.testcontainers:testcontainers-junit-jupiter')
+	dockerTestImplementation('org.testcontainers:testcontainers-db2')
+	dockerTestImplementation('org.testcontainers:testcontainers-mariadb')
 	dockerTestImplementation('org.testcontainers:testcontainers-mysql')
 	dockerTestImplementation('org.testcontainers:testcontainers-mssqlserver')
 	dockerTestImplementation('org.testcontainers:testcontainers-oracle-free')

@@ -18,22 +18,32 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mssqlserver.MSSQLServerContainer;
+
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 
 /**
  * Isolates the Microsoft JDBC driver's generated-key behavior from sqlapp.
  */
-@Testcontainers
 class SqlServerBatchGeneratedKeysTest {
 	private static final String IMAGE =
 			"mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
 
-	@Container
 	private static final MSSQLServerContainer SQL_SERVER =
-			new MSSQLServerContainer(IMAGE).acceptLicense();
+			ReusableTestcontainers.configure(new MSSQLServerContainer(IMAGE).acceptLicense());
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(SQL_SERVER);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(SQL_SERVER);
+	}
 
 	@Test
 	void testStandardGetGeneratedKeysAfterExecuteBatchIsUnsupported() throws Exception {

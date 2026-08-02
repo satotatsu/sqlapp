@@ -59,7 +59,7 @@ public class SpannerTruncateTableFactoryTest extends SpannerSqlFactoryTest {
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
-				DELETE FROM "tableA\"""";
+				DELETE FROM `tableA`""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

@@ -5,6 +5,7 @@ plugins {
 dependencies {
 	implementation project(':sqlapp-core')
 	testImplementation project(':sqlapp-core-test')
+	testImplementation('org.xerial:sqlite-jdbc:3.53.1.0')
 }
 
 javadoc {

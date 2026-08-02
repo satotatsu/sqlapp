@@ -75,7 +75,7 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("fulltextindexes.sql");
+		return getSqlNodeCache().getString("fulltextIndexes.sql");
 	}
 
 	protected Index createIndex(final Connection connection, ExResultSet rs)

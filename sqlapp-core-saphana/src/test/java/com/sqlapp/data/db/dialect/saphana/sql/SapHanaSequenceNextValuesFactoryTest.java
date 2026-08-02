@@ -60,7 +60,7 @@ public class SapHanaSequenceNextValuesFactoryTest extends AbstractSapHanaSqlFact
 		System.out.println(list);
 		String expected = """
 				SELECT "seqA".NEXTVAL
-				FROM SERIES_GENERATE_INTEGER( 1, /*context*/1 )
+				FROM SERIES_GENERATE_INTEGER( 1, 1, /*context*/1 + 1 )
 				""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}

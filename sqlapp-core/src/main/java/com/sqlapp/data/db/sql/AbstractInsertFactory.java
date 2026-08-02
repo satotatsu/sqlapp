@@ -56,8 +56,12 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 			}
 		});
 		addInsertAfter(table, builder);
-		addSql(sqlList, builder, SqlType.INSERT, table);
+		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
+	}
+
+	protected SqlType getSqlType() {
+		return SqlType.INSERT;
 	}
 
 	protected void addInsertAfter(final Table table, final S builder) {
@@ -118,7 +122,11 @@ public abstract class AbstractInsertFactory<S extends AbstractSqlBuilder<?>> ext
 			});
 			builder.lineBreak();
 		});
-		builder.lineBreak().values();
+		addValues(builder);
 		return list;
+	}
+
+	protected void addValues(final S builder) {
+		builder.lineBreak().values();
 	}
 }

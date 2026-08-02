@@ -22,7 +22,7 @@ SELECT
   , tr.*
 FROM SYSCAT.TRIGGERS tr
 WHERE 1=1
-  AND SYSCAT.TRIGGERS.VALID = 'Y'
+  AND tr.VALID = 'Y'
   /*if isNotEmpty(schemaName) */
   AND rtrim(tr.TRIGSCHEMA) IN /*schemaName*/('%')
   /*end*/
@@ -30,4 +30,4 @@ WHERE 1=1
   AND rtrim(tr.TRIGNAME) IN /*triggerName*/('%')
   /*end*/
 ORDER BY tr.TRIGSCHEMA, tr.TRIGNAME
-WITH UR  
+WITH UR

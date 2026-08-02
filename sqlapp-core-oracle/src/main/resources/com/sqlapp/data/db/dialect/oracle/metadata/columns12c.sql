@@ -2,6 +2,7 @@ SELECT
   tc.*
   , cc.COMMENTS
   , tic.GENERATION_TYPE
+  , tic.SEQUENCE_NAME
   , tic.IDENTITY_OPTIONS
 FROM all_tab_cols tc
 LEFT OUTER JOIN all_col_comments cc

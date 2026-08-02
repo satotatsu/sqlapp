@@ -21,6 +21,8 @@ package com.sqlapp.data.db.dialect.phoenix;
 
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
+import java.math.BigInteger;
+import java.util.List;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -29,6 +31,8 @@ import com.sqlapp.data.db.dialect.phoenix.sql.PhoenixSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.phoenix.util.PhoenixSqlBuilder;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * Phoenix固有情報クラス
@@ -144,6 +148,30 @@ public class Phoenix extends Dialect {
 	@Override
 	public boolean supportsWith() {
 		return true;
+	}
+
+	@Override
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
+	@Override
+	public boolean supportsSequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public List<Object> expandSequenceValues(final Sequence sequence, final List<Object> values, final int count) {
+		if (values.size() != 1 || count <= 1) {
+			return values;
+		}
+		final BigInteger first = new BigInteger(values.get(0).toString());
+		final BigInteger increment = sequence.getIncrementBy() != null ? sequence.getIncrementBy() : BigInteger.ONE;
+		final List<Object> result = CommonUtils.list(count);
+		for (int i = 0; i < count; i++) {
+			result.add(first.add(increment.multiply(BigInteger.valueOf(i))).longValueExact());
+		}
+		return result;
 	}
 
 	/*

@@ -21,6 +21,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
@@ -92,6 +93,8 @@ public class H2MetadataRoundTripTest {
 					""");
 			statement.execute(
 					"CREATE TABLE PARENT_TABLE (ID BIGINT PRIMARY KEY)");
+			statement.execute("CREATE TABLE ALWAYS_IDENTITY "
+					+ "(ID BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY)");
 			statement.execute("""
 					CREATE TABLE METADATA_ROUND_TRIP
 					(
@@ -180,8 +183,13 @@ public class H2MetadataRoundTripTest {
 
 			final Column id = table.getColumns().get("ID");
 			assertTrue(id.isIdentity());
+			assertEquals(IdentityGenerationType.ByDefault,
+					id.getIdentityGenerationType());
 			assertEquals(100L, id.getIdentityStartValue());
 			assertEquals(10L, id.getIdentityStep());
+			assertEquals(IdentityGenerationType.Always, schema.getTables()
+					.get("ALWAYS_IDENTITY").getColumns().get("ID")
+					.getIdentityGenerationType());
 
 			final Column name = table.getColumns().get("NAME");
 			assertTrue(name.isNotNull());

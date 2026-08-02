@@ -226,9 +226,15 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	@Override
 	protected HsqlSqlBuilder autoIncrement(final AbstractColumn<?> column) {
 		generated().by().default_().as().identity();
-		if (column.getIdentityStartValue() != null) {
+		Long start = column.getIdentityLastValue() != null
+				? column.getIdentityLastValue() : column.getIdentityStartValue();
+		if (start != null || column.getIdentityStep() != null) {
+			if (start == null) {
+				start = 1L;
+			}
+			final Long identityStart = start;
 			this.space().brackets(() -> {
-				start().with().space()._add(column.getIdentityStartValue());
+				start().with().space()._add(identityStart);
 				if (column.getIdentityStep() != null) {
 					comma().incrementBy().space()._add(column.getIdentityStep());
 				}

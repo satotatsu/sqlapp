@@ -56,7 +56,7 @@ public class Db2_1010MaskReader extends MaskReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString(".sql");
+		return getSqlNodeCache().getString("masks.sql");
 	}
 
 	protected Mask createMask(ExResultSet rs) throws SQLException {

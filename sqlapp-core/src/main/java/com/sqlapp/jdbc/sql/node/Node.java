@@ -257,7 +257,9 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 							bindParameter.setValue(row.getRowId());
 							cnt++;
 						} else {
-							final Object value = row.get(bindParameter.getColumn());
+							final Column column = bindParameter.getColumn();
+							final Object value = column != null ? row.get(column)
+									: evalValueAndSetDataType(row, bindParameter);
 							bindParameter.setValue(value);
 							cnt++;
 						}

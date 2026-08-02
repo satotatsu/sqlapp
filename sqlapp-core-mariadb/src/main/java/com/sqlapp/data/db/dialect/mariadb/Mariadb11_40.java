@@ -14,7 +14,7 @@ import com.sqlapp.data.db.metadata.CatalogReader;
 /**
  * MariaDB 11.4 long-term release.
  */
-public class Mariadb11_40 extends Mariadb10_30 {
+public class Mariadb11_40 extends Mariadb10_50 {
 
 	private static final long serialVersionUID = 1L;
 

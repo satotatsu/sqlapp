@@ -15,11 +15,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -28,12 +29,21 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** PostgreSQL integration coverage for hierarchical JDBC batch writes. */
-@Testcontainers
 class PostgresJdbcTreeDataSessionTest {
 	private static final String IMAGE = "postgres:18.4";
 
-	@Container
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(IMAGE);
+	private static final PostgreSQLContainer POSTGRES =
+			ReusableTestcontainers.configure(new PostgreSQLContainer(IMAGE));
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(POSTGRES);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(POSTGRES);
+	}
 
 	@Test
 	void testAlwaysIdentityRejectsExplicitValues() throws SQLException {

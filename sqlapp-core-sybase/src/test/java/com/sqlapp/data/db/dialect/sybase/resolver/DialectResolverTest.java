@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sybase.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -37,10 +38,16 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Sybase", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Sybase);
+		assertEquals("Adaptive Server Enterprise", dialect.getProductName());
+		assertTrue(dialect.supportsIdentity());
+		assertTrue(dialect.requiresExplicitIdentityValuesForGeneratedKeys());
 		dialect = DialectResolver.getInstance().getDialect("Adaptive Server", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Sybase);
 		dialect = DialectResolver.getInstance().getDialect("ACE", 0, 0, 0);
+		System.out.println(dialect);
+		assertTrue(dialect instanceof Sybase);
+		dialect = DialectResolver.getInstance().getDialect("ASE", 16, 0, 3);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Sybase);
 	}

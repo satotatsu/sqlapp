@@ -1,0 +1,138 @@
+/*
+ * Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com>
+ *
+ * This file is part of sqlapp-core-derby.
+ */
+package com.sqlapp.data.db.dialect.derby;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
+
+/** Derby integration coverage for sequence-preallocated tree inserts. */
+class DerbyJdbcTreeDataSessionTest {
+
+	@Test
+	void testSequencePreallocationPropagatesKeysAndReusesPreparedStatements() throws Exception {
+		try (Connection connection = open("tree-data-session")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadSchema(connection);
+			Table parent = schema.getTables().get("PARENT_TABLE");
+			Table child = schema.getTables().get("CHILD_TABLE");
+			assertTrue(parent.getColumns().get("ID").isIdentity());
+			child.getConstraints().addForeignKeyConstraint("MODEL_FK_CHILD_PARENT",
+					child.getColumns().get("PARENT_ID"), parent.getColumns().get("ID"));
+			schema.getSequences().add(new Sequence("PARENT_SEQ"));
+			parent.getColumns().get("ID").setSequenceName("PARENT_SEQ");
+			schema.getSequences().add(new Sequence("CHILD_SEQ"));
+			child.getColumns().get("ID").setSequenceName("CHILD_SEQ");
+			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
+			AtomicInteger executions = new AtomicInteger();
+
+			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				session.setRootBatchSize(3);
+				session.setTableOperationMode(TableOperationMode.INSERT);
+				session.setPreparedStatementBeforeExecuteHandler(statement -> {
+					statements.add(statement);
+					executions.incrementAndGet();
+				});
+				for (int i = 1; i <= 6; i++) {
+					Row parentRow = session.newRow(parent);
+					parentRow.put("TXT", "parent-" + i);
+					Row childRow = session.newRow(child);
+					childRow.put("TXT", "child-" + i);
+				}
+			}
+
+			assertEquals(2, statements.size());
+			assertEquals(4, executions.get());
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery("""
+							SELECT p.id, p.txt, c.parent_id, c.txt
+							FROM parent_table p
+							JOIN child_table c ON c.parent_id = p.id
+							ORDER BY p.id
+							""")) {
+				for (long i = 1; i <= 6; i++) {
+					assertTrue(resultSet.next());
+					assertEquals(1000L + i, resultSet.getLong(1));
+					assertEquals("parent-" + i, resultSet.getString(2));
+					assertEquals(resultSet.getLong(1), resultSet.getLong(3));
+					assertEquals("child-" + i, resultSet.getString(4));
+				}
+				assertFalse(resultSet.next());
+			}
+			connection.commit();
+		}
+	}
+
+	@Test
+	void testGeneratedIdentityWithoutExplicitSequenceFailsClearly() throws Exception {
+		try (Connection connection = open("identity-without-sequence")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Table parent = loadSchema(connection).getTables().get("PARENT_TABLE");
+			SQLException exception = assertThrows(SQLException.class, () -> {
+				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent)) {
+					session.setTableOperationMode(TableOperationMode.INSERT);
+					session.newRow(parent).put("TXT", "unsupported-identity");
+				}
+			});
+			assertTrue(exception.getMessage().contains("associate an explicit sequence"), exception.getMessage());
+			connection.rollback();
+		}
+	}
+
+	private Connection open(final String database) throws SQLException {
+		return DriverManager.getConnection("jdbc:derby:memory:" + database + ";create=true");
+	}
+
+	private Schema loadSchema(final Connection connection) throws SQLException {
+		return SchemaUtils.getSchema(connection, "APP", "PARENT_TABLE", "CHILD_TABLE").orElseThrow();
+	}
+
+	private void createTables(final Connection connection) throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			statement.execute("CREATE SEQUENCE parent_seq AS BIGINT START WITH 1001 INCREMENT BY 1");
+			statement.execute("CREATE SEQUENCE child_seq AS BIGINT START WITH 2001 INCREMENT BY 1");
+			statement.execute("""
+					CREATE TABLE parent_table (
+						id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+						txt VARCHAR(256)
+					)
+					""");
+			statement.execute("""
+					CREATE TABLE child_table (
+						id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+						parent_id BIGINT NOT NULL,
+						txt VARCHAR(256),
+						CONSTRAINT fk_child_parent FOREIGN KEY (parent_id) REFERENCES parent_table(id)
+					)
+					""");
+			connection.commit();
+		}
+	}
+}
