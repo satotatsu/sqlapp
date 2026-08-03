@@ -150,14 +150,15 @@ license {
 	}
 	header = project.file("../build-logic/lgpl.template")
 	exclude ([
-		'**/*.properties',
-		'**/*.html',
-		'**/*.css',
-		'**/*.csv',
-		'**/*.xml',
-		'**/*.yaml',
-		'**/*.json',
-		'**/*.jsonl'
+		//		'**/*.properties',
+		//		'**/*.html',
+		//		'**/*.css',
+		//		'**/*.csv',
+		//		'**/*.xml',
+		//		'**/*.yaml',
+		//		'**/*.json',
+		//		'**/*.jsonl'
+		'**/*'
 	])
 	//	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
 	//	}
