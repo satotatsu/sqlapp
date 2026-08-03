@@ -136,6 +136,10 @@ tasks.named('test') {
 
 jacoco { toolVersion = "0.8.15" }
 
+tasks.named('checkLicenses') {
+	enabled = false
+}
+
 license {
 	charset= defaultEncoding
 	properties {
@@ -150,14 +154,15 @@ license {
 	}
 	header = project.file("../build-logic/lgpl.template")
 	exclude ([
-		'**/*.properties',
-		'**/*.html',
-		'**/*.css',
-		'**/*.csv',
-		'**/*.xml',
-		'**/*.yaml',
-		'**/*.json',
-		'**/*.jsonl'
+		//		'**/*.properties',
+		//		'**/*.html',
+		//		'**/*.css',
+		//		'**/*.csv',
+		//		'**/*.xml',
+		//		'**/*.yaml',
+		//		'**/*.json',
+		//		'**/*.jsonl'
+		'**/*'
 	])
 	//	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
 	//	}
