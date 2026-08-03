@@ -136,10 +136,6 @@ tasks.named('test') {
 
 jacoco { toolVersion = "0.8.15" }
 
-tasks.named('checkLicenses') {
-	enabled = false
-}
-
 license {
 	charset= defaultEncoding
 	properties {
