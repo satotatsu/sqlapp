@@ -41,9 +41,9 @@ import com.sqlapp.data.db.command.normalization.SurrogateKeyGenerationType;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
-import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 
 /**
  * Gradle task for converting a schema XML document to first normal form.
@@ -171,6 +171,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	@Override
 	protected void beforeRun(FirstNormalFormCommand command) {
+		command.setColumnFilter(getColumnFilter());
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
