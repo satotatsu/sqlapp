@@ -103,13 +103,9 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 		final Table table = c.getParent();
 		final XmlReaderOptions options = new XmlReaderOptions();
 		options.setRowValueConverter(rowValueConverter);
-		final VirtualThreadIterable<Row> itr = new VirtualThreadIterable<>(queue -> {
+		final VirtualThreadIterable<Row> iterable = new VirtualThreadIterable<>(output -> {
 			options.setAddRow((tbl, row) -> {
-				try {
-					queue.put(row);
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
+				output.accept(row);
 				return false;
 			});
 			try {
@@ -117,10 +113,8 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 			} catch (XMLStreamException | IOException e) {
 				throw new RuntimeException(e);
 			}
-		}, () -> {
-			closeResource();
-		}, 20000);
-		return itr.iterator();
+		}, this::closeResource, 20_000);
+		return iterable.iterator();
 	}
 
 	private void loadXml(Table table, final XmlReaderOptions options) throws XMLStreamException, IOException {
@@ -152,5 +146,4 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 		}
 		FileUtils.close(reader);
 	}
-
 }

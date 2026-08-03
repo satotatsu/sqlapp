@@ -65,13 +65,9 @@ public class XmlRowIterable extends AbstractMapIterable {
 	protected <T> Iterator<Map<String, Object>> iteratorInternal(T obj, XmlReaderOptions options,
 			ExceptionConsumer<Table> cons) {
 		final Table table = new Table();
-		final VirtualThreadIterable<Map<String, Object>> itr = new VirtualThreadIterable<>(queue -> {
+		final VirtualThreadIterable<Map<String, Object>> iterable = new VirtualThreadIterable<>(output -> {
 			options.setAddRow((tbl, row) -> {
-				try {
-					queue.put(row.toMapSimple());
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
+				output.accept(row.toMapSimple());
 				return false;
 			});
 			try {
@@ -80,7 +76,7 @@ public class XmlRowIterable extends AbstractMapIterable {
 				throw new RuntimeException(e);
 			}
 		});
-		return itr.iterator();
+		return iterable.iterator();
 	}
 
 	@FunctionalInterface
