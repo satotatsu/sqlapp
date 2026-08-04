@@ -33,15 +33,11 @@ class VirtualThreadIterableTest {
 	}
 
 	void test(int count) {
-		VirtualThreadIterable<String> iterable = new VirtualThreadIterable<String>(queue -> {
+		VirtualThreadIterable<String> iterable = new VirtualThreadIterable<String>(cons -> {
 			for (int i = 0; i < count; i++) {
-				try {
-					queue.put("a" + i);
-				} catch (InterruptedException e) {
-					throw new RuntimeException(e);
-				}
+				cons.accept("a" + i);
 			}
-		}, 100);
+		});
 		int i = 0;
 		for (String val : iterable) {
 			assertEquals("a" + i, val);

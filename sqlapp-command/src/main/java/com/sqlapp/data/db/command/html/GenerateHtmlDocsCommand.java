@@ -42,8 +42,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.db.command.export.TableFileReader;
-import com.sqlapp.data.db.command.viewpoint.SchemaViewpointCommandSupport;
-import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
@@ -52,6 +50,8 @@ import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProper
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointCommandSupport;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -61,11 +61,11 @@ import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
-import com.sqlapp.data.schemas.viewpoint.SchemaViewpointResolver;
-import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
 import com.sqlapp.data.schemas.properties.DisplayNameProperty;
 import com.sqlapp.data.schemas.properties.DisplayRemarksProperty;
 import com.sqlapp.data.schemas.properties.NameProperty;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpointResolver;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
 import com.sqlapp.elk.NameMode;
 import com.sqlapp.elk.SVGDrawMode;
 import com.sqlapp.elk.TableSvgCreator;
@@ -254,19 +254,18 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 			document.setDescription(resolution.viewpoint().getDescription());
 			document.setColor(resolution.viewpoint().getColor());
 			document.setTables(new java.util.ArrayList<>(resolution.tables()));
-			String diagramFileName = "viewpoint-" + safeFileName(document.getId()) + "."
-					+ getDiagramFormat();
+			String diagramFileName = "viewpoint-" + safeFileName(document.getId()) + "." + getDiagramFormat();
 			document.setTabId("Viewpoint_" + safeFileName(document.getId()));
 			if (!diagramFileNames.add(diagramFileName.toLowerCase(Locale.ROOT))) {
 				throw new com.sqlapp.exceptions.CommandException(
 						"Viewpoint IDs resolve to the same diagram file name: " + document.getId());
 			}
 			document.setDiagramFileName(diagramFileName);
-			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.NORMAL, NameMode.LOGICAL,
-					"../tables/", tableNode -> {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.NORMAL, NameMode.LOGICAL, "../tables/",
+					tableNode -> {
 					});
-			document.setImage(createImage("viewpoint-" + safeFileName(document.getId()),
-					document.getTables(), svgCreator));
+			document.setImage(
+					createImage("viewpoint-" + safeFileName(document.getId()), document.getTables(), svgCreator));
 			viewpointDocuments.add(document);
 			resolution.tables().stream().map(resolver::qualifiedName).forEach(resolved::add);
 		}
@@ -533,7 +532,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	}
 
 	private static String buildStyle(int w, int h) {
-		return "width:" + (w + 5) + "px;height:" + (h + 5) + "px";
+		return "width:" + (w + 30) + "px;height:" + (h + 30) + "px";
 	}
 
 	private RelationImageHolder createImage(String name, Collection<Table> list, TableSvgCreator svgCreator) {
@@ -599,8 +598,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		//
 		outputMenuDetails(catalog, context.clone(), rootMenu.clone(), MenuDefinition.Tables, list, (con, obj) -> {
 			Table val = (Table) obj;
-			con.put("viewpointDocuments", viewpointDocuments.stream()
-					.filter(viewpoint -> viewpoint.contains(val)).toList());
+			con.put("viewpointDocuments",
+					viewpointDocuments.stream().filter(viewpoint -> viewpoint.contains(val)).toList());
 			if (!hasRelation(val)) {
 				return;
 			}
