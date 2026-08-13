@@ -72,6 +72,8 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
+		column.setFormula(getString(rs, "formula"));
+		column.setFormulaPersisted(rs.getBoolean("formula_persisted"));
 		String check_definition = replace(trim(unwrap(getString(rs, "check_definition"), '(', ')')),
 				"[" + column.getName() + "]", column.getName());
 		String check_constraint_name = getString(rs, "check_constraint_name");

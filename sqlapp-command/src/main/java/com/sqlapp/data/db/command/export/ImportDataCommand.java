@@ -308,9 +308,9 @@ public class ImportDataCommand extends AbstractExportCommand
 			}
 			readFiles(table, targets);
 		}
-		try {
-			final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes,
-					this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
+		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes,
+				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
+		try (handler) {
 			handler.setValueConverter(r -> {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
