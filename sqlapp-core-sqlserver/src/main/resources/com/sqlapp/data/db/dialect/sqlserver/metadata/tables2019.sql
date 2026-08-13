@@ -27,7 +27,7 @@ SELECT
 	, t.durability
 	, t.durability_desc
 	, t.is_memory_optimized
-	, t.temporal_type_desc
+	, t.temporal_type_desc AS temporal_type
 	, idx.optimize_for_sequential_key
 FROM sys.tables t
 INNER JOIN sys.schemas s
