@@ -34,7 +34,7 @@ SELECT
 	, c.default_object_id 
 	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 FROM sys.columns c
-INNER JOIN sys.tables t
+INNER JOIN sys.objects t
   ON (c.object_id = t.object_id)
 INNER JOIN sys.types ty
   ON (c.user_type_id = ty.user_type_id)
@@ -61,6 +61,7 @@ LEFT OUTER JOIN sys.extended_properties ex
   ON (t.object_id = ex.major_id
   AND c.column_Id = ex.minor_id)
 WHERE 1=1
+  AND t.type IN ('U', 'V')
   /*if isNotEmpty(schemaName) */
   AND st.name IN /*schemaName;type=NVARCHAR*/('%')
   /*end*/

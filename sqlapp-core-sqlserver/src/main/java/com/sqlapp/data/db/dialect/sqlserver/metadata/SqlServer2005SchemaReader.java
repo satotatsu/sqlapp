@@ -147,7 +147,7 @@ public class SqlServer2005SchemaReader extends SchemaReader {
 
 	@Override
 	protected SynonymReader newSynonymReader() {
-		return null;
+		return new SqlServer2005SynonymReader(this.getDialect());
 	}
 
 	@Override

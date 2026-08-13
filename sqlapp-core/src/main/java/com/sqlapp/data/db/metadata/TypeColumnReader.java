@@ -95,10 +95,10 @@ public abstract class TypeColumnReader extends AbstractNamedMetadataReader<TypeC
 	protected TripleKeyMap<String, String, String, List<TypeColumn>> toKeyMap(List<TypeColumn> list){
 		TripleKeyMap<String, String, String, List<TypeColumn>> map=new TripleKeyMap<String, String, String, List<TypeColumn>>();
 		for(TypeColumn obj:list){
-			List<TypeColumn> tableConsts=map.get(obj.getCatalogName(), obj.getSchemaName(), obj.getDataTypeName());
+			List<TypeColumn> tableConsts=map.get(obj.getCatalogName(), obj.getSchemaName(), obj.getTypeName());
 			if (tableConsts==null){
 				tableConsts=list();
-				map.put(obj.getCatalogName(), obj.getSchemaName(), obj.getDataTypeName(), tableConsts);
+				map.put(obj.getCatalogName(), obj.getSchemaName(), obj.getTypeName(), tableConsts);
 			}
 			tableConsts.add(obj);
 		}

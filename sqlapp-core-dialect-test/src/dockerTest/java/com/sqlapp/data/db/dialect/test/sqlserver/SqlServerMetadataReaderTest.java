@@ -24,10 +24,13 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2022;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Type;
 
 /** SQL Server 2025 integration coverage for the full metadata reader tree. */
 class SqlServerMetadataReaderTest {
@@ -65,7 +68,10 @@ class SqlServerMetadataReaderTest {
 
 			Table parent = schema.getTables().get("METADATA_PARENT");
 			assertNotNull(parent);
+			assertEquals("Metadata parent table", parent.getRemarks());
 			assertNotNull(parent.getConstraints().get("PK_METADATA_PARENT"));
+			assertEquals("Display name",
+					parent.getColumns().get("NAME").getRemarks());
 
 			Table child = schema.getTables().get("METADATA_CHILD");
 			assertNotNull(child);
@@ -73,7 +79,11 @@ class SqlServerMetadataReaderTest {
 			assertNotNull(child.getConstraints().get("UK_METADATA_CHILD_CODE"));
 			assertNotNull(child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
 			assertNotNull(child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
-			assertNotNull(child.getIndexes().get("IDX_METADATA_CHILD_PARENT"));
+			Index index = child.getIndexes()
+					.get("IDX_METADATA_CHILD_PARENT");
+			assertNotNull(index);
+			assertTrue(index.getWhere().contains("AMOUNT"), index.getWhere());
+			assertNotNull(index.getIncludes().get("CODE"));
 
 			Column id = child.getColumns().get("ID");
 			assertTrue(id.isIdentity());
@@ -96,19 +106,53 @@ class SqlServerMetadataReaderTest {
 			assertEquals(50L, sequence.getStartValue().longValue());
 			assertEquals(10L, sequence.getIncrementBy().longValue());
 
-			assertNotNull(schema.getViews().get("METADATA_VIEW"));
-			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
-			assertNotNull(schema.getFunctions().get("METADATA_FUNCTION"));
+			Type tableType = schema.getTypes().get("METADATA_TABLE_TYPE");
+			assertNotNull(tableType);
+			assertNotNull(tableType.getColumns().get("ITEM_ID"));
+			assertTrue(tableType.getColumns().get("ITEM_NAME").isNotNull());
+
+			var view = schema.getViews().get("METADATA_VIEW");
+			assertNotNull(view);
+			assertNotNull(view.getColumns().get("TOTAL"));
+			assertTrue(view.getStatement().toString()
+					.contains("METADATA_CHILD"), view.getStatement().toString());
+
+			var procedure = schema.getProcedures()
+					.get("METADATA_PROCEDURE");
+			assertNotNull(procedure);
+			assertEquals(1, procedure.getArguments().size());
+			assertEquals("@PARENT_ID", procedure.getArguments().get(0).getName());
+
+			var function = schema.getFunctions().get("METADATA_FUNCTION");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertEquals("@AMOUNT", function.getArguments().get(0).getName());
+
+			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
+			assertNotNull(trigger);
+			assertEquals("METADATA_CHILD", trigger.getTableName());
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertTrue(trigger.getStatement().toString()
+					.contains("METADATA_PARENT"), trigger.getStatement().toString());
+
+			var synonym = schema.getSynonyms().get("METADATA_PARENT_SYNONYM");
+			assertNotNull(synonym);
+			assertTrue(synonym.getObjectName().contains("METADATA_PARENT"),
+					synonym.getObjectName());
 		}
 	}
 
 	private void createSchemaObjects(Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			statement.execute("DROP SYNONYM IF EXISTS METADATA_PARENT_SYNONYM");
+			statement.execute("DROP TRIGGER IF EXISTS METADATA_TRIGGER");
 			statement.execute("DROP VIEW IF EXISTS METADATA_VIEW");
 			statement.execute("DROP PROCEDURE IF EXISTS METADATA_PROCEDURE");
 			statement.execute("DROP FUNCTION IF EXISTS METADATA_FUNCTION");
 			statement.execute("DROP TABLE IF EXISTS METADATA_CHILD");
 			statement.execute("DROP TABLE IF EXISTS METADATA_PARENT");
+			statement.execute("DROP TYPE IF EXISTS METADATA_TABLE_TYPE");
 			statement.execute("DROP SEQUENCE IF EXISTS METADATA_SEQ");
 			statement.execute("""
 					CREATE SEQUENCE METADATA_SEQ AS BIGINT
@@ -139,6 +183,27 @@ class SqlServerMetadataReaderTest {
 			statement.execute("""
 					CREATE INDEX IDX_METADATA_CHILD_PARENT
 					ON METADATA_CHILD(PARENT_ID) INCLUDE (CODE)
+					WHERE AMOUNT > 0
+					""");
+			statement.execute("""
+					EXEC sys.sp_addextendedproperty
+						@name = N'MS_Description',
+						@value = N'Metadata parent table',
+						@level0type = N'SCHEMA', @level0name = N'dbo',
+						@level1type = N'TABLE', @level1name = N'METADATA_PARENT'
+					""");
+			statement.execute("""
+					EXEC sys.sp_addextendedproperty
+						@name = N'MS_Description', @value = N'Display name',
+						@level0type = N'SCHEMA', @level0name = N'dbo',
+						@level1type = N'TABLE', @level1name = N'METADATA_PARENT',
+						@level2type = N'COLUMN', @level2name = N'NAME'
+					""");
+			statement.execute("""
+					CREATE TYPE METADATA_TABLE_TYPE AS TABLE (
+						ITEM_ID BIGINT PRIMARY KEY,
+						ITEM_NAME NVARCHAR(100) NOT NULL
+					)
 					""");
 			statement.execute("""
 					CREATE VIEW METADATA_VIEW AS
@@ -158,6 +223,20 @@ class SqlServerMetadataReaderTest {
 					BEGIN
 						RETURN @AMOUNT * 2
 					END
+					""");
+			statement.execute("""
+					CREATE TRIGGER METADATA_TRIGGER ON METADATA_CHILD
+					AFTER INSERT
+					AS
+					BEGIN
+						SET NOCOUNT ON;
+						SELECT p.ID FROM METADATA_PARENT p
+						JOIN inserted i ON i.PARENT_ID = p.ID;
+					END
+					""");
+			statement.execute("""
+					CREATE SYNONYM METADATA_PARENT_SYNONYM
+					FOR dbo.METADATA_PARENT
 					""");
 		}
 	}
