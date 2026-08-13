@@ -57,7 +57,7 @@ public class SqlServer2000RoleMemberReader extends RoleMemberReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roleMember2000.sql");
+		return getSqlNodeCache().getString("roleMembers2000.sql");
 	}
 
 	protected RoleMember createRoleMember(ExResultSet rs) throws SQLException {

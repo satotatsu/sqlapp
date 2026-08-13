@@ -24,12 +24,14 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2022;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.PartitionFunction;
+import com.sqlapp.data.schemas.PartitionScheme;
 import com.sqlapp.data.schemas.Schema;
-import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
@@ -66,9 +68,52 @@ class SqlServerMetadataReaderTest {
 			assertInstanceOf(SqlServer2022.class, dialect,
 					"SQL Server 17.x must use the newest supported dialect.");
 
-			Schema schema = SchemaUtils.getSchema(connection, "dbo")
+			var catalogReader = dialect.getCatalogReader();
+			catalogReader.setCatalogName(connection.getCatalog());
+			Catalog catalog = catalogReader.getAllFull(connection).stream()
+					.filter(current -> connectionCatalogEquals(connection, current))
+					.findFirst()
 					.orElseThrow(() -> new AssertionError(
-							"SQL Server dbo schema was not loaded."));
+							"Current SQL Server catalog was not loaded."));
+			Schema schema = catalog.getSchemas().get("dbo");
+			assertNotNull(schema, "SQL Server dbo schema was not loaded.");
+
+			PartitionFunction partitionFunction = catalog.getPartitionFunctions()
+					.get("METADATA_PARTITION_FUNCTION");
+			assertNotNull(partitionFunction);
+			assertTrue(partitionFunction.isBoundaryValueOnRight());
+			assertEquals(3, partitionFunction.getValues().size());
+			assertEquals("100", partitionFunction.getValues().get(0));
+			assertEquals("1000", partitionFunction.getValues().get(1));
+			assertEquals("10000", partitionFunction.getValues().get(2));
+
+			PartitionScheme partitionScheme = catalog.getPartitionSchemes()
+					.get("METADATA_PARTITION_SCHEME");
+			assertNotNull(partitionScheme);
+			assertEquals("METADATA_PARTITION_FUNCTION",
+					partitionScheme.getPartitionFunctionName());
+			assertEquals(5, partitionScheme.getTableSpaces().size());
+			assertEquals("PRIMARY",
+					partitionScheme.getTableSpaces().get(0).getName());
+			assertEquals("PRIMARY",
+					partitionScheme.getTableSpaces().get(4).getName());
+
+			assertEquals("dbo", catalog.getUsers().get("METADATA_USER")
+					.getDefaultSchemaName());
+			assertNotNull(catalog.getRoles().get("METADATA_ROLE"));
+			assertTrue(catalog.getRoleMembers().stream().anyMatch(member ->
+					"METADATA_USER".equals(member.getGranteeName())
+					&& "METADATA_ROLE".equals(member.getMemberRoleName())),
+					catalog.getRoleMembers().toString());
+			assertTrue(catalog.getObjectPrivileges().stream().anyMatch(privilege ->
+					"METADATA_PARENT".equals(privilege.getObjectName())
+					&& "METADATA_ROLE".equals(privilege.getGranteeName())
+					&& "SELECT".equals(privilege.getPrivilege())));
+			assertTrue(catalog.getColumnPrivileges().stream().anyMatch(privilege ->
+					"METADATA_PARENT".equals(privilege.getObjectName())
+					&& "NAME".equals(privilege.getColumnName())
+					&& "METADATA_USER".equals(privilege.getGranteeName())
+					&& "UPDATE".equals(privilege.getPrivilege())));
 
 			Table parent = schema.getTables().get("METADATA_PARENT");
 			assertNotNull(parent);
@@ -121,6 +166,9 @@ class SqlServerMetadataReaderTest {
 
 			Table typeCoverage = schema.getTables().get("METADATA_TYPES");
 			assertNotNull(typeCoverage);
+			assertNotNull(schema.getXmlSchemas().get("METADATA_XML_SCHEMA"));
+			assertTrue(schema.getXmlSchemas().get("METADATA_XML_SCHEMA")
+					.getDefinition().toString().contains("root"));
 			assertEquals(DataType.NVARCHAR,
 					typeCoverage.getColumns().get("UNICODE_VALUE").getDataType());
 			assertEquals(123, typeCoverage.getColumns().get("UNICODE_VALUE")
@@ -131,6 +179,9 @@ class SqlServerMetadataReaderTest {
 					typeCoverage.getColumns().get("OFFSET_VALUE").getDataType());
 			assertEquals(DataType.VARBINARY,
 					typeCoverage.getColumns().get("BINARY_VALUE").getDataType());
+			assertEquals("dbo.METADATA_XML_SCHEMA",
+					typeCoverage.getColumns().get("XML_VALUE")
+						.getSpecifics().get("xmlschema"));
 			assertEquals("partial(1, \"XXXX\", 1)",
 					typeCoverage.getColumns().get("MASKED_VALUE")
 						.getMaskingFunction());
@@ -184,8 +235,29 @@ class SqlServerMetadataReaderTest {
 		}
 	}
 
+	private boolean connectionCatalogEquals(Connection connection, Catalog catalog) {
+		try {
+			return connection.getCatalog().equalsIgnoreCase(catalog.getName());
+		} catch (SQLException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
 	private void createSchemaObjects(Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			statement.execute("""
+					IF DATABASE_PRINCIPAL_ID('METADATA_ROLE') IS NOT NULL
+					AND DATABASE_PRINCIPAL_ID('METADATA_USER') IS NOT NULL
+						ALTER ROLE METADATA_ROLE DROP MEMBER METADATA_USER
+					""");
+			statement.execute("""
+					IF DATABASE_PRINCIPAL_ID('METADATA_ROLE') IS NOT NULL
+						DROP ROLE METADATA_ROLE
+					""");
+			statement.execute("""
+					IF DATABASE_PRINCIPAL_ID('METADATA_USER') IS NOT NULL
+						DROP USER METADATA_USER
+					""");
 			statement.execute("DROP SYNONYM IF EXISTS METADATA_PARENT_SYNONYM");
 			statement.execute("DROP TRIGGER IF EXISTS METADATA_TRIGGER");
 			statement.execute("DROP VIEW IF EXISTS METADATA_VIEW");
@@ -200,8 +272,38 @@ class SqlServerMetadataReaderTest {
 					""");
 			statement.execute("DROP TABLE IF EXISTS METADATA_TEMPORAL");
 			statement.execute("DROP TABLE IF EXISTS METADATA_TEMPORAL_HISTORY");
+			statement.execute("""
+					IF EXISTS (SELECT 1 FROM sys.partition_schemes
+						WHERE name = 'METADATA_PARTITION_SCHEME')
+						DROP PARTITION SCHEME METADATA_PARTITION_SCHEME
+					""");
+			statement.execute("""
+					IF EXISTS (SELECT 1 FROM sys.partition_functions
+						WHERE name = 'METADATA_PARTITION_FUNCTION')
+						DROP PARTITION FUNCTION METADATA_PARTITION_FUNCTION
+					""");
+			statement.execute("""
+					IF EXISTS (SELECT 1 FROM sys.xml_schema_collections
+						WHERE name = 'METADATA_XML_SCHEMA')
+						DROP XML SCHEMA COLLECTION dbo.METADATA_XML_SCHEMA
+					""");
 			statement.execute("DROP TYPE IF EXISTS METADATA_TABLE_TYPE");
 			statement.execute("DROP SEQUENCE IF EXISTS METADATA_SEQ");
+			statement.execute("""
+					CREATE PARTITION FUNCTION METADATA_PARTITION_FUNCTION (BIGINT)
+					AS RANGE RIGHT FOR VALUES (100, 1000, 10000)
+					""");
+			statement.execute("""
+					CREATE PARTITION SCHEME METADATA_PARTITION_SCHEME
+					AS PARTITION METADATA_PARTITION_FUNCTION
+					ALL TO ([PRIMARY])
+					""");
+			statement.execute("""
+					CREATE XML SCHEMA COLLECTION dbo.METADATA_XML_SCHEMA AS N'
+					<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+						<xs:element name="root" type="xs:string"/>
+					</xs:schema>'
+					""");
 			statement.execute("""
 					CREATE SEQUENCE METADATA_SEQ AS BIGINT
 					START WITH 50 INCREMENT BY 10
@@ -243,6 +345,7 @@ class SqlServerMetadataReaderTest {
 						MAX_VALUE VARCHAR(MAX),
 						OFFSET_VALUE DATETIMEOFFSET(7),
 						BINARY_VALUE VARBINARY(64),
+						XML_VALUE XML(dbo.METADATA_XML_SCHEMA),
 						MASKED_VALUE VARCHAR(100)
 							MASKED WITH (FUNCTION = 'partial(1,"XXXX",1)')
 					)
@@ -264,6 +367,11 @@ class SqlServerMetadataReaderTest {
 						@level0type = N'SCHEMA', @level0name = N'dbo',
 						@level1type = N'TABLE', @level1name = N'METADATA_PARENT'
 					""");
+			statement.execute("CREATE USER METADATA_USER WITHOUT LOGIN WITH DEFAULT_SCHEMA = dbo");
+			statement.execute("CREATE ROLE METADATA_ROLE AUTHORIZATION dbo");
+			statement.execute("ALTER ROLE METADATA_ROLE ADD MEMBER METADATA_USER");
+			statement.execute("GRANT SELECT ON dbo.METADATA_PARENT TO METADATA_ROLE");
+			statement.execute("GRANT UPDATE (NAME) ON dbo.METADATA_PARENT TO METADATA_USER");
 			statement.execute("""
 					EXEC sys.sp_addextendedproperty
 						@name = N'MS_Description', @value = N'Display name',

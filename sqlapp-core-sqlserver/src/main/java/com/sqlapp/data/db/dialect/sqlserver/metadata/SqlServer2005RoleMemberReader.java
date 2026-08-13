@@ -36,7 +36,7 @@ public class SqlServer2005RoleMemberReader extends
 
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roleMember2005.sql");
+		return getSqlNodeCache().getString("roleMembers2005.sql");
 	}
 
 	@Override
