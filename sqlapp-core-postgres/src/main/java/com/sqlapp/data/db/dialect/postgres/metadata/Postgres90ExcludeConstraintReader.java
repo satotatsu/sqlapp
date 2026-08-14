@@ -107,10 +107,10 @@ public class Postgres90ExcludeConstraintReader extends ExcludeConstraintReader {
 					}
 					map.put(schema_name, table_name, constraint_name, c);
 				}
-				int attnum = rs.getInt("attnum");
+				int columnPosition = rs.getInt("column_position");
 				String[] oidArray = operatorIdMap.get(schema_name, table_name,
 						constraint_name);
-				Operator operator = operatorMap.get(oidArray[attnum - 1]);
+				Operator operator = operatorMap.get(oidArray[columnPosition - 1]);
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(table_name);
 				c.getColumns().add(column);

@@ -71,6 +71,10 @@ class Postgres140MetadataReaderTest {
 			assertNotNull(partition);
 			assertEquals("metadata_events",
 					partition.getPartitionParent().getTableName());
+			var booking = schema.getTables().get("metadata_booking");
+			assertNotNull(booking);
+			assertNotNull(booking.getConstraints()
+					.get("ex_metadata_booking_during"));
 		}
 	}
 
@@ -87,6 +91,12 @@ class Postgres140MetadataReaderTest {
 				CREATE TABLE metadata_test_14.metadata_events_2025
 				 PARTITION OF metadata_test_14.metadata_events
 				 FOR VALUES FROM ('2025-01-01') TO ('2026-01-01')
+				""");
+		statement.execute("""
+				CREATE TABLE metadata_test_14.metadata_booking (
+				 id bigint PRIMARY KEY, during daterange NOT NULL,
+				 CONSTRAINT ex_metadata_booking_during
+				 EXCLUDE USING gist (during WITH &&))
 				""");
 		statement.execute("""
 				CREATE TABLE metadata_test_14.metadata_parent (

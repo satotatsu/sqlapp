@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -72,6 +73,15 @@ class PostgresMetadataReaderTest {
 					child.getConstraints().get("fk_metadata_child_parent"));
 			assertEquals(2, foreignKey.getColumns().size());
 			assertNotNull(child.getIndexes().get("idx_metadata_child_parent"));
+			var expressionIndex = child.getIndexes()
+					.get("idx_metadata_child_lower_code");
+			assertNotNull(expressionIndex);
+			assertTrue(expressionIndex.getColumns().get(0).getName()
+					.toLowerCase(Locale.ROOT).contains("lower"));
+			Table booking = schema.getTables().get("metadata_booking");
+			assertNotNull(booking);
+			assertNotNull(booking.getConstraints()
+					.get("ex_metadata_booking_during"));
 			assertNotNull(schema.getSequences().get("metadata_seq"));
 			assertNotNull(schema.getViews().get("metadata_view"));
 			assertNotNull(schema.getMviews().get("metadata_mview"));
@@ -140,6 +150,16 @@ class PostgresMetadataReaderTest {
 				CREATE INDEX idx_metadata_child_parent
 				 ON metadata_test.metadata_child(parent_id DESC, parent_region)
 				 INCLUDE (code) WHERE amount > 0
+				""");
+		statement.execute("""
+				CREATE INDEX idx_metadata_child_lower_code
+				 ON metadata_test.metadata_child(lower(code)) WHERE status = 'NEW'
+				""");
+		statement.execute("""
+				CREATE TABLE metadata_test.metadata_booking (
+				 id bigint PRIMARY KEY, during daterange NOT NULL,
+				 CONSTRAINT ex_metadata_booking_during
+				 EXCLUDE USING gist (during WITH &&))
 				""");
 		statement.execute("COMMENT ON TABLE metadata_test.metadata_parent IS 'Metadata parent table'");
 		statement.execute("COMMENT ON COLUMN metadata_test.metadata_parent.name IS 'Display name'");

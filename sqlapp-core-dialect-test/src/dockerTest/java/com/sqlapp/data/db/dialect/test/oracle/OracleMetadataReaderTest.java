@@ -95,6 +95,11 @@ class OracleMetadataReaderTest {
 			assertNotNull(index);
 			assertEquals("PARENT_ID", index.getColumns().get(0).getName());
 			assertEquals("CODE", index.getColumns().get(1).getName());
+			Index functionIndex = parent.getIndexes()
+					.get("IDX_METADATA_PARENT_UPPER_NAME");
+			assertNotNull(functionIndex);
+			assertTrue(functionIndex.getColumns().get(0).getName()
+					.contains("UPPER"));
 
 			Table partitioned = schema.getTables().get("METADATA_PARTITIONED");
 			assertNotNull(partitioned);
@@ -142,6 +147,15 @@ class OracleMetadataReaderTest {
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_SYNONYM"));
+			var metadataPackage = schema.getPackages().get("METADATA_PACKAGE");
+			assertNotNull(metadataPackage);
+			assertNotNull(metadataPackage.getStatement());
+			assertTrue(metadataPackage.getStatement().stream()
+					.anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
+			assertNotNull(metadataPackage.getBody());
+			assertNotNull(metadataPackage.getBody().getStatement());
+			assertTrue(metadataPackage.getBody().getStatement().stream()
+					.anyMatch(line -> line.contains("RETURN P_AMOUNT * 2")));
 		}
 	}
 
@@ -153,6 +167,7 @@ class OracleMetadataReaderTest {
 			drop(statement, "DROP VIEW METADATA_VIEW", 942);
 			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE", 4043);
 			drop(statement, "DROP FUNCTION METADATA_FUNCTION", 4043);
+			drop(statement, "DROP PACKAGE METADATA_PACKAGE", 4043);
 			drop(statement, "DROP TABLE METADATA_CHILD CASCADE CONSTRAINTS PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_VECTOR PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_PARTITIONED PURGE", 942);
@@ -188,6 +203,10 @@ class OracleMetadataReaderTest {
 			statement.execute("""
 					CREATE INDEX IDX_METADATA_CHILD_PARENT
 					ON METADATA_CHILD(PARENT_ID DESC, CODE ASC)
+					""");
+			statement.execute("""
+					CREATE INDEX IDX_METADATA_PARENT_UPPER_NAME
+					 ON METADATA_PARENT(UPPER(NAME))
 					""");
 			statement.execute("""
 					CREATE TABLE METADATA_VECTOR (
@@ -230,6 +249,24 @@ class OracleMetadataReaderTest {
 					BEGIN
 						RETURN P_AMOUNT * 2;
 					END;
+					""");
+			statement.execute("""
+					CREATE PACKAGE METADATA_PACKAGE AS
+					 FUNCTION DOUBLE_AMOUNT(P_AMOUNT IN NUMBER) RETURN NUMBER;
+					 PROCEDURE TOUCH_PARENT(P_PARENT_ID IN NUMBER);
+					END METADATA_PACKAGE;
+					""");
+			statement.execute("""
+					CREATE PACKAGE BODY METADATA_PACKAGE AS
+					 FUNCTION DOUBLE_AMOUNT(P_AMOUNT IN NUMBER) RETURN NUMBER AS
+					 BEGIN
+					  RETURN P_AMOUNT * 2;
+					 END DOUBLE_AMOUNT;
+					 PROCEDURE TOUCH_PARENT(P_PARENT_ID IN NUMBER) AS
+					 BEGIN
+					  NULL;
+					 END TOUCH_PARENT;
+					END METADATA_PACKAGE;
 					""");
 			statement.execute("""
 					CREATE TRIGGER METADATA_TRIGGER

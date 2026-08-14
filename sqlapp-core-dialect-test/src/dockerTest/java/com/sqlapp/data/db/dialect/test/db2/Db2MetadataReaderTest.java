@@ -27,6 +27,7 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Db2 12.1.5 integration coverage for the metadata reader tree. */
@@ -95,6 +96,14 @@ class Db2MetadataReaderTest {
 			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
 			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_LOW"));
 			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_HIGH"));
+			Table temporal = schema.getTables().get("METADATA_TEMPORAL");
+			assertNotNull(temporal);
+			var businessTime = temporal.getTemporalPeriods().get("BUSINESS_TIME");
+			assertNotNull(businessTime);
+			assertEquals(TemporalPeriodType.APPLICATION_TIME,
+					businessTime.getPeriodType());
+			assertEquals("BUSINESS_START", businessTime.getStartColumnName());
+			assertEquals("BUSINESS_END", businessTime.getEndColumnName());
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
 			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
@@ -116,6 +125,7 @@ class Db2MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_PARENT");
 			drop(statement, "DROP TABLE METADATA_AUDIT");
 			drop(statement, "DROP TABLE METADATA_PARTITIONED");
+			drop(statement, "DROP TABLE METADATA_TEMPORAL");
 			drop(statement, "DROP SEQUENCE METADATA_SEQ");
 			statement.execute("CREATE SEQUENCE METADATA_SEQ START WITH 50 INCREMENT BY 10");
 			statement.execute("""
@@ -148,6 +158,14 @@ class Db2MetadataReaderTest {
 					 PARTITION BY RANGE (BUCKET) (
 					  PARTITION P_LOW STARTING FROM (MINVALUE) ENDING AT (99) INCLUSIVE,
 					  PARTITION P_HIGH STARTING FROM (100) INCLUSIVE ENDING AT (MAXVALUE))
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_TEMPORAL (
+					 ID BIGINT NOT NULL PRIMARY KEY,
+					 BUSINESS_START DATE NOT NULL,
+					 BUSINESS_END DATE NOT NULL,
+					 PAYLOAD VARCHAR(100),
+					 PERIOD BUSINESS_TIME (BUSINESS_START, BUSINESS_END))
 					""");
 			statement.execute("""
 					CREATE PROCEDURE METADATA_PROCEDURE(IN P_PARENT_ID BIGINT)

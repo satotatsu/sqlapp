@@ -31,6 +31,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.saphana.SapHana;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
 
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
@@ -99,6 +100,12 @@ class SapHanaMetadataReaderTest {
 			assertEquals("BUCKET", partitioned.getPartitioning()
 					.getPartitioningColumns().get(0).getName());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
+			var documents = schema.getTables().get("METADATA_DOCUMENTS");
+			assertNotNull(documents);
+			var fulltextIndex = documents.getIndexes()
+					.get("IDX_METADATA_DOCUMENTS_TEXT");
+			assertNotNull(fulltextIndex);
+			assertEquals(IndexType.FullText, fulltextIndex.getIndexType());
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getStatement());
@@ -123,6 +130,15 @@ class SapHanaMetadataReaderTest {
 				  PARTITION 0 <= VALUES < 100,
 				  PARTITION 100 <= VALUES < 200,
 				  PARTITION OTHERS)
+				""");
+		statement.execute("""
+				CREATE COLUMN TABLE METADATA_TEST.METADATA_DOCUMENTS (
+				 ID BIGINT NOT NULL PRIMARY KEY, CONTENT NCLOB)
+				""");
+		statement.execute("""
+				CREATE FULLTEXT INDEX IDX_METADATA_DOCUMENTS_TEXT
+				 ON METADATA_TEST.METADATA_DOCUMENTS(CONTENT)
+				 FAST PREPROCESS OFF
 				""");
 		statement.execute("""
 				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARENT (
