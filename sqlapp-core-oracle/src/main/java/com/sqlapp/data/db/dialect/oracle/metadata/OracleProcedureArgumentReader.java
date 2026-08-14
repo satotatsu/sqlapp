@@ -51,7 +51,7 @@ public class OracleProcedureArgumentReader extends RoutineArgumentReader<Procedu
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				NamedArgument obj = createNamedArgument(rs);
-				if (obj!=null){
+				if (obj != null && obj.getRoutine() != null) {
 					result.add(obj);
 				}
 			}

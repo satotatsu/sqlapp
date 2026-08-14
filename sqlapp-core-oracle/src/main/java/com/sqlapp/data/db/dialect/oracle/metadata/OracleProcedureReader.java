@@ -86,7 +86,7 @@ public class OracleProcedureReader extends ProcedureReader {
 	}
 	
 	protected Procedure createProcedure(ExResultSet rs) throws SQLException{
-		Procedure obj = new Procedure(getString(rs, "OWNER"));
+		Procedure obj = new Procedure(getString(rs, "OBJECT_NAME"));
 		OracleMetadataUtils.setCommonInfo(rs, obj);
 		obj.setDeterministic("YES".equalsIgnoreCase(getString(rs, "DETERMINISTIC")));
 		obj.setParallel("YES".equalsIgnoreCase(getString(rs, "PARALLEL")));

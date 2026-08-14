@@ -74,7 +74,8 @@ public class OracleIndexReader extends IndexReader {
 				String columnExpression = getString(rs, "COLUMN_EXPRESSION");
 				String indexType = getString(rs, "INDEX_TYPE");
 				String uniqueness = getString(rs, "UNIQUENESS");
-				boolean desc = "Y".equalsIgnoreCase(getString(rs, "DESCEND"));
+				boolean desc = "DESC".equalsIgnoreCase(
+						getString(rs, "DESCEND"));
 				Index index = map.get(schema_name, name);
 				if (index == null) {
 					index = new Index(name);
@@ -110,7 +111,11 @@ public class OracleIndexReader extends IndexReader {
 				} else {
 					order = Order.Asc;
 				}
-				if (!isEmpty(columnExpression)) {
+				if (!isEmpty(columnExpression)
+						&& columnExpression.matches("\"[^\"]+\"")) {
+					index.getColumns().add(new Column(columnExpression.substring(
+							1, columnExpression.length() - 1)), order);
+				} else if (!isEmpty(columnExpression)) {
 					index.getColumns().add(columnExpression, order);
 				} else {
 					index.getColumns().add(new Column(columnName), order);
