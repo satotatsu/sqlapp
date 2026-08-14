@@ -150,6 +150,21 @@ class OracleMetadataReaderTest {
 			assertEquals(schemaName, dimension.getSchemaName());
 			assertEquals("VALID",
 					dimension.getSpecifics().get("COMPILE_STATE"));
+			var productLevel = dimension.getLevels().get("PRODUCT");
+			assertNotNull(productLevel);
+			assertEquals("METADATA_DIM_PRODUCT",
+					productLevel.getColumns().get(0).getTableName());
+			assertEquals("PRODUCT_ID",
+					productLevel.getColumns().get(0).getName());
+			assertNotNull(dimension.getLevels().get("CATEGORY"));
+			var hierarchy = dimension.getHierarchies().get("PRODUCT_ROLLUP");
+			assertNotNull(hierarchy);
+			assertEquals("PRODUCT", hierarchy.getLevels().get(0).getName());
+			assertEquals("CATEGORY", hierarchy.getLevels().get(1).getName());
+			var attribute = dimension.getAttributes().get("PRODUCT");
+			assertNotNull(attribute);
+			assertEquals("PRODUCT_NAME",
+					attribute.getColumns().get(0).getName());
 
 			Sequence sequence = schema.getSequences().get("METADATA_SEQ");
 			assertNotNull(sequence);
