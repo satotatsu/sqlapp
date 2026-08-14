@@ -70,8 +70,7 @@ public class SapHanaViewReader extends ViewReader {
 
 	@Override
 	protected ColumnReader newColumnReader() {
-		// return new ResultSetColumnReader(this.getDialect());
-		return null;
+		return new SapHanaViewColumnReader(this.getDialect());
 	}
 
 	@Override

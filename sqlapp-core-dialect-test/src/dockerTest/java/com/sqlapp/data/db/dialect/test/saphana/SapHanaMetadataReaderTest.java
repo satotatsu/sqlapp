@@ -28,6 +28,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.saphana.SapHana;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
@@ -111,8 +112,22 @@ class SapHanaMetadataReaderTest {
 					.get("IDX_METADATA_CHILD_PARENT");
 			assertNotNull(childIndex);
 			assertEquals(IndexType.InvertedValue, childIndex.getIndexType());
-			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
-			assertNotNull(schema.getViews().get("METADATA_VIEW"));
+			var sequence = schema.getSequences().get("METADATA_SEQ");
+			assertNotNull(sequence);
+			assertEquals(50L, sequence.getStartValue().longValue());
+			assertEquals(10L, sequence.getIncrementBy().longValue());
+			assertEquals(10L, sequence.getMinValue().longValue());
+			assertEquals(1000L, sequence.getMaxValue().longValue());
+			assertTrue(sequence.isCycle());
+			var view = schema.getViews().get("METADATA_VIEW");
+			assertNotNull(view);
+			assertTrue(view.getDefinition().toString()
+					.contains("METADATA_CHILD"));
+			assertEquals(3, view.getColumns().size());
+			assertEquals(DataType.BIGINT,
+					view.getColumns().get("ID").getDataType());
+			assertEquals(DataType.DECIMAL,
+					view.getColumns().get("AMOUNT").getDataType());
 			var synonym = schema.getSynonyms().get("METADATA_PARENT_SYNONYM");
 			assertNotNull(synonym);
 			assertEquals("METADATA_TEST", synonym.getSchemaName());
@@ -204,7 +219,7 @@ class SapHanaMetadataReaderTest {
 	private void createObjects(final Statement statement) throws SQLException {
 		drop(statement, "DROP SCHEMA METADATA_TEST CASCADE");
 		statement.execute("CREATE SCHEMA METADATA_TEST");
-		statement.execute("CREATE SEQUENCE METADATA_TEST.METADATA_SEQ START WITH 50 INCREMENT BY 10");
+		statement.execute("CREATE SEQUENCE METADATA_TEST.METADATA_SEQ START WITH 50 INCREMENT BY 10 MINVALUE 10 MAXVALUE 1000 CYCLE");
 		statement.execute("""
 				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARTITIONED (
 				 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL, PAYLOAD NVARCHAR(100))
