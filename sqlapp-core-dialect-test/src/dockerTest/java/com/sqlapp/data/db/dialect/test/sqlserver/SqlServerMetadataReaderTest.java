@@ -203,6 +203,15 @@ class SqlServerMetadataReaderTest {
 					.get("bounding_box_xmax"));
 			assertEquals("-1000.0", spatialIndex.getSpecifics()
 					.get("bounding_box_xmin"));
+			assertEquals("true", schema.getTables().get("METADATA_NODE")
+					.getSpecifics().get("is_node"));
+			assertEquals("true", schema.getTables().get("METADATA_EDGE")
+					.getSpecifics().get("is_edge"));
+			Index jsonIndex = schema.getTables().get("METADATA_JSON")
+					.getIndexes().get("IDX_METADATA_JSON_DOCUMENT");
+			assertNotNull(jsonIndex);
+			assertEquals(IndexType.Json, jsonIndex.getIndexType());
+			assertEquals("DOCUMENT", jsonIndex.getColumns().get(0).getName());
 			Column id = child.getColumns().get("ID");
 			assertTrue(id.isIdentity());
 			assertEquals(100L, id.getIdentityStartValue());
@@ -335,6 +344,9 @@ class SqlServerMetadataReaderTest {
 			statement.execute("DROP PROCEDURE IF EXISTS METADATA_PROCEDURE");
 			statement.execute("DROP FUNCTION IF EXISTS METADATA_FUNCTION");
 			statement.execute("DROP TABLE IF EXISTS METADATA_CHILD");
+			statement.execute("DROP TABLE IF EXISTS METADATA_EDGE");
+			statement.execute("DROP TABLE IF EXISTS METADATA_NODE");
+			statement.execute("DROP TABLE IF EXISTS METADATA_JSON");
 			statement.execute("DROP TABLE IF EXISTS METADATA_SPATIAL");
 			statement.execute("DROP TABLE IF EXISTS METADATA_COLUMNSTORE");
 			statement.execute("DROP TABLE IF EXISTS METADATA_PARENT");
@@ -432,6 +444,22 @@ class SqlServerMetadataReaderTest {
 					USING GEOMETRY_AUTO_GRID
 					WITH (BOUNDING_BOX = (-1000, -1000, 1000, 1000),
 						CELLS_PER_OBJECT = 16)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_NODE (
+						NAME NVARCHAR(100) NOT NULL
+					) AS NODE
+					""");
+			statement.execute("CREATE TABLE METADATA_EDGE AS EDGE");
+			statement.execute("""
+					CREATE TABLE METADATA_JSON (
+						ID INT NOT NULL PRIMARY KEY,
+						DOCUMENT JSON NOT NULL
+					)
+					""");
+			statement.execute("""
+					CREATE JSON INDEX IDX_METADATA_JSON_DOCUMENT
+					ON METADATA_JSON(DOCUMENT)
 					""");
 			statement.execute("""
 					CREATE INDEX IDX_METADATA_CHILD_PARENT

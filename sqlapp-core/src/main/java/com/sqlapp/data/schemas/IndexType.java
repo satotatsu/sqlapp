@@ -71,6 +71,10 @@ public enum IndexType implements EnumProperties {
 	 */
 	Xml("XML"),
 	/**
+	 * JSON
+	 */
+	Json("JSON"),
+	/**
 	 * CLUSTERED
 	 */
 	Clustered("CLUSTERED") {

@@ -72,6 +72,8 @@ public class SqlServerUtils extends ReaderUtils {
 			return IndexType.ClusteredColumnStore;
 		} else if (indexType == 6) {
 			return IndexType.NonClusteredColumnStore;
+		} else if (indexType == 9) {
+			return IndexType.Json;
 		}
 		// 非クラスタ化インデックス
 		return IndexType.BTree;

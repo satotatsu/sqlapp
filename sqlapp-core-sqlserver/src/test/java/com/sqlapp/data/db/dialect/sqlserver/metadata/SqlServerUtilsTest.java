@@ -32,6 +32,7 @@ public class SqlServerUtilsTest extends AbstractTest {
 	public void testGetIndexTypeForColumnStoreIndexes() {
 		assertEquals(IndexType.ClusteredColumnStore, SqlServerUtils.getIndexType(5));
 		assertEquals(IndexType.NonClusteredColumnStore, SqlServerUtils.getIndexType(6));
+		assertEquals(IndexType.Json, SqlServerUtils.getIndexType(9));
 	}
 
 	/**

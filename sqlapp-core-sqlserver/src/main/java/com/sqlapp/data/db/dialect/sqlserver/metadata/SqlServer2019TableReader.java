@@ -48,6 +48,8 @@ public class SqlServer2019TableReader extends SqlServer2016TableReader {
 	@Override
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
+		setSpecifics(rs, "is_node", table);
+		setSpecifics(rs, "is_edge", table);
 		return table;
 	}
 
