@@ -181,6 +181,28 @@ class SqlServerMetadataReaderTest {
 			assertEquals(IndexType.NonClusteredColumnStore,
 					columnStoreIndex.getIndexType());
 			assertEquals(2, columnStoreIndex.getColumns().size());
+			Table columnStoreTable = schema.getTables()
+					.get("METADATA_COLUMNSTORE");
+			assertNotNull(columnStoreTable);
+			Index clusteredColumnStoreIndex = columnStoreTable.getIndexes()
+					.get("IDX_METADATA_COLUMNSTORE");
+			assertNotNull(clusteredColumnStoreIndex);
+			assertEquals(IndexType.ClusteredColumnStore,
+					clusteredColumnStoreIndex.getIndexType());
+			assertEquals(2, clusteredColumnStoreIndex.getColumns().size());
+			Index spatialIndex = schema.getTables().get("METADATA_SPATIAL")
+					.getIndexes().get("IDX_METADATA_SPATIAL_LOCATION");
+			assertNotNull(spatialIndex);
+			assertEquals(IndexType.Spatial, spatialIndex.getIndexType());
+			assertEquals("LOCATION", spatialIndex.getColumns().get(0).getName());
+			assertEquals("GEOMETRY_AUTO_GRID", spatialIndex.getSpecifics()
+					.get("tessellation_scheme"));
+			assertEquals("16", spatialIndex.getSpecifics()
+					.get("cells_per_object"));
+			assertEquals("1000.0", spatialIndex.getSpecifics()
+					.get("bounding_box_xmax"));
+			assertEquals("-1000.0", spatialIndex.getSpecifics()
+					.get("bounding_box_xmin"));
 			Column id = child.getColumns().get("ID");
 			assertTrue(id.isIdentity());
 			assertEquals(100L, id.getIdentityStartValue());
@@ -198,6 +220,11 @@ class SqlServerMetadataReaderTest {
 			assertTrue(total.isFormulaPersisted());
 
 			Table typeCoverage = schema.getTables().get("METADATA_TYPES");
+			Index xmlIndex = typeCoverage.getIndexes()
+					.get("IDX_METADATA_TYPES_XML");
+			assertNotNull(xmlIndex);
+			assertEquals(IndexType.Xml, xmlIndex.getIndexType());
+			assertEquals("XML_VALUE", xmlIndex.getColumns().get(0).getName());
 			assertNotNull(typeCoverage);
 			assertNotNull(schema.getXmlSchemas().get("METADATA_XML_SCHEMA"));
 			assertTrue(schema.getXmlSchemas().get("METADATA_XML_SCHEMA")
@@ -308,6 +335,8 @@ class SqlServerMetadataReaderTest {
 			statement.execute("DROP PROCEDURE IF EXISTS METADATA_PROCEDURE");
 			statement.execute("DROP FUNCTION IF EXISTS METADATA_FUNCTION");
 			statement.execute("DROP TABLE IF EXISTS METADATA_CHILD");
+			statement.execute("DROP TABLE IF EXISTS METADATA_SPATIAL");
+			statement.execute("DROP TABLE IF EXISTS METADATA_COLUMNSTORE");
 			statement.execute("DROP TABLE IF EXISTS METADATA_PARENT");
 			statement.execute("DROP TABLE IF EXISTS METADATA_TYPES");
 			statement.execute("""
@@ -382,6 +411,29 @@ class SqlServerMetadataReaderTest {
 					ON METADATA_PARENT(NAME, REGION)
 					""");
 			statement.execute("""
+					CREATE TABLE METADATA_COLUMNSTORE (
+						ID BIGINT NOT NULL,
+						VALUE DECIMAL(18, 2) NOT NULL
+					)
+					""");
+			statement.execute("""
+					CREATE CLUSTERED COLUMNSTORE INDEX IDX_METADATA_COLUMNSTORE
+					ON METADATA_COLUMNSTORE
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_SPATIAL (
+						ID INT NOT NULL PRIMARY KEY,
+						LOCATION GEOMETRY
+					)
+					""");
+			statement.execute("""
+					CREATE SPATIAL INDEX IDX_METADATA_SPATIAL_LOCATION
+					ON METADATA_SPATIAL(LOCATION)
+					USING GEOMETRY_AUTO_GRID
+					WITH (BOUNDING_BOX = (-1000, -1000, 1000, 1000),
+						CELLS_PER_OBJECT = 16)
+					""");
+			statement.execute("""
 					CREATE INDEX IDX_METADATA_CHILD_PARENT
 					ON METADATA_CHILD(PARENT_ID DESC, PARENT_REGION ASC) INCLUDE (CODE)
 					WHERE AMOUNT > 0
@@ -389,7 +441,7 @@ class SqlServerMetadataReaderTest {
 					""");
 			statement.execute("""
 					CREATE TABLE METADATA_TYPES (
-						ID UNIQUEIDENTIFIER NOT NULL,
+						ID UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
 						UNICODE_VALUE NVARCHAR(123),
 						MAX_VALUE VARCHAR(MAX),
 						OFFSET_VALUE DATETIMEOFFSET(7),
@@ -398,6 +450,10 @@ class SqlServerMetadataReaderTest {
 						MASKED_VALUE VARCHAR(100)
 							MASKED WITH (FUNCTION = 'partial(1,"XXXX",1)')
 					)
+					""");
+			statement.execute("""
+					CREATE PRIMARY XML INDEX IDX_METADATA_TYPES_XML
+					ON METADATA_TYPES(XML_VALUE)
 					""");
 			statement.execute("""
 					CREATE TABLE METADATA_TEMPORAL (
