@@ -59,7 +59,7 @@ class SapHanaMetadataReaderTest {
 							.withHostName("hxehost").getHostConfig()
 							.withShmSize(1L << 30))
 					.waitingFor(Wait.forLogMessage(".*Startup finished.*", 1)
-							.withStartupTimeout(Duration.ofMinutes(15))));
+							.withStartupTimeout(Duration.ofMinutes(30))));
 
 	@BeforeAll
 	static void startContainer() {
@@ -95,6 +95,13 @@ class SapHanaMetadataReaderTest {
 			assertNotNull(parent);
 			assertEquals(TableDataStoreType.Column,
 					parent.getTableDataStoreType());
+			assertEquals("TRUE",
+					parent.getSpecifics().get("IS_COLUMN_TABLE"));
+			assertEquals("FALSE",
+					parent.getSpecifics().get("IS_INSERT_ONLY"));
+			assertEquals("FALSE",
+					parent.getSpecifics().get("IS_TEMPORARY"));
+			assertNotNull(parent.getSpecifics().get("AUTO_MERGE_ON"));
 			assertEquals("Metadata parent table", parent.getRemarks());
 			assertEquals("Display name",
 					parent.getColumns().get("NAME").getRemarks());
@@ -109,6 +116,8 @@ class SapHanaMetadataReaderTest {
 			assertNotNull(rowStore);
 			assertEquals(TableDataStoreType.Row,
 					rowStore.getTableDataStoreType());
+			assertEquals("FALSE",
+					rowStore.getSpecifics().get("IS_COLUMN_TABLE"));
 			var child = schema.getTables().get("METADATA_CHILD");
 			assertNotNull(child);
 			assertEquals(IdentityGenerationType.ByDefault,
@@ -171,6 +180,12 @@ class SapHanaMetadataReaderTest {
 			assertEquals("BUCKET", partitioned.getPartitioning()
 					.getPartitioningColumns().get(0).getName());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
+			assertTrue(partitioned.getPartitioning().getPartitions().stream()
+					.allMatch(partition -> partition.getSpecifics()
+							.get("LOAD_UNIT") != null));
+			assertTrue(partitioned.getPartitioning().getPartitions().stream()
+					.allMatch(partition -> partition.getSpecifics()
+							.get("STORAGE_TYPE") != null));
 			var multiPartitioned = schema.getTables()
 					.get("METADATA_MULTI_PARTITIONED");
 			assertNotNull(multiPartitioned);
