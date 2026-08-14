@@ -54,11 +54,16 @@ class Db2_1150MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARTITIONED");
 			drop(statement, "DROP TABLE METADATA_COMPAT_MDC");
 			drop(statement, "DROP TABLE METADATA_COMPAT_TYPED");
+			drop(statement, "DROP TYPE METADATA_COMPAT_ADDRESS");
 			drop(statement, "DROP TYPE METADATA_COMPAT_MONEY");
 			drop(statement, "DROP SEQUENCE METADATA_COMPAT_SEQ");
 			statement.execute("""
 					CREATE DISTINCT TYPE METADATA_COMPAT_MONEY
 					 AS DECIMAL(18, 2) WITH COMPARISONS
+					""");
+			statement.execute("""
+					CREATE TYPE METADATA_COMPAT_ADDRESS AS (
+					 STREET VARCHAR(100), POSTAL_CODE CHAR(5)) MODE DB2SQL
 					""");
 			statement.execute("""
 					CREATE TABLE METADATA_COMPAT_PARENT (
@@ -129,6 +134,11 @@ class Db2_1150MetadataReaderTest {
 			assertEquals("METADATA_COMPAT_MONEY", schema.getTables()
 					.get("METADATA_COMPAT_TYPED").getColumns().get("AMOUNT")
 					.getDataTypeName());
+			var address = schema.getTypes().get("METADATA_COMPAT_ADDRESS");
+			assertNotNull(address);
+			assertEquals(2, address.getColumns().size());
+			assertEquals(DataType.VARCHAR,
+					address.getColumns().get("STREET").getDataType());
 		}
 	}
 

@@ -71,8 +71,8 @@ public class Db2TypeColumnReader extends TypeColumnReader {
 
 	protected TypeColumn createTypeColumn(ExResultSet rs) throws SQLException {
 		TypeColumn obj = createObject(getString(rs, COLUMN_NAME));
-		obj.setTypeName(TYPE_NAME);
-		obj.setSchemaName(SCHEMA_NAME);
+		obj.setTypeName(getString(rs, TYPE_NAME));
+		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		Long length = this.getLong(rs, "LENGTH");
 		Integer scale = this.getInteger(rs, "SCALE");
 		String productDataType = getString(rs, DATA_TYPE);

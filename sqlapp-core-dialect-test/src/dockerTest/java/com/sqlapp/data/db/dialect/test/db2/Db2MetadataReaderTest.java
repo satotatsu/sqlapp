@@ -120,6 +120,15 @@ class Db2MetadataReaderTest {
 			assertNotNull(typed);
 			assertEquals("METADATA_MONEY",
 					typed.getColumns().get("AMOUNT").getDataTypeName());
+			var address = schema.getTypes().get("METADATA_ADDRESS");
+			assertNotNull(address);
+			assertEquals(2, address.getColumns().size());
+			assertEquals(DataType.VARCHAR,
+					address.getColumns().get("STREET").getDataType());
+			assertEquals(100L,
+					address.getColumns().get("STREET").getLength());
+			assertEquals(DataType.CHAR,
+					address.getColumns().get("POSTAL_CODE").getDataType());
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
 			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
@@ -144,11 +153,16 @@ class Db2MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_TEMPORAL");
 			drop(statement, "DROP TABLE METADATA_MDC");
 			drop(statement, "DROP TABLE METADATA_TYPED");
+			drop(statement, "DROP TYPE METADATA_ADDRESS");
 			drop(statement, "DROP TYPE METADATA_MONEY");
 			drop(statement, "DROP SEQUENCE METADATA_SEQ");
 			statement.execute("""
 					CREATE DISTINCT TYPE METADATA_MONEY AS DECIMAL(18, 2)
 					 WITH COMPARISONS
+					""");
+			statement.execute("""
+					CREATE TYPE METADATA_ADDRESS AS (
+					 STREET VARCHAR(100), POSTAL_CODE CHAR(5)) MODE DB2SQL
 					""");
 			statement.execute("CREATE SEQUENCE METADATA_SEQ START WITH 50 INCREMENT BY 10");
 			statement.execute("""
