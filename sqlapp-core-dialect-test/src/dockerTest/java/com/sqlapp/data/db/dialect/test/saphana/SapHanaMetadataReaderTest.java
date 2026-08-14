@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Table.TableDataStoreType;
+import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
 class SapHanaMetadataReaderTest {
@@ -96,6 +97,13 @@ class SapHanaMetadataReaderTest {
 			assertEquals("Metadata parent table", parent.getRemarks());
 			assertEquals("Display name",
 					parent.getColumns().get("NAME").getRemarks());
+			var parentPrimaryKey = assertInstanceOf(UniqueConstraint.class,
+					parent.getConstraints().get("PK_METADATA_PARENT"));
+			assertTrue(parentPrimaryKey.isPrimaryKey());
+			assertEquals("ID",
+					parentPrimaryKey.getColumns().get(0).getName());
+			assertEquals("REGION",
+					parentPrimaryKey.getColumns().get(1).getName());
 			var rowStore = schema.getTables().get("METADATA_ROW_STORE");
 			assertNotNull(rowStore);
 			assertEquals(TableDataStoreType.Row,
@@ -109,6 +117,19 @@ class SapHanaMetadataReaderTest {
 			var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
 			assertEquals(2, foreignKey.getColumns().size());
+			assertEquals("PARENT_ID",
+					foreignKey.getColumns().get(0).getName());
+			assertEquals("PARENT_REGION",
+					foreignKey.getColumns().get(1).getName());
+			assertEquals("ID",
+					foreignKey.getRelatedColumns().get(0).getName());
+			assertEquals("REGION",
+					foreignKey.getRelatedColumns().get(1).getName());
+			var childUniqueKey = assertInstanceOf(UniqueConstraint.class,
+					child.getConstraints().get("UK_METADATA_CHILD_CODE"));
+			assertTrue(!childUniqueKey.isPrimaryKey());
+			assertEquals("CODE",
+					childUniqueKey.getColumns().get(0).getName());
 			var checkConstraint = assertInstanceOf(CheckConstraint.class,
 					child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
 			assertTrue(checkConstraint.getExpression().contains("AMOUNT"));
@@ -117,6 +138,10 @@ class SapHanaMetadataReaderTest {
 					.get("IDX_METADATA_CHILD_PARENT");
 			assertNotNull(childIndex);
 			assertEquals(IndexType.InvertedValue, childIndex.getIndexType());
+			assertEquals("PARENT_ID",
+					childIndex.getColumns().get(0).getName());
+			assertEquals("PARENT_REGION",
+					childIndex.getColumns().get(1).getName());
 			var sequence = schema.getSequences().get("METADATA_SEQ");
 			assertNotNull(sequence);
 			assertEquals(50L, sequence.getStartValue().longValue());
