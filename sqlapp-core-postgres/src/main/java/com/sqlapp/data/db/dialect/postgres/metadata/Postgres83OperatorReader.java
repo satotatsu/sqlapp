@@ -76,8 +76,11 @@ public class Postgres83OperatorReader extends OperatorReader {
 		obj.setId(getString(rs, "oid"));
 		obj.setLeftArgument(getString(rs, "left_type"));
 		obj.setRightArgument(getString(rs, "right_type"));
-		obj.setFunctionSchemaName(getString(rs, "code_function_schema"));
 		obj.setFunctionName(getString(rs, "code_function_name"));
+		if (obj.getFunction() != null) {
+			obj.getFunction().setSchemaName(
+					getString(rs, "code_function_schema"));
+		}
 		obj.setRestrictFunctionName(getString(rs, "rest_function_name"));
 		if (obj.getRestrictFunction() != null) {
 			obj.getRestrictFunction().setSchemaName(

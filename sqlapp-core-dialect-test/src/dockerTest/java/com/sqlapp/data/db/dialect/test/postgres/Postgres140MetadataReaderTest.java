@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.postgres.Postgres140;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
@@ -64,6 +65,14 @@ class Postgres140MetadataReaderTest {
 			assertNotNull(schema.getSequences().get("metadata_seq"));
 			assertNotNull(schema.getViews().get("metadata_view"));
 			assertNotNull(schema.getFunctions().get("metadata_function"));
+			var operator = schema.getOperators().get("#@#");
+			assertNotNull(operator);
+			assertEquals(DataType.INT,
+					operator.getLeftArgument().getDataType());
+			assertEquals(DataType.INT,
+					operator.getRightArgument().getDataType());
+			assertEquals("metadata_test_14", operator.getFunctionSchemaName());
+			assertEquals("metadata_int_add", operator.getFunctionName());
 			var partitioned = schema.getTables().get("metadata_events");
 			assertNotNull(partitioned);
 			assertEquals(PartitioningType.Range,
@@ -130,6 +139,16 @@ class Postgres140MetadataReaderTest {
 		statement.execute("""
 				CREATE FUNCTION metadata_test_14.metadata_function(p_amount numeric)
 				 RETURNS numeric LANGUAGE sql IMMUTABLE AS $$ SELECT p_amount * 2 $$
+				""");
+		statement.execute("""
+				CREATE FUNCTION metadata_test_14.metadata_int_add(integer, integer)
+				 RETURNS integer LANGUAGE sql IMMUTABLE
+				 AS $$ SELECT $1 + $2 $$
+				""");
+		statement.execute("""
+				CREATE OPERATOR metadata_test_14.#@# (
+				 LEFTARG = integer, RIGHTARG = integer,
+				 FUNCTION = metadata_test_14.metadata_int_add)
 				""");
 		statement.execute("""
 				CREATE RULE metadata_child_audit AS
