@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.db2.Db2_1215;
@@ -112,6 +113,13 @@ class Db2MetadataReaderTest {
 					.getSpecifics().get("DIMENSION"));
 			assertNotNull(mdc.getColumns().get("BUCKET")
 					.getSpecifics().get("DIMENSION"));
+			var money = schema.getDomains().get("METADATA_MONEY");
+			assertNotNull(money);
+			assertEquals(DataType.DECIMAL, money.getDataType());
+			Table typed = schema.getTables().get("METADATA_TYPED");
+			assertNotNull(typed);
+			assertEquals("METADATA_MONEY",
+					typed.getColumns().get("AMOUNT").getDataTypeName());
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
 			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
@@ -135,7 +143,13 @@ class Db2MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_PARTITIONED");
 			drop(statement, "DROP TABLE METADATA_TEMPORAL");
 			drop(statement, "DROP TABLE METADATA_MDC");
+			drop(statement, "DROP TABLE METADATA_TYPED");
+			drop(statement, "DROP TYPE METADATA_MONEY");
 			drop(statement, "DROP SEQUENCE METADATA_SEQ");
+			statement.execute("""
+					CREATE DISTINCT TYPE METADATA_MONEY AS DECIMAL(18, 2)
+					 WITH COMPARISONS
+					""");
 			statement.execute("CREATE SEQUENCE METADATA_SEQ START WITH 50 INCREMENT BY 10");
 			statement.execute("""
 					CREATE TABLE METADATA_PARENT (
@@ -181,6 +195,11 @@ class Db2MetadataReaderTest {
 					 REGION CHAR(2) NOT NULL, BUCKET INTEGER NOT NULL,
 					 PAYLOAD VARCHAR(100))
 					 ORGANIZE BY DIMENSIONS (REGION, BUCKET)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_TYPED (
+					 ID BIGINT NOT NULL PRIMARY KEY,
+					 AMOUNT METADATA_MONEY)
 					""");
 			statement.execute("""
 					CREATE PROCEDURE METADATA_PROCEDURE(IN P_PARENT_ID BIGINT)

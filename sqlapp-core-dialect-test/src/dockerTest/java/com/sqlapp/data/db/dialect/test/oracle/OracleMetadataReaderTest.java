@@ -134,6 +134,18 @@ class OracleMetadataReaderTest {
 			assertNotNull(sequence);
 
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
+			var mview = schema.getMviews().get("METADATA_MVIEW");
+			assertNotNull(mview);
+			assertNotNull(mview.getStatement());
+			assertTrue(mview.getStatement().toString()
+					.contains("METADATA_PARENT"));
+			var mviewLog = schema.getMviewLogs().stream()
+					.filter(current -> "METADATA_PARENT".equals(
+							current.getMasterTableName()))
+					.findFirst().orElseThrow();
+			assertTrue(mviewLog.isSavePrimaryKey());
+			assertTrue(mviewLog.isSaveRowIds());
+			assertTrue(mviewLog.isIncludeNewValues());
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
@@ -164,6 +176,8 @@ class OracleMetadataReaderTest {
 		try (Statement statement = connection.createStatement()) {
 			drop(statement, "DROP SYNONYM METADATA_PARENT_SYNONYM", 1434);
 			drop(statement, "DROP TRIGGER METADATA_TRIGGER", 4080);
+			drop(statement, "DROP MATERIALIZED VIEW METADATA_MVIEW", 12003);
+			drop(statement, "DROP MATERIALIZED VIEW LOG ON METADATA_PARENT", 942);
 			drop(statement, "DROP VIEW METADATA_VIEW", 942);
 			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE", 4043);
 			drop(statement, "DROP FUNCTION METADATA_FUNCTION", 4043);
@@ -233,6 +247,15 @@ class OracleMetadataReaderTest {
 					""");
 			statement.execute("COMMENT ON TABLE METADATA_PARENT IS 'Metadata parent table'");
 			statement.execute("COMMENT ON COLUMN METADATA_PARENT.NAME IS 'Display name'");
+			statement.execute("""
+					CREATE MATERIALIZED VIEW LOG ON METADATA_PARENT
+					 WITH PRIMARY KEY, ROWID INCLUDING NEW VALUES
+					""");
+			statement.execute("""
+					CREATE MATERIALIZED VIEW METADATA_MVIEW
+					 BUILD IMMEDIATE REFRESH COMPLETE ON DEMAND AS
+					 SELECT ID, REGION, NAME FROM METADATA_PARENT
+					""");
 			statement.execute("""
 					CREATE VIEW METADATA_VIEW AS
 					SELECT ID, CODE, TOTAL FROM METADATA_CHILD

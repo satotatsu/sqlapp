@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.db2.Db2_1150;
@@ -52,7 +53,13 @@ class Db2_1150MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARENT");
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARTITIONED");
 			drop(statement, "DROP TABLE METADATA_COMPAT_MDC");
+			drop(statement, "DROP TABLE METADATA_COMPAT_TYPED");
+			drop(statement, "DROP TYPE METADATA_COMPAT_MONEY");
 			drop(statement, "DROP SEQUENCE METADATA_COMPAT_SEQ");
+			statement.execute("""
+					CREATE DISTINCT TYPE METADATA_COMPAT_MONEY
+					 AS DECIMAL(18, 2) WITH COMPARISONS
+					""");
 			statement.execute("""
 					CREATE TABLE METADATA_COMPAT_PARENT (
 					 ID BIGINT NOT NULL PRIMARY KEY, NAME VARCHAR(100))
@@ -80,6 +87,11 @@ class Db2_1150MetadataReaderTest {
 					 REGION CHAR(2) NOT NULL, BUCKET INTEGER NOT NULL,
 					 PAYLOAD VARCHAR(100))
 					 ORGANIZE BY DIMENSIONS (REGION, BUCKET)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_COMPAT_TYPED (
+					 ID BIGINT NOT NULL PRIMARY KEY,
+					 AMOUNT METADATA_COMPAT_MONEY)
 					""");
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -111,6 +123,12 @@ class Db2_1150MetadataReaderTest {
 					.getSpecifics().get("DIMENSION"));
 			assertNotNull(mdc.getColumns().get("BUCKET")
 					.getSpecifics().get("DIMENSION"));
+			var money = schema.getDomains().get("METADATA_COMPAT_MONEY");
+			assertNotNull(money);
+			assertEquals(DataType.DECIMAL, money.getDataType());
+			assertEquals("METADATA_COMPAT_MONEY", schema.getTables()
+					.get("METADATA_COMPAT_TYPED").getColumns().get("AMOUNT")
+					.getDataTypeName());
 		}
 	}
 
