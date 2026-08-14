@@ -77,6 +77,12 @@ public API risks, the smallest implementation location and required tests.
 
 For `sqlapp-core-{db}` changes:
 
+- MetadataReader must continue to operate correctly on past supported database
+  versions.
+- Exact compatibility of previously read fields or Schema model representations
+  is not required when improving dialect metadata behavior.
+- Isolate version-specific catalog columns and SQL syntax in the reader for the
+  database version that supports them.
 - State the database product and affected version range.
 - Check `DialectResolver` and preserve older supported behavior.
 - Inherit from the nearest compatible version and override only differences.

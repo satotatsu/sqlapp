@@ -212,6 +212,12 @@ class SqlServerMetadataReaderTest {
 			assertNotNull(jsonIndex);
 			assertEquals(IndexType.Json, jsonIndex.getIndexType());
 			assertEquals("DOCUMENT", jsonIndex.getColumns().get(0).getName());
+			Table ledgerTable = schema.getTables().get("METADATA_LEDGER");
+			assertNotNull(ledgerTable);
+			assertEquals("APPEND_ONLY_LEDGER_TABLE",
+					ledgerTable.getSpecifics().get("ledger_type"));
+			assertNotNull(ledgerTable.getSpecifics().get("ledger_view_id"));
+			assertNotNull(schema.getViews().get("METADATA_LEDGER_Ledger"));
 			Column id = child.getColumns().get("ID");
 			assertTrue(id.isIdentity());
 			assertEquals(100L, id.getIdentityStartValue());
@@ -347,6 +353,7 @@ class SqlServerMetadataReaderTest {
 			statement.execute("DROP TABLE IF EXISTS METADATA_EDGE");
 			statement.execute("DROP TABLE IF EXISTS METADATA_NODE");
 			statement.execute("DROP TABLE IF EXISTS METADATA_JSON");
+			statement.execute("DROP TABLE IF EXISTS METADATA_LEDGER");
 			statement.execute("DROP TABLE IF EXISTS METADATA_SPATIAL");
 			statement.execute("DROP TABLE IF EXISTS METADATA_COLUMNSTORE");
 			statement.execute("DROP TABLE IF EXISTS METADATA_PARENT");
@@ -460,6 +467,12 @@ class SqlServerMetadataReaderTest {
 			statement.execute("""
 					CREATE JSON INDEX IDX_METADATA_JSON_DOCUMENT
 					ON METADATA_JSON(DOCUMENT)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_LEDGER (
+						ID BIGINT NOT NULL PRIMARY KEY,
+						VALUE NVARCHAR(100) NOT NULL
+					) WITH (LEDGER = ON (APPEND_ONLY = ON))
 					""");
 			statement.execute("""
 					CREATE INDEX IDX_METADATA_CHILD_PARENT

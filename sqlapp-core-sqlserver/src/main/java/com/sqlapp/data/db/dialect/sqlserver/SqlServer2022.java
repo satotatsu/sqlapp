@@ -22,7 +22,9 @@ package com.sqlapp.data.db.dialect.sqlserver;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2022CatalogReader;
 import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2022SqlFactoryRegistry;
+import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
@@ -49,6 +51,11 @@ public class SqlServer2022 extends SqlServer2019 {
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServer2022SqlFactoryRegistry(this);
+	}
+
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new SqlServer2022CatalogReader(this);
 	}
 
 	/*
