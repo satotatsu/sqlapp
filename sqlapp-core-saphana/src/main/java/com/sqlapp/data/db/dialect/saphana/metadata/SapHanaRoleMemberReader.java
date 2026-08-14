@@ -57,7 +57,7 @@ public class SapHanaRoleMemberReader extends RoleMemberReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roleMember.sql");
+		return getSqlNodeCache().getString("roleMembers.sql");
 	}
 
 	protected RoleMember createRoleMember(ExResultSet rs) throws SQLException {

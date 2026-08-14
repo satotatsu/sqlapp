@@ -61,6 +61,15 @@ public class SapHanaObjectPrivilegeReader extends ObjectPrivilegeReader {
 		return getSqlNodeCache().getString("objectPrivileges.sql");
 	}
 
+	@Override
+	protected ParametersContext defaultParametersContext(
+			final Connection connection) {
+		final ParametersContext context = super.defaultParametersContext(connection);
+		context.put(SCHEMA_NAME,
+				nativeCaseString(connection, this.getSchemaName()));
+		return context;
+	}
+
 	protected ObjectPrivilege createPrivilege(ExResultSet rs) throws SQLException {
 		ObjectPrivilege obj = new ObjectPrivilege();
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));

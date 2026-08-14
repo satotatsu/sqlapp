@@ -77,8 +77,10 @@ class SapHanaMetadataReaderTest {
 	void testReadsRepresentativeSchemaObjectsFromHana2() throws SQLException {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
-			createObjects(statement);
-			var dialect = DialectResolver.getInstance().getDialect(connection);
+			try {
+				createObjects(statement);
+				createSecurityObjects(statement);
+				var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(SapHana.class, dialect);
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName("METADATA_TEST");
@@ -160,7 +162,36 @@ class SapHanaMetadataReaderTest {
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
 			assertEquals("METADATA_TEST", trigger.getTableSchemaName());
 			assertEquals("METADATA_CHILD", trigger.getTableName());
-			assertNotNull(trigger.getDefinition());
+				assertNotNull(trigger.getDefinition());
+				var catalogReader = dialect.getCatalogReader();
+				var roleReader = catalogReader.getRoleReader();
+				roleReader.setObjectName("METADATA_ROLE");
+				assertNotNull(roleReader.getAll(connection).stream()
+						.filter(role -> "METADATA_ROLE".equals(role.getName()))
+						.findFirst().orElseThrow());
+				var userReader = catalogReader.getUserReader();
+				userReader.setObjectName("METADATA_USER");
+				assertNotNull(userReader.getAll(connection).stream()
+						.filter(user -> "METADATA_USER".equals(user.getName()))
+						.findFirst().orElseThrow());
+				var roleMemberReader = catalogReader.getRoleMemberReader();
+				roleMemberReader.setGrantee("METADATA_USER");
+				assertTrue(roleMemberReader.getAll(connection).stream()
+						.anyMatch(member -> "METADATA_ROLE".equals(
+								member.getMemberRoleName())
+								&& member.isAdmin()));
+				var objectPrivilegeReader = catalogReader
+						.getObjectPrivilegeReader();
+				objectPrivilegeReader.setSchemaName("METADATA_TEST");
+				objectPrivilegeReader.setObjectName("METADATA_PARENT");
+				assertTrue(objectPrivilegeReader.getAll(connection).stream()
+						.anyMatch(privilege -> "METADATA_ROLE".equals(
+								privilege.getGranteeName())
+								&& "SELECT".equals(privilege.getPrivilege())
+								&& privilege.isGrantable()));
+			} finally {
+				cleanupSecurityObjects(statement);
+			}
 		}
 	}
 
@@ -277,6 +308,21 @@ class SapHanaMetadataReaderTest {
 		} catch (SQLException e) {
 			// The disposable test database may not contain the schema yet.
 		}
+	}
+
+	private void createSecurityObjects(final Statement statement)
+			throws SQLException {
+		drop(statement, "DROP USER METADATA_USER CASCADE");
+		drop(statement, "DROP ROLE METADATA_ROLE");
+		statement.execute("CREATE USER METADATA_USER PASSWORD HxeTest9xB NO FORCE_FIRST_PASSWORD_CHANGE");
+		statement.execute("CREATE ROLE METADATA_ROLE");
+		statement.execute("GRANT METADATA_ROLE TO METADATA_USER WITH ADMIN OPTION");
+		statement.execute("GRANT SELECT ON METADATA_TEST.METADATA_PARENT TO METADATA_ROLE WITH GRANT OPTION");
+	}
+
+	private void cleanupSecurityObjects(final Statement statement) {
+		drop(statement, "DROP USER METADATA_USER CASCADE");
+		drop(statement, "DROP ROLE METADATA_ROLE");
 	}
 
 	private static Path createPasswordDirectory() {
