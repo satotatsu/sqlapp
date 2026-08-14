@@ -37,15 +37,17 @@ SELECT DISTINCT
     WHEN 'p' THEN 'PARTIAL'
     ELSE 'SIMPLE'
     END AS match_option
-  , pg_get_constraintdef(c.oid) as consrc --êßñÒéÆ
+  , pg_get_constraintdef(c.oid) as consrc
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
 FROM pg_catalog.pg_constraint c
 INNER JOIN pg_catalog.pg_class p
   ON (c.conrelid = p.oid)
+INNER JOIN generate_subscripts(c.conkey, 1) key_position(position)
+  ON (TRUE)
 INNER JOIN pg_catalog.pg_attribute pc
   ON (p.oid = pc.attrelid
-  AND pc.attnum = ANY (c.conkey))
+  AND pc.attnum = c.conkey[key_position.position])
 INNER JOIN pg_catalog.pg_namespace nc
   ON (c.connamespace = nc.oid)
 INNER JOIN pg_catalog.pg_namespace pr
@@ -54,7 +56,7 @@ INNER JOIN pg_catalog.pg_class r
   ON (c.confrelid = r.oid)
 INNER JOIN pg_catalog.pg_attribute rc
   ON (r.oid = rc.attrelid
-  AND rc.attnum = ANY (c.confkey))
+  AND rc.attnum = c.confkey[key_position.position])
 INNER JOIN pg_catalog.pg_namespace rr
   ON (r.relnamespace = rr.oid)
 WHERE 1=1

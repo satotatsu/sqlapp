@@ -61,7 +61,7 @@ public class Db2CheckConstraintReader extends CheckConstraintReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String catalog_name = null;
-				String schema_name = null;
+				String schema_name = trim(getString(rs, SCHEMA_NAME));
 				String name = trim(getString(rs, CONSTRAINT_NAME));
 				String source = trim(getString(rs, "TEXT"));
 				String column_name = trim(getString(rs, COLUMN_NAME));
@@ -71,11 +71,12 @@ public class Db2CheckConstraintReader extends CheckConstraintReader {
 				// short triggetType=rs.getShort("RDB$TRIGGER_TYPE");
 				if (c == null) {
 					c = new CheckConstraint(name, source);
+					c.setSchemaName(schema_name);
 					c.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					c.setTableName(tableName);
 					cols = list();
-					tMap.put(schema_name, schema_name, name, c);
-					colMap.put(schema_name, schema_name, name, cols);
+					tMap.put(catalog_name, schema_name, name, c);
+					colMap.put(catalog_name, schema_name, name, cols);
 				}
 				if (column_name != null) {
 					Column column = new Column(column_name);
