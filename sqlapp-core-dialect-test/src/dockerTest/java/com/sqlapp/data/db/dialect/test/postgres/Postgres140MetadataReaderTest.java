@@ -24,6 +24,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.postgres.Postgres140;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
 
 /** PostgreSQL 14 compatibility coverage for the metadata reader tree. */
@@ -73,6 +74,15 @@ class Postgres140MetadataReaderTest {
 					operator.getRightArgument().getDataType());
 			assertEquals("metadata_test_14", operator.getFunctionSchemaName());
 			assertEquals("metadata_int_add", operator.getFunctionName());
+			var operatorClass = schema.getOperatorClasses()
+					.get("metadata_int_ops");
+			assertNotNull(operatorClass);
+			assertEquals(DataType.INT, operatorClass.getDataType());
+			assertEquals(IndexType.BTree, operatorClass.getIndexType());
+			assertEquals(5, operatorClass.getOperatorFamilies().size());
+			assertEquals(1, operatorClass.getFunctionFamilies().size());
+			assertTrue(operatorClass.getFunctionFamilies().get(0)
+					.getFunctionName().startsWith("metadata_int_cmp"));
 			var partitioned = schema.getTables().get("metadata_events");
 			assertNotNull(partitioned);
 			assertEquals(PartitioningType.Range,
@@ -149,6 +159,24 @@ class Postgres140MetadataReaderTest {
 				CREATE OPERATOR metadata_test_14.#@# (
 				 LEFTARG = integer, RIGHTARG = integer,
 				 FUNCTION = metadata_test_14.metadata_int_add)
+				""");
+		statement.execute("""
+				CREATE FUNCTION metadata_test_14.metadata_int_cmp(integer, integer)
+				 RETURNS integer LANGUAGE sql IMMUTABLE STRICT
+				 AS $$ SELECT CASE WHEN $1 < $2 THEN -1
+				  WHEN $1 > $2 THEN 1 ELSE 0 END $$
+				""");
+		statement.execute("""
+				CREATE OPERATOR FAMILY metadata_test_14.metadata_int_family
+				 USING btree
+				""");
+		statement.execute("""
+				CREATE OPERATOR CLASS metadata_test_14.metadata_int_ops
+				 FOR TYPE integer USING btree
+				 FAMILY metadata_test_14.metadata_int_family AS
+				  OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =,
+				  OPERATOR 4 >=, OPERATOR 5 >,
+				  FUNCTION 1 metadata_test_14.metadata_int_cmp(integer, integer)
 				""");
 		statement.execute("""
 				CREATE RULE metadata_child_audit AS
