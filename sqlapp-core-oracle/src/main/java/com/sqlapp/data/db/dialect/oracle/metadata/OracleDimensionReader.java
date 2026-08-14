@@ -68,7 +68,10 @@ public class OracleDimensionReader extends DimensionReader {
 
 	protected Dimension createDimension(ExResultSet rs) throws SQLException {
 		Dimension obj = new Dimension(getString(rs, DIMENSION_NAME));
-		//TODO 
+		obj.setSchemaName(getString(rs, "OWNER"));
+		setSpecifics(rs, "COMPILE_STATE", obj);
+		setSpecifics(rs, "INVALID", obj);
+		setSpecifics(rs, "REVISION", obj);
 		return obj;
 	}
 }

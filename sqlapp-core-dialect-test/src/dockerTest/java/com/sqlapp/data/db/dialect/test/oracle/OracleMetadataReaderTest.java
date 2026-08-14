@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Locale;
@@ -55,6 +56,7 @@ class OracleMetadataReaderTest {
 	void testReadsRepresentativeSchemaObjectsFromLatestOracle()
 			throws SQLException {
 		try (Connection connection = ORACLE.createConnection("")) {
+			grantDirectoryAccess();
 			createSchemaObjects(connection);
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -130,6 +132,25 @@ class OracleMetadataReaderTest {
 			assertEquals(DataType.VECTOR,
 					vectorTable.getColumns().get("EMBEDDING").getDataType());
 
+			var externalTable = schema.getExternalTables()
+					.get("METADATA_EXTERNAL");
+			assertNotNull(externalTable);
+			assertEquals("DATA_PUMP_DIR",
+					externalTable.getDefaultDirectoryName());
+			assertEquals("DATA_PUMP_DIR", externalTable.getDirectoryName());
+			assertEquals("metadata_external.csv", externalTable.getLocation());
+			assertEquals("ORACLE_LOADER", externalTable.getTypeName());
+			assertEquals("CLOB", externalTable.getAccessType());
+			assertEquals("10", externalTable.getRejectLimit());
+			assertTrue(externalTable.getAccessParameters()
+					.contains("TERMINATED BY"));
+
+			var dimension = schema.getDimensions().get("METADATA_DIMENSION");
+			assertNotNull(dimension);
+			assertEquals(schemaName, dimension.getSchemaName());
+			assertEquals("VALID",
+					dimension.getSpecifics().get("COMPILE_STATE"));
+
 			Sequence sequence = schema.getSequences().get("METADATA_SEQ");
 			assertNotNull(sequence);
 
@@ -177,11 +198,15 @@ class OracleMetadataReaderTest {
 			drop(statement, "DROP SYNONYM METADATA_PARENT_SYNONYM", 1434);
 			drop(statement, "DROP TRIGGER METADATA_TRIGGER", 4080);
 			drop(statement, "DROP MATERIALIZED VIEW METADATA_MVIEW", 12003);
-			drop(statement, "DROP MATERIALIZED VIEW LOG ON METADATA_PARENT", 942);
+			drop(statement, "DROP MATERIALIZED VIEW LOG ON METADATA_PARENT",
+					942, 12002);
 			drop(statement, "DROP VIEW METADATA_VIEW", 942);
 			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE", 4043);
 			drop(statement, "DROP FUNCTION METADATA_FUNCTION", 4043);
 			drop(statement, "DROP PACKAGE METADATA_PACKAGE", 4043);
+			drop(statement, "DROP DIMENSION METADATA_DIMENSION", 30333);
+			drop(statement, "DROP TABLE METADATA_EXTERNAL PURGE", 942);
+			drop(statement, "DROP TABLE METADATA_DIM_PRODUCT PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_CHILD CASCADE CONSTRAINTS PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_VECTOR PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_PARTITIONED PURGE", 942);
@@ -227,6 +252,32 @@ class OracleMetadataReaderTest {
 						ID NUMBER(19) PRIMARY KEY,
 						EMBEDDING VECTOR(3, FLOAT32)
 					)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_EXTERNAL (
+					 ID NUMBER(19), NAME VARCHAR2(100))
+					 ORGANIZATION EXTERNAL (
+					  TYPE ORACLE_LOADER
+					  DEFAULT DIRECTORY DATA_PUMP_DIR
+					  ACCESS PARAMETERS (
+					   RECORDS DELIMITED BY NEWLINE
+					   FIELDS TERMINATED BY ',')
+					  LOCATION ('metadata_external.csv'))
+					 REJECT LIMIT 10
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_DIM_PRODUCT (
+					 PRODUCT_ID NUMBER(19) NOT NULL,
+					 CATEGORY_ID NUMBER(19) NOT NULL,
+					 PRODUCT_NAME VARCHAR2(100))
+					""");
+			statement.execute("""
+					CREATE DIMENSION METADATA_DIMENSION
+					 LEVEL PRODUCT IS (METADATA_DIM_PRODUCT.PRODUCT_ID)
+					 LEVEL CATEGORY IS (METADATA_DIM_PRODUCT.CATEGORY_ID)
+					 HIERARCHY PRODUCT_ROLLUP (PRODUCT CHILD OF CATEGORY)
+					 ATTRIBUTE PRODUCT DETERMINES
+					  (METADATA_DIM_PRODUCT.PRODUCT_NAME)
 					""");
 			statement.execute("""
 					CREATE TABLE METADATA_PARTITIONED (
@@ -305,14 +356,26 @@ class OracleMetadataReaderTest {
 		}
 	}
 
+	private void grantDirectoryAccess() throws SQLException {
+		try (Connection connection = DriverManager.getConnection(
+				ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+				Statement statement = connection.createStatement()) {
+			statement.execute("GRANT READ, WRITE ON DIRECTORY DATA_PUMP_DIR TO "
+					+ ORACLE.getUsername().toUpperCase(Locale.ROOT));
+		}
+	}
+
 	private void drop(final Statement statement, final String sql,
-			final int missingObjectErrorCode) throws SQLException {
+			final int... missingObjectErrorCodes) throws SQLException {
 		try {
 			statement.execute(sql);
 		} catch (SQLException e) {
-			if (e.getErrorCode() != missingObjectErrorCode) {
-				throw e;
+			for (int missingObjectErrorCode : missingObjectErrorCodes) {
+				if (e.getErrorCode() == missingObjectErrorCode) {
+					return;
+				}
 			}
+			throw e;
 		}
 	}
 }
