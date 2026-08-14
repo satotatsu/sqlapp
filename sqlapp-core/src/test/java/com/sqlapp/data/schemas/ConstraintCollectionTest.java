@@ -50,6 +50,17 @@ public class ConstraintCollectionTest {
 		System.out.println(diff);
 	}
 
+	@Test
+	public void testAddAllUnnamedDifferentConstraintTypes() {
+		ConstraintCollection constraints = new ConstraintCollection();
+		constraints.add(new UniqueConstraint());
+		constraints.addAll(java.util.List.of(new ForeignKeyConstraint()));
+
+		assertEquals(2, constraints.size());
+		assertTrue(constraints.stream().anyMatch(UniqueConstraint.class::isInstance));
+		assertTrue(constraints.stream().anyMatch(ForeignKeyConstraint.class::isInstance));
+	}
+
 	protected ConstraintCollection createConstraintCollection1(){
 		ConstraintCollection cc=new ConstraintCollection();
 		CheckConstraintTest ccTest=new CheckConstraintTest();

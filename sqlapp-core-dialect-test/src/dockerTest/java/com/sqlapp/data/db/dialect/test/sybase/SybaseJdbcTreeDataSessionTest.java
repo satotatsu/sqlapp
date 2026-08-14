@@ -27,6 +27,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
@@ -54,7 +55,7 @@ class SybaseJdbcTreeDataSessionTest {
 	}
 
 	@Test
-	void metadataReaderLoadsIdentityPrimaryKeyAndIndex() throws SQLException {
+	void metadataReaderLoadsIdentityPrimaryKeyIndexAndForeignKey() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(
 				"jdbc:jtds:sybase://localhost:" + ASE.getMappedPort(5000)
 						+ "/master", "sa", "sybase");
@@ -65,7 +66,10 @@ class SybaseJdbcTreeDataSessionTest {
 				// The isolated test container may not contain the table yet.
 			}
 			statement.execute("CREATE TABLE metadata_table (id INT IDENTITY NOT NULL, "
-					+ "code VARCHAR(30) NOT NULL, CONSTRAINT pk_metadata_table PRIMARY KEY (id))");
+					+ "parent_id INT NULL, code VARCHAR(30) NOT NULL, "
+					+ "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
+					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
+					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE INDEX idx_metadata_table_code ON metadata_table(code)");
 			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table")
 					.orElseThrow();
@@ -75,6 +79,12 @@ class SybaseJdbcTreeDataSessionTest {
 			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
 			assertNotNull(table.getIndexes().get("idx_metadata_table_code"));
+			var foreignKey = table.getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.findFirst().orElseThrow();
+			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
+			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 		}
 	}
 

@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.test.virtica;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,6 +34,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
@@ -57,14 +59,22 @@ class VirticaBatchGeneratedKeysTest {
 	}
 
 	@Test
-	void metadataReaderLoadsTableColumnsAndSequence() throws Exception {
+	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP VIEW IF EXISTS metadata_view");
+			statement.execute("DROP TABLE IF EXISTS metadata_child");
 			statement.execute("DROP TABLE IF EXISTS metadata_table");
 			statement.execute("DROP SEQUENCE IF EXISTS metadata_sequence");
 			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5");
 			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, "
-					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id))");
+					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
+					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code))");
+			statement.execute("CREATE TABLE metadata_child (id BIGINT NOT NULL, parent_id BIGINT NOT NULL, "
+					+ "CONSTRAINT pk_metadata_child PRIMARY KEY (id), "
+					+ "CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id) "
+					+ "REFERENCES metadata_table(id))");
+			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			var schema = DialectResolver.getInstance().getDialect(connection)
 					.getCatalogReader().getSchemaReader().getAllFull(connection)
 					.stream().filter(s -> s.getTables().stream().anyMatch(
@@ -75,6 +85,18 @@ class VirticaBatchGeneratedKeysTest {
 					.findFirst().orElseThrow();
 			assertTrue(table.getColumns().get("id") != null);
 			assertTrue(table.getConstraints().getPrimaryKeyConstraint() != null);
+			assertNotNull(table.getConstraints().get("uk_metadata_table_code"));
+			var child = schema.getTables().stream()
+					.filter(t -> "metadata_child".equalsIgnoreCase(t.getName()))
+					.findFirst().orElseThrow();
+			var foreignKey = child.getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.findFirst().orElseThrow();
+			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
+			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
+			assertTrue(schema.getViews().stream().anyMatch(
+					v -> "metadata_view".equalsIgnoreCase(v.getName())));
 			assertTrue(schema.getSequences().stream().anyMatch(
 					s -> "metadata_sequence".equalsIgnoreCase(s.getName())));
 		}
