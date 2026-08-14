@@ -239,6 +239,16 @@ public class DbUtils {
 		if (matcher.matches()) {
 			revision = Integer.valueOf(matcher.group(1));
 			productVersionInfo.setRevision(revision);
+		} else if (name != null && name.toUpperCase(java.util.Locale.ROOT)
+				.startsWith("DB2")) {
+			pattern = Pattern.compile(".*SQL0*" + majorVersion + "0*"
+					+ minorVersion + "([0-9]+).*",
+					Pattern.CASE_INSENSITIVE);
+			matcher = pattern.matcher(dbProductVersion);
+			if (matcher.matches()) {
+				productVersionInfo.setRevision(
+						Integer.valueOf(matcher.group(1)));
+			}
 		}
 		return productVersionInfo;
 	}

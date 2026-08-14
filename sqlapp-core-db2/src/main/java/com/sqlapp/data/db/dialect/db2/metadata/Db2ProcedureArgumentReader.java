@@ -33,9 +33,10 @@ import java.util.List;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.RoutineArgumentReader;
 import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 
 /**
  * DB2 Procedure Argument Reader
@@ -43,7 +44,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
  * @author satoh
  * 
  */
-public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Function> {
+public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Procedure> {
 
 	protected Db2ProcedureArgumentReader(Dialect dialect) {
 		super(dialect);
@@ -59,14 +60,25 @@ public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Function> 
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				NamedArgument column = createArgument(rs);
-				result.add(column);
+				if (column != null) {
+					result.add(column);
+				}
 			}
 		});
 		return result;
 	}
 
 	protected NamedArgument createArgument(ExResultSet rs) throws SQLException {
-		NamedArgument obj = createObject("PARMNAME");
+		String argumentName = getString(rs, "PARMNAME");
+		if (argumentName == null) {
+			return null;
+		}
+		Procedure routine = new Procedure(getString(rs, "ROUTINE_NAME"));
+		routine.setSchemaName(getString(rs, "SCHEMA_NAME"));
+		routine.setSpecificName(getString(rs, "SPECIFIC_NAME"));
+		NamedArgument obj = createObject(argumentName);
+		obj.setSchemaName(routine.getSchemaName());
+		SchemaUtils.setRoutine(obj, routine);
 		Long length = this.getLong(rs, "LENGTH");
 		Integer scale = this.getInteger(rs, "SCALE");
 		obj.setCollation(getString(rs, "COLLATIONNAME"));

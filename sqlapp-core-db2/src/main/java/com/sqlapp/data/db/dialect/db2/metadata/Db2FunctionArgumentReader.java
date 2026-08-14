@@ -36,6 +36,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 
 /**
  * DB2 Function Argument Reader
@@ -55,18 +56,29 @@ public class Db2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
-		execute(connection, node, context, new ResultSetNextHandler() {
+			execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				NamedArgument column = createArgument(rs);
-				result.add(column);
+				if (column != null) {
+					result.add(column);
+				}
 			}
 		});
 		return result;
 	}
 
 	protected NamedArgument createArgument(ExResultSet rs) throws SQLException {
-		NamedArgument obj = createObject("PARMNAME");
+		String argumentName = getString(rs, "PARMNAME");
+		if (argumentName == null) {
+			return null;
+		}
+		Function routine = new Function(getString(rs, "ROUTINE_NAME"));
+		routine.setSchemaName(getString(rs, "SCHEMA_NAME"));
+		routine.setSpecificName(getString(rs, "SPECIFIC_NAME"));
+		NamedArgument obj = createObject(argumentName);
+		obj.setSchemaName(routine.getSchemaName());
+		SchemaUtils.setRoutine(obj, routine);
 		Long length = this.getLong(rs, "LENGTH");
 		Integer scale = this.getInteger(rs, "SCALE");
 		obj.setCollation(getString(rs, "COLLATIONNAME"));

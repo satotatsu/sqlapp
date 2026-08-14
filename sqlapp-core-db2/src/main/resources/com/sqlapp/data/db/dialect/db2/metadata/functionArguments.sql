@@ -5,6 +5,7 @@ SELECT
   , r.*
 FROM SYSCAT.ROUTINEPARMS r
 WHERE 1=1
+  AND r.ROUTINETYPE='F'
   /*if isNotEmpty(schemaName) */
   AND rtrim(r.ROUTINESCHEMA) IN /*schemaName*/('%')
   /*end*/
