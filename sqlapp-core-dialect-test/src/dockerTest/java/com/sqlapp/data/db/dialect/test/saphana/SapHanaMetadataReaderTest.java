@@ -38,6 +38,7 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Table.TableDataStoreType;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
 class SapHanaMetadataReaderTest {
@@ -195,12 +196,31 @@ class SapHanaMetadataReaderTest {
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getStatement());
-			assertTrue(procedure.getArguments().size() >= 2);
+			assertEquals(2, procedure.getArguments().size());
+			var procedureInput = procedure.getArguments().get("P_ID");
+			assertNotNull(procedureInput);
+			assertEquals(ParameterDirection.Input,
+					procedureInput.getDirection());
+			assertEquals(DataType.BIGINT, procedureInput.getDataType());
+			var procedureOutput = procedure.getArguments().get("P_NAME");
+			assertNotNull(procedureOutput);
+			assertEquals(ParameterDirection.Output,
+					procedureOutput.getDirection());
+			assertEquals(DataType.NVARCHAR, procedureOutput.getDataType());
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertNotNull(function.getDefinition());
-			assertTrue(function.getArguments().stream()
-					.anyMatch(argument -> "P_AMOUNT".equals(argument.getName())));
+			assertEquals(2, function.getArguments().size());
+			var functionInput = function.getArguments().get("P_AMOUNT");
+			assertNotNull(functionInput);
+			assertEquals(ParameterDirection.Input,
+					functionInput.getDirection());
+			assertEquals(DataType.DECIMAL, functionInput.getDataType());
+			var functionResult = function.getArguments().get("RESULT");
+			assertNotNull(functionResult);
+			assertEquals(ParameterDirection.Output,
+					functionResult.getDirection());
+			assertEquals(DataType.DECIMAL, functionResult.getDataType());
 			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("AFTER", trigger.getActionTiming());
