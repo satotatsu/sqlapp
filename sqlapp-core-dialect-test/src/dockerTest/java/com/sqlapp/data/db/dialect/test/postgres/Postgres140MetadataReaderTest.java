@@ -22,6 +22,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.postgres.Postgres140;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.PartitioningType;
 
 /** PostgreSQL 14 compatibility coverage for the metadata reader tree. */
 class Postgres140MetadataReaderTest {
@@ -62,6 +63,14 @@ class Postgres140MetadataReaderTest {
 			assertNotNull(schema.getSequences().get("metadata_seq"));
 			assertNotNull(schema.getViews().get("metadata_view"));
 			assertNotNull(schema.getFunctions().get("metadata_function"));
+			var partitioned = schema.getTables().get("metadata_events");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range,
+					partitioned.getPartitioning().getPartitioningType());
+			var partition = schema.getTables().get("metadata_events_2025");
+			assertNotNull(partition);
+			assertEquals("metadata_events",
+					partition.getPartitionParent().getTableName());
 		}
 	}
 
@@ -69,6 +78,16 @@ class Postgres140MetadataReaderTest {
 		statement.execute("DROP SCHEMA IF EXISTS metadata_test_14 CASCADE");
 		statement.execute("CREATE SCHEMA metadata_test_14");
 		statement.execute("CREATE SEQUENCE metadata_test_14.metadata_seq START 10");
+		statement.execute("""
+				CREATE TABLE metadata_test_14.metadata_events (
+				 id bigint NOT NULL, occurred_at date NOT NULL)
+				 PARTITION BY RANGE (occurred_at)
+				""");
+		statement.execute("""
+				CREATE TABLE metadata_test_14.metadata_events_2025
+				 PARTITION OF metadata_test_14.metadata_events
+				 FOR VALUES FROM ('2025-01-01') TO ('2026-01-01')
+				""");
 		statement.execute("""
 				CREATE TABLE metadata_test_14.metadata_parent (
 				 id bigint NOT NULL, region char(2) NOT NULL,

@@ -146,6 +146,10 @@ public class Db2TableReader extends TableReader {
 	}
 
 	protected void readPartitionExrepssion(final ExResultSet rs, final Table table) throws SQLException{
+		if (table.getPartitioning() == null) {
+			table.toPartitioning();
+			table.getPartitioning().setPartitioningType(PartitioningType.Range);
+		}
 		final String expression = getString(rs,
 				"DATAPARTITIONEXPRESSION");
 		final boolean nullsFirst = "Y".equalsIgnoreCase(getString(rs,
@@ -208,6 +212,7 @@ public class Db2TableReader extends TableReader {
 		Partitioning partitioning = null;
 		if (table.getPartitioning() == null) {
 			partitioning = new Partitioning();
+			partitioning.setPartitioningType(PartitioningType.Range);
 			table.setPartitioning(partitioning);
 		} else {
 			partitioning = table.getPartitioning();

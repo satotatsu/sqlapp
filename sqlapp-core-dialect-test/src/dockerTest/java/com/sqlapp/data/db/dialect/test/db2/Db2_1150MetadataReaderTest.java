@@ -5,6 +5,7 @@
  */
 package com.sqlapp.data.db.dialect.test.db2;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -22,6 +23,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.db2.Db2_1150;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Table;
 
 /** Db2 11.5 compatibility coverage for the full metadata reader tree. */
@@ -48,6 +50,7 @@ class Db2_1150MetadataReaderTest {
 			drop(statement, "DROP VIEW METADATA_COMPAT_VIEW");
 			drop(statement, "DROP TABLE METADATA_COMPAT_CHILD");
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARENT");
+			drop(statement, "DROP TABLE METADATA_COMPAT_PARTITIONED");
 			drop(statement, "DROP SEQUENCE METADATA_COMPAT_SEQ");
 			statement.execute("""
 					CREATE TABLE METADATA_COMPAT_PARENT (
@@ -63,6 +66,13 @@ class Db2_1150MetadataReaderTest {
 					""");
 			statement.execute("CREATE INDEX IDX_METADATA_COMPAT ON METADATA_COMPAT_CHILD(PARENT_ID)");
 			statement.execute("CREATE SEQUENCE METADATA_COMPAT_SEQ START WITH 1");
+			statement.execute("""
+					CREATE TABLE METADATA_COMPAT_PARTITIONED (
+					 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL)
+					 PARTITION BY RANGE (BUCKET) (
+					  PARTITION P_LOW STARTING FROM (MINVALUE) ENDING AT (99) INCLUSIVE,
+					  PARTITION P_HIGH STARTING FROM (100) INCLUSIVE ENDING AT (MAXVALUE))
+					""");
 			statement.execute("CREATE VIEW METADATA_COMPAT_VIEW AS SELECT ID, PARENT_ID FROM METADATA_COMPAT_CHILD");
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -80,6 +90,12 @@ class Db2_1150MetadataReaderTest {
 			assertNotNull(child.getIndexes().get("IDX_METADATA_COMPAT"));
 			assertNotNull(schema.getSequences().get("METADATA_COMPAT_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_COMPAT_VIEW"));
+			Table partitioned = schema.getTables()
+					.get("METADATA_COMPAT_PARTITIONED");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range,
+					partitioned.getPartitioning().getPartitioningType());
+			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
 		}
 	}
 

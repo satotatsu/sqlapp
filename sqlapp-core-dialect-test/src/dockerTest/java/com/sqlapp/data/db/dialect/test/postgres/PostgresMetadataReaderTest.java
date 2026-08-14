@@ -24,6 +24,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.postgres.Postgres180;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
@@ -78,6 +79,20 @@ class PostgresMetadataReaderTest {
 			assertNotNull(schema.getTriggers().get("metadata_trigger"));
 			assertNotNull(schema.getDomains().get("metadata_code"));
 			assertNotNull(schema.getDomains().get("metadata_status"));
+			Table partitioned = schema.getTables().get("metadata_events");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range,
+					partitioned.getPartitioning().getPartitioningType());
+			assertEquals("occurred_at", partitioned.getPartitioning()
+					.getPartitioningColumns().get(0).getName());
+			Table partition2025 = schema.getTables().get("metadata_events_2025");
+			assertNotNull(partition2025);
+			assertEquals("metadata_events",
+					partition2025.getPartitionParent().getTableName());
+			assertTrue(partition2025.getPartitionParent().getLowValue()
+					.contains("2025-01-01"));
+			assertTrue(partition2025.getPartitionParent().getHighValue()
+					.contains("2026-01-01"));
 		}
 	}
 
@@ -87,6 +102,21 @@ class PostgresMetadataReaderTest {
 		statement.execute("CREATE TYPE metadata_test.metadata_status AS ENUM ('NEW', 'DONE')");
 		statement.execute("CREATE DOMAIN metadata_test.metadata_code AS varchar(40) CHECK (VALUE <> '')");
 		statement.execute("CREATE SEQUENCE metadata_test.metadata_seq START 50 INCREMENT 10");
+		statement.execute("""
+				CREATE TABLE metadata_test.metadata_events (
+				 id bigint NOT NULL, occurred_at date NOT NULL, payload text)
+				 PARTITION BY RANGE (occurred_at)
+				""");
+		statement.execute("""
+				CREATE TABLE metadata_test.metadata_events_2025
+				 PARTITION OF metadata_test.metadata_events
+				 FOR VALUES FROM ('2025-01-01') TO ('2026-01-01')
+				""");
+		statement.execute("""
+				CREATE TABLE metadata_test.metadata_events_future
+				 PARTITION OF metadata_test.metadata_events
+				 FOR VALUES FROM ('2026-01-01') TO (MAXVALUE)
+				""");
 		statement.execute("""
 				CREATE TABLE metadata_test.metadata_parent (
 				 id bigint NOT NULL, region char(2) NOT NULL,

@@ -139,7 +139,7 @@ public class OracleIndexReader extends IndexReader {
 	protected void setMetadataDetail(final Connection connection,
 			final Index index) throws SQLException {
 		String value=index.getSpecifics().get(PARTTITIONED_KEY);
-		if (!eq(Boolean.TRUE,
+		if (!eq(Boolean.TRUE.toString(),
 				value)) {
 			index.getSpecifics().remove(this.getDialect(),
 					PARTTITIONED_KEY);

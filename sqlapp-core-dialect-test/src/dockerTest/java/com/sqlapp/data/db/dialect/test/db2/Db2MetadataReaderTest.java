@@ -24,6 +24,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.db2.Db2_1215;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -85,6 +86,15 @@ class Db2MetadataReaderTest {
 			assertEquals(2, foreignKey.getColumns().size());
 			assertEquals(2, foreignKey.getRelatedColumns().size());
 			assertNotNull(child.getIndexes().get("IDX_METADATA_CHILD_PARENT"));
+			Table partitioned = schema.getTables().get("METADATA_PARTITIONED");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range,
+					partitioned.getPartitioning().getPartitioningType());
+			assertEquals("BUCKET", partitioned.getPartitioning()
+					.getPartitioningColumns().get(0).getName());
+			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
+			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_LOW"));
+			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_HIGH"));
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
 			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
@@ -105,6 +115,7 @@ class Db2MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_CHILD");
 			drop(statement, "DROP TABLE METADATA_PARENT");
 			drop(statement, "DROP TABLE METADATA_AUDIT");
+			drop(statement, "DROP TABLE METADATA_PARTITIONED");
 			drop(statement, "DROP SEQUENCE METADATA_SEQ");
 			statement.execute("CREATE SEQUENCE METADATA_SEQ START WITH 50 INCREMENT BY 10");
 			statement.execute("""
@@ -131,6 +142,13 @@ class Db2MetadataReaderTest {
 			statement.execute("CREATE VIEW METADATA_VIEW AS SELECT ID, CODE FROM METADATA_CHILD");
 			statement.execute("CREATE ALIAS METADATA_PARENT_ALIAS FOR METADATA_PARENT");
 			statement.execute("CREATE TABLE METADATA_AUDIT (ID BIGINT)");
+			statement.execute("""
+					CREATE TABLE METADATA_PARTITIONED (
+					 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL, PAYLOAD VARCHAR(100))
+					 PARTITION BY RANGE (BUCKET) (
+					  PARTITION P_LOW STARTING FROM (MINVALUE) ENDING AT (99) INCLUSIVE,
+					  PARTITION P_HIGH STARTING FROM (100) INCLUSIVE ENDING AT (MAXVALUE))
+					""");
 			statement.execute("""
 					CREATE PROCEDURE METADATA_PROCEDURE(IN P_PARENT_ID BIGINT)
 					 LANGUAGE SQL BEGIN ATOMIC INSERT INTO METADATA_AUDIT VALUES P_PARENT_ID; END

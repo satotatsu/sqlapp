@@ -10,4 +10,4 @@ WHERE 1=1
   /*if isNotEmpty(objectName)*/
   AND NAME IN /*objectName*/('%')
   /*end*/
-ORDER BY ORDER BY COLUMN_POSITION
+ORDER BY COLUMN_POSITION

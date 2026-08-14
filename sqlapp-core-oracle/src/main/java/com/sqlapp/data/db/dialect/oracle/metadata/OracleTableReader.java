@@ -152,15 +152,18 @@ public class OracleTableReader extends TableReader {
 		String subPartitioningType = getString(rs,
 				"SUBPARTITIONING_TYPE");
 		Partitioning partitioning = null;
-		Partition partition = null;
-		if (table.getPartitioning() != null) {
-			partitioning = table.getPartitioning();
-			partition = addPartition(rs, partitioning);
-		} else {
+		if (table.getPartitioning() == null) {
 			partitioning = new Partitioning();
-			partitioning.setPartitioningType(partitioningType);
 			table.setPartitioning(partitioning);
-			partition = addPartition(rs, partitioning);
+		} else {
+			partitioning = table.getPartitioning();
+		}
+		boolean initializePartitioning = partitioning.getPartitioningType() == null;
+		if (initializePartitioning) {
+			partitioning.setPartitioningType(partitioningType);
+		}
+		Partition partition = addPartition(rs, partitioning);
+		if (initializePartitioning) {
 			setPartitionColumnInfo(connection, table.getSchemaName(),
 					table.getName(), partitioning);
 			if (!"NONE".equalsIgnoreCase(subPartitioningType)) {

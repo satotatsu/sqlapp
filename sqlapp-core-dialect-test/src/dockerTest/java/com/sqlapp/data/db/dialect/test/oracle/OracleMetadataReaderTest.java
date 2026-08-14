@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.oracle.Oracle23ai;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
@@ -95,6 +96,24 @@ class OracleMetadataReaderTest {
 			assertEquals("PARENT_ID", index.getColumns().get(0).getName());
 			assertEquals("CODE", index.getColumns().get(1).getName());
 
+			Table partitioned = schema.getTables().get("METADATA_PARTITIONED");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range,
+					partitioned.getPartitioning().getPartitioningType());
+			assertEquals("CREATED_AT", partitioned.getPartitioning()
+					.getPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Hash,
+					partitioned.getPartitioning().getSubPartitioningType());
+			assertEquals("REGION", partitioned.getPartitioning()
+					.getSubPartitioningColumns().get(0).getName());
+			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
+			assertEquals(2, partitioned.getPartitioning().getPartitions()
+					.get("P_2025").getSubPartitions().size());
+			Index localIndex = partitioned.getIndexes()
+					.get("IDX_METADATA_PARTITIONED_REGION");
+			assertNotNull(localIndex);
+			assertEquals(2, localIndex.getPartitioning().getPartitions().size());
+
 			assertTrue(child.getColumns().get("ID").isIdentity());
 			assertTrue(child.getColumns().get("CODE").isNotNull());
 			assertTrue(child.getColumns().get("CODE").getDefaultValue()
@@ -136,6 +155,7 @@ class OracleMetadataReaderTest {
 			drop(statement, "DROP FUNCTION METADATA_FUNCTION", 4043);
 			drop(statement, "DROP TABLE METADATA_CHILD CASCADE CONSTRAINTS PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_VECTOR PURGE", 942);
+			drop(statement, "DROP TABLE METADATA_PARTITIONED PURGE", 942);
 			drop(statement, "DROP TABLE METADATA_PARENT CASCADE CONSTRAINTS PURGE", 942);
 			drop(statement, "DROP SEQUENCE METADATA_SEQ", 2289);
 			statement.execute("""
@@ -174,6 +194,23 @@ class OracleMetadataReaderTest {
 						ID NUMBER(19) PRIMARY KEY,
 						EMBEDDING VECTOR(3, FLOAT32)
 					)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_PARTITIONED (
+					 ID NUMBER(19) NOT NULL,
+					 REGION CHAR(2) NOT NULL,
+					 CREATED_AT DATE NOT NULL,
+					 PAYLOAD VARCHAR2(100)
+					)
+					PARTITION BY RANGE (CREATED_AT)
+					SUBPARTITION BY HASH (REGION) SUBPARTITIONS 2 (
+					 PARTITION P_2025 VALUES LESS THAN (DATE '2026-01-01'),
+					 PARTITION P_MAX VALUES LESS THAN (MAXVALUE)
+					)
+					""");
+			statement.execute("""
+					CREATE INDEX IDX_METADATA_PARTITIONED_REGION
+					 ON METADATA_PARTITIONED(REGION) LOCAL
 					""");
 			statement.execute("COMMENT ON TABLE METADATA_PARENT IS 'Metadata parent table'");
 			statement.execute("COMMENT ON COLUMN METADATA_PARENT.NAME IS 'Display name'");

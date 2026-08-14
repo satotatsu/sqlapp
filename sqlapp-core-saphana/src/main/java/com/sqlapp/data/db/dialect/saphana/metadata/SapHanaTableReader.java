@@ -88,7 +88,8 @@ public class SapHanaTableReader extends TableReader {
 					}
 				}
 				String level2Expression = this.getString(rs, "LEVEL_2_EXPRESSION");
-				if (table.getPartitioning().getSubPartitioningColumns().isEmpty()) {
+				if (!CommonUtils.isEmpty(level2Expression)
+						&& table.getPartitioning().getSubPartitioningColumns().isEmpty()) {
 					String[] args = level2Expression.split("\\s*,\\s*");
 					for (String arg : args) {
 						String col = CommonUtils.unwrap(arg, "\"");
@@ -143,7 +144,6 @@ public class SapHanaTableReader extends TableReader {
 				} else {
 					partition.setName(partition.getId());
 				}
-				result.add(table);
 			}
 		});
 		return result;

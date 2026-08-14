@@ -31,6 +31,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.saphana.SapHana;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.PartitioningType;
 
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
 class SapHanaMetadataReaderTest {
@@ -91,6 +92,13 @@ class SapHanaMetadataReaderTest {
 			assertNotNull(child.getIndexes().get("IDX_METADATA_CHILD_PARENT"));
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
+			var partitioned = schema.getTables().get("METADATA_PARTITIONED");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range,
+					partitioned.getPartitioning().getPartitioningType());
+			assertEquals("BUCKET", partitioned.getPartitioning()
+					.getPartitioningColumns().get(0).getName());
+			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getStatement());
@@ -108,6 +116,14 @@ class SapHanaMetadataReaderTest {
 		drop(statement, "DROP SCHEMA METADATA_TEST CASCADE");
 		statement.execute("CREATE SCHEMA METADATA_TEST");
 		statement.execute("CREATE SEQUENCE METADATA_TEST.METADATA_SEQ START WITH 50 INCREMENT BY 10");
+		statement.execute("""
+				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARTITIONED (
+				 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL, PAYLOAD NVARCHAR(100))
+				 PARTITION BY RANGE (BUCKET) (
+				  PARTITION 0 <= VALUES < 100,
+				  PARTITION 100 <= VALUES < 200,
+				  PARTITION OTHERS)
+				""");
 		statement.execute("""
 				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARENT (
 				 ID BIGINT NOT NULL, REGION NVARCHAR(2) NOT NULL,
