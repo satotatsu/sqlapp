@@ -28,6 +28,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
@@ -61,6 +62,15 @@ class FirebirdJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 			assertTrue(parent.getColumns().get("ID").isIdentity());
 			assertNotNull(parent.getColumns().get("ID").getSequenceName());
+			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint());
+			assertEquals("ID", parent.getConstraints().getPrimaryKeyConstraint()
+					.getColumns().get(0).getName());
+			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.findFirst().orElseThrow();
+			assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
+			assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(3);

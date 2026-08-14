@@ -87,13 +87,26 @@ public class VirticaColumnReader extends ColumnReader {
 					"ALLOW_CYCLE")));
 		}
 		this.getDialect().setDbType(data_type,
-				max(char_maxlength, numeric_precision, datetime_precision), numeric_scale, obj);
+				maxNullable(char_maxlength, numeric_precision,
+						datetime_precision == null ? null
+								: datetime_precision.longValue()),
+				numeric_scale, obj);
 		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
 		obj.setTableName(getString(rs, TABLE_NAME));
 		obj.setRemarks(getString(rs, "COMMENT"));
 		return obj;
+	}
+
+	private Long maxNullable(final Long... values) {
+		Long result = null;
+		for (Long value : values) {
+			if (value != null && (result == null || value > result)) {
+				result = value;
+			}
+		}
+		return result;
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

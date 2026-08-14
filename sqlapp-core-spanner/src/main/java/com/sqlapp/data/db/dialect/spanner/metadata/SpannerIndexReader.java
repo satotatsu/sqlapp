@@ -27,7 +27,6 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateIndexFactory;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -73,40 +72,17 @@ public class SpannerIndexReader extends IndexReader {
 					index.setCatalogName(catalog_name);
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
-					index.setUnique(rs.getBoolean("IS_UNIQUE"));
+					index.setUnique(rs.getBoolean("is_unique"));
 					index.setIndexType(toIndexType(
-							getString(rs, "INDEX_TYPE")));
-					index.setVectorDistanceType(toVectorDistanceType(
-							getString(rs, "DISTANCE_TYPE")));
-					index.getSpecifics().put(
-							SpannerCreateIndexFactory.IS_NULL_FILTERED,
-							rs.getBoolean("IS_NULL_FILTERED"));
-					setSpecifics(rs, SpannerCreateIndexFactory.TREE_DEPTH,
-							index);
-					setSpecifics(rs, SpannerCreateIndexFactory.NUM_LEAVES,
-							index);
-					setSpecifics(rs, SpannerCreateIndexFactory.NUM_BRANCHES,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.DISABLE_SEARCH,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.SORT_ORDER_SHARDING,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.LOCALITY_GROUP,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.COLUMNAR_POLICY,
-							index);
+							getString(rs, "index_type")));
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
 				}
-				if (getLong(rs, "ORDINAL_POSITION") == null) {
+				if (getLong(rs, "ordinal_position") == null) {
 					index.getIncludes().add(new Column(columnName));
 				} else {
 					index.getColumns().add(new Column(columnName),
-							Order.parse(getString(rs, "COLUMN_ORDERING")));
+							Order.parse(getString(rs, "column_ordering")));
 				}
 			}
 		});

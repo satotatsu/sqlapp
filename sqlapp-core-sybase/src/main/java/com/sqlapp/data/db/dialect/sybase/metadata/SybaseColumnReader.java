@@ -63,7 +63,6 @@ public class SybaseColumnReader extends ColumnReader {
 				result.add(column);
 			}
 		});
-		setColumnComments(connection, context, result);
 		return result;
 	}
 

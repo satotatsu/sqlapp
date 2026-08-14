@@ -37,7 +37,6 @@ import com.sqlapp.data.db.metadata.ForeignKeyConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
-import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateTableFactory;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
@@ -78,18 +77,10 @@ public class SpannerTableReader extends TableReader {
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table obj = createTable(getString(rs, TABLE_NAME));
 		obj.setDialect(getDialect());
-		obj.setCatalogName(getString(rs, "TABLE_CATALOG"));
-		obj.setSchemaName(getString(rs, "TABLE_SCHEMA"));
-		setSpecifics(rs, "PARENT_TABLE_NAME", obj);
-		setSpecifics(rs, "ON_DELETE_ACTION", obj);
-		setSpecifics(rs, SpannerCreateTableFactory.LOCALITY_GROUP, obj);
-		setSpecifics(rs, SpannerCreateTableFactory.COLUMNAR_POLICY, obj);
-		setSpecifics(rs,
-				SpannerCreateTableFactory.FULLTEXT_DICTIONARY_TABLE,
-				obj);
-		setSpecifics(rs,
-				SpannerCreateTableFactory.FULLTEXT_DICTIONARY_STALENESS,
-				obj);
+		obj.setCatalogName(getString(rs, "table_catalog"));
+		obj.setSchemaName(getString(rs, "table_schema"));
+		setSpecifics(rs, "parent_table_name", obj);
+		setSpecifics(rs, "on_delete_action", obj);
 		return obj;
 	}
 

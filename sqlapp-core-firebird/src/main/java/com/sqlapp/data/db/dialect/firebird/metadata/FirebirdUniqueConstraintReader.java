@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.firebird.metadata;
 
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
+import static com.sqlapp.util.CommonUtils.trim;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -59,13 +60,15 @@ public class FirebirdUniqueConstraintReader extends UniqueConstraintReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String catalog_name = null;
 				String schema_name = null;
-				String table_name = getString(rs, TABLE_NAME);
-				String constraint_name = getString(rs, CONSTRAINT_NAME);
+				String table_name = trim(getString(rs, TABLE_NAME));
+				String constraint_name = trim(getString(rs, CONSTRAINT_NAME));
 				// String expression=getString(rs, "SEARCH_CONDITION");
-				boolean primary = !"unique".equalsIgnoreCase(getString(rs, "CONSTRAINT_TYPE"));
+				boolean primary = !"unique".equalsIgnoreCase(
+						trim(getString(rs, "CONSTRAINT_TYPE")));
 				UniqueConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, primary);
+					c.setPrimaryKey(primary);
 					c.setCatalogName(catalog_name);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
@@ -73,7 +76,7 @@ public class FirebirdUniqueConstraintReader extends UniqueConstraintReader {
 					// String index_name = getString(rs, INDEX_NAME);
 					map.put(catalog_name, schema_name, constraint_name, c);
 				}
-				Column column = new Column(getString(rs, COLUMN_NAME));
+				Column column = new Column(trim(getString(rs, COLUMN_NAME)));
 				Order order = null;
 				boolean isDesc = rs.getBoolean("IS_DESC");
 				if (isDesc) {

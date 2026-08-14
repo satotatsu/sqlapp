@@ -61,7 +61,7 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 			rs = databaseMetaData.getPrimaryKeys(
 					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
 					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
-					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())));
+					CommonUtils.coalesce(emptyToNull(this.getTableName(context)), emptyToNull(this.getObjectName())));
 			TripleKeyMap<String, String, String, UniqueConstraint> tUkMap = tripleKeyMap();
 			TripleKeyMap<String, String, String, FlexList<String>> tColMap = tripleKeyMap();
 			while (rs.next()) {
@@ -75,6 +75,7 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 				FlexList<String> colList = tColMap.get(table_catalog, table_schema, table_name);
 				if (uk == null) {
 					uk = new UniqueConstraint(pk_name);
+					uk.setPrimaryKey(true);
 					uk.setCatalogName(table_catalog);
 					uk.setSchemaName(table_schema);
 					uk.setTableName(table_name);
@@ -83,7 +84,7 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 					tColMap.put(table_catalog, table_schema, table_name, colList);
 					list.add(uk);
 				}
-				colList.add(keySeq, columnName);
+				colList.add(keySeq - 1, columnName);
 			}
 			for (UniqueConstraint uk : list) {
 				FlexList<String> colList = tColMap.get(uk.getCatalogName(), uk.getSchemaName(), uk.getTableName());

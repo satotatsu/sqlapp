@@ -14,8 +14,10 @@ import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.View;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * Cloud Spanner view metadata reader.
@@ -31,10 +33,15 @@ public class SpannerViewReader extends AbstractISViewReader {
 		final View view = new View(getString(rs, TABLE_NAME));
 		view.setCatalogName(getString(rs, TABLE_CATALOG));
 		view.setSchemaName(getString(rs, TABLE_SCHEMA));
-		view.setStatement(getString(rs, "VIEW_DEFINITION"));
+		view.setStatement(getString(rs, "view_definition"));
 		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE,
-				getString(rs, "SECURITY_TYPE"));
+				getString(rs, "security_type"));
 		return view;
+	}
+
+	@Override
+	protected SqlNode getSqlNode(final ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("views.sql");
 	}
 
 	@Override

@@ -24,6 +24,8 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlite.metadata.SqliteCatalogReader;
+import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.dialect.sqlite.sql.SqliteSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
@@ -89,6 +91,11 @@ public class Sqlite extends Dialect {
 	/**
 	 * DB製品名
 	 */
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new SqliteCatalogReader(this);
+	}
+
 	@Override
 	public String getProductName() {
 		return "SQLite";

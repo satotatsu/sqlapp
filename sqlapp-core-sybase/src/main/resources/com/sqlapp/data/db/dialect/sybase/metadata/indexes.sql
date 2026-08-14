@@ -18,23 +18,18 @@ SELECT
   ELSE 2            --1 >= 非クラスタ化インデックス
   END
   AS type
-, INDEXPROPERTY(SI.id, SI.name, 'IsPadIndex') AS pad_index
-, CASE INDEXPROPERTY(SI.id, SI.name, 'IsRowLockDisallowed') WHEN 1 THEN 0 ELSE 1 END
-  AS allow_row_locks
-, CASE INDEXPROPERTY(SI.id, SI.name, 'IsPageLockDisallowed') WHEN 1 THEN 0 ELSE 1 END
-  AS allow_page_locks
-, INDEXPROPERTY(SI.id, SI.name, 'IsAutoStatistics')
-  AS auto_create_statistics
-, INDEXPROPERTY(SI.id, SI.name, 'IndexFillFactor') AS fill_factor
-, INDEXKEY_PROPERTY(SI.id, SI.indid, c.colid, 'IsDescending') AS is_descending
-, sfg.groupname AS index_file_group_name
+, NULL AS pad_index
+, NULL AS allow_row_locks
+, NULL AS allow_page_locks
+, NULL AS auto_create_statistics
+, NULL AS fill_factor
+, 0 AS is_descending
+, NULL AS index_file_group_name
 FROM sysobjects so
 INNER JOIN sysusers su
   ON (so.uid = su.uid)
 INNER JOIN sysindexes si
   ON (so.id=si.id AND si.indid < 250)
-LEFT OUTER JOIN sysfilegroups sfg 
-  ON (si.groupid = sfg.groupid)
 INNER JOIN sysindexkeys ik
   ON (si.id=ik.id
   AND si.indid=ik.indid)
@@ -42,15 +37,15 @@ INNER JOIN syscolumns c
   ON (ik.id=c.id
   AND ik.colid=c.colid)
 WHERE 1=1
---  AND so.type='U'
-  AND si.status<2048
+  AND so.type='U'
+  AND si.indid > 0
   /*if isNotEmpty(schemaName) */
-  AND su.name IN /*schemaName;type=NVARCHAR*/('%')
+  AND su.name IN /*schemaName;type=VARCHAR*/('%')
   /*end*/
   /*if isNotEmpty(indexName) */
-  AND si.name IN /*indexName;type=NVARCHAR*/('%')
+  AND si.name IN /*indexName;type=VARCHAR*/('%')
   /*end*/
   /*if isNotEmpty(tableName) */
-  AND so.name IN /*tableName;type=NVARCHAR*/('%')
+  AND so.name IN /*tableName;type=VARCHAR*/('%')
   /*end*/
 ORDER BY su.name, si.name, ik.keyno

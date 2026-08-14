@@ -12,7 +12,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 /**
  * MariaDB 11.8 long-term release.
  */
-public class Mariadb11_80 extends Mariadb11_40 {
+public class Mariadb11_80 extends Mariadb11_50 {
 
 	private static final long serialVersionUID = 1L;
 

@@ -31,6 +31,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -77,6 +78,14 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(DataType.SERIAL, parent.getColumns().get("id").getDataType());
 			assertEquals(IdentityGenerationType.ByDefault,
 					parent.getColumns().get("id").getIdentityGenerationType());
+			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
+					.getColumns().get(0).getName());
+			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.findFirst().orElseThrow();
+			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
+			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 

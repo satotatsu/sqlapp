@@ -70,39 +70,39 @@ public class SpannerColumnReader extends ColumnReader {
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
 		obj.setTableName(getString(rs, TABLE_NAME));
-		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE"));
-		String data_type = getString(rs, "SPANNER_TYPE");
+		boolean nullable = toBoolean(getString(rs, "is_nullable"));
+		String data_type = getString(rs, "spanner_type");
 		obj.setNullable(nullable);
 		this.getDialect().setDbType(data_type,
 				null, null, obj);
-		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
-		obj.setOnUpdate(getString(rs, "ON_UPDATE_EXPRESSION"));
+		obj.setDefaultValue(getString(rs, "column_default"));
+		obj.setOnUpdate(getString(rs, "on_update_expression"));
 		if ("ALWAYS".equalsIgnoreCase(
-				getString(rs, "IS_GENERATED"))) {
-			obj.setFormula(getString(rs, "GENERATION_EXPRESSION"));
+				getString(rs, "is_generated"))) {
+			obj.setFormula(getString(rs, "generation_expression"));
 			obj.setFormulaPersisted("YES".equalsIgnoreCase(
-					getString(rs, "IS_STORED")));
+					getString(rs, "is_stored")));
 		}
 		obj.setHidden("TRUE".equalsIgnoreCase(
-				getString(rs, "IS_HIDDEN")));
-		setSpecifics(rs, "ALLOW_COMMIT_TIMESTAMP", obj);
-		setSpecifics(rs, SpannerSqlBuilder.VECTOR_LENGTH, obj);
-		setSpecifics(rs, SpannerSqlBuilder.LOCALITY_GROUP, obj);
-		if ("YES".equalsIgnoreCase(getString(rs, "IS_IDENTITY"))) {
+				getString(rs, "is_hidden")));
+		setSpecifics(rs, "allow_commit_timestamp", obj);
+		setSpecifics(rs, "vector_length", obj);
+		setSpecifics(rs, "locality_group", obj);
+		if ("YES".equalsIgnoreCase(getString(rs, "is_identity"))) {
 			obj.setIdentity(true);
 			obj.setIdentityGenerationType(IdentityGenerationType.parse(
-					getString(rs, "IDENTITY_GENERATION")));
-			final Long start = getLong(rs, "IDENTITY_START_WITH_COUNTER");
+					getString(rs, "identity_generation")));
+			final Long start = getLong(rs, "identity_start_with_counter");
 			if (start != null) {
 				obj.setIdentityStartValue(start);
 			}
-			if (getString(rs, "IDENTITY_KIND") != null) {
+			if (getString(rs, "identity_kind") != null) {
 				obj.getSpecifics().put(
 						SpannerSqlBuilder.IDENTITY_BIT_REVERSED_POSITIVE,
 						true);
 			}
-			final Long skipMin = getLong(rs, "IDENTITY_SKIP_RANGE_MIN");
-			final Long skipMax = getLong(rs, "IDENTITY_SKIP_RANGE_MAX");
+			final Long skipMin = getLong(rs, "identity_skip_range_min");
+			final Long skipMax = getLong(rs, "identity_skip_range_max");
 			if (skipMin != null) {
 				obj.getSpecifics().put(
 						SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN,

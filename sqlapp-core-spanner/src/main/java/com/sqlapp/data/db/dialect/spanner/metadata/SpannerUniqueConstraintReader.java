@@ -58,7 +58,7 @@ public class SpannerUniqueConstraintReader extends UniqueConstraintReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String catalogName = null;
+				String catalogName = getString(rs, TABLE_CATALOG);
 				String schemaName = getString(rs, TABLE_SCHEMA);
 				String tableName = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
@@ -66,16 +66,15 @@ public class SpannerUniqueConstraintReader extends UniqueConstraintReader {
 						constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, true);
+					c.setPrimaryKey(true);
 					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
 					map.put(catalogName, schemaName, tableName, constraint_name, c);
-					setSpecifics(rs, "IS_NULL_FILTERED", c);
-					setStatistics(rs, "INDEX_STATE", c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(tableName);
-				c.getColumns().add(column, Order.parse(getString(rs, "COLUMN_ORDERING")));
+				c.getColumns().add(column, Order.parse(getString(rs, "column_ordering")));
 			}
 		});
 		return map.toList();

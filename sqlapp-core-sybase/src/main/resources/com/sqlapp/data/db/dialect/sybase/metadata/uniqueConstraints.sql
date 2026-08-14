@@ -44,9 +44,9 @@ INNER JOIN syscolumns c
 WHERE ((con.status&1)=1 OR (con.status&2)=2)
 --  AND so.type='U'
   /*if isNotEmpty(schemaName) */
-  AND su.name IN /*schemaName;type=NVARCHAR*/('%')
+  AND su.name IN /*schemaName;type=VARCHAR*/('%')
   /*end*/
   /*if isNotEmpty(constraintName) */
-  AND si.name IN /*constraintName;type=NVARCHAR*/('%')
+  AND si.name IN /*constraintName;type=VARCHAR*/('%')
   /*end*/
 ORDER BY su.name, si.name, ik.keyno

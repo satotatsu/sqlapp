@@ -57,6 +57,30 @@ class VirticaBatchGeneratedKeysTest {
 	}
 
 	@Test
+	void metadataReaderLoadsTableColumnsAndSequence() throws Exception {
+		try (Connection connection = createConnection();
+				Statement statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS metadata_table");
+			statement.execute("DROP SEQUENCE IF EXISTS metadata_sequence");
+			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5");
+			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, "
+					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id))");
+			var schema = DialectResolver.getInstance().getDialect(connection)
+					.getCatalogReader().getSchemaReader().getAllFull(connection)
+					.stream().filter(s -> s.getTables().stream().anyMatch(
+							t -> "metadata_table".equalsIgnoreCase(t.getName())))
+					.findFirst().orElseThrow();
+			var table = schema.getTables().stream()
+					.filter(t -> "metadata_table".equalsIgnoreCase(t.getName()))
+					.findFirst().orElseThrow();
+			assertTrue(table.getColumns().get("id") != null);
+			assertTrue(table.getConstraints().getPrimaryKeyConstraint() != null);
+			assertTrue(schema.getSequences().stream().anyMatch(
+					s -> "metadata_sequence".equalsIgnoreCase(s.getName())));
+		}
+	}
+
+	@Test
 	void jdbcGeneratedKeysAreUnsupported() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {

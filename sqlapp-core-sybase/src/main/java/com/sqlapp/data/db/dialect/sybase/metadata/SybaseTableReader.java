@@ -26,6 +26,9 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcForeignKeyConstraintReader;
+import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
+import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcPrimaryKeyConstraintReader;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
@@ -70,9 +73,6 @@ public class SybaseTableReader extends TableReader {
 				result.add(table);
 			}
 		});
-		for (Table table : result) {
-			setTableComment(connection, table);
-		}
 		return result;
 	}
 
@@ -112,22 +112,22 @@ public class SybaseTableReader extends TableReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
-		return new SybaseIndexReader(this.getDialect());
+		return new JdbcIndexReader(this.getDialect());
 	}
 
 	@Override
 	protected UniqueConstraintReader newUniqueConstraintReader() {
-		return new SybaseUniqueConstraintReader(this.getDialect());
+		return new JdbcPrimaryKeyConstraintReader(this.getDialect());
 	}
 
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
-		return new SybaseCheckConstraintReader(this.getDialect());
+		return null;
 	}
 
 	@Override
 	protected ForeignKeyConstraintReader newForeignKeyConstraintReader() {
-		return new SybaseForeignKeyConstraintReader(this.getDialect());
+		return new JdbcForeignKeyConstraintReader(this.getDialect());
 	}
 
 	/*
