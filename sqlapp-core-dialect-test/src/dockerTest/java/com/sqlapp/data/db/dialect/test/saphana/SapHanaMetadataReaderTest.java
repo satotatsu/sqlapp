@@ -193,6 +193,16 @@ class SapHanaMetadataReaderTest {
 					.get("IDX_METADATA_DOCUMENTS_TEXT");
 			assertNotNull(fulltextIndex);
 			assertEquals(IndexType.FullText, fulltextIndex.getIndexType());
+			assertEquals(1, fulltextIndex.getColumns().size());
+			assertNotNull(fulltextIndex.getColumns().get(0).getName());
+			assertEquals("FALSE",
+					fulltextIndex.getSpecifics().get("FAST_PREPROCESS"));
+			assertEquals("FALSE",
+					fulltextIndex.getSpecifics().get("FUZZY_SEARCH_INDEX"));
+			assertEquals("TRUE",
+					fulltextIndex.getSpecifics().get("SEARCH_ONLY"));
+			assertEquals("TRUE",
+					fulltextIndex.getSpecifics().get("IS_EXPLICIT"));
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getStatement());
@@ -296,6 +306,8 @@ class SapHanaMetadataReaderTest {
 				CREATE FULLTEXT INDEX IDX_METADATA_DOCUMENTS_TEXT
 				 ON METADATA_TEST.METADATA_DOCUMENTS(CONTENT)
 				 FAST PREPROCESS OFF
+				 FUZZY SEARCH INDEX OFF
+				 SEARCH ONLY ON
 				""");
 		statement.execute("""
 				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARENT (
