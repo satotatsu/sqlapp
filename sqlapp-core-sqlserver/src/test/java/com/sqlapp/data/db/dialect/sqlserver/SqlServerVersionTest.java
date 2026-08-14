@@ -24,6 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2019CatalogReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2019SchemaReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2019TableReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2022CatalogReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2022SchemaReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2022TableReader;
 import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 
 public class SqlServerVersionTest {
@@ -37,6 +43,8 @@ public class SqlServerVersionTest {
 	private Dialect dialect2016 = SqlServerDialectResolver.getInstance().getDialect(13, 0);
 	private Dialect dialect2017 = SqlServerDialectResolver.getInstance().getDialect(14, 0);
 	private Dialect dialect2019 = SqlServerDialectResolver.getInstance().getDialect(15, 0);
+	private Dialect dialect2022 = SqlServerDialectResolver.getInstance().getDialect(16, 0);
+	private Dialect dialect2025 = SqlServerDialectResolver.getInstance().getDialect(17, 0);
 
 	@Test
 	public void testInstance() {
@@ -49,6 +57,26 @@ public class SqlServerVersionTest {
 		assertTrue(dialect2016 instanceof SqlServer2016);
 		assertTrue(dialect2017 instanceof SqlServer2017);
 		assertTrue(dialect2019 instanceof SqlServer2019);
+		assertTrue(dialect2022 instanceof SqlServer2022);
+		assertTrue(dialect2025 instanceof SqlServer2022);
+	}
+
+	@Test
+	public void testMetadataReaderVersionBoundary() {
+		assertTrue(dialect2019.getCatalogReader()
+				instanceof SqlServer2019CatalogReader);
+		assertTrue(dialect2019.getCatalogReader().getSchemaReader()
+				instanceof SqlServer2019SchemaReader);
+		assertTrue(dialect2019.getCatalogReader().getSchemaReader()
+				.getTableReader() instanceof SqlServer2019TableReader);
+		assertTrue(dialect2022.getCatalogReader()
+				instanceof SqlServer2022CatalogReader);
+		assertTrue(dialect2022.getCatalogReader().getSchemaReader()
+				instanceof SqlServer2022SchemaReader);
+		assertTrue(dialect2022.getCatalogReader().getSchemaReader()
+				.getTableReader() instanceof SqlServer2022TableReader);
+		assertTrue(dialect2025.getCatalogReader()
+				instanceof SqlServer2022CatalogReader);
 	}
 
 	@Test
@@ -60,6 +88,7 @@ public class SqlServerVersionTest {
 		assertTrue(dialect2012.compareTo(dialect2014) < 0);
 		assertTrue(dialect2014.compareTo(dialect2016) < 0);
 		assertTrue(dialect2017.compareTo(dialect2019) < 0);
+		assertTrue(dialect2019.compareTo(dialect2022) < 0);
 		//
 		assertTrue(dialect2019.compareTo(dialect2017) > 0);
 		assertTrue(dialect2017.compareTo(dialect2016) > 0);
