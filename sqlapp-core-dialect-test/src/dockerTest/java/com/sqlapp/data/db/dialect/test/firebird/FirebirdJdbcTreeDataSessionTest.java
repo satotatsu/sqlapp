@@ -71,6 +71,10 @@ class FirebirdJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
 			assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
+			assertNotNull(child.getIndexes().get("IDX_CHILD_TXT"));
+			assertNotNull(schema.getViews().get("PARENT_VIEW"));
+			assertNotNull(schema.getTriggers().get("TRG_PARENT_AUDIT"));
+			assertNotNull(schema.getSequences().get("METADATA_SEQUENCE"));
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(3);
@@ -107,7 +111,8 @@ class FirebirdJdbcTreeDataSessionTest {
 	}
 
 	private Schema loadSchema(final Connection connection) throws SQLException {
-		return SchemaUtils.getSchema(connection, null, "PARENT_TABLE", "CHILD_TABLE")
+		return SchemaUtils.getSchema(connection, null, "PARENT_TABLE", "CHILD_TABLE", "PARENT_VIEW",
+				"METADATA_AUDIT", "TRG_PARENT_AUDIT", "METADATA_SEQUENCE")
 				.orElseThrow(() -> new AssertionError("Firebird test schema was not loaded."));
 	}
 
@@ -125,6 +130,10 @@ class FirebirdJdbcTreeDataSessionTest {
 
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			dropObject(statement, "TRIGGER", "TRG_PARENT_AUDIT");
+			dropObject(statement, "VIEW", "PARENT_VIEW");
+			dropObject(statement, "SEQUENCE", "METADATA_SEQUENCE");
+			dropTable(statement, "METADATA_AUDIT");
 			dropTable(statement, "CHILD_TABLE");
 			dropTable(statement, "PARENT_TABLE");
 			statement.execute("""
@@ -141,10 +150,33 @@ class FirebirdJdbcTreeDataSessionTest {
 						CONSTRAINT fk_child_parent FOREIGN KEY (parent_id) REFERENCES parent_table(id)
 					)
 					""");
+			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
+			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
+			statement.execute("CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5");
+			statement.execute("CREATE TABLE metadata_audit (parent_id BIGINT NOT NULL)");
+			statement.execute("""
+					CREATE TRIGGER trg_parent_audit FOR parent_table
+					ACTIVE AFTER INSERT POSITION 0
+					AS
+					BEGIN
+					  INSERT INTO metadata_audit(parent_id) VALUES (NEW.id);
+					END
+					""");
 			connection.commit();
 			statement.executeUpdate("INSERT INTO parent_table(txt) VALUES ('parent-1')");
 			statement.executeUpdate("INSERT INTO parent_table(txt) VALUES ('parent-2')");
 			connection.commit();
+		}
+	}
+
+	private void dropObject(final Statement statement, final String objectType, final String objectName)
+			throws SQLException {
+		try {
+			statement.execute("DROP " + objectType + " " + objectName);
+		} catch (SQLException e) {
+			if (e.getErrorCode() != 335544351) {
+				throw e;
+			}
 		}
 	}
 

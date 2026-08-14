@@ -67,7 +67,8 @@ class InformixJdbcTreeDataSessionTest {
 		try (Connection connection = createConnection()) {
 			connection.setAutoCommit(false);
 			createTables(connection);
-			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table")
+			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
+					"parent_view")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -86,6 +87,10 @@ class InformixJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
+			assertTrue(child.getIndexes().stream().anyMatch(
+					index -> "idx_child_txt".equalsIgnoreCase(index.getName())));
+			assertTrue(schema.getViews().stream().anyMatch(
+					view -> "parent_view".equalsIgnoreCase(view.getName())));
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
@@ -131,6 +136,7 @@ class InformixJdbcTreeDataSessionTest {
 
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			dropView(statement, "parent_view");
 			dropTable(statement, "child_table");
 			dropTable(statement, "parent_table");
 			statement.execute("""
@@ -148,7 +154,19 @@ class InformixJdbcTreeDataSessionTest {
 							REFERENCES parent_table(id)
 					)
 					""");
+			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
+			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
 			connection.commit();
+		}
+	}
+
+	private void dropView(final Statement statement, final String viewName) throws SQLException {
+		try {
+			statement.execute("DROP VIEW " + viewName);
+		} catch (SQLException e) {
+			if (e.getErrorCode() != -206) {
+				throw e;
+			}
 		}
 	}
 
