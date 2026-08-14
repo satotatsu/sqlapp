@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.test.postgres;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -75,6 +76,11 @@ class Postgres140MetadataReaderTest {
 			assertNotNull(booking);
 			assertNotNull(booking.getConstraints()
 					.get("ex_metadata_booking_during"));
+			var rule = schema.getRules().get("metadata_child_audit");
+			assertNotNull(rule);
+			assertEquals("metadata_child", rule.getTableName());
+			assertTrue(rule.getDefinition().stream()
+					.anyMatch(line -> line.contains("metadata_audit")));
 		}
 	}
 
@@ -82,6 +88,7 @@ class Postgres140MetadataReaderTest {
 		statement.execute("DROP SCHEMA IF EXISTS metadata_test_14 CASCADE");
 		statement.execute("CREATE SCHEMA metadata_test_14");
 		statement.execute("CREATE SEQUENCE metadata_test_14.metadata_seq START 10");
+		statement.execute("CREATE TABLE metadata_test_14.metadata_audit (child_id bigint)");
 		statement.execute("""
 				CREATE TABLE metadata_test_14.metadata_events (
 				 id bigint NOT NULL, occurred_at date NOT NULL)
@@ -123,6 +130,11 @@ class Postgres140MetadataReaderTest {
 		statement.execute("""
 				CREATE FUNCTION metadata_test_14.metadata_function(p_amount numeric)
 				 RETURNS numeric LANGUAGE sql IMMUTABLE AS $$ SELECT p_amount * 2 $$
+				""");
+		statement.execute("""
+				CREATE RULE metadata_child_audit AS
+				 ON INSERT TO metadata_test_14.metadata_child DO ALSO
+				 INSERT INTO metadata_test_14.metadata_audit(child_id) VALUES (NEW.id)
 				""");
 	}
 }

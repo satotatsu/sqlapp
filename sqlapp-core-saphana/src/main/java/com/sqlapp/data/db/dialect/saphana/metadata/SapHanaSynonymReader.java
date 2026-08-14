@@ -70,6 +70,7 @@ public class SapHanaSynonymReader extends SynonymReader {
 	protected Synonym createSynonym(ExResultSet rs) throws SQLException {
 		Synonym synonym = new Synonym(getString(rs, SYNONYM_NAME));
 		synonym.setId("" + rs.getLong("SYNONYM_OID"));
+		synonym.setSchemaName(getString(rs, SCHEMA_NAME));
 		synonym.setObjectSchemaName(getString(rs, OBJECT_SCHEMA));
 		synonym.setObjectName(getString(rs, OBJECT_NAME));
 		return synonym;

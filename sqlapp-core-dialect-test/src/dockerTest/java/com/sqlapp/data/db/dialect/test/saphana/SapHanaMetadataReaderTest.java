@@ -33,6 +33,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
+import com.sqlapp.data.schemas.Table.TableDataStoreType;
 
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
 class SapHanaMetadataReaderTest {
@@ -85,6 +86,8 @@ class SapHanaMetadataReaderTest {
 					.findFirst().orElseThrow();
 			var parent = schema.getTables().get("METADATA_PARENT");
 			assertNotNull(parent);
+			assertEquals(TableDataStoreType.Column,
+					parent.getTableDataStoreType());
 			var child = schema.getTables().get("METADATA_CHILD");
 			assertNotNull(child);
 			var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
@@ -93,6 +96,11 @@ class SapHanaMetadataReaderTest {
 			assertNotNull(child.getIndexes().get("IDX_METADATA_CHILD_PARENT"));
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
+			var synonym = schema.getSynonyms().get("METADATA_PARENT_SYNONYM");
+			assertNotNull(synonym);
+			assertEquals("METADATA_TEST", synonym.getSchemaName());
+			assertEquals("METADATA_TEST", synonym.getObjectSchemaName());
+			assertEquals("METADATA_PARENT", synonym.getObjectName());
 			var partitioned = schema.getTables().get("METADATA_PARTITIONED");
 			assertNotNull(partitioned);
 			assertEquals(PartitioningType.Range,
@@ -164,6 +172,10 @@ class SapHanaMetadataReaderTest {
 		statement.execute("""
 				CREATE VIEW METADATA_TEST.METADATA_VIEW AS
 				 SELECT ID, CODE, AMOUNT FROM METADATA_TEST.METADATA_CHILD
+				""");
+		statement.execute("""
+				CREATE SYNONYM METADATA_TEST.METADATA_PARENT_SYNONYM
+				 FOR METADATA_TEST.METADATA_PARENT
 				""");
 		statement.execute("""
 				CREATE PROCEDURE METADATA_TEST.METADATA_PROCEDURE (

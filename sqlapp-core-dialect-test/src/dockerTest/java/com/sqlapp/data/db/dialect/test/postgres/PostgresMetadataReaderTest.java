@@ -87,6 +87,11 @@ class PostgresMetadataReaderTest {
 			assertNotNull(schema.getMviews().get("metadata_mview"));
 			assertNotNull(schema.getFunctions().get("metadata_function"));
 			assertNotNull(schema.getTriggers().get("metadata_trigger"));
+			var rule = schema.getRules().get("metadata_child_audit");
+			assertNotNull(rule);
+			assertEquals("metadata_child", rule.getTableName());
+			assertTrue(rule.getDefinition().stream()
+					.anyMatch(line -> line.contains("metadata_audit")));
 			assertNotNull(schema.getDomains().get("metadata_code"));
 			assertNotNull(schema.getDomains().get("metadata_status"));
 			Table partitioned = schema.getTables().get("metadata_events");
@@ -112,6 +117,7 @@ class PostgresMetadataReaderTest {
 		statement.execute("CREATE TYPE metadata_test.metadata_status AS ENUM ('NEW', 'DONE')");
 		statement.execute("CREATE DOMAIN metadata_test.metadata_code AS varchar(40) CHECK (VALUE <> '')");
 		statement.execute("CREATE SEQUENCE metadata_test.metadata_seq START 50 INCREMENT 10");
+		statement.execute("CREATE TABLE metadata_test.metadata_audit (child_id bigint)");
 		statement.execute("""
 				CREATE TABLE metadata_test.metadata_events (
 				 id bigint NOT NULL, occurred_at date NOT NULL, payload text)
@@ -176,6 +182,11 @@ class PostgresMetadataReaderTest {
 		statement.execute("""
 				CREATE TRIGGER metadata_trigger BEFORE INSERT ON metadata_test.metadata_child
 				 FOR EACH ROW EXECUTE FUNCTION metadata_test.metadata_trigger_function()
+				""");
+		statement.execute("""
+				CREATE RULE metadata_child_audit AS
+				 ON INSERT TO metadata_test.metadata_child DO ALSO
+				 INSERT INTO metadata_test.metadata_audit(child_id) VALUES (NEW.id)
 				""");
 	}
 }
