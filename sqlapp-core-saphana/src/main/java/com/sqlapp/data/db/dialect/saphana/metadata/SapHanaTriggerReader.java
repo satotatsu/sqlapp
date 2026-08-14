@@ -76,8 +76,8 @@ public class SapHanaTriggerReader extends TriggerReader {
 		trigger.addEventManipulation(event);
 		String actionTime = getString(rs, "TRIGGER_ACTION_TIME");
 		trigger.setActionTiming(actionTime);
-		trigger.setTableName(getString(rs, "SUBJECT_TABLE_NAME"));
 		trigger.setTableSchemaName(getString(rs, "SUBJECT_TABLE_SCHEMA"));
+		trigger.setTableName(getString(rs, "SUBJECT_TABLE_NAME"));
 		trigger.setDefinition(getString(rs, "DEFINITION"));
 		return trigger;
 	}

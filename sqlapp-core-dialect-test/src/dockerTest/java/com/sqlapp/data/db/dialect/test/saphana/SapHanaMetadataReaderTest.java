@@ -118,6 +118,18 @@ class SapHanaMetadataReaderTest {
 			assertNotNull(procedure);
 			assertNotNull(procedure.getStatement());
 			assertTrue(procedure.getArguments().size() >= 2);
+			var function = schema.getFunctions().get("METADATA_FUNCTION");
+			assertNotNull(function);
+			assertNotNull(function.getDefinition());
+			assertTrue(function.getArguments().stream()
+					.anyMatch(argument -> "P_AMOUNT".equals(argument.getName())));
+			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
+			assertNotNull(trigger);
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertEquals("METADATA_TEST", trigger.getTableSchemaName());
+			assertEquals("METADATA_CHILD", trigger.getTableName());
+			assertNotNull(trigger.getDefinition());
 		}
 	}
 
@@ -184,6 +196,29 @@ class SapHanaMetadataReaderTest {
 				 BEGIN
 				   SELECT NAME INTO P_NAME FROM METADATA_TEST.METADATA_PARENT
 				    WHERE ID = P_ID;
+				 END
+				""");
+		statement.execute("""
+				CREATE FUNCTION METADATA_TEST.METADATA_FUNCTION (
+				 IN P_AMOUNT DECIMAL(18,2))
+				 RETURNS RESULT DECIMAL(18,2)
+				 LANGUAGE SQLSCRIPT AS
+				 BEGIN
+				   RESULT := :P_AMOUNT * 2;
+				 END
+				""");
+		statement.execute("""
+				CREATE COLUMN TABLE METADATA_TEST.METADATA_AUDIT (
+				 CHILD_ID BIGINT NOT NULL)
+				""");
+		statement.execute("""
+				CREATE TRIGGER METADATA_TEST.METADATA_TRIGGER
+				 AFTER INSERT ON METADATA_TEST.METADATA_CHILD
+				 REFERENCING NEW ROW NEW_ROW
+				 FOR EACH ROW
+				 BEGIN
+				   INSERT INTO METADATA_TEST.METADATA_AUDIT
+				    VALUES (:NEW_ROW.ID);
 				 END
 				""");
 	}
