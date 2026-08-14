@@ -123,6 +123,22 @@ class SapHanaMetadataReaderTest {
 			assertEquals("BUCKET", partitioned.getPartitioning()
 					.getPartitioningColumns().get(0).getName());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
+			var multiPartitioned = schema.getTables()
+					.get("METADATA_MULTI_PARTITIONED");
+			assertNotNull(multiPartitioned);
+			assertEquals(PartitioningType.Hash,
+					multiPartitioned.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Range,
+					multiPartitioned.getPartitioning().getSubPartitioningType());
+			assertEquals("ID", multiPartitioned.getPartitioning()
+					.getPartitioningColumns().get(0).getName());
+			assertEquals("BUCKET", multiPartitioned.getPartitioning()
+					.getSubPartitioningColumns().get(0).getName());
+			assertEquals(2,
+					multiPartitioned.getPartitioning().getPartitions().size());
+			assertEquals(6, multiPartitioned.getPartitioning().getPartitions()
+					.stream().mapToInt(partition -> partition.getSubPartitions().size())
+					.sum());
 			var documents = schema.getTables().get("METADATA_DOCUMENTS");
 			assertNotNull(documents);
 			var fulltextIndex = documents.getIndexes()
@@ -162,6 +178,16 @@ class SapHanaMetadataReaderTest {
 				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARTITIONED (
 				 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL, PAYLOAD NVARCHAR(100))
 				 PARTITION BY RANGE (BUCKET) (
+				  PARTITION 0 <= VALUES < 100,
+				  PARTITION 100 <= VALUES < 200,
+				  PARTITION OTHERS)
+				""");
+		statement.execute("""
+				CREATE COLUMN TABLE METADATA_TEST.METADATA_MULTI_PARTITIONED (
+				 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL,
+				 PAYLOAD NVARCHAR(100))
+				 PARTITION BY HASH (ID) PARTITIONS 2,
+				 RANGE (BUCKET) (
 				  PARTITION 0 <= VALUES < 100,
 				  PARTITION 100 <= VALUES < 200,
 				  PARTITION OTHERS)
