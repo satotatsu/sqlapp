@@ -224,7 +224,7 @@ public class SapHanaTableReader extends TableReader {
 
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
-		return null;
+		return new SapHanaCheckConstraintReader(this.getDialect());
 	}
 
 	/*

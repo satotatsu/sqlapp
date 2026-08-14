@@ -32,6 +32,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.saphana.SapHana;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
@@ -108,6 +109,10 @@ class SapHanaMetadataReaderTest {
 			var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
 			assertEquals(2, foreignKey.getColumns().size());
+			var checkConstraint = assertInstanceOf(CheckConstraint.class,
+					child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
+			assertTrue(checkConstraint.getExpression().contains("AMOUNT"));
+			assertTrue(checkConstraint.getExpression().contains(">= 0"));
 			var childIndex = child.getIndexes()
 					.get("IDX_METADATA_CHILD_PARENT");
 			assertNotNull(childIndex);
