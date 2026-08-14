@@ -40,6 +40,16 @@ public class InformixDialectResolverTest {
 	}
 
 	@Test
+	public void testMetadataReaderIsAvailableAcrossVersions() {
+		assertEquals("InformixCatalogReader", resolver.getDialect("Informix", 11, 70)
+				.getCatalogReader().getClass().getSimpleName());
+		assertEquals("InformixCatalogReader", resolver.getDialect("IBM Informix Dynamic Server", 12, 10)
+				.getCatalogReader().getClass().getSimpleName());
+		assertEquals("InformixCatalogReader", resolver.getDialect("IBM Informix Dynamic Server", 14, 10)
+				.getCatalogReader().getClass().getSimpleName());
+	}
+
+	@Test
 	public void testServiceLoader() {
 		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
 		boolean find = false;

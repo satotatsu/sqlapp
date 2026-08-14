@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -46,6 +47,23 @@ public class DialectResolverTest {
 		assertTrue(dialect instanceof MySql840);
 		dialect = DialectResolver.getInstance().getDialect("MySql", 9, 7, 0);
 		assertTrue(dialect instanceof MySql900);
+	}
+
+	@Test
+	public void testMetadataReaderVersionBoundaries() {
+		assertCatalogReader("MySqlCatalogReader", 5, 5, 0);
+		assertCatalogReader("MySqlCatalog564Reader", 5, 6, 4);
+		assertCatalogReader("MySqlCatalog564Reader", 5, 6, 5);
+		assertCatalogReader("MySqlCatalog570Reader", 5, 7, 0);
+		assertCatalogReader("MySqlCatalog800Reader", 8, 0, 0);
+		assertCatalogReader("MySqlCatalog800Reader", 8, 0, 1);
+		assertCatalogReader("MySqlCatalog800Reader", 8, 4, 0);
+		assertCatalogReader("MySqlCatalog800Reader", 9, 0, 0);
+	}
+
+	private void assertCatalogReader(String className, int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("MySql", major, minor, revision);
+		assertEquals(className, dialect.getCatalogReader().getClass().getSimpleName());
 	}
 
 	@Test

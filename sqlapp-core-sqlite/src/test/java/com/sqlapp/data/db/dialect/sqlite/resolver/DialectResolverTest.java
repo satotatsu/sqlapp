@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sqlite.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -37,6 +38,18 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("SQLite", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Sqlite);
+	}
+
+	@Test
+	public void testMetadataReaderIsAvailableAcrossVersions() {
+		assertCatalogReader(3, 8, 0);
+		assertCatalogReader(3, 35, 0);
+		assertCatalogReader(3, 50, 0);
+	}
+
+	private void assertCatalogReader(int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("SQLite", major, minor, revision);
+		assertEquals("SqliteCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
 	}
 
 	@Test

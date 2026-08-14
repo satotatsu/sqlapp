@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.firebird.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -51,6 +52,21 @@ public class DialectResolverTest {
 		dialect = DialectResolver.getInstance().getDialect("Firebird", 5, 0, 0);
 		assertTrue(dialect instanceof Firebird50);
 		assertTrue(dialect.supportsInsertReturningResultSet());
+	}
+
+	@Test
+	public void testMetadataReaderVersionBoundaries() {
+		assertCatalogReader("FirebirdCatalogReader", 1, 5, 0);
+		assertCatalogReader("Firebird20CatalogReader", 2, 0, 0);
+		assertCatalogReader("Firebird25CatalogReader", 2, 5, 0);
+		assertCatalogReader("Firebird30CatalogReader", 3, 0, 0);
+		assertCatalogReader("Firebird30CatalogReader", 4, 0, 0);
+		assertCatalogReader("Firebird30CatalogReader", 5, 0, 0);
+	}
+
+	private void assertCatalogReader(String className, int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("Firebird", major, minor, revision);
+		assertEquals(className, dialect.getCatalogReader().getClass().getSimpleName());
 	}
 
 	@Test

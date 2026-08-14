@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.virtica.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -62,6 +63,22 @@ public class DialectResolverTest {
 		assertTrue(dialect instanceof Virtica90);
 		assertTrue("UUID".equals(dialect.getDbDataTypes()
 				.getDbType(DataType.UUID).getTypeName()));
+	}
+
+	@Test
+	public void testMetadataReaderIsAvailableAcrossVersionBoundaries() {
+		assertCatalogReader(7, 1, 0);
+		assertCatalogReader(7, 2, 0);
+		assertCatalogReader(8, 0, 0);
+		assertCatalogReader(9, 0, 0);
+		assertCatalogReader(11, 1, 0);
+		assertCatalogReader(11, 1, 1);
+		assertCatalogReader(25, 1, 0);
+	}
+
+	private void assertCatalogReader(int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("Vertica", major, minor, revision);
+		assertEquals("VirticaCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
 	}
 
 	@Test

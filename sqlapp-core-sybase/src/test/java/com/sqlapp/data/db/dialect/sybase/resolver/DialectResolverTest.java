@@ -53,6 +53,18 @@ public class DialectResolverTest {
 	}
 
 	@Test
+	public void testMetadataReaderIsAvailableAcrossAseVersions() {
+		assertCatalogReader(12, 5, 0);
+		assertCatalogReader(15, 7, 0);
+		assertCatalogReader(16, 0, 3);
+	}
+
+	private void assertCatalogReader(int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("ASE", major, minor, revision);
+		assertEquals("SybaseCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
+	}
+
+	@Test
 	public void testServiceLoader() {
 		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
 		boolean find = false;
