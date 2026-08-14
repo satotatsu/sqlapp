@@ -115,6 +115,37 @@ public class Db2TableReader extends TableReader {
 		final DoubleKeyMap<String,String,Table> tables=SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitionExpression(connection, tables);
 		setPartitioning(connection, tables);
+		setDimensionColumns(connection, tables);
+	}
+
+	protected void setDimensionColumns(final Connection connection,
+			final DoubleKeyMap<String, String, Table> tables) {
+		final ParametersContext context = this.defaultParametersContext(connection);
+		context.put(SCHEMA_NAME, tables.keySet());
+		context.put(TABLE_NAME, tables.secondKeySet());
+		execute(connection, getDimensionColumnsSqlNode(), context,
+				new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs)
+					throws SQLException {
+				final Table table = tables.get(getString(rs, SCHEMA_NAME),
+						getString(rs, TABLE_NAME));
+				if (table == null) {
+					return;
+				}
+				final Column column = table.getColumns().get(
+						getString(rs, COLUMN_NAME));
+				if (column != null) {
+					setSpecifics(rs, "DIMENSION", column);
+					setSpecifics(rs, "COLSEQ", column);
+					setSpecifics(rs, "TYPE", column);
+				}
+			}
+		});
+	}
+
+	protected SqlNode getDimensionColumnsSqlNode() {
+		return getSqlNodeCache().getString("dimensionColumns.sql");
 	}
 	
 	/**

@@ -51,6 +51,7 @@ class Db2_1150MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_COMPAT_CHILD");
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARENT");
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARTITIONED");
+			drop(statement, "DROP TABLE METADATA_COMPAT_MDC");
 			drop(statement, "DROP SEQUENCE METADATA_COMPAT_SEQ");
 			statement.execute("""
 					CREATE TABLE METADATA_COMPAT_PARENT (
@@ -74,6 +75,12 @@ class Db2_1150MetadataReaderTest {
 					  PARTITION P_HIGH STARTING FROM (100) INCLUSIVE ENDING AT (MAXVALUE))
 					""");
 			statement.execute("CREATE VIEW METADATA_COMPAT_VIEW AS SELECT ID, PARENT_ID FROM METADATA_COMPAT_CHILD");
+			statement.execute("""
+					CREATE TABLE METADATA_COMPAT_MDC (
+					 REGION CHAR(2) NOT NULL, BUCKET INTEGER NOT NULL,
+					 PAYLOAD VARCHAR(100))
+					 ORGANIZE BY DIMENSIONS (REGION, BUCKET)
+					""");
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Db2_1150.class, dialect);
@@ -96,6 +103,14 @@ class Db2_1150MetadataReaderTest {
 			assertEquals(PartitioningType.Range,
 					partitioned.getPartitioning().getPartitioningType());
 			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
+			Table mdc = schema.getTables().get("METADATA_COMPAT_MDC");
+			assertNotNull(mdc);
+			assertEquals("C", mdc.getColumns().get("REGION")
+					.getSpecifics().get("TYPE"));
+			assertNotNull(mdc.getColumns().get("REGION")
+					.getSpecifics().get("DIMENSION"));
+			assertNotNull(mdc.getColumns().get("BUCKET")
+					.getSpecifics().get("DIMENSION"));
 		}
 	}
 

@@ -104,6 +104,14 @@ class Db2MetadataReaderTest {
 					businessTime.getPeriodType());
 			assertEquals("BUSINESS_START", businessTime.getStartColumnName());
 			assertEquals("BUSINESS_END", businessTime.getEndColumnName());
+			Table mdc = schema.getTables().get("METADATA_MDC");
+			assertNotNull(mdc);
+			assertEquals("C", mdc.getColumns().get("REGION")
+					.getSpecifics().get("TYPE"));
+			assertNotNull(mdc.getColumns().get("REGION")
+					.getSpecifics().get("DIMENSION"));
+			assertNotNull(mdc.getColumns().get("BUCKET")
+					.getSpecifics().get("DIMENSION"));
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
 			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
@@ -126,6 +134,7 @@ class Db2MetadataReaderTest {
 			drop(statement, "DROP TABLE METADATA_AUDIT");
 			drop(statement, "DROP TABLE METADATA_PARTITIONED");
 			drop(statement, "DROP TABLE METADATA_TEMPORAL");
+			drop(statement, "DROP TABLE METADATA_MDC");
 			drop(statement, "DROP SEQUENCE METADATA_SEQ");
 			statement.execute("CREATE SEQUENCE METADATA_SEQ START WITH 50 INCREMENT BY 10");
 			statement.execute("""
@@ -166,6 +175,12 @@ class Db2MetadataReaderTest {
 					 BUSINESS_END DATE NOT NULL,
 					 PAYLOAD VARCHAR(100),
 					 PERIOD BUSINESS_TIME (BUSINESS_START, BUSINESS_END))
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_MDC (
+					 REGION CHAR(2) NOT NULL, BUCKET INTEGER NOT NULL,
+					 PAYLOAD VARCHAR(100))
+					 ORGANIZE BY DIMENSIONS (REGION, BUCKET)
 					""");
 			statement.execute("""
 					CREATE PROCEDURE METADATA_PROCEDURE(IN P_PARENT_ID BIGINT)
