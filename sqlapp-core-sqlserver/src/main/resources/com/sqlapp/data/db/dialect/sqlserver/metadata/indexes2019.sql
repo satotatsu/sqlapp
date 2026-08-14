@@ -53,7 +53,7 @@ INNER JOIN sys.data_spaces dsidx
 LEFT OUTER JOIN sys.spatial_index_tessellations sit
   ON (i.object_id=sit.object_id
   AND i.index_id=sit.index_id)
-WHERE i.type IN (1, 2, 3, 4)
+WHERE i.type IN (1, 2, 3, 4, 5, 6)
   AND i.is_unique_constraint = 0 
   AND i.is_primary_key = 0 
 --  AND objectproperty(i.object_id, 'IsMSShipped') <> 1 

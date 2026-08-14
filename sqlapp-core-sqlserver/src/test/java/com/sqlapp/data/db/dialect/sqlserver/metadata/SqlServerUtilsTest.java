@@ -24,8 +24,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.core.test.AbstractTest;
+import com.sqlapp.data.schemas.IndexType;
 
 public class SqlServerUtilsTest extends AbstractTest {
+
+	@Test
+	public void testGetIndexTypeForColumnStoreIndexes() {
+		assertEquals(IndexType.ClusteredColumnStore, SqlServerUtils.getIndexType(5));
+		assertEquals(IndexType.NonClusteredColumnStore, SqlServerUtils.getIndexType(6));
+	}
 
 	/**
 	 * プロシージャのステートメント部分抜き出しテスト1

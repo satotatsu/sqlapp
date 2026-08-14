@@ -68,7 +68,7 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 				}
 				String columnName = getString(rs, COLUMN_NAME);
 				boolean included=getBoolean(rs, "is_included_column");
-				if (included){
+				if (included && !index.getIndexType().isColumnStore()){
 					index.getIncludes().add(new Column(columnName));
 				} else{
 					if (rs.getInt("is_descending_key") == 1) {

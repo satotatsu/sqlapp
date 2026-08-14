@@ -23,7 +23,9 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * SqlServer2019のインデックス読み込みクラス
@@ -37,6 +39,11 @@ public class SqlServer2019IndexReader extends SqlServer2016IndexReader {
 		super(dialect);
 	}
 
+	@Override
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("indexes2019.sql");
+	}
+
 	/**
 	 * OPTIMIZE_FOR_SEQUENTIAL_KEY
 	 */
@@ -44,7 +51,8 @@ public class SqlServer2019IndexReader extends SqlServer2016IndexReader {
 	@Override
 	protected Index createIndex(final ExResultSet rs) throws SQLException {
 		final Index index = super.createIndex(rs);
-		setSpecifics(rs, OPTIMIZE_FOR_SEQUENTIAL_KEY, index);
+		setSpecifics(rs, "optimize_for_sequential_key",
+				OPTIMIZE_FOR_SEQUENTIAL_KEY, index);
 		return index;
 	}
 }

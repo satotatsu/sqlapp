@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -28,6 +29,7 @@ import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.PartitionFunction;
 import com.sqlapp.data.schemas.PartitionScheme;
@@ -42,14 +44,20 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 class SqlServerMetadataReaderTest {
 	private static final String IMAGE =
 			"mcr.microsoft.com/mssql/server:2025-latest";
+	private static final String DATABASE_NAME = "METADATA_READER_TEST";
 
 	private static final MSSQLServerContainer SQL_SERVER =
 			ReusableTestcontainers.configure(
 					new MSSQLServerContainer(IMAGE).acceptLicense());
 
 	@BeforeAll
-	static void startContainer() {
+	static void startContainer() throws SQLException {
 		ReusableTestcontainers.start(SQL_SERVER);
+		try (Connection connection = SQL_SERVER.createConnection("");
+				Statement statement = connection.createStatement()) {
+			statement.execute("IF DB_ID(N'" + DATABASE_NAME
+					+ "') IS NULL CREATE DATABASE " + DATABASE_NAME);
+		}
 	}
 
 	@AfterAll
@@ -60,7 +68,7 @@ class SqlServerMetadataReaderTest {
 	@Test
 	void testReadsRepresentativeSchemaObjectsFromLatestSqlServer()
 			throws SQLException {
-		try (Connection connection = SQL_SERVER.createConnection("")) {
+		try (Connection connection = createTestDatabaseConnection()) {
 			createSchemaObjects(connection);
 
 			Dialect dialect = DialectResolver.getInstance()
@@ -77,6 +85,17 @@ class SqlServerMetadataReaderTest {
 							"Current SQL Server catalog was not loaded."));
 			Schema schema = catalog.getSchemas().get("dbo");
 			assertNotNull(schema, "SQL Server dbo schema was not loaded.");
+			Schema auxiliarySchema = catalog.getSchemas().get("METADATA_AUX");
+			assertNotNull(auxiliarySchema);
+			Table auxiliaryParent = auxiliarySchema.getTables()
+					.get("METADATA_PARENT");
+			assertNotNull(auxiliaryParent);
+			assertNotNull(auxiliaryParent.getColumns().get("AUXILIARY_VALUE"));
+			assertEquals(2, auxiliaryParent.getColumns().size());
+			assertNotNull(auxiliaryParent.getConstraints()
+					.get("PK_METADATA_AUX_PARENT"));
+			assertNotNull(auxiliaryParent.getIndexes()
+					.get("IDX_METADATA_AUX_PARENT"));
 
 			PartitionFunction partitionFunction = catalog.getPartitionFunctions()
 					.get("METADATA_PARTITION_FUNCTION");
@@ -97,6 +116,13 @@ class SqlServerMetadataReaderTest {
 					partitionScheme.getTableSpaces().get(0).getName());
 			assertEquals("PRIMARY",
 					partitionScheme.getTableSpaces().get(4).getName());
+			assertTrue(catalog.getSettings().size() > 0);
+			assertNotNull(catalog.getSettings().get("Collation"));
+			assertEquals(catalog.getSettings().get("Collation").getValue(),
+					catalog.getCollation());
+			assertNotNull(catalog.getTableSpaces().get("PRIMARY"));
+			assertTrue(catalog.getTableSpaces().get("PRIMARY")
+					.getTableSpaceFiles().size() > 0);
 
 			assertEquals("dbo", catalog.getUsers().get("METADATA_USER")
 					.getDefaultSchemaName());
@@ -147,7 +173,14 @@ class SqlServerMetadataReaderTest {
 			assertEquals(Order.Asc, index.getColumns().get(1).getOrder());
 			assertTrue(index.getWhere().contains("AMOUNT"), index.getWhere());
 			assertNotNull(index.getIncludes().get("CODE"));
-
+			assertEquals("true", index.getSpecifics()
+					.get("OPTIMIZE_FOR_SEQUENTIAL_KEY"));
+			Index columnStoreIndex = parent.getIndexes()
+					.get("IDX_METADATA_PARENT_COLUMNSTORE");
+			assertNotNull(columnStoreIndex);
+			assertEquals(IndexType.NonClusteredColumnStore,
+					columnStoreIndex.getIndexType());
+			assertEquals(2, columnStoreIndex.getColumns().size());
 			Column id = child.getColumns().get("ID");
 			assertTrue(id.isIdentity());
 			assertEquals(100L, id.getIdentityStartValue());
@@ -235,6 +268,12 @@ class SqlServerMetadataReaderTest {
 		}
 	}
 
+	private static Connection createTestDatabaseConnection() throws SQLException {
+		return DriverManager.getConnection(SQL_SERVER.getJdbcUrl()
+				+ ";databaseName=" + DATABASE_NAME, SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword());
+	}
+
 	private boolean connectionCatalogEquals(Connection connection, Catalog catalog) {
 		try {
 			return connection.getCatalog().equalsIgnoreCase(catalog.getName());
@@ -245,6 +284,11 @@ class SqlServerMetadataReaderTest {
 
 	private void createSchemaObjects(Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS METADATA_AUX.METADATA_PARENT");
+			statement.execute("""
+					IF SCHEMA_ID('METADATA_AUX') IS NOT NULL
+						DROP SCHEMA METADATA_AUX
+					""");
 			statement.execute("""
 					IF DATABASE_PRINCIPAL_ID('METADATA_ROLE') IS NOT NULL
 					AND DATABASE_PRINCIPAL_ID('METADATA_USER') IS NOT NULL
@@ -334,9 +378,14 @@ class SqlServerMetadataReaderTest {
 					)
 					""");
 			statement.execute("""
+					CREATE NONCLUSTERED COLUMNSTORE INDEX IDX_METADATA_PARENT_COLUMNSTORE
+					ON METADATA_PARENT(NAME, REGION)
+					""");
+			statement.execute("""
 					CREATE INDEX IDX_METADATA_CHILD_PARENT
 					ON METADATA_CHILD(PARENT_ID DESC, PARENT_REGION ASC) INCLUDE (CODE)
 					WHERE AMOUNT > 0
+					WITH (OPTIMIZE_FOR_SEQUENTIAL_KEY = ON)
 					""");
 			statement.execute("""
 					CREATE TABLE METADATA_TYPES (
@@ -372,6 +421,18 @@ class SqlServerMetadataReaderTest {
 			statement.execute("ALTER ROLE METADATA_ROLE ADD MEMBER METADATA_USER");
 			statement.execute("GRANT SELECT ON dbo.METADATA_PARENT TO METADATA_ROLE");
 			statement.execute("GRANT UPDATE (NAME) ON dbo.METADATA_PARENT TO METADATA_USER");
+			statement.execute("CREATE SCHEMA METADATA_AUX AUTHORIZATION dbo");
+			statement.execute("""
+					CREATE TABLE METADATA_AUX.METADATA_PARENT (
+						ID INT NOT NULL,
+						AUXILIARY_VALUE NVARCHAR(30),
+						CONSTRAINT PK_METADATA_AUX_PARENT PRIMARY KEY (ID)
+					)
+					""");
+			statement.execute("""
+					CREATE INDEX IDX_METADATA_AUX_PARENT
+					ON METADATA_AUX.METADATA_PARENT(AUXILIARY_VALUE)
+					""");
 			statement.execute("""
 					EXEC sys.sp_addextendedproperty
 						@name = N'MS_Description', @value = N'Display name',

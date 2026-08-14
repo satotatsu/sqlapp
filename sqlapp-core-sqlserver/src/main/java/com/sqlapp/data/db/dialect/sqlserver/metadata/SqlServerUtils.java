@@ -68,6 +68,10 @@ public class SqlServerUtils extends ReaderUtils {
 			return IndexType.Xml;
 		} else if (indexType == 4) {
 			return IndexType.Spatial;
+		} else if (indexType == 5) {
+			return IndexType.ClusteredColumnStore;
+		} else if (indexType == 6) {
+			return IndexType.NonClusteredColumnStore;
 		}
 		// 非クラスタ化インデックス
 		return IndexType.BTree;
