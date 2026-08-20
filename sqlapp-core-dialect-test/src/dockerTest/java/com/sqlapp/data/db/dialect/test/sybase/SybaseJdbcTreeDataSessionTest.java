@@ -26,6 +26,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
@@ -76,8 +77,9 @@ class SybaseJdbcTreeDataSessionTest {
 				// The isolated test container may not contain the table yet.
 			}
 			statement.execute("CREATE TABLE metadata_table (id INT IDENTITY NOT NULL, "
-					+ "parent_id INT NULL, code VARCHAR(30) NOT NULL, "
+					+ "parent_id INT NULL, code VARCHAR(30) DEFAULT 'unknown' NOT NULL, "
 					+ "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
+					+ "CONSTRAINT ck_metadata_table_code CHECK (code <> ''), "
 					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE INDEX idx_metadata_table_code ON metadata_table(code)");
@@ -90,8 +92,12 @@ class SybaseJdbcTreeDataSessionTest {
 			var table = schema.getTables().get("metadata_table");
 			assertNotNull(table);
 			assertTrue(table.getColumns().get("id").isIdentity());
+			assertTrue(table.getColumns().get("code").getDefaultValue()
+					.contains("unknown"));
 			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
+			assertTrue(table.getConstraints().stream()
+					.anyMatch(CheckConstraint.class::isInstance));
 			assertNotNull(table.getIndexes().get("idx_metadata_table_code"));
 			var foreignKey = table.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)

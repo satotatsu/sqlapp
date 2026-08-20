@@ -122,7 +122,7 @@ public class SybaseTableReader extends TableReader {
 
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
-		return null;
+		return new SybaseCheckConstraintReader(this.getDialect());
 	}
 
 	@Override

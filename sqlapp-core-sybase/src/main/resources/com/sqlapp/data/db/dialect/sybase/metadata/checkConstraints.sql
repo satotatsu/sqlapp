@@ -1,26 +1,24 @@
 SELECT
   DB_NAME() AS catalog_name
 , su.name AS schema_name
-, OBJECT_NAME(c.constid) AS constraint_name
-, OBJECT_NAME(c.id) AS table_name
-, COL_NAME(c.id, c.colid) AS column_name
-, OBJECT_DEFINITION(c.constid) AS definition
-, OBJECTPROPERTY(c.constid, 'CnstIsColumn')  --単一の列に対するチェック制約(1 or 0)
-  AS is_column_check_constraint
-, c.spare1
-, c.actions
-, c.error
+, OBJECT_NAME(c.constrid) AS constraint_name
+, OBJECT_NAME(c.tableid) AS table_name
+, COL_NAME(c.tableid, c.colid) AS column_name
+, sc.text AS definition
+, CASE WHEN c.colid > 0 THEN 1 ELSE 0 END AS is_column_check_constraint
 FROM sysconstraints c
 INNER JOIN sysobjects so
-  ON (c.id=so.id)
+  ON (c.tableid=so.id)
 INNER JOIN sysusers su
   ON (so.uid = su.uid)
-WHERE (c.status & 4)=4
+INNER JOIN syscomments sc
+  ON (c.constrid = sc.id)
+WHERE (c.status & 128)=128
   AND (c.status & 1)=0
   /*if isNotEmpty(schemaName)*/
   AND su.name IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND OBJECT_NAME(c.id) IN /*tableName*/('%')
+  AND OBJECT_NAME(c.tableid) IN /*tableName*/('%')
   /*end*/
-ORDER BY su.name, OBJECT_NAME(c.id), OBJECT_NAME(c.constid)
+ORDER BY su.name, OBJECT_NAME(c.tableid), OBJECT_NAME(c.constrid), sc.colid
