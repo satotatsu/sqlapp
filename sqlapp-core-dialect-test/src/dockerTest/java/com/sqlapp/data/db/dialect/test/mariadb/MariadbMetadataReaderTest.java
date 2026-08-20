@@ -66,6 +66,8 @@ class MariadbMetadataReaderTest {
 			assertNotNull(parent.getConstraints().get("uk_metadata_parent_code"));
 			assertNotNull(parent.getConstraints().get("ck_metadata_parent_amount"));
 			assertNotNull(parent.getIndexes().get("idx_metadata_parent_name"));
+			assertTrue(parent.getColumns().get("secret_value").isHidden());
+			assertTrue(!parent.getIndexes().get("idx_metadata_parent_ignored").isEnable());
 
 			var child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
@@ -81,6 +83,13 @@ class MariadbMetadataReaderTest {
 			assertEquals(PartitioningType.Range,
 					partitioned.getPartitioning().getPartitioningType());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
+			var versioned = schema.getTables().get("metadata_versioned");
+			assertNotNull(versioned.getSystemVersioning());
+			assertTrue(versioned.getSystemVersioning().isEnable());
+			assertEquals("row_start", versioned.getTemporalPeriods().get(0)
+					.getStartColumnName());
+			assertEquals("row_end", versioned.getTemporalPeriods().get(0)
+					.getEndColumnName());
 			assertNotNull(schema.getViews().get("metadata_view"));
 
 			var sequence = schema.getSequences().get("metadata_sequence");
@@ -116,17 +125,20 @@ class MariadbMetadataReaderTest {
 		statement.execute("DROP TABLE IF EXISTS metadata_child");
 		statement.execute("DROP TABLE IF EXISTS metadata_parent");
 		statement.execute("DROP TABLE IF EXISTS metadata_partitioned");
+		statement.execute("DROP TABLE IF EXISTS metadata_versioned");
 		statement.execute("DROP TABLE IF EXISTS metadata_audit");
 		statement.execute("""
 				CREATE TABLE metadata_parent (
 				 id BIGINT NOT NULL AUTO_INCREMENT,
 				 code VARCHAR(40) NOT NULL,
 				 name VARCHAR(100) COMMENT 'display name',
+				 secret_value VARCHAR(40) INVISIBLE,
 				 amount DECIMAL(18,2) NOT NULL,
 				 PRIMARY KEY (id),
 				 CONSTRAINT uk_metadata_parent_code UNIQUE (code),
 				 CONSTRAINT ck_metadata_parent_amount CHECK (amount >= 0),
-				 INDEX idx_metadata_parent_name (name)
+				 INDEX idx_metadata_parent_name (name),
+				 INDEX idx_metadata_parent_ignored (amount) IGNORED
 				) COMMENT='metadata parent'
 				""");
 		statement.execute("""
@@ -147,6 +159,15 @@ class MariadbMetadataReaderTest {
 				  PARTITION pmax VALUES LESS THAN MAXVALUE)
 				""");
 		statement.execute("CREATE TABLE metadata_audit (parent_id BIGINT NOT NULL)");
+		statement.execute("""
+				CREATE TABLE metadata_versioned (
+				 id BIGINT NOT NULL PRIMARY KEY,
+				 value_text VARCHAR(100),
+				 row_start TIMESTAMP(6) GENERATED ALWAYS AS ROW START,
+				 row_end TIMESTAMP(6) GENERATED ALWAYS AS ROW END,
+				 PERIOD FOR SYSTEM_TIME (row_start, row_end)
+				) WITH SYSTEM VERSIONING
+				""");
 		statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
 		statement.execute("CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5 MINVALUE 10 MAXVALUE 1000 CYCLE");
 		statement.execute("""

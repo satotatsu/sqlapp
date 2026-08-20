@@ -36,10 +36,12 @@ class MariadbTable11_40Reader extends MariadbTable10_27Reader {
 			Column start = null;
 			Column end = null;
 			for (Column column : table.getColumns()) {
-				if (Boolean.TRUE.equals(column.getSpecifics().get("SYSTEM_TIME_PERIOD_START"))) {
+				if (Boolean.TRUE.equals(column.getSpecifics().get(
+						"SYSTEM_TIME_PERIOD_START", Boolean.class))) {
 					start = column;
 				}
-				if (Boolean.TRUE.equals(column.getSpecifics().get("SYSTEM_TIME_PERIOD_END"))) {
+				if (Boolean.TRUE.equals(column.getSpecifics().get(
+						"SYSTEM_TIME_PERIOD_END", Boolean.class))) {
 					end = column;
 				}
 			}
