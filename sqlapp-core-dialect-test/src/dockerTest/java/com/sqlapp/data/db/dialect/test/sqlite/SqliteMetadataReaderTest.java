@@ -45,6 +45,9 @@ class SqliteMetadataReaderTest {
 			statement.execute("CREATE INDEX idx_metadata_child_partial ON metadata_child(code) "
 					+ "WHERE parent_id > 0 AND code IS NOT NULL");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
+			statement.execute("CREATE TABLE metadata_strict (id INTEGER PRIMARY KEY, value TEXT) STRICT");
+			statement.execute("CREATE TABLE metadata_without_rowid (id TEXT PRIMARY KEY, value TEXT) "
+					+ "WITHOUT ROWID");
 
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Sqlite.class, dialect);
@@ -76,6 +79,10 @@ class SqliteMetadataReaderTest {
 			assertEquals("parent_id > 0 AND code IS NOT NULL",
 					child.getIndexes().get("idx_metadata_child_partial").getWhere());
 			assertNotNull(schema.getViews().get("metadata_view"));
+			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_strict")
+					.getSpecifics().get("strict", Boolean.class));
+			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_without_rowid")
+					.getSpecifics().get("without_rowid", Boolean.class));
 		}
 	}
 }

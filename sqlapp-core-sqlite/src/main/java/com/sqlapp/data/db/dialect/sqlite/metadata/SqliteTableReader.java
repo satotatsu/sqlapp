@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.sqlite.metadata;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
@@ -51,7 +52,42 @@ public class SqliteTableReader extends JdbcTableReader {
 			load(connection, table, getIndexReader());
 			load(connection, table, getUniqueConstraintReader());
 			load(connection, table, getForeignKeyConstraintReader());
+			loadTableOptions(connection, table);
 		}
+	}
+
+	private void loadTableOptions(final Connection connection, final Table table)
+			throws SQLException {
+		final String schemaName = table.getSchemaName() == null
+				? "main" : table.getSchemaName();
+		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
+				+ ".sqlite_schema WHERE type='table' AND name=?";
+		try (var statement = connection.prepareStatement(sql)) {
+			statement.setString(1, table.getName());
+			try (var resultSet = statement.executeQuery()) {
+				if (!resultSet.next()) {
+					return;
+				}
+				final String definition = resultSet.getString(1);
+				if (definition == null) {
+					return;
+				}
+				final String normalized = definition.toUpperCase(Locale.ROOT);
+				final int closingParenthesis = normalized.lastIndexOf(')');
+				final String options = closingParenthesis < 0 ? ""
+						: normalized.substring(closingParenthesis + 1);
+				if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*")) {
+					table.getSpecifics().put("without_rowid", Boolean.TRUE.toString());
+				}
+				if (options.matches("(?s).*\\bSTRICT\\b.*")) {
+					table.getSpecifics().put("strict", Boolean.TRUE.toString());
+				}
+			}
+		}
+	}
+
+	private String quoteIdentifier(final String value) {
+		return "\"" + value.replace("\"", "\"\"") + "\"";
 	}
 
 	private void load(final Connection connection, final Table table,
