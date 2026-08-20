@@ -48,6 +48,9 @@ class SqliteMetadataReaderTest {
 			statement.execute("CREATE TABLE metadata_strict (id INTEGER PRIMARY KEY, value TEXT) STRICT");
 			statement.execute("CREATE TABLE metadata_without_rowid (id TEXT PRIMARY KEY, value TEXT) "
 					+ "WITHOUT ROWID");
+			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
+			statement.execute("CREATE TRIGGER trg_metadata_parent AFTER INSERT ON metadata_parent "
+					+ "BEGIN INSERT INTO metadata_audit(parent_id) VALUES (NEW.id); END");
 
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Sqlite.class, dialect);
@@ -83,6 +86,13 @@ class SqliteMetadataReaderTest {
 					.getSpecifics().get("strict", Boolean.class));
 			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_without_rowid")
 					.getSpecifics().get("without_rowid", Boolean.class));
+			var trigger = schema.getTriggers().get("trg_metadata_parent");
+			assertNotNull(trigger);
+			assertEquals("metadata_parent", trigger.getTableName());
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertNotNull(trigger.getDefinition());
+			assertTrue(trigger.getStatement().get(0).startsWith("INSERT INTO metadata_audit"));
 		}
 	}
 }

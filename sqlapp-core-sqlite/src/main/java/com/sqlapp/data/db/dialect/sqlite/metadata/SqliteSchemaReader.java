@@ -18,6 +18,7 @@ import com.sqlapp.data.db.metadata.FunctionReader;
 import com.sqlapp.data.db.metadata.ProcedureReader;
 import com.sqlapp.data.db.metadata.SynonymReader;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.db.metadata.TriggerReader;
 import com.sqlapp.data.db.metadata.TypeReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
@@ -57,6 +58,11 @@ public class SqliteSchemaReader extends JdbcSchemaReader {
 	@Override
 	protected TypeReader newTypeReader() {
 		return null;
+	}
+
+	@Override
+	protected TriggerReader newTriggerReader() {
+		return new SqliteTriggerReader(getDialect());
 	}
 
 	@Override
