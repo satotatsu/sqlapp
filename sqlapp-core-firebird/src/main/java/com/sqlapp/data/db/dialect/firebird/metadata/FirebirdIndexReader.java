@@ -64,7 +64,7 @@ public class FirebirdIndexReader extends IndexReader {
 				String schema_name = null;
 				String name = trim(getString(rs, INDEX_NAME));
 				String columnName = trim(getString(rs, COLUMN_NAME));
-				boolean uniqueness = !rs.getBoolean("NON_UNIQUE");
+				boolean uniqueness = rs.getBoolean("UNIQUE_FLAG");
 				Index index = map.get(catalog_name, schema_name, name);
 				if (index == null) {
 					index = new Index(name);
