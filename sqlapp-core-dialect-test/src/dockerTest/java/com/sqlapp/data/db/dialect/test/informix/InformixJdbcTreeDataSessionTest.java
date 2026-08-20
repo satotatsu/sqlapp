@@ -30,6 +30,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
@@ -82,6 +83,9 @@ class InformixJdbcTreeDataSessionTest {
 					parent.getColumns().get("id").getIdentityGenerationType());
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
+			assertEquals("'child-default'", child.getColumns().get("txt").getDefaultValue());
+			assertTrue(child.getConstraints().stream()
+					.anyMatch(CheckConstraint.class::isInstance));
 			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
@@ -155,9 +159,10 @@ class InformixJdbcTreeDataSessionTest {
 					CREATE TABLE child_table (
 						id SERIAL PRIMARY KEY,
 						parent_id INTEGER NOT NULL,
-						txt VARCHAR(255),
+						txt VARCHAR(255) DEFAULT 'child-default',
 						FOREIGN KEY (parent_id)
-							REFERENCES parent_table(id)
+							REFERENCES parent_table(id),
+						CHECK (txt <> '') CONSTRAINT ck_child_txt
 					)
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
