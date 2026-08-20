@@ -75,6 +75,7 @@ public class SpannerIndexReader extends IndexReader {
 					index.setUnique(rs.getBoolean("is_unique"));
 					index.setIndexType(toIndexType(
 							getString(rs, "index_type")));
+					setSpecifics(rs, "is_null_filtered", index);
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
 				}
