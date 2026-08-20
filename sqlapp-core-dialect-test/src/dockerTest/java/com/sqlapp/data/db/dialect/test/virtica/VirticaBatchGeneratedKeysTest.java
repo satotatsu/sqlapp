@@ -69,7 +69,7 @@ class VirticaBatchGeneratedKeysTest {
 			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5");
 			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, "
 					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
-					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code))");
+					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code)) PARTITION BY id");
 			statement.execute("CREATE TABLE metadata_child (id BIGINT NOT NULL, parent_id BIGINT NOT NULL, "
 					+ "CONSTRAINT pk_metadata_child PRIMARY KEY (id), "
 					+ "CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id) "
@@ -86,6 +86,8 @@ class VirticaBatchGeneratedKeysTest {
 			assertTrue(table.getColumns().get("id") != null);
 			assertTrue(table.getConstraints().getPrimaryKeyConstraint() != null);
 			assertNotNull(table.getConstraints().get("uk_metadata_table_code"));
+			assertTrue(table.getSpecifics().get("PARTITION_EXPRESSION")
+					.toLowerCase().contains("id"));
 			var child = schema.getTables().stream()
 					.filter(t -> "metadata_child".equalsIgnoreCase(t.getName()))
 					.findFirst().orElseThrow();
