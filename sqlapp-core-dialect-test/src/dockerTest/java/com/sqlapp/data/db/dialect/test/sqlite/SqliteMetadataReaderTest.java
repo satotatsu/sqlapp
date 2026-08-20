@@ -42,6 +42,8 @@ class SqliteMetadataReaderTest {
 					  REFERENCES metadata_parent(id) ON DELETE CASCADE)
 					""");
 			statement.execute("CREATE INDEX idx_metadata_child_code ON metadata_child(code)");
+			statement.execute("CREATE INDEX idx_metadata_child_partial ON metadata_child(code) "
+					+ "WHERE parent_id > 0 AND code IS NOT NULL");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
 
 			var dialect = DialectResolver.getInstance().getDialect(connection);
@@ -71,6 +73,8 @@ class SqliteMetadataReaderTest {
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertNotNull(child.getIndexes().get("idx_metadata_child_code"));
+			assertEquals("parent_id > 0 AND code IS NOT NULL",
+					child.getIndexes().get("idx_metadata_child_partial").getWhere());
 			assertNotNull(schema.getViews().get("metadata_view"));
 		}
 	}

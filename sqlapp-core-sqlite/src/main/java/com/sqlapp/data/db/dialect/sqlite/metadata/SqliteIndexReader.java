@@ -12,6 +12,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
@@ -22,6 +24,8 @@ import com.sqlapp.data.schemas.SchemaProperties;
 
 /** Calls SQLite JDBC's index API once per table, as required by the driver. */
 public class SqliteIndexReader extends JdbcIndexReader {
+	private static final Pattern WHERE_PATTERN = Pattern.compile("(?is)\\bWHERE\\b\\s+(.+)$");
+
 	public SqliteIndexReader(final Dialect dialect) {
 		super(dialect);
 	}
@@ -38,10 +42,41 @@ public class SqliteIndexReader extends JdbcIndexReader {
 				result.addAll(getAllIndex(connection.getMetaData(), tableContext,
 						false));
 			}
+			loadPartialIndexPredicates(connection, result);
 			return result;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private void loadPartialIndexPredicates(final Connection connection,
+			final List<Index> indexes) throws SQLException {
+		for (Index index : indexes) {
+			final String schemaName = index.getSchemaName() == null
+					? "main" : index.getSchemaName();
+			final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
+					+ ".sqlite_schema WHERE type='index' AND name=?";
+			try (var statement = connection.prepareStatement(sql)) {
+				statement.setString(1, index.getName());
+				try (var resultSet = statement.executeQuery()) {
+					if (resultSet.next()) {
+						index.setWhere(extractWhere(resultSet.getString(1)));
+					}
+				}
+			}
+		}
+	}
+
+	static String extractWhere(final String sql) {
+		if (sql == null) {
+			return null;
+		}
+		final Matcher matcher = WHERE_PATTERN.matcher(sql);
+		return matcher.find() ? matcher.group(1).trim() : null;
+	}
+
+	private String quoteIdentifier(final String value) {
+		return "\"" + value.replace("\"", "\"\"") + "\"";
 	}
 
 	private List<String> tableNames(final ParametersContext context) {
