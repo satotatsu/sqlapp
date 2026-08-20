@@ -100,7 +100,7 @@ public class SybaseSchemaReader extends SchemaReader {
 
 	@Override
 	protected ViewReader newViewReader() {
-		return null;
+		return new SybaseViewReader(this.getDialect());
 	}
 
 	@Override
@@ -145,7 +145,7 @@ public class SybaseSchemaReader extends SchemaReader {
 
 	@Override
 	protected ProcedureReader newProcedureReader() {
-		return null;
+		return new SybaseProcedureReader(this.getDialect());
 	}
 
 	@Override

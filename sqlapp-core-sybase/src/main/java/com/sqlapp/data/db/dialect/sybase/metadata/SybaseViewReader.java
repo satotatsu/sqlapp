@@ -19,15 +19,25 @@
 
 package com.sqlapp.data.db.dialect.sybase.metadata;
 
+import static com.sqlapp.util.CommonUtils.list;
+
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.AbstractISViewReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
+import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ResultSetNextHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * SqlServerのビュー読み込み
@@ -39,6 +49,42 @@ public class SybaseViewReader extends AbstractISViewReader {
 
 	protected SybaseViewReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
+			ProductVersionInfo productVersionInfo) {
+		SqlNode node = getSqlNodeCache().getString("views.sql");
+		List<Table> result = list();
+		Map<Table, StringBuilder> definitions = new LinkedHashMap<>();
+		execute(connection, node, context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				String name = getString(rs, TABLE_NAME);
+				Table obj = result.isEmpty() ? null : result.get(result.size() - 1);
+				if (obj == null || !name.equals(obj.getName())) {
+					obj = superCreateTable(rs);
+					result.add(obj);
+					definitions.put(obj, new StringBuilder());
+				}
+				definitions.get(obj).append(getString(rs, "view_definition"));
+			}
+		});
+		definitions.forEach((obj, definition) -> setDefinition(obj, definition.toString()));
+		return result;
+	}
+
+	private Table superCreateTable(ExResultSet rs) throws SQLException {
+		return createTable(rs);
+	}
+
+	private void setDefinition(Table obj, String definition) {
+		if (this.getReaderOptions().isReadDefinition()) {
+			obj.setDefinition(definition);
+		}
+		if (this.getReaderOptions().isReadStatement()) {
+			obj.setStatement(SybaseUtils.getViewStatement(definition));
+		}
 	}
 
 	@Override
@@ -66,7 +112,7 @@ public class SybaseViewReader extends AbstractISViewReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
-		return new SybaseIndexReader(this.getDialect());
+		return null;
 	}
 
 	/*

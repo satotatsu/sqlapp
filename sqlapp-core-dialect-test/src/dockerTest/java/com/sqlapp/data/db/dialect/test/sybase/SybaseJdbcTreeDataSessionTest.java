@@ -61,6 +61,16 @@ class SybaseJdbcTreeDataSessionTest {
 						+ "/master", "sa", "sybase");
 				Statement statement = connection.createStatement()) {
 			try {
+				statement.execute("DROP PROCEDURE metadata_procedure");
+			} catch (SQLException ignored) {
+				// The isolated test container may not contain the procedure yet.
+			}
+			try {
+				statement.execute("DROP VIEW metadata_view");
+			} catch (SQLException ignored) {
+				// The isolated test container may not contain the view yet.
+			}
+			try {
 				statement.execute("DROP TABLE metadata_table");
 			} catch (SQLException ignored) {
 				// The isolated test container may not contain the table yet.
@@ -71,7 +81,11 @@ class SybaseJdbcTreeDataSessionTest {
 					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE INDEX idx_metadata_table_code ON metadata_table(code)");
-			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table")
+			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
+			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
+					+ "SELECT code FROM metadata_table WHERE id = @p_id");
+			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table", "metadata_view",
+					"metadata_procedure")
 					.orElseThrow();
 			var table = schema.getTables().get("metadata_table");
 			assertNotNull(table);
@@ -85,6 +99,10 @@ class SybaseJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
+			assertNotNull(schema.getViews().get("metadata_view"));
+			var procedure = schema.getProcedures().get("metadata_procedure");
+			assertNotNull(procedure);
+			assertTrue(procedure.getDefinition() != null || procedure.getStatement() != null);
 		}
 	}
 

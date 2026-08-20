@@ -24,7 +24,9 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ProcedureReader;
@@ -53,13 +55,21 @@ public class SybaseProcedureReader extends ProcedureReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Procedure> result = list();
+		final Map<Procedure, StringBuilder> definitions = new LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Procedure procedure = createProcedure(rs);
-				result.add(procedure);
+				String name = getString(rs, ROUTINE_NAME);
+				Procedure procedure = result.isEmpty() ? null : result.get(result.size() - 1);
+				if (procedure == null || !name.equals(procedure.getName())) {
+					procedure = createProcedure(rs);
+					result.add(procedure);
+					definitions.put(procedure, new StringBuilder());
+				}
+				definitions.get(procedure).append(getString(rs, "routine_definition"));
 			}
 		});
+		definitions.forEach((procedure, definition) -> setDefinition(procedure, definition.toString()));
 		return result;
 	}
 
@@ -85,6 +95,15 @@ public class SybaseProcedureReader extends ProcedureReader {
 			obj.setStatement(SybaseUtils.getViewStatement(difinition));
 		}
 		return obj;
+	}
+
+	private void setDefinition(Procedure obj, String definition) {
+		if (this.getReaderOptions().isReadDefinition()) {
+			obj.setDefinition(definition);
+		}
+		if (this.getReaderOptions().isReadStatement()) {
+			obj.setStatement(SybaseUtils.getViewStatement(definition));
+		}
 	}
 
 	@Override
