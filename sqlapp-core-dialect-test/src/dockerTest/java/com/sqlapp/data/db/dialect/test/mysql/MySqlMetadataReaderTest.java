@@ -92,7 +92,19 @@ class MySqlMetadataReaderTest {
 			assertNotNull(partitioned);
 			assertEquals(PartitioningType.Range,
 					partitioned.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Hash,
+					partitioned.getPartitioning().getSubPartitioningType());
+			assertEquals("bucket", partitioned.getPartitioning()
+					.getPartitioningColumns().get(0).getName());
+			assertEquals("id", partitioned.getPartitioning()
+					.getSubPartitioningColumns().get(0).getName());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
+			assertTrue(partitioned.getPartitioning().getPartitions().stream()
+					.allMatch(partition -> partition.getSubPartitions().size() == 2));
+			assertEquals("p0s0 comment", partitioned.getPartitioning().getPartitions()
+					.get("p0").getSubPartitions().get("p0s0").getRemarks());
+			assertNotNull(partitioned.getPartitioning().getPartitions()
+					.get("pmax").getSubPartitions().get("pmaxs1"));
 
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
@@ -156,10 +168,14 @@ class MySqlMetadataReaderTest {
 		statement.execute("""
 				CREATE TABLE metadata_partitioned (
 				 id BIGINT NOT NULL, bucket INT NOT NULL, PRIMARY KEY (id, bucket))
-				 PARTITION BY RANGE (bucket) (
-				  PARTITION p0 VALUES LESS THAN (10),
-				  PARTITION p1 VALUES LESS THAN (20),
-				  PARTITION pmax VALUES LESS THAN MAXVALUE)
+				 PARTITION BY RANGE (bucket)
+				 SUBPARTITION BY HASH (id) (
+				  PARTITION p0 VALUES LESS THAN (10) (
+				   SUBPARTITION p0s0 COMMENT='p0s0 comment', SUBPARTITION p0s1),
+				  PARTITION p1 VALUES LESS THAN (20) (
+				   SUBPARTITION p1s0, SUBPARTITION p1s1),
+				  PARTITION pmax VALUES LESS THAN MAXVALUE (
+				   SUBPARTITION pmaxs0, SUBPARTITION pmaxs1))
 				""");
 		statement.execute("CREATE TABLE metadata_audit (parent_id BIGINT NOT NULL)");
 		statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");

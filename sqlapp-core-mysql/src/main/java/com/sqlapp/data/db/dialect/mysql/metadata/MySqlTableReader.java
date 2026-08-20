@@ -186,6 +186,7 @@ public class MySqlTableReader extends TableReader {
 	}
 	
 	private void setPartitionDetails(final ExResultSet rs, final AbstractPartition<?> partition) throws SQLException{
+		partition.setRemarks(getString(rs, "PARTITION_COMMENT"));
 		partition.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		partition.setLastAlteredAt(rs.getTimestamp("UPDATE_TIME"));
 		Statistics.ROWS.setValue(rs, "TABLE_ROWS", partition);
