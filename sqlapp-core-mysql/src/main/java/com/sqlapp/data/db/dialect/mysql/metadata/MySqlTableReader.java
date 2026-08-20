@@ -164,7 +164,6 @@ public class MySqlTableReader extends TableReader {
 		if (partition == null) {
 			partition = new Partition(partitionName);
 			partition.setHighValue(partitionDescription);
-			partition.setRemarks(getString(rs, "PARTITION_COMMENT"));
 			if (subPartitionExpression==null){
 				setPartitionDetails(rs, partition);
 			}

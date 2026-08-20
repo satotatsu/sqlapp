@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.test.mariadb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -93,6 +94,12 @@ class MariadbMetadataReaderTest {
 					.allMatch(partition -> partition.getSubPartitions().size() == 2));
 			assertEquals("p0s0 comment", partitioned.getPartitioning().getPartitions()
 					.get("p0").getSubPartitions().get("p0s0").getRemarks());
+			assertNull(partitioned.getPartitioning().getPartitions()
+					.get("p0").getRemarks());
+			assertEquals("10", partitioned.getPartitioning().getPartitions()
+					.get("p0").getHighValue());
+			assertEquals("MAXVALUE", partitioned.getPartitioning().getPartitions()
+					.get("pmax").getHighValue());
 			assertNotNull(partitioned.getPartitioning().getPartitions()
 					.get("pmax").getSubPartitions().get("pmaxs1"));
 			var versioned = schema.getTables().get("metadata_versioned");
@@ -167,7 +174,7 @@ class MariadbMetadataReaderTest {
 				 id BIGINT NOT NULL, bucket INT NOT NULL, PRIMARY KEY (id, bucket))
 				 PARTITION BY RANGE (bucket)
 				 SUBPARTITION BY HASH (id) (
-				  PARTITION p0 VALUES LESS THAN (10) (
+				  PARTITION p0 VALUES LESS THAN (10) COMMENT='p0 comment' (
 				   SUBPARTITION p0s0 COMMENT='p0s0 comment', SUBPARTITION p0s1),
 				  PARTITION p1 VALUES LESS THAN (20) (
 				   SUBPARTITION p1s0, SUBPARTITION p1s1),
