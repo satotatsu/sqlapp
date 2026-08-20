@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.mysql.MySql840;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.ParameterDirection;
@@ -69,6 +70,14 @@ class MySqlMetadataReaderTest {
 			assertNotNull(parent.getConstraints().get("uk_metadata_parent_code"));
 			assertNotNull(parent.getConstraints().get("ck_metadata_parent_amount"));
 			assertNotNull(parent.getIndexes().get("idx_metadata_parent_name"));
+			assertTrue(!parent.getIndexes().get("idx_metadata_parent_invisible").isEnable());
+			var functionalIndex = parent.getIndexes().get("idx_metadata_parent_lower_name");
+			assertNotNull(functionalIndex);
+			assertTrue(functionalIndex.getColumns().get(0).getName()
+					.toLowerCase().contains("lower"));
+			var orderedIndex = parent.getIndexes().get("idx_metadata_parent_ordered");
+			assertEquals(Order.Desc, orderedIndex.getColumns().get(0).getOrder());
+			assertEquals(10L, orderedIndex.getColumns().get(1).getLength());
 
 			var child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
@@ -129,7 +138,10 @@ class MySqlMetadataReaderTest {
 				 PRIMARY KEY (id),
 				 CONSTRAINT uk_metadata_parent_code UNIQUE (code),
 				 CONSTRAINT ck_metadata_parent_amount CHECK (amount >= 0),
-				 INDEX idx_metadata_parent_name (name)
+				 INDEX idx_metadata_parent_name (name),
+				 INDEX idx_metadata_parent_invisible (amount) INVISIBLE,
+				 INDEX idx_metadata_parent_lower_name ((LOWER(name))),
+				 INDEX idx_metadata_parent_ordered (name DESC, code(10))
 				) COMMENT='metadata parent'
 				""");
 		statement.execute("""
