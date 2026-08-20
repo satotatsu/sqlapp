@@ -29,6 +29,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
@@ -75,6 +76,15 @@ class FirebirdJdbcTreeDataSessionTest {
 			assertNotNull(schema.getViews().get("PARENT_VIEW"));
 			assertNotNull(schema.getTriggers().get("TRG_PARENT_AUDIT"));
 			assertNotNull(schema.getSequences().get("METADATA_SEQUENCE"));
+			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
+			assertNotNull(procedure);
+			assertNotNull(procedure.getStatement());
+			assertNotNull(procedure.getArguments().get("P_ID"));
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get("P_ID").getDirection());
+			assertEquals(ParameterDirection.Output, procedure.getArguments().get("P_VALUE").getDirection());
+			var function = schema.getFunctions().get("METADATA_FUNCTION");
+			assertNotNull(function);
+			assertNotNull(function.getArguments().get("P_VALUE"));
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(3);
@@ -112,7 +122,8 @@ class FirebirdJdbcTreeDataSessionTest {
 
 	private Schema loadSchema(final Connection connection) throws SQLException {
 		return SchemaUtils.getSchema(connection, null, "PARENT_TABLE", "CHILD_TABLE", "PARENT_VIEW",
-				"METADATA_AUDIT", "TRG_PARENT_AUDIT", "METADATA_SEQUENCE")
+				"METADATA_AUDIT", "TRG_PARENT_AUDIT", "METADATA_SEQUENCE", "METADATA_PROCEDURE",
+				"METADATA_FUNCTION")
 				.orElseThrow(() -> new AssertionError("Firebird test schema was not loaded."));
 	}
 
@@ -131,6 +142,8 @@ class FirebirdJdbcTreeDataSessionTest {
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			dropObject(statement, "TRIGGER", "TRG_PARENT_AUDIT");
+			dropObject(statement, "PROCEDURE", "METADATA_PROCEDURE");
+			dropObject(statement, "FUNCTION", "METADATA_FUNCTION");
 			dropObject(statement, "VIEW", "PARENT_VIEW");
 			dropObject(statement, "SEQUENCE", "METADATA_SEQUENCE");
 			dropTable(statement, "METADATA_AUDIT");
@@ -160,6 +173,23 @@ class FirebirdJdbcTreeDataSessionTest {
 					AS
 					BEGIN
 					  INSERT INTO metadata_audit(parent_id) VALUES (NEW.id);
+					END
+					""");
+			statement.execute("""
+					CREATE PROCEDURE metadata_procedure(p_id BIGINT)
+					RETURNS (p_value BIGINT)
+					AS
+					BEGIN
+					  p_value = p_id + 1;
+					  SUSPEND;
+					END
+					""");
+			statement.execute("""
+					CREATE FUNCTION metadata_function(p_value BIGINT)
+					RETURNS BIGINT
+					AS
+					BEGIN
+					  RETURN p_value + 1;
 					END
 					""");
 			connection.commit();

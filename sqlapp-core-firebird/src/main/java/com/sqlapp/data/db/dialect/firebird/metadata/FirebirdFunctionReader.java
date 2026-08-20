@@ -31,6 +31,7 @@ import com.sqlapp.data.db.metadata.FunctionReader;
 import com.sqlapp.data.db.metadata.RoutineArgumentReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -58,14 +59,32 @@ public class FirebirdFunctionReader extends FunctionReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("functions.sql");
+		return getSqlNodeCache(FirebirdFunctionReader.class).getString("functions.sql");
 	}
 
 	protected Function createFunction(ExResultSet rs) throws SQLException {
-		String name = trim(getString(rs, "RDB$FUNCTIONS_NAME"));
-		// String source=trim(getString(rs, "RDB$PROCEDURE_SOURCE"));
-		Function obj = new Function(name);
-		return obj;
+		String name = trim(getString(rs, "RDB$FUNCTION_NAME"));
+		return new Function(name);
+	}
+
+	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Function> functions)
+			throws SQLException {
+		FirebirdFunctionArgumentReader reader = (FirebirdFunctionArgumentReader) newRoutineArgumentReader();
+		reader.setCatalogName(this.getCatalogName());
+		reader.setSchemaName(this.getSchemaName());
+		initializeChild(reader);
+		reader.setObjectName(null);
+		reader.setReadDbObjectPredicate((obj, metadataReader) -> true);
+		List<NamedArgument> arguments = reader.getAllFull(connection);
+		for (Function function : functions) {
+			function.setDialect(this.getDialect());
+			for (NamedArgument argument : arguments) {
+				if (function.getName().equals(argument.getRoutineName())) {
+					function.getArguments().add(argument);
+				}
+			}
+		}
 	}
 
 	/*

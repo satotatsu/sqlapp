@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.firebird.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.PackageBodyReader;
 import com.sqlapp.data.db.metadata.PackageReader;
+import com.sqlapp.data.db.metadata.FunctionReader;
 import com.sqlapp.data.db.metadata.SequenceReader;
 import com.sqlapp.data.db.metadata.TableReader;
 
@@ -55,5 +56,10 @@ public class Firebird30SchemaReader extends Firebird25SchemaReader {
 	@Override
 	protected SequenceReader newSequenceReader() {
 		return new Firebird30SequenceReader(this.getDialect());
+	}
+
+	@Override
+	protected FunctionReader newFunctionReader() {
+		return new Firebird30FunctionReader(this.getDialect());
 	}
 }
