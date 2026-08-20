@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.test.informix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -99,8 +100,10 @@ class InformixJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertTrue(descendingIndex.isUnique());
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
-			assertTrue(schema.getViews().stream().anyMatch(
-					view -> "parent_view".equalsIgnoreCase(view.getName())));
+			var view = schema.getViews().get("parent_view");
+			assertNotNull(view);
+			assertTrue(view.getStatement().toString().toLowerCase()
+					.contains("parent_table"), view.getStatement().toString());
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 

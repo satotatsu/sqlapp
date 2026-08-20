@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.informix.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcSchemaReader;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.db.metadata.ViewReader;
 
 /** Informix JDBC schema reader. */
 public class InformixSchemaReader extends JdbcSchemaReader {
@@ -18,5 +19,10 @@ public class InformixSchemaReader extends JdbcSchemaReader {
 	@Override
 	protected TableReader newTableReader() {
 		return new InformixTableReader(getDialect());
+	}
+
+	@Override
+	protected ViewReader newViewReader() {
+		return new InformixViewReader(getDialect());
 	}
 }
