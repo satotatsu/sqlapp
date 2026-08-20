@@ -32,6 +32,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -89,6 +90,11 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertTrue(child.getIndexes().stream().anyMatch(
 					index -> "idx_child_txt".equalsIgnoreCase(index.getName())));
+			var descendingIndex = child.getIndexes().stream()
+					.filter(index -> "idx_child_txt_desc".equalsIgnoreCase(index.getName()))
+					.findFirst().orElseThrow();
+			assertTrue(descendingIndex.isUnique());
+			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
 			assertTrue(schema.getViews().stream().anyMatch(
 					view -> "parent_view".equalsIgnoreCase(view.getName())));
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -155,6 +161,7 @@ class InformixJdbcTreeDataSessionTest {
 					)
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
+			statement.execute("CREATE UNIQUE INDEX idx_child_txt_desc ON child_table(txt DESC)");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
 			connection.commit();
 		}
