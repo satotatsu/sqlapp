@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcViewReader;
+import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
@@ -27,6 +28,11 @@ public class SqliteViewReader extends JdbcViewReader {
 
 	public SqliteViewReader(final Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected ColumnReader newColumnReader() {
+		return new SqliteColumnReader(getDialect());
 	}
 
 	@Override

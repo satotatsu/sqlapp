@@ -55,7 +55,8 @@ class SqliteMetadataReaderTest {
 					+ "BEGIN INSERT INTO metadata_audit(parent_id) VALUES (NEW.id); END");
 			statement.execute("ATTACH DATABASE ':memory:' AS analytics");
 			statement.execute("CREATE TABLE analytics.metadata_attached "
-					+ "(id INTEGER PRIMARY KEY, code TEXT UNIQUE)");
+					+ "(id INTEGER PRIMARY KEY, code TEXT NOT NULL UNIQUE, "
+					+ "status TEXT DEFAULT 'active')");
 			statement.execute("CREATE VIEW analytics.metadata_attached_view AS "
 					+ "SELECT id, code FROM metadata_attached");
 			statement.execute("CREATE TRIGGER analytics.trg_metadata_attached "
@@ -87,7 +88,7 @@ class SqliteMetadataReaderTest {
 			assertEquals("code", uniqueCode.getColumns().get(0).getName());
 			var child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
-			assertNotNull(child.getColumns().get("normalized_code"));
+			assertTrue(child.getColumns().get("normalized_code").isFormulaPersisted());
 			var foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
@@ -117,6 +118,10 @@ class SqliteMetadataReaderTest {
 					.findFirst().orElseThrow();
 			var attachedTable = attachedSchema.getTables().get("metadata_attached");
 			assertNotNull(attachedTable);
+			assertNotNull(attachedTable.getColumns().get("id"));
+			assertTrue(attachedTable.getColumns().get("code").isNotNull());
+			assertEquals("'active'",
+					attachedTable.getColumns().get("status").getDefaultValue());
 			assertTrue(attachedTable.getConstraints().stream()
 					.filter(UniqueConstraint.class::isInstance)
 					.map(UniqueConstraint.class::cast)

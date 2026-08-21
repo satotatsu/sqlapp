@@ -14,6 +14,7 @@ import java.util.Locale;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
 import com.sqlapp.data.db.metadata.IndexReader;
+import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.TableObjectReader;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -55,6 +56,11 @@ public class SqliteTableReader extends JdbcTableReader {
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	protected ColumnReader newColumnReader() {
+		return new SqliteColumnReader(getDialect());
 	}
 
 	@Override
