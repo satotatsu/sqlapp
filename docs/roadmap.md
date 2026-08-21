@@ -252,6 +252,16 @@ plan are recorded in `docs/dialect-enhancement-continuation.md`.
   Vertica exposes the current distributed value but not the original start
   value in its sequence catalog
 
+Vertica projections require a dedicated typed Schema model and must not be
+encoded as a collection of opaque `Table.specifics` keys. A normal projection
+is a physical table-storage and access layout rather than an independently
+queried materialized result, so it must not be represented as `Mview` either.
+The future model should preserve the anchor-table reference, ordered projection
+columns and expressions, sort positions, per-column encoding, segmentation
+expression, segmented/unsegmented state, superprojection and aggregate flags,
+`KSAFE`, and partition-range endpoints. Rename-sensitive references and XML
+round trips must be covered before a Vertica metadata reader is added.
+
 ### Shared design requirements
 
 Before implementing these items, compare equivalent concepts in the other

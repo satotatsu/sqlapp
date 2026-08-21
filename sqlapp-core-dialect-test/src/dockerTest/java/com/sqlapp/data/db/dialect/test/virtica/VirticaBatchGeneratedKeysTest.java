@@ -38,6 +38,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
@@ -67,7 +68,8 @@ class VirticaBatchGeneratedKeysTest {
 			statement.execute("DROP TABLE IF EXISTS metadata_child");
 			statement.execute("DROP TABLE IF EXISTS metadata_table");
 			statement.execute("DROP SEQUENCE IF EXISTS metadata_sequence");
-			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5");
+			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5 "
+					+ "MINVALUE 10 MAXVALUE 1000 CYCLE CACHE 7");
 			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, "
 					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
 					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
@@ -87,7 +89,12 @@ class VirticaBatchGeneratedKeysTest {
 					.findFirst().orElseThrow();
 			assertTrue(table.getColumns().get("id") != null);
 			assertTrue(table.getConstraints().getPrimaryKeyConstraint() != null);
-			assertNotNull(table.getConstraints().get("uk_metadata_table_code"));
+			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
+					.getColumns().get(0).getName());
+			var unique = table.getConstraints().get("uk_metadata_table_code");
+			assertNotNull(unique);
+			assertEquals("code", ((UniqueConstraint) unique)
+					.getColumns().get(0).getName());
 			var check = table.getConstraints().stream()
 					.filter(CheckConstraint.class::isInstance)
 					.map(CheckConstraint.class::cast).findFirst().orElseThrow();
@@ -104,10 +111,19 @@ class VirticaBatchGeneratedKeysTest {
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
-			assertTrue(schema.getViews().stream().anyMatch(
-					v -> "metadata_view".equalsIgnoreCase(v.getName())));
-			assertTrue(schema.getSequences().stream().anyMatch(
-					s -> "metadata_sequence".equalsIgnoreCase(s.getName())));
+			var view = schema.getViews().stream().filter(
+					v -> "metadata_view".equalsIgnoreCase(v.getName()))
+					.findFirst().orElseThrow();
+			assertTrue(view.getStatement().toString().toLowerCase()
+					.contains("metadata_table"));
+			var sequence = schema.getSequences().stream().filter(
+					s -> "metadata_sequence".equalsIgnoreCase(s.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(10L, sequence.getMinValue().longValue());
+			assertEquals(1000L, sequence.getMaxValue().longValue());
+			assertEquals(5L, sequence.getIncrementBy().longValue());
+			assertEquals(7L, sequence.getCacheSize().longValue());
+			assertTrue(sequence.isCycle());
 		}
 	}
 
