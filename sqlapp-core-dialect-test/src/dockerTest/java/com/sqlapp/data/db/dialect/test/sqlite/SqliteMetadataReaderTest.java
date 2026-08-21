@@ -52,8 +52,9 @@ class SqliteMetadataReaderTest {
 					+ "ON metadata_child(lower(code) DESC)");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
 			statement.execute("CREATE TABLE metadata_strict (id INTEGER PRIMARY KEY, value TEXT) STRICT");
-			statement.execute("CREATE TABLE metadata_without_rowid (id TEXT PRIMARY KEY, value TEXT) "
-					+ "WITHOUT ROWID");
+			statement.execute("CREATE TABLE metadata_without_rowid "
+					+ "(tenant_id TEXT, id TEXT, value TEXT, "
+					+ "PRIMARY KEY (tenant_id, id DESC)) WITHOUT ROWID");
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("CREATE TRIGGER trg_metadata_parent AFTER INSERT ON metadata_parent "
 					+ "BEGIN INSERT INTO metadata_audit(parent_id) VALUES (NEW.id); END");
@@ -126,6 +127,17 @@ class SqliteMetadataReaderTest {
 					.getSpecifics().get("strict", Boolean.class));
 			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_without_rowid")
 					.getSpecifics().get("without_rowid", Boolean.class));
+			var withoutRowidPrimaryKey = schema.getTables()
+					.get("metadata_without_rowid").getConstraints().stream()
+					.filter(UniqueConstraint.class::isInstance)
+					.map(UniqueConstraint.class::cast)
+					.filter(UniqueConstraint::isPrimaryKey)
+					.findFirst().orElseThrow();
+			assertEquals("tenant_id",
+					withoutRowidPrimaryKey.getColumns().get(0).getName());
+			assertEquals("id", withoutRowidPrimaryKey.getColumns().get(1).getName());
+			assertEquals(Order.Desc,
+					withoutRowidPrimaryKey.getColumns().get(1).getOrder());
 			var trigger = schema.getTriggers().get("trg_metadata_parent");
 			assertNotNull(trigger);
 			assertEquals("metadata_parent", trigger.getTableName());

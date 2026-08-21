@@ -17,6 +17,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
@@ -93,9 +94,50 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 			primaryKey.setSchemaName(getSchemaName(context));
 			primaryKey.setTableName(tableName);
 			columns.values().forEach(primaryKey.getColumns()::add);
+			loadPrimaryKeyOrders(connection, schemaName, tableName, primaryKey);
 			result.add(primaryKey);
 		}
 		return result;
+	}
+
+	private void loadPrimaryKeyOrders(final Connection connection,
+			final String schemaName, final String tableName,
+			final UniqueConstraint primaryKey) {
+		final String listSql = "PRAGMA " + quoteIdentifier(schemaName)
+				+ ".index_list(" + quoteString(tableName) + ")";
+		String primaryKeyIndex = null;
+		try (var statement = connection.createStatement();
+				ResultSet resultSet = statement.executeQuery(listSql)) {
+			final boolean hasOrigin = hasColumn(resultSet, "origin");
+			while (hasOrigin && resultSet.next()) {
+				if ("pk".equalsIgnoreCase(resultSet.getString("origin"))) {
+					primaryKeyIndex = resultSet.getString("name");
+					break;
+				}
+			}
+			if (primaryKeyIndex == null) {
+				return;
+			}
+			final String detailSql = "PRAGMA " + quoteIdentifier(schemaName)
+					+ ".index_xinfo(" + quoteString(primaryKeyIndex) + ")";
+			try (var detailStatement = connection.createStatement();
+					ResultSet details = detailStatement.executeQuery(detailSql)) {
+				if (!hasColumn(details, "desc")) {
+					return;
+				}
+				while (details.next()) {
+					final String columnName = details.getString("name");
+					if (columnName != null
+							&& primaryKey.getColumns().get(columnName) != null) {
+						primaryKey.getColumns().get(columnName).setOrder(
+								details.getBoolean("desc")
+										? Order.Desc : Order.Asc);
+					}
+				}
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private void loadColumns(final Connection connection,
