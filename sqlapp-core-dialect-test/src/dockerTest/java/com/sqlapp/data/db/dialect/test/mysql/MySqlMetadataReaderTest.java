@@ -130,7 +130,13 @@ class MySqlMetadataReaderTest {
 			assertNotNull(function.getDefinition());
 			assertNotNull(function.getArguments().get("p_amount"));
 			assertNotNull(function.getReturning().getDataType());
-			assertNotNull(schema.getTriggers().get("metadata_trigger"));
+			var trigger = schema.getTriggers().get("metadata_trigger");
+			assertNotNull(trigger);
+			assertEquals("metadata_parent", trigger.getTableName());
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertTrue(String.join("\n", trigger.getStatement())
+					.contains("metadata_audit"));
 			var event = schema.getEvents().get("metadata_event");
 			assertNotNull(event);
 			assertEquals("DAY", event.getIntervalField());

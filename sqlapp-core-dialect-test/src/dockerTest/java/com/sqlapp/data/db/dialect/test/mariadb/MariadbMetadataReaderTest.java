@@ -109,7 +109,10 @@ class MariadbMetadataReaderTest {
 					.getStartColumnName());
 			assertEquals("row_end", versioned.getTemporalPeriods().get(0)
 					.getEndColumnName());
-			assertNotNull(schema.getViews().get("metadata_view"));
+			var view = schema.getViews().get("metadata_view");
+			assertNotNull(view);
+			assertTrue(view.getDefinition().toString().contains("metadata_parent"));
+			assertEquals(2, view.getColumns().size());
 
 			var sequence = schema.getSequences().get("metadata_sequence");
 			assertNotNull(sequence);
@@ -129,7 +132,13 @@ class MariadbMetadataReaderTest {
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
 			assertNotNull(function.getArguments().get("p_amount"));
-			assertNotNull(schema.getTriggers().get("metadata_trigger"));
+			var trigger = schema.getTriggers().get("metadata_trigger");
+			assertNotNull(trigger);
+			assertEquals("metadata_parent", trigger.getTableName());
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertTrue(String.join("\n", trigger.getStatement())
+					.contains("metadata_audit"));
 			assertNotNull(schema.getEvents().get("metadata_event"));
 		}
 	}
