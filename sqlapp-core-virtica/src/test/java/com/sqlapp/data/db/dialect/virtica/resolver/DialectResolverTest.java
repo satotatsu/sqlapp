@@ -34,6 +34,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.virtica.Virtica;
 import com.sqlapp.data.db.dialect.virtica.Virtica11_1_1;
+import com.sqlapp.data.db.dialect.virtica.Virtica12_0_4;
 import com.sqlapp.data.db.dialect.virtica.Virtica80;
 import com.sqlapp.data.db.dialect.virtica.Virtica90;
 import com.sqlapp.data.db.datatype.DataType;
@@ -49,6 +50,7 @@ public class DialectResolverTest {
 		assertTrue(dialect instanceof Virtica90);
 		dialect = DialectResolver.getInstance().getDialect("Vertica Analytic Database", 12, 0, 0);
 		assertTrue(dialect instanceof Virtica11_1_1);
+		assertFalse(dialect instanceof Virtica12_0_4);
 		assertTrue(dialect.supportsValues());
 		dialect = DialectResolver.getInstance().getDialect("Vertica", 11, 1, 0);
 		assertTrue(dialect instanceof Virtica90);
@@ -56,6 +58,8 @@ public class DialectResolverTest {
 		dialect = DialectResolver.getInstance().getDialect("Vertica", 11, 1, 1);
 		assertTrue(dialect instanceof Virtica11_1_1);
 		assertTrue(dialect.supportsValues());
+		dialect = DialectResolver.getInstance().getDialect("Vertica", 12, 0, 4);
+		assertTrue(dialect instanceof Virtica12_0_4);
 		dialect = DialectResolver.getInstance().getDialect("Vertica", 8, 1, 0);
 		assertTrue(dialect instanceof Virtica80);
 		assertFalse(dialect instanceof Virtica90);
@@ -75,13 +79,18 @@ public class DialectResolverTest {
 		assertCatalogReader(9, 0, 0, false);
 		assertCatalogReader(11, 1, 0, false);
 		assertCatalogReader(11, 1, 1, true);
+		assertCatalogReader(12, 0, 3, true);
+		assertCatalogReader(12, 0, 4, true);
 		assertCatalogReader(25, 1, 0, true);
 	}
 
 	private void assertCatalogReader(int major, int minor, int revision,
 			boolean supportsStoredProcedures) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Vertica", major, minor, revision);
-		assertEquals(supportsStoredProcedures ? "Virtica11_1_1CatalogReader" : "VirticaCatalogReader",
+		boolean supportsScheduledEvents = major > 12
+				|| (major == 12 && (minor > 0 || (minor == 0 && revision >= 4)));
+		assertEquals(supportsScheduledEvents ? "Virtica12_0_4CatalogReader"
+				: supportsStoredProcedures ? "Virtica11_1_1CatalogReader" : "VirticaCatalogReader",
 				dialect.getCatalogReader().getClass().getSimpleName());
 		assertEquals("VirticaRoleMemberReader", dialect.getCatalogReader()
 				.getRoleMemberReader().getClass().getSimpleName());
@@ -93,6 +102,11 @@ public class DialectResolverTest {
 			assertNotNull(dialect.getCatalogReader().getSchemaReader().getProcedureReader());
 		} else {
 			assertNull(dialect.getCatalogReader().getSchemaReader().getProcedureReader());
+		}
+		if (supportsScheduledEvents) {
+			assertNotNull(dialect.getCatalogReader().getSchemaReader().getEventReader());
+		} else {
+			assertNull(dialect.getCatalogReader().getSchemaReader().getEventReader());
 		}
 	}
 

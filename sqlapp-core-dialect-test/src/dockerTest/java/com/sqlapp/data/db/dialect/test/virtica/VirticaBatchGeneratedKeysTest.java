@@ -36,6 +36,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.EventType;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SqlSecurity;
@@ -66,6 +67,14 @@ class VirticaBatchGeneratedKeysTest {
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP TRIGGER IF EXISTS metadata_schedule_trigger");
+			statement.execute("DROP SCHEDULE IF EXISTS metadata_schedule");
+			statement.execute("DROP PROCEDURE IF EXISTS metadata_scheduled_procedure()");
+			statement.execute("CREATE PROCEDURE metadata_scheduled_procedure() LANGUAGE PLvSQL "
+					+ "AS $$ BEGIN RAISE NOTICE 'scheduled'; END; $$");
+			statement.execute("CREATE SCHEDULE metadata_schedule USING CRON '0 3 * * *'");
+			statement.execute("CREATE TRIGGER metadata_schedule_trigger ON SCHEDULE metadata_schedule "
+					+ "EXECUTE PROCEDURE metadata_scheduled_procedure() AS DEFINER");
 			statement.execute("DROP TEXT INDEX IF EXISTS metadata_text_index");
 			statement.execute("DROP TABLE IF EXISTS metadata_text");
 			statement.execute("CREATE TABLE metadata_text (id BIGINT NOT NULL, content VARCHAR(200), "
@@ -236,6 +245,15 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(IndexType.FullText, textIndex.getIndexType());
 			assertEquals("content", textIndex.getColumns().get(0).getName());
 			assertNotNull(textIndex.getSpecifics().get("TOKENIZER_NAME"));
+			var event = schema.getEvents().stream().filter(
+					e -> "metadata_schedule_trigger".equalsIgnoreCase(e.getName()))
+					.findFirst().orElseThrow();
+			assertTrue(event.isEnable());
+			assertEquals(EventType.Recurring, event.getEventType());
+			assertEquals("metadata_scheduled_procedure",
+					event.getSpecifics().get("PROCEDURE_NAME"));
+			assertEquals("metadata_schedule", event.getSpecifics().get("SCHEDULE_NAME"));
+			assertEquals("0 3 * * *", event.getSpecifics().get("DATE_TIME_STRING"));
 		}
 	}
 

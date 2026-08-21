@@ -57,7 +57,10 @@ public class VirticaDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion > 11 || (majorVersion == 11 && (minorVersion > 1
+			if (majorVersion > 12 || (majorVersion == 12 && (minorVersion > 0
+					|| (minorVersion == 0 && revision != null && revision >= 4)))) {
+				return DialectHolder.defaultDialect12_0_4;
+			} else if (majorVersion > 11 || (majorVersion == 11 && (minorVersion > 1
 					|| (minorVersion == 1 && revision != null && revision >= 1)))) {
 				return DialectHolder.defaultDialect11_1_1;
 			} else if (majorVersion >= 9) {
