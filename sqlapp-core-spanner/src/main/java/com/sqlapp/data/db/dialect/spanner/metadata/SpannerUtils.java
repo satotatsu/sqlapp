@@ -18,9 +18,19 @@
  */
 
 package com.sqlapp.data.db.dialect.spanner.metadata;
+
+import java.util.Locale;
+
 import com.sqlapp.data.db.metadata.ReaderUtils;
+import com.sqlapp.data.schemas.Order;
 
 
 public class SpannerUtils extends ReaderUtils {
 
+	static Order parseOrder(final String value) {
+		if (value == null) {
+			return null;
+		}
+		return Order.parse(value.toUpperCase(Locale.ROOT));
+	}
 }

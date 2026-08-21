@@ -26,6 +26,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.spanner.Spanner;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Cloud Spanner emulator integration coverage for MetadataReader. */
@@ -76,7 +77,7 @@ class SpannerMetadataReaderTest {
 					) PRIMARY KEY (id)
 					""");
 			statement.execute("CREATE INDEX idx_metadata_child_code "
-					+ "ON metadata_child(code)");
+					+ "ON metadata_child(code DESC)");
 			statement.execute("CREATE NULL_FILTERED INDEX idx_metadata_child_filtered "
 					+ "ON metadata_child(code) STORING (parent_id)");
 			statement.execute("""
@@ -84,7 +85,7 @@ class SpannerMetadataReaderTest {
 					 id INT64 NOT NULL,
 					 child_id INT64 NOT NULL,
 					 payload STRING(30)
-					) PRIMARY KEY (id, child_id),
+					) PRIMARY KEY (id, child_id DESC),
 					INTERLEAVE IN PARENT metadata_parent ON DELETE CASCADE
 					""");
 			statement.execute("CREATE VIEW metadata_view SQL SECURITY INVOKER AS "
@@ -107,7 +108,9 @@ class SpannerMetadataReaderTest {
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
 			assertTrue(parent.getIndexes().get("uq_metadata_parent_code").isUnique());
 			var child = schema.getTables().get("metadata_child");
-			assertNotNull(child.getIndexes().get("idx_metadata_child_code"));
+			var orderedIndex = child.getIndexes().get("idx_metadata_child_code");
+			assertNotNull(orderedIndex);
+			assertEquals(Order.Desc, orderedIndex.getColumns().get(0).getOrder());
 			var filteredIndex = child.getIndexes().get("idx_metadata_child_filtered");
 			assertNotNull(filteredIndex);
 			assertEquals(Boolean.TRUE,
@@ -123,7 +126,17 @@ class SpannerMetadataReaderTest {
 			assertNotNull(interleaved);
 			assertEquals("metadata_parent", interleaved.getSpecifics().get("parent_table_name"));
 			assertEquals("CASCADE", interleaved.getSpecifics().get("on_delete_action"));
-			assertNotNull(schema.getSequences().get("metadata_sequence"));
+			var interleavedPrimaryKey = interleaved.getConstraints().stream()
+					.filter(UniqueConstraint.class::isInstance)
+					.map(UniqueConstraint.class::cast)
+					.filter(UniqueConstraint::isPrimaryKey)
+					.findFirst().orElseThrow();
+			assertEquals("id", interleavedPrimaryKey.getColumns().get(0).getName());
+			assertEquals("child_id", interleavedPrimaryKey.getColumns().get(1).getName());
+			assertEquals(Order.Desc, interleavedPrimaryKey.getColumns().get(1).getOrder());
+			var sequence = schema.getSequences().get("metadata_sequence");
+			assertNotNull(sequence);
+			assertEquals(1000L, sequence.getStartValue().longValue());
 			assertNotNull(schema.getViews().get("metadata_view"));
 		}
 	}

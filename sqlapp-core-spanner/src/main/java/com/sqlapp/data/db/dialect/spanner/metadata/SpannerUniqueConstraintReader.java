@@ -31,7 +31,6 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.CommonUtils;
@@ -74,7 +73,8 @@ public class SpannerUniqueConstraintReader extends UniqueConstraintReader {
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(tableName);
-				c.getColumns().add(column, Order.parse(getString(rs, "column_ordering")));
+				c.getColumns().add(column,
+						SpannerUtils.parseOrder(getString(rs, "column_ordering")));
 			}
 		});
 		return map.toList();

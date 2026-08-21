@@ -32,7 +32,6 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
-import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.jdbc.ExResultSet;
@@ -83,7 +82,7 @@ public class SpannerIndexReader extends IndexReader {
 					index.getIncludes().add(new Column(columnName));
 				} else {
 					index.getColumns().add(new Column(columnName),
-							Order.parse(getString(rs, "column_ordering")));
+							SpannerUtils.parseOrder(getString(rs, "column_ordering")));
 				}
 			}
 		});
