@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.spanner.Spanner;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Order;
@@ -76,12 +77,24 @@ class SpannerMetadataReaderTest {
 			statement.execute("CREATE UNIQUE INDEX uq_metadata_parent_code "
 					+ "ON metadata_parent(code)");
 			statement.execute("""
+					CREATE TABLE metadata_composite_parent (
+					 tenant_id INT64 NOT NULL,
+					 parent_id INT64 NOT NULL
+					) PRIMARY KEY (tenant_id, parent_id)
+					""");
+			statement.execute("""
 					CREATE TABLE metadata_child (
 					 id INT64 NOT NULL,
 					 parent_id INT64 NOT NULL,
+					 tenant_id INT64,
+					 composite_parent_id INT64,
 					 code STRING(30),
 					 CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id)
-					  REFERENCES metadata_parent (id)
+					  REFERENCES metadata_parent (id) NOT ENFORCED,
+					 CONSTRAINT fk_metadata_child_composite
+					  FOREIGN KEY (tenant_id, composite_parent_id)
+					  REFERENCES metadata_composite_parent (tenant_id, parent_id)
+					  ON DELETE CASCADE
 					) PRIMARY KEY (id)
 					""");
 			statement.execute("CREATE INDEX idx_metadata_child_code "
@@ -142,9 +155,29 @@ class SpannerMetadataReaderTest {
 			var foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
+					.filter(constraint -> "fk_metadata_child_parent"
+							.equals(constraint.getName()))
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
+			assertTrue(!foreignKey.isEnable());
+			assertNotNull(foreignKey.getSpecifics().get("spanner_state"));
+			var compositeForeignKey = child.getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.filter(constraint -> "fk_metadata_child_composite"
+							.equals(constraint.getName()))
+					.findFirst().orElseThrow();
+			assertEquals("tenant_id",
+					compositeForeignKey.getColumns().get(0).getName());
+			assertEquals("composite_parent_id",
+					compositeForeignKey.getColumns().get(1).getName());
+			assertEquals("tenant_id",
+					compositeForeignKey.getRelatedColumns().get(0).getName());
+			assertEquals("parent_id",
+					compositeForeignKey.getRelatedColumns().get(1).getName());
+			assertEquals(CascadeRule.Cascade, compositeForeignKey.getDeleteRule());
+			assertTrue(compositeForeignKey.isEnable());
 			var interleaved = schema.getTables().get("metadata_interleaved_child");
 			assertNotNull(interleaved);
 			assertEquals("metadata_parent", interleaved.getSpecifics().get("parent_table_name"));

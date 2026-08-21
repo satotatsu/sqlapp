@@ -113,6 +113,8 @@ public class SpannerForeignKeyConstraintReader extends ForeignKeyConstraintReade
 		c.setMatchOption(getString(rs, MATCH_OPTION));
 		c.setUpdateRule(getString(rs, UPDATE_RULE));
 		c.setDeleteRule(getString(rs, DELETE_RULE));
+		c.setEnable(!"NO".equalsIgnoreCase(getString(rs, "enforced")));
+		setSpecifics(rs, "spanner_state", c);
 		return c;
 	}
 }
