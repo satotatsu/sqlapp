@@ -25,6 +25,7 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,8 +75,7 @@ public class VirticaFunctionReader extends FunctionReader {
 		obj.setRemarks(getString(rs, "COMMENT"));
 		setReturning(rs, obj);
 		String args=getString(rs, "FUNCTION_ARGUMENT_TYPE");
-		String[] splits=args.split("\\s*,\\s*");
-		for(String split:splits){
+		for(String split:splitArguments(args)){
 			NamedArgument argument=createNamedArgument(split);
 			obj.getArguments().add(argument);
 		}
@@ -103,7 +103,29 @@ public class VirticaFunctionReader extends FunctionReader {
 		return obj;
 	}
 
-	private static final Pattern NAMED_ARGUMENT_PATTERN=Pattern.compile("\\s*([^\\s])\\s+(.*)");
+	protected List<String> splitArguments(String parameters) {
+		List<String> result = new ArrayList<>();
+		if (parameters == null || parameters.trim().isEmpty()) {
+			return result;
+		}
+		int start = 0;
+		int depth = 0;
+		for (int i = 0; i < parameters.length(); i++) {
+			char c = parameters.charAt(i);
+			if (c == '(') {
+				depth++;
+			} else if (c == ')' && depth > 0) {
+				depth--;
+			} else if (c == ',' && depth == 0) {
+				result.add(parameters.substring(start, i).trim());
+				start = i + 1;
+			}
+		}
+		result.add(parameters.substring(start).trim());
+		return result;
+	}
+
+	private static final Pattern NAMED_ARGUMENT_PATTERN=Pattern.compile("\\s*(\\S+)\\s+(.+)");
 	
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("functions.sql");

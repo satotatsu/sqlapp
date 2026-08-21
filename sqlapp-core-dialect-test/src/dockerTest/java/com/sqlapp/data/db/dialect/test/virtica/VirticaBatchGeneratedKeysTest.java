@@ -64,6 +64,9 @@ class VirticaBatchGeneratedKeysTest {
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP FUNCTION IF EXISTS metadata_zero_if_null(INT)");
+			statement.execute("CREATE FUNCTION metadata_zero_if_null(input_value INT) RETURN INT "
+					+ "AS BEGIN RETURN (CASE WHEN input_value IS NULL THEN 0 ELSE input_value END); END");
 			statement.execute("DROP USER IF EXISTS metadata_user");
 			statement.execute("DROP ROLE IF EXISTS metadata_role");
 			statement.execute("CREATE ROLE metadata_role");
@@ -179,6 +182,15 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(7L, sequence.getCacheSize().longValue());
 			assertTrue(sequence.isCycle());
 			assertEquals("metadata sequence comment", sequence.getRemarks());
+			var function = schema.getFunctions().stream().filter(
+					f -> "metadata_zero_if_null".equalsIgnoreCase(f.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(1, function.getArguments().size());
+			assertEquals("input_value", function.getArguments().get(0).getName());
+			assertEquals(DataType.BIGINT, function.getArguments().get(0).getDataType());
+			assertEquals(DataType.BIGINT, function.getReturning().getDataType());
+			assertTrue(function.getDefinition().stream().anyMatch(
+					line -> line.toLowerCase().contains("input_value")));
 		}
 	}
 
