@@ -117,7 +117,7 @@ public class VirticaTableReader extends TableReader {
 
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
-		return null;
+		return new VirticaCheckConstraintReader(this.getDialect());
 	}
 
 	@Override

@@ -33,6 +33,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
@@ -69,7 +70,8 @@ class VirticaBatchGeneratedKeysTest {
 			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5");
 			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, "
 					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
-					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code)) PARTITION BY id");
+					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
+					+ "CONSTRAINT ck_metadata_table_code CHECK (code <> '')) PARTITION BY id");
 			statement.execute("CREATE TABLE metadata_child (id BIGINT NOT NULL, parent_id BIGINT NOT NULL, "
 					+ "CONSTRAINT pk_metadata_child PRIMARY KEY (id), "
 					+ "CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id) "
@@ -86,6 +88,11 @@ class VirticaBatchGeneratedKeysTest {
 			assertTrue(table.getColumns().get("id") != null);
 			assertTrue(table.getConstraints().getPrimaryKeyConstraint() != null);
 			assertNotNull(table.getConstraints().get("uk_metadata_table_code"));
+			var check = table.getConstraints().stream()
+					.filter(CheckConstraint.class::isInstance)
+					.map(CheckConstraint.class::cast).findFirst().orElseThrow();
+			assertEquals("ck_metadata_table_code", check.getName());
+			assertTrue(check.isEnable());
 			assertTrue(table.getSpecifics().get("PARTITION_EXPRESSION")
 					.toLowerCase().contains("id"));
 			var child = schema.getTables().stream()
