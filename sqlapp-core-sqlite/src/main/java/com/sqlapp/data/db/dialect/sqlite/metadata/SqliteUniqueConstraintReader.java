@@ -8,10 +8,12 @@ package com.sqlapp.data.db.dialect.sqlite.metadata;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcPrimaryKeyConstraintReader;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -62,12 +64,38 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 
 	private List<UniqueConstraint> readPrimaryKeys(final Connection connection,
 			final ParametersContext context) {
-		final JdbcPrimaryKeyConstraintReader reader =
-				new JdbcPrimaryKeyConstraintReader(getDialect());
-		reader.setCatalogName(getCatalogName(context));
-		reader.setSchemaName(getSchemaName(context));
-		reader.setObjectName(getTableName(context));
-		return reader.getAll(connection);
+		final List<UniqueConstraint> result = new ArrayList<>();
+		final String tableName = getTableName(context);
+		if (tableName == null) {
+			return result;
+		}
+		final String schemaName = getSchemaName(context) == null
+				? "main" : getSchemaName(context);
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
+				+ ".table_info(" + quoteString(tableName) + ")";
+		final Map<Integer, String> columns = new TreeMap<>();
+		try (var statement = connection.createStatement();
+				ResultSet resultSet = statement.executeQuery(sql)) {
+			while (resultSet.next()) {
+				final int position = resultSet.getInt("pk");
+				if (position > 0) {
+					columns.put(position, resultSet.getString("name"));
+				}
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+		if (!columns.isEmpty()) {
+			final UniqueConstraint primaryKey = new UniqueConstraint(null, true);
+			primaryKey.setDialect(getDialect());
+			primaryKey.setPrimaryKey(true);
+			primaryKey.setCatalogName(getCatalogName(context));
+			primaryKey.setSchemaName(getSchemaName(context));
+			primaryKey.setTableName(tableName);
+			columns.values().forEach(primaryKey.getColumns()::add);
+			result.add(primaryKey);
+		}
+		return result;
 	}
 
 	private void loadColumns(final Connection connection,

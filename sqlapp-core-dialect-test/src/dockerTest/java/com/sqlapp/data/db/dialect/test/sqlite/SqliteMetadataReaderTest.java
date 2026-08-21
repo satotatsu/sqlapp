@@ -53,6 +53,12 @@ class SqliteMetadataReaderTest {
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("CREATE TRIGGER trg_metadata_parent AFTER INSERT ON metadata_parent "
 					+ "BEGIN INSERT INTO metadata_audit(parent_id) VALUES (NEW.id); END");
+			statement.execute("ATTACH DATABASE ':memory:' AS analytics");
+			statement.execute("CREATE TABLE analytics.metadata_attached "
+					+ "(id INTEGER PRIMARY KEY, code TEXT UNIQUE)");
+			statement.execute("CREATE TRIGGER analytics.trg_metadata_attached "
+					+ "AFTER UPDATE ON metadata_attached BEGIN SELECT NEW.id; END");
+			statement.execute("CREATE TEMP TABLE metadata_temp (id INTEGER PRIMARY KEY)");
 
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Sqlite.class, dialect);
@@ -104,6 +110,21 @@ class SqliteMetadataReaderTest {
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
 			assertNotNull(trigger.getDefinition());
 			assertTrue(trigger.getStatement().get(0).startsWith("INSERT INTO metadata_audit"));
+			var attachedSchema = schemas.stream()
+					.filter(s -> "analytics".equals(s.getName()))
+					.findFirst().orElseThrow();
+			var attachedTable = attachedSchema.getTables().get("metadata_attached");
+			assertNotNull(attachedTable);
+			assertTrue(attachedTable.getConstraints().stream()
+					.filter(UniqueConstraint.class::isInstance)
+					.map(UniqueConstraint.class::cast)
+					.anyMatch(constraint -> !constraint.isPrimaryKey()
+							&& "code".equals(constraint.getColumns().get(0).getName())));
+			assertNotNull(attachedSchema.getTriggers().get("trg_metadata_attached"));
+			var tempSchema = schemas.stream()
+					.filter(s -> "temp".equals(s.getName()))
+					.findFirst().orElseThrow();
+			assertNotNull(tempSchema.getTables().get("metadata_temp"));
 		}
 	}
 }

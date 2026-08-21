@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.sqlite.metadata;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,13 +30,31 @@ public class SqliteTableReader extends JdbcTableReader {
 	protected List<Table> doGetAll(final Connection connection,
 			final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final List<Table> tables = super.doGetAll(connection, context,
-				productVersionInfo);
-		// SQLite JDBC exposes the backing indexes of UNIQUE constraints through
-		// getTables() as well. They are indexes, not Schema model tables.
-		tables.removeIf(table -> table.getName() != null
-				&& table.getName().startsWith("sqlite_autoindex_"));
-		return tables;
+		final List<Table> tables = new ArrayList<>();
+		final String schemaName = getSchemaName(context) == null
+				? "main" : getSchemaName(context);
+		final String requestedTable = getObjectName(context);
+		final String sql = "SELECT name FROM " + quoteIdentifier(schemaName)
+				+ ".sqlite_schema WHERE type='table' "
+				+ "AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY name";
+		try (var statement = connection.createStatement();
+				var resultSet = statement.executeQuery(sql)) {
+			while (resultSet.next()) {
+				final String tableName = resultSet.getString("name");
+				if (requestedTable != null
+						&& !requestedTable.equalsIgnoreCase(tableName)) {
+					continue;
+				}
+				final Table table = new Table(tableName);
+				table.setDialect(getDialect());
+				table.setCatalogName(getCatalogName(context));
+				table.setSchemaName(schemaName);
+				tables.add(table);
+			}
+			return tables;
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
