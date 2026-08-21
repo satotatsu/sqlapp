@@ -97,6 +97,8 @@ class SybaseJdbcTreeDataSessionTest {
 					.orElseThrow();
 			var table = schema.getTables().get("metadata_table");
 			assertNotNull(table);
+			assertEquals(Boolean.TRUE,
+					table.getSpecifics().get("has_clustered_index", Boolean.class));
 			assertTrue(table.getColumns().get("id").isIdentity());
 			assertTrue(table.getColumns().get("code").getDefaultValue()
 					.contains("unknown"));

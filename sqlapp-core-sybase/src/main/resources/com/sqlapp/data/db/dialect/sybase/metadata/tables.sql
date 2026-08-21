@@ -5,7 +5,10 @@ SELECT
   , so.id AS table_id
   , so.crdate AS create_date
   , NULL AS text_in_row_limit
-  , NULL AS has_clustered_index
+  , CASE WHEN EXISTS (
+      SELECT 1 FROM sysindexes si
+      WHERE si.id = so.id AND si.indid = 1
+    ) THEN 1 ELSE 0 END AS has_clustered_index
   , NULL AS file_group_name
   , NULL AS lob_file_group_name
 FROM sysobjects so
