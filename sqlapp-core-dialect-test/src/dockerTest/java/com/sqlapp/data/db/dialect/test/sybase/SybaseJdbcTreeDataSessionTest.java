@@ -88,6 +88,8 @@ class SybaseJdbcTreeDataSessionTest {
 					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE INDEX idx_metadata_table_code ON metadata_table(code)");
+			statement.execute("sp_chgattribute 'metadata_table.idx_metadata_table_code', "
+					+ "'fillfactor', 70");
 			statement.execute("CREATE INDEX idx_metadata_table_code_desc ON metadata_table(code DESC)");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
@@ -111,7 +113,10 @@ class SybaseJdbcTreeDataSessionTest {
 			assertEquals("code", unique.getColumns().get(0).getName());
 			assertTrue(table.getConstraints().stream()
 					.anyMatch(CheckConstraint.class::isInstance));
-			assertNotNull(table.getIndexes().get("idx_metadata_table_code"));
+			var codeIndex = table.getIndexes().get("idx_metadata_table_code");
+			assertNotNull(codeIndex);
+			assertEquals("70",
+					codeIndex.getSpecifics().get("fill_factor").toString());
 			assertEquals(Order.Desc, table.getIndexes().get("idx_metadata_table_code_desc")
 					.getColumns().get(0).getOrder());
 			var foreignKey = table.getConstraints().stream()

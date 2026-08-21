@@ -8,7 +8,7 @@ SELECT
 , CASE WHEN (si.status & 2048) = 2048 THEN 1 ELSE 0 END AS is_primary_key
 , CASE si.indid WHEN 1 THEN 1 ELSE 2 END AS type
 , 0 AS is_disabled
-, NULL AS fill_factor
+, si.fill_factor AS fill_factor
 , NULL AS pad_index
 , NULL AS allow_row_locks
 , NULL AS allow_page_locks

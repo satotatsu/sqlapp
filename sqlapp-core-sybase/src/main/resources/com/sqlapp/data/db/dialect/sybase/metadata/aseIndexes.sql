@@ -7,7 +7,7 @@ SELECT
 , n.number AS keyno
 , CASE WHEN (si.status & 2) = 2 THEN 1 ELSE 0 END AS is_unique
 , CASE si.indid WHEN 1 THEN 1 ELSE 2 END AS type
-, NULL AS fill_factor
+, si.fill_factor AS fill_factor
 , NULL AS pad_index
 , NULL AS allow_row_locks
 , NULL AS allow_page_locks
