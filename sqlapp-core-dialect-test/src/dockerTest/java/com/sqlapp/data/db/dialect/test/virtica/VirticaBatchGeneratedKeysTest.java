@@ -70,15 +70,18 @@ class VirticaBatchGeneratedKeysTest {
 			statement.execute("DROP SEQUENCE IF EXISTS metadata_sequence");
 			statement.execute("CREATE SEQUENCE metadata_sequence START 100 INCREMENT 5 "
 					+ "MINVALUE 10 MAXVALUE 1000 CYCLE CACHE 7");
-			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, "
-					+ "code VARCHAR(30), CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
-					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
+			statement.execute("CREATE TABLE metadata_table (id BIGINT NOT NULL, identity_id IDENTITY(100, 5, 7) NOT NULL, "
+					+ "code VARCHAR(30) DEFAULT 'unknown', CONSTRAINT pk_metadata_table PRIMARY KEY (id) ENABLED, "
+					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code) ENABLED, "
 					+ "CONSTRAINT ck_metadata_table_code CHECK (code <> '')) PARTITION BY id");
 			statement.execute("CREATE TABLE metadata_child (id BIGINT NOT NULL, parent_id BIGINT NOT NULL, "
-					+ "CONSTRAINT pk_metadata_child PRIMARY KEY (id), "
+					+ "CONSTRAINT pk_metadata_child PRIMARY KEY (id) ENABLED, "
 					+ "CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
+			statement.execute("COMMENT ON TABLE metadata_table IS 'metadata table comment'");
+			statement.execute("COMMENT ON COLUMN metadata_table.code IS 'metadata code comment'");
+			statement.execute("COMMENT ON SEQUENCE metadata_sequence IS 'metadata sequence comment'");
 			var schema = DialectResolver.getInstance().getDialect(connection)
 					.getCatalogReader().getSchemaReader().getAllFull(connection)
 					.stream().filter(s -> s.getTables().stream().anyMatch(
@@ -88,9 +91,16 @@ class VirticaBatchGeneratedKeysTest {
 					.filter(t -> "metadata_table".equalsIgnoreCase(t.getName()))
 					.findFirst().orElseThrow();
 			assertTrue(table.getColumns().get("id") != null);
-			assertTrue(table.getConstraints().getPrimaryKeyConstraint() != null);
-			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
-					.getColumns().get(0).getName());
+			assertTrue(table.getColumns().get("identity_id").isIdentity());
+			assertEquals(5L, table.getColumns().get("identity_id").getIdentityStep().longValue());
+			assertEquals(7, table.getColumns().get("identity_id").getIdentityCacheSize().intValue());
+			assertNotNull(table.getColumns().get("identity_id").getSequenceName());
+			assertEquals("'unknown'", table.getColumns().get("code").getDefaultValue());
+			assertEquals("metadata table comment", table.getRemarks());
+			assertEquals("metadata code comment", table.getColumns().get("code").getRemarks());
+			var primary = table.getConstraints().get("pk_metadata_table");
+			assertNotNull(primary);
+			assertEquals("id", ((UniqueConstraint) primary).getColumns().get(0).getName());
 			var unique = table.getConstraints().get("uk_metadata_table_code");
 			assertNotNull(unique);
 			assertEquals("code", ((UniqueConstraint) unique)
@@ -124,6 +134,7 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(5L, sequence.getIncrementBy().longValue());
 			assertEquals(7L, sequence.getCacheSize().longValue());
 			assertTrue(sequence.isCycle());
+			assertEquals("metadata sequence comment", sequence.getRemarks());
 		}
 	}
 

@@ -110,6 +110,9 @@ public class VirticaColumnReader extends ColumnReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.gte(24, 1, null)) {
+			return getSqlNodeCache().getString("columns24_1.sql");
+		}
 		return getSqlNodeCache().getString("columns.sql");
 	}
 }

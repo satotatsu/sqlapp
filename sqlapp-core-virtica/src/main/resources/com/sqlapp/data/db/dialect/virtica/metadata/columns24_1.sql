@@ -1,0 +1,31 @@
+SELECT 
+col.*
+, NULL AS TABLE_CATALOG
+, c.COMMENT
+, s.SEQUENCE_NAME
+, s.SESSION_CACHE_COUNT
+, s.ALLOW_CYCLE
+, s.INCREMENT_BY
+, s.MINIMUM
+, s.MAXIMUM
+, s.CURRENT_VALUE
+FROM V_CATALOG.COLUMNS col
+LEFT OUTER JOIN V_CATALOG.SEQUENCES s
+  ON (col.TABLE_ID=s.IDENTITY_TABLE_ID AND col.IS_IDENTITY)
+LEFT OUTER JOIN V_CATALOG.COMMENTS c
+  ON (c.OBJECT_ID=col.TABLE_ID
+  AND c.OBJECT_TYPE='COLUMN'
+  AND c.OBJECT_SCHEMA=col.TABLE_SCHEMA
+  AND c.OBJECT_NAME=col.TABLE_NAME
+  AND c.CHILD_OBJECT=col.COLUMN_NAME)
+WHERE 1=1
+  /*if isNotEmpty(schemaName) */
+  AND col.TABLE_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND col.TABLE_NAME IN /*tableName*/('%')
+  /*end*/
+  /*if isNotEmpty(columnName) */
+  AND col.COLUMN_NAME IN /*columnName*/('%')
+  /*end*/
+ORDER BY col.TABLE_SCHEMA, col.TABLE_NAME, col.ORDINAL_POSITION
