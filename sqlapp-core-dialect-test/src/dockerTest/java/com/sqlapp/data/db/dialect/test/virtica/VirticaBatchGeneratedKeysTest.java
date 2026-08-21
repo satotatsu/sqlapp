@@ -89,6 +89,12 @@ class VirticaBatchGeneratedKeysTest {
 			statement.execute("COMMENT ON COLUMN metadata_table.code IS 'metadata code comment'");
 			statement.execute("COMMENT ON SEQUENCE metadata_sequence IS 'metadata sequence comment'");
 			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var settingReader = dialect.getCatalogReader().getSettingReader();
+			settingReader.setObjectName("EnableDataCollector");
+			var settings = settingReader.getAllFull(connection);
+			assertEquals(1, settings.size());
+			assertNotNull(settings.get(0).getValue());
+			assertNotNull(settings.get(0).getDefaultValue());
 			var roleReader = dialect.getCatalogReader().getRoleReader();
 			roleReader.setObjectName("metadata_role");
 			var roles = roleReader.getAllFull(connection);

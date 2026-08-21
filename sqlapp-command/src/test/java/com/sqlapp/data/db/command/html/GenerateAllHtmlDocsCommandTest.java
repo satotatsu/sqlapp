@@ -19,11 +19,20 @@
 
 package com.sqlapp.data.db.command.html;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+
+import org.junit.jupiter.api.Test;
+
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.Mask;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Setting;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableSpace;
 
@@ -34,7 +43,27 @@ public class GenerateAllHtmlDocsCommandTest extends AbstractGenerateHtmlDocsComm
 		final Catalog catalog=super.createCatalog();
 		final TableSpace tableSpace=createTableSpace("tableSpaceA");
 		catalog.getTableSpaces().add(tableSpace);
+		catalog.getSettings().add(createSetting("settingA"));
 		return catalog;
+	}
+
+	protected Setting createSetting(final String name){
+		final Setting obj=new Setting(name);
+		setValues(obj);
+		return obj;
+	}
+
+	@Test
+	void settingsDefaultValueColumnIsHiddenWhenNoValueExists() throws IOException {
+		Catalog catalog = new Catalog();
+		catalog.getSettings().add(new Setting("settingWithoutDefault").setValue("current"));
+		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
+		command.setCatalog(catalog);
+		command.setOutputDirectory(testProjectDir);
+		command.run();
+		String html = Files.readString(testProjectDir.toPath().resolve("settings.html"),
+				StandardCharsets.UTF_8);
+		assertFalse(html.contains(">Default Value</th>"));
 	}
 
 	protected TableSpace createTableSpace(final String name){

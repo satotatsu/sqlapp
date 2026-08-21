@@ -130,7 +130,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected SettingReader newSettingReader() {
-		return null;
+		return new VirticaSettingReader(this.getDialect());
 	}
 
 	@Override

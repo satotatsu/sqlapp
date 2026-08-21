@@ -24,6 +24,7 @@ public class SettingTest extends AbstractDbObjectTest<Setting> {
 	public static Setting getSetting() {
 		Setting obj = new Setting("nls_length_semantics");
 		obj.setValue("Byte");
+		obj.setDefaultValue("Char");
 		return obj;
 	}
 
