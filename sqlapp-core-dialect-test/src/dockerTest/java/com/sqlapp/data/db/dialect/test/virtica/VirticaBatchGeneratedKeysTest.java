@@ -83,6 +83,7 @@ class VirticaBatchGeneratedKeysTest {
 					+ "CONSTRAINT pk_metadata_child PRIMARY KEY (id) ENABLED, "
 					+ "CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
+			statement.execute("GRANT SELECT, UPDATE ON metadata_table TO metadata_user WITH GRANT OPTION");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("COMMENT ON TABLE metadata_table IS 'metadata table comment'");
 			statement.execute("COMMENT ON COLUMN metadata_table.code IS 'metadata code comment'");
@@ -109,6 +110,17 @@ class VirticaBatchGeneratedKeysTest {
 			assertTrue(roleMembers.stream().anyMatch(member ->
 					"metadata_role".equals(member.getMemberRoleName())
 							&& "metadata_user".equals(member.getGranteeName())));
+			var privilegeReader = dialect.getCatalogReader().getObjectPrivilegeReader();
+			privilegeReader.setObjectName("metadata_table");
+			var privileges = privilegeReader.getAllFull(connection);
+			assertTrue(privileges.stream().anyMatch(privilege ->
+					"metadata_user".equals(privilege.getGranteeName())
+							&& "SELECT".equals(privilege.getPrivilege())
+							&& privilege.isGrantable()));
+			assertTrue(privileges.stream().anyMatch(privilege ->
+					"metadata_user".equals(privilege.getGranteeName())
+							&& "UPDATE".equals(privilege.getPrivilege())
+							&& privilege.isGrantable()));
 			var schema = dialect.getCatalogReader().getSchemaReader().getAllFull(connection)
 					.stream().filter(s -> s.getTables().stream().anyMatch(
 							t -> "metadata_table".equalsIgnoreCase(t.getName())))

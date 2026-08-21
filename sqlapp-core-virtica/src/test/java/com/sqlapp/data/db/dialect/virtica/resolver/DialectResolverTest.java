@@ -81,6 +81,8 @@ public class DialectResolverTest {
 		assertEquals("VirticaCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
 		assertEquals("VirticaRoleMemberReader", dialect.getCatalogReader()
 				.getRoleMemberReader().getClass().getSimpleName());
+		assertEquals("VirticaObjectPrivilegeReader", dialect.getCatalogReader()
+				.getObjectPrivilegeReader().getClass().getSimpleName());
 	}
 
 	@Test

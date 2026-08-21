@@ -100,7 +100,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected ObjectPrivilegeReader newObjectPrivilegeReader() {
-		return null;
+		return new VirticaObjectPrivilegeReader(this.getDialect());
 	}
 
 	@Override
