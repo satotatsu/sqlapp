@@ -66,9 +66,13 @@ class VirticaBatchGeneratedKeysTest {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
 			statement.execute("DROP PROCEDURE IF EXISTS metadata_procedure(INT, VARCHAR)");
+			statement.execute("DROP PROCEDURE IF EXISTS metadata_procedure(VARCHAR)");
 			statement.execute("CREATE PROCEDURE metadata_procedure(IN input_value INT, message_value VARCHAR) "
 					+ "LANGUAGE PLvSQL SECURITY INVOKER AS $$ BEGIN "
 					+ "RAISE NOTICE 'value = %, message = %', input_value, message_value; END; $$");
+			statement.execute("CREATE PROCEDURE metadata_procedure(text_value VARCHAR) "
+					+ "LANGUAGE PLvSQL SECURITY DEFINER AS $$ BEGIN "
+					+ "RAISE NOTICE 'text = %', text_value; END; $$");
 			statement.execute("DROP FUNCTION IF EXISTS metadata_zero_if_null(INT)");
 			statement.execute("DROP FUNCTION IF EXISTS metadata_zero_if_null(NUMERIC)");
 			statement.execute("CREATE FUNCTION metadata_zero_if_null(input_value INT) RETURN INT "
@@ -202,8 +206,11 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(DataType.BIGINT, function.getReturning().getDataType());
 			assertTrue(function.getDefinition().stream().anyMatch(
 					line -> line.toLowerCase().contains("input_value")));
-			var procedure = schema.getProcedures().stream().filter(
+			var procedures = schema.getProcedures().stream().filter(
 					p -> "metadata_procedure".equalsIgnoreCase(p.getName()))
+					.toList();
+			assertEquals(2, procedures.size());
+			var procedure = procedures.stream().filter(p -> p.getArguments().size() == 2)
 					.findFirst().orElseThrow();
 			assertEquals(2, procedure.getArguments().size());
 			assertEquals("input_value", procedure.getArguments().get(0).getName());
