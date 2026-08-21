@@ -76,6 +76,11 @@ class SybaseJdbcTreeDataSessionTest {
 			}
 			statement.execute("sp_addserver 'metadata_remote', 'ASEnterprise', 'metadata_network'");
 			try {
+				statement.execute("DROP TRIGGER metadata_trigger");
+			} catch (SQLException ignored) {
+				// The isolated test container may not contain the trigger yet.
+			}
+			try {
 				statement.execute("DROP VIEW metadata_view");
 			} catch (SQLException ignored) {
 				// The isolated test container may not contain the view yet.
@@ -103,6 +108,8 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("sp_chgattribute 'metadata_table.idx_metadata_table_code', "
 					+ "'fillfactor', 70");
 			statement.execute("CREATE INDEX idx_metadata_table_code_desc ON metadata_table(code DESC)");
+			statement.execute("CREATE TRIGGER metadata_trigger ON metadata_table FOR INSERT, UPDATE AS "
+					+ "SELECT id FROM inserted");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
@@ -138,7 +145,7 @@ class SybaseJdbcTreeDataSessionTest {
 			var roleMembers = roleMemberReader.getAllFull(connection);
 			assertTrue(roleMembers.stream().anyMatch(member -> "sa_role".equals(member.getMemberRoleName())));
 			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table", "metadata_view",
-					"metadata_procedure", "metadata_code")
+					"metadata_procedure", "metadata_code", "metadata_trigger")
 					.orElseThrow();
 			var domain = schema.getDomains().get("metadata_code");
 			assertNotNull(domain);
@@ -174,6 +181,18 @@ class SybaseJdbcTreeDataSessionTest {
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertNotNull(schema.getViews().get("metadata_view"));
+			var trigger = schema.getTriggers().get("metadata_trigger");
+			assertNotNull(trigger);
+			assertEquals("metadata_table", trigger.getTableName());
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertEquals("ROW", trigger.getActionOrientation());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertTrue(trigger.getEventManipulation().contains("UPDATE"));
+			String triggerDefinition = String.join(" ", trigger.getDefinition()) + " "
+					+ String.join(" ", trigger.getStatement());
+			triggerDefinition = triggerDefinition
+					.toLowerCase().replaceAll("\\s+", " ");
+			assertTrue(triggerDefinition.contains("create trigger"), triggerDefinition);
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
 			assertTrue(procedure.getDefinition() != null || procedure.getStatement() != null);

@@ -170,8 +170,7 @@ public class SybaseSchemaReader extends SchemaReader {
 
 	@Override
 	protected TriggerReader newTriggerReader() {
-		// TODO
-		return null;
+		return new SybaseTriggerReader(this.getDialect());
 	}
 
 	@Override
