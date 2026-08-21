@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.virtica.metadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -26,6 +27,14 @@ class VirticaFunctionReaderTest {
 
 		assertEquals("input_value", argument.getName());
 		assertEquals(DataType.BIGINT, argument.getDataType());
+	}
+
+	@Test
+	void parsesUnnamedUdxArgumentType() throws SQLException {
+		NamedArgument argument = reader.createNamedArgument("Numeric");
+
+		assertNull(argument.getName());
+		assertEquals(DataType.NUMERIC, argument.getDataType());
 	}
 
 	@Test

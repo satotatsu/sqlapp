@@ -36,6 +36,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SqlSecurity;
 import com.sqlapp.data.schemas.Table;
@@ -65,6 +66,12 @@ class VirticaBatchGeneratedKeysTest {
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP TEXT INDEX IF EXISTS metadata_text_index");
+			statement.execute("DROP TABLE IF EXISTS metadata_text");
+			statement.execute("CREATE TABLE metadata_text (id BIGINT NOT NULL, content VARCHAR(200), "
+					+ "CONSTRAINT pk_metadata_text PRIMARY KEY (id) ENABLED) "
+					+ "ORDER BY id UNSEGMENTED ALL NODES");
+			statement.execute("CREATE TEXT INDEX metadata_text_index ON metadata_text (id, content)");
 			statement.execute("DROP PROCEDURE IF EXISTS metadata_procedure(INT, VARCHAR)");
 			statement.execute("DROP PROCEDURE IF EXISTS metadata_procedure(VARCHAR)");
 			statement.execute("CREATE PROCEDURE metadata_procedure(IN input_value INT, message_value VARCHAR) "
@@ -220,6 +227,15 @@ class VirticaBatchGeneratedKeysTest {
 			assertTrue(procedure.getLanguage().toLowerCase().contains("pl/vsql"));
 			assertEquals(SqlSecurity.Invoker, procedure.getSqlSecurity());
 			assertEquals("dbadmin", procedure.getSpecifics().get("OWNER"));
+			var textTable = schema.getTables().stream().filter(
+					t -> "metadata_text".equalsIgnoreCase(t.getName()))
+					.findFirst().orElseThrow();
+			var textIndex = textTable.getIndexes().stream().filter(
+					i -> "metadata_text_index".equalsIgnoreCase(i.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(IndexType.FullText, textIndex.getIndexType());
+			assertEquals("content", textIndex.getColumns().get(0).getName());
+			assertNotNull(textIndex.getSpecifics().get("TOKENIZER_NAME"));
 		}
 	}
 

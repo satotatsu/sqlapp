@@ -105,6 +105,8 @@ public class VirticaFunctionReader extends FunctionReader {
 		if (matcher.matches()){
 			obj.setName(matcher.group(1));
 			this.getDialect().setDbType(matcher.group(2), null, null, obj);
+		} else {
+			this.getDialect().setDbType(parameter.trim(), null, null, obj);
 		}
 		return obj;
 	}

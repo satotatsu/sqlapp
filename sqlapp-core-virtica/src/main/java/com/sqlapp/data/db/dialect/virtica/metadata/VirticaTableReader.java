@@ -107,7 +107,7 @@ public class VirticaTableReader extends TableReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
-		return null;
+		return new VirticaIndexReader(this.getDialect());
 	}
 
 	@Override
