@@ -71,7 +71,7 @@ class InformixJdbcTreeDataSessionTest {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
-					"parent_view")
+					"parent_view", "metadata_audit", "metadata_trigger")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -104,6 +104,14 @@ class InformixJdbcTreeDataSessionTest {
 			assertNotNull(view);
 			assertTrue(view.getStatement().toString().toLowerCase()
 					.contains("parent_table"), view.getStatement().toString());
+			var trigger = schema.getTriggers().get("metadata_trigger");
+			assertNotNull(trigger);
+			assertEquals("parent_table", trigger.getTableName());
+			assertEquals("AFTER", trigger.getActionTiming());
+			assertEquals("ROW", trigger.getActionOrientation());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertTrue(trigger.getStatement().toString().toLowerCase()
+					.contains("metadata_audit"));
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
@@ -149,7 +157,9 @@ class InformixJdbcTreeDataSessionTest {
 
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			dropTrigger(statement, "metadata_trigger");
 			dropView(statement, "parent_view");
+			dropTable(statement, "metadata_audit");
 			dropTable(statement, "child_table");
 			dropTable(statement, "parent_table");
 			statement.execute("""
@@ -171,8 +181,26 @@ class InformixJdbcTreeDataSessionTest {
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
 			statement.execute("CREATE UNIQUE INDEX idx_child_txt_desc ON child_table(txt DESC)");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
+			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
+			statement.execute("""
+					CREATE TRIGGER metadata_trigger INSERT ON parent_table
+					REFERENCING NEW AS new_row
+					FOR EACH ROW
+					(INSERT INTO metadata_audit(parent_id) VALUES (new_row.id))
+					""");
 			connection.commit();
 		}
+	}
+
+	private void dropTrigger(final Statement statement, final String triggerName) throws SQLException {
+		try (ResultSet resultSet = statement.executeQuery(
+				"SELECT COUNT(*) FROM systriggers WHERE trigname = '" + triggerName + "'")) {
+			resultSet.next();
+			if (resultSet.getInt(1) == 0) {
+				return;
+			}
+		}
+		statement.execute("DROP TRIGGER " + triggerName);
 	}
 
 	private void dropView(final Statement statement, final String viewName) throws SQLException {
