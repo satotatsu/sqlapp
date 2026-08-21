@@ -30,6 +30,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.informix.metadata.InformixTableReader;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.IdentityGenerationType;
@@ -73,7 +74,7 @@ class InformixJdbcTreeDataSessionTest {
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
-					"metadata_function", "metadata_sequence")
+					"metadata_function", "metadata_sequence", "metadata_fragmented")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -136,6 +137,22 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(1000L, sequence.getMaxValue().longValue());
 			assertTrue(sequence.isCycle());
 			assertEquals(10L, sequence.getCacheSize().longValue());
+			var fragmented = schema.getTables().get("metadata_fragmented");
+			assertNotNull(fragmented.getPartitioning(), () -> fragmentDetails(connection));
+			assertEquals("E", fragmented.getPartitioning().getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
+			assertEquals(2, fragmented.getPartitioning().getPartitions().size());
+			var lowFragment = fragmented.getPartitioning().getPartitions().get("frag_low");
+			assertNotNull(lowFragment);
+			assertEquals("rootdbs", lowFragment.getTableSpaceName());
+			assertTrue(lowFragment.getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+					.contains("id < 100"));
+			var highFragment = fragmented.getPartitioning().getPartitions().get("frag_high");
+			assertNotNull(highFragment);
+			assertTrue(highFragment.getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+					.contains("id >= 100"));
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
@@ -179,6 +196,32 @@ class InformixJdbcTreeDataSessionTest {
 		return DriverManager.getConnection(url, "informix", "in4mix");
 	}
 
+	private String fragmentDetails(final Connection connection) {
+		try (Statement statement = connection.createStatement();
+				ResultSet resultSet = statement.executeQuery("""
+						SELECT t.owner, t.tabname, f.fragtype, f.strategy, f.evalpos,
+						       f.partition, f.exprtext, f.dbspace
+						FROM systables t JOIN sysfragments f ON t.tabid = f.tabid
+						WHERE t.tabname = 'metadata_fragmented'
+						ORDER BY f.evalpos
+						""")) {
+			StringBuilder builder = new StringBuilder("sysfragments=");
+			while (resultSet.next()) {
+				builder.append('[');
+				for (int i = 1; i <= 8; i++) {
+					if (i > 1) {
+						builder.append(',');
+					}
+					builder.append(resultSet.getString(i));
+				}
+				builder.append(']');
+			}
+			return builder.toString();
+		} catch (SQLException e) {
+			return "Unable to query sysfragments: " + e.getMessage();
+		}
+	}
+
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			dropTrigger(statement, "metadata_trigger");
@@ -186,6 +229,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropRoutine(statement, "metadata_function", false);
 			dropSequence(statement, "metadata_sequence");
 			dropView(statement, "parent_view");
+			dropTable(statement, "metadata_fragmented");
 			dropTable(statement, "metadata_audit");
 			dropTable(statement, "child_table");
 			dropTable(statement, "parent_table");
@@ -229,6 +273,15 @@ class InformixJdbcTreeDataSessionTest {
 			statement.execute("""
 					CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5
 					MINVALUE 10 MAXVALUE 1000 CYCLE CACHE 10
+					""");
+			statement.execute("""
+					CREATE TABLE metadata_fragmented (
+						id INTEGER NOT NULL,
+						value_text VARCHAR(50)
+					)
+					FRAGMENT BY EXPRESSION
+						PARTITION frag_low id < 100 IN rootdbs,
+						PARTITION frag_high id >= 100 IN rootdbs
 					""");
 			connection.commit();
 		}
