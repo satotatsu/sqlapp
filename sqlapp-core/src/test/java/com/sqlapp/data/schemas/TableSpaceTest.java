@@ -19,8 +19,17 @@
 
 package com.sqlapp.data.schemas;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 public class TableSpaceTest extends AbstractDbObjectTest<TableSpace> {
+
+	@Test
+	void tableSpaceFileConstructorSetsFilePath() {
+		TableSpaceFile file = new TableSpaceFile("data", "/data/data.dat");
+		assertEquals("/data/data.dat", file.getFilePath());
+	}
 
 	public static TableSpace getTableSpace() {
 		TableSpace tableSpace = new TableSpace("spaceA");

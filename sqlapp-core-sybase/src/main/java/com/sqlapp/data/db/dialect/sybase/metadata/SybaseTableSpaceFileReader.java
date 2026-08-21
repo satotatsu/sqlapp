@@ -34,7 +34,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 /**
- * SqlServerのファイル読み込み
+ * Sybase ASEのdatabase device読み込み
  * 
  * @author satoh
  * 
@@ -62,20 +62,26 @@ public class SybaseTableSpaceFileReader extends TableSpaceFileReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tableSpaceFiles.sql");
+		return getSqlNodeCache().getString(getTableSpaceFileSqlResource(productVersionInfo));
+	}
+
+	static String getTableSpaceFileSqlResource(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo.getMajorVersion() >= 15) {
+			return "tableSpaceFiles15.sql";
+		}
+		return "tableSpaceFiles.sql";
 	}
 
 	protected TableSpaceFile createStorageFile(ExResultSet rs)
 			throws SQLException {
-		TableSpaceFile obj = new TableSpaceFile(getString(rs, "name"),
-				getString(rs, "physical_name"));
+		String filePath = getString(rs, "physical_name");
+		TableSpaceFile obj = new TableSpaceFile(getString(rs, "name"), filePath);
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setTableSpaceName(getString(rs, "file_group_name"));
-		obj.setAutoExtensible(rs.getInt("growth") > 0);
 		setSpecifics(rs, "file_id", obj);
 		setSpecifics(rs, "size", obj);
-		setSpecifics(rs, "growth", obj);
-		setSpecifics(rs, "max_size", obj);
+		setSpecifics(rs, "logical_start_page", obj);
+		setSpecifics(rs, "unreserved_pages", obj);
 		return obj;
 	}
 

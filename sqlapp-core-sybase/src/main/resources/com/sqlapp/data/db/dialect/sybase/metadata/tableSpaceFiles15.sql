@@ -1,6 +1,6 @@
-SELECT 
+SELECT
   DB_NAME() AS catalog_name
-, d.low AS file_id
+, u.vdevno AS file_id
 , u.size
 , d.name
 , d.phyname AS physical_name
@@ -12,7 +12,7 @@ INNER JOIN master.dbo.sysusages u
   ON u.dbid=DB_ID()
   AND (u.segmap & CONVERT(INT, POWER(2, s.segment))) != 0
 INNER JOIN master.dbo.sysdevices d
-  ON u.vstart BETWEEN d.low AND d.high
+  ON u.vdevno=d.vdevno
 WHERE 1=1
   /*if isNotEmpty(tableSpaceName) */
   AND s.name IN /*tableSpaceName;type=VARCHAR*/('%')
