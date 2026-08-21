@@ -77,7 +77,8 @@ class SpannerMetadataReaderTest {
 					 updated_at TIMESTAMP DEFAULT (PENDING_COMMIT_TIMESTAMP())
 					  ON UPDATE (PENDING_COMMIT_TIMESTAMP())
 					  OPTIONS (allow_commit_timestamp=true),
-					 tokenized_code TOKENLIST AS (TOKENIZE_FULLTEXT(code)) HIDDEN
+					 tokenized_code TOKENLIST AS (TOKENIZE_FULLTEXT(code)) HIDDEN,
+					 embedding ARRAY<FLOAT32>(vector_length=>3)
 					 ,CONSTRAINT ck_metadata_parent_amount
 					  CHECK (amount IS NULL OR amount >= 0)
 					) PRIMARY KEY (id)
@@ -86,6 +87,9 @@ class SpannerMetadataReaderTest {
 					+ "ON metadata_parent(code)");
 			statement.execute("CREATE SEARCH INDEX search_metadata_parent_code "
 					+ "ON metadata_parent(tokenized_code)");
+			statement.execute("CREATE VECTOR INDEX vector_metadata_parent_embedding "
+					+ "ON metadata_parent(embedding) WHERE embedding IS NOT NULL "
+					+ "OPTIONS(distance_type='COSINE')");
 			statement.execute("""
 					CREATE TABLE metadata_composite_parent (
 					 tenant_id INT64 NOT NULL,
@@ -153,6 +157,7 @@ class SpannerMetadataReaderTest {
 			assertEquals("TRUE",
 					updatedAt.getSpecifics().get("allow_commit_timestamp"));
 			assertTrue(parent.getColumns().get("tokenized_code").isHidden());
+			assertNotNull(parent.getColumns().get("embedding"));
 			var primaryKey = parent.getConstraints().stream()
 					.filter(UniqueConstraint.class::isInstance)
 					.map(UniqueConstraint.class::cast)
@@ -165,6 +170,11 @@ class SpannerMetadataReaderTest {
 			assertEquals(IndexType.FullText, searchIndex.getIndexType());
 			assertEquals("tokenized_code",
 					searchIndex.getColumns().get(0).getName());
+			var vectorIndex = parent.getIndexes().get(
+					"vector_metadata_parent_embedding");
+			assertNotNull(vectorIndex);
+			assertEquals(IndexType.Vector, vectorIndex.getIndexType());
+			assertEquals("embedding", vectorIndex.getColumns().get(0).getName());
 			var amountCheck = parent.getConstraints().stream()
 					.filter(CheckConstraint.class::isInstance)
 					.map(CheckConstraint.class::cast)

@@ -86,7 +86,43 @@ public class SpannerIndexReader extends IndexReader {
 				}
 			}
 		});
+		setIndexOptions(connection, context, productVersionInfo, map);
 		return result;
+	}
+
+	private void setIndexOptions(final Connection connection,
+			final ParametersContext context,
+			final ProductVersionInfo productVersionInfo,
+			final TripleKeyMap<String, String, String, Index> map) {
+		final boolean[] supported = new boolean[1];
+		execute(connection, getSqlNodeCache().getString(
+				"indexOptionsAvailability.sql"), context,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(final ExResultSet rs)
+							throws SQLException {
+						supported[0] = rs.getLong("option_table_count") > 0;
+					}
+				});
+		if (!supported[0]) {
+			return;
+		}
+		execute(connection, getSqlNodeCache().getString("indexOptions.sql"),
+				context, new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(final ExResultSet rs)
+							throws SQLException {
+						final Index index = map.get(
+								getString(rs, TABLE_CATALOG),
+								getString(rs, TABLE_SCHEMA),
+								getString(rs, INDEX_NAME));
+						if (index != null && "distance_type".equalsIgnoreCase(
+								getString(rs, "option_name"))) {
+							index.setVectorDistanceType(toVectorDistanceType(
+									getString(rs, "option_value")));
+						}
+					}
+				});
 	}
 
 	static IndexType toIndexType(final String productIndexType) {
