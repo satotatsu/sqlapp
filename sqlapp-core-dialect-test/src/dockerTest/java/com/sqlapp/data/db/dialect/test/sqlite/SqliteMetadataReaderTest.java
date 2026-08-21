@@ -127,6 +127,8 @@ class SqliteMetadataReaderTest {
 					.getSpecifics().get("strict", Boolean.class));
 			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_without_rowid")
 					.getSpecifics().get("without_rowid", Boolean.class));
+			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_strict")
+					.getSpecifics().get("strict", Boolean.class));
 			var withoutRowidPrimaryKey = schema.getTables()
 					.get("metadata_without_rowid").getConstraints().stream()
 					.filter(UniqueConstraint.class::isInstance)

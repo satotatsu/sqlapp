@@ -30,6 +30,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
@@ -64,7 +65,15 @@ class FirebirdJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 			assertTrue(parent.getColumns().get("ID").isIdentity());
+			assertEquals(IdentityGenerationType.ByDefault,
+					parent.getColumns().get("ID").getIdentityGenerationType());
 			assertNotNull(parent.getColumns().get("ID").getSequenceName());
+			var alwaysIdentity = schema.getTables().get("METADATA_IDENTITY_ALWAYS")
+					.getColumns().get("ID");
+			assertTrue(alwaysIdentity.isIdentity());
+			assertEquals(IdentityGenerationType.Always,
+					alwaysIdentity.getIdentityGenerationType());
+			assertNotNull(alwaysIdentity.getSequenceName());
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint());
 			assertEquals("ID", parent.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
@@ -141,7 +150,7 @@ class FirebirdJdbcTreeDataSessionTest {
 	private Schema loadSchema(final Connection connection) throws SQLException {
 		return SchemaUtils.getSchema(connection, null, "PARENT_TABLE", "CHILD_TABLE", "PARENT_VIEW",
 				"METADATA_AUDIT", "TRG_PARENT_AUDIT", "METADATA_SEQUENCE", "METADATA_PROCEDURE",
-				"METADATA_FUNCTION", "METADATA_FEATURES")
+				"METADATA_FUNCTION", "METADATA_FEATURES", "METADATA_IDENTITY_ALWAYS")
 				.orElseThrow(() -> new AssertionError("Firebird test schema was not loaded."));
 	}
 
@@ -166,6 +175,7 @@ class FirebirdJdbcTreeDataSessionTest {
 			dropObject(statement, "SEQUENCE", "METADATA_SEQUENCE");
 			dropTable(statement, "METADATA_AUDIT");
 			dropTable(statement, "METADATA_FEATURES");
+			dropTable(statement, "METADATA_IDENTITY_ALWAYS");
 			dropTable(statement, "CHILD_TABLE");
 			dropTable(statement, "PARENT_TABLE");
 			statement.execute("""
@@ -183,6 +193,12 @@ class FirebirdJdbcTreeDataSessionTest {
 					)
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
+			statement.execute("""
+					CREATE TABLE metadata_identity_always (
+					 id BIGINT GENERATED ALWAYS AS IDENTITY
+					  (START WITH 42 INCREMENT BY 7) PRIMARY KEY
+					)
+					""");
 			statement.execute("""
 					CREATE TABLE metadata_features (
 					 id BIGINT NOT NULL PRIMARY KEY,
