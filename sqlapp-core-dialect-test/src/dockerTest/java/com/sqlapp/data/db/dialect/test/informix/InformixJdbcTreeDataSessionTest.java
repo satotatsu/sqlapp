@@ -78,7 +78,7 @@ class InformixJdbcTreeDataSessionTest {
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
-					"metadata_parent_synonym")
+					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -89,6 +89,8 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(DataType.SERIAL, parent.getColumns().get("id").getDataType());
 			assertEquals(IdentityGenerationType.ByDefault,
 					parent.getColumns().get("id").getIdentityGenerationType());
+			assertBigSerialIdentity(schema.getTables().get("metadata_serial8"));
+			assertBigSerialIdentity(schema.getTables().get("metadata_bigserial"));
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint(),
 					() -> constraintDetails(connection, parent));
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
@@ -207,6 +209,14 @@ class InformixJdbcTreeDataSessionTest {
 		}
 	}
 
+	private void assertBigSerialIdentity(final Table table) {
+		var column = table.getColumns().get("id");
+		assertTrue(column.isIdentity());
+		assertEquals(DataType.BIGSERIAL, column.getDataType());
+		assertEquals(IdentityGenerationType.ByDefault,
+				column.getIdentityGenerationType());
+	}
+
 	private Connection createConnection() throws SQLException {
 		String url = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088)
 				+ "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y";
@@ -269,6 +279,8 @@ class InformixJdbcTreeDataSessionTest {
 			dropSynonym(statement, "metadata_parent_synonym");
 			dropView(statement, "parent_view");
 			dropTable(statement, "metadata_fragmented");
+			dropTable(statement, "metadata_bigserial");
+			dropTable(statement, "metadata_serial8");
 			dropTable(statement, "metadata_audit");
 			dropTable(statement, "child_table");
 			dropTable(statement, "parent_table");
@@ -292,6 +304,8 @@ class InformixJdbcTreeDataSessionTest {
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
 			statement.execute("CREATE UNIQUE INDEX idx_child_txt_desc ON child_table(txt DESC)");
+			statement.execute("CREATE TABLE metadata_serial8 (id SERIAL8 PRIMARY KEY)");
+			statement.execute("CREATE TABLE metadata_bigserial (id BIGSERIAL PRIMARY KEY)");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("""
