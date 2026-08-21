@@ -125,7 +125,7 @@ public class SybaseCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleReader newRoleReader() {
-		return null;
+		return new SybaseRoleReader(this.getDialect());
 	}
 
 	@Override

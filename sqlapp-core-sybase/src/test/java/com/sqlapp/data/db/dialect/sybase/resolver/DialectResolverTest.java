@@ -62,6 +62,10 @@ public class DialectResolverTest {
 	private void assertCatalogReader(int major, int minor, int revision) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("ASE", major, minor, revision);
 		assertEquals("SybaseCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
+		assertEquals("SybaseRoleReader", dialect.getCatalogReader()
+				.getRoleReader().getClass().getSimpleName());
+		assertEquals("SybaseRoleMemberReader", dialect.getCatalogReader()
+				.getRoleMemberReader().getClass().getSimpleName());
 		assertEquals("SybaseDomainReader", dialect.getCatalogReader().getSchemaReader()
 				.getDomainReader().getClass().getSimpleName());
 	}

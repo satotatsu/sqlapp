@@ -4,7 +4,7 @@ SELECT
   , u.name AS user_name
   , u.createdate AS create_date
   , u.updatedate AS modify_date
-  , l.loginname AS login_user_name
+  , l.name AS login_user_name
 FROM sysusers u
 INNER JOIN sys.syslogins l
   ON (u.sid=l.sid)

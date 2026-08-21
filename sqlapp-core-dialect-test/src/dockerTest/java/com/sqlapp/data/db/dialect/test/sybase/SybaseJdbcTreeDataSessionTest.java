@@ -100,6 +100,17 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
+			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var roleReader = dialect.getCatalogReader().getRoleReader();
+			roleReader.setObjectName("sa_role");
+			var roles = roleReader.getAllFull(connection);
+			assertEquals(1, roles.size());
+			assertEquals("sa_role", roles.get(0).getName());
+			assertNotNull(roles.get(0).getId());
+			var roleMemberReader = dialect.getCatalogReader().getRoleMemberReader();
+			roleMemberReader.setGrantee("sa");
+			var roleMembers = roleMemberReader.getAllFull(connection);
+			assertTrue(roleMembers.stream().anyMatch(member -> "sa_role".equals(member.getMemberRoleName())));
 			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table", "metadata_view",
 					"metadata_procedure", "metadata_code")
 					.orElseThrow();
