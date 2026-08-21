@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.SqlSecurity;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
@@ -64,6 +65,10 @@ class VirticaBatchGeneratedKeysTest {
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP PROCEDURE IF EXISTS metadata_procedure(INT, VARCHAR)");
+			statement.execute("CREATE PROCEDURE metadata_procedure(IN input_value INT, message_value VARCHAR) "
+					+ "LANGUAGE PLvSQL SECURITY INVOKER AS $$ BEGIN "
+					+ "RAISE NOTICE 'value = %, message = %', input_value, message_value; END; $$");
 			statement.execute("DROP FUNCTION IF EXISTS metadata_zero_if_null(INT)");
 			statement.execute("DROP FUNCTION IF EXISTS metadata_zero_if_null(NUMERIC)");
 			statement.execute("CREATE FUNCTION metadata_zero_if_null(input_value INT) RETURN INT "
@@ -197,6 +202,17 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(DataType.BIGINT, function.getReturning().getDataType());
 			assertTrue(function.getDefinition().stream().anyMatch(
 					line -> line.toLowerCase().contains("input_value")));
+			var procedure = schema.getProcedures().stream().filter(
+					p -> "metadata_procedure".equalsIgnoreCase(p.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(2, procedure.getArguments().size());
+			assertEquals("input_value", procedure.getArguments().get(0).getName());
+			assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
+			assertEquals("message_value", procedure.getArguments().get(1).getName());
+			assertEquals(DataType.VARCHAR, procedure.getArguments().get(1).getDataType());
+			assertTrue(procedure.getLanguage().toLowerCase().contains("pl/vsql"));
+			assertEquals(SqlSecurity.Invoker, procedure.getSqlSecurity());
+			assertEquals("dbadmin", procedure.getSpecifics().get("OWNER"));
 		}
 	}
 
