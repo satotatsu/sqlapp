@@ -77,7 +77,7 @@ public class SybaseIndexReader extends IndexReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("indexes.sql");
+		return getSqlNodeCache().getString("aseIndexes.sql");
 	}
 
 	/**

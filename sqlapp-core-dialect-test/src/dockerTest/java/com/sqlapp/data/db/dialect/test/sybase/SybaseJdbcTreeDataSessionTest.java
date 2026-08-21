@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
@@ -86,6 +87,7 @@ class SybaseJdbcTreeDataSessionTest {
 					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE INDEX idx_metadata_table_code ON metadata_table(code)");
+			statement.execute("CREATE INDEX idx_metadata_table_code_desc ON metadata_table(code DESC)");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
@@ -105,6 +107,8 @@ class SybaseJdbcTreeDataSessionTest {
 			assertTrue(table.getConstraints().stream()
 					.anyMatch(CheckConstraint.class::isInstance));
 			assertNotNull(table.getIndexes().get("idx_metadata_table_code"));
+			assertEquals(Order.Desc, table.getIndexes().get("idx_metadata_table_code_desc")
+					.getColumns().get(0).getOrder());
 			var foreignKey = table.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)

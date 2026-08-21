@@ -27,7 +27,6 @@ import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcForeignKeyConstraintReader;
-import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
@@ -111,7 +110,7 @@ public class SybaseTableReader extends TableReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
-		return new JdbcIndexReader(this.getDialect());
+		return new SybaseIndexReader(this.getDialect());
 	}
 
 	@Override
