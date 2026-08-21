@@ -74,7 +74,8 @@ class InformixJdbcTreeDataSessionTest {
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
-					"metadata_function", "metadata_sequence", "metadata_fragmented")
+					"metadata_function", "metadata_sequence", "metadata_fragmented",
+					"metadata_parent_synonym")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -153,6 +154,10 @@ class InformixJdbcTreeDataSessionTest {
 			assertTrue(highFragment.getSpecifics()
 					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
 					.contains("id >= 100"));
+			var synonym = schema.getSynonyms().get("metadata_parent_synonym");
+			assertNotNull(synonym);
+			assertEquals("parent_table", synonym.getObjectName());
+			assertEquals("informix", synonym.getObjectSchemaName());
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
@@ -228,6 +233,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropRoutine(statement, "metadata_procedure", true);
 			dropRoutine(statement, "metadata_function", false);
 			dropSequence(statement, "metadata_sequence");
+			dropSynonym(statement, "metadata_parent_synonym");
 			dropView(statement, "parent_view");
 			dropTable(statement, "metadata_fragmented");
 			dropTable(statement, "metadata_audit");
@@ -283,6 +289,7 @@ class InformixJdbcTreeDataSessionTest {
 						PARTITION frag_low id < 100 IN rootdbs,
 						PARTITION frag_high id >= 100 IN rootdbs
 					""");
+			statement.execute("CREATE SYNONYM metadata_parent_synonym FOR parent_table");
 			connection.commit();
 		}
 	}
@@ -323,6 +330,18 @@ class InformixJdbcTreeDataSessionTest {
 			}
 		}
 		statement.execute("DROP SEQUENCE " + sequenceName);
+	}
+
+	private void dropSynonym(final Statement statement, final String synonymName) throws SQLException {
+		try (ResultSet resultSet = statement.executeQuery(
+				"SELECT COUNT(*) FROM systables WHERE tabname = '" + synonymName
+						+ "' AND tabtype IN ('P', 'S')")) {
+			resultSet.next();
+			if (resultSet.getInt(1) == 0) {
+				return;
+			}
+		}
+		statement.execute("DROP SYNONYM " + synonymName);
 	}
 
 	private void dropView(final Statement statement, final String viewName) throws SQLException {
