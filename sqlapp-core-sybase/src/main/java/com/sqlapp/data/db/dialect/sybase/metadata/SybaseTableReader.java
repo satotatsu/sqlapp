@@ -28,7 +28,6 @@ import java.util.List;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcForeignKeyConstraintReader;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
-import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcPrimaryKeyConstraintReader;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
@@ -117,7 +116,7 @@ public class SybaseTableReader extends TableReader {
 
 	@Override
 	protected UniqueConstraintReader newUniqueConstraintReader() {
-		return new JdbcPrimaryKeyConstraintReader(this.getDialect());
+		return new SybaseUniqueConstraintReader(this.getDialect());
 	}
 
 	@Override

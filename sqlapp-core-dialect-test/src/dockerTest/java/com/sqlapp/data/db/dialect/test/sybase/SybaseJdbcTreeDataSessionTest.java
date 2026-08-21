@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.test.sybase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,6 +33,7 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
@@ -79,6 +81,7 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("CREATE TABLE metadata_table (id INT IDENTITY NOT NULL, "
 					+ "parent_id INT NULL, code VARCHAR(30) DEFAULT 'unknown' NOT NULL, "
 					+ "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
+					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
 					+ "CONSTRAINT ck_metadata_table_code CHECK (code <> ''), "
 					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
@@ -96,6 +99,9 @@ class SybaseJdbcTreeDataSessionTest {
 					.contains("unknown"));
 			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
+			var unique = assertInstanceOf(UniqueConstraint.class,
+					table.getConstraints().get("uk_metadata_table_code"));
+			assertEquals("code", unique.getColumns().get(0).getName());
 			assertTrue(table.getConstraints().stream()
 					.anyMatch(CheckConstraint.class::isInstance));
 			assertNotNull(table.getIndexes().get("idx_metadata_table_code"));

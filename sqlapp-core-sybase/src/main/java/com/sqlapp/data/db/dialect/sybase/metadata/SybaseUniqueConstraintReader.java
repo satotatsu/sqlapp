@@ -83,7 +83,7 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("uniqueConstraints.sql");
+		return getSqlNodeCache().getString("aseUniqueConstraints.sql");
 	}
 
 	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)
