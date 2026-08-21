@@ -19,6 +19,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SchemaProperties;
 
@@ -64,7 +65,37 @@ public class SqliteIndexReader extends JdbcIndexReader {
 					}
 				}
 			}
+			loadColumnOrders(connection, schemaName, index);
 		}
+	}
+
+	private void loadColumnOrders(final Connection connection,
+			final String schemaName, final Index index) throws SQLException {
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
+				+ ".index_xinfo(" + quoteString(index.getName()) + ")";
+		try (var statement = connection.createStatement();
+				var resultSet = statement.executeQuery(sql)) {
+			final boolean hasDescending = hasColumn(resultSet, "desc");
+			while (resultSet.next()) {
+				final String columnName = resultSet.getString("name");
+				if (!hasDescending || columnName == null
+						|| index.getColumns().get(columnName) == null) {
+					continue;
+				}
+				index.getColumns().get(columnName).setOrder(
+						resultSet.getBoolean("desc") ? Order.Desc : Order.Asc);
+			}
+		}
+	}
+
+	private boolean hasColumn(final java.sql.ResultSet resultSet,
+			final String name) throws SQLException {
+		for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
+			if (name.equalsIgnoreCase(resultSet.getMetaData().getColumnLabel(i))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	static String extractWhere(final String sql) {
@@ -77,6 +108,10 @@ public class SqliteIndexReader extends JdbcIndexReader {
 
 	private String quoteIdentifier(final String value) {
 		return "\"" + value.replace("\"", "\"\"") + "\"";
+	}
+
+	private String quoteString(final String value) {
+		return "'" + value.replace("'", "''") + "'";
 	}
 
 	private List<String> tableNames(final ParametersContext context) {

@@ -16,7 +16,9 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.sqlite.Sqlite;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** SQLite integration coverage for the JDBC metadata reader tree. */
@@ -41,7 +43,7 @@ class SqliteMetadataReaderTest {
 					 CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id)
 					  REFERENCES metadata_parent(id) ON DELETE CASCADE)
 					""");
-			statement.execute("CREATE INDEX idx_metadata_child_code ON metadata_child(code)");
+			statement.execute("CREATE INDEX idx_metadata_child_code ON metadata_child(code DESC)");
 			statement.execute("CREATE INDEX idx_metadata_child_partial ON metadata_child(code) "
 					+ "WHERE parent_id > 0 AND code IS NOT NULL");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
@@ -69,6 +71,12 @@ class SqliteMetadataReaderTest {
 					.filter(UniqueConstraint::isPrimaryKey)
 					.findFirst().orElseThrow();
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
+			var uniqueCode = parent.getConstraints().stream()
+					.filter(UniqueConstraint.class::isInstance)
+					.map(UniqueConstraint.class::cast)
+					.filter(constraint -> !constraint.isPrimaryKey())
+					.findFirst().orElseThrow();
+			assertEquals("code", uniqueCode.getColumns().get(0).getName());
 			var child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
 			assertNotNull(child.getColumns().get("normalized_code"));
@@ -78,7 +86,10 @@ class SqliteMetadataReaderTest {
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
-			assertNotNull(child.getIndexes().get("idx_metadata_child_code"));
+			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
+			var descendingIndex = child.getIndexes().get("idx_metadata_child_code");
+			assertNotNull(descendingIndex);
+			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
 			assertEquals("parent_id > 0 AND code IS NOT NULL",
 					child.getIndexes().get("idx_metadata_child_partial").getWhere());
 			assertNotNull(schema.getViews().get("metadata_view"));

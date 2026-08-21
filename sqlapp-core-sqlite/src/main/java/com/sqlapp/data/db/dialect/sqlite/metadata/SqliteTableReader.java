@@ -14,6 +14,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.db.metadata.TableObjectReader;
+import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
@@ -40,6 +41,11 @@ public class SqliteTableReader extends JdbcTableReader {
 	@Override
 	protected IndexReader newIndexReader() {
 		return new SqliteIndexReader(getDialect());
+	}
+
+	@Override
+	protected UniqueConstraintReader newUniqueConstraintReader() {
+		return new SqliteUniqueConstraintReader(getDialect());
 	}
 
 	@Override
