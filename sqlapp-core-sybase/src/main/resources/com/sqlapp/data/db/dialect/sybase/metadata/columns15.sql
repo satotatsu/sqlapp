@@ -11,9 +11,9 @@ SELECT
   , c.scale
   , NULL AS collation_name
   , CASE WHEN (c.status & 8) = 8 THEN 1 ELSE 0 END AS is_nullable
-  , 0 AS is_computed
-  , 0 AS is_computed_persisted
-  , CAST(NULL AS VARCHAR(16384)) AS computed_definition
+  , CASE WHEN (ISNULL(c.status2, 0) & 16) = 16 THEN 1 ELSE 0 END AS is_computed
+  , CASE WHEN (ISNULL(c.status2, 0) & 32) = 32 THEN 1 ELSE 0 END AS is_computed_persisted
+  , cc.text AS computed_definition
   , c.colid AS colorder
   , cm.text AS default_definition
   , CASE WHEN (c.status & 128) = 128 THEN 1 ELSE 0 END AS is_identity
@@ -30,8 +30,9 @@ INNER JOIN systypes t
   ON (c.usertype = t.usertype)
 LEFT OUTER JOIN syscomments cm
   ON (c.cdefault = cm.id)
+LEFT OUTER JOIN syscomments cc
+  ON (c.computedcol = cc.id)
 WHERE 1=1
---  AND SO.type = 'U'
   /*if isNotEmpty(schemaName) */
   AND su.name IN /*schemaName;type=VARCHAR*/('%')
   /*end*/

@@ -67,7 +67,15 @@ public class SybaseColumnReader extends ColumnReader {
 	}
 
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("columns.sql");
+		return getSqlNodeCache().getString(
+				getColumnSqlResource(productVersionInfo));
+	}
+
+	static String getColumnSqlResource(
+			final ProductVersionInfo productVersionInfo) {
+		return productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 15
+				? "columns15.sql" : "columns.sql";
 	}
 
 	/**
@@ -137,6 +145,10 @@ public class SybaseColumnReader extends ColumnReader {
 		this.getDialect().setDbType(productDataType,
 				notZero(max_length, precision), scale, obj);
 		obj.setDefaultValue(unwrap(getString(rs, "default_definition"), '(', ')'));
+		if (rs.getBoolean("is_computed")) {
+			obj.setFormula(getString(rs, "computed_definition"));
+			obj.setFormulaPersisted(rs.getBoolean("is_computed_persisted"));
+		}
 		// column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));

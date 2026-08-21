@@ -81,6 +81,7 @@ class SybaseJdbcTreeDataSessionTest {
 			}
 			statement.execute("CREATE TABLE metadata_table (id INT IDENTITY NOT NULL, "
 					+ "parent_id INT NULL, code VARCHAR(30) DEFAULT 'unknown' NOT NULL, "
+					+ "normalized_code COMPUTE upper(code), "
 					+ "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
 					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
 					+ "CONSTRAINT ck_metadata_table_code CHECK (code <> ''), "
@@ -99,6 +100,8 @@ class SybaseJdbcTreeDataSessionTest {
 			assertTrue(table.getColumns().get("id").isIdentity());
 			assertTrue(table.getColumns().get("code").getDefaultValue()
 					.contains("unknown"));
+			assertTrue(table.getColumns().get("normalized_code").getFormula()
+					.toLowerCase().contains("upper"));
 			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
 			var unique = assertInstanceOf(UniqueConstraint.class,
