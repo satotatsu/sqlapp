@@ -67,6 +67,8 @@ class VirticaBatchGeneratedKeysTest {
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP TRIGGER IF EXISTS metadata_once_trigger");
+			statement.execute("DROP SCHEDULE IF EXISTS metadata_once_schedule");
 			statement.execute("DROP TRIGGER IF EXISTS metadata_schedule_trigger");
 			statement.execute("DROP SCHEDULE IF EXISTS metadata_schedule");
 			statement.execute("DROP PROCEDURE IF EXISTS metadata_scheduled_procedure()");
@@ -74,6 +76,10 @@ class VirticaBatchGeneratedKeysTest {
 					+ "AS $$ BEGIN RAISE NOTICE 'scheduled'; END; $$");
 			statement.execute("CREATE SCHEDULE metadata_schedule USING CRON '0 3 * * *'");
 			statement.execute("CREATE TRIGGER metadata_schedule_trigger ON SCHEDULE metadata_schedule "
+					+ "EXECUTE PROCEDURE metadata_scheduled_procedure() AS DEFINER");
+			statement.execute("CREATE SCHEDULE metadata_once_schedule "
+					+ "USING DATETIMES('2099-01-01 00:00:00+00')");
+			statement.execute("CREATE TRIGGER metadata_once_trigger ON SCHEDULE metadata_once_schedule "
 					+ "EXECUTE PROCEDURE metadata_scheduled_procedure() AS DEFINER");
 			statement.execute("DROP TEXT INDEX IF EXISTS metadata_text_index");
 			statement.execute("DROP TABLE IF EXISTS metadata_text");
@@ -254,6 +260,13 @@ class VirticaBatchGeneratedKeysTest {
 					event.getSpecifics().get("PROCEDURE_NAME"));
 			assertEquals("metadata_schedule", event.getSpecifics().get("SCHEDULE_NAME"));
 			assertEquals("0 3 * * *", event.getSpecifics().get("DATE_TIME_STRING"));
+			var oneTimeEvent = schema.getEvents().stream().filter(
+					e -> "metadata_once_trigger".equalsIgnoreCase(e.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(EventType.OneTime, oneTimeEvent.getEventType());
+			assertEquals("DATE_TIME_LIST", oneTimeEvent.getSpecifics().get("DATE_TIME_TYPE"));
+			assertTrue(oneTimeEvent.getSpecifics().get("DATE_TIME_STRING")
+					.contains("2099-01-01"));
 		}
 	}
 
