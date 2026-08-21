@@ -23,6 +23,7 @@ import org.testcontainers.mariadb.MariaDBContainer;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb11_80;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.schemas.EventType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -139,7 +140,16 @@ class MariadbMetadataReaderTest {
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
 			assertTrue(String.join("\n", trigger.getStatement())
 					.contains("metadata_audit"));
-			assertNotNull(schema.getEvents().get("metadata_event"));
+			var event = schema.getEvents().get("metadata_event");
+			assertNotNull(event);
+			assertEquals(EventType.Recurring, event.getEventType());
+			assertEquals("DAY", event.getIntervalField());
+			assertEquals(1, event.getIntervalValue().intValue());
+			assertEquals("PRESERVE", event.getOnCompletion());
+			assertTrue(!event.isEnable());
+			assertEquals("metadata event", event.getRemarks());
+			assertTrue(String.join("\n", event.getStatement())
+					.contains("metadata_audit"));
 		}
 	}
 
@@ -216,6 +226,7 @@ class MariadbMetadataReaderTest {
 				""");
 		statement.execute("""
 				CREATE EVENT metadata_event ON SCHEDULE EVERY 1 DAY
+				 ON COMPLETION PRESERVE DISABLE COMMENT 'metadata event'
 				 DO DELETE FROM metadata_audit WHERE parent_id < 0
 				""");
 	}
