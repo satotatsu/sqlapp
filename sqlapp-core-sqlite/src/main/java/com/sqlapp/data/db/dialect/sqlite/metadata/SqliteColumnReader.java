@@ -14,6 +14,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,6 +28,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 public class SqliteColumnReader extends ColumnReader {
 	private static final Pattern SIZE_PATTERN = Pattern.compile(
 			"^\\s*([^()]+?)(?:\\s*\\(\\s*(\\d+)(?:\\s*,\\s*(\\d+))?\\s*\\))?\\s*$");
+	private static final Pattern AS_PATTERN = Pattern.compile("(?i)\\bAS\\s*\\(");
 
 	public SqliteColumnReader(final Dialect dialect) {
 		super(dialect);
@@ -55,6 +57,7 @@ public class SqliteColumnReader extends ColumnReader {
 		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + "."
 				+ pragma + "(" + quoteString(tableName) + ")";
 		final Map<Column, Integer> primaryKeyPositions = new IdentityHashMap<>();
+		final Map<Column, Integer> hiddenKinds = new IdentityHashMap<>();
 		try (var statement = connection.createStatement();
 				var resultSet = statement.executeQuery(sql)) {
 			final boolean hasHidden = hasColumn(resultSet, "hidden");
@@ -73,6 +76,7 @@ public class SqliteColumnReader extends ColumnReader {
 					final int hidden = resultSet.getInt("hidden");
 					column.setHidden(hidden == 1);
 					column.setFormulaPersisted(hidden == 3);
+					hiddenKinds.put(column, hidden);
 				}
 				primaryKeyPositions.put(column, primaryKeyPosition);
 				result.add(column);
@@ -90,7 +94,131 @@ public class SqliteColumnReader extends ColumnReader {
 				}
 			});
 		}
+		loadGeneratedExpressions(connection, schemaName, tableName, hiddenKinds);
 		return result;
+	}
+
+	private void loadGeneratedExpressions(final Connection connection,
+			final String schemaName, final String tableName,
+			final Map<Column, Integer> hiddenKinds) {
+		if (hiddenKinds.values().stream().noneMatch(kind -> kind == 2 || kind == 3)) {
+			return;
+		}
+		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
+				+ ".sqlite_schema WHERE type='table' AND name=?";
+		try (var statement = connection.prepareStatement(sql)) {
+			statement.setString(1, tableName);
+			try (var resultSet = statement.executeQuery()) {
+				if (!resultSet.next()) {
+					return;
+				}
+				final List<String> definitions = splitColumnDefinitions(
+						resultSet.getString(1));
+				hiddenKinds.forEach((column, kind) -> {
+					if (kind != 2 && kind != 3) {
+						return;
+					}
+					definitions.stream()
+							.filter(definition -> Objects.equals(column.getName(),
+									readIdentifier(definition)))
+							.map(SqliteColumnReader::extractFormula)
+							.filter(Objects::nonNull).findFirst()
+							.ifPresent(column::setFormula);
+				});
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	static List<String> splitColumnDefinitions(final String createSql) {
+		final List<String> result = list();
+		if (createSql == null) {
+			return result;
+		}
+		final int start = createSql.indexOf('(');
+		if (start < 0) {
+			return result;
+		}
+		int depth = 1;
+		int itemStart = start + 1;
+		char quote = 0;
+		for (int i = start + 1; i < createSql.length(); i++) {
+			final char current = createSql.charAt(i);
+			if (quote != 0) {
+				if (current == quote || quote == ']' && current == ']') {
+					if (quote != ']' && i + 1 < createSql.length()
+							&& createSql.charAt(i + 1) == quote) {
+						i++;
+					} else {
+						quote = 0;
+					}
+				}
+				continue;
+			}
+			if (current == '\'' || current == '"' || current == '`') {
+				quote = current;
+			} else if (current == '[') {
+				quote = ']';
+			} else if (current == '(') {
+				depth++;
+			} else if (current == ')') {
+				depth--;
+				if (depth == 0) {
+					result.add(createSql.substring(itemStart, i).trim());
+					break;
+				}
+			} else if (current == ',' && depth == 1) {
+				result.add(createSql.substring(itemStart, i).trim());
+				itemStart = i + 1;
+			}
+		}
+		return result;
+	}
+
+	static String extractFormula(final String definition) {
+		final Matcher matcher = AS_PATTERN.matcher(definition);
+		if (!matcher.find()) {
+			return null;
+		}
+		final int open = matcher.end() - 1;
+		int depth = 1;
+		char quote = 0;
+		for (int i = open + 1; i < definition.length(); i++) {
+			final char current = definition.charAt(i);
+			if (quote != 0) {
+				if (current == quote && (i + 1 >= definition.length()
+						|| definition.charAt(i + 1) != quote)) {
+					quote = 0;
+				} else if (current == quote) {
+					i++;
+				}
+				continue;
+			}
+			if (current == '\'' || current == '"' || current == '`') {
+				quote = current;
+			} else if (current == '(') {
+				depth++;
+			} else if (current == ')' && --depth == 0) {
+				return definition.substring(open + 1, i).trim();
+			}
+		}
+		return null;
+	}
+
+	private static String readIdentifier(final String definition) {
+		final String value = definition.trim();
+		if (value.isEmpty()) {
+			return value;
+		}
+		final char first = value.charAt(0);
+		if (first == '"' || first == '`' || first == '[') {
+			final char end = first == '[' ? ']' : first;
+			final int endIndex = value.indexOf(end, 1);
+			return endIndex < 0 ? value : value.substring(1, endIndex);
+		}
+		final int whitespace = value.indexOf(' ');
+		return whitespace < 0 ? value : value.substring(0, whitespace);
 	}
 
 	private boolean hasColumn(final java.sql.ResultSet resultSet,

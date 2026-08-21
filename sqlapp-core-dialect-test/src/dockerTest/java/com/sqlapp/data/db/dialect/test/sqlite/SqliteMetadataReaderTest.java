@@ -88,7 +88,9 @@ class SqliteMetadataReaderTest {
 			assertEquals("code", uniqueCode.getColumns().get(0).getName());
 			var child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
-			assertTrue(child.getColumns().get("normalized_code").isFormulaPersisted());
+			var normalizedCode = child.getColumns().get("normalized_code");
+			assertEquals("lower(code)", normalizedCode.getFormula());
+			assertTrue(normalizedCode.isFormulaPersisted());
 			var foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
