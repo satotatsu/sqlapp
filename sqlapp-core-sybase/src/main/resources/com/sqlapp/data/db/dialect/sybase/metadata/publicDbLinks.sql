@@ -1,18 +1,13 @@
 SELECT
   DB_NAME() AS catalog_name
 , SS.srvname AS name
-, SS.srvproduct AS product
-, SS.providername AS provider
-, SS.providerstring AS provider_string
-, SS.datasource AS data_source
-, SS.catalog
-, SS.schemadate AS modify_date
-, SR.rmtloginame AS user_name
-FROM sysservers SS
-LEFT OUTER JOIN sysoledbusers SR
-  on (SS.srvid=SR.rmtsrvid)
+, SS.srvnetname AS data_source
+, SS.srvclass
+, SS.srvstatus
+, SS.srvsecmech
+FROM master.dbo.sysservers SS
 WHERE 1=1
   /*if isNotEmpty(dbLinkName)*/
-  AND SS.srvname IN /*dbLinkName;type=NVARCHAR*/('%')
+  AND SS.srvname IN /*dbLinkName;type=VARCHAR*/('%')
   /*end*/
 ORDER BY SS.srvname

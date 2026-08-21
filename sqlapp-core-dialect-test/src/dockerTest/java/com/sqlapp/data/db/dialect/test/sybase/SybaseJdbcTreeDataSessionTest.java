@@ -70,6 +70,12 @@ class SybaseJdbcTreeDataSessionTest {
 				// The isolated test container may not contain the procedure yet.
 			}
 			try {
+				statement.execute("sp_dropserver 'metadata_remote'");
+			} catch (SQLException ignored) {
+				// The isolated test container may not contain the remote server yet.
+			}
+			statement.execute("sp_addserver 'metadata_remote', 'ASEnterprise', 'metadata_network'");
+			try {
 				statement.execute("DROP VIEW metadata_view");
 			} catch (SQLException ignored) {
 				// The isolated test container may not contain the view yet.
@@ -114,6 +120,12 @@ class SybaseJdbcTreeDataSessionTest {
 			assertEquals("dbo", users.get(0).getName());
 			assertEquals("sa", users.get(0).getLoginUserName());
 			assertNotNull(users.get(0).getId());
+			var dbLinkReader = dialect.getCatalogReader().getPublicDbLinkReader();
+			dbLinkReader.setObjectName("metadata_remote");
+			var dbLinks = dbLinkReader.getAllFull(connection);
+			assertEquals(1, dbLinks.size());
+			assertEquals("metadata_remote", dbLinks.get(0).getName());
+			assertEquals("metadata_network", dbLinks.get(0).getDataSource());
 			var roleMemberReader = dialect.getCatalogReader().getRoleMemberReader();
 			roleMemberReader.setGrantee("sa");
 			var roleMembers = roleMemberReader.getAllFull(connection);
