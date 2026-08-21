@@ -63,6 +63,7 @@ public class VirticaUserReader extends UserReader {
 
 	protected User createUser(ExResultSet rs) throws SQLException {
 		User obj = new User(getString(rs, USER_NAME));
+		obj.setId(getString(rs, "USER_ID"));
 		obj.setAdmin(rs.getBoolean("IS_SUPER_USER"));
 		obj.setLockedAt(getTimestamp(rs, "LOCK_TIME"));
 		setSpecifics(rs, "PROFILE_NAME", obj);

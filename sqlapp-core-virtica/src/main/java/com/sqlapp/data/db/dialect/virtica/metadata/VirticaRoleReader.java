@@ -70,7 +70,7 @@ public class VirticaRoleReader extends RoleReader {
 	protected Role createRole(ExResultSet rs) throws SQLException {
 		String name = getString(rs, "NAME");
 		Role obj = new Role(name);
-		obj.setId(getString(rs, "ID"));
+		obj.setId(getString(rs, "ROLE_ID"));
 		//TODO ASSIGNED_ROLES
 		setSpecifics(rs, "ASSIGNED_ROLES", obj);
 		return obj;

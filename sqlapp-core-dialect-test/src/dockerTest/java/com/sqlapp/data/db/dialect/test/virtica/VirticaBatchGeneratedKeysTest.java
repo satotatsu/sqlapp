@@ -64,6 +64,11 @@ class VirticaBatchGeneratedKeysTest {
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("DROP USER IF EXISTS metadata_user");
+			statement.execute("DROP ROLE IF EXISTS metadata_role");
+			statement.execute("CREATE ROLE metadata_role");
+			statement.execute("CREATE USER metadata_user");
+			statement.execute("GRANT metadata_role TO metadata_user");
 			statement.execute("DROP VIEW IF EXISTS metadata_view");
 			statement.execute("DROP TABLE IF EXISTS metadata_child");
 			statement.execute("DROP TABLE IF EXISTS metadata_table");
@@ -82,8 +87,23 @@ class VirticaBatchGeneratedKeysTest {
 			statement.execute("COMMENT ON TABLE metadata_table IS 'metadata table comment'");
 			statement.execute("COMMENT ON COLUMN metadata_table.code IS 'metadata code comment'");
 			statement.execute("COMMENT ON SEQUENCE metadata_sequence IS 'metadata sequence comment'");
-			var schema = DialectResolver.getInstance().getDialect(connection)
-					.getCatalogReader().getSchemaReader().getAllFull(connection)
+			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var roleReader = dialect.getCatalogReader().getRoleReader();
+			roleReader.setObjectName("metadata_role");
+			var roles = roleReader.getAllFull(connection);
+			assertEquals(1, roles.size());
+			assertEquals("metadata_role", roles.get(0).getName());
+			assertNotNull(roles.get(0).getId());
+			var userReader = dialect.getCatalogReader().getUserReader();
+			userReader.setObjectName("metadata_user");
+			var users = userReader.getAllFull(connection);
+			assertEquals(1, users.size());
+			assertEquals("metadata_user", users.get(0).getName());
+			assertNotNull(users.get(0).getId());
+			assertFalse(users.get(0).isAdmin());
+			assertTrue(users.get(0).getSpecifics().get("ALL_ROLES")
+					.toLowerCase().contains("metadata_role"));
+			var schema = dialect.getCatalogReader().getSchemaReader().getAllFull(connection)
 					.stream().filter(s -> s.getTables().stream().anyMatch(
 							t -> "metadata_table".equalsIgnoreCase(t.getName())))
 					.findFirst().orElseThrow();
