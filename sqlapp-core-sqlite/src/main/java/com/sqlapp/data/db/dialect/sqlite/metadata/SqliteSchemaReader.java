@@ -20,6 +20,7 @@ import com.sqlapp.data.db.metadata.SynonymReader;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.metadata.TriggerReader;
 import com.sqlapp.data.db.metadata.TypeReader;
+import com.sqlapp.data.db.metadata.ViewReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Schema;
@@ -63,6 +64,11 @@ public class SqliteSchemaReader extends JdbcSchemaReader {
 	@Override
 	protected TriggerReader newTriggerReader() {
 		return new SqliteTriggerReader(getDialect());
+	}
+
+	@Override
+	protected ViewReader newViewReader() {
+		return new SqliteViewReader(getDialect());
 	}
 
 	@Override

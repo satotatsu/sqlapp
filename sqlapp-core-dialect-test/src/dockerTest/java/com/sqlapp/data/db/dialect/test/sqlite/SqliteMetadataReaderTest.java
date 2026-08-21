@@ -56,6 +56,8 @@ class SqliteMetadataReaderTest {
 			statement.execute("ATTACH DATABASE ':memory:' AS analytics");
 			statement.execute("CREATE TABLE analytics.metadata_attached "
 					+ "(id INTEGER PRIMARY KEY, code TEXT UNIQUE)");
+			statement.execute("CREATE VIEW analytics.metadata_attached_view AS "
+					+ "SELECT id, code FROM metadata_attached");
 			statement.execute("CREATE TRIGGER analytics.trg_metadata_attached "
 					+ "AFTER UPDATE ON metadata_attached BEGIN SELECT NEW.id; END");
 			statement.execute("CREATE TEMP TABLE metadata_temp (id INTEGER PRIMARY KEY)");
@@ -121,6 +123,10 @@ class SqliteMetadataReaderTest {
 					.anyMatch(constraint -> !constraint.isPrimaryKey()
 							&& "code".equals(constraint.getColumns().get(0).getName())));
 			assertNotNull(attachedSchema.getTriggers().get("trg_metadata_attached"));
+			var attachedView = attachedSchema.getViews().get("metadata_attached_view");
+			assertNotNull(attachedView);
+			assertTrue(attachedView.getStatement().get(0)
+					.startsWith("SELECT id, code FROM metadata_attached"));
 			var tempSchema = schemas.stream()
 					.filter(s -> "temp".equals(s.getName()))
 					.findFirst().orElseThrow();
