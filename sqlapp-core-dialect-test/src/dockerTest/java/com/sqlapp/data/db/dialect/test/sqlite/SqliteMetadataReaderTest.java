@@ -48,6 +48,8 @@ class SqliteMetadataReaderTest {
 			statement.execute("CREATE INDEX idx_metadata_child_code ON metadata_child(code DESC)");
 			statement.execute("CREATE INDEX idx_metadata_child_partial ON metadata_child(code) "
 					+ "WHERE parent_id > 0 AND code IS NOT NULL");
+			statement.execute("CREATE INDEX idx_metadata_child_expression "
+					+ "ON metadata_child(lower(code) DESC)");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
 			statement.execute("CREATE TABLE metadata_strict (id INTEGER PRIMARY KEY, value TEXT) STRICT");
 			statement.execute("CREATE TABLE metadata_without_rowid (id TEXT PRIMARY KEY, value TEXT) "
@@ -61,6 +63,10 @@ class SqliteMetadataReaderTest {
 					+ "status TEXT DEFAULT 'active')");
 			statement.execute("CREATE VIEW analytics.metadata_attached_view AS "
 					+ "SELECT id, code FROM metadata_attached");
+			statement.execute("CREATE TABLE analytics.metadata_attached_child "
+					+ "(id INTEGER PRIMARY KEY, parent_id INTEGER, "
+					+ "FOREIGN KEY (parent_id) REFERENCES metadata_attached(id) "
+					+ "ON UPDATE SET NULL ON DELETE CASCADE)");
 			statement.execute("CREATE TRIGGER analytics.trg_metadata_attached "
 					+ "AFTER UPDATE ON metadata_attached BEGIN SELECT NEW.id; END");
 			statement.execute("CREATE TEMP TABLE metadata_temp (id INTEGER PRIMARY KEY)");
@@ -112,6 +118,9 @@ class SqliteMetadataReaderTest {
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
 			assertEquals("parent_id > 0 AND code IS NOT NULL",
 					child.getIndexes().get("idx_metadata_child_partial").getWhere());
+			var expressionIndex = child.getIndexes().get("idx_metadata_child_expression");
+			assertEquals("lower(code)", expressionIndex.getColumns().get(0).getName());
+			assertEquals(Order.Desc, expressionIndex.getColumns().get(0).getOrder());
 			assertNotNull(schema.getViews().get("metadata_view"));
 			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_strict")
 					.getSpecifics().get("strict", Boolean.class));
@@ -138,6 +147,16 @@ class SqliteMetadataReaderTest {
 					.map(UniqueConstraint.class::cast)
 					.anyMatch(constraint -> !constraint.isPrimaryKey()
 							&& "code".equals(constraint.getColumns().get(0).getName())));
+			var attachedForeignKey = attachedSchema.getTables()
+					.get("metadata_attached_child").getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.findFirst().orElseThrow();
+			assertEquals("parent_id", attachedForeignKey.getColumns().get(0).getName());
+			assertEquals("id",
+					attachedForeignKey.getRelatedColumns().get(0).getName());
+			assertEquals(CascadeRule.SetNull, attachedForeignKey.getUpdateRule());
+			assertEquals(CascadeRule.Cascade, attachedForeignKey.getDeleteRule());
 			assertNotNull(attachedSchema.getTriggers().get("trg_metadata_attached"));
 			var attachedView = attachedSchema.getViews().get("metadata_attached_view");
 			assertNotNull(attachedView);

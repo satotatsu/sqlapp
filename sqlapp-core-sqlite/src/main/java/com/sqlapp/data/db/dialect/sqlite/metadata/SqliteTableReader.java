@@ -15,6 +15,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
+import com.sqlapp.data.db.metadata.ForeignKeyConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.db.metadata.TableObjectReader;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
@@ -67,6 +68,11 @@ public class SqliteTableReader extends JdbcTableReader {
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
 		return new SqliteCheckConstraintReader(getDialect());
+	}
+
+	@Override
+	protected ForeignKeyConstraintReader newForeignKeyConstraintReader() {
+		return new SqliteForeignKeyConstraintReader(getDialect());
 	}
 
 	@Override

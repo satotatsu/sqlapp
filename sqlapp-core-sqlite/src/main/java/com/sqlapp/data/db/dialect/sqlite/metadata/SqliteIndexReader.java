@@ -19,6 +19,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SchemaProperties;
@@ -57,35 +58,57 @@ public class SqliteIndexReader extends JdbcIndexReader {
 					? "main" : index.getSchemaName();
 			final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
 					+ ".sqlite_schema WHERE type='index' AND name=?";
+			String definition = null;
 			try (var statement = connection.prepareStatement(sql)) {
 				statement.setString(1, index.getName());
 				try (var resultSet = statement.executeQuery()) {
 					if (resultSet.next()) {
-						index.setWhere(extractWhere(resultSet.getString(1)));
+						definition = resultSet.getString(1);
+						index.setWhere(extractWhere(definition));
 					}
 				}
 			}
-			loadColumnOrders(connection, schemaName, index);
+			loadColumnDetails(connection, schemaName, index, definition);
 		}
 	}
 
-	private void loadColumnOrders(final Connection connection,
-			final String schemaName, final Index index) throws SQLException {
+	private void loadColumnDetails(final Connection connection,
+			final String schemaName, final Index index,
+			final String definition) throws SQLException {
 		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
 				+ ".index_xinfo(" + quoteString(index.getName()) + ")";
+		final List<String> definitions =
+				SqliteColumnReader.splitColumnDefinitions(definition);
 		try (var statement = connection.createStatement();
 				var resultSet = statement.executeQuery(sql)) {
 			final boolean hasDescending = hasColumn(resultSet, "desc");
+			final boolean hasKey = hasColumn(resultSet, "key");
+			index.getColumns().clear();
 			while (resultSet.next()) {
 				final String columnName = resultSet.getString("name");
-				if (!hasDescending || columnName == null
-						|| index.getColumns().get(columnName) == null) {
+				final int columnId = resultSet.getInt("cid");
+				if (hasKey && !resultSet.getBoolean("key")
+						|| !hasKey && columnName == null && columnId != -2) {
 					continue;
 				}
-				index.getColumns().get(columnName).setOrder(
-						resultSet.getBoolean("desc") ? Order.Desc : Order.Asc);
+				final Order order = hasDescending && resultSet.getBoolean("desc")
+						? Order.Desc : Order.Asc;
+				if (columnName != null) {
+					index.getColumns().add(new Column(columnName), order);
+				} else {
+					final int position = resultSet.getInt("seqno");
+					if (position < definitions.size()) {
+						index.getColumns().add(stripOrder(definitions.get(position)),
+								order);
+					}
+				}
 			}
 		}
+	}
+
+	static String stripOrder(final String definition) {
+		return definition.replaceFirst("(?is)\\s+(?:ASC|DESC)\\s*$", "")
+				.trim();
 	}
 
 	private boolean hasColumn(final java.sql.ResultSet resultSet,

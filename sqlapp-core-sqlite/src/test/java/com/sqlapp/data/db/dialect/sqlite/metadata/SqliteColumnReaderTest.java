@@ -26,4 +26,13 @@ class SqliteColumnReaderTest {
 		assertEquals("(price + tax) * quantity",
 				SqliteColumnReader.extractFormula(definitions.get(2)));
 	}
+
+	@Test
+	void stripsOnlyTheIndexKeyOrder() {
+		assertEquals("lower(code)",
+				SqliteIndexReader.stripOrder("lower(code) DESC"));
+		assertEquals("CASE WHEN score > 0 THEN 'DESC' END",
+				SqliteIndexReader.stripOrder(
+						"CASE WHEN score > 0 THEN 'DESC' END ASC"));
+	}
 }
