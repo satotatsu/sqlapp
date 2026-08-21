@@ -73,7 +73,7 @@ class InformixJdbcTreeDataSessionTest {
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
-					"metadata_function")
+					"metadata_function", "metadata_sequence")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -128,6 +128,14 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(1, function.getArguments().size());
 			assertEquals("p_value", function.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, function.getArguments().get(0).getDirection());
+			var sequence = schema.getSequences().get("metadata_sequence");
+			assertNotNull(sequence);
+			assertEquals(10L, sequence.getStartValue().longValue());
+			assertEquals(5L, sequence.getIncrementBy().longValue());
+			assertEquals(10L, sequence.getMinValue().longValue());
+			assertEquals(1000L, sequence.getMaxValue().longValue());
+			assertTrue(sequence.isCycle());
+			assertEquals(10L, sequence.getCacheSize().longValue());
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
@@ -176,6 +184,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropTrigger(statement, "metadata_trigger");
 			dropRoutine(statement, "metadata_procedure", true);
 			dropRoutine(statement, "metadata_function", false);
+			dropSequence(statement, "metadata_sequence");
 			dropView(statement, "parent_view");
 			dropTable(statement, "metadata_audit");
 			dropTable(statement, "child_table");
@@ -217,6 +226,10 @@ class InformixJdbcTreeDataSessionTest {
 					RETURN p_value * 2;
 					END FUNCTION
 					""");
+			statement.execute("""
+					CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5
+					MINVALUE 10 MAXVALUE 1000 CYCLE CACHE 10
+					""");
 			connection.commit();
 		}
 	}
@@ -243,6 +256,20 @@ class InformixJdbcTreeDataSessionTest {
 			}
 		}
 		statement.execute("DROP " + (procedure ? "PROCEDURE " : "FUNCTION ") + routineName);
+	}
+
+	private void dropSequence(final Statement statement, final String sequenceName) throws SQLException {
+		try (ResultSet resultSet = statement.executeQuery("""
+				SELECT COUNT(*)
+				FROM syssequences s JOIN systables t ON s.tabid = t.tabid
+				WHERE t.tabname = '%s'
+				""".formatted(sequenceName))) {
+			resultSet.next();
+			if (resultSet.getInt(1) == 0) {
+				return;
+			}
+		}
+		statement.execute("DROP SEQUENCE " + sequenceName);
 	}
 
 	private void dropView(final Statement statement, final String viewName) throws SQLException {

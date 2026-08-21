@@ -12,6 +12,7 @@ import com.sqlapp.data.db.metadata.TriggerReader;
 import com.sqlapp.data.db.metadata.ViewReader;
 import com.sqlapp.data.db.metadata.ProcedureReader;
 import com.sqlapp.data.db.metadata.FunctionReader;
+import com.sqlapp.data.db.metadata.SequenceReader;
 
 /** Informix JDBC schema reader. */
 public class InformixSchemaReader extends JdbcSchemaReader {
@@ -42,5 +43,10 @@ public class InformixSchemaReader extends JdbcSchemaReader {
 	@Override
 	protected FunctionReader newFunctionReader() {
 		return new InformixFunctionReader(getDialect());
+	}
+
+	@Override
+	protected SequenceReader newSequenceReader() {
+		return new InformixSequenceReader(getDialect());
 	}
 }
