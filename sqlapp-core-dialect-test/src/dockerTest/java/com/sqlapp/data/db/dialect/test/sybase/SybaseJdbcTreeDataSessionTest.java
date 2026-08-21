@@ -107,6 +107,13 @@ class SybaseJdbcTreeDataSessionTest {
 			assertEquals(1, roles.size());
 			assertEquals("sa_role", roles.get(0).getName());
 			assertNotNull(roles.get(0).getId());
+			var userReader = dialect.getCatalogReader().getUserReader();
+			userReader.setObjectName("dbo");
+			var users = userReader.getAllFull(connection);
+			assertEquals(1, users.size());
+			assertEquals("dbo", users.get(0).getName());
+			assertEquals("sa", users.get(0).getLoginUserName());
+			assertNotNull(users.get(0).getId());
 			var roleMemberReader = dialect.getCatalogReader().getRoleMemberReader();
 			roleMemberReader.setGrantee("sa");
 			var roleMembers = roleMemberReader.getAllFull(connection);

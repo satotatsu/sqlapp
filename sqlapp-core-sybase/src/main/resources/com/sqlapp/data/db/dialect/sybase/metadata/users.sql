@@ -2,15 +2,12 @@ SELECT
     DB_NAME() AS catalog_name
   , u.uid AS principal_id
   , u.name AS user_name
-  , u.createdate AS create_date
-  , u.updatedate AS modify_date
   , l.name AS login_user_name
 FROM sysusers u
-INNER JOIN sys.syslogins l
-  ON (u.sid=l.sid)
-WHERE (u.isntuser = 1 OR u.issqluser=1)
-  AND u.name<>'dbo'
+INNER JOIN master.dbo.syslogins l
+  ON (u.suid=l.suid)
+WHERE u.suid>=0
   /*if isNotEmpty(userName) */
-  AND u.name IN /*userName;type=NVARCHAR*/('%')
+  AND u.name IN /*userName;type=VARCHAR*/('%')
   /*end*/
 ORDER BY u.name
