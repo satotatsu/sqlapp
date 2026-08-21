@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.test.informix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,6 +34,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.informix.metadata.InformixTableReader;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
@@ -40,6 +42,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.sqlapp.jdbc.sql.ParameterDirection;
@@ -86,6 +89,8 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(DataType.SERIAL, parent.getColumns().get("id").getDataType());
 			assertEquals(IdentityGenerationType.ByDefault,
 					parent.getColumns().get("id").getIdentityGenerationType());
+			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint(),
+					() -> constraintDetails(connection, parent));
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
 			assertEquals("'child-default'", child.getColumns().get("txt").getDefaultValue());
@@ -97,6 +102,13 @@ class InformixJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
+			assertEquals("fk_child_parent", foreignKey.getName());
+			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
+			var unique = assertInstanceOf(UniqueConstraint.class,
+					child.getConstraints().get("uq_child_parent_txt"));
+			assertEquals(2, unique.getColumns().size());
+			assertEquals("parent_id", unique.getColumns().get(0).getName());
+			assertEquals("txt", unique.getColumns().get(1).getName());
 			assertTrue(child.getIndexes().stream().anyMatch(
 					index -> "idx_child_txt".equalsIgnoreCase(index.getName())));
 			var descendingIndex = child.getIndexes().stream()
@@ -227,6 +239,27 @@ class InformixJdbcTreeDataSessionTest {
 		}
 	}
 
+	private String constraintDetails(final Connection connection, final Table table) {
+		StringBuilder builder = new StringBuilder("model=").append(table.getConstraints());
+		try (Statement statement = connection.createStatement();
+				ResultSet resultSet = statement.executeQuery("""
+						SELECT c.constrname, c.constrtype, c.idxname, t.tabid
+						FROM sysconstraints c JOIN systables t ON c.tabid = t.tabid
+						WHERE t.tabname = 'parent_table'
+						""")) {
+			builder.append(", catalog=");
+			while (resultSet.next()) {
+				builder.append('[').append(resultSet.getString(1)).append(',')
+						.append(resultSet.getString(2)).append(',')
+						.append(resultSet.getString(3)).append(',')
+						.append(resultSet.getInt(4)).append(']');
+			}
+		} catch (SQLException e) {
+			builder.append(", error=").append(e.getMessage());
+		}
+		return builder.toString();
+	}
+
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			dropTrigger(statement, "metadata_trigger");
@@ -251,7 +284,9 @@ class InformixJdbcTreeDataSessionTest {
 						parent_id INTEGER NOT NULL,
 						txt VARCHAR(255) DEFAULT 'child-default',
 						FOREIGN KEY (parent_id)
-							REFERENCES parent_table(id),
+							REFERENCES parent_table(id)
+							ON DELETE CASCADE CONSTRAINT fk_child_parent,
+						UNIQUE (parent_id, txt) CONSTRAINT uq_child_parent_txt,
 						CHECK (txt <> '') CONSTRAINT ck_child_txt
 					)
 					""");
