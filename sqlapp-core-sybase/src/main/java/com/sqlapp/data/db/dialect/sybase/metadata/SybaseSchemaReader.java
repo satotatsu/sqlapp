@@ -120,7 +120,7 @@ public class SybaseSchemaReader extends SchemaReader {
 
 	@Override
 	protected DomainReader newDomainReader() {
-		return null;
+		return new SybaseDomainReader(this.getDialect());
 	}
 
 	@Override

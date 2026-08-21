@@ -10,8 +10,12 @@ SELECT
 , bt.name as base_type_name
 FROM systypes t
 INNER JOIN systypes bt
-  ON (t.xtype=bt.xtype
-     AND t.name<>bt.name)
+  ON (t.type=bt.type
+     AND bt.usertype=(
+       SELECT min(bt2.usertype)
+       FROM systypes bt2
+       WHERE bt2.type=t.type
+     ))
 INNER JOIN sysusers u
   ON (t.uid=u.uid)
 WHERE t.name not in

@@ -79,8 +79,14 @@ class SybaseJdbcTreeDataSessionTest {
 			} catch (SQLException ignored) {
 				// The isolated test container may not contain the table yet.
 			}
+			try {
+				statement.execute("sp_droptype metadata_code");
+			} catch (SQLException ignored) {
+				// The isolated test container may not contain the type yet.
+			}
+			statement.execute("sp_addtype metadata_code, 'varchar(30)', 'not null'");
 			statement.execute("CREATE TABLE metadata_table (id INT IDENTITY NOT NULL, "
-					+ "parent_id INT NULL, code VARCHAR(30) DEFAULT 'unknown' NOT NULL, "
+					+ "parent_id INT NULL, code metadata_code DEFAULT 'unknown', "
 					+ "normalized_code COMPUTE upper(code), "
 					+ "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
 					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
@@ -95,8 +101,13 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
 			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table", "metadata_view",
-					"metadata_procedure")
+					"metadata_procedure", "metadata_code")
 					.orElseThrow();
+			var domain = schema.getDomains().get("metadata_code");
+			assertNotNull(domain);
+			assertEquals(DataType.VARCHAR, domain.getDataType());
+			assertEquals(30L, domain.getLength().longValue());
+			assertTrue(domain.isNotNull());
 			var table = schema.getTables().get("metadata_table");
 			assertNotNull(table);
 			assertEquals(Boolean.TRUE,
