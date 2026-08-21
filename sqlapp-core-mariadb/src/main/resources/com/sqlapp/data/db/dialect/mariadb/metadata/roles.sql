@@ -1,9 +1,9 @@
 SELECT
-  r.*
-FROM information_schema.ENABLED_ROLES r
+  u.User AS ROLE_NAME
+FROM mysql.user u
 WHERE 1=1
   /*if isNotEmpty(roleName) */
-  AND r.rolname IN /*roleName*/('%')
+  AND u.User IN /*roleName*/('%')
   /*end*/
-  AND r.rolcanlogin=false
-ORDER BY r.rolname
+  AND u.is_role='Y'
+ORDER BY u.User

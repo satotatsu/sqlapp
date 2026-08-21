@@ -30,7 +30,8 @@ public class DialectHolder {
 	public final static Mariadb10_27 mariadb10_27Dialect = new Mariadb10_27(() -> mariadb10_30Dialect);
 	public final static Mariadb10_25 mariadb10_25Dialect = new Mariadb10_25(() -> mariadb10_27Dialect);
 	public final static Mariadb10_20 mariadb10_20Dialect = new Mariadb10_20(() -> mariadb10_25Dialect);
-	public final static Mariadb10_00 mariadb10_00Dialect = new Mariadb10_00(() -> mariadb10_20Dialect);
+	public final static Mariadb10_05 mariadb10_05Dialect = new Mariadb10_05(() -> mariadb10_20Dialect);
+	public final static Mariadb10_00 mariadb10_00Dialect = new Mariadb10_00(() -> mariadb10_05Dialect);
 	public final static Mariadb defaultDialect = new Mariadb(() -> mariadb10_00Dialect);
 
 }

@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.mariadb.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 
-public class MariadbCatalog10_27Reader extends MariadbCatalog10_00Reader{
+public class MariadbCatalog10_27Reader extends MariadbCatalog10_05Reader{
 
 	public MariadbCatalog10_27Reader(Dialect dialect) {
 		super(dialect);

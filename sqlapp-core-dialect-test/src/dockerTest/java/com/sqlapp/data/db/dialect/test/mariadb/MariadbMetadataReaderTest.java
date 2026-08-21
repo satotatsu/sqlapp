@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -31,8 +32,10 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** MariaDB 11.8 integration coverage for the metadata reader tree. */
 class MariadbMetadataReaderTest {
+	private static final String ROOT_PASSWORD = "metadata-root";
 	private static final MariaDBContainer MARIADB = ReusableTestcontainers
 			.configure(new MariaDBContainer("mariadb:11.8")
+					.withEnv("MARIADB_ROOT_PASSWORD", ROOT_PASSWORD)
 					.withCommand("--log-bin-trust-function-creators=1"));
 
 	@BeforeAll
@@ -47,11 +50,17 @@ class MariadbMetadataReaderTest {
 
 	@Test
 	void testReadsRepresentativeSchemaObjectsFromMariaDb118() throws SQLException {
-		try (Connection connection = MARIADB.createConnection("");
+		try (Connection connection = DriverManager.getConnection(
+				MARIADB.getJdbcUrl(), "root", ROOT_PASSWORD);
 				Statement statement = connection.createStatement()) {
 			createObjects(statement);
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Mariadb11_80.class, dialect);
+			var roleReader = dialect.getCatalogReader().getRoleReader();
+			roleReader.setObjectName("metadata_reader_role");
+			var roles = roleReader.getAllFull(connection);
+			assertEquals(1, roles.size());
+			assertEquals("metadata_reader_role", roles.get(0).getName());
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName(MARIADB.getDatabaseName());
 			var schema = reader.getAllFull(connection).stream()
@@ -154,6 +163,8 @@ class MariadbMetadataReaderTest {
 	}
 
 	private void createObjects(final Statement statement) throws SQLException {
+		statement.execute("DROP ROLE IF EXISTS metadata_reader_role");
+		statement.execute("CREATE ROLE metadata_reader_role");
 		statement.execute("DROP EVENT IF EXISTS metadata_event");
 		statement.execute("DROP TRIGGER IF EXISTS metadata_trigger");
 		statement.execute("DROP FUNCTION IF EXISTS metadata_function");
