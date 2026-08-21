@@ -71,18 +71,24 @@ public class VirticaFunctionReader extends FunctionReader {
 
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = new Function(getString(rs, FUNCTION_NAME));
+		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDefinition(getString(rs, "FUNCTION_DEFINITION"));
 		obj.setRemarks(getString(rs, "COMMENT"));
 		setReturning(rs, obj);
 		String args=getString(rs, "FUNCTION_ARGUMENT_TYPE");
+		obj.setSpecificName(createSpecificName(obj.getName(), args));
 		for(String split:splitArguments(args)){
 			NamedArgument argument=createNamedArgument(split);
 			obj.getArguments().add(argument);
 		}
 		this.setSpecifics(rs, "VOLATILITY", obj);
 		this.setSpecifics(rs, "IS_FENCED", obj);
-		this.setSpecifics(rs, "VOLATILITY", obj);
+		this.setSpecifics(rs, "IS_STRICT", obj);
 		return obj;
+	}
+
+	protected String createSpecificName(String functionName, String parameters) {
+		return functionName + "(" + (parameters == null ? "" : parameters.trim()) + ")";
 	}
 
 	protected void setReturning(ExResultSet rs, Function obj) throws SQLException {

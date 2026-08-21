@@ -38,5 +38,13 @@ class VirticaFunctionReaderTest {
 	void acceptsNoArguments() {
 		assertEquals(List.of(), reader.splitArguments(null));
 		assertEquals(List.of(), reader.splitArguments("  "));
+		assertEquals("zero_args()", reader.createSpecificName("zero_args", null));
+	}
+
+	@Test
+	void createsOverloadSpecificNameFromArguments() {
+		assertEquals("calculate(amount Numeric(10,2), label Varchar(100))",
+				reader.createSpecificName("calculate",
+						"amount Numeric(10,2), label Varchar(100)"));
 	}
 }
