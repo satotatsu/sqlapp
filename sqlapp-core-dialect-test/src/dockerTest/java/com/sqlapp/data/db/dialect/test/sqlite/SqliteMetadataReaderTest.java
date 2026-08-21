@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.sqlite.Sqlite;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -32,7 +33,8 @@ class SqliteMetadataReaderTest {
 					CREATE TABLE metadata_parent (
 					 id INTEGER PRIMARY KEY AUTOINCREMENT,
 					 code TEXT NOT NULL UNIQUE,
-					 amount NUMERIC NOT NULL CHECK (amount >= 0))
+					 amount NUMERIC NOT NULL,
+					 CONSTRAINT ck_metadata_parent_amount CHECK (amount >= 0))
 					""");
 			statement.execute("""
 					CREATE TABLE metadata_child (
@@ -86,6 +88,13 @@ class SqliteMetadataReaderTest {
 					.filter(constraint -> !constraint.isPrimaryKey())
 					.findFirst().orElseThrow();
 			assertEquals("code", uniqueCode.getColumns().get(0).getName());
+			var amountCheck = parent.getConstraints().stream()
+					.filter(CheckConstraint.class::isInstance)
+					.map(CheckConstraint.class::cast)
+					.filter(constraint -> "ck_metadata_parent_amount"
+							.equals(constraint.getName()))
+					.findFirst().orElseThrow();
+			assertEquals("amount >= 0", amountCheck.getExpression());
 			var child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
 			var normalizedCode = child.getColumns().get("normalized_code");
