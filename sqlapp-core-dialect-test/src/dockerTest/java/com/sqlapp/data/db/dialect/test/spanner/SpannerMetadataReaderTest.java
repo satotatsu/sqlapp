@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
@@ -69,13 +70,22 @@ class SpannerMetadataReaderTest {
 					  (BIT_REVERSED_POSITIVE START COUNTER WITH 2000
 					   SKIP RANGE 200, 299),
 					 code STRING(30) NOT NULL,
-					 amount NUMERIC
+					 amount NUMERIC,
+					 normalized_code STRING(30) AS (LOWER(code)) STORED,
+					 created_at TIMESTAMP DEFAULT (PENDING_COMMIT_TIMESTAMP())
+					  OPTIONS (allow_commit_timestamp=true),
+					 updated_at TIMESTAMP DEFAULT (PENDING_COMMIT_TIMESTAMP())
+					  ON UPDATE (PENDING_COMMIT_TIMESTAMP())
+					  OPTIONS (allow_commit_timestamp=true),
+					 tokenized_code TOKENLIST AS (TOKENIZE_FULLTEXT(code)) HIDDEN
 					 ,CONSTRAINT ck_metadata_parent_amount
 					  CHECK (amount IS NULL OR amount >= 0)
 					) PRIMARY KEY (id)
 					""");
 			statement.execute("CREATE UNIQUE INDEX uq_metadata_parent_code "
 					+ "ON metadata_parent(code)");
+			statement.execute("CREATE SEARCH INDEX search_metadata_parent_code "
+					+ "ON metadata_parent(tokenized_code)");
 			statement.execute("""
 					CREATE TABLE metadata_composite_parent (
 					 tenant_id INT64 NOT NULL,
@@ -129,6 +139,20 @@ class SpannerMetadataReaderTest {
 					SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN, Long.class).longValue());
 			assertEquals(299L, identity.getSpecifics().get(
 					SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX, Long.class).longValue());
+			var normalizedCode = parent.getColumns().get("normalized_code");
+			assertEquals("LOWER(code)", normalizedCode.getFormula());
+			assertTrue(normalizedCode.isFormulaPersisted());
+			var createdAt = parent.getColumns().get("created_at");
+			assertTrue(createdAt.getDefaultValue().contains(
+					"PENDING_COMMIT_TIMESTAMP"));
+			assertEquals("TRUE",
+					createdAt.getSpecifics().get("allow_commit_timestamp"));
+			var updatedAt = parent.getColumns().get("updated_at");
+			assertTrue(updatedAt.getOnUpdate().contains(
+					"PENDING_COMMIT_TIMESTAMP"));
+			assertEquals("TRUE",
+					updatedAt.getSpecifics().get("allow_commit_timestamp"));
+			assertTrue(parent.getColumns().get("tokenized_code").isHidden());
 			var primaryKey = parent.getConstraints().stream()
 					.filter(UniqueConstraint.class::isInstance)
 					.map(UniqueConstraint.class::cast)
@@ -136,6 +160,11 @@ class SpannerMetadataReaderTest {
 					.findFirst().orElseThrow();
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
 			assertTrue(parent.getIndexes().get("uq_metadata_parent_code").isUnique());
+			var searchIndex = parent.getIndexes().get("search_metadata_parent_code");
+			assertNotNull(searchIndex);
+			assertEquals(IndexType.FullText, searchIndex.getIndexType());
+			assertEquals("tokenized_code",
+					searchIndex.getColumns().get(0).getName());
 			var amountCheck = parent.getConstraints().stream()
 					.filter(CheckConstraint.class::isInstance)
 					.map(CheckConstraint.class::cast)
