@@ -105,7 +105,7 @@ public class SpannerTableReader extends TableReader {
 
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
-		return null;
+		return new SpannerCheckConstraintReader(this.getDialect());
 	}
 
 	@Override

@@ -28,6 +28,7 @@ import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
@@ -68,6 +69,8 @@ class SpannerMetadataReaderTest {
 					   SKIP RANGE 200, 299),
 					 code STRING(30) NOT NULL,
 					 amount NUMERIC
+					 ,CONSTRAINT ck_metadata_parent_amount
+					  CHECK (amount IS NULL OR amount >= 0)
 					) PRIMARY KEY (id)
 					""");
 			statement.execute("CREATE UNIQUE INDEX uq_metadata_parent_code "
@@ -120,6 +123,13 @@ class SpannerMetadataReaderTest {
 					.findFirst().orElseThrow();
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
 			assertTrue(parent.getIndexes().get("uq_metadata_parent_code").isUnique());
+			var amountCheck = parent.getConstraints().stream()
+					.filter(CheckConstraint.class::isInstance)
+					.map(CheckConstraint.class::cast)
+					.filter(constraint -> "ck_metadata_parent_amount"
+							.equals(constraint.getName()))
+					.findFirst().orElseThrow();
+			assertTrue(amountCheck.getExpression().contains("amount >= 0"));
 			var child = schema.getTables().get("metadata_child");
 			var orderedIndex = child.getIndexes().get("idx_metadata_child_code");
 			assertNotNull(orderedIndex);
