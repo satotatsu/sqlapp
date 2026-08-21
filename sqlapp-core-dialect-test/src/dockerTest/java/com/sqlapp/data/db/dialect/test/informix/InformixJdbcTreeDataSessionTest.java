@@ -41,6 +41,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** Informix 14.10 integration coverage for JDBC batch generated keys. */
 class InformixJdbcTreeDataSessionTest {
@@ -71,7 +72,8 @@ class InformixJdbcTreeDataSessionTest {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
-					"parent_view", "metadata_audit", "metadata_trigger")
+					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
+					"metadata_function")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -112,6 +114,20 @@ class InformixJdbcTreeDataSessionTest {
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
 			assertTrue(trigger.getStatement().toString().toLowerCase()
 					.contains("metadata_audit"));
+			var procedure = schema.getProcedures().get("metadata_procedure");
+			assertNotNull(procedure);
+			assertTrue(procedure.getStatement().toString().toLowerCase()
+					.contains("insert into metadata_audit"));
+			assertEquals(1, procedure.getArguments().size());
+			assertEquals("p_id", procedure.getArguments().get(0).getName().toLowerCase());
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get(0).getDirection());
+			var function = schema.getFunctions().get("metadata_function");
+			assertNotNull(function);
+			assertTrue(function.getStatement().toString().toLowerCase()
+					.contains("return p_value * 2"));
+			assertEquals(1, function.getArguments().size());
+			assertEquals("p_value", function.getArguments().get(0).getName().toLowerCase());
+			assertEquals(ParameterDirection.Input, function.getArguments().get(0).getDirection());
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
@@ -158,6 +174,8 @@ class InformixJdbcTreeDataSessionTest {
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			dropTrigger(statement, "metadata_trigger");
+			dropRoutine(statement, "metadata_procedure", true);
+			dropRoutine(statement, "metadata_function", false);
 			dropView(statement, "parent_view");
 			dropTable(statement, "metadata_audit");
 			dropTable(statement, "child_table");
@@ -188,6 +206,17 @@ class InformixJdbcTreeDataSessionTest {
 					FOR EACH ROW
 					(INSERT INTO metadata_audit(parent_id) VALUES (new_row.id))
 					""");
+			statement.execute("""
+					CREATE PROCEDURE metadata_procedure(p_id INTEGER)
+					INSERT INTO metadata_audit(parent_id) VALUES (p_id);
+					END PROCEDURE
+					""");
+			statement.execute("""
+					CREATE FUNCTION metadata_function(p_value INTEGER)
+					RETURNING INTEGER;
+					RETURN p_value * 2;
+					END FUNCTION
+					""");
 			connection.commit();
 		}
 	}
@@ -201,6 +230,19 @@ class InformixJdbcTreeDataSessionTest {
 			}
 		}
 		statement.execute("DROP TRIGGER " + triggerName);
+	}
+
+	private void dropRoutine(final Statement statement, final String routineName,
+			final boolean procedure) throws SQLException {
+		try (ResultSet resultSet = statement.executeQuery(
+				"SELECT COUNT(*) FROM sysprocedures WHERE procname = '" + routineName
+						+ "' AND isproc = '" + (procedure ? "t" : "f") + "'")) {
+			resultSet.next();
+			if (resultSet.getInt(1) == 0) {
+				return;
+			}
+		}
+		statement.execute("DROP " + (procedure ? "PROCEDURE " : "FUNCTION ") + routineName);
 	}
 
 	private void dropView(final Statement statement, final String viewName) throws SQLException {
