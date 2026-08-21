@@ -70,6 +70,8 @@ public class DialectResolverTest {
 				.getPublicDbLinkReader().getClass().getSimpleName());
 		assertEquals("SybaseRoleMemberReader", dialect.getCatalogReader()
 				.getRoleMemberReader().getClass().getSimpleName());
+		assertEquals("SybaseSettingReader", dialect.getCatalogReader()
+				.getSettingReader().getClass().getSimpleName());
 		assertEquals("SybaseDomainReader", dialect.getCatalogReader().getSchemaReader()
 				.getDomainReader().getClass().getSimpleName());
 		assertEquals("SybaseTriggerReader", dialect.getCatalogReader().getSchemaReader()

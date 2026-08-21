@@ -160,7 +160,7 @@ public class SybaseCatalogReader extends CatalogReader {
 
 	@Override
 	protected SettingReader newSettingReader() {
-		return null;
+		return new SybaseSettingReader(this.getDialect());
 	}
 
 	@Override

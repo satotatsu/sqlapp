@@ -1,30 +1,17 @@
-SELECT a.*
-FROM
-(
-	SELECT 'Collation' AS name, CAST(DATABASEPROPERTYEX ( DB_NAME(), 'Collation' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'ComparisonStyle' AS name, CAST(DATABASEPROPERTYEX ( DB_NAME(), 'ComparisonStyle' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsAnsiNullDefault' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsAnsiNullDefault' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsAnsiNullsEnabled' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsAnsiNullsEnabled' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsAutoShrink' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsAutoShrink' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsAutoCreateStatistics' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsAutoCreateStatistics' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsAutoUpdateStatistics' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsAutoUpdateStatistics' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsFulltextEnabled' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsFulltextEnabled' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'IsInStandBy' AS name, CAST(DATABASEPROPERTY ( DB_NAME(), 'IsInStandBy' ) AS NVARCHAR) AS value
-	UNION ALL
-	SELECT 'SQLSortOrder' AS name, CAST(DATABASEPROPERTYEX ( DB_NAME(), 'SQLSortOrder' ) AS NVARCHAR) AS value
---	UNION ALL
---	SELECT 'Status' AS setting_name, CAST(DATABASEPROPERTY ( DB_NAME(), 'Status' ) AS NVARCHAR) AS value
-) a
+SELECT
+  cfg.config AS setting_id
+, cfg.comment AS setting_name
+, CASE WHEN cfg.value2 IS NULL
+    THEN CONVERT(VARCHAR(255), cfg.value)
+    ELSE cfg.value2 END AS configured_value
+, CASE WHEN cur.value2 IS NULL
+    THEN CONVERT(VARCHAR(255), cur.value)
+    ELSE cur.value2 END AS current_value
+, cur.status
+FROM master.dbo.sysconfigures cfg
+INNER JOIN master.dbo.syscurconfigs cur ON cfg.config=cur.config
 WHERE 1=1
   /*if isNotEmpty(settingName) */
-  AND a.name IN /*settingName;type=NVARCHAR*/('%')
+  AND cfg.comment IN /*settingName;type=VARCHAR*/('%')
   /*end*/
-ORDER BY a.name
+ORDER BY cfg.comment

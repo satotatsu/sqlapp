@@ -114,6 +114,14 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
 			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var settings = dialect.getCatalogReader().getSettingReader().getAllFull(connection);
+			assertTrue(settings.size() > 0);
+			var connectionSetting = settings.stream()
+					.filter(setting -> "number of user connections".equals(setting.getName()))
+					.findFirst().orElseThrow();
+			assertNotNull(connectionSetting.getId());
+			assertNotNull(connectionSetting.getValue());
+			assertNotNull(connectionSetting.getDisplayValue());
 			var tableSpaces = dialect.getCatalogReader().getTableSpaceReader()
 					.getAllFull(connection);
 			var defaultSegment = tableSpaces.stream()
