@@ -120,7 +120,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleMemberReader newRoleMemberReader() {
-		return null;
+		return new VirticaRoleMemberReader(this.getDialect());
 	}
 
 	@Override

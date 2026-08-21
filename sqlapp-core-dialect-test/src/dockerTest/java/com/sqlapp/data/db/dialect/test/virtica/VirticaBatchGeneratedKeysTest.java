@@ -103,6 +103,12 @@ class VirticaBatchGeneratedKeysTest {
 			assertFalse(users.get(0).isAdmin());
 			assertTrue(users.get(0).getSpecifics().get("ALL_ROLES")
 					.toLowerCase().contains("metadata_role"));
+			var roleMemberReader = dialect.getCatalogReader().getRoleMemberReader();
+			roleMemberReader.setGrantee("metadata_user");
+			var roleMembers = roleMemberReader.getAllFull(connection);
+			assertTrue(roleMembers.stream().anyMatch(member ->
+					"metadata_role".equals(member.getMemberRoleName())
+							&& "metadata_user".equals(member.getGranteeName())));
 			var schema = dialect.getCatalogReader().getSchemaReader().getAllFull(connection)
 					.stream().filter(s -> s.getTables().stream().anyMatch(
 							t -> "metadata_table".equalsIgnoreCase(t.getName())))

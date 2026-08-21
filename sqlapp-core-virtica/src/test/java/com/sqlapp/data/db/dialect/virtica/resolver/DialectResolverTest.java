@@ -79,6 +79,8 @@ public class DialectResolverTest {
 	private void assertCatalogReader(int major, int minor, int revision) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Vertica", major, minor, revision);
 		assertEquals("VirticaCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
+		assertEquals("VirticaRoleMemberReader", dialect.getCatalogReader()
+				.getRoleMemberReader().getClass().getSimpleName());
 	}
 
 	@Test
