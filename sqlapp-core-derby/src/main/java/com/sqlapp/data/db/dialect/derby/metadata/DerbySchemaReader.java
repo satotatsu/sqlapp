@@ -70,7 +70,7 @@ public class DerbySchemaReader extends AbstractJdbcSchemaReader {
 
 	@Override
 	protected SequenceReader newSequenceReader() {
-		return null;
+		return new DerbySequenceReader(this.getDialect());
 	}
 
 	@Override

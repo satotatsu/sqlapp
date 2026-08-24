@@ -27,6 +27,6 @@ WHERE 1=1
   AND CTU.TABLE_NAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(checkClause)*/
-  AND CC.CHECK_CLAUSE IN /*checkClause*/('%')
+  AND CC.CHECK_CLAUSE LIKE /*checkClause*/'%'
   /*end*/
 ORDER BY CC.CONSTRAINT_CATALOG, CC.CONSTRAINT_SCHEMA, CC.CONSTRAINT_NAME

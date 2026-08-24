@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.test.db2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -48,9 +49,13 @@ class Db2_1150MetadataReaderTest {
 	void testMetadataReaderOperatesOnDb2_11_5() throws SQLException {
 		try (Connection connection = DB2.createConnection("");
 				Statement statement = connection.createStatement()) {
-			drop(statement, "DROP VIEW METADATA_COMPAT_VIEW");
+				drop(statement, "DROP VIEW METADATA_COMPAT_VIEW");
+			drop(statement, "DROP TRIGGER METADATA_COMPAT_TRIGGER");
+			drop(statement, "DROP PROCEDURE METADATA_COMPAT_PROCEDURE");
+			drop(statement, "DROP FUNCTION METADATA_COMPAT_FUNCTION");
 			drop(statement, "DROP TABLE METADATA_COMPAT_CHILD");
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARENT");
+			drop(statement, "DROP TABLE METADATA_COMPAT_AUDIT");
 			drop(statement, "DROP TABLE METADATA_COMPAT_PARTITIONED");
 			drop(statement, "DROP TABLE METADATA_COMPAT_MDC");
 			drop(statement, "DROP TABLE METADATA_COMPAT_TYPED");
@@ -87,6 +92,22 @@ class Db2_1150MetadataReaderTest {
 					  PARTITION P_HIGH STARTING FROM (100) INCLUSIVE ENDING AT (MAXVALUE))
 					""");
 			statement.execute("CREATE VIEW METADATA_COMPAT_VIEW AS SELECT ID, PARENT_ID FROM METADATA_COMPAT_CHILD");
+			statement.execute("CREATE TABLE METADATA_COMPAT_AUDIT (ID BIGINT)");
+			statement.execute("""
+					CREATE PROCEDURE METADATA_COMPAT_PROCEDURE(IN P_ID BIGINT)
+					 LANGUAGE SQL BEGIN ATOMIC
+					 INSERT INTO METADATA_COMPAT_AUDIT VALUES P_ID; END
+					""");
+			statement.execute("""
+					CREATE FUNCTION METADATA_COMPAT_FUNCTION(P_AMOUNT DECIMAL(18,2))
+					 RETURNS DECIMAL(18,2) LANGUAGE SQL DETERMINISTIC
+					 BEGIN RETURN P_AMOUNT * 2; END
+					""");
+			statement.execute("""
+					CREATE TRIGGER METADATA_COMPAT_TRIGGER AFTER INSERT
+					 ON METADATA_COMPAT_CHILD REFERENCING NEW AS N FOR EACH ROW
+					 INSERT INTO METADATA_COMPAT_AUDIT VALUES N.ID
+					""");
 			statement.execute("""
 					CREATE TABLE METADATA_COMPAT_MDC (
 					 REGION CHAR(2) NOT NULL, BUCKET INTEGER NOT NULL,
@@ -113,7 +134,26 @@ class Db2_1150MetadataReaderTest {
 			assertNotNull(child.getConstraints().get("FK_METADATA_COMPAT"));
 			assertNotNull(child.getIndexes().get("IDX_METADATA_COMPAT"));
 			assertNotNull(schema.getSequences().get("METADATA_COMPAT_SEQ"));
-			assertNotNull(schema.getViews().get("METADATA_COMPAT_VIEW"));
+			var view = schema.getViews().get("METADATA_COMPAT_VIEW");
+			assertNotNull(view);
+			assertTrue(String.join("\n", view.getDefinition())
+					.toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_CHILD"));
+			var procedure = schema.getProcedures()
+					.get("METADATA_COMPAT_PROCEDURE");
+			assertNotNull(procedure);
+			assertEquals(1, procedure.getArguments().size());
+			assertTrue(String.join("\n", procedure.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_AUDIT"));
+			var function = schema.getFunctions().get("METADATA_COMPAT_FUNCTION");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertTrue(String.join("\n", function.getStatement())
+					.toUpperCase(Locale.ROOT).contains("P_AMOUNT"));
+			var trigger = schema.getTriggers().get("METADATA_COMPAT_TRIGGER");
+			assertNotNull(trigger);
+			assertEquals("METADATA_COMPAT_CHILD", trigger.getTableName());
+			assertTrue(String.join("\n", trigger.getDefinition())
+					.toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_AUDIT"));
 			Table partitioned = schema.getTables()
 					.get("METADATA_COMPAT_PARTITIONED");
 			assertNotNull(partitioned);

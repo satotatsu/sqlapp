@@ -7,11 +7,13 @@ package com.sqlapp.data.db.dialect.test.sqlserver;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,6 +59,15 @@ class SqlServer2019MetadataReaderTest {
 						VALUE NVARCHAR(100)
 					)
 					""");
+			statement.execute("CREATE VIEW METADATA_2019_VIEW AS SELECT ID, VALUE FROM METADATA_2019");
+			statement.execute("""
+					CREATE PROCEDURE METADATA_2019_PROCEDURE @P_ID BIGINT AS
+					SELECT VALUE FROM METADATA_2019 WHERE ID = @P_ID
+					""");
+			statement.execute("""
+					CREATE TRIGGER METADATA_2019_TRIGGER ON METADATA_2019
+					AFTER INSERT AS SELECT ID FROM inserted
+					""");
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(SqlServer2019.class, dialect);
@@ -65,8 +76,22 @@ class SqlServer2019MetadataReaderTest {
 			Catalog catalog = reader.getAllFull(connection).stream()
 					.filter(current -> connectionCatalogEquals(connection, current))
 					.findFirst().orElseThrow();
-			assertNotNull(catalog.getSchemas().get("dbo").getTables()
-					.get("METADATA_2019"));
+			var schema = catalog.getSchemas().get("dbo");
+			assertNotNull(schema.getTables().get("METADATA_2019"));
+			var view = schema.getViews().get("METADATA_2019_VIEW");
+			assertNotNull(view);
+			assertNotNull(view.getColumns().get("VALUE"));
+			assertTrue(String.join("\n", view.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_2019"));
+			var procedure = schema.getProcedures().get("METADATA_2019_PROCEDURE");
+			assertNotNull(procedure);
+			assertNotNull(procedure.getArguments().get("@P_ID"));
+			assertTrue(String.join("\n", procedure.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_2019"));
+			var trigger = schema.getTriggers().get("METADATA_2019_TRIGGER");
+			assertNotNull(trigger);
+			assertTrue(String.join("\n", trigger.getStatement())
+					.toUpperCase(Locale.ROOT).contains("INSERTED"));
 		}
 	}
 

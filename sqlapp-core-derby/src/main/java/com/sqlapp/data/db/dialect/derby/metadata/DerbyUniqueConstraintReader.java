@@ -85,6 +85,7 @@ public class DerbyUniqueConstraintReader extends UniqueConstraintReader {
 		uc.setEnable("E".equalsIgnoreCase(getString(rs, "state")));
 		uc.setCatalogName(catalogName);
 		uc.setSchemaName(schemaName);
+		uc.setTableName(tableName);
 		uc.getColumns().addAll(index.getColumns());
 		return uc;
 	}

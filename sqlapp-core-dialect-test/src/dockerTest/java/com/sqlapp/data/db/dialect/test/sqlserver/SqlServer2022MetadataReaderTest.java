@@ -8,11 +8,13 @@ package com.sqlapp.data.db.dialect.test.sqlserver;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,6 +61,11 @@ class SqlServer2022MetadataReaderTest {
 						VALUE NVARCHAR(100) NOT NULL
 					) WITH (LEDGER = ON (APPEND_ONLY = ON))
 					""");
+			statement.execute("CREATE VIEW METADATA_LEDGER_2022_VIEW AS SELECT ID, VALUE FROM METADATA_LEDGER_2022");
+			statement.execute("""
+					CREATE PROCEDURE METADATA_2022_PROCEDURE @P_ID BIGINT AS
+					SELECT VALUE FROM METADATA_LEDGER_2022 WHERE ID = @P_ID
+					""");
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(SqlServer2022.class, dialect);
@@ -72,6 +79,17 @@ class SqlServer2022MetadataReaderTest {
 			assertNotNull(table);
 			assertEquals("APPEND_ONLY_LEDGER_TABLE",
 					table.getSpecifics().get("ledger_type"));
+			var schema = catalog.getSchemas().get("dbo");
+			var view = schema.getViews().get("METADATA_LEDGER_2022_VIEW");
+			assertNotNull(view);
+			assertNotNull(view.getColumns().get("VALUE"));
+			assertTrue(String.join("\n", view.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_LEDGER_2022"));
+			var procedure = schema.getProcedures().get("METADATA_2022_PROCEDURE");
+			assertNotNull(procedure);
+			assertNotNull(procedure.getArguments().get("@P_ID"));
+			assertTrue(String.join("\n", procedure.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_LEDGER_2022"));
 		}
 	}
 

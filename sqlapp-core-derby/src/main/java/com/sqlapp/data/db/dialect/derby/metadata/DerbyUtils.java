@@ -100,6 +100,8 @@ public class DerbyUtils {
 			Dialect dialect, String schemaName, String tableName,
 			String indexName, String definition) {
 		Index index = new Index(indexName);
+		index.setSchemaName(schemaName);
+		index.setTableName(tableName);
 		Matcher matcher = INDEX_INFO_PATTERN.matcher(definition);
 		if (matcher.matches()) {
 			String val = matcher.group(1);
