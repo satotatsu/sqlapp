@@ -191,14 +191,18 @@ class SybaseJdbcTreeDataSessionTest {
 			var unique = assertInstanceOf(UniqueConstraint.class,
 					table.getConstraints().get("uk_metadata_table_code"));
 			assertEquals("code", unique.getColumns().get(0).getName());
-			assertTrue(table.getConstraints().stream()
-					.anyMatch(CheckConstraint.class::isInstance));
+			var check = assertInstanceOf(CheckConstraint.class,
+					table.getConstraints().get("ck_metadata_table_code"));
+			assertTrue(check.getExpression().replaceAll("\\s+", "")
+					.contains("code<>''"), check::getExpression);
 			var codeIndex = table.getIndexes().get("idx_metadata_table_code");
 			assertNotNull(codeIndex);
+			assertEquals("code", codeIndex.getColumns().get(0).getName());
 			assertEquals("70",
 					codeIndex.getSpecifics().get("fill_factor").toString());
-			assertEquals(Order.Desc, table.getIndexes().get("idx_metadata_table_code_desc")
-					.getColumns().get(0).getOrder());
+			var descendingIndex = table.getIndexes().get("idx_metadata_table_code_desc");
+			assertEquals("code", descendingIndex.getColumns().get(0).getName());
+			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
 			var foreignKey = table.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
