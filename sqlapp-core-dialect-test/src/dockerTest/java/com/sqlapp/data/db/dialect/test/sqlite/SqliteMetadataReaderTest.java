@@ -60,6 +60,10 @@ class SqliteMetadataReaderTest {
 					+ "PRIMARY KEY (tenant_id, id DESC)) WITHOUT ROWID");
 			statement.execute("CREATE TABLE metadata_integer_without_rowid "
 					+ "(id INTEGER PRIMARY KEY, value TEXT) WITHOUT ROWID");
+			statement.execute("CREATE TABLE metadata_inline_desc_pk "
+					+ "(id INTEGER PRIMARY KEY DESC, value TEXT)");
+			statement.execute("CREATE TABLE metadata_table_desc_pk "
+					+ "(id INTEGER, value TEXT, PRIMARY KEY (id DESC))");
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("CREATE TRIGGER trg_metadata_parent AFTER INSERT ON metadata_parent "
 					+ "BEGIN INSERT INTO metadata_audit(parent_id) VALUES (NEW.id); END");
@@ -150,6 +154,10 @@ class SqliteMetadataReaderTest {
 			assertEquals(Order.Desc,
 					withoutRowidPrimaryKey.getColumns().get(1).getOrder());
 			assertFalse(schema.getTables().get("metadata_integer_without_rowid")
+					.getColumns().get("id").isIdentity());
+			assertFalse(schema.getTables().get("metadata_inline_desc_pk")
+					.getColumns().get("id").isIdentity());
+			assertTrue(schema.getTables().get("metadata_table_desc_pk")
 					.getColumns().get("id").isIdentity());
 			var trigger = schema.getTriggers().get("trg_metadata_parent");
 			assertNotNull(trigger);
