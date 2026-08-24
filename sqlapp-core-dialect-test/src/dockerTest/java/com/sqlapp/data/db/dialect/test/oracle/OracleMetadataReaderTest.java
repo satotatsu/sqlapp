@@ -169,7 +169,11 @@ class OracleMetadataReaderTest {
 			Sequence sequence = schema.getSequences().get("METADATA_SEQ");
 			assertNotNull(sequence);
 
-			assertNotNull(schema.getViews().get("METADATA_VIEW"));
+			var view = schema.getViews().get("METADATA_VIEW");
+			assertNotNull(view);
+			assertNotNull(view.getColumns().get("TOTAL"));
+			assertTrue(String.join("\n", view.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var mview = schema.getMviews().get("METADATA_MVIEW");
 			assertNotNull(mview);
 			assertNotNull(mview.getStatement());
@@ -186,14 +190,21 @@ class OracleMetadataReaderTest {
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertNotNull(procedure.getStatement());
+			assertTrue(String.join("\n", procedure.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
-			assertNotNull(function.getStatement());
+			assertTrue(String.join("\n", function.getStatement())
+					.toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
+			assertEquals("METADATA_CHILD", trigger.getTableName());
+			assertEquals("BEFORE", trigger.getActionTiming());
+			assertTrue(trigger.getEventManipulation().contains("INSERT"));
+			assertTrue(String.join("\n", trigger.getStatement())
+					.toUpperCase(Locale.ROOT).contains("UPPER"));
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_SYNONYM"));
 			var metadataPackage = schema.getPackages().get("METADATA_PACKAGE");
 			assertNotNull(metadataPackage);
@@ -329,7 +340,8 @@ class OracleMetadataReaderTest {
 			statement.execute("""
 					CREATE PROCEDURE METADATA_PROCEDURE(P_PARENT_ID IN NUMBER) AS
 					BEGIN
-						NULL;
+						UPDATE METADATA_CHILD SET AMOUNT = AMOUNT
+						 WHERE PARENT_ID = P_PARENT_ID;
 					END;
 					""");
 			statement.execute("""
@@ -362,7 +374,7 @@ class OracleMetadataReaderTest {
 					BEFORE INSERT ON METADATA_CHILD
 					FOR EACH ROW
 					BEGIN
-						NULL;
+						:NEW.CODE := UPPER(:NEW.CODE);
 					END;
 					""");
 			statement.execute("""

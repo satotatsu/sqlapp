@@ -148,10 +148,14 @@ class Db2MetadataReaderTest {
 			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
 			assertEquals(DataType.DECIMAL,
 					function.getArguments().get(0).getDataType());
-			String functionStatement = String.join("\n", function.getStatement())
-					.toUpperCase(Locale.ROOT);
-			assertTrue(functionStatement.contains("P_AMOUNT"));
-			assertTrue(functionStatement.contains("*"));
+			var compiledFunction = schema.getFunctions()
+					.get("METADATA_COMPILED_FUNCTION");
+			assertNotNull(compiledFunction);
+			assertEquals(1, compiledFunction.getArguments().size());
+			String compiledFunctionStatement = String.join("\n",
+					compiledFunction.getStatement()).toUpperCase(Locale.ROOT);
+			assertTrue(compiledFunctionStatement.contains("RETURN"));
+			assertTrue(compiledFunctionStatement.contains("P_AMOUNT"));
 			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_CHILD", trigger.getTableName());
@@ -167,6 +171,7 @@ class Db2MetadataReaderTest {
 			drop(statement, "DROP TRIGGER METADATA_TRIGGER");
 			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE");
 			drop(statement, "DROP FUNCTION METADATA_FUNCTION");
+			drop(statement, "DROP FUNCTION METADATA_COMPILED_FUNCTION");
 			drop(statement, "DROP VIEW METADATA_VIEW");
 			drop(statement, "DROP ALIAS METADATA_PARENT_ALIAS");
 			drop(statement, "DROP TABLE METADATA_CHILD");
@@ -245,6 +250,11 @@ class Db2MetadataReaderTest {
 			statement.execute("""
 					CREATE FUNCTION METADATA_FUNCTION(P_AMOUNT DECIMAL(18,2))
 					 RETURNS DECIMAL(18,2) LANGUAGE SQL DETERMINISTIC RETURN P_AMOUNT * 2
+					""");
+			statement.execute("""
+					CREATE FUNCTION METADATA_COMPILED_FUNCTION(P_AMOUNT DECIMAL(18,2))
+					 RETURNS DECIMAL(18,2) LANGUAGE SQL DETERMINISTIC
+					 BEGIN RETURN P_AMOUNT * 3; END
 					""");
 			statement.execute("""
 					CREATE TRIGGER METADATA_TRIGGER AFTER INSERT ON METADATA_CHILD

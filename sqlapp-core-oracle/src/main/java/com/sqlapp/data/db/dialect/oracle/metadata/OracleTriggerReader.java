@@ -91,14 +91,14 @@ public class OracleTriggerReader extends TriggerReader {
 		if (triggerType.startsWith("BEFORE")) {
 			trigger.setActionTiming("BEFORE");
 		} else if (triggerType.startsWith("AFTER")) {
-			trigger.setActionOrientation("AFTER");
+			trigger.setActionTiming("AFTER");
 		}
 		trigger.setActionCondition(actionCondition);
 		trigger.setEnable("ENABLED".equalsIgnoreCase(status));
 		trigger.setActionReferenceOldRow(":OLD");
 		trigger.setActionReferenceNewRow(":NEW");
-		trigger.setTableName(tableName);
 		trigger.setTableSchemaName(tableOwner);
+		trigger.setTableName(tableName);
 		trigger.setStatement(getString(rs, "TRIGGER_BODY"));
 		trigger.addDefinition(getString(rs, "DESCRIPTION"));
 		return trigger;

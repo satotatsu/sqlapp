@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -64,8 +65,22 @@ class Postgres140MetadataReaderTest {
 			assertEquals(2, foreignKey.getColumns().size());
 			assertNotNull(child.getIndexes().get("idx_metadata_child_parent"));
 			assertNotNull(schema.getSequences().get("metadata_seq"));
-			assertNotNull(schema.getViews().get("metadata_view"));
-			assertNotNull(schema.getFunctions().get("metadata_function"));
+			var view = schema.getViews().get("metadata_view");
+			assertNotNull(view);
+			assertEquals(2, view.getColumns().size());
+			assertTrue(String.join("\n", view.getStatement())
+					.toLowerCase(Locale.ROOT).contains("metadata_child"));
+			var function = schema.getFunctions().get("metadata_function");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertEquals("p_amount", function.getArguments().get(0).getName());
+			assertTrue(String.join("\n", function.getStatement())
+					.toLowerCase(Locale.ROOT).contains("p_amount * 2"));
+			var trigger = schema.getTriggers().get("metadata_trigger");
+			assertNotNull(trigger);
+			assertEquals("metadata_child", trigger.getTableName());
+			assertTrue(String.join("\n", trigger.getStatement())
+					.toLowerCase(Locale.ROOT).contains("metadata_trigger_function"));
 			var operator = schema.getOperators().get("#@#");
 			assertNotNull(operator);
 			assertEquals(DataType.INT,
@@ -149,6 +164,15 @@ class Postgres140MetadataReaderTest {
 		statement.execute("""
 				CREATE FUNCTION metadata_test_14.metadata_function(p_amount numeric)
 				 RETURNS numeric LANGUAGE sql IMMUTABLE AS $$ SELECT p_amount * 2 $$
+				""");
+		statement.execute("""
+				CREATE FUNCTION metadata_test_14.metadata_trigger_function()
+				 RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$
+				""");
+		statement.execute("""
+				CREATE TRIGGER metadata_trigger BEFORE INSERT
+				 ON metadata_test_14.metadata_child FOR EACH ROW
+				 EXECUTE FUNCTION metadata_test_14.metadata_trigger_function()
 				""");
 		statement.execute("""
 				CREATE FUNCTION metadata_test_14.metadata_int_add(integer, integer)

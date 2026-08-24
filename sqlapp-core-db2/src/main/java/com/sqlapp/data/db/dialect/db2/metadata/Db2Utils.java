@@ -62,7 +62,7 @@ public class Db2Utils {
 		}
 		if (readerOption.isReadStatement()) {
 			int offset = rs.getInt("TEXT_BODY_OFFSET");
-			if (offset >= 0 && definition != null) {
+			if (offset > 0 && definition != null) {
 				obj.setStatement(definition.substring(offset));
 			}
 		}

@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -289,11 +290,19 @@ class SqlServerMetadataReaderTest {
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("@PARENT_ID", procedure.getArguments().get(0).getName());
+			assertEquals(DataType.BIGINT,
+					procedure.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", procedure.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("@AMOUNT", function.getArguments().get(0).getName());
+			assertEquals(DataType.DECIMAL,
+					function.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", function.getStatement())
+					.toUpperCase(Locale.ROOT).contains("@AMOUNT * 2"));
 
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
