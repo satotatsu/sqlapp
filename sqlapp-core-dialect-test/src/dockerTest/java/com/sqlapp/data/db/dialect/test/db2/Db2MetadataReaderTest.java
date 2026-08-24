@@ -130,10 +130,33 @@ class Db2MetadataReaderTest {
 			assertEquals(DataType.CHAR,
 					address.getColumns().get("POSTAL_CODE").getDataType());
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
-			assertNotNull(schema.getViews().get("METADATA_VIEW"));
-			assertNotNull(schema.getProcedures().get("METADATA_PROCEDURE"));
-			assertNotNull(schema.getFunctions().get("METADATA_FUNCTION"));
-			assertNotNull(schema.getTriggers().get("METADATA_TRIGGER"));
+			var view = schema.getViews().get("METADATA_VIEW");
+			assertNotNull(view);
+			assertTrue(String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT)
+					.contains("METADATA_CHILD"));
+			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
+			assertNotNull(procedure);
+			assertEquals(1, procedure.getArguments().size());
+			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
+			assertEquals(DataType.BIGINT,
+					procedure.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", procedure.getStatement())
+					.toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
+			var function = schema.getFunctions().get("METADATA_FUNCTION");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
+			assertEquals(DataType.DECIMAL,
+					function.getArguments().get(0).getDataType());
+			String functionStatement = String.join("\n", function.getStatement())
+					.toUpperCase(Locale.ROOT);
+			assertTrue(functionStatement.contains("P_AMOUNT"));
+			assertTrue(functionStatement.contains("*"));
+			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
+			assertNotNull(trigger);
+			assertEquals("METADATA_CHILD", trigger.getTableName());
+			assertTrue(String.join("\n", trigger.getDefinition())
+					.toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_ALIAS"));
 		}
 	}

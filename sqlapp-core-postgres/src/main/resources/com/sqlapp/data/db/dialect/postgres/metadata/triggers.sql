@@ -2,6 +2,7 @@ SELECT
   current_database() AS trigger_catalog
 , n.nspname AS trigger_schema
 , t.tgname AS trigger_name
+, c.relname AS table_name
 , t.oid
 , substring(pg_get_triggerdef(t.oid) from
            position('EXECUTE PROCEDURE' in substring(pg_get_triggerdef(t.oid) from 48)) + 47)

@@ -68,6 +68,7 @@ public class PostgresTriggerReader extends TriggerReader {
 		obj.setSpecificName(getString(rs, "oid"));
 		// trigger.setCatalogName(getString(rs, "trigger_catalog"));
 		obj.setSchemaName(getString(rs, "trigger_schema"));
+		obj.setTableName(getString(rs, TABLE_NAME));
 		obj.setActionOrientation(getString(rs, "action_orientation"));
 		obj.setActionTiming(getString(rs, "condition_timing"));
 		obj.setStatement(getString(rs, "action_statement"));

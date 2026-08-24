@@ -85,9 +85,23 @@ class PostgresMetadataReaderTest {
 			assertNotNull(booking.getConstraints()
 					.get("ex_metadata_booking_during"));
 			assertNotNull(schema.getSequences().get("metadata_seq"));
-			assertNotNull(schema.getViews().get("metadata_view"));
-			assertNotNull(schema.getMviews().get("metadata_mview"));
-			assertNotNull(schema.getFunctions().get("metadata_function"));
+			var view = schema.getViews().get("metadata_view");
+			assertNotNull(view);
+			assertEquals(3, view.getColumns().size());
+			assertTrue(String.join("\n", view.getStatement()).toLowerCase(Locale.ROOT)
+					.contains("metadata_child"));
+			var materializedView = schema.getMviews().get("metadata_mview");
+			assertNotNull(materializedView);
+			assertTrue(String.join("\n", materializedView.getStatement())
+					.toLowerCase(Locale.ROOT).contains("count"));
+			var function = schema.getFunctions().get("metadata_function");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertEquals("p_amount", function.getArguments().get(0).getName());
+			assertEquals(DataType.NUMERIC,
+					function.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", function.getStatement())
+					.toLowerCase(Locale.ROOT).contains("p_amount * 2"));
 			var operator = schema.getOperators().get("#@#");
 			assertNotNull(operator);
 			assertEquals(DataType.INT,
@@ -105,7 +119,11 @@ class PostgresMetadataReaderTest {
 			assertEquals(1, operatorClass.getFunctionFamilies().size());
 			assertTrue(operatorClass.getFunctionFamilies().get(0)
 					.getFunctionName().startsWith("metadata_int_cmp"));
-			assertNotNull(schema.getTriggers().get("metadata_trigger"));
+			var trigger = schema.getTriggers().get("metadata_trigger");
+			assertNotNull(trigger);
+			assertEquals("metadata_child", trigger.getTableName());
+			assertTrue(String.join("\n", trigger.getStatement())
+					.toLowerCase(Locale.ROOT).contains("metadata_trigger_function"));
 			var rule = schema.getRules().get("metadata_child_audit");
 			assertNotNull(rule);
 			assertEquals("metadata_child", rule.getTableName());
