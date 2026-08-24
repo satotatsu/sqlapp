@@ -185,8 +185,10 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(2, unique.getColumns().size());
 			assertEquals("parent_id", unique.getColumns().get(0).getName());
 			assertEquals("txt", unique.getColumns().get(1).getName());
-			assertTrue(child.getIndexes().stream().anyMatch(
-					index -> "idx_child_txt".equalsIgnoreCase(index.getName())));
+			var childTextIndex = child.getIndexes().stream()
+					.filter(index -> "idx_child_txt".equalsIgnoreCase(index.getName()))
+					.findFirst().orElseThrow();
+			assertEquals("txt", childTextIndex.getColumns().get(0).getName());
 			var descendingIndex = child.getIndexes().stream()
 					.filter(index -> "idx_child_txt_desc".equalsIgnoreCase(index.getName()))
 					.findFirst().orElseThrow();
@@ -314,6 +316,14 @@ class InformixJdbcTreeDataSessionTest {
 					.get("list_inactive").getTableSpaceName());
 			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
 					.get("list_remainder").getTableSpaceName());
+			assertTrue(listFragmented.getPartitioning().getPartitions()
+					.get("list_active").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+					.toLowerCase().contains("active"));
+			assertTrue(listFragmented.getPartitioning().getPartitions()
+					.get("list_inactive").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+					.toLowerCase().contains("inactive"));
 			var rangeFragmented = schema.getTables().get("metadata_range_fragmented");
 			assertNotNull(rangeFragmented.getPartitioning(), () -> fragmentDetails(connection));
 			assertEquals(PartitioningType.Range,
@@ -325,6 +335,14 @@ class InformixJdbcTreeDataSessionTest {
 					.get("range_low").getTableSpaceName());
 			assertEquals("rootdbs", rangeFragmented.getPartitioning().getPartitions()
 					.get("range_transition").getTableSpaceName());
+			assertTrue(rangeFragmented.getPartitioning().getPartitions()
+					.get("range_low").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+					.contains("100"));
+			assertTrue(rangeFragmented.getPartitioning().getPartitions()
+					.get("range_transition").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+					.contains("200"));
 			var synonym = schema.getSynonyms().get("metadata_parent_synonym");
 			assertNotNull(synonym);
 			assertEquals("parent_table", synonym.getObjectName());
