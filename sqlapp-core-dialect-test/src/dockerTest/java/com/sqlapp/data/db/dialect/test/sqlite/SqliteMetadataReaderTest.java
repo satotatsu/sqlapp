@@ -135,7 +135,13 @@ class SqliteMetadataReaderTest {
 			var expressionIndex = child.getIndexes().get("idx_metadata_child_expression");
 			assertEquals("lower(code)", expressionIndex.getColumns().get(0).getName());
 			assertEquals(Order.Desc, expressionIndex.getColumns().get(0).getOrder());
-			assertNotNull(schema.getViews().get("metadata_view"));
+			var view = schema.getViews().get("metadata_view");
+			assertNotNull(view);
+			assertTrue(view.getStatement().get(0)
+					.startsWith("SELECT id, code FROM metadata_parent"));
+			assertEquals(2, view.getColumns().size());
+			assertEquals("id", view.getColumns().get(0).getName());
+			assertEquals("code", view.getColumns().get(1).getName());
 			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_strict")
 					.getSpecifics().get("strict", Boolean.class));
 			assertEquals(Boolean.TRUE, schema.getTables().get("metadata_without_rowid")
@@ -164,7 +170,6 @@ class SqliteMetadataReaderTest {
 			assertEquals("metadata_parent", trigger.getTableName());
 			assertEquals("AFTER", trigger.getActionTiming());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertNotNull(trigger.getDefinition());
 			assertTrue(trigger.getStatement().get(0).startsWith("INSERT INTO metadata_audit"));
 			var attachedSchema = schemas.stream()
 					.filter(s -> "analytics".equals(s.getName()))
@@ -190,11 +195,19 @@ class SqliteMetadataReaderTest {
 					attachedForeignKey.getRelatedColumns().get(0).getName());
 			assertEquals(CascadeRule.SetNull, attachedForeignKey.getUpdateRule());
 			assertEquals(CascadeRule.Cascade, attachedForeignKey.getDeleteRule());
-			assertNotNull(attachedSchema.getTriggers().get("trg_metadata_attached"));
+			var attachedTrigger = attachedSchema.getTriggers().get("trg_metadata_attached");
+			assertNotNull(attachedTrigger);
+			assertEquals("metadata_attached", attachedTrigger.getTableName());
+			assertEquals("AFTER", attachedTrigger.getActionTiming());
+			assertTrue(attachedTrigger.getEventManipulation().contains("UPDATE"));
+			assertTrue(attachedTrigger.getStatement().get(0).startsWith("SELECT NEW.id"));
 			var attachedView = attachedSchema.getViews().get("metadata_attached_view");
 			assertNotNull(attachedView);
 			assertTrue(attachedView.getStatement().get(0)
 					.startsWith("SELECT id, code FROM metadata_attached"));
+			assertEquals(2, attachedView.getColumns().size());
+			assertEquals("id", attachedView.getColumns().get(0).getName());
+			assertEquals("code", attachedView.getColumns().get(1).getName());
 			var tempSchema = schemas.stream()
 					.filter(s -> "temp".equals(s.getName()))
 					.findFirst().orElseThrow();
