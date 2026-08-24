@@ -158,9 +158,11 @@ class InformixJdbcTreeDataSessionTest {
 			assertNotNull(function);
 			assertTrue(function.getStatement().toString().toLowerCase()
 					.contains("return p_value * 2"));
-			assertEquals(1, function.getArguments().size());
+			assertEquals(2, function.getArguments().size());
 			assertEquals("p_value", function.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, function.getArguments().get(0).getDirection());
+			assertEquals("p_label", function.getArguments().get(1).getName().toLowerCase());
+			assertEquals(ParameterDirection.Input, function.getArguments().get(1).getDirection());
 			var sequence = schema.getSequences().get("metadata_sequence");
 			assertNotNull(sequence);
 			assertEquals(10L, sequence.getStartValue().longValue());
@@ -383,7 +385,9 @@ class InformixJdbcTreeDataSessionTest {
 					END PROCEDURE
 					""");
 			statement.execute("""
-					CREATE FUNCTION metadata_function(p_value INTEGER)
+					CREATE FUNCTION metadata_function(
+						p_value INTEGER,
+						p_label VARCHAR(20) DEFAULT 'x,y')
 					RETURNING INTEGER;
 					RETURN p_value * 2;
 					END FUNCTION

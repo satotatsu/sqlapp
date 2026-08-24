@@ -60,13 +60,19 @@ final class InformixRoutineUtils {
 		List<String> result = new ArrayList<>();
 		int start = 0;
 		int depth = 0;
+		boolean quoted = false;
 		for (int i = 0; i < text.length(); i++) {
 			char ch = text.charAt(i);
-			if (ch == '(') {
+			if (ch == '\'' && quoted && i + 1 < text.length()
+					&& text.charAt(i + 1) == '\'') {
+				i++;
+			} else if (ch == '\'') {
+				quoted = !quoted;
+			} else if (!quoted && ch == '(') {
 				depth++;
-			} else if (ch == ')') {
+			} else if (!quoted && ch == ')') {
 				depth--;
-			} else if (ch == ',' && depth == 0) {
+			} else if (!quoted && ch == ',' && depth == 0) {
 				result.add(text.substring(start, i));
 				start = i + 1;
 			}
