@@ -120,6 +120,15 @@ class InformixJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertTrue(descendingIndex.isUnique());
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
+			var mixedOrderIndex = child.getIndexes().stream()
+					.filter(index -> "idx_child_parent_txt_mixed".equalsIgnoreCase(index.getName()))
+					.findFirst().orElseThrow();
+			assertFalse(mixedOrderIndex.isUnique());
+			assertEquals(2, mixedOrderIndex.getColumns().size());
+			assertEquals("parent_id", mixedOrderIndex.getColumns().get(0).getName());
+			assertEquals(Order.Asc, mixedOrderIndex.getColumns().get(0).getOrder());
+			assertEquals("txt", mixedOrderIndex.getColumns().get(1).getName());
+			assertEquals(Order.Desc, mixedOrderIndex.getColumns().get(1).getOrder());
 			var view = schema.getViews().get("parent_view");
 			assertNotNull(view);
 			assertTrue(view.getStatement().toString().toLowerCase()
@@ -136,9 +145,15 @@ class InformixJdbcTreeDataSessionTest {
 			assertNotNull(procedure);
 			assertTrue(procedure.getStatement().toString().toLowerCase()
 					.contains("insert into metadata_audit"));
-			assertEquals(1, procedure.getArguments().size());
+			assertEquals(4, procedure.getArguments().size());
 			assertEquals("p_id", procedure.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, procedure.getArguments().get(0).getDirection());
+			assertEquals("p_value", procedure.getArguments().get(1).getName().toLowerCase());
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get(1).getDirection());
+			assertEquals("p_double", procedure.getArguments().get(2).getName().toLowerCase());
+			assertEquals(ParameterDirection.Output, procedure.getArguments().get(2).getDirection());
+			assertEquals("p_counter", procedure.getArguments().get(3).getName().toLowerCase());
+			assertEquals(ParameterDirection.Inout, procedure.getArguments().get(3).getDirection());
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
 			assertTrue(function.getStatement().toString().toLowerCase()
@@ -344,6 +359,8 @@ class InformixJdbcTreeDataSessionTest {
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
 			statement.execute("CREATE UNIQUE INDEX idx_child_txt_desc ON child_table(txt DESC)");
+			statement.execute(
+					"CREATE INDEX idx_child_parent_txt_mixed ON child_table(parent_id, txt DESC)");
 			statement.execute("CREATE TABLE metadata_serial8 (id SERIAL8 PRIMARY KEY)");
 			statement.execute("CREATE TABLE metadata_bigserial (id BIGSERIAL PRIMARY KEY)");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
@@ -355,7 +372,13 @@ class InformixJdbcTreeDataSessionTest {
 					(INSERT INTO metadata_audit(parent_id) VALUES (new_row.id))
 					""");
 			statement.execute("""
-					CREATE PROCEDURE metadata_procedure(p_id INTEGER)
+					CREATE PROCEDURE metadata_procedure(
+						p_id INTEGER,
+						p_value INTEGER,
+						OUT p_double INTEGER,
+						INOUT p_counter INTEGER)
+					LET p_double = p_value * 2;
+					LET p_counter = p_counter + 1;
 					INSERT INTO metadata_audit(parent_id) VALUES (p_id);
 					END PROCEDURE
 					""");
