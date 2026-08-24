@@ -104,7 +104,7 @@ public class SqliteColumnReader extends ColumnReader {
 			final String schemaName, final String tableName,
 			final String columnName) {
 		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_schema WHERE type='table' AND name=?";
+				+ ".sqlite_master WHERE type='table' AND name=?";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, tableName);
 			try (var resultSet = statement.executeQuery()) {
@@ -140,7 +140,7 @@ public class SqliteColumnReader extends ColumnReader {
 			return;
 		}
 		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_schema WHERE type='table' AND name=?";
+				+ ".sqlite_master WHERE type='table' AND name=?";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, tableName);
 			try (var resultSet = statement.executeQuery()) {

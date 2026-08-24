@@ -20,7 +20,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Trigger;
 
-/** Reads SQLite triggers from {@code sqlite_schema}. */
+/** Reads SQLite triggers from the historical {@code sqlite_master} alias. */
 public class SqliteTriggerReader extends TriggerReader {
 	private static final Pattern EVENT_PATTERN = Pattern.compile(
 			"(?is)\\b(BEFORE|AFTER|INSTEAD\\s+OF)\\s+(INSERT|UPDATE|DELETE)\\b");
@@ -38,7 +38,7 @@ public class SqliteTriggerReader extends TriggerReader {
 		final List<Trigger> result = list();
 		final String schemaName = getSchemaName() == null ? "main" : getSchemaName();
 		final String sql = "SELECT name, tbl_name, sql FROM "
-				+ quoteIdentifier(schemaName) + ".sqlite_schema "
+				+ quoteIdentifier(schemaName) + ".sqlite_master "
 				+ "WHERE type='trigger' ORDER BY name";
 		try (var statement = connection.createStatement();
 				var resultSet = statement.executeQuery(sql)) {

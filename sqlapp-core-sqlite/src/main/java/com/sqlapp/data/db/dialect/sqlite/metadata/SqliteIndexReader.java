@@ -57,7 +57,7 @@ public class SqliteIndexReader extends JdbcIndexReader {
 			final String schemaName = index.getSchemaName() == null
 					? "main" : index.getSchemaName();
 			final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-					+ ".sqlite_schema WHERE type='index' AND name=?";
+					+ ".sqlite_master WHERE type='index' AND name=?";
 			String definition = null;
 			try (var statement = connection.prepareStatement(sql)) {
 				statement.setString(1, index.getName());

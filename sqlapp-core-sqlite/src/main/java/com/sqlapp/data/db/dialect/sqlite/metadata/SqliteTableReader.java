@@ -38,7 +38,7 @@ public class SqliteTableReader extends JdbcTableReader {
 				? "main" : getSchemaName(context);
 		final String requestedTable = getObjectName(context);
 		final String sql = "SELECT name FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_schema WHERE type='table' "
+				+ ".sqlite_master WHERE type='table' "
 				+ "AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY name";
 		try (var statement = connection.createStatement();
 				var resultSet = statement.executeQuery(sql)) {
@@ -105,7 +105,7 @@ public class SqliteTableReader extends JdbcTableReader {
 		final String schemaName = table.getSchemaName() == null
 				? "main" : table.getSchemaName();
 		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_schema WHERE type='table' AND name=?";
+				+ ".sqlite_master WHERE type='table' AND name=?";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, table.getName());
 			try (var resultSet = statement.executeQuery()) {

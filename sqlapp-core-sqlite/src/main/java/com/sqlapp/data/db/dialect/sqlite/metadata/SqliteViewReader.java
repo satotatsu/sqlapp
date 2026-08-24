@@ -21,7 +21,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.View;
 
-/** Reads SQLite views from each database's {@code sqlite_schema}. */
+/** Reads SQLite views from each database's historical schema-table alias. */
 public class SqliteViewReader extends JdbcViewReader {
 	private static final Pattern STATEMENT_PATTERN = Pattern.compile(
 			"(?is)^\\s*CREATE\\s+(?:TEMP(?:ORARY)?\\s+)?VIEW\\s+.*?\\s+AS\\s+(.*)$");
@@ -44,7 +44,7 @@ public class SqliteViewReader extends JdbcViewReader {
 				? "main" : getSchemaName(context);
 		final String requestedView = getObjectName(context);
 		final String sql = "SELECT name, sql FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_schema WHERE type='view' ORDER BY name";
+				+ ".sqlite_master WHERE type='view' ORDER BY name";
 		try (var statement = connection.createStatement();
 				var resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
