@@ -44,6 +44,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** Vertica 25.1 JDBC generated-key behavior probe. */
 class VirticaBatchGeneratedKeysTest {
@@ -221,6 +222,9 @@ class VirticaBatchGeneratedKeysTest {
 					.findFirst().orElseThrow();
 			assertTrue(view.getStatement().toString().toLowerCase()
 					.contains("metadata_table"));
+			assertEquals(2, view.getColumns().size());
+			assertEquals("id", view.getColumns().get(0).getName());
+			assertEquals("code", view.getColumns().get(1).getName());
 			var sequence = schema.getSequences().stream().filter(
 					s -> "metadata_sequence".equalsIgnoreCase(s.getName()))
 					.findFirst().orElseThrow();
@@ -251,8 +255,12 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(2, procedure.getArguments().size());
 			assertEquals("input_value", procedure.getArguments().get(0).getName());
 			assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
+			assertEquals(ParameterDirection.Input,
+					procedure.getArguments().get(0).getDirection());
 			assertEquals("message_value", procedure.getArguments().get(1).getName());
 			assertEquals(DataType.VARCHAR, procedure.getArguments().get(1).getDataType());
+			assertEquals(ParameterDirection.Input,
+					procedure.getArguments().get(1).getDirection());
 			assertTrue(procedure.getLanguage().toLowerCase().contains("pl/vsql"));
 			assertEquals(SqlSecurity.Invoker, procedure.getSqlSecurity());
 			assertEquals("dbadmin", procedure.getSpecifics().get("OWNER"));
