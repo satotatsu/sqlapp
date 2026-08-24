@@ -236,7 +236,14 @@ class SpannerMetadataReaderTest {
 					SpannerCreateSequenceFactory.SKIP_RANGE_MIN, Long.class).longValue());
 			assertEquals(199L, sequence.getSpecifics().get(
 					SpannerCreateSequenceFactory.SKIP_RANGE_MAX, Long.class).longValue());
-			assertNotNull(schema.getViews().get("metadata_view"));
+			var view = schema.getViews().get("metadata_view");
+			assertNotNull(view);
+			String viewStatement = String.join("\n", view.getStatement()).toLowerCase();
+			assertTrue(viewStatement.contains("select p.id, p.code"), viewStatement);
+			assertTrue(viewStatement.contains("from metadata_parent as p"), viewStatement);
+			assertEquals(2, view.getColumns().size());
+			assertEquals("id", view.getColumns().get(0).getName());
+			assertEquals("code", view.getColumns().get(1).getName());
 		}
 	}
 
