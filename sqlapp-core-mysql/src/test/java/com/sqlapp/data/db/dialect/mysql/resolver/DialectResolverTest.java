@@ -51,19 +51,35 @@ public class DialectResolverTest {
 
 	@Test
 	public void testMetadataReaderVersionBoundaries() {
-		assertCatalogReader("MySqlCatalogReader", 5, 5, 0);
-		assertCatalogReader("MySqlCatalog564Reader", 5, 6, 4);
-		assertCatalogReader("MySqlCatalog564Reader", 5, 6, 5);
-		assertCatalogReader("MySqlCatalog570Reader", 5, 7, 0);
-		assertCatalogReader("MySqlCatalog800Reader", 8, 0, 0);
-		assertCatalogReader("MySqlCatalog800Reader", 8, 0, 1);
-		assertCatalogReader("MySqlCatalog800Reader", 8, 4, 0);
-		assertCatalogReader("MySqlCatalog800Reader", 9, 0, 0);
+		assertMetadataReaders("MySqlCatalogReader", "MySqlSchemaReader",
+				"MySqlTableReader", "MySqlColumnReader", 5, 5, 0);
+		assertMetadataReaders("MySqlCatalog564Reader", "MySqlSchema564Reader",
+				"MySqlTable564Reader", "MySqlColumn564Reader", 5, 6, 4);
+		assertMetadataReaders("MySqlCatalog564Reader", "MySqlSchema564Reader",
+				"MySqlTable564Reader", "MySqlColumn564Reader", 5, 6, 5);
+		assertMetadataReaders("MySqlCatalog570Reader", "MySqlSchema570Reader",
+				"MySqlTable570Reader", "MySqlColumn570Reader", 5, 7, 0);
+		assertMetadataReaders("MySqlCatalog800Reader", "MySqlSchema800Reader",
+				"MySqlTable800Reader", "MySqlColumn800Reader", 8, 0, 0);
+		assertMetadataReaders("MySqlCatalog800Reader", "MySqlSchema800Reader",
+				"MySqlTable800Reader", "MySqlColumn800Reader", 8, 0, 1);
+		assertMetadataReaders("MySqlCatalog800Reader", "MySqlSchema800Reader",
+				"MySqlTable800Reader", "MySqlColumn800Reader", 8, 4, 0);
+		assertMetadataReaders("MySqlCatalog800Reader", "MySqlSchema800Reader",
+				"MySqlTable800Reader", "MySqlColumn800Reader", 9, 0, 0);
 	}
 
-	private void assertCatalogReader(String className, int major, int minor, int revision) {
+	private void assertMetadataReaders(String catalogClass, String schemaClass,
+			String tableClass, String columnClass, int major, int minor, int revision) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("MySql", major, minor, revision);
-		assertEquals(className, dialect.getCatalogReader().getClass().getSimpleName());
+		var catalogReader = dialect.getCatalogReader();
+		assertEquals(catalogClass, catalogReader.getClass().getSimpleName());
+		var schemaReader = catalogReader.getSchemaReader();
+		assertEquals(schemaClass, schemaReader.getClass().getSimpleName());
+		var tableReader = schemaReader.getTableReader();
+		assertEquals(tableClass, tableReader.getClass().getSimpleName());
+		assertEquals(columnClass,
+				tableReader.getColumnReader().getClass().getSimpleName());
 	}
 
 	@Test
