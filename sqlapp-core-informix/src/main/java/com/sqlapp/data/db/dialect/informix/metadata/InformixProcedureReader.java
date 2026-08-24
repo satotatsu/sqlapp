@@ -57,11 +57,9 @@ public class InformixProcedureReader extends ProcedureReader {
 		List<Procedure> result = list();
 		routines.values().forEach(routineText -> {
 			String text = routineText.text.toString();
-			if (getReaderOptions().isReadDefinition()) {
+			if (getReaderOptions().isReadDefinition()
+					|| getReaderOptions().isReadStatement()) {
 				routineText.procedure.setDefinition(text);
-			}
-			if (getReaderOptions().isReadStatement()) {
-				routineText.procedure.setStatement(text);
 			}
 			InformixRoutineUtils.setArguments(routineText.procedure, text);
 			result.add(routineText.procedure);

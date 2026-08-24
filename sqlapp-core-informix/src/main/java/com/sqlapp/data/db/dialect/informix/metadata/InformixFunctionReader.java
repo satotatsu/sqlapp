@@ -57,11 +57,9 @@ public class InformixFunctionReader extends FunctionReader {
 		List<Function> result = list();
 		routines.values().forEach(routineText -> {
 			String text = routineText.text.toString();
-			if (getReaderOptions().isReadDefinition()) {
+			if (getReaderOptions().isReadDefinition()
+					|| getReaderOptions().isReadStatement()) {
 				routineText.function.setDefinition(text);
-			}
-			if (getReaderOptions().isReadStatement()) {
-				routineText.function.setStatement(text);
 			}
 			InformixRoutineUtils.setArguments(routineText.function, text);
 			result.add(routineText.function);

@@ -54,11 +54,9 @@ public class InformixViewReader extends JdbcViewReader {
 			}
 		});
 		definitions.forEach((view, definition) -> {
-			if (getReaderOptions().isReadDefinition()) {
+			if (getReaderOptions().isReadDefinition()
+					|| getReaderOptions().isReadStatement()) {
 				view.setDefinition(definition.toString());
-			}
-			if (getReaderOptions().isReadStatement()) {
-				view.setStatement(definition.toString());
 			}
 		});
 		return result;

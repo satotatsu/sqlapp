@@ -89,6 +89,14 @@ For `sqlapp-core-{db}` changes:
 - Keep vendor catalog queries in the dialect module.
 - Consider identifiers, quoting, case, data types and version boundaries.
 - Separate metadata-reading changes from SQL-generation changes.
+- Prefer a body or query in `statement` plus separately modeled components such
+  as procedure arguments or view columns when both can be read reliably and can
+  recreate the object together.
+- When that split representation cannot be read reliably, store the complete,
+  executable CREATE DDL in `definition`; components already embedded in that DDL
+  are then optional supplemental metadata rather than mandatory duplicates.
+- Test object recreatability from either `statement` plus modeled components or
+  from `definition`, according to the representation selected by the reader.
 - Add relevant resolution, type, quoting, SQL, metadata and boundary tests.
 - Clearly separate tests requiring a real database.
 

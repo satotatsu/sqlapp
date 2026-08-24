@@ -78,7 +78,8 @@ class InformixJdbcTreeDataSessionTest {
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"composite_parent",
-					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
+					"parent_view", "metadata_complex_view", "metadata_audit", "metadata_trigger",
+					"metadata_procedure",
 					"metadata_update_trigger",
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
 					"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
@@ -202,8 +203,19 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(Order.Desc, mixedOrderIndex.getColumns().get(1).getOrder());
 			var view = schema.getViews().get("parent_view");
 			assertNotNull(view);
-			assertTrue(view.getStatement().toString().toLowerCase()
-					.contains("parent_table"), view.getStatement().toString());
+			assertTrue(view.getDefinition().toString().toLowerCase()
+					.contains("parent_table"), view.getDefinition().toString());
+			assertTrue(view.getStatement().toString().isEmpty());
+			var complexView = schema.getViews().get("metadata_complex_view");
+			assertNotNull(complexView);
+			String complexViewSql = complexView.getDefinition().toString().toLowerCase();
+			assertTrue(complexViewSql.contains("parent_table"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains("child_table"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains("upper"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains("join"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains("parent_key"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains("child_text_upper"), () -> complexViewSql);
+			assertTrue(complexView.getStatement().toString().isEmpty());
 			var trigger = schema.getTriggers().get("metadata_trigger");
 			assertNotNull(trigger);
 			assertEquals("parent_table", trigger.getTableName());
@@ -224,8 +236,9 @@ class InformixJdbcTreeDataSessionTest {
 					.contains("old_row.parent_id"));
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
-			assertTrue(procedure.getStatement().toString().toLowerCase()
+			assertTrue(procedure.getDefinition().toString().toLowerCase()
 					.contains("insert into metadata_audit"));
+			assertTrue(procedure.getStatement().toString().isEmpty());
 			assertEquals(4, procedure.getArguments().size());
 			assertEquals("p_id", procedure.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, procedure.getArguments().get(0).getDirection());
@@ -237,8 +250,9 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(ParameterDirection.Inout, procedure.getArguments().get(3).getDirection());
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
-			assertTrue(function.getStatement().toString().toLowerCase()
+			assertTrue(function.getDefinition().toString().toLowerCase()
 					.contains("return p_value * 2"));
+			assertTrue(function.getStatement().toString().isEmpty());
 			assertEquals(2, function.getArguments().size());
 			assertEquals("p_value", function.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, function.getArguments().get(0).getDirection());
@@ -413,6 +427,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropRoutine(statement, "metadata_function", false);
 			dropSequence(statement, "metadata_sequence");
 			dropSynonym(statement, "metadata_parent_synonym");
+			dropView(statement, "metadata_complex_view");
 			dropView(statement, "parent_view");
 			dropTable(statement, "metadata_range_fragmented");
 			dropTable(statement, "metadata_list_fragmented");
@@ -486,6 +501,13 @@ class InformixJdbcTreeDataSessionTest {
 					)
 					""");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
+			statement.execute("""
+					CREATE VIEW metadata_complex_view (parent_key, child_text_upper) AS
+					SELECT p.id, UPPER(c.txt)
+					FROM parent_table p
+					INNER JOIN child_table c ON c.parent_id = p.id
+					WHERE c.txt IS NOT NULL
+					""");
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("""
 					CREATE TRIGGER metadata_trigger INSERT ON parent_table
