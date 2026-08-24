@@ -47,8 +47,6 @@ public class VirticaTableSpaceFileReader extends TableSpaceFileReader {
 		file.setTableSpaceName(getString(rs, "LOCATION_LABEL"));
 		setSpecifics(rs, "NODE_NAME", file);
 		setSpecifics(rs, "LOCATION_USAGE", file);
-		setSpecifics(rs, "SHARING_TYPE", file);
-		setSpecifics(rs, "IS_RETIRED", file);
 		return file;
 	}
 }

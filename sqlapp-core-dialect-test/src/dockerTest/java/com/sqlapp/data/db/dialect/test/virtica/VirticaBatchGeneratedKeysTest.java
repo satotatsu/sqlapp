@@ -281,8 +281,6 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals(locationPath, tableSpace.getTableSpaceFiles().get(0).getFilePath());
 			assertEquals("TEMP", tableSpace.getTableSpaceFiles().get(0)
 					.getSpecifics().get("LOCATION_USAGE"));
-			assertFalse(Boolean.parseBoolean(tableSpace.getTableSpaceFiles().get(0)
-					.getSpecifics().get("IS_RETIRED")));
 			statement.executeQuery("SELECT RETIRE_LOCATION('" + locationPath + "', '')").close();
 			statement.executeQuery("SELECT DROP_LOCATION('" + locationPath + "', '')").close();
 		}
