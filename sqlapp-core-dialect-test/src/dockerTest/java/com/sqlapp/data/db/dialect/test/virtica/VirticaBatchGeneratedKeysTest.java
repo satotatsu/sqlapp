@@ -65,8 +65,14 @@ class VirticaBatchGeneratedKeysTest {
 
 	@Test
 	void metadataReaderLoadsTablesConstraintsViewAndSequence() throws Exception {
+		String locationLabel = "metadata_fast_" + System.nanoTime();
+		String locationPath = "/tmp/" + locationLabel;
+		assertEquals(0, VERTICA.execInContainer("mkdir", "-p", locationPath).getExitCode());
+		assertEquals(0, VERTICA.execInContainer("chmod", "777", locationPath).getExitCode());
 		try (Connection connection = createConnection();
 				Statement statement = connection.createStatement()) {
+			statement.execute("CREATE LOCATION '" + locationPath + "' ALL NODES "
+					+ "USAGE 'TEMP' LABEL '" + locationLabel + "'");
 			statement.execute("DROP TRIGGER IF EXISTS metadata_once_trigger");
 			statement.execute("DROP SCHEDULE IF EXISTS metadata_once_schedule");
 			statement.execute("DROP TRIGGER IF EXISTS metadata_schedule_trigger");
@@ -267,6 +273,18 @@ class VirticaBatchGeneratedKeysTest {
 			assertEquals("DATE_TIME_LIST", oneTimeEvent.getSpecifics().get("DATE_TIME_TYPE"));
 			assertTrue(oneTimeEvent.getSpecifics().get("DATE_TIME_STRING")
 					.contains("2099-01-01"));
+			var tableSpace = dialect.getCatalogReader().getTableSpaceReader()
+					.getAllFull(connection).stream()
+					.filter(ts -> locationLabel.equals(ts.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(1, tableSpace.getTableSpaceFiles().size());
+			assertEquals(locationPath, tableSpace.getTableSpaceFiles().get(0).getFilePath());
+			assertEquals("TEMP", tableSpace.getTableSpaceFiles().get(0)
+					.getSpecifics().get("LOCATION_USAGE"));
+			assertFalse(Boolean.parseBoolean(tableSpace.getTableSpaceFiles().get(0)
+					.getSpecifics().get("IS_RETIRED")));
+			statement.executeQuery("SELECT RETIRE_LOCATION('" + locationPath + "', '')").close();
+			statement.executeQuery("SELECT DROP_LOCATION('" + locationPath + "', '')").close();
 		}
 	}
 

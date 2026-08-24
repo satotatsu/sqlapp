@@ -65,7 +65,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
-		return null;
+		return new VirticaTableSpaceReader(this.getDialect());
 	}
 
 	@Override

@@ -98,6 +98,8 @@ public class DialectResolverTest {
 				.getObjectPrivilegeReader().getClass().getSimpleName());
 		assertEquals("VirticaSettingReader", dialect.getCatalogReader()
 				.getSettingReader().getClass().getSimpleName());
+		assertEquals("VirticaTableSpaceReader", dialect.getCatalogReader()
+				.getTableSpaceReader().getClass().getSimpleName());
 		if (supportsStoredProcedures) {
 			assertNotNull(dialect.getCatalogReader().getSchemaReader().getProcedureReader());
 		} else {
