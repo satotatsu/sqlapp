@@ -78,6 +78,7 @@ class InformixJdbcTreeDataSessionTest {
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
+					"metadata_update_trigger",
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
 					"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
 					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial",
@@ -180,6 +181,16 @@ class InformixJdbcTreeDataSessionTest {
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
 			assertTrue(trigger.getStatement().toString().toLowerCase()
 					.contains("metadata_audit"));
+			var updateTrigger = schema.getTriggers().get("metadata_update_trigger");
+			assertNotNull(updateTrigger);
+			assertEquals("child_table", updateTrigger.getTableName());
+			assertEquals("AFTER", updateTrigger.getActionTiming());
+			assertEquals("ROW", updateTrigger.getActionOrientation());
+			assertTrue(updateTrigger.getEventManipulation().contains("UPDATE"));
+			assertEquals("old_row", updateTrigger.getActionReferenceOldRow());
+			assertEquals("new_row", updateTrigger.getActionReferenceNewRow());
+			assertTrue(updateTrigger.getStatement().toString().toLowerCase()
+					.contains("old_row.parent_id"));
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
 			assertTrue(procedure.getStatement().toString().toLowerCase()
@@ -365,6 +376,7 @@ class InformixJdbcTreeDataSessionTest {
 
 	private void createTables(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			dropTrigger(statement, "metadata_update_trigger");
 			dropTrigger(statement, "metadata_trigger");
 			dropRoutine(statement, "metadata_procedure", true);
 			dropRoutine(statement, "metadata_function", false);
@@ -429,6 +441,12 @@ class InformixJdbcTreeDataSessionTest {
 					REFERENCING NEW AS new_row
 					FOR EACH ROW
 					(INSERT INTO metadata_audit(parent_id) VALUES (new_row.id))
+					""");
+			statement.execute("""
+					CREATE TRIGGER metadata_update_trigger UPDATE OF txt ON child_table
+					REFERENCING OLD AS old_row NEW AS new_row
+					FOR EACH ROW
+					(INSERT INTO metadata_audit(parent_id) VALUES (old_row.parent_id))
 					""");
 			statement.execute("""
 					CREATE PROCEDURE metadata_procedure(
