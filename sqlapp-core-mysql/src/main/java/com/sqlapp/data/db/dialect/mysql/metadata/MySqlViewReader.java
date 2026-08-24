@@ -19,11 +19,15 @@
 
 package com.sqlapp.data.db.dialect.mysql.metadata;
 
+import java.sql.SQLException;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.AbstractISViewReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
 
 /**
  * MySqlのビュー読み込み
@@ -35,6 +39,17 @@ public class MySqlViewReader extends AbstractISViewReader {
 
 	protected MySqlViewReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected Table createTable(ExResultSet rs) throws SQLException {
+		Table table = createTable(getString(rs, TABLE_NAME));
+		table.setCatalogName(getString(rs, TABLE_CATALOG));
+		table.setSchemaName(getString(rs, TABLE_SCHEMA));
+		Boolean updatable = toBoolean(getString(rs, "IS_UPDATABLE"));
+		table.setReadonly(!updatable.booleanValue());
+		table.setStatement(getString(rs, "VIEW_DEFINITION"));
+		return table;
 	}
 
 	@Override

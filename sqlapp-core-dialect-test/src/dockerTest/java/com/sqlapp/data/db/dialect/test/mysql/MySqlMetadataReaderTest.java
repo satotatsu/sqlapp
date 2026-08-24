@@ -117,7 +117,8 @@ class MySqlMetadataReaderTest {
 
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
-			assertTrue(view.getDefinition().toString().contains("metadata_parent"));
+			String viewStatement = String.join("\n", view.getStatement()).toLowerCase();
+			assertTrue(viewStatement.contains("metadata_parent"), viewStatement);
 			assertEquals(2, view.getColumns().size());
 			assertEquals("id", view.getColumns().get(0).getName());
 			assertEquals("code", view.getColumns().get(1).getName());
