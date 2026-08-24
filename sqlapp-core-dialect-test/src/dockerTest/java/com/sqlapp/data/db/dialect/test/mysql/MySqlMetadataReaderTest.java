@@ -24,6 +24,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.mysql.MySql840;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.EventType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
@@ -70,9 +71,16 @@ class MySqlMetadataReaderTest {
 					parent.getConstraints().get("PRIMARY"));
 			assertTrue(primaryKey.isPrimaryKey());
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
-			assertNotNull(parent.getConstraints().get("uk_metadata_parent_code"));
-			assertNotNull(parent.getConstraints().get("ck_metadata_parent_amount"));
-			assertNotNull(parent.getIndexes().get("idx_metadata_parent_name"));
+			var unique = assertInstanceOf(UniqueConstraint.class,
+					parent.getConstraints().get("uk_metadata_parent_code"));
+			assertEquals("code", unique.getColumns().get(0).getName());
+			var check = assertInstanceOf(CheckConstraint.class,
+					parent.getConstraints().get("ck_metadata_parent_amount"));
+			assertTrue(check.getExpression().replace("`", "")
+					.contains("amount >= 0"), check::getExpression);
+			var nameIndex = parent.getIndexes().get("idx_metadata_parent_name");
+			assertNotNull(nameIndex);
+			assertEquals("name", nameIndex.getColumns().get(0).getName());
 			assertTrue(!parent.getIndexes().get("idx_metadata_parent_invisible").isEnable());
 			var functionalIndex = parent.getIndexes().get("idx_metadata_parent_lower_name");
 			assertNotNull(functionalIndex);
