@@ -69,7 +69,7 @@ public class DerbyUniqueConstraintReader extends UniqueConstraintReader {
 
 	protected UniqueConstraint createUniqueConstraint(Connection connection,
 			ExResultSet rs) throws SQLException {
-		String catalogName = null;
+		String catalogName = "";
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String constraintName = getString(rs, CONSTRAINT_NAME);
 		String tableName = getString(rs, TABLE_NAME);

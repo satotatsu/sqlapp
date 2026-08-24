@@ -51,6 +51,7 @@ class DerbyMetadataRoundTripTest {
 			reader.setSchemaName("APP");
 			var tableReader = reader.getTableReader();
 			tableReader.setSchemaName("APP");
+			tableReader.setObjectName("METADATA_TABLE");
 			var uniqueConstraints = tableReader.getUniqueConstraintReader()
 					.getAllFull(connection);
 			assertTrue(uniqueConstraints.stream().anyMatch(
@@ -61,6 +62,8 @@ class DerbyMetadataRoundTripTest {
 					.findFirst().orElseThrow();
 			assertEquals("APP", uniqueConstraint.getSchemaName());
 			assertEquals("METADATA_TABLE", uniqueConstraint.getTableName());
+			assertEquals(1, uniqueConstraint.getColumns().size(),
+					uniqueConstraint.toString());
 			var checkConstraints = tableReader.getCheckConstraintReader()
 					.getAllFull(connection);
 			assertTrue(checkConstraints.stream().anyMatch(
@@ -73,12 +76,29 @@ class DerbyMetadataRoundTripTest {
 					.findFirst().orElseThrow();
 			assertEquals("APP", foreignKey.getSchemaName());
 			assertEquals("METADATA_TABLE", foreignKey.getTableName());
+			assertEquals(1, foreignKey.getColumns().size(), foreignKey.toString());
+			assertEquals(1, foreignKey.getRelatedColumns().size(),
+					foreignKey.toString());
+			var detailedTable = CommonUtils.first(
+					tableReader.getAllFull(connection));
+			assertEquals(uniqueConstraint.getCatalogName(),
+					detailedTable.getCatalogName());
+			assertEquals(uniqueConstraint.getSchemaName(),
+					detailedTable.getSchemaName());
+			assertEquals(uniqueConstraint.getTableName(), detailedTable.getName());
+			assertNotNull(detailedTable.getIndexes().get("IDX_METADATA_NAME"));
+			assertNotNull(detailedTable.getConstraints().get("UK_METADATA_NAME"));
+			assertNotNull(detailedTable.getConstraints().get("CK_METADATA_NAME"));
+			assertNotNull(detailedTable.getConstraints().get("FK_METADATA_PARENT"));
 			Schema schema = CommonUtils.first(reader.getAllFull(connection));
 
 			var table = schema.getTables().get("METADATA_TABLE");
 			assertNotNull(table);
 			assertEquals("APP", table.getSchemaName());
-			assertEquals(uniqueConstraint.getCatalogName(), table.getCatalogName());
+			assertNotNull(table.getIndexes().get("IDX_METADATA_NAME"));
+			assertNotNull(table.getConstraints().get("UK_METADATA_NAME"));
+			assertNotNull(table.getConstraints().get("CK_METADATA_NAME"));
+			assertNotNull(table.getConstraints().get("FK_METADATA_PARENT"));
 			assertEquals("'unknown'", table.getColumns().get("NAME").getDefaultValue());
 			assertNotNull(schema.getSequences().get("ORDER_SEQ"));
 

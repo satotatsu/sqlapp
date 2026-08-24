@@ -59,7 +59,7 @@ public class DerbyCheckConstraintReader extends CheckConstraintReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String catalogName = null;
+				String catalogName = "";
 				String schemaName = getString(rs, "SCHEMANAME");
 				String tableName = getString(rs, "TABLENAME");
 				String name = getString(rs, "CONSTRAINTNAME");
@@ -69,6 +69,7 @@ public class DerbyCheckConstraintReader extends CheckConstraintReader {
 				CheckConstraint c = tMap.get(catalogName, schemaName, name);
 				if (c == null) {
 					c = new CheckConstraint(name, source);
+					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
 					cols = list();

@@ -74,7 +74,7 @@ public class DerbyIndexReader extends IndexReader {
 
 	protected Index createIndex(final Connection connection, ExResultSet rs)
 			throws SQLException {
-		String catalogName = null;
+		String catalogName = "";
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String name = getString(rs, INDEX_NAME);
 		String columnInfo = getString(rs, "index_info");

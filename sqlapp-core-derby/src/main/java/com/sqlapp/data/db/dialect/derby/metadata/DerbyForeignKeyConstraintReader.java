@@ -79,6 +79,7 @@ public class DerbyForeignKeyConstraintReader extends ForeignKeyConstraintReader 
 		Index fk_index = DerbyUtils.parseIndexDescriptor(connection, getDialect(), fk_table_schema, fk_table_name,
 				"dummy", getString(rs, "fkcols"));
 		ForeignKeyConstraint c = new ForeignKeyConstraint(fk_name);
+		c.setCatalogName("");
 		c.setSchemaName(fk_table_schema);
 		c.setTableName(fk_table_name);
 		c.setUpdateRule(DerbyUtils.getCascadeRule(getString(rs, UPDATE_RULE)));
