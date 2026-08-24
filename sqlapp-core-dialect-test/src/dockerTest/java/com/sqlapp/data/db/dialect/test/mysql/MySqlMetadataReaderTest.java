@@ -24,6 +24,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.mysql.MySql840;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.EventType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
@@ -96,6 +97,8 @@ class MySqlMetadataReaderTest {
 					child.getConstraints().get("fk_metadata_child_parent"));
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
+			assertEquals(CascadeRule.Cascade, foreignKey.getUpdateRule());
+			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
 			assertNotNull(child.getColumns().get("normalized_code")
 					.getFormula());
 
@@ -201,7 +204,7 @@ class MySqlMetadataReaderTest {
 				 code VARCHAR(40) NOT NULL,
 				 normalized_code VARCHAR(40) GENERATED ALWAYS AS (LOWER(code)) STORED,
 				 CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id)
-				  REFERENCES metadata_parent(id))
+				  REFERENCES metadata_parent(id) ON UPDATE CASCADE ON DELETE CASCADE)
 				""");
 		statement.execute("""
 				CREATE TABLE metadata_partitioned (
