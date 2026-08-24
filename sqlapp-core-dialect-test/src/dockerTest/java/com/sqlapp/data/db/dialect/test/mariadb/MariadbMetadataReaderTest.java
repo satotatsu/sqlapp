@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.mariadb.MariaDBContainer;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb11_80;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.EventType;
@@ -123,6 +124,8 @@ class MariadbMetadataReaderTest {
 			assertNotNull(view);
 			assertTrue(view.getDefinition().toString().contains("metadata_parent"));
 			assertEquals(2, view.getColumns().size());
+			assertEquals("id", view.getColumns().get(0).getName());
+			assertEquals("code", view.getColumns().get(1).getName());
 
 			var sequence = schema.getSequences().get("metadata_sequence");
 			assertNotNull(sequence);
@@ -134,14 +137,22 @@ class MariadbMetadataReaderTest {
 
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
-			assertNotNull(procedure.getStatement());
+			String procedureStatement = String.join("\n", procedure.getStatement()).toLowerCase();
+			assertTrue(procedureStatement.contains("select name into p_name"), procedureStatement);
 			assertEquals(ParameterDirection.Input,
 					procedure.getArguments().get("p_id").getDirection());
+			assertEquals(DataType.BIGINT, procedure.getArguments().get("p_id").getDataType());
 			assertEquals(ParameterDirection.Output,
 					procedure.getArguments().get("p_name").getDirection());
+			assertEquals(DataType.VARCHAR, procedure.getArguments().get("p_name").getDataType());
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
-			assertNotNull(function.getArguments().get("p_amount"));
+			String functionStatement = String.join("\n", function.getStatement()).toLowerCase();
+			assertTrue(functionStatement.contains("return p_amount * 2"), functionStatement);
+			assertEquals(DataType.DECIMAL, function.getArguments().get("p_amount").getDataType());
+			assertEquals(2, function.getArguments().get("p_amount").getScale());
+			assertEquals(DataType.DECIMAL, function.getReturning().getDataType());
+			assertEquals(2, function.getReturning().getScale());
 			var trigger = schema.getTriggers().get("metadata_trigger");
 			assertNotNull(trigger);
 			assertEquals("metadata_parent", trigger.getTableName());
