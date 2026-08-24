@@ -86,7 +86,8 @@ public class SqliteColumnReader extends ColumnReader {
 		}
 		final long primaryKeyColumns = primaryKeyPositions.values().stream()
 				.filter(position -> position > 0).count();
-		if (primaryKeyColumns == 1) {
+		if (primaryKeyColumns == 1
+				&& !isWithoutRowId(connection, schemaName, tableName)) {
 			primaryKeyPositions.forEach((column, position) -> {
 				if (position > 0 && "INTEGER".equalsIgnoreCase(
 						column.getDataTypeName())) {
@@ -96,6 +97,31 @@ public class SqliteColumnReader extends ColumnReader {
 		}
 		loadGeneratedExpressions(connection, schemaName, tableName, hiddenKinds);
 		return result;
+	}
+
+	private boolean isWithoutRowId(final Connection connection,
+			final String schemaName, final String tableName) {
+		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
+				+ ".sqlite_schema WHERE type='table' AND name=?";
+		try (var statement = connection.prepareStatement(sql)) {
+			statement.setString(1, tableName);
+			try (var resultSet = statement.executeQuery()) {
+				if (!resultSet.next()) {
+					return false;
+				}
+				final String definition = resultSet.getString(1);
+				if (definition == null) {
+					return false;
+				}
+				final String normalized = definition.toUpperCase(Locale.ROOT);
+				final int closingParenthesis = normalized.lastIndexOf(')');
+				final String options = closingParenthesis < 0 ? ""
+						: normalized.substring(closingParenthesis + 1);
+				return options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*");
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private void loadGeneratedExpressions(final Connection connection,

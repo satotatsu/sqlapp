@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.test.sqlite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +43,8 @@ class SqliteMetadataReaderTest {
 					 parent_id INTEGER NOT NULL,
 					 code TEXT NOT NULL,
 					 normalized_code TEXT GENERATED ALWAYS AS (lower(code)) STORED,
+					 display_code TEXT GENERATED ALWAYS AS
+					  (printf('%s,%s', lower(code), code)) VIRTUAL,
 					 CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id)
 					  REFERENCES metadata_parent(id) ON DELETE CASCADE)
 					""");
@@ -55,6 +58,8 @@ class SqliteMetadataReaderTest {
 			statement.execute("CREATE TABLE metadata_without_rowid "
 					+ "(tenant_id TEXT, id TEXT, value TEXT, "
 					+ "PRIMARY KEY (tenant_id, id DESC)) WITHOUT ROWID");
+			statement.execute("CREATE TABLE metadata_integer_without_rowid "
+					+ "(id INTEGER PRIMARY KEY, value TEXT) WITHOUT ROWID");
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("CREATE TRIGGER trg_metadata_parent AFTER INSERT ON metadata_parent "
 					+ "BEGIN INSERT INTO metadata_audit(parent_id) VALUES (NEW.id); END");
@@ -107,6 +112,10 @@ class SqliteMetadataReaderTest {
 			var normalizedCode = child.getColumns().get("normalized_code");
 			assertEquals("lower(code)", normalizedCode.getFormula());
 			assertTrue(normalizedCode.isFormulaPersisted());
+			var displayCode = child.getColumns().get("display_code");
+			assertEquals("printf('%s,%s', lower(code), code)",
+					displayCode.getFormula());
+			assertFalse(displayCode.isFormulaPersisted());
 			var foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
@@ -140,6 +149,8 @@ class SqliteMetadataReaderTest {
 			assertEquals("id", withoutRowidPrimaryKey.getColumns().get(1).getName());
 			assertEquals(Order.Desc,
 					withoutRowidPrimaryKey.getColumns().get(1).getOrder());
+			assertFalse(schema.getTables().get("metadata_integer_without_rowid")
+					.getColumns().get("id").isIdentity());
 			var trigger = schema.getTriggers().get("trg_metadata_parent");
 			assertNotNull(trigger);
 			assertEquals("metadata_parent", trigger.getTableName());
