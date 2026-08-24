@@ -88,21 +88,17 @@ public class SybaseProcedureReader extends ProcedureReader {
 		obj.setCreatedAt(created);
 		obj.setLastAlteredAt(lastAltered);
 		String difinition = getString(rs, "routine_definition");
-		if (this.getReaderOptions().isReadDefinition()) {
+		if (this.getReaderOptions().isReadDefinition()
+				|| this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(difinition);
-		}
-		if (this.getReaderOptions().isReadStatement()) {
-			obj.setStatement(SybaseUtils.getViewStatement(difinition));
 		}
 		return obj;
 	}
 
 	private void setDefinition(Procedure obj, String definition) {
-		if (this.getReaderOptions().isReadDefinition()) {
+		if (this.getReaderOptions().isReadDefinition()
+				|| this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(definition);
-		}
-		if (this.getReaderOptions().isReadStatement()) {
-			obj.setStatement(SybaseUtils.getViewStatement(definition));
 		}
 	}
 

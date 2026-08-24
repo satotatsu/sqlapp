@@ -188,7 +188,14 @@ class SybaseJdbcTreeDataSessionTest {
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
-			assertNotNull(schema.getViews().get("metadata_view"));
+			var view = schema.getViews().get("metadata_view");
+			assertNotNull(view);
+			String viewStatement = String.join(" ", view.getStatement())
+					.toLowerCase().replaceAll("\\s+", " ");
+			assertTrue(viewStatement.contains("select id, code from metadata_table"), viewStatement);
+			assertEquals(2, view.getColumns().size());
+			assertEquals("id", view.getColumns().get(0).getName());
+			assertEquals("code", view.getColumns().get(1).getName());
 			var trigger = schema.getTriggers().get("metadata_trigger");
 			assertNotNull(trigger);
 			assertEquals("metadata_table", trigger.getTableName());
@@ -203,7 +210,12 @@ class SybaseJdbcTreeDataSessionTest {
 			assertTrue(triggerDefinition.contains("create trigger"), triggerDefinition);
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
-			assertTrue(procedure.getDefinition() != null || procedure.getStatement() != null);
+			String procedureDefinition = String.join(" ", procedure.getDefinition())
+					.toLowerCase().replaceAll("\\s+", " ");
+			assertTrue(procedureDefinition.contains("create procedure"), procedureDefinition);
+			assertTrue(procedureDefinition.contains("metadata_procedure"), procedureDefinition);
+			assertTrue(procedureDefinition.contains("@p_id int"), procedureDefinition);
+			assertTrue(procedureDefinition.contains("select code from metadata_table"), procedureDefinition);
 		}
 	}
 
