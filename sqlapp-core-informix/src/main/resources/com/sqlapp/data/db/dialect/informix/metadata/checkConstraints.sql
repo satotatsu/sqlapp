@@ -10,6 +10,7 @@ INNER JOIN systables t
 INNER JOIN syschecks k
   ON (c.constrid = k.constrid)
 WHERE c.constrtype = 'C'
+  AND k.type = 'T'
   /*if isNotEmpty(schemaName)*/
   AND t.owner IN /*schemaName*/('%')
   /*end*/

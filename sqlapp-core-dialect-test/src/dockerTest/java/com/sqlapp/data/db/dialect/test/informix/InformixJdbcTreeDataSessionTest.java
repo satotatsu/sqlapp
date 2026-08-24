@@ -119,8 +119,26 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
 					.getColumns().get(0).getName());
 			assertEquals("'child-default'", child.getColumns().get("txt").getDefaultValue());
-			assertTrue(child.getConstraints().stream()
-					.anyMatch(CheckConstraint.class::isInstance));
+			var textCheck = assertInstanceOf(CheckConstraint.class,
+					child.getConstraints().get("ck_child_txt"));
+			String textCheckExpression = textCheck.getExpression().toLowerCase()
+					.replaceAll("\\s+", "");
+			assertTrue(textCheckExpression.contains("txt!=''"),
+					textCheck::getExpression);
+			assertTrue(textCheck.getExpression().length() < 100,
+					textCheck::getExpression);
+			var complexCheck = assertInstanceOf(CheckConstraint.class,
+					child.getConstraints().get("ck_child_complex"));
+			String complexCheckExpression = complexCheck.getExpression().toLowerCase()
+					.replaceAll("\\s+", "");
+			assertTrue(complexCheckExpression.contains("parent_id>0"),
+					complexCheck::getExpression);
+			assertTrue(complexCheckExpression.contains("length(txt)>=1"),
+					complexCheck::getExpression);
+			assertTrue(complexCheckExpression.contains("txt='allow,empty'"),
+					complexCheck::getExpression);
+			assertTrue(complexCheck.getExpression().length() < 200,
+					complexCheck::getExpression);
 			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
@@ -378,7 +396,9 @@ class InformixJdbcTreeDataSessionTest {
 							REFERENCES parent_table(id)
 							ON DELETE CASCADE CONSTRAINT fk_child_parent,
 						UNIQUE (parent_id, txt) CONSTRAINT uq_child_parent_txt,
-						CHECK (txt <> '') CONSTRAINT ck_child_txt
+						CHECK (txt <> '') CONSTRAINT ck_child_txt,
+						CHECK ((parent_id > 0 AND LENGTH(txt) >= 1)
+							OR txt = 'allow,empty') CONSTRAINT ck_child_complex
 					)
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
