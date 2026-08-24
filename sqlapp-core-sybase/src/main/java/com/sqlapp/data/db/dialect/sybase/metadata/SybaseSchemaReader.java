@@ -140,7 +140,7 @@ public class SybaseSchemaReader extends SchemaReader {
 
 	@Override
 	protected FunctionReader newFunctionReader() {
-		return null;
+		return new SybaseFunctionReader(this.getDialect());
 	}
 
 	@Override

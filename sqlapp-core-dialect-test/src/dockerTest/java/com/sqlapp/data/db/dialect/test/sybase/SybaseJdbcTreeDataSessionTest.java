@@ -70,6 +70,11 @@ class SybaseJdbcTreeDataSessionTest {
 				// The isolated test container may not contain the procedure yet.
 			}
 			try {
+				statement.execute("DROP FUNCTION metadata_function");
+			} catch (SQLException ignored) {
+				// The isolated test container may not contain the function yet.
+			}
+			try {
 				statement.execute("sp_dropserver 'metadata_remote'");
 			} catch (SQLException ignored) {
 				// The isolated test container may not contain the remote server yet.
@@ -113,6 +118,18 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
+			statement.execute("CREATE FUNCTION metadata_function(@p_id INT) RETURNS INT AS "
+					+ "BEGIN RETURN @p_id * 2 END");
+			String functionObjectType;
+			try (var resultSet = statement.executeQuery("SELECT o.type, COUNT(c.colid) "
+					+ "FROM sysobjects o LEFT JOIN syscomments c ON o.id = c.id "
+					+ "WHERE o.name = 'metadata_function' GROUP BY o.type")) {
+				assertTrue(resultSet.next());
+				functionObjectType = resultSet.getString(1).trim();
+				int functionTextRows = resultSet.getInt(2);
+				assertEquals("SF", functionObjectType);
+				assertTrue(functionTextRows > 0, "type=" + functionObjectType);
+			}
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			var settings = dialect.getCatalogReader().getSettingReader().getAllFull(connection);
 			assertTrue(settings.size() > 0);
@@ -153,7 +170,7 @@ class SybaseJdbcTreeDataSessionTest {
 			var roleMembers = roleMemberReader.getAllFull(connection);
 			assertTrue(roleMembers.stream().anyMatch(member -> "sa_role".equals(member.getMemberRoleName())));
 			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table", "metadata_view",
-					"metadata_procedure", "metadata_code", "metadata_trigger")
+					"metadata_procedure", "metadata_function", "metadata_code", "metadata_trigger")
 					.orElseThrow();
 			var domain = schema.getDomains().get("metadata_code");
 			assertNotNull(domain);
@@ -216,6 +233,17 @@ class SybaseJdbcTreeDataSessionTest {
 			assertTrue(procedureDefinition.contains("metadata_procedure"), procedureDefinition);
 			assertTrue(procedureDefinition.contains("@p_id int"), procedureDefinition);
 			assertTrue(procedureDefinition.contains("select code from metadata_table"), procedureDefinition);
+			var function = schema.getFunctions().stream()
+					.filter(current -> "metadata_function".equalsIgnoreCase(current.getName()))
+					.findFirst().orElseThrow(() -> new AssertionError(
+							"type=" + functionObjectType + ", functions=" + schema.getFunctions()));
+			String functionDefinition = String.join(" ", function.getDefinition())
+					.toLowerCase().replaceAll("\\s+", " ");
+			assertTrue(functionDefinition.contains("create function"), functionDefinition);
+			assertTrue(functionDefinition.contains("metadata_function"), functionDefinition);
+			assertTrue(functionDefinition.contains("@p_id int"), functionDefinition);
+			assertTrue(functionDefinition.contains("returns int"), functionDefinition);
+			assertTrue(functionDefinition.contains("return @p_id * 2"), functionDefinition);
 		}
 	}
 
