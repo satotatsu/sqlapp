@@ -203,19 +203,23 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(Order.Desc, mixedOrderIndex.getColumns().get(1).getOrder());
 			var view = schema.getViews().get("parent_view");
 			assertNotNull(view);
-			assertTrue(view.getDefinition().toString().toLowerCase()
-					.contains("parent_table"), view.getDefinition().toString());
-			assertTrue(view.getStatement().toString().isEmpty());
+			String viewSql = view.getDefinition().toString().toLowerCase();
+			assertTrue(viewSql.contains("create view"), () -> viewSql);
+			assertTrue(viewSql.contains("parent_view"), () -> viewSql);
+			assertTrue(viewSql.contains(" as select "), () -> viewSql);
+			assertTrue(viewSql.contains("parent_table"), () -> viewSql);
 			var complexView = schema.getViews().get("metadata_complex_view");
 			assertNotNull(complexView);
 			String complexViewSql = complexView.getDefinition().toString().toLowerCase();
+			assertTrue(complexViewSql.contains("create view"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains("metadata_complex_view"), () -> complexViewSql);
+			assertTrue(complexViewSql.contains(" as"), () -> complexViewSql);
 			assertTrue(complexViewSql.contains("parent_table"), () -> complexViewSql);
 			assertTrue(complexViewSql.contains("child_table"), () -> complexViewSql);
 			assertTrue(complexViewSql.contains("upper"), () -> complexViewSql);
 			assertTrue(complexViewSql.contains("join"), () -> complexViewSql);
 			assertTrue(complexViewSql.contains("parent_key"), () -> complexViewSql);
 			assertTrue(complexViewSql.contains("child_text_upper"), () -> complexViewSql);
-			assertTrue(complexView.getStatement().toString().isEmpty());
 			var trigger = schema.getTriggers().get("metadata_trigger");
 			assertNotNull(trigger);
 			assertEquals("parent_table", trigger.getTableName());
@@ -236,9 +240,11 @@ class InformixJdbcTreeDataSessionTest {
 					.contains("old_row.parent_id"));
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
-			assertTrue(procedure.getDefinition().toString().toLowerCase()
-					.contains("insert into metadata_audit"));
-			assertTrue(procedure.getStatement().toString().isEmpty());
+			String procedureSql = procedure.getDefinition().toString().toLowerCase();
+			assertTrue(procedureSql.contains("create procedure"), () -> procedureSql);
+			assertTrue(procedureSql.contains("metadata_procedure"), () -> procedureSql);
+			assertTrue(procedureSql.contains("insert into metadata_audit"), () -> procedureSql);
+			assertTrue(procedureSql.contains("end procedure"), () -> procedureSql);
 			assertEquals(4, procedure.getArguments().size());
 			assertEquals("p_id", procedure.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, procedure.getArguments().get(0).getDirection());
@@ -250,9 +256,11 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(ParameterDirection.Inout, procedure.getArguments().get(3).getDirection());
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
-			assertTrue(function.getDefinition().toString().toLowerCase()
-					.contains("return p_value * 2"));
-			assertTrue(function.getStatement().toString().isEmpty());
+			String functionSql = function.getDefinition().toString().toLowerCase();
+			assertTrue(functionSql.contains("create function"), () -> functionSql);
+			assertTrue(functionSql.contains("metadata_function"), () -> functionSql);
+			assertTrue(functionSql.contains("return p_value * 2"), () -> functionSql);
+			assertTrue(functionSql.contains("end function"), () -> functionSql);
 			assertEquals(2, function.getArguments().size());
 			assertEquals("p_value", function.getArguments().get(0).getName().toLowerCase());
 			assertEquals(ParameterDirection.Input, function.getArguments().get(0).getDirection());
