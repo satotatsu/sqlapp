@@ -64,6 +64,7 @@ public class Informix extends Dialect {
 		getDbDataTypes().addNVarchar(255);
 		// Binary
 		getDbDataTypes().addBinary(LEN_2GB, type -> {
+			type.addColumnTypeMatcher("BYTE");
 			type.setCreateFormat("BYTE");
 		});
 		// Boolean

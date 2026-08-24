@@ -45,11 +45,17 @@ final class InformixRoutineUtils {
 
 	private static int matchingParenthesis(final String text, final int open) {
 		int depth = 0;
+		boolean quoted = false;
 		for (int i = open; i < text.length(); i++) {
 			char ch = text.charAt(i);
-			if (ch == '(') {
+			if (ch == '\'' && quoted && i + 1 < text.length()
+					&& text.charAt(i + 1) == '\'') {
+				i++;
+			} else if (ch == '\'') {
+				quoted = !quoted;
+			} else if (!quoted && ch == '(') {
 				depth++;
-			} else if (ch == ')' && --depth == 0) {
+			} else if (!quoted && ch == ')' && --depth == 0) {
 				return i;
 			}
 		}

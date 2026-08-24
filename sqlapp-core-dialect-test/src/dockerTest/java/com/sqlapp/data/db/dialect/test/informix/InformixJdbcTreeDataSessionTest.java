@@ -80,7 +80,8 @@ class InformixJdbcTreeDataSessionTest {
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
 					"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
-					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial")
+					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial",
+					"metadata_types")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -93,6 +94,16 @@ class InformixJdbcTreeDataSessionTest {
 					parent.getColumns().get("id").getIdentityGenerationType());
 			assertBigSerialIdentity(schema.getTables().get("metadata_serial8"));
 			assertBigSerialIdentity(schema.getTables().get("metadata_bigserial"));
+			var types = schema.getTables().get("metadata_types");
+			assertEquals(DataType.BOOLEAN, types.getColumns().get("boolean_value").getDataType());
+			assertEquals(DataType.LONGVARCHAR, types.getColumns().get("long_text").getDataType());
+			assertEquals(DataType.CLOB, types.getColumns().get("text_value").getDataType());
+			var byteColumn = types.getColumns().get("byte_value");
+			assertEquals(DataType.BINARY, byteColumn.getDataType(),
+					() -> "dataTypeName=" + byteColumn.getDataTypeName());
+			assertEquals(DataType.DATETIME, types.getColumns().get("date_time_value").getDataType());
+			assertEquals(DataType.TIME, types.getColumns().get("time_value").getDataType());
+			assertEquals(DataType.TIMESTAMP, types.getColumns().get("timestamp_value").getDataType());
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint(),
 					() -> constraintDetails(connection, parent));
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
@@ -336,6 +347,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropTable(statement, "metadata_list_fragmented");
 			dropTable(statement, "metadata_round_robin");
 			dropTable(statement, "metadata_fragmented");
+			dropTable(statement, "metadata_types");
 			dropTable(statement, "metadata_bigserial");
 			dropTable(statement, "metadata_serial8");
 			dropTable(statement, "metadata_audit");
@@ -365,6 +377,17 @@ class InformixJdbcTreeDataSessionTest {
 					"CREATE INDEX idx_child_parent_txt_mixed ON child_table(parent_id, txt DESC)");
 			statement.execute("CREATE TABLE metadata_serial8 (id SERIAL8 PRIMARY KEY)");
 			statement.execute("CREATE TABLE metadata_bigserial (id BIGSERIAL PRIMARY KEY)");
+			statement.execute("""
+					CREATE TABLE metadata_types (
+						boolean_value BOOLEAN,
+						long_text LVARCHAR(1000),
+						text_value TEXT,
+						byte_value BYTE,
+						date_time_value DATETIME YEAR TO SECOND,
+						time_value DATETIME HOUR TO SECOND,
+						timestamp_value DATETIME YEAR TO FRACTION
+					)
+					""");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
 			statement.execute("CREATE TABLE metadata_audit (parent_id INTEGER NOT NULL)");
 			statement.execute("""
@@ -387,7 +410,7 @@ class InformixJdbcTreeDataSessionTest {
 			statement.execute("""
 					CREATE FUNCTION metadata_function(
 						p_value INTEGER,
-						p_label VARCHAR(20) DEFAULT 'x,y')
+						p_label VARCHAR(20) DEFAULT '(x,y)')
 					RETURNING INTEGER;
 					RETURN p_value * 2;
 					END FUNCTION
