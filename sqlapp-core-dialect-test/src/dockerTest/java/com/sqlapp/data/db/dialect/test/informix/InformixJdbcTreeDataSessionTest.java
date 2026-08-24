@@ -38,6 +38,7 @@ import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -78,6 +79,7 @@ class InformixJdbcTreeDataSessionTest {
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
+					"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
 					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
@@ -168,6 +170,41 @@ class InformixJdbcTreeDataSessionTest {
 			assertTrue(highFragment.getSpecifics()
 					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
 					.contains("id >= 100"));
+			var roundRobin = schema.getTables().get("metadata_round_robin");
+			assertNotNull(roundRobin.getPartitioning(), () -> fragmentDetails(connection));
+			assertEquals(PartitioningType.RoundRobin,
+					roundRobin.getPartitioning().getPartitioningType());
+			assertEquals("R", roundRobin.getPartitioning().getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
+			assertEquals(2, roundRobin.getPartitioning().getPartitions().size());
+			assertEquals("rootdbs", roundRobin.getPartitioning().getPartitions()
+					.get("round_robin_one").getTableSpaceName());
+			assertEquals("rootdbs", roundRobin.getPartitioning().getPartitions()
+					.get("round_robin_two").getTableSpaceName());
+			var listFragmented = schema.getTables().get("metadata_list_fragmented");
+			assertNotNull(listFragmented.getPartitioning(), () -> fragmentDetails(connection));
+			assertEquals(PartitioningType.List,
+					listFragmented.getPartitioning().getPartitioningType());
+			assertEquals("L", listFragmented.getPartitioning().getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
+			assertEquals(3, listFragmented.getPartitioning().getPartitions().size());
+			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
+					.get("list_active").getTableSpaceName());
+			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
+					.get("list_inactive").getTableSpaceName());
+			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
+					.get("list_remainder").getTableSpaceName());
+			var rangeFragmented = schema.getTables().get("metadata_range_fragmented");
+			assertNotNull(rangeFragmented.getPartitioning(), () -> fragmentDetails(connection));
+			assertEquals(PartitioningType.Range,
+					rangeFragmented.getPartitioning().getPartitioningType());
+			assertEquals("N", rangeFragmented.getPartitioning().getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
+			assertEquals(2, rangeFragmented.getPartitioning().getPartitions().size());
+			assertEquals("rootdbs", rangeFragmented.getPartitioning().getPartitions()
+					.get("range_low").getTableSpaceName());
+			assertEquals("rootdbs", rangeFragmented.getPartitioning().getPartitions()
+					.get("range_transition").getTableSpaceName());
 			var synonym = schema.getSynonyms().get("metadata_parent_synonym");
 			assertNotNull(synonym);
 			assertEquals("parent_table", synonym.getObjectName());
@@ -278,6 +315,9 @@ class InformixJdbcTreeDataSessionTest {
 			dropSequence(statement, "metadata_sequence");
 			dropSynonym(statement, "metadata_parent_synonym");
 			dropView(statement, "parent_view");
+			dropTable(statement, "metadata_range_fragmented");
+			dropTable(statement, "metadata_list_fragmented");
+			dropTable(statement, "metadata_round_robin");
 			dropTable(statement, "metadata_fragmented");
 			dropTable(statement, "metadata_bigserial");
 			dropTable(statement, "metadata_serial8");
@@ -337,6 +377,35 @@ class InformixJdbcTreeDataSessionTest {
 					FRAGMENT BY EXPRESSION
 						PARTITION frag_low id < 100 IN rootdbs,
 						PARTITION frag_high id >= 100 IN rootdbs
+					""");
+			statement.execute("""
+					CREATE TABLE metadata_round_robin (
+						id INTEGER NOT NULL,
+						value_text VARCHAR(50)
+					)
+					FRAGMENT BY ROUND ROBIN
+						PARTITION round_robin_one IN rootdbs,
+						PARTITION round_robin_two IN rootdbs
+					""");
+			statement.execute("""
+					CREATE TABLE metadata_list_fragmented (
+						id INTEGER NOT NULL,
+						status VARCHAR(20)
+					)
+					FRAGMENT BY LIST (status)
+						PARTITION list_active VALUES ('active', 'pending') IN rootdbs,
+						PARTITION list_inactive VALUES ('inactive') IN rootdbs,
+						PARTITION list_remainder REMAINDER IN rootdbs
+					""");
+			statement.execute("""
+					CREATE TABLE metadata_range_fragmented (
+						id INTEGER NOT NULL,
+						value_text VARCHAR(50)
+					)
+					FRAGMENT BY RANGE (id)
+						INTERVAL (100) STORE IN (rootdbs)
+						PARTITION range_low VALUES < 100 IN rootdbs,
+						PARTITION range_transition VALUES < 200 IN rootdbs
 					""");
 			statement.execute("CREATE SYNONYM metadata_parent_synonym FOR parent_table");
 			connection.commit();
