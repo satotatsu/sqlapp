@@ -8,6 +8,8 @@ package com.sqlapp.data.db.dialect.firebird;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.firebird.metadata.Firebird50CatalogReader;
+import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
@@ -18,6 +20,11 @@ public class Firebird50 extends Firebird30 {
 
 	protected Firebird50(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
+	}
+
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new Firebird50CatalogReader(this);
 	}
 
 	@Override

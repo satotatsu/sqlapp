@@ -90,6 +90,12 @@ class FirebirdJdbcTreeDataSessionTest {
 			var descendingIndex = features.getIndexes().get("IDX_FEATURES_TXT_DESC");
 			assertTrue(descendingIndex.isUnique());
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
+			var expressionIndex = features.getIndexes().get("IDX_FEATURES_UPPER_TXT");
+			assertNotNull(expressionIndex);
+			assertTrue(expressionIndex.getColumns().get(0).getName().toUpperCase()
+					.contains("UPPER"));
+			assertEquals("TXT IS NOT NULL", features.getIndexes()
+					.get("IDX_FEATURES_TXT_PARTIAL").getWhere().toUpperCase());
 			var view = schema.getViews().get("PARENT_VIEW");
 			assertNotNull(view);
 			assertTrue(String.join("\n", view.getStatement()).toUpperCase().contains("PARENT_TABLE"));
@@ -228,6 +234,10 @@ class FirebirdJdbcTreeDataSessionTest {
 					""");
 			statement.execute("CREATE UNIQUE DESCENDING INDEX idx_features_txt_desc "
 					+ "ON metadata_features(txt)");
+			statement.execute("CREATE INDEX idx_features_upper_txt ON metadata_features "
+					+ "COMPUTED BY (UPPER(txt))");
+			statement.execute("CREATE INDEX idx_features_txt_partial ON metadata_features(txt) "
+					+ "WHERE txt IS NOT NULL");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
 			statement.execute("CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5");
 			statement.execute("CREATE TABLE metadata_audit (parent_id BIGINT NOT NULL)");

@@ -61,12 +61,20 @@ public class DialectResolverTest {
 		assertCatalogReader("Firebird25CatalogReader", 2, 5, 0);
 		assertCatalogReader("Firebird30CatalogReader", 3, 0, 0);
 		assertCatalogReader("Firebird30CatalogReader", 4, 0, 0);
-		assertCatalogReader("Firebird30CatalogReader", 5, 0, 0);
+		assertCatalogReader("Firebird50CatalogReader", 5, 0, 0);
+		assertTableReader("Firebird30TableReader", 4, 0, 0);
+		assertTableReader("Firebird50TableReader", 5, 0, 0);
 	}
 
 	private void assertCatalogReader(String className, int major, int minor, int revision) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Firebird", major, minor, revision);
 		assertEquals(className, dialect.getCatalogReader().getClass().getSimpleName());
+	}
+
+	private void assertTableReader(String className, int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("Firebird", major, minor, revision);
+		assertEquals(className, dialect.getCatalogReader().getSchemaReader()
+				.getTableReader().getClass().getSimpleName());
 	}
 
 	@Test
