@@ -82,7 +82,7 @@ class InformixJdbcTreeDataSessionTest {
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
 					"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
 					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial",
-					"metadata_types")
+					"metadata_types", "MetadataCaseTable")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -115,6 +115,15 @@ class InformixJdbcTreeDataSessionTest {
 					types.getColumns().get("year_month_value").getDataType());
 			assertEquals(DataType.INTERVAL_DAY_TO_SECOND,
 					types.getColumns().get("day_second_value").getDataType());
+			var caseTable = schema.getTables().get("MetadataCaseTable");
+			assertNotNull(caseTable);
+			assertEquals("MetadataCaseTable", caseTable.getName());
+			assertNotNull(caseTable.getColumns().get("MixedId"));
+			assertEquals(DataType.INT, caseTable.getColumns().get("MixedId").getDataType());
+			var reservedColumn = caseTable.getColumns().get("Select");
+			assertNotNull(reservedColumn);
+			assertEquals(DataType.VARCHAR, reservedColumn.getDataType());
+			assertEquals("'quoted'", reservedColumn.getDefaultValue());
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint(),
 					() -> constraintDetails(connection, parent));
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
@@ -387,6 +396,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropTable(statement, "metadata_list_fragmented");
 			dropTable(statement, "metadata_round_robin");
 			dropTable(statement, "metadata_fragmented");
+			dropQuotedTable(statement, "MetadataCaseTable");
 			dropTable(statement, "metadata_types");
 			dropTable(statement, "metadata_bigserial");
 			dropTable(statement, "metadata_serial8");
@@ -432,6 +442,12 @@ class InformixJdbcTreeDataSessionTest {
 						money_value MONEY(16, 2),
 						year_month_value INTERVAL YEAR TO MONTH,
 						day_second_value INTERVAL DAY TO SECOND
+					)
+					""");
+			statement.execute("""
+					CREATE TABLE "MetadataCaseTable" (
+						"MixedId" INTEGER PRIMARY KEY,
+						"Select" VARCHAR(20) DEFAULT 'quoted'
 					)
 					""");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
@@ -577,6 +593,17 @@ class InformixJdbcTreeDataSessionTest {
 	private void dropTable(final Statement statement, final String tableName) throws SQLException {
 		try {
 			statement.execute("DROP TABLE " + tableName);
+		} catch (SQLException e) {
+			if (e.getErrorCode() != -206) {
+				throw e;
+			}
+		}
+	}
+
+	private void dropQuotedTable(final Statement statement, final String tableName)
+			throws SQLException {
+		try {
+			statement.execute("DROP TABLE \"" + tableName.replace("\"", "\"\"") + "\"");
 		} catch (SQLException e) {
 			if (e.getErrorCode() != -206) {
 				throw e;
