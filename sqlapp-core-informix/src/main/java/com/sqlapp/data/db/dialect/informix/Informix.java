@@ -120,6 +120,12 @@ public class Informix extends Dialect {
 		getDbDataTypes().addDecimal(type -> {
 			type.setMaxPrecision(32).setMaxScale(32);
 		});
+		getDbDataTypes().addMoney("MONEY", type -> {
+		});
+		getDbDataTypes().addIntervalYearToMonth(type -> {
+		});
+		getDbDataTypes().addIntervalDayToSecond(type -> {
+		});
 	}
 
 	/**

@@ -104,6 +104,16 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(DataType.DATETIME, types.getColumns().get("date_time_value").getDataType());
 			assertEquals(DataType.TIME, types.getColumns().get("time_value").getDataType());
 			assertEquals(DataType.TIMESTAMP, types.getColumns().get("timestamp_value").getDataType());
+			var decimalColumn = types.getColumns().get("decimal_value");
+			assertEquals(DataType.DECIMAL, decimalColumn.getDataType());
+			assertEquals(20L, decimalColumn.getLength());
+			assertEquals(4, decimalColumn.getScale());
+			var moneyColumn = types.getColumns().get("money_value");
+			assertEquals(DataType.MONEY, moneyColumn.getDataType());
+			assertEquals(DataType.INTERVAL_YEAR_TO_MONTH,
+					types.getColumns().get("year_month_value").getDataType());
+			assertEquals(DataType.INTERVAL_DAY_TO_SECOND,
+					types.getColumns().get("day_second_value").getDataType());
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint(),
 					() -> constraintDetails(connection, parent));
 			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
@@ -385,7 +395,11 @@ class InformixJdbcTreeDataSessionTest {
 						byte_value BYTE,
 						date_time_value DATETIME YEAR TO SECOND,
 						time_value DATETIME HOUR TO SECOND,
-						timestamp_value DATETIME YEAR TO FRACTION
+						timestamp_value DATETIME YEAR TO FRACTION,
+						decimal_value DECIMAL(20, 4),
+						money_value MONEY(16, 2),
+						year_month_value INTERVAL YEAR TO MONTH,
+						day_second_value INTERVAL DAY TO SECOND
 					)
 					""");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
