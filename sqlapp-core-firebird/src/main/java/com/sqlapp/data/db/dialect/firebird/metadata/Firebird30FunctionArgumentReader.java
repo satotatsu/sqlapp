@@ -18,12 +18,18 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ParameterDirection;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** Firebird 3.0以降のPSQL関数引数Readerです。 */
 public class Firebird30FunctionArgumentReader extends FirebirdFunctionArgumentReader {
 
 	protected Firebird30FunctionArgumentReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected SqlNode getSqlSqlNode(com.sqlapp.data.schemas.ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("functionArguments30.sql");
 	}
 
 	@Override

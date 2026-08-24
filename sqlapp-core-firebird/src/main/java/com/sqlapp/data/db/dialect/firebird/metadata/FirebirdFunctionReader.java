@@ -81,7 +81,17 @@ public class FirebirdFunctionReader extends FunctionReader {
 			function.setDialect(this.getDialect());
 			for (NamedArgument argument : arguments) {
 				if (function.getName().equals(argument.getRoutineName())) {
-					function.getArguments().add(argument);
+					if (argument.getName() == null) {
+						function.getReturning()
+								.setDataType(argument.getDataType())
+								.setDataTypeName(argument.getDataTypeName())
+								.setLength(argument.getLength())
+								.setScale(argument.getScale())
+								.setCharacterSet(argument.getCharacterSet())
+								.setCollation(argument.getCollation());
+					} else {
+						function.getArguments().add(argument);
+					}
 				}
 			}
 		}
