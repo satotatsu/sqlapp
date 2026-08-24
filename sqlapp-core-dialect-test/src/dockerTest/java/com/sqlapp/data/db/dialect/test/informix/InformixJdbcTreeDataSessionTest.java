@@ -77,6 +77,7 @@ class InformixJdbcTreeDataSessionTest {
 			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
+					"composite_parent",
 					"parent_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
 					"metadata_update_trigger",
 					"metadata_function", "metadata_sequence", "metadata_fragmented",
@@ -86,6 +87,13 @@ class InformixJdbcTreeDataSessionTest {
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
+			Table compositeParent = schema.getTables().get("composite_parent");
+			var compositePrimaryKey = compositeParent.getConstraints().getPrimaryKeyConstraint();
+			assertNotNull(compositePrimaryKey);
+			assertEquals("pk_composite_parent", compositePrimaryKey.getName());
+			assertEquals(2, compositePrimaryKey.getColumns().size());
+			assertEquals("code", compositePrimaryKey.getColumns().get(0).getName());
+			assertEquals("version_no", compositePrimaryKey.getColumns().get(1).getName());
 			assertTrue(parent.getColumns().get("id").isIdentity(), () -> "dialect="
 					+ schema.getDialect().getClass().getName() + ", dataType="
 					+ parent.getColumns().get("id").getDataType() + ", dataTypeName="
@@ -152,11 +160,25 @@ class InformixJdbcTreeDataSessionTest {
 			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
 					.filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
+					.filter(constraint -> "fk_child_parent".equals(constraint.getName()))
 					.findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertEquals("fk_child_parent", foreignKey.getName());
 			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
+			ForeignKeyConstraint compositeForeignKey = child.getConstraints().stream()
+					.filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast)
+					.filter(constraint -> "fk_child_composite".equals(constraint.getName()))
+					.findFirst().orElseThrow();
+			assertEquals(2, compositeForeignKey.getColumns().size());
+			assertEquals("ref_code", compositeForeignKey.getColumns().get(0).getName());
+			assertEquals("ref_version", compositeForeignKey.getColumns().get(1).getName());
+			assertEquals(2, compositeForeignKey.getRelatedColumns().size());
+			assertEquals("code", compositeForeignKey.getRelatedColumns().get(0).getName());
+			assertEquals("version_no", compositeForeignKey.getRelatedColumns().get(1).getName());
+			assertEquals("composite_parent", compositeForeignKey.getRelatedTableName());
+			assertEquals(CascadeRule.Cascade, compositeForeignKey.getDeleteRule());
 			var unique = assertInstanceOf(UniqueConstraint.class,
 					child.getConstraints().get("uq_child_parent_txt"));
 			assertEquals(2, unique.getColumns().size());
@@ -402,6 +424,7 @@ class InformixJdbcTreeDataSessionTest {
 			dropTable(statement, "metadata_serial8");
 			dropTable(statement, "metadata_audit");
 			dropTable(statement, "child_table");
+			dropTable(statement, "composite_parent");
 			dropTable(statement, "parent_table");
 			statement.execute("""
 					CREATE TABLE parent_table (
@@ -410,13 +433,25 @@ class InformixJdbcTreeDataSessionTest {
 					)
 					""");
 			statement.execute("""
+					CREATE TABLE composite_parent (
+						code VARCHAR(20) NOT NULL,
+						version_no INTEGER NOT NULL,
+						PRIMARY KEY (code, version_no) CONSTRAINT pk_composite_parent
+					)
+					""");
+			statement.execute("""
 					CREATE TABLE child_table (
 						id SERIAL PRIMARY KEY,
 						parent_id INTEGER NOT NULL,
+						ref_code VARCHAR(20),
+						ref_version INTEGER,
 						txt VARCHAR(255) DEFAULT 'child-default',
 						FOREIGN KEY (parent_id)
 							REFERENCES parent_table(id)
 							ON DELETE CASCADE CONSTRAINT fk_child_parent,
+						FOREIGN KEY (ref_code, ref_version)
+							REFERENCES composite_parent(code, version_no)
+							ON DELETE CASCADE CONSTRAINT fk_child_composite,
 						UNIQUE (parent_id, txt) CONSTRAINT uq_child_parent_txt,
 						CHECK (txt <> '') CONSTRAINT ck_child_txt,
 						CHECK ((parent_id > 0 AND LENGTH(txt) >= 1)
