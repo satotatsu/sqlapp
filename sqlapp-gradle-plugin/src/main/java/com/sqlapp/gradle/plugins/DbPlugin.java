@@ -38,6 +38,7 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "migrationRepair", MigrationRepairTask.class);
 		//
 		registerTask(project, "exportSchemaXml", ExportSchemaXmlTask.class);
+		registerTask(project, "exportAccessSchemaXml", ExportAccessSchemaXmlTask.class);
 		//
 		registerTask(project, "diffSchemaXml", DiffSchemaXmlTask.class);
 		//

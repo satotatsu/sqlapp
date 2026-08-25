@@ -22,6 +22,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 |---|---|---|
 | Schema inspection | `countAllTables` | Count rows in database tables |
 | Schema inspection | `exportSchemaXml` | Export database metadata as sqlapp Schema XML |
+| Schema inspection | `exportAccessSchemaXml` | Export an Access MDB/ACCDB file as sqlapp Schema XML |
 | Schema comparison | `diffSchemaXml` | Compare two Schema XML files |
 | SQL generation | `generateDiffSql` | Generate SQL from a schema difference |
 | SQL generation | `generateSql` | Generate SQL from Schema XML |
@@ -71,6 +72,22 @@ A value listed as a convention is used only when the build does not configure
 the property. Required files and directories must be configured before task
 execution. Relative paths are resolved against the Gradle project directory.
 
+### Export an Access file
+
+```groovy
+exportAccessSchemaXml {
+    inputFile = file('customer.accdb')
+    outputFile = layout.buildDirectory.file('schema/customer.xml')
+    schemaName = 'public'
+    dumpRows = true
+    includeRowDumpTables.addAll('顧客', '受注')
+}
+```
+
+`inputFile` and `outputFile` are required. `schemaName` and the row filters are
+optional; `dumpRows` defaults to `true`. Encrypted files and Access complex
+columns such as attachments and multi-value fields are not supported.
+
 ## Documentation maintenance
 
 When a task is added or its user-facing properties change:
@@ -79,4 +96,3 @@ When a task is added or its user-facing properties change:
 2. Update a runnable configuration in `sqlapp-gradle-example`.
 3. Verify property names, types, conventions, required inputs, and outputs
    against the task implementation.
-
