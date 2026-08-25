@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
@@ -83,7 +84,7 @@ class MdbFileLoaderTest {
 					.addIndex(new IndexBuilder("PK_顧客マスタ")
 							.withColumns("顧客ID").withPrimaryKey())
 					.addIndex(new IndexBuilder("IDX_顧客名")
-							.withColumns("顧客名"))
+							.withColumns("顧客名").withUnique())
 					.addIndex(new IndexBuilder("IDX_顧客名_地域")
 							.withColumns("顧客名")
 							.withColumns(false, "地域ID"))
@@ -97,7 +98,8 @@ class MdbFileLoaderTest {
 					.addColumns("地域ID", "地域ID")
 					.addColumns("国コード", "国コード")
 					.withReferentialIntegrity()
-					.withCascadeUpdates().withName("FK_顧客_地域")
+					.withCascadeUpdates().withCascadeDeletes()
+					.withName("FK_顧客_地域")
 					.toRelationship(database);
 			parent.addRow(1, "JP");
 			source.addRow(io.github.spannm.jackcess.Column.AUTO_NUMBER,
@@ -109,6 +111,8 @@ class MdbFileLoaderTest {
 		final var schema = MdbFileLoader.load(file);
 		final var table = schema.getTables().get("顧客マスタ");
 		assertNotNull(table);
+		assertNotNull(table.getCreatedAt());
+		assertNotNull(table.getLastAlteredAt());
 		assertEquals("顧客情報を保持するテーブル", table.getRemarks());
 		assertTrue(table.getConstraints().stream()
 				.anyMatch(c -> c instanceof CheckConstraint
@@ -127,7 +131,7 @@ class MdbFileLoaderTest {
 		assertEquals("<> ''", table.getColumns().get("顧客名")
 				.getCheckConstraint().getExpression());
 		assertNotNull(table.getConstraints().getPrimaryKeyConstraint());
-		assertNotNull(table.getIndexes().get("IDX_顧客名"));
+		assertTrue(table.getIndexes().get("IDX_顧客名").isUnique());
 		final var orderedIndex = table.getIndexes().get("IDX_顧客名_地域");
 		assertEquals(Order.Asc, orderedIndex.getColumns().get(0).getOrder());
 		assertEquals(Order.Desc, orderedIndex.getColumns().get(1).getOrder());
@@ -136,6 +140,8 @@ class MdbFileLoaderTest {
 		assertNotNull(foreignKey);
 		assertEquals(2, foreignKey.getColumns().size());
 		assertEquals(2, foreignKey.getRelatedColumns().size());
+		assertEquals(CascadeRule.Cascade, foreignKey.getUpdateRule());
+		assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
 		assertEquals(2, schema.getTables().get("地域マスタ")
 				.getConstraints().getPrimaryKeyConstraint().getColumns().size());
 

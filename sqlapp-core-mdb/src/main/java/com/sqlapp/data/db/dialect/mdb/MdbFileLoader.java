@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.mdb;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -107,6 +108,12 @@ public final class MdbFileLoader {
 	private static Table toTable(
 			final io.github.spannm.jackcess.Table source) throws IOException {
 		final Table table = new Table(source.getName());
+		if (source.getCreatedDate() != null) {
+			table.setCreatedAt(Timestamp.valueOf(source.getCreatedDate()));
+		}
+		if (source.getUpdatedDate() != null) {
+			table.setLastAlteredAt(Timestamp.valueOf(source.getUpdatedDate()));
+		}
 		final PropertyMap tableProperties = source.getProperties();
 		table.setRemarks(toString(
 				tableProperties.getValue(PropertyMap.DESCRIPTION_PROP)));
