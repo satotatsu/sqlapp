@@ -64,6 +64,7 @@ module com.sqlapp.core {
 	exports com.sqlapp.data.schemas.rowiterator;
 	exports com.sqlapp.exceptions;
 	exports com.sqlapp.jdbc;
+	exports com.sqlapp.jdbc.bulk;
 	exports com.sqlapp.jdbc.sql;
 	exports com.sqlapp.jdbc.sql.node;
 	exports com.sqlapp.thread;
