@@ -23,6 +23,7 @@ import com.sqlapp.data.schemas.Table;
 
 import io.github.spannm.jackcess.Database;
 import io.github.spannm.jackcess.DatabaseBuilder;
+import io.github.spannm.jackcess.PropertyMap;
 
 /** Loads an Access MDB/ACCDB file without passing identifiers through SQL. */
 public final class MdbFileLoader {
@@ -82,6 +83,19 @@ public final class MdbFileLoader {
 			column.setDataType(toDataType(sourceColumn.getType()));
 			column.setDataTypeName(sourceColumn.getType().getTypeName());
 			column.setIdentity(sourceColumn.isAutoNumber());
+			final PropertyMap properties = sourceColumn.getProperties();
+			column.setNotNull(Boolean.TRUE.equals(
+					properties.getValue(PropertyMap.REQUIRED_PROP)));
+			column.setDefaultValue(toString(properties
+					.getValue(PropertyMap.DEFAULT_VALUE_PROP)));
+			column.setRemarks(toString(properties
+					.getValue(PropertyMap.DESCRIPTION_PROP)));
+			column.setCheck(toString(properties
+					.getValue(PropertyMap.VALIDATION_RULE_PROP)));
+			if (sourceColumn.isCalculated()) {
+				column.setFormula(toString(properties
+						.getValue(PropertyMap.EXPRESSION_PROP)));
+			}
 			if (sourceColumn.getType().isTextual()
 					&& !sourceColumn.getType().isLongValue()) {
 				column.setLength((long) sourceColumn.getLengthInUnits());
@@ -115,6 +129,10 @@ public final class MdbFileLoader {
 			table.getIndexes().add(index);
 		}
 		return table;
+	}
+
+	private static String toString(final Object value) {
+		return value == null ? null : value.toString();
 	}
 
 	private static void loadRelationships(final Database database,

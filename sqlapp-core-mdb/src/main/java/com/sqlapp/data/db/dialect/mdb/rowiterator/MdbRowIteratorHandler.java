@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.mdb.rowiterator;
 
 import java.nio.file.Path;
+import java.sql.Blob;
 import java.util.Iterator;
 
 import com.sqlapp.data.schemas.Column;
@@ -83,8 +84,35 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 			row.setDataSourceDetailInfo(tableName);
 			row.setDataSourceRowNumber(count);
 			for (final Column column : table.getColumns()) {
-				put(row, column, source.get(column.getName()));
+				put(row, column, normalizeValue(column,
+						source.get(column.getName())));
 			}
+		}
+
+		private Object normalizeValue(final Column column, final Object value) {
+			if (value == null || value instanceof byte[]) {
+				return value;
+			}
+			if (value instanceof io.github.spannm.jackcess.complex.ComplexValueForeignKey) {
+				throw new UnsupportedOperationException(
+						"Access complex/attachment column is not supported: "
+								+ tableName + "." + column.getName());
+			}
+			if (value instanceof Blob blob) {
+				try {
+					return blob.getBytes(1L, Math.toIntExact(blob.length()));
+				} catch (final Exception e) {
+					throw new RuntimeException("Failed to read Access OLE column: "
+							+ tableName + "." + column.getName(), e);
+				} finally {
+					try {
+						blob.free();
+					} catch (final Exception e) {
+						// The read result or original read failure remains primary.
+					}
+				}
+			}
+			return value;
 		}
 
 		@Override
@@ -93,7 +121,8 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 				try {
 					database.close();
 				} catch (final Exception e) {
-					// Iterator cleanup must not hide the original read failure.
+					throw new RuntimeException("Failed to close Access database: "
+							+ file, e);
 				}
 			}
 		}
