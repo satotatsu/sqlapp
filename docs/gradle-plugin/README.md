@@ -102,9 +102,17 @@ exportSqliteSchemaXml {
 ```
 
 `inputFile` and `outputFile` are required. Files ending in `.db`, `.sqlite`,
-or `.sqlite3` are supported. `schemaName` renames the exported Schema model;
-it does not select an attached SQLite database. Row filters are optional and
-`dumpRows` defaults to `true`. The source file is opened read-only.
+or `.sqlite3` are supported; a valid unencrypted SQLite header also allows an
+arbitrary extension. `schemaName` renames the exported Schema model; it does
+not select an attached SQLite database. Row filters are optional and
+`dumpRows` defaults to `true`. The source file is opened read-only. Encrypted
+SQLite files are diagnosed explicitly but require a separate encryption-aware
+JDBC driver and are not decrypted by this task.
+
+Java callers that need an attached database can use
+`SqliteFileLoader.loadSchema(primaryFile, databaseName, attachments)`. Each
+lazy row-reading connection reapplies the same attachments, so metadata and
+row data are read from the selected database consistently.
 
 ## Documentation maintenance
 

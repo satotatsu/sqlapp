@@ -8,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.sql.DriverManager;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -70,5 +72,52 @@ class SqliteFileLoaderTest {
 			assertTrue(SchemaFileLoaderResolver.resolve(file)
 					instanceof SqliteSchemaFileLoader);
 		}
+	}
+
+	@Test
+	void resolvesAValidDatabaseWithAnArbitraryExtension() throws Exception {
+		final Path file = tempDirectory.resolve("database.data");
+		try (var connection = DriverManager
+				.getConnection("jdbc:sqlite:" + file);
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE sample (id INTEGER)");
+		}
+		assertTrue(SchemaFileLoaderResolver.resolve(file)
+				instanceof SqliteSchemaFileLoader);
+	}
+
+	@Test
+	void loadsASelectedAttachedDatabaseAndItsRows() throws Exception {
+		final Path primary = tempDirectory.resolve("primary.db");
+		final Path attached = tempDirectory.resolve("archive.db");
+		try (var connection = DriverManager
+				.getConnection("jdbc:sqlite:" + primary)) {
+			// Create the primary file.
+		}
+		try (var connection = DriverManager
+				.getConnection("jdbc:sqlite:" + attached);
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE history (id INTEGER PRIMARY KEY, value TEXT)");
+			statement.execute("INSERT INTO history VALUES (1, 'archived')");
+		}
+
+		final var schema = SqliteFileLoader.loadSchema(primary, "archive",
+				Map.of("archive", attached));
+		assertEquals("archive", schema.getName());
+		final var rows = schema.getTables().get("history").getRows().iterator();
+		assertTrue(rows.hasNext());
+		assertEquals("archived", rows.next().get("value"));
+		assertFalse(rows.hasNext());
+		assertEquals("history", SqliteFileLoader.loadTable(primary,
+				"archive", Map.of("archive", attached), "history").getName());
+	}
+
+	@Test
+	void reportsEncryptedOrInvalidFilesClearly() throws Exception {
+		final Path file = tempDirectory.resolve("encrypted.db");
+		Files.writeString(file, "not a plain SQLite database");
+		final var exception = assertThrows(java.io.IOException.class,
+				() -> SqliteFileLoader.loadSchema(file));
+		assertTrue(exception.getMessage().contains("may be encrypted"));
 	}
 }
