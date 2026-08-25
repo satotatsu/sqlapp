@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +29,7 @@ import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.loader.SchemaFileLoaderResolver;
 
 import io.github.spannm.jackcess.ColumnBuilder;
@@ -84,7 +87,8 @@ class MdbFileLoaderTest {
 					.addIndex(new IndexBuilder("PK_顧客マスタ")
 							.withColumns("顧客ID").withPrimaryKey())
 					.addIndex(new IndexBuilder("IDX_顧客名")
-							.withColumns("顧客名").withUnique())
+							.withColumns("顧客名").withUnique()
+							.withIgnoreNulls())
 					.addIndex(new IndexBuilder("IDX_顧客名_地域")
 							.withColumns("顧客名")
 							.withColumns(false, "地域ID"))
@@ -131,7 +135,17 @@ class MdbFileLoaderTest {
 		assertEquals("<> ''", table.getColumns().get("顧客名")
 				.getCheckConstraint().getExpression());
 		assertNotNull(table.getConstraints().getPrimaryKeyConstraint());
-		assertTrue(table.getIndexes().get("IDX_顧客名").isUnique());
+		final var uniqueIndex = table.getIndexes().get("IDX_顧客名");
+		assertTrue(uniqueIndex.isUnique());
+		assertEquals(Boolean.TRUE, uniqueIndex.getSpecifics().get(
+				MdbFileLoader.INDEX_IGNORE_NULLS, Boolean.class));
+		final StringWriter xml = new StringWriter();
+		table.writeXml(xml);
+		final Table restoredTable = new Table();
+		restoredTable.loadXml(new StringReader(xml.toString()));
+		assertEquals(Boolean.TRUE, restoredTable.getIndexes()
+				.get("IDX_顧客名").getSpecifics().get(
+						MdbFileLoader.INDEX_IGNORE_NULLS, Boolean.class));
 		final var orderedIndex = table.getIndexes().get("IDX_顧客名_地域");
 		assertEquals(Order.Asc, orderedIndex.getColumns().get(0).getOrder());
 		assertEquals(Order.Desc, orderedIndex.getColumns().get(1).getOrder());

@@ -39,6 +39,8 @@ import io.github.spannm.jackcess.query.Query;
  * </p>
  */
 public final class MdbFileLoader {
+	/** Access index flag stored without converting it to a partial index. */
+	public static final String INDEX_IGNORE_NULLS = "IGNORE_NULLS";
 
 	private MdbFileLoader() {
 	}
@@ -165,6 +167,10 @@ public final class MdbFileLoader {
 			}
 			final Index index = new Index(sourceIndex.getName());
 			index.setUnique(sourceIndex.isUnique());
+			if (sourceIndex.shouldIgnoreNulls()) {
+				index.getSpecifics().put(INDEX_IGNORE_NULLS,
+						Boolean.TRUE.toString());
+			}
 			for (int i = 0; i < sourceIndex.getColumns().size(); i++) {
 				final io.github.spannm.jackcess.Index.Column sourceColumn = sourceIndex
 						.getColumns().get(i);
