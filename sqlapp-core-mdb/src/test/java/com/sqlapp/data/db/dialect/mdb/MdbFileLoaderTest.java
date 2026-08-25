@@ -12,12 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.loader.SchemaFileLoaderResolver;
 
 import io.github.spannm.jackcess.ColumnBuilder;
@@ -27,6 +29,7 @@ import io.github.spannm.jackcess.IndexBuilder;
 import io.github.spannm.jackcess.RelationshipBuilder;
 import io.github.spannm.jackcess.PropertyMap;
 import io.github.spannm.jackcess.TableBuilder;
+import io.github.spannm.jackcess.query.Query;
 
 class MdbFileLoaderTest {
 
@@ -132,6 +135,7 @@ class MdbFileLoaderTest {
 
 		final var singleTable = MdbFileLoader.loadTable(file, "顧客マスタ");
 		assertEquals("顧客マスタ", singleTable.getName());
+		assertNotNull(singleTable.getConstraints().get("FK_顧客_地域"));
 		final var singleRows = singleTable.getRows().iterator();
 		assertTrue(singleRows.hasNext());
 		assertEquals("山田 太郎", singleRows.next().get("顧客名"));
@@ -170,5 +174,73 @@ class MdbFileLoaderTest {
 		final var provider = SchemaFileLoaderResolver.resolve(file);
 		assertTrue(provider instanceof MdbSchemaFileLoader);
 		assertNotNull(provider.loadSchema(file).getTables().get("受注明細"));
+	}
+
+	@Test
+	void loadsOnlyViewCompatibleSavedQueries() {
+		final Schema schema = new Schema("");
+		MdbFileLoader.loadQueries(List.of(
+				query("販売一覧", Query.Type.SELECT, false, List.of(),
+						"SELECT * FROM [販売]"),
+				query("販売統合", Query.Type.UNION, false, List.of(),
+						"SELECT * FROM [国内] UNION SELECT * FROM [海外]"),
+				query("非表示", Query.Type.SELECT, true, List.of(),
+						"SELECT 1"),
+				query("パラメータ付き", Query.Type.SELECT, false,
+						List.of("PARAMETERS [対象日] DateTime"),
+						"SELECT * FROM [販売]"),
+				query("更新処理", Query.Type.UPDATE, false, List.of(),
+						"UPDATE [販売] SET [状態] = 1")), schema);
+
+		assertEquals(2, schema.getViews().size());
+		assertEquals("SELECT * FROM [販売]", schema.getViews()
+				.get("販売一覧").getDefinition().get(0));
+		assertNotNull(schema.getViews().get("販売統合"));
+	}
+
+	private static Query query(final String name, final Query.Type type,
+			final boolean hidden, final List<String> parameters,
+			final String sql) {
+		return new Query() {
+			@Override
+			public String getName() {
+				return name;
+			}
+
+			@Override
+			public Type getType() {
+				return type;
+			}
+
+			@Override
+			public boolean isHidden() {
+				return hidden;
+			}
+
+			@Override
+			public int getObjectId() {
+				return 0;
+			}
+
+			@Override
+			public int getObjectFlag() {
+				return type.getObjectFlag();
+			}
+
+			@Override
+			public List<String> getParameters() {
+				return parameters;
+			}
+
+			@Override
+			public String getOwnerAccessType() {
+				return null;
+			}
+
+			@Override
+			public String toSQLString() {
+				return sql;
+			}
+		};
 	}
 }

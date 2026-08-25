@@ -20,10 +20,12 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.View;
 
 import io.github.spannm.jackcess.Database;
 import io.github.spannm.jackcess.DatabaseBuilder;
 import io.github.spannm.jackcess.PropertyMap;
+import io.github.spannm.jackcess.query.Query;
 
 /** Loads an Access MDB/ACCDB file without passing identifiers through SQL. */
 public final class MdbFileLoader {
@@ -40,20 +42,25 @@ public final class MdbFileLoader {
 		final Schema schema = new Schema("");
 		try (Database database = new DatabaseBuilder().withPath(normalized)
 				.withReadOnly(true).open()) {
-			for (final String tableName : database.getTableNames()) {
-				final io.github.spannm.jackcess.Table source = database
-						.getTable(tableName);
-				if (source == null || source.isSystem()) {
-					continue;
-				}
-				final Table table = toTable(source);
-				table.setRowIteratorHandler(
-						new MdbRowIteratorHandler(normalized, tableName));
-				schema.getTables().add(table);
-			}
+			loadTables(database, normalized, schema);
 			loadRelationships(database, schema);
+			loadQueries(database.getQueries(), schema);
 		}
 		return schema;
+	}
+
+	static void loadQueries(final Iterable<Query> queries,
+			final Schema schema) {
+		for (final Query query : queries) {
+			if (query.isHidden() || !query.getParameters().isEmpty()
+					|| (query.getType() != Query.Type.SELECT
+							&& query.getType() != Query.Type.UNION)) {
+				continue;
+			}
+			final View view = new View(query.getName());
+			view.setDefinition(query.toSQLString());
+			schema.getViews().add(view);
+		}
 	}
 
 	public static Table loadTable(final Path file, final String tableName)
@@ -61,16 +68,30 @@ public final class MdbFileLoader {
 		final Path normalized = file.toAbsolutePath().normalize();
 		try (Database database = new DatabaseBuilder().withPath(normalized)
 				.withReadOnly(true).open()) {
-			final io.github.spannm.jackcess.Table source = database
-					.getTable(tableName);
-			if (source == null || source.isSystem()) {
+			final Schema schema = new Schema("");
+			loadTables(database, normalized, schema);
+			loadRelationships(database, schema);
+			final Table table = schema.getTables().get(tableName);
+			if (table == null) {
 				throw new IllegalArgumentException(
 						"Access table not found: " + tableName);
 			}
+			return table;
+		}
+	}
+
+	private static void loadTables(final Database database,
+			final Path file, final Schema schema) throws IOException {
+		for (final String tableName : database.getTableNames()) {
+			final io.github.spannm.jackcess.Table source = database
+					.getTable(tableName);
+			if (source == null || source.isSystem()) {
+				continue;
+			}
 			final Table table = toTable(source);
 			table.setRowIteratorHandler(
-					new MdbRowIteratorHandler(normalized, tableName));
-			return table;
+					new MdbRowIteratorHandler(file, tableName));
+			schema.getTables().add(table);
 		}
 	}
 
