@@ -52,6 +52,25 @@ public final class SchemaFileLoaderResolver {
 		return loadSchema(Objects.requireNonNull(file, "file").toPath());
 	}
 
+	/**
+	 * Loads a supported file and assigns the logical target schema name.
+	 */
+	public static Schema loadSchema(final Path file, final String schemaName)
+			throws IOException {
+		final Schema schema = loadSchema(file);
+		schema.setName(Objects.requireNonNull(schemaName, "schemaName"));
+		return schema;
+	}
+
+	/**
+	 * Loads a supported file and assigns the logical target schema name.
+	 */
+	public static Schema loadSchema(final File file, final String schemaName)
+			throws IOException {
+		return loadSchema(Objects.requireNonNull(file, "file").toPath(),
+				schemaName);
+	}
+
 	/** Loads one table from a supported database or schema file. */
 	public static Table loadTable(final Path file, final String tableName)
 			throws IOException {
@@ -66,6 +85,28 @@ public final class SchemaFileLoaderResolver {
 			throws IOException {
 		return loadTable(Objects.requireNonNull(file, "file").toPath(),
 				tableName);
+	}
+
+	/** Loads one table and assigns its logical target schema name. */
+	public static Table loadTable(final Path file, final String schemaName,
+			final String tableName) throws IOException {
+		final Table table = loadTable(file, tableName);
+		final String targetSchemaName = Objects.requireNonNull(schemaName,
+				"schemaName");
+		final Schema schema = table.getAncestor(Schema.class);
+		if (schema == null) {
+			table.setSchemaName(targetSchemaName);
+		} else {
+			schema.setName(targetSchemaName);
+		}
+		return table;
+	}
+
+	/** Loads one table and assigns its logical target schema name. */
+	public static Table loadTable(final File file, final String schemaName,
+			final String tableName) throws IOException {
+		return loadTable(Objects.requireNonNull(file, "file").toPath(),
+				schemaName, tableName);
 	}
 
 	private static Path normalize(final Path file) {

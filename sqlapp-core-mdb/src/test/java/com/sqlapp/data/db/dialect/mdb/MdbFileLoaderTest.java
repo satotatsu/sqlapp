@@ -190,6 +190,10 @@ class MdbFileLoaderTest {
 				.getTables().get("受注明細"));
 		assertEquals("受注明細", SchemaFileLoaderResolver
 				.loadTable(file.toFile(), "受注明細").getName());
+		assertEquals("移行先", SchemaFileLoaderResolver
+				.loadSchema(file, "移行先").getName());
+		assertEquals("移行先", SchemaFileLoaderResolver
+				.loadTable(file, "移行先", "受注明細").getSchemaName());
 	}
 
 	@Test
