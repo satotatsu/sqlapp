@@ -1,5 +1,5 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
-package com.sqlapp.data.db.dialect.virtica.bulk;
+package com.sqlapp.data.db.dialect.mysql.bulk;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,11 +14,11 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.util.CommonUtils;
 
-/** Streams Schema rows as UTF-8 delimited data for Vertica COPY FROM STDIN. */
-public class VirticaBulkDataInputStream extends InputStream {
-	static final char NULL_MARKER = '\u001d';
+/** Streams rows for MySQL LOAD DATA LOCAL INFILE without buffering the table. */
+public class MySqlBulkDataInputStream extends InputStream {
 	static final char RECORD_TERMINATOR = '\u001e';
 	static final char DELIMITER = '\u001f';
+
 	private final List<Column> columns = new ArrayList<>();
 	private final Iterator<Row> rows;
 	private byte[] current = new byte[0];
@@ -26,11 +26,9 @@ public class VirticaBulkDataInputStream extends InputStream {
 	private long rowCount;
 	private boolean closed;
 
-	public VirticaBulkDataInputStream(final Table table,
-			final BulkOption options) {
+	public MySqlBulkDataInputStream(final Table table, final BulkOption options) {
 		java.util.Objects.requireNonNull(table, "table");
-		final BulkOption effective = options == null ? BulkOption.defaults()
-				: options;
+		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		for (final Column column : table.getColumns()) {
 			if (column.isHidden() || !CommonUtils.isEmpty(column.getFormula())
 					|| (column.isIdentity() && !effective.isKeepIdentity())) {
@@ -40,7 +38,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 		}
 		if (columns.isEmpty()) {
 			throw new IllegalArgumentException(
-					"No writable Vertica COPY columns: " + table.getName());
+					"No writable MySQL bulk columns: " + table.getName());
 		}
 		rows = table.getRows().iterator();
 	}
@@ -75,12 +73,11 @@ public class VirticaBulkDataInputStream extends InputStream {
 				if (!rows.hasNext()) {
 					return written == 0 ? -1 : written;
 				}
-				current = toCsv(rows.next()).getBytes(StandardCharsets.UTF_8);
+				current = encode(rows.next()).getBytes(StandardCharsets.UTF_8);
 				position = 0;
 				rowCount++;
 			}
-			final int count = Math.min(length - written,
-					current.length - position);
+			final int count = Math.min(length - written, current.length - position);
 			System.arraycopy(current, position, buffer, offset + written, count);
 			position += count;
 			written += count;
@@ -88,7 +85,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 		return written;
 	}
 
-	private String toCsv(final Row row) {
+	private String encode(final Row row) {
 		final StringBuilder builder = new StringBuilder();
 		for (int i = 0; i < columns.size(); i++) {
 			if (i > 0) {
@@ -96,7 +93,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 			}
 			final Object value = row.get(columns.get(i).getOrdinal());
 			if (value == null) {
-				builder.append(NULL_MARKER);
+				builder.append("\\N");
 			} else {
 				final String text = value instanceof byte[] bytes
 						? java.util.HexFormat.of().formatHex(bytes)
@@ -111,8 +108,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 		for (int i = 0; i < text.length(); i++) {
 			final char character = text.charAt(i);
 			if (character == '\\' || character == DELIMITER
-					|| character == RECORD_TERMINATOR
-					|| character == NULL_MARKER) {
+					|| character == RECORD_TERMINATOR) {
 				builder.append('\\');
 			}
 			builder.append(character);
@@ -129,7 +125,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 			try {
 				closeable.close();
 			} catch (Exception e) {
-				throw new IOException("Failed to close Vertica COPY rows", e);
+				throw new IOException("Failed to close MySQL bulk rows", e);
 			}
 		}
 	}

@@ -52,3 +52,25 @@ transaction, encrypted-value modification, forced trigger behavior, and table
 locking options are rejected rather than silently ignored. PostgreSQL
 constraints and triggers retain their normal `COPY` behavior, and transaction
 boundaries remain controlled by the supplied JDBC connection.
+
+## Vertica
+
+The Vertica provider uses JDBC `VerticaCopyStream` and `COPY FROM STDIN`.
+Rows are streamed as UTF-8 delimited data with separate non-printing markers
+for fields, records, and SQL `NULL`. This preserves embedded line feeds and
+distinguishes `NULL` from an empty string. Identity columns are omitted unless
+`keepIdentity` is enabled; hidden and computed columns are always omitted.
+
+## MySQL and MariaDB
+
+The MySQL and MariaDB providers use their respective JDBC driver's local
+infile stream API with `LOAD DATA LOCAL INFILE`. They do not read a client-side
+file path. MySQL requires `allowLoadLocalInfile=true`; MariaDB requires
+`allowLocalInfile=true`. The database server must also have `local_infile`
+enabled.
+
+Rows are streamed incrementally as UTF-8 delimited data. SQL `NULL`, empty
+strings, embedded line feeds, delimiters, and backslashes remain distinct.
+Binary columns are sent as hexadecimal fields and assigned with `UNHEX`.
+Identity columns are omitted unless `keepIdentity` is enabled. Hidden and
+computed columns are always omitted.

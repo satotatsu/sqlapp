@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
 	implementation project(':sqlapp-core')
+	implementation('com.mysql:mysql-connector-j:9.7.0')
 	testImplementation project(':sqlapp-core-test')
 }
 

@@ -37,7 +37,11 @@ public class VirticaBulkInsertExecutor implements BulkInsertExecutor {
 				}
 				sql.append(dialect.quote(input.getColumns().get(i).getName()));
 			}
-			sql.append(") FROM STDIN DELIMITER ',' ENCLOSED BY '\"' NULL ''");
+			// Separate non-printing markers preserve embedded line feeds and also
+			// distinguish NULL from an empty string.
+			sql.append(") FROM STDIN DELIMITER E'\\037' "
+					+ "RECORD TERMINATOR E'\\036' NULL AS E'\\035' "
+					+ "ESCAPE AS E'\\\\'");
 			final VerticaCopyStream stream = new VerticaCopyStream(
 					connection.unwrap(VerticaConnection.class), sql.toString(), input);
 			stream.start();
