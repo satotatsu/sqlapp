@@ -23,6 +23,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Schema inspection | `countAllTables` | Count rows in database tables |
 | Schema inspection | `exportSchemaXml` | Export database metadata as sqlapp Schema XML |
 | Schema inspection | `exportAccessSchemaXml` | Export an Access MDB/ACCDB file as sqlapp Schema XML |
+| Schema inspection | `exportSqliteSchemaXml` | Export a SQLite DB/SQLite/SQLite3 file as sqlapp Schema XML |
 | Schema comparison | `diffSchemaXml` | Compare two Schema XML files |
 | SQL generation | `generateDiffSql` | Generate SQL from a schema difference |
 | SQL generation | `generateSql` | Generate SQL from Schema XML |
@@ -87,6 +88,23 @@ exportAccessSchemaXml {
 `inputFile` and `outputFile` are required. `schemaName` and the row filters are
 optional; `dumpRows` defaults to `true`. Encrypted files and Access complex
 columns such as attachments and multi-value fields are not supported.
+
+### Export a SQLite file
+
+```groovy
+exportSqliteSchemaXml {
+    inputFile = file('customer.sqlite3')
+    outputFile = layout.buildDirectory.file('schema/customer.xml')
+    schemaName = 'public'
+    dumpRows = true
+    includeRowDumpTables.addAll('顧客', '受注')
+}
+```
+
+`inputFile` and `outputFile` are required. Files ending in `.db`, `.sqlite`,
+or `.sqlite3` are supported. `schemaName` renames the exported Schema model;
+it does not select an attached SQLite database. Row filters are optional and
+`dumpRows` defaults to `true`. The source file is opened read-only.
 
 ## Documentation maintenance
 

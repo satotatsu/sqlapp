@@ -24,6 +24,8 @@ dependencies {
 		exclude group:'ch.qos.logback'
 		exclude group:'org.slf4j'
 	}
+	implementation project(':sqlapp-core-mdb')
+	implementation project(':sqlapp-core-sqlite')
 	
 	api('jakarta.activation:jakarta.activation-api:2.1.4')
 
@@ -34,6 +36,7 @@ dependencies {
 
 	testImplementation('org.hsqldb:hsqldb:2.7.3')
 	testImplementation project(':sqlapp-core-hsql')
+	testImplementation('io.github.spannm:ucanaccess:5.1.6')
 	
 	//JUnit
 	testImplementation(platform('org.junit:junit-bom:6.1.0'))

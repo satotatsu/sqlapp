@@ -12,7 +12,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
 /**
- * Provider for database or schema files handled outside JDBC.
+ * Provider for database or schema files loaded directly from a file path.
  * <p>
  * Implementations may attach lazy row iterators to returned tables. Callers
  * which stop iteration before exhaustion must close an iterator implementing
