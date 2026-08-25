@@ -82,4 +82,33 @@ class SqlServerBulkInsertTest {
 			}
 		}
 	}
+
+	@Test
+	void preservesExplicitIdentityWhenRequested() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_IDENTITY_TEST (ID BIGINT IDENTITY(1,1) PRIMARY KEY, NAME NVARCHAR(100))");
+			final Table table = new Table("SQLAPP_BULK_IDENTITY_TEST");
+			table.setSchemaName("dbo");
+			table.getColumns().add(new Column("ID")
+					.setDataType(DataType.BIGINT).setIdentity(true));
+			table.getColumns().add(new Column("NAME")
+					.setDataType(DataType.NVARCHAR).setLength(100));
+			table.getRows().add(row -> {
+				row.put("ID", 100L);
+				row.put("NAME", "explicit");
+			});
+
+			assertEquals(1, BulkInsertResolver.execute(connection, table,
+					BulkOption.builder().keepIdentity(true).build()));
+			try (var resultSet = statement.executeQuery(
+					"SELECT ID, NAME FROM dbo.SQLAPP_BULK_IDENTITY_TEST")) {
+				resultSet.next();
+				assertEquals(100L, resultSet.getLong("ID"));
+				assertEquals("explicit", resultSet.getString("NAME"));
+			}
+		}
+	}
 }

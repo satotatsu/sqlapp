@@ -36,3 +36,19 @@ A dialect module such as PostgreSQL should implement `BulkInsertExecutor` and
 `META-INF/services/com.sqlapp.jdbc.bulk.BulkInsertProvider`. Vendor APIs and
 options remain in the dialect module; the shared core has no vendor-specific
 dependency.
+
+## PostgreSQL
+
+The PostgreSQL provider uses the JDBC driver's `CopyManager` with
+`COPY ... FROM STDIN WITH (FORMAT csv)`. Rows are encoded incrementally by a
+`Reader`, so the complete data set is not retained in memory. CSV quoting
+distinguishes SQL `NULL` from an empty string and supports embedded commas,
+quotes, and newlines. Binary values use PostgreSQL hexadecimal `bytea` input;
+Java arrays are encoded as PostgreSQL array literals.
+
+Identity columns are omitted unless `keepIdentity` is enabled. Hidden and
+computed columns are omitted. Unsupported batch size, COPY timeout, internal
+transaction, encrypted-value modification, forced trigger behavior, and table
+locking options are rejected rather than silently ignored. PostgreSQL
+constraints and triggers retain their normal `COPY` behavior, and transaction
+boundaries remain controlled by the supplied JDBC connection.
