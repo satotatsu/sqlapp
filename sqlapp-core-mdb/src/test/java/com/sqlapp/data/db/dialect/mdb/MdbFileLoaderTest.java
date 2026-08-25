@@ -228,11 +228,23 @@ class MdbFileLoaderTest {
 		final LocalDateTime timestamp = LocalDateTime.of(2026, 8, 25, 12,
 				34, 56);
 		try (Database database = DatabaseBuilder.create(
-				Database.FileFormat.V2010, file.toFile())) {
+				Database.FileFormat.V2019, file.toFile())) {
 			final io.github.spannm.jackcess.Table source = new TableBuilder(
 					"型一覧")
 					.addColumn(new ColumnBuilder("真偽値",
 							io.github.spannm.jackcess.DataType.BOOLEAN))
+					.addColumn(new ColumnBuilder("バイト整数",
+							io.github.spannm.jackcess.DataType.BYTE))
+					.addColumn(new ColumnBuilder("短整数",
+							io.github.spannm.jackcess.DataType.INT))
+					.addColumn(new ColumnBuilder("長整数",
+							io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new ColumnBuilder("巨大整数",
+							io.github.spannm.jackcess.DataType.BIG_INT))
+					.addColumn(new ColumnBuilder("単精度",
+							io.github.spannm.jackcess.DataType.FLOAT))
+					.addColumn(new ColumnBuilder("倍精度",
+							io.github.spannm.jackcess.DataType.DOUBLE))
 					.addColumn(new ColumnBuilder("通貨",
 							io.github.spannm.jackcess.DataType.MONEY))
 					.addColumn(new ColumnBuilder("小数",
@@ -246,7 +258,9 @@ class MdbFileLoaderTest {
 							io.github.spannm.jackcess.DataType.BINARY)
 							.withLength(8))
 					.toTable(database);
-			source.addRow(true, new BigDecimal("1234.5678"),
+			source.addRow(true, (byte) 12, (short) 1234, 123456,
+					1234567890123L, 1.25f, 2.5d,
+					new BigDecimal("1234.5678"),
 					new BigDecimal("98765.432"),
 					"{12345678-1234-1234-1234-1234567890AB}", timestamp,
 					new byte[] { 4, 5, 6 });
@@ -255,6 +269,18 @@ class MdbFileLoaderTest {
 		final var table = MdbFileLoader.loadTable(file, "型一覧");
 		assertEquals(DataType.BOOLEAN,
 				table.getColumns().get("真偽値").getDataType());
+		assertEquals(DataType.TINYINT,
+				table.getColumns().get("バイト整数").getDataType());
+		assertEquals(DataType.SMALLINT,
+				table.getColumns().get("短整数").getDataType());
+		assertEquals(DataType.INT,
+				table.getColumns().get("長整数").getDataType());
+		assertEquals(DataType.BIGINT,
+				table.getColumns().get("巨大整数").getDataType());
+		assertEquals(DataType.REAL,
+				table.getColumns().get("単精度").getDataType());
+		assertEquals(DataType.DOUBLE,
+				table.getColumns().get("倍精度").getDataType());
 		assertEquals(DataType.DECIMAL,
 				table.getColumns().get("通貨").getDataType());
 		assertEquals(DataType.DECIMAL,
@@ -272,6 +298,13 @@ class MdbFileLoaderTest {
 		assertTrue(rows.hasNext());
 		final var row = rows.next();
 		assertEquals(true, row.get("真偽値"));
+		assertEquals(12, ((Number) row.get("バイト整数")).intValue());
+		assertEquals(1234, ((Number) row.get("短整数")).intValue());
+		assertEquals(123456, ((Number) row.get("長整数")).intValue());
+		assertEquals(1234567890123L,
+				((Number) row.get("巨大整数")).longValue());
+		assertEquals(1.25f, ((Number) row.get("単精度")).floatValue());
+		assertEquals(2.5d, ((Number) row.get("倍精度")).doubleValue());
 		assertEquals(new BigDecimal("98765.432"), row.get("小数"));
 		final Date dateTimeValue = row.get("日時");
 		assertEquals(timestamp, LocalDateTime.ofInstant(
