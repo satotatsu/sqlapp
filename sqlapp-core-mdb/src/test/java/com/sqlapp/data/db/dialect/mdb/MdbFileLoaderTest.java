@@ -156,7 +156,7 @@ class MdbFileLoaderTest {
 
 	@Test
 	void loadsLegacyMdbWithJapaneseIdentifiers() throws Exception {
-		final Path file = tempDirectory.resolve("旧形式.mdb");
+		final Path file = tempDirectory.resolve("旧形式.MDB");
 		try (Database database = DatabaseBuilder.create(
 				Database.FileFormat.V2000, file.toFile())) {
 			final io.github.spannm.jackcess.Table source = new TableBuilder(
@@ -182,6 +182,14 @@ class MdbFileLoaderTest {
 		final var provider = SchemaFileLoaderResolver.resolve(file);
 		assertTrue(provider instanceof MdbSchemaFileLoader);
 		assertNotNull(provider.loadSchema(file).getTables().get("受注明細"));
+		assertNotNull(SchemaFileLoaderResolver.loadSchema(file).getTables()
+				.get("受注明細"));
+		assertEquals("受注明細", SchemaFileLoaderResolver
+				.loadTable(file, "受注明細").getName());
+		assertNotNull(SchemaFileLoaderResolver.loadSchema(file.toFile())
+				.getTables().get("受注明細"));
+		assertEquals("受注明細", SchemaFileLoaderResolver
+				.loadTable(file.toFile(), "受注明細").getName());
 	}
 
 	@Test

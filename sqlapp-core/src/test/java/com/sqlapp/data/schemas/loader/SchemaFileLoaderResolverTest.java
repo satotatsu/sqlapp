@@ -22,4 +22,13 @@ class SchemaFileLoaderResolverTest {
 		assertTrue(exception.getMessage().contains("No schema file loader"),
 				exception.getMessage());
 	}
+
+	@Test
+	void rejectsNullArgumentsClearly() {
+		assertThrows(NullPointerException.class,
+				() -> SchemaFileLoaderResolver.resolve(null));
+		assertThrows(NullPointerException.class,
+				() -> SchemaFileLoaderResolver.loadTable(
+						Path.of("unsupported.schema-file"), null));
+	}
 }
