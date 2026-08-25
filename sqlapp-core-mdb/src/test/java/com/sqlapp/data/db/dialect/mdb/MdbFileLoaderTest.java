@@ -24,6 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.loader.SchemaFileLoaderResolver;
 
@@ -83,6 +84,9 @@ class MdbFileLoaderTest {
 							.withColumns("顧客ID").withPrimaryKey())
 					.addIndex(new IndexBuilder("IDX_顧客名")
 							.withColumns("顧客名"))
+					.addIndex(new IndexBuilder("IDX_顧客名_地域")
+							.withColumns("顧客名")
+							.withColumns(false, "地域ID"))
 					.toTable(database);
 			source.getProperties().put(PropertyMap.DESCRIPTION_PROP,
 					"顧客情報を保持するテーブル");
@@ -124,6 +128,9 @@ class MdbFileLoaderTest {
 				.getCheckConstraint().getExpression());
 		assertNotNull(table.getConstraints().getPrimaryKeyConstraint());
 		assertNotNull(table.getIndexes().get("IDX_顧客名"));
+		final var orderedIndex = table.getIndexes().get("IDX_顧客名_地域");
+		assertEquals(Order.Asc, orderedIndex.getColumns().get(0).getOrder());
+		assertEquals(Order.Desc, orderedIndex.getColumns().get(1).getOrder());
 		final var foreignKey = (ForeignKeyConstraint) table.getConstraints()
 				.get("FK_顧客_地域");
 		assertNotNull(foreignKey);
@@ -311,6 +318,27 @@ class MdbFileLoaderTest {
 				dateTimeValue.toInstant(), ZoneId.systemDefault()));
 		assertTrue(row.get("バイナリ") instanceof byte[]);
 		assertFalse(rows.hasNext());
+	}
+
+	@Test
+	void loadsCalculatedColumnExpression() throws Exception {
+		final Path file = tempDirectory.resolve("計算列.accdb");
+		try (Database database = DatabaseBuilder.create(
+				Database.FileFormat.V2010, file.toFile())) {
+			new TableBuilder("注文明細")
+					.addColumn(new ColumnBuilder("単価",
+							io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new ColumnBuilder("数量",
+							io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new ColumnBuilder("金額",
+							io.github.spannm.jackcess.DataType.LONG)
+							.withCalculatedInfo("[単価] * [数量]"))
+					.toTable(database);
+		}
+
+		final var table = MdbFileLoader.loadTable(file, "注文明細");
+		assertEquals("[単価] * [数量]",
+				table.getColumns().get("金額").getFormula());
 	}
 
 	private static Query query(final String name, final Query.Type type,
