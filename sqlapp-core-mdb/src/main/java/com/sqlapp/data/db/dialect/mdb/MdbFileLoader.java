@@ -77,6 +77,8 @@ public final class MdbFileLoader {
 	private static Table toTable(
 			final io.github.spannm.jackcess.Table source) throws IOException {
 		final Table table = new Table(source.getName());
+		table.setRemarks(toString(source.getProperties()
+				.getValue(PropertyMap.DESCRIPTION_PROP)));
 		for (final io.github.spannm.jackcess.Column sourceColumn : source
 				.getColumns()) {
 			final Column column = new Column(sourceColumn.getName());

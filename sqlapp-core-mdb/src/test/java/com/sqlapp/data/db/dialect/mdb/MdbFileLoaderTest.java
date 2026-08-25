@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.loader.SchemaFileLoaderResolver;
 
 import io.github.spannm.jackcess.ColumnBuilder;
 import io.github.spannm.jackcess.Database;
@@ -75,6 +76,9 @@ class MdbFileLoaderTest {
 					.addIndex(new IndexBuilder("IDX_顧客名")
 							.withColumns("顧客名"))
 					.toTable(database);
+			source.getProperties().put(PropertyMap.DESCRIPTION_PROP,
+					"顧客情報を保持するテーブル");
+			source.getProperties().save();
 			new RelationshipBuilder(parent, source)
 					.addColumns("地域ID", "地域ID")
 					.addColumns("国コード", "国コード")
@@ -91,6 +95,7 @@ class MdbFileLoaderTest {
 		final var schema = MdbFileLoader.load(file);
 		final var table = schema.getTables().get("顧客マスタ");
 		assertNotNull(table);
+		assertEquals("顧客情報を保持するテーブル", table.getRemarks());
 		assertEquals(DataType.INT,
 				table.getColumns().get("顧客ID").getDataType());
 		assertTrue(table.getColumns().get("顧客ID").isIdentity());
@@ -162,5 +167,8 @@ class MdbFileLoaderTest {
 		assertTrue(rows.hasNext());
 		assertEquals("鉛筆", rows.next().get("商品名"));
 		assertFalse(rows.hasNext());
+		final var provider = SchemaFileLoaderResolver.resolve(file);
+		assertTrue(provider instanceof MdbSchemaFileLoader);
+		assertNotNull(provider.loadSchema(file).getTables().get("受注明細"));
 	}
 }
