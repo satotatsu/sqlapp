@@ -17,6 +17,7 @@ import com.sqlapp.data.schemas.rowiterator.AbstractRowIteratorHandler;
 
 import io.github.spannm.jackcess.Database;
 import io.github.spannm.jackcess.DatabaseBuilder;
+import io.github.spannm.jackcess.DateTimeType;
 
 /**
  * Lazily streams one Access table directly from its MDB/ACCDB file.
@@ -58,6 +59,7 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 		protected void preInitialize() throws Exception {
 			database = new DatabaseBuilder().withPath(file).withReadOnly(true)
 					.open();
+			database.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
 			final io.github.spannm.jackcess.Table source = database
 					.getTable(tableName);
 			if (source == null) {

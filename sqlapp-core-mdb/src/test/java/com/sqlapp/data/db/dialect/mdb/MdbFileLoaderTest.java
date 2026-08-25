@@ -10,8 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -216,6 +220,64 @@ class MdbFileLoaderTest {
 		assertEquals("SELECT * FROM [販売]", schema.getViews()
 				.get("販売一覧").getDefinition().get(0));
 		assertNotNull(schema.getViews().get("販売統合"));
+	}
+
+	@Test
+	void mapsCommonAccessTypesAndValues() throws Exception {
+		final Path file = tempDirectory.resolve("型対応.accdb");
+		final LocalDateTime timestamp = LocalDateTime.of(2026, 8, 25, 12,
+				34, 56);
+		try (Database database = DatabaseBuilder.create(
+				Database.FileFormat.V2010, file.toFile())) {
+			final io.github.spannm.jackcess.Table source = new TableBuilder(
+					"型一覧")
+					.addColumn(new ColumnBuilder("真偽値",
+							io.github.spannm.jackcess.DataType.BOOLEAN))
+					.addColumn(new ColumnBuilder("通貨",
+							io.github.spannm.jackcess.DataType.MONEY))
+					.addColumn(new ColumnBuilder("小数",
+							io.github.spannm.jackcess.DataType.NUMERIC)
+							.withPrecision(12).withScale(3))
+					.addColumn(new ColumnBuilder("GUID",
+							io.github.spannm.jackcess.DataType.GUID))
+					.addColumn(new ColumnBuilder("日時",
+							io.github.spannm.jackcess.DataType.SHORT_DATE_TIME))
+					.addColumn(new ColumnBuilder("バイナリ",
+							io.github.spannm.jackcess.DataType.BINARY)
+							.withLength(8))
+					.toTable(database);
+			source.addRow(true, new BigDecimal("1234.5678"),
+					new BigDecimal("98765.432"),
+					"{12345678-1234-1234-1234-1234567890AB}", timestamp,
+					new byte[] { 4, 5, 6 });
+		}
+
+		final var table = MdbFileLoader.loadTable(file, "型一覧");
+		assertEquals(DataType.BOOLEAN,
+				table.getColumns().get("真偽値").getDataType());
+		assertEquals(DataType.DECIMAL,
+				table.getColumns().get("通貨").getDataType());
+		assertEquals(DataType.DECIMAL,
+				table.getColumns().get("小数").getDataType());
+		assertEquals(12L, table.getColumns().get("小数").getLength());
+		assertEquals(3, table.getColumns().get("小数").getScale());
+		assertEquals(DataType.NVARCHAR,
+				table.getColumns().get("GUID").getDataType());
+		assertEquals(DataType.DATETIME,
+				table.getColumns().get("日時").getDataType());
+		assertEquals(DataType.VARBINARY,
+				table.getColumns().get("バイナリ").getDataType());
+
+		final var rows = table.getRows().iterator();
+		assertTrue(rows.hasNext());
+		final var row = rows.next();
+		assertEquals(true, row.get("真偽値"));
+		assertEquals(new BigDecimal("98765.432"), row.get("小数"));
+		final Date dateTimeValue = row.get("日時");
+		assertEquals(timestamp, LocalDateTime.ofInstant(
+				dateTimeValue.toInstant(), ZoneId.systemDefault()));
+		assertTrue(row.get("バイナリ") instanceof byte[]);
+		assertFalse(rows.hasNext());
 	}
 
 	private static Query query(final String name, final Query.Type type,
