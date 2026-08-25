@@ -74,3 +74,15 @@ strings, embedded line feeds, delimiters, and backslashes remain distinct.
 Binary columns are sent as hexadecimal fields and assigned with `UNHEX`.
 Identity columns are omitted unless `keepIdentity` is enabled. Hidden and
 computed columns are always omitted.
+
+## JDBC batch providers
+
+`JdbcBatchBulkInsertExecutor` is the portable streaming fallback for drivers
+without a client-side bulk-copy API. It builds one prepared `INSERT`, consumes
+the Schema row iterator incrementally, and calls `executeBatch` at the selected
+batch size (1,000 by default). A configured bulk timeout is applied as the JDBC
+query timeout. Transaction boundaries remain controlled by the caller.
+
+Sybase ASE uses this executor with ASE `identity_insert` handling when
+`keepIdentity` is enabled. Oracle uses the Oracle JDBC driver's optimized
+standard batching. Oracle retains its native empty-string-is-NULL semantics.
