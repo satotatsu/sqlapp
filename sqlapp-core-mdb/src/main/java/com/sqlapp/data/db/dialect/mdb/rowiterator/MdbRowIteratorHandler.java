@@ -18,7 +18,11 @@ import com.sqlapp.data.schemas.rowiterator.AbstractRowIteratorHandler;
 import io.github.spannm.jackcess.Database;
 import io.github.spannm.jackcess.DatabaseBuilder;
 
-/** Lazily streams one Access table directly from its MDB/ACCDB file. */
+/**
+ * Lazily streams one Access table directly from its MDB/ACCDB file.
+ * Iterators are {@link AutoCloseable}; callers stopping before exhaustion must
+ * close them so that the Access file is released immediately.
+ */
 public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	private final Path file;

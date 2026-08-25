@@ -27,7 +27,16 @@ import io.github.spannm.jackcess.DatabaseBuilder;
 import io.github.spannm.jackcess.PropertyMap;
 import io.github.spannm.jackcess.query.Query;
 
-/** Loads an Access MDB/ACCDB file without passing identifiers through SQL. */
+/**
+ * Loads an Access MDB/ACCDB file without passing identifiers through SQL.
+ * <p>
+ * Table rows are read lazily. Non-parameterized saved SELECT and UNION queries
+ * are represented as views whose definition contains the Access SQL. Action,
+ * hidden and parameterized queries are not represented as views. Access
+ * complex columns remain unsupported by the row iterator because a single
+ * Schema column cannot preserve attachment or multi-value structure.
+ * </p>
+ */
 public final class MdbFileLoader {
 
 	private MdbFileLoader() {
@@ -98,8 +107,14 @@ public final class MdbFileLoader {
 	private static Table toTable(
 			final io.github.spannm.jackcess.Table source) throws IOException {
 		final Table table = new Table(source.getName());
-		table.setRemarks(toString(source.getProperties()
-				.getValue(PropertyMap.DESCRIPTION_PROP)));
+		final PropertyMap tableProperties = source.getProperties();
+		table.setRemarks(toString(
+				tableProperties.getValue(PropertyMap.DESCRIPTION_PROP)));
+		final String validationRule = toString(
+				tableProperties.getValue(PropertyMap.VALIDATION_RULE_PROP));
+		if (validationRule != null) {
+			table.getConstraints().addCheckConstraint(null, validationRule);
+		}
 		for (final io.github.spannm.jackcess.Column sourceColumn : source
 				.getColumns()) {
 			final Column column = new Column(sourceColumn.getName());

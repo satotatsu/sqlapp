@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.loader.SchemaFileLoaderResolver;
@@ -81,6 +82,8 @@ class MdbFileLoaderTest {
 					.toTable(database);
 			source.getProperties().put(PropertyMap.DESCRIPTION_PROP,
 					"顧客情報を保持するテーブル");
+			source.getProperties().put(PropertyMap.VALIDATION_RULE_PROP,
+					"[地域ID] > 0");
 			source.getProperties().save();
 			new RelationshipBuilder(parent, source)
 					.addColumns("地域ID", "地域ID")
@@ -99,6 +102,11 @@ class MdbFileLoaderTest {
 		final var table = schema.getTables().get("顧客マスタ");
 		assertNotNull(table);
 		assertEquals("顧客情報を保持するテーブル", table.getRemarks());
+		assertTrue(table.getConstraints().stream()
+				.anyMatch(c -> c instanceof CheckConstraint
+						&& "[地域ID] > 0".equals(
+								((CheckConstraint) c)
+										.getExpression())));
 		assertEquals(DataType.INT,
 				table.getColumns().get("顧客ID").getDataType());
 		assertTrue(table.getColumns().get("顧客ID").isIdentity());
