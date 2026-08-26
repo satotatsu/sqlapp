@@ -22,6 +22,11 @@ module com.sqlapp.core.informix {
 	requires java.sql;
 	requires com.sqlapp.core;
 	exports com.sqlapp.data.db.dialect.informix;
+	exports com.sqlapp.data.db.dialect.informix.bulk;
 //	exports com.sqlapp.data.db.dialect.informix.metadata;
 	exports com.sqlapp.data.db.dialect.informix.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider
+		with com.sqlapp.data.db.dialect.informix.bulk.InformixBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider
+		with com.sqlapp.data.db.dialect.informix.bulk.InformixBulkUpsertProvider;
 }

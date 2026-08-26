@@ -105,6 +105,14 @@ later; sqlapp currently tests it with the Xerial driver bundled by the SQLite
 dialect module. An auto-commit connection is temporarily wrapped in one
 transaction when `useTransaction` is enabled.
 
+Informix uses a session-local temporary table populated by the existing JDBC
+batch provider, followed by one `MERGE`. The temporary table is created from
+the target projection, so its column types follow the physical target without
+reconstructing vendor type declarations from the Schema model. Informix 11.50
+and later support the required `MERGE` statement. The executor joins an
+existing transaction or manages one for an auto-commit connection and removes
+the temporary table after success or failure.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and
