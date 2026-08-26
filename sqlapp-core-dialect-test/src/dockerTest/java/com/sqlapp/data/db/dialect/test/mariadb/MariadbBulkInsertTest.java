@@ -18,6 +18,8 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 /** Exercises MariaDB Connector/J LOAD DATA LOCAL INFILE against MariaDB 11.8. */
 class MariadbBulkInsertTest {
@@ -72,4 +74,28 @@ class MariadbBulkInsertTest {
 			}
 		}
 	}
+
+	@Test
+	void upsertsThroughLoadDataStaging() throws Exception {
+		try(Connection connection=MARIADB.createConnection("?allowLocalInfile=true");var statement=connection.createStatement()){
+			statement.execute("DROP TABLE IF EXISTS sqlapp_upsert_mariadb");
+			statement.execute("CREATE TABLE sqlapp_upsert_mariadb (id BIGINT AUTO_INCREMENT UNIQUE, code VARCHAR(20) PRIMARY KEY, name VARCHAR(200), payload VARBINARY(20))");
+			statement.execute("INSERT INTO sqlapp_upsert_mariadb(code,name) VALUES('A','old')");
+			final Table table=upsertTable();
+			table.getRows().add(r->{r.put("code","A");r.put("name","更新後\nline");r.put("payload",new byte[]{0,(byte)0xff});});
+			table.getRows().add(r->{r.put("code","B");r.put("name",null);});
+			table.getRows().add(r->{r.put("code","C");r.put("name","");r.put("payload",new byte[]{2});});
+			BulkUpsertResolver.execute(connection,table,BulkUpsertOption.defaults());
+			try(var rs=statement.executeQuery("SELECT id,code,name,payload FROM sqlapp_upsert_mariadb ORDER BY code")){
+				rs.next();assertEquals(1L,rs.getLong("id"));assertEquals("更新後\nline",rs.getString("name"));assertArrayEquals(new byte[]{0,(byte)0xff},rs.getBytes("payload"));
+				rs.next();assertEquals("B",rs.getString("code"));assertNull(rs.getString("name"));
+				rs.next();assertEquals("C",rs.getString("code"));assertEquals("",rs.getString("name"));assertArrayEquals(new byte[]{2},rs.getBytes("payload"));
+			}
+		}
+	}
+
+	private static Table upsertTable(){final Table t=new Table("sqlapp_upsert_mariadb");
+		final Column id=new Column("id").setDataType(DataType.BIGINT).setIdentity(true);final Column code=new Column("code").setDataType(DataType.VARCHAR).setLength(20);
+		t.getColumns().add(id);t.getColumns().add(code);t.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(200));t.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY).setLength(20));
+		t.setPrimaryKey("pk_sqlapp_upsert_mariadb",code);return t;}
 }

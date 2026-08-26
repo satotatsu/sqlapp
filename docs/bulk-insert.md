@@ -73,6 +73,15 @@ DEFAULT` restriction. The executor joins an existing transaction or manages
 one for an auto-commit connection, and drops the local table after success or
 failure.
 
+MySQL and MariaDB use a connection-local temporary table, their existing
+`LOAD DATA LOCAL INFILE` streaming providers, and `INSERT ... SELECT ... ON
+DUPLICATE KEY UPDATE`. Update-only operation uses `UPDATE ... JOIN`. The
+`VALUES(column)` update form is retained for compatibility with the older
+MySQL and MariaDB dialect versions supported by sqlapp. The JDBC connection
+must enable local infile loading as described below. A database may report an
+updated row as two affected rows for `ON DUPLICATE KEY UPDATE`; the returned
+count therefore follows the JDBC driver's native update-count semantics.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and

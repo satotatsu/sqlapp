@@ -218,9 +218,7 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 	}
 
 	private BulkOption bulkOption(final BulkOption source) {
-		final BulkOption o = source == null ? BulkOption.defaults() : source;
-		return BulkOption.builder().batchSize(o.getBatchSize()).bulkCopyTimeout(o.getBulkCopyTimeout())
-				.keepIdentity(true).keepNulls(true).build();
+		return source == null ? BulkOption.defaults() : source;
 	}
 
 	private String stageName(final BulkUpsertOption option) {
