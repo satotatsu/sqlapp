@@ -3,7 +3,6 @@ package com.sqlapp.data.db.dialect.informix.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,13 +10,13 @@ import java.util.UUID;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
+import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** Informix bulk upsert using a session temporary table and MERGE. */
@@ -40,13 +39,12 @@ public class InformixBulkUpsertExecutor implements BulkUpsertExecutor {
 		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stageName(option);
 		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
-		final boolean manage = option.isUseTransaction() && connection.getAutoCommit();
+		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(connection,
+				option.isUseTransaction());
 		boolean created = false;
 		Throwable failure = null;
 		SQLException cleanupFailure = null;
 		try {
-			if (manage)
-				connection.setAutoCommit(false);
 			try (var statement = connection.createStatement()) {
 				statement.execute("SELECT " + list(staged, null) + " FROM " + target + " WHERE 1 = 0 INTO TEMP "
 						+ quote(stage) + " WITH NO LOG");
@@ -58,17 +56,11 @@ public class InformixBulkUpsertExecutor implements BulkUpsertExecutor {
 			try (var statement = connection.createStatement()) {
 				affected = statement.executeUpdate(mergeSql(target, quote(stage), keys, staged, updates, option));
 			}
-			if (manage)
-				connection.commit();
+			transaction.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
 			failure = e;
-			if (manage)
-				try {
-					connection.rollback();
-				} catch (SQLException x) {
-					e.addSuppressed(x);
-				}
+			transaction.rollback(e);
 			throw e;
 		} finally {
 			if (created)
@@ -80,17 +72,14 @@ public class InformixBulkUpsertExecutor implements BulkUpsertExecutor {
 					else
 						cleanupFailure = e;
 				}
-			if (manage)
-				try {
-					connection.setAutoCommit(true);
-				} catch (SQLException e) {
+			try { transaction.close(); } catch (SQLException e) {
 					if (failure != null)
 						failure.addSuppressed(e);
 					else if (cleanupFailure != null)
 						cleanupFailure.addSuppressed(e);
 					else
 						throw e;
-				}
+			}
 			if (failure == null && cleanupFailure != null)
 				throw cleanupFailure;
 		}

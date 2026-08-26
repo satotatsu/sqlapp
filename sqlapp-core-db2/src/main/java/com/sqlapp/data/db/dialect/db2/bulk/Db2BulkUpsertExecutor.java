@@ -3,7 +3,6 @@ package com.sqlapp.data.db.dialect.db2.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,13 +10,13 @@ import java.util.UUID;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
+import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** DB2 bulk upsert using a declared global temporary table and MERGE. */
@@ -42,14 +41,12 @@ public class Db2BulkUpsertExecutor implements BulkUpsertExecutor {
 		final String stageSql = "SESSION." + quote(stage);
 		final String target = dialect.getObjectFullName(table.getCatalogName(),
 				table.getSchemaName(), table.getName());
-		final boolean manageTransaction = option.isUseTransaction() && connection.getAutoCommit();
+		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(connection,
+				option.isUseTransaction());
 		boolean created = false;
 		Throwable failure = null;
 		SQLException cleanupFailure = null;
 		try {
-			if (manageTransaction) {
-				connection.setAutoCommit(false);
-			}
 			try (var statement = connection.createStatement()) {
 				statement.execute("DECLARE GLOBAL TEMPORARY TABLE " + stageSql
 						+ " AS (SELECT " + columnList(staged, null) + " FROM " + target
@@ -63,19 +60,11 @@ public class Db2BulkUpsertExecutor implements BulkUpsertExecutor {
 				affected = statement.executeUpdate(mergeSql(target, stageSql, keys,
 						staged, updates, option));
 			}
-			if (manageTransaction) {
-				connection.commit();
-			}
+			transaction.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
 			failure = e;
-			if (manageTransaction) {
-				try {
-					connection.rollback();
-				} catch (SQLException rollbackFailure) {
-					e.addSuppressed(rollbackFailure);
-				}
-			}
+			transaction.rollback(e);
 			throw e;
 		} finally {
 			if (created) {
@@ -89,18 +78,10 @@ public class Db2BulkUpsertExecutor implements BulkUpsertExecutor {
 					}
 				}
 			}
-			if (manageTransaction) {
-				try {
-					connection.setAutoCommit(true);
-				} catch (SQLException e) {
-					if (failure != null) {
-						failure.addSuppressed(e);
-					} else if (cleanupFailure != null) {
-						cleanupFailure.addSuppressed(e);
-					} else {
-						throw e;
-					}
-				}
+			try { transaction.close(); } catch (SQLException e) {
+				if (failure != null) failure.addSuppressed(e);
+				else if (cleanupFailure != null) cleanupFailure.addSuppressed(e);
+				else throw e;
 			}
 			if (failure == null && cleanupFailure != null) {
 				throw cleanupFailure;

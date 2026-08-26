@@ -3,7 +3,6 @@ package com.sqlapp.data.db.dialect.saphana.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,13 +10,13 @@ import java.util.UUID;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
+import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** SAP HANA bulk upsert using ngdbc batching, a local table and MERGE. */
@@ -40,12 +39,12 @@ public class SapHanaBulkUpsertExecutor implements BulkUpsertExecutor {
 		final String stageSql = quote("#" + stage);
 		final String target = dialect.getObjectFullName(table.getCatalogName(),
 				table.getSchemaName(), table.getName());
-		final boolean manage = option.isUseTransaction() && connection.getAutoCommit();
+		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(connection,
+				option.isUseTransaction());
 		boolean created = false;
 		Throwable failure = null;
 		SQLException cleanupFailure = null;
 		try {
-			if (manage) connection.setAutoCommit(false);
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE LOCAL TEMPORARY TABLE " + stageSql + " AS (SELECT "
 						+ list(staged, null) + " FROM " + target + " WHERE 1 = 0) WITH NO DATA");
@@ -57,11 +56,11 @@ public class SapHanaBulkUpsertExecutor implements BulkUpsertExecutor {
 			try (var statement = connection.createStatement()) {
 				affected = statement.executeUpdate(mergeSql(target, stageSql, keys, staged, updates, option));
 			}
-			if (manage) connection.commit();
+			transaction.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
 			failure = e;
-			if (manage) try { connection.rollback(); } catch (SQLException x) { e.addSuppressed(x); }
+			transaction.rollback(e);
 			throw e;
 		} finally {
 			if (created) try (var statement = connection.createStatement()) {
@@ -69,7 +68,7 @@ public class SapHanaBulkUpsertExecutor implements BulkUpsertExecutor {
 			} catch (SQLException e) {
 				if (failure != null) failure.addSuppressed(e); else cleanupFailure = e;
 			}
-			if (manage) try { connection.setAutoCommit(true); } catch (SQLException e) {
+			try { transaction.close(); } catch (SQLException e) {
 				if (failure != null) failure.addSuppressed(e);
 				else if (cleanupFailure != null) cleanupFailure.addSuppressed(e); else throw e;
 			}

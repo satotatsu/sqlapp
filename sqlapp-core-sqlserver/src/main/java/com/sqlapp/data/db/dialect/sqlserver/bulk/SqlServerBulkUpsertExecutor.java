@@ -3,7 +3,6 @@ package com.sqlapp.data.db.dialect.sqlserver.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,13 +10,13 @@ import java.util.UUID;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
+import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** SQL Server bulk upsert using SQLServerBulkCopy and a local temp table. */
@@ -42,15 +41,12 @@ public class SqlServerBulkUpsertExecutor implements BulkUpsertExecutor {
 		final String stagingName = stagingName(effective);
 		final String targetName = dialect.getObjectFullName(table.getCatalogName(),
 				table.getSchemaName(), table.getName());
-		final boolean manageTransaction = effective.isUseTransaction()
-				&& connection.getAutoCommit();
+		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(connection,
+				effective.isUseTransaction());
 		boolean stagingCreated = false;
 		Throwable failure = null;
 		SQLException cleanupFailure = null;
 		try {
-			if (manageTransaction) {
-				connection.setAutoCommit(false);
-			}
 			try (var statement = connection.createStatement()) {
 				statement.execute(createStagingSql(targetName, stagingName,
 						stagingColumns));
@@ -61,19 +57,11 @@ public class SqlServerBulkUpsertExecutor implements BulkUpsertExecutor {
 					stagingBulkOption(effective.getBulkOption()));
 			final long affected = executeMerge(connection, table, targetName,
 					stagingName, keys, stagingColumns, updateColumns, effective);
-			if (manageTransaction) {
-				connection.commit();
-			}
+			transaction.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
 			failure = e;
-			if (manageTransaction) {
-				try {
-					connection.rollback();
-				} catch (SQLException rollbackFailure) {
-					e.addSuppressed(rollbackFailure);
-				}
-			}
+			transaction.rollback(e);
 			throw e;
 		} finally {
 			if (stagingCreated) {
@@ -87,18 +75,10 @@ public class SqlServerBulkUpsertExecutor implements BulkUpsertExecutor {
 					}
 				}
 			}
-			if (manageTransaction) {
-				try {
-					connection.setAutoCommit(true);
-				} catch (SQLException restoreFailure) {
-					if (failure != null) {
-						failure.addSuppressed(restoreFailure);
-					} else if (cleanupFailure != null) {
-						cleanupFailure.addSuppressed(restoreFailure);
-					} else {
-						throw restoreFailure;
-					}
-				}
+			try { transaction.close(); } catch (SQLException restoreFailure) {
+				if (failure != null) failure.addSuppressed(restoreFailure);
+				else if (cleanupFailure != null) cleanupFailure.addSuppressed(restoreFailure);
+				else throw restoreFailure;
 			}
 			if (failure == null && cleanupFailure != null) {
 				throw cleanupFailure;

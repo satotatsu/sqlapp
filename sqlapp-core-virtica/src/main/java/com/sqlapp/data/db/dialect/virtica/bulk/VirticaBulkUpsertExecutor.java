@@ -3,7 +3,6 @@ package com.sqlapp.data.db.dialect.virtica.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,12 +10,12 @@ import java.util.UUID;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
+import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** Vertica bulk upsert using COPY, a local temporary table and MERGE. */
@@ -37,13 +36,11 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 				updates = plan.getUpdateColumns();
 		final String stage = stageName(o), stageSql = quote(stage),
 				target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
-		final boolean manage = o.isUseTransaction() && c.getAutoCommit();
+		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(c, o.isUseTransaction());
 		boolean created = false;
 		Throwable failure = null;
 		SQLException cleanup = null;
 		try {
-			if (manage)
-				c.setAutoCommit(false);
 			try (var s = c.createStatement()) {
 				s.execute("CREATE LOCAL TEMPORARY TABLE " + stageSql + " ON COMMIT PRESERVE ROWS AS SELECT "
 						+ list(staged, null) + " FROM " + target + " WHERE 1 = 0");
@@ -51,17 +48,11 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 			}
 			BulkInsertResolver.resolve(dialect).execute(c, plan.createStagingTable(stage), o.getBulkOption());
 			final long affected = apply(c, target, stageSql, keys, staged, updates, o);
-			if (manage)
-				c.commit();
+			transaction.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
 			failure = e;
-			if (manage)
-				try {
-					c.rollback();
-				} catch (SQLException x) {
-					e.addSuppressed(x);
-				}
+			transaction.rollback(e);
 			throw e;
 		} finally {
 			if (created)
@@ -73,17 +64,14 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 					else
 						cleanup = e;
 				}
-			if (manage)
-				try {
-					c.setAutoCommit(true);
-				} catch (SQLException e) {
+			try { transaction.close(); } catch (SQLException e) {
 					if (failure != null)
 						failure.addSuppressed(e);
 					else if (cleanup != null)
 						cleanup.addSuppressed(e);
 					else
 						throw e;
-				}
+			}
 			if (failure == null && cleanup != null)
 				throw cleanup;
 		}
