@@ -27,4 +27,6 @@ module com.sqlapp.core.virtica {
 	exports com.sqlapp.data.db.dialect.virtica.resolver;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.virtica.bulk.VirticaBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.virtica.bulk.VirticaBulkUpsertProvider;
 }
