@@ -6,6 +6,7 @@ import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 
 /** Firebird Jaybird JDBC batch insert executor. */
 public class FirebirdBulkInsertExecutor extends JdbcBatchBulkInsertExecutor {
+
 	public FirebirdBulkInsertExecutor(final Dialect dialect) {
 		super(dialect);
 	}

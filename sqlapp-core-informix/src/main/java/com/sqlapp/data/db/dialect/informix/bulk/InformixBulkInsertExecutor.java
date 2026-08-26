@@ -6,6 +6,7 @@ import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 
 /** Informix JDBC batch insert executor. */
 public class InformixBulkInsertExecutor extends JdbcBatchBulkInsertExecutor {
+
 	public InformixBulkInsertExecutor(final Dialect dialect) {
 		super(dialect);
 	}

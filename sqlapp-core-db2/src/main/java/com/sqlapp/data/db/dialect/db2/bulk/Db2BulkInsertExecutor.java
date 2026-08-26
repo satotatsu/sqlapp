@@ -6,6 +6,7 @@ import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 
 /** DB2 JCC optimized JDBC batch insert executor. */
 public class Db2BulkInsertExecutor extends JdbcBatchBulkInsertExecutor {
+
 	public Db2BulkInsertExecutor(final Dialect dialect) {
 		super(dialect);
 	}

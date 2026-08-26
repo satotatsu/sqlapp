@@ -9,8 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertProvider;
 public class InformixBulkInsertProvider implements BulkInsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect != null && "Informix Dynamic Server"
-				.equalsIgnoreCase(dialect.getProductName());
+		return dialect != null && "Informix Dynamic Server".equalsIgnoreCase(dialect.getProductName());
 	}
 
 	@Override
