@@ -17,6 +17,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.util.CommonUtils;
 
 /** DB2 bulk upsert using a declared global temporary table and MERGE. */
@@ -33,16 +34,10 @@ public class Db2BulkUpsertExecutor implements BulkUpsertExecutor {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		final BulkUpsertOption option = options == null ? BulkUpsertOption.defaults() : options;
-		if (!option.isUpdateWhenMatched() && !option.isInsertWhenNotMatched()) {
-			throw new IllegalArgumentException("At least one upsert action must be enabled");
-		}
-		final List<Column> keys = keys(table, option);
-		final List<Column> staged = stagedColumns(table, option, keys);
-		final List<Column> updates = updateColumns(table, option, keys, staged);
-		if (option.isUpdateWhenMatched() && updates.isEmpty()
-				&& !option.isInsertWhenNotMatched()) {
-			throw new IllegalArgumentException("No columns are available to update");
-		}
+		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(table, option);
+		final List<Column> keys = plan.getKeyColumns();
+		final List<Column> staged = plan.getStagingColumns();
+		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stagingName(option);
 		final String stageSql = "SESSION." + quote(stage);
 		final String target = dialect.getObjectFullName(table.getCatalogName(),
@@ -62,7 +57,7 @@ public class Db2BulkUpsertExecutor implements BulkUpsertExecutor {
 				created = true;
 			}
 			BulkInsertResolver.resolve(dialect).execute(connection,
-					stagingTable(table, stage, staged), stagingBulkOption(option.getBulkOption()));
+					plan.createStagingTable(stage), stagingBulkOption(option.getBulkOption()));
 			final long affected;
 			try (var statement = connection.createStatement()) {
 				affected = statement.executeUpdate(mergeSql(target, stageSql, keys,

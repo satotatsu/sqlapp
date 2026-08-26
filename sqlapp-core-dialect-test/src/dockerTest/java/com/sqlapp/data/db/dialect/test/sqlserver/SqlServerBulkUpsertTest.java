@@ -19,6 +19,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
@@ -78,9 +79,12 @@ class SqlServerBulkUpsertTest {
 				row.put("AMOUNT", new BigDecimal("0.00"));
 				row.put("PAYLOAD", new byte[] { 2 });
 			});
+			table.getRows().add(row -> { row.put("CODE", "D"); row.put("NAME", "first"); });
+			table.getRows().add(row -> { row.put("CODE", "D"); row.put("NAME", "discarded"); });
 
-			assertEquals(3, BulkUpsertResolver.execute(connection, table,
+			assertEquals(4, BulkUpsertResolver.execute(connection, table,
 					BulkUpsertOption.builder()
+							.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
 							.bulkOption(BulkOption.builder().batchSize(2).build())
 							.build()));
 
@@ -103,6 +107,9 @@ class SqlServerBulkUpsertTest {
 				assertEquals("C", resultSet.getString("CODE"));
 				assertEquals("", resultSet.getString("NAME"));
 				assertArrayEquals(new byte[] { 2 }, resultSet.getBytes("PAYLOAD"));
+				resultSet.next();
+				assertEquals("D", resultSet.getString("CODE"));
+				assertEquals("first", resultSet.getString("NAME"));
 			}
 		}
 	}

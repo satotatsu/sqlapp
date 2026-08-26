@@ -14,6 +14,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 import com.sqlapp.util.CommonUtils;
 
@@ -31,12 +32,9 @@ public class SqliteBulkUpsertExecutor implements BulkUpsertExecutor {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		final BulkUpsertOption o = options == null ? BulkUpsertOption.defaults() : options;
-		if (!o.isUpdateWhenMatched() && !o.isInsertWhenNotMatched())
-			throw new IllegalArgumentException("At least one upsert action must be enabled");
-		final List<Column> keys = keys(table, o), writable = writable(table, o, keys),
-				updates = updates(table, o, keys, writable);
-		if (o.isUpdateWhenMatched() && updates.isEmpty() && !o.isInsertWhenNotMatched())
-			throw new IllegalArgumentException("No columns are available to update");
+		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(table, o);
+		final List<Column> keys = plan.getKeyColumns(), writable = plan.getStagingColumns(),
+				updates = plan.getUpdateColumns();
 		final List<Column> bindings = new ArrayList<>();
 		final String sql;
 		if (o.isInsertWhenNotMatched()) {
@@ -62,7 +60,7 @@ public class SqliteBulkUpsertExecutor implements BulkUpsertExecutor {
 		try {
 			if (manage)
 				connection.setAutoCommit(false);
-			final long affected = batch.execute(connection, table, o.getBulkOption());
+			final long affected = batch.execute(connection, plan.createStagingTable(table.getName()), o.getBulkOption());
 			if (manage)
 				connection.commit();
 			return affected;

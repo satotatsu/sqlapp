@@ -17,6 +17,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.util.CommonUtils;
 
 /** SQL Server bulk upsert using SQLServerBulkCopy and a local temp table. */
@@ -34,20 +35,10 @@ public class SqlServerBulkUpsertExecutor implements BulkUpsertExecutor {
 		java.util.Objects.requireNonNull(table, "table");
 		final BulkUpsertOption effective = options == null
 				? BulkUpsertOption.defaults() : options;
-		if (!effective.isUpdateWhenMatched()
-				&& !effective.isInsertWhenNotMatched()) {
-			throw new IllegalArgumentException(
-					"At least one upsert action must be enabled");
-		}
-		final List<Column> keys = resolveKeys(table, effective);
-		final List<Column> stagingColumns = resolveStagingColumns(table,
-				effective, keys);
-		final List<Column> updateColumns = resolveUpdateColumns(table,
-				effective, keys, stagingColumns);
-		if (effective.isUpdateWhenMatched() && updateColumns.isEmpty()
-				&& !effective.isInsertWhenNotMatched()) {
-			throw new IllegalArgumentException("No columns are available to update");
-		}
+		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(table, effective);
+		final List<Column> keys = plan.getKeyColumns();
+		final List<Column> stagingColumns = plan.getStagingColumns();
+		final List<Column> updateColumns = plan.getUpdateColumns();
 		final String stagingName = stagingName(effective);
 		final String targetName = dialect.getObjectFullName(table.getCatalogName(),
 				table.getSchemaName(), table.getName());
@@ -65,7 +56,7 @@ public class SqlServerBulkUpsertExecutor implements BulkUpsertExecutor {
 						stagingColumns));
 				stagingCreated = true;
 			}
-			final Table staging = stagingTable(table, stagingName, stagingColumns);
+			final Table staging = plan.createStagingTable(stagingName);
 			BulkInsertResolver.resolve(dialect).execute(connection, staging,
 					stagingBulkOption(effective.getBulkOption()));
 			final long affected = executeMerge(connection, table, targetName,

@@ -16,6 +16,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.util.CommonUtils;
 
 /** Vertica bulk upsert using COPY, a local temporary table and MERGE. */
@@ -31,12 +32,9 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 		java.util.Objects.requireNonNull(c, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		final BulkUpsertOption o = options == null ? BulkUpsertOption.defaults() : options;
-		if (!o.isUpdateWhenMatched() && !o.isInsertWhenNotMatched())
-			throw new IllegalArgumentException("At least one upsert action must be enabled");
-		final List<Column> keys = keys(table, o), staged = staged(table, o, keys),
-				updates = updates(table, o, keys, staged);
-		if (o.isUpdateWhenMatched() && updates.isEmpty() && !o.isInsertWhenNotMatched())
-			throw new IllegalArgumentException("No columns are available to update");
+		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(table, o);
+		final List<Column> keys = plan.getKeyColumns(), staged = plan.getStagingColumns(),
+				updates = plan.getUpdateColumns();
 		final String stage = stageName(o), stageSql = quote(stage),
 				target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
 		final boolean manage = o.isUseTransaction() && c.getAutoCommit();
@@ -51,7 +49,7 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 						+ list(staged, null) + " FROM " + target + " WHERE 1 = 0");
 				created = true;
 			}
-			BulkInsertResolver.resolve(dialect).execute(c, stagingTable(table, stage, staged), o.getBulkOption());
+			BulkInsertResolver.resolve(dialect).execute(c, plan.createStagingTable(stage), o.getBulkOption());
 			final long affected = apply(c, target, stageSql, keys, staged, updates, o);
 			if (manage)
 				c.commit();

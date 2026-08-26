@@ -37,6 +37,9 @@ public class BulkUpsertOption implements Serializable {
 	private final boolean insertWhenNotMatched = true;
 	@Builder.Default
 	private final boolean useTransaction = true;
+	/** Handling of duplicate match keys in the source rows. */
+	@Builder.Default
+	private final BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy = BulkUpsertDuplicateKeyStrategy.ERROR;
 	/** Optional deterministic staging name, mainly for diagnostics/tests. */
 	private final String stagingTableName;
 	@Builder.Default

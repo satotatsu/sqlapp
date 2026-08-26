@@ -34,6 +34,14 @@ long affected = BulkUpsertResolver.execute(connection, table,
                 .build());
 ```
 
+Source match keys are checked while rows are streamed into the staging input.
+The default `duplicateKeyStrategy=ERROR` rejects duplicate non-null keys with
+their source row positions before the database merge is executed. Set
+`duplicateKeyStrategy=KEEP_FIRST` to retain the first row for each key and
+discard later duplicates. `KEEP_FIRST` stores only the encountered key set,
+not the complete source rows. Keys containing `NULL` are not collapsed because
+SQL equality does not match those rows in the supported merge statements.
+
 SQL Server 2008 and later use a connection-local temporary table,
 `SQLServerBulkCopy`, and `MERGE ... WITH (HOLDLOCK)`. Generated identity
 columns are omitted by default. An identity match or insert requires

@@ -38,7 +38,7 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 			throw new IllegalArgumentException("batchSize must be greater than zero");
 		}
 		final Iterator<Row> rows = table.getRows().iterator();
-		SQLException failure = null;
+		Throwable failure = null;
 		try (PreparedStatement statement = connection.prepareStatement(
 				createInsertSql(table, columns))) {
 			if (effective.getBulkCopyTimeout() != null) {
@@ -59,7 +59,7 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 				affected += count(statement.executeBatch());
 			}
 			return affected;
-		} catch (SQLException e) {
+		} catch (SQLException | RuntimeException e) {
 			failure = e;
 			throw e;
 		} finally {

@@ -17,6 +17,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -35,13 +36,10 @@ public class SybaseBulkUpsertExecutor implements BulkUpsertExecutor {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		final BulkUpsertOption option = options == null ? BulkUpsertOption.defaults() : options;
-		if (!option.isUpdateWhenMatched() && !option.isInsertWhenNotMatched())
-			throw new IllegalArgumentException("At least one upsert action must be enabled");
-		final List<Column> keys = keys(table, option);
-		final List<Column> staged = staged(table, option, keys);
-		final List<Column> updates = updates(table, option, keys, staged);
-		if (option.isUpdateWhenMatched() && updates.isEmpty() && !option.isInsertWhenNotMatched())
-			throw new IllegalArgumentException("No columns are available to update");
+		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(table, option);
+		final List<Column> keys = plan.getKeyColumns();
+		final List<Column> staged = plan.getStagingColumns();
+		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stageName(option);
 		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
 		final String stageSql = "#" + stage;
@@ -57,7 +55,7 @@ public class SybaseBulkUpsertExecutor implements BulkUpsertExecutor {
 						"SELECT " + list(staged, null) + " INTO " + stageSql + " FROM " + target + " WHERE 1 = 0");
 				created = true;
 			}
-			BulkInsertResolver.resolve(dialect).execute(connection, stagingTable(table, stage, staged),
+			BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable("#" + stage),
 					bulkOption(option.getBulkOption()));
 			final long affected;
 			try (var statement = connection.createStatement()) {
