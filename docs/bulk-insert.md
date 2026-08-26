@@ -82,6 +82,14 @@ must enable local infile loading as described below. A database may report an
 updated row as two affected rows for `ON DUPLICATE KEY UPDATE`; the returned
 count therefore follows the JDBC driver's native update-count semantics.
 
+Vertica uses a local temporary table with `ON COMMIT PRESERVE ROWS` and loads
+it through `VerticaCopyStream`. Vertica rejects `MERGE` whenever the target
+contains an identity or sequence-backed column, even when that column is not
+part of the statement. The executor therefore applies a set-based `UPDATE`
+followed by an `INSERT ... SELECT ... WHERE NOT EXISTS` in the same transaction.
+Generated identity columns are omitted by default, and the local table is
+dropped after success or failure.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and
