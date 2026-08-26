@@ -23,9 +23,13 @@ module com.sqlapp.core.db2mod {
 	requires transitive com.sqlapp.core;
 
 	exports com.sqlapp.data.db.dialect.db2;
+	exports com.sqlapp.data.db.dialect.db2.bulk;
 	exports com.sqlapp.data.db.dialect.db2.metadata;
 	exports com.sqlapp.data.db.dialect.db2.resolver;
 	exports com.sqlapp.data.db.dialect.db2.sql;
 	exports com.sqlapp.data.db.dialect.db2.util;
-//	provides 
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.db2.bulk.Db2BulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.db2.bulk.Db2BulkUpsertProvider;
 }
