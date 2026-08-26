@@ -22,5 +22,8 @@ module com.sqlapp.core.sqlite {
 	requires java.sql;
 	requires com.sqlapp.core;
 	exports com.sqlapp.data.db.dialect.sqlite;
+	exports com.sqlapp.data.db.dialect.sqlite.bulk;
 	exports com.sqlapp.data.db.dialect.sqlite.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.sqlite.bulk.SqliteBulkInsertProvider;
 }
