@@ -27,4 +27,6 @@ module com.sqlapp.core.saphana {
 	exports com.sqlapp.data.db.dialect.saphana.resolver;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaBulkUpsertProvider;
 }
