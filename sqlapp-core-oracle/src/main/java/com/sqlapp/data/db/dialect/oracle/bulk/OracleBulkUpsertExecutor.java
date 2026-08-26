@@ -13,6 +13,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertExecutionScope;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
@@ -40,17 +41,15 @@ public class OracleBulkUpsertExecutor implements BulkUpsertExecutor {
 		final String stagingName = stagingName(effective);
 		final String targetName = dialect.getObjectFullName(table.getCatalogName(),
 				table.getSchemaName(), table.getName());
-		boolean created = false;
-		Throwable failure = null;
-		SQLException cleanupFailure = null;
-		try {
+		try (var scope = BulkUpsertExecutionScope.begin(connection, false)) {
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE GLOBAL TEMPORARY TABLE "
 						+ quote(stagingName) + " ON COMMIT PRESERVE ROWS AS SELECT "
 						+ columnList(stagingColumns, null) + " FROM " + targetName
 						+ " WHERE 1 = 0");
-				created = true;
 			}
+			scope.addCleanupSql("TRUNCATE TABLE " + quote(stagingName));
+			scope.addCleanupSql("DROP TABLE " + quote(stagingName));
 			BulkInsertResolver.resolve(dialect).execute(connection,
 					plan.createStagingTable(stagingName),
 					stagingBulkOption(effective.getBulkOption()));
@@ -60,25 +59,6 @@ public class OracleBulkUpsertExecutor implements BulkUpsertExecutor {
 						stagingName, keys, stagingColumns, updates, effective));
 			}
 			return affected;
-		} catch (SQLException | RuntimeException e) {
-			failure = e;
-			throw e;
-		} finally {
-			if (created) {
-				try (var statement = connection.createStatement()) {
-					statement.execute("TRUNCATE TABLE " + quote(stagingName));
-					statement.execute("DROP TABLE " + quote(stagingName));
-				} catch (SQLException e) {
-					if (failure != null) {
-						failure.addSuppressed(e);
-					} else {
-						cleanupFailure = e;
-					}
-				}
-			}
-			if (failure == null && cleanupFailure != null) {
-				throw cleanupFailure;
-			}
 		}
 	}
 

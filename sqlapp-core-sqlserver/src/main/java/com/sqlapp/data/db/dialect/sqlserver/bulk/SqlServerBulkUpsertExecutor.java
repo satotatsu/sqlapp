@@ -13,10 +13,10 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertExecutionScope;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
-import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** SQL Server bulk upsert using SQLServerBulkCopy and a local temp table. */
@@ -41,47 +41,24 @@ public class SqlServerBulkUpsertExecutor implements BulkUpsertExecutor {
 		final String stagingName = stagingName(effective);
 		final String targetName = dialect.getObjectFullName(table.getCatalogName(),
 				table.getSchemaName(), table.getName());
-		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(connection,
-				effective.isUseTransaction());
-		boolean stagingCreated = false;
-		Throwable failure = null;
-		SQLException cleanupFailure = null;
-		try {
+		try (var scope = BulkUpsertExecutionScope.begin(connection,
+				effective.isUseTransaction())) {
+			try {
 			try (var statement = connection.createStatement()) {
 				statement.execute(createStagingSql(targetName, stagingName,
 						stagingColumns));
-				stagingCreated = true;
 			}
+			scope.addCleanupSql("DROP TABLE " + quote(stagingName));
 			final Table staging = plan.createStagingTable(stagingName);
 			BulkInsertResolver.resolve(dialect).execute(connection, staging,
 					stagingBulkOption(effective.getBulkOption()));
 			final long affected = executeMerge(connection, table, targetName,
 					stagingName, keys, stagingColumns, updateColumns, effective);
-			transaction.commit();
+			scope.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
-			failure = e;
-			transaction.rollback(e);
+			scope.rollback(e);
 			throw e;
-		} finally {
-			if (stagingCreated) {
-				try (var statement = connection.createStatement()) {
-					statement.execute("DROP TABLE " + quote(stagingName));
-				} catch (SQLException e) {
-					if (failure != null) {
-						failure.addSuppressed(e);
-					} else {
-						cleanupFailure = e;
-					}
-				}
-			}
-			try { transaction.close(); } catch (SQLException restoreFailure) {
-				if (failure != null) failure.addSuppressed(restoreFailure);
-				else if (cleanupFailure != null) cleanupFailure.addSuppressed(restoreFailure);
-				else throw restoreFailure;
-			}
-			if (failure == null && cleanupFailure != null) {
-				throw cleanupFailure;
 			}
 		}
 	}
