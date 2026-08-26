@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -56,7 +57,7 @@ public final class BulkUpsertPlan {
 			staging.getColumns().add(copy);
 		}
 		staging.setRowIteratorHandler(rows -> new UniqueKeyIterator(table.getRows().iterator(), keyColumns,
-				option.getDuplicateKeyStrategy()));
+				option.getDuplicateKeyStrategy(), option.getDuplicateRowSelector()));
 		return staging;
 	}
 
@@ -123,16 +124,23 @@ public final class BulkUpsertPlan {
 		private final Iterator<Row> source;
 		private final List<Column> keys;
 		private final BulkUpsertDuplicateKeyStrategy strategy;
+		private final BulkUpsertDuplicateRowSelector selector;
 		private final Map<Key, Long> firstRows = new HashMap<>();
+		private Iterator<Row> buffered;
+		private boolean bufferedPrepared;
 		private long rowNumber;
 		private Row next;
 		private boolean prepared;
 
 		private UniqueKeyIterator(final Iterator<Row> source, final List<Column> keys,
-				final BulkUpsertDuplicateKeyStrategy strategy) {
+				final BulkUpsertDuplicateKeyStrategy strategy,
+				final BulkUpsertDuplicateRowSelector selector) {
 			this.source = source;
 			this.keys = keys;
 			this.strategy = java.util.Objects.requireNonNull(strategy, "duplicateKeyStrategy");
+			this.selector = selector;
+			if (strategy == BulkUpsertDuplicateKeyStrategy.CUSTOM && selector == null)
+				throw new IllegalArgumentException("duplicateRowSelector is required for CUSTOM duplicate keys");
 		}
 
 		@Override public boolean hasNext() {
@@ -152,6 +160,12 @@ public final class BulkUpsertPlan {
 		private void prepare() {
 			if (prepared) return;
 			prepared = true;
+			if (strategy == BulkUpsertDuplicateKeyStrategy.KEEP_LAST
+					|| strategy == BulkUpsertDuplicateKeyStrategy.CUSTOM) {
+				prepareBuffered();
+				if (buffered.hasNext()) next = buffered.next();
+				return;
+			}
 			while (source.hasNext()) {
 				final Row row = source.next();
 				rowNumber++;
@@ -175,10 +189,39 @@ public final class BulkUpsertPlan {
 			}
 		}
 
+		private void prepareBuffered() {
+			if (bufferedPrepared) return;
+			bufferedPrepared = true;
+			final Map<Object, Row> retained = new LinkedHashMap<>();
+			while (source.hasNext()) {
+				final Row row = source.next();
+				rowNumber++;
+				final Object[] values = new Object[keys.size()];
+				boolean hasNull = false;
+				for (int i = 0; i < keys.size(); i++) {
+					values[i] = row.get(keys.get(i));
+					hasNull |= values[i] == null;
+				}
+				final Object key = hasNull ? new NullKey(rowNumber) : new Key(values);
+				final Row current = retained.get(key);
+				if (current == null) retained.put(key, row);
+				else if (strategy == BulkUpsertDuplicateKeyStrategy.KEEP_LAST) retained.put(key, row);
+				else {
+					final Row selected = selector.select(current, row);
+					if (selected == null)
+						throw new IllegalArgumentException("duplicateRowSelector returned null at source row " + rowNumber);
+					retained.put(key, selected);
+				}
+			}
+			buffered = retained.values().iterator();
+		}
+
 		@Override public void close() throws Exception {
 			if (source instanceof AutoCloseable closeable) closeable.close();
 		}
 	}
+
+	private record NullKey(long rowNumber) { }
 
 	private static final class Key {
 		private final Object[] values;

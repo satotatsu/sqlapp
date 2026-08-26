@@ -40,6 +40,8 @@ public class BulkUpsertOption implements Serializable {
 	/** Handling of duplicate match keys in the source rows. */
 	@Builder.Default
 	private final BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy = BulkUpsertDuplicateKeyStrategy.ERROR;
+	/** Selector required when duplicateKeyStrategy is CUSTOM. */
+	private final BulkUpsertDuplicateRowSelector duplicateRowSelector;
 	/** Optional deterministic staging name, mainly for diagnostics/tests. */
 	private final String stagingTableName;
 	@Builder.Default

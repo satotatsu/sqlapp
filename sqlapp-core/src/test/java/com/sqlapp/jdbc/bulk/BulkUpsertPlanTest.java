@@ -33,6 +33,27 @@ class BulkUpsertPlanTest {
 		assertEquals(false, rows.hasNext());
 	}
 
+	@Test
+	void canKeepLastDuplicateSourceKey() {
+		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
+				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_LAST).build())
+				.createStagingTable("stage").getRows().iterator();
+		assertEquals("second", rows.next().get("name"));
+		assertEquals(false, rows.hasNext());
+	}
+
+	@Test
+	void canSelectDuplicateSourceRowWithCustomCondition() {
+		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
+				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+				.duplicateRowSelector((retained, candidate) ->
+						((String) retained.get("name")).compareTo((String) candidate.get("name")) <= 0
+								? retained : candidate)
+				.build()).createStagingTable("stage").getRows().iterator();
+		assertEquals("first", rows.next().get("name"));
+		assertEquals(false, rows.hasNext());
+	}
+
 	private static Table tableWithDuplicateKeys() {
 		final Table table = new Table("target");
 		final Column id = new Column("id").setDataType(DataType.INT);

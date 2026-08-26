@@ -6,5 +6,9 @@ public enum BulkUpsertDuplicateKeyStrategy {
 	/** Reject the input before executing the database merge. */
 	ERROR,
 	/** Keep the first source row for each key and discard later rows. */
-	KEEP_FIRST
+	KEEP_FIRST,
+	/** Keep the last source row for each key. */
+	KEEP_LAST,
+	/** Use {@link BulkUpsertOption#getDuplicateRowSelector()} to select a row. */
+	CUSTOM
 }

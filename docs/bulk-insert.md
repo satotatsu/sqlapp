@@ -36,11 +36,15 @@ long affected = BulkUpsertResolver.execute(connection, table,
 
 Source match keys are checked while rows are streamed into the staging input.
 The default `duplicateKeyStrategy=ERROR` rejects duplicate non-null keys with
-their source row positions before the database merge is executed. Set
-`duplicateKeyStrategy=KEEP_FIRST` to retain the first row for each key and
-discard later duplicates. `KEEP_FIRST` stores only the encountered key set,
-not the complete source rows. Keys containing `NULL` are not collapsed because
-SQL equality does not match those rows in the supported merge statements.
+their source row positions before the database merge is executed.
+`KEEP_FIRST` retains the first row for each key and remains fully streaming.
+`KEEP_LAST` retains the last row. `CUSTOM` calls `duplicateRowSelector` with
+the currently retained row and each later candidate, allowing selection by a
+timestamp, priority, completeness, or another application rule. `KEEP_LAST`
+and `CUSTOM` retain one selected row per distinct key until the input has been
+read; they do not retain discarded duplicates. Keys containing `NULL` are not
+collapsed because SQL equality does not match those rows in the supported
+merge statements.
 
 SQL Server 2008 and later use a connection-local temporary table,
 `SQLServerBulkCopy`, and `MERGE ... WITH (HOLDLOCK)`. Generated identity
