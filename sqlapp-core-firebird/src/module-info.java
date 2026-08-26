@@ -29,4 +29,6 @@ module com.sqlapp.core.firebird {
 	exports com.sqlapp.data.db.dialect.firebird.sql to com.sqlapp.core;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.firebird.bulk.FirebirdBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.firebird.bulk.FirebirdBulkUpsertProvider;
 }
