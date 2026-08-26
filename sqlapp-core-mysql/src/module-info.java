@@ -30,4 +30,6 @@ module com.sqlapp.core.mysql {
 	exports com.sqlapp.data.db.dialect.mysql.sql to com.sqlapp.core;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.mysql.bulk.MySqlBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.mysql.bulk.MySqlBulkUpsertProvider;
 }

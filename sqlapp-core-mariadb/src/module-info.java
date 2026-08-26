@@ -28,4 +28,6 @@ module com.sqlapp.core.mariadb {
 	exports com.sqlapp.data.db.dialect.mariadb.resolver;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.mariadb.bulk.MariadbBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.mariadb.bulk.MariadbBulkUpsertProvider;
 }
