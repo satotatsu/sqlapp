@@ -22,6 +22,8 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 /** Exercises streaming JDBC batches against Sybase ASE 16.0 SP03. */
 class SybaseBulkInsertTest {
@@ -99,6 +101,39 @@ class SybaseBulkInsertTest {
 		}
 	}
 
+	@Test
+	void upsertsAndSupportsSingleActionModes() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try { statement.execute("DROP TABLE sqlapp_upsert_sybase"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE TABLE sqlapp_upsert_sybase (id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute("INSERT INTO sqlapp_upsert_sybase VALUES (1, 'old')");
+
+			Table table = createUpsertTable();
+			table.getRows().add(row -> { row.put("id", 1); row.put("txt", "updated"); });
+			table.getRows().add(row -> { row.put("id", 2); row.put("txt", "inserted"); });
+			assertEquals(2, BulkUpsertResolver.execute(connection, table, BulkUpsertOption.defaults()));
+
+			table = createUpsertTable();
+			table.getRows().add(row -> { row.put("id", 1); row.put("txt", "update-only"); });
+			table.getRows().add(row -> { row.put("id", 3); row.put("txt", "ignored"); });
+			BulkUpsertResolver.execute(connection, table,
+					BulkUpsertOption.builder().insertWhenNotMatched(false).build());
+
+			table = createUpsertTable();
+			table.getRows().add(row -> { row.put("id", 1); row.put("txt", "ignored"); });
+			table.getRows().add(row -> { row.put("id", 3); row.put("txt", "insert-only"); });
+			BulkUpsertResolver.execute(connection, table,
+					BulkUpsertOption.builder().updateWhenMatched(false).build());
+
+			try (var rs = statement.executeQuery("SELECT id, txt FROM sqlapp_upsert_sybase ORDER BY id")) {
+				rs.next(); assertEquals(1, rs.getInt(1)); assertEquals("update-only", rs.getString(2));
+				rs.next(); assertEquals(2, rs.getInt(1)); assertEquals("inserted", rs.getString(2));
+				rs.next(); assertEquals(3, rs.getInt(1)); assertEquals("insert-only", rs.getString(2));
+			}
+		}
+	}
+
 	private static Connection createConnection() throws Exception {
 		return DriverManager.getConnection("jdbc:jtds:sybase://localhost:"
 				+ ASE.getMappedPort(5000) + "/master", "sa", "sybase");
@@ -123,6 +158,14 @@ class SybaseBulkInsertTest {
 		table.getColumns().add(new Column("nullable_value").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("empty_value").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY));
+		return table;
+	}
+
+	private static Table createUpsertTable() {
+		final Table table = new Table("sqlapp_upsert_sybase");
+		table.getColumns().add(new Column("id").setDataType(DataType.INT));
+		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR));
+		table.setPrimaryKey("pk_sqlapp_upsert_sybase", table.getColumns().get("id"));
 		return table;
 	}
 }

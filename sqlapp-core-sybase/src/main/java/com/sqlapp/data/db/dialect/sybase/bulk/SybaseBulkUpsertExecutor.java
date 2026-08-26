@@ -1,0 +1,241 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.dialect.sybase.bulk;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.RowCollection;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.util.CommonUtils;
+
+/**
+ * Sybase ASE bulk upsert using a connection-local temporary table and MERGE.
+ */
+public class SybaseBulkUpsertExecutor implements BulkUpsertExecutor {
+	private final Dialect dialect;
+
+	public SybaseBulkUpsertExecutor(final Dialect dialect) {
+		this.dialect = java.util.Objects.requireNonNull(dialect, "dialect");
+	}
+
+	@Override
+	public long execute(final Connection connection, final Table table, final BulkUpsertOption options)
+			throws SQLException {
+		java.util.Objects.requireNonNull(connection, "connection");
+		java.util.Objects.requireNonNull(table, "table");
+		final BulkUpsertOption option = options == null ? BulkUpsertOption.defaults() : options;
+		if (!option.isUpdateWhenMatched() && !option.isInsertWhenNotMatched())
+			throw new IllegalArgumentException("At least one upsert action must be enabled");
+		final List<Column> keys = keys(table, option);
+		final List<Column> staged = staged(table, option, keys);
+		final List<Column> updates = updates(table, option, keys, staged);
+		if (option.isUpdateWhenMatched() && updates.isEmpty() && !option.isInsertWhenNotMatched())
+			throw new IllegalArgumentException("No columns are available to update");
+		final String stage = stageName(option);
+		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
+		final String stageSql = "#" + stage;
+		final boolean manage = option.isUseTransaction() && connection.getAutoCommit();
+		boolean created = false;
+		Throwable failure = null;
+		SQLException cleanupFailure = null;
+		try {
+			if (manage)
+				connection.setAutoCommit(false);
+			try (var statement = connection.createStatement()) {
+				statement.execute(
+						"SELECT " + list(staged, null) + " INTO " + stageSql + " FROM " + target + " WHERE 1 = 0");
+				created = true;
+			}
+			BulkInsertResolver.resolve(dialect).execute(connection, stagingTable(table, stage, staged),
+					bulkOption(option.getBulkOption()));
+			final long affected;
+			try (var statement = connection.createStatement()) {
+				affected = statement.executeUpdate(mergeSql(target, stageSql, keys, staged, updates, option));
+			}
+			if (manage)
+				connection.commit();
+			return affected;
+		} catch (SQLException | RuntimeException e) {
+			failure = e;
+			if (manage)
+				try {
+					connection.rollback();
+				} catch (SQLException x) {
+					e.addSuppressed(x);
+				}
+			throw e;
+		} finally {
+			if (created)
+				try (var statement = connection.createStatement()) {
+					statement.execute("DROP TABLE " + stageSql);
+				} catch (SQLException e) {
+					if (failure != null)
+						failure.addSuppressed(e);
+					else
+						cleanupFailure = e;
+				}
+			if (manage)
+				try {
+					connection.setAutoCommit(true);
+				} catch (SQLException e) {
+					if (failure != null)
+						failure.addSuppressed(e);
+					else if (cleanupFailure != null)
+						cleanupFailure.addSuppressed(e);
+					else
+						throw e;
+				}
+			if (failure == null && cleanupFailure != null)
+				throw cleanupFailure;
+		}
+	}
+
+	private String mergeSql(final String target, final String stage, final List<Column> keys, final List<Column> staged,
+			final List<Column> updates, final BulkUpsertOption option) {
+		final StringBuilder sql = new StringBuilder("MERGE INTO ").append(target).append(" AS target USING ")
+				.append(stage).append(" AS source ON (");
+		for (int i = 0; i < keys.size(); i++) {
+			if (i > 0)
+				sql.append(" AND ");
+			final String name = quote(keys.get(i).getName());
+			sql.append("target.").append(name).append(" = source.").append(name);
+		}
+		sql.append(')');
+		if (option.isUpdateWhenMatched() && !updates.isEmpty()) {
+			sql.append(" WHEN MATCHED THEN UPDATE SET ");
+			for (int i = 0; i < updates.size(); i++) {
+				if (i > 0)
+					sql.append(", ");
+				final String name = quote(updates.get(i).getName());
+				sql.append("target.").append(name).append(" = source.").append(name);
+			}
+		}
+		if (option.isInsertWhenNotMatched())
+			sql.append(" WHEN NOT MATCHED THEN INSERT (").append(list(staged, null)).append(") VALUES (")
+					.append(list(staged, "source")).append(')');
+		return sql.toString();
+	}
+
+	private List<Column> keys(final Table table, final BulkUpsertOption option) {
+		final List<String> names = new ArrayList<>(option.getKeyColumns());
+		if (names.isEmpty()) {
+			if (table.getPrimaryKeyConstraint() == null || table.getPrimaryKeyConstraint().getColumns().isEmpty())
+				throw new IllegalArgumentException(
+						"Bulk upsert requires keyColumns or a primary key: " + table.getName());
+			table.getPrimaryKeyConstraint().getColumns().forEach(c -> names.add(c.getName()));
+		}
+		final List<Column> result = columns(table, names, "key");
+		if (result.stream().anyMatch(Column::isIdentity) && !option.getBulkOption().isKeepIdentity())
+			throw new IllegalArgumentException("An identity key requires bulkOption.keepIdentity=true");
+		return result;
+	}
+
+	private List<Column> staged(final Table table, final BulkUpsertOption option, final List<Column> keys) {
+		final Set<String> keyNames = names(keys);
+		final List<Column> result = new ArrayList<>();
+		for (final Column column : table.getColumns())
+			if (!column.isHidden() && CommonUtils.isEmpty(column.getFormula()) && (!column.isIdentity()
+					|| option.getBulkOption().isKeepIdentity() || keyNames.contains(column.getName())))
+				result.add(column);
+		if (!names(result).containsAll(keyNames))
+			throw new IllegalArgumentException("Every key column must be writable to the staging table");
+		return result;
+	}
+
+	private List<Column> updates(final Table table, final BulkUpsertOption option, final List<Column> keys,
+			final List<Column> staged) {
+		final Set<String> keyNames = names(keys), stagedNames = names(staged);
+		if (!option.getUpdateColumns().isEmpty()) {
+			final List<Column> result = columns(table, option.getUpdateColumns(), "update");
+			for (final Column column : result)
+				if (keyNames.contains(column.getName()) || column.isIdentity()
+						|| !stagedNames.contains(column.getName()))
+					throw new IllegalArgumentException("Invalid bulk upsert update column: " + column.getName());
+			return result;
+		}
+		final List<Column> result = new ArrayList<>();
+		for (final Column column : staged)
+			if (!keyNames.contains(column.getName()) && !column.isIdentity())
+				result.add(column);
+		return result;
+	}
+
+	private List<Column> columns(final Table table, final List<String> names, final String role) {
+		final List<Column> result = new ArrayList<>();
+		final Set<String> unique = new HashSet<>();
+		for (final String name : names) {
+			final Column column = table.getColumns().get(name);
+			if (column == null || !unique.add(column.getName()))
+				throw new IllegalArgumentException("Invalid bulk upsert " + role + " column: " + name);
+			result.add(column);
+		}
+		return result;
+	}
+
+	private Table stagingTable(final Table source, final String name, final List<Column> staged) {
+		final Table table = new Table("#" + name) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public RowCollection getRows() {
+				return source.getRows();
+			}
+		};
+		final Set<String> included = names(staged);
+		for (final Column column : source.getColumns()) {
+			final Column copy = column.clone().setIdentity(false);
+			if (!included.contains(column.getName()))
+				copy.setHidden(true);
+			table.getColumns().add(copy);
+		}
+		return table;
+	}
+
+	private BulkOption bulkOption(final BulkOption source) {
+		final BulkOption option = source == null ? BulkOption.defaults() : source;
+		return BulkOption.builder().batchSize(option.getBatchSize()).bulkCopyTimeout(option.getBulkCopyTimeout())
+				.keepIdentity(false).keepNulls(true).build();
+	}
+
+	private String stageName(final BulkUpsertOption option) {
+		final String name = CommonUtils.isEmpty(option.getStagingTableName())
+				? "SQLAPP_UP_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
+				: option.getStagingTableName();
+		if (!name.matches("[A-Za-z][A-Za-z0-9_]{0,126}"))
+			throw new IllegalArgumentException("Invalid Sybase ASE stagingTableName: " + name);
+		return name;
+	}
+
+	private Set<String> names(final List<Column> columns) {
+		final Set<String> result = new HashSet<>();
+		columns.forEach(c -> result.add(c.getName()));
+		return result;
+	}
+
+	private String list(final List<Column> columns, final String alias) {
+		final StringBuilder result = new StringBuilder();
+		for (int i = 0; i < columns.size(); i++) {
+			if (i > 0)
+				result.append(", ");
+			if (alias != null)
+				result.append(alias).append('.');
+			result.append(quote(columns.get(i).getName()));
+		}
+		return result.toString();
+	}
+
+	private String quote(final String name) {
+		return dialect.quote(name);
+	}
+}

@@ -113,6 +113,15 @@ and later support the required `MERGE` statement. The executor joins an
 existing transaction or manages one for an auto-commit connection and removes
 the temporary table after success or failure.
 
+Sybase ASE uses a connection-local `#` temporary table populated by the
+existing jTDS JDBC batch provider, followed by one `MERGE`. The temporary table
+is derived from the target projection and intentionally has no identity
+property, so staging never toggles `identity_insert`; explicit identity values
+are applied only by the final `MERGE`. This implementation requires an ASE
+version supporting `MERGE` and is tested with ASE 16.0 SP03. The executor joins
+an existing transaction or manages one for an auto-commit connection and drops
+the local table after success or failure.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and

@@ -22,6 +22,11 @@ module com.sqlapp.core.sybase {
 	requires java.sql;
 	requires com.sqlapp.core;
 	exports com.sqlapp.data.db.dialect.sybase;
+	exports com.sqlapp.data.db.dialect.sybase.bulk;
 	exports com.sqlapp.data.db.dialect.sybase.metadata;
 	exports com.sqlapp.data.db.dialect.sybase.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider
+		with com.sqlapp.data.db.dialect.sybase.bulk.SybaseBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider
+		with com.sqlapp.data.db.dialect.sybase.bulk.SybaseBulkUpsertProvider;
 }

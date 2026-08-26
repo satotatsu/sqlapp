@@ -7,11 +7,18 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.sybase.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 class SybaseBulkInsertProviderTest {
 	@Test
 	void resolvesSybaseProvider() {
 		assertInstanceOf(SybaseBulkInsertExecutor.class,
 				BulkInsertResolver.resolve(DialectHolder.defaultDialect));
+	}
+
+	@Test
+	void resolvesSybaseUpsertProvider() {
+		assertInstanceOf(SybaseBulkUpsertExecutor.class,
+				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
 	}
 }
