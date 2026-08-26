@@ -26,4 +26,6 @@ module com.sqlapp.core.sqlite {
 	exports com.sqlapp.data.db.dialect.sqlite.resolver;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.sqlite.bulk.SqliteBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.sqlite.bulk.SqliteBulkUpsertProvider;
 }
