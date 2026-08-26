@@ -23,6 +23,9 @@ module com.sqlapp.core.mariadb {
 	requires com.sqlapp.core;
 	requires com.sqlapp.core.mysql;
 	exports com.sqlapp.data.db.dialect.mariadb;
+	exports com.sqlapp.data.db.dialect.mariadb.bulk;
 	exports com.sqlapp.data.db.dialect.mariadb.metadata;
 	exports com.sqlapp.data.db.dialect.mariadb.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.mariadb.bulk.MariadbBulkInsertProvider;
 }
