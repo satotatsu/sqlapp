@@ -97,6 +97,14 @@ the shared JDBC batch executor and Jaybird. Normal upsert uses Firebird's
 NOT EXISTS`. An auto-commit connection is temporarily wrapped in one
 transaction when `useTransaction` is enabled.
 
+SQLite does not require a staging table. Rows are consumed incrementally by
+the shared JDBC batch executor and Xerial JDBC. Normal upsert uses `INSERT ...
+ON CONFLICT ... DO UPDATE`, insert-only operation uses `DO NOTHING`, and
+update-only operation uses batched `UPDATE`. This requires SQLite 3.24.0 or
+later; sqlapp currently tests it with the Xerial driver bundled by the SQLite
+dialect module. An auto-commit connection is temporarily wrapped in one
+transaction when `useTransaction` is enabled.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and
