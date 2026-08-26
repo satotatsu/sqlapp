@@ -238,6 +238,11 @@ public class Oracle extends Dialect {
 		return true;
 	}
 
+	@Override
+	public boolean supportsMerge() {
+		return true;
+	}
+
 	/**
 	 * ROWNUM句のサポート
 	 */
