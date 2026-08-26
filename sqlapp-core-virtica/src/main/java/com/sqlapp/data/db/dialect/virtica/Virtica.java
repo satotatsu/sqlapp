@@ -153,6 +153,11 @@ public class Virtica extends Dialect {
 	}
 
 	@Override
+	public boolean supportsMerge() {
+		return true;
+	}
+
+	@Override
 	public boolean supportsIdentity() {
 		return true;
 	}
