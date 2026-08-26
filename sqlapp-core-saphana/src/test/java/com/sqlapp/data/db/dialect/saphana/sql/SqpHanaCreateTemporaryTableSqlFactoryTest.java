@@ -63,7 +63,7 @@ public class SqpHanaCreateTemporaryTableSqlFactoryTest extends AbstractSapHanaSq
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				CREATE LOCAL TABLE "#tableA"
+				CREATE LOCAL TEMPORARY TABLE "#tableA"
 				(
 					  "cola" INTEGER
 					, "colb" BIGINT

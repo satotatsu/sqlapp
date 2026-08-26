@@ -49,7 +49,7 @@ public class SapHanaBulkUpsertExecutor implements BulkUpsertExecutor {
 		try {
 			if (manage) connection.setAutoCommit(false);
 			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE LOCAL TABLE " + stageSql + " AS (SELECT "
+				statement.execute("CREATE LOCAL TEMPORARY TABLE " + stageSql + " AS (SELECT "
 						+ list(staged, null) + " FROM " + target + " WHERE 1 = 0) WITH NO DATA");
 				created = true;
 			}
