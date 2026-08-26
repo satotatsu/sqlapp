@@ -50,8 +50,10 @@ public class Db2BulkUpsertExecutor implements BulkUpsertExecutor {
 						+ " WHERE 1 = 0) WITH NO DATA ON COMMIT PRESERVE ROWS NOT LOGGED");
 			}
 			scope.addCleanupSql("DROP TABLE " + stageSql);
-			BulkInsertResolver.resolve(dialect).execute(connection,
-					plan.createStagingTable(stage), stagingBulkOption(option.getBulkOption()));
+			final Table stagingTable = plan.createStagingTable(stage)
+					.setSchemaName("SESSION");
+			BulkInsertResolver.resolve(dialect).execute(connection, stagingTable,
+					stagingBulkOption(option.getBulkOption()));
 			final long affected;
 			try (var statement = connection.createStatement()) {
 				affected = statement.executeUpdate(mergeSql(target, stageSql, keys,

@@ -13,10 +13,10 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertExecutionScope;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
-import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** Informix bulk upsert using a session temporary table and MERGE. */
@@ -39,49 +39,26 @@ public class InformixBulkUpsertExecutor implements BulkUpsertExecutor {
 		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stageName(option);
 		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
-		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(connection,
-				option.isUseTransaction());
-		boolean created = false;
-		Throwable failure = null;
-		SQLException cleanupFailure = null;
-		try {
+		try (var scope = BulkUpsertExecutionScope.begin(connection,
+				option.isUseTransaction())) {
+			try {
 			try (var statement = connection.createStatement()) {
 				statement.execute("SELECT " + list(staged, null) + " FROM " + target + " WHERE 1 = 0 INTO TEMP "
 						+ quote(stage) + " WITH NO LOG");
-				created = true;
 			}
+			scope.addCleanupSql("DROP TABLE " + quote(stage));
 			BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
 					bulkOption(option.getBulkOption()));
 			final long affected;
 			try (var statement = connection.createStatement()) {
 				affected = statement.executeUpdate(mergeSql(target, quote(stage), keys, staged, updates, option));
 			}
-			transaction.commit();
+			scope.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
-			failure = e;
-			transaction.rollback(e);
+			scope.rollback(e);
 			throw e;
-		} finally {
-			if (created)
-				try (var statement = connection.createStatement()) {
-					statement.execute("DROP TABLE " + quote(stage));
-				} catch (SQLException e) {
-					if (failure != null)
-						failure.addSuppressed(e);
-					else
-						cleanupFailure = e;
-				}
-			try { transaction.close(); } catch (SQLException e) {
-					if (failure != null)
-						failure.addSuppressed(e);
-					else if (cleanupFailure != null)
-						cleanupFailure.addSuppressed(e);
-					else
-						throw e;
 			}
-			if (failure == null && cleanupFailure != null)
-				throw cleanupFailure;
 		}
 	}
 

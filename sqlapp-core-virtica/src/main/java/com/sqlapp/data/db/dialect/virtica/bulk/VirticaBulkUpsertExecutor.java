@@ -12,10 +12,10 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.BulkUpsertExecutionScope;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
-import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.util.CommonUtils;
 
 /** Vertica bulk upsert using COPY, a local temporary table and MERGE. */
@@ -36,44 +36,21 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 				updates = plan.getUpdateColumns();
 		final String stage = stageName(o), stageSql = quote(stage),
 				target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
-		final BulkUpsertTransaction transaction = BulkUpsertTransaction.begin(c, o.isUseTransaction());
-		boolean created = false;
-		Throwable failure = null;
-		SQLException cleanup = null;
-		try {
+		try (var scope = BulkUpsertExecutionScope.begin(c, o.isUseTransaction())) {
+			try {
 			try (var s = c.createStatement()) {
 				s.execute("CREATE LOCAL TEMPORARY TABLE " + stageSql + " ON COMMIT PRESERVE ROWS AS SELECT "
 						+ list(staged, null) + " FROM " + target + " WHERE 1 = 0");
-				created = true;
 			}
+			scope.addCleanupSql("DROP TABLE " + stageSql);
 			BulkInsertResolver.resolve(dialect).execute(c, plan.createStagingTable(stage), o.getBulkOption());
 			final long affected = apply(c, target, stageSql, keys, staged, updates, o);
-			transaction.commit();
+			scope.commit();
 			return affected;
 		} catch (SQLException | RuntimeException e) {
-			failure = e;
-			transaction.rollback(e);
+			scope.rollback(e);
 			throw e;
-		} finally {
-			if (created)
-				try (var s = c.createStatement()) {
-					s.execute("DROP TABLE " + stageSql);
-				} catch (SQLException e) {
-					if (failure != null)
-						failure.addSuppressed(e);
-					else
-						cleanup = e;
-				}
-			try { transaction.close(); } catch (SQLException e) {
-					if (failure != null)
-						failure.addSuppressed(e);
-					else if (cleanup != null)
-						cleanup.addSuppressed(e);
-					else
-						throw e;
 			}
-			if (failure == null && cleanup != null)
-				throw cleanup;
 		}
 	}
 
