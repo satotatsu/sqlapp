@@ -42,6 +42,13 @@ for the target merge. The executor joins an existing JDBC transaction, or
 temporarily manages one when the connection is in auto-commit mode. Staging
 tables are dropped after success or failure.
 
+PostgreSQL 9.5 and later use a temporary table, JDBC `CopyManager`, and
+`INSERT ... SELECT ... ON CONFLICT`. This deliberately uses the 9.5 syntax on
+newer servers as well, preserving the supported-version range instead of
+requiring PostgreSQL 15 `MERGE`. Update-only operation uses `UPDATE ... FROM`.
+Explicit identity input uses `OVERRIDING SYSTEM VALUE`; generated identities
+are omitted by default. The same transaction and staging cleanup rules apply.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and

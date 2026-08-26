@@ -24,4 +24,8 @@ module com.sqlapp.core.postgres {
 	exports com.sqlapp.data.db.dialect.postgres;
 	exports com.sqlapp.data.db.dialect.postgres.metadata;
 	exports com.sqlapp.data.db.dialect.postgres.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertProvider;
 }
