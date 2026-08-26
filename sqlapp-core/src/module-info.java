@@ -76,4 +76,6 @@ module com.sqlapp.core {
 	exports com.sqlapp.util.function;
 	exports com.sqlapp.util.iterator;
 	exports com.sqlapp.util.xml;
+	uses com.sqlapp.jdbc.bulk.BulkInsertProvider;
+	uses com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 }

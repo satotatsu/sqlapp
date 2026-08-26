@@ -24,4 +24,8 @@ module com.sqlapp.core.sqlserver {
 	exports com.sqlapp.data.db.dialect.sqlserver;
 	exports com.sqlapp.data.db.dialect.sqlserver.metadata;
 	exports com.sqlapp.data.db.dialect.sqlserver.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.sqlserver.bulk.SqlServerBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.sqlserver.bulk.SqlServerBulkUpsertProvider;
 }

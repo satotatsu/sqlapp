@@ -16,6 +16,32 @@ long inserted = BulkInsertResolver.execute(connection, table,
 The source is `table.getRows()`, including a lazy `RowIteratorHandler` when one
 is configured. Iterators are closed after completion or failure.
 
+## Bulk upsert
+
+`BulkUpsertResolver` performs a set-oriented upsert by creating a staging
+table, loading it through the existing bulk-insert provider, and applying the
+staged rows to the target. The target primary key is the default match key;
+`keyColumns` can select another unique key. By default every non-key,
+non-generated input column is updated and every missing row is inserted.
+
+```java
+long affected = BulkUpsertResolver.execute(connection, table,
+        BulkUpsertOption.builder()
+                .keyColumn("EXTERNAL_ID")
+                .updateColumn("NAME")
+                .updateColumn("AMOUNT")
+                .bulkOption(BulkOption.builder().batchSize(10_000).build())
+                .build());
+```
+
+SQL Server 2008 and later use a connection-local temporary table,
+`SQLServerBulkCopy`, and `MERGE ... WITH (HOLDLOCK)`. Generated identity
+columns are omitted by default. An identity match or insert requires
+`bulkOption.keepIdentity=true`, in which case `IDENTITY_INSERT` is enabled only
+for the target merge. The executor joins an existing JDBC transaction, or
+temporarily manages one when the connection is in auto-commit mode. Staging
+tables are dropped after success or failure.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and
