@@ -208,8 +208,9 @@ public final class BulkUpsertPlan {
 				else if (strategy == BulkUpsertDuplicateKeyStrategy.KEEP_LAST) retained.put(key, row);
 				else {
 					final Row selected = selector.select(current, row);
-					if (selected == null)
-						throw new IllegalArgumentException("duplicateRowSelector returned null at source row " + rowNumber);
+					if (selected != current && selected != row)
+						throw new IllegalArgumentException("duplicateRowSelector must return retained or candidate at source row "
+								+ rowNumber);
 					retained.put(key, selected);
 				}
 			}

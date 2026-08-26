@@ -54,6 +54,16 @@ class BulkUpsertPlanTest {
 		assertEquals(false, rows.hasNext());
 	}
 
+	@Test
+	void customSelectorCannotReplaceTheKeyedRow() {
+		final Table table = tableWithDuplicateKeys();
+		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.builder()
+				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+				.duplicateRowSelector((retained, candidate) -> new com.sqlapp.data.schemas.Row())
+				.build()).createStagingTable("stage").getRows().iterator();
+		assertThrows(IllegalArgumentException.class, rows::hasNext);
+	}
+
 	private static Table tableWithDuplicateKeys() {
 		final Table table = new Table("target");
 		final Column id = new Column("id").setDataType(DataType.INT);

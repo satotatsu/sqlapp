@@ -100,61 +100,6 @@ public class SapHanaBulkUpsertExecutor implements BulkUpsertExecutor {
 		return sql.toString();
 	}
 
-	private List<Column> keys(final Table table, final BulkUpsertOption option) {
-		final List<String> names=new ArrayList<>(option.getKeyColumns());
-		if (names.isEmpty()) {
-			if (table.getPrimaryKeyConstraint()==null || table.getPrimaryKeyConstraint().getColumns().isEmpty())
-				throw new IllegalArgumentException("Bulk upsert requires keyColumns or a primary key: "+table.getName());
-			table.getPrimaryKeyConstraint().getColumns().forEach(c->names.add(c.getName()));
-		}
-		final List<Column> result=columns(table,names,"key");
-		if (result.stream().anyMatch(Column::isIdentity) && !option.getBulkOption().isKeepIdentity())
-			throw new IllegalArgumentException("An identity key requires bulkOption.keepIdentity=true");
-		return result;
-	}
-
-	private List<Column> staged(final Table table, final BulkUpsertOption option, final List<Column> keys) {
-		final Set<String> keyNames=names(keys); final List<Column> result=new ArrayList<>();
-		for (final Column c:table.getColumns()) if (!c.isHidden() && CommonUtils.isEmpty(c.getFormula())
-				&& (!c.isIdentity() || option.getBulkOption().isKeepIdentity() || keyNames.contains(c.getName()))) result.add(c);
-		if (!names(result).containsAll(keyNames))
-			throw new IllegalArgumentException("Every key column must be writable to the staging table");
-		return result;
-	}
-
-	private List<Column> updates(final Table table, final BulkUpsertOption option,
-			final List<Column> keys, final List<Column> staged) {
-		final Set<String> keyNames=names(keys), stagedNames=names(staged);
-		if (!option.getUpdateColumns().isEmpty()) {
-			final List<Column> result=columns(table,option.getUpdateColumns(),"update");
-			for (final Column c:result) if (keyNames.contains(c.getName()) || c.isIdentity() || !stagedNames.contains(c.getName()))
-				throw new IllegalArgumentException("Invalid bulk upsert update column: "+c.getName());
-			return result;
-		}
-		final List<Column> result=new ArrayList<>();
-		for (final Column c:staged) if (!keyNames.contains(c.getName()) && !c.isIdentity()) result.add(c);
-		return result;
-	}
-
-	private List<Column> columns(final Table table, final List<String> names, final String role) {
-		final List<Column> result=new ArrayList<>(); final Set<String> unique=new HashSet<>();
-		for (final String name:names) {
-			final Column c=table.getColumns().get(name);
-			if (c==null || !unique.add(c.getName())) throw new IllegalArgumentException("Invalid bulk upsert "+role+" column: "+name);
-			result.add(c);
-		}
-		return result;
-	}
-
-	private Table stagingTable(final Table source, final String name, final List<Column> staged) {
-		final Table table=new Table("#"+name) { private static final long serialVersionUID=1L;
-			@Override public RowCollection getRows(){ return source.getRows(); } };
-		final Set<String> included=names(staged);
-		for (final Column c:source.getColumns()) { final Column copy=c.clone().setIdentity(false);
-			if (!included.contains(c.getName())) copy.setHidden(true); table.getColumns().add(copy); }
-		return table;
-	}
-
 	private BulkOption bulkOption(final BulkOption source) {
 		final BulkOption o=source==null?BulkOption.defaults():source;
 		return BulkOption.builder().batchSize(o.getBatchSize()).bulkCopyTimeout(o.getBulkCopyTimeout())

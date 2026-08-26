@@ -15,6 +15,7 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
+import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 import com.sqlapp.util.CommonUtils;
 
@@ -56,25 +57,15 @@ public class SqliteBulkUpsertExecutor implements BulkUpsertExecutor {
 				return sql;
 			}
 		};
-		final boolean manage = o.isUseTransaction() && connection.getAutoCommit();
-		try {
-			if (manage)
-				connection.setAutoCommit(false);
+		try (var transaction = BulkUpsertTransaction.begin(connection, o.isUseTransaction())) {
+			try {
 			final long affected = batch.execute(connection, plan.createStagingTable(table.getName()), o.getBulkOption());
-			if (manage)
-				connection.commit();
+			transaction.commit();
 			return affected;
-		} catch (SQLException | RuntimeException e) {
-			if (manage)
-				try {
-					connection.rollback();
-				} catch (SQLException x) {
-					e.addSuppressed(x);
-				}
-			throw e;
-		} finally {
-			if (manage)
-				connection.setAutoCommit(true);
+			} catch (SQLException | RuntimeException e) {
+				transaction.rollback(e);
+				throw e;
+			}
 		}
 	}
 
@@ -113,60 +104,6 @@ public class SqliteBulkUpsertExecutor implements BulkUpsertExecutor {
 				s.append(" AND ");
 			s.append(quote(keys.get(i).getName())).append(" = ?");
 		}
-	}
-
-	private List<Column> keys(final Table t, final BulkUpsertOption o) {
-		final List<String> n = new ArrayList<>(o.getKeyColumns());
-		if (n.isEmpty()) {
-			if (t.getPrimaryKeyConstraint() == null || t.getPrimaryKeyConstraint().getColumns().isEmpty())
-				throw new IllegalArgumentException("Bulk upsert requires keyColumns or a primary key: " + t.getName());
-			t.getPrimaryKeyConstraint().getColumns().forEach(c -> n.add(c.getName()));
-		}
-		final List<Column> r = columns(t, n, "key");
-		if (r.stream().anyMatch(Column::isIdentity) && !o.getBulkOption().isKeepIdentity())
-			throw new IllegalArgumentException("An identity key requires bulkOption.keepIdentity=true");
-		return r;
-	}
-
-	private List<Column> writable(final Table t, final BulkUpsertOption o, final List<Column> keys) {
-		final Set<String> kn = names(keys);
-		final List<Column> r = new ArrayList<>();
-		for (final Column c : t.getColumns())
-			if (!c.isHidden() && CommonUtils.isEmpty(c.getFormula())
-					&& (!c.isIdentity() || o.getBulkOption().isKeepIdentity() || kn.contains(c.getName())))
-				r.add(c);
-		if (!names(r).containsAll(kn))
-			throw new IllegalArgumentException("Every key column must be writable");
-		return r;
-	}
-
-	private List<Column> updates(final Table t, final BulkUpsertOption o, final List<Column> keys,
-			final List<Column> writable) {
-		final Set<String> kn = names(keys), wn = names(writable);
-		if (!o.getUpdateColumns().isEmpty()) {
-			final List<Column> r = columns(t, o.getUpdateColumns(), "update");
-			for (final Column c : r)
-				if (kn.contains(c.getName()) || c.isIdentity() || !wn.contains(c.getName()))
-					throw new IllegalArgumentException("Invalid bulk upsert update column: " + c.getName());
-			return r;
-		}
-		final List<Column> r = new ArrayList<>();
-		for (final Column c : writable)
-			if (!kn.contains(c.getName()) && !c.isIdentity())
-				r.add(c);
-		return r;
-	}
-
-	private List<Column> columns(final Table t, final List<String> names, final String role) {
-		final List<Column> r = new ArrayList<>();
-		final Set<String> u = new HashSet<>();
-		for (final String n : names) {
-			final Column c = t.getColumns().get(n);
-			if (c == null || !u.add(c.getName()))
-				throw new IllegalArgumentException("Invalid bulk upsert " + role + " column: " + n);
-			r.add(c);
-		}
-		return r;
 	}
 
 	private Set<String> names(final List<Column> c) {

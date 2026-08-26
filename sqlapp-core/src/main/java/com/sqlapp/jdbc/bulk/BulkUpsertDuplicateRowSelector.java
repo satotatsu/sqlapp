@@ -8,6 +8,6 @@ import com.sqlapp.data.schemas.Row;
 /** Selects the row retained when two bulk-upsert source rows have one key. */
 @FunctionalInterface
 public interface BulkUpsertDuplicateRowSelector extends Serializable {
-	/** Returns the row to retain; returning {@code null} is invalid. */
+	/** Returns either {@code retained} or {@code candidate}; other results are invalid. */
 	Row select(Row retained, Row candidate);
 }
