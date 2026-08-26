@@ -23,7 +23,10 @@ module com.sqlapp.core.firebird {
 	requires com.sqlapp.core;
 
 	exports com.sqlapp.data.db.dialect.firebird;
+	exports com.sqlapp.data.db.dialect.firebird.bulk;
 	exports com.sqlapp.data.db.dialect.firebird.metadata;
 	exports com.sqlapp.data.db.dialect.firebird.resolver;
 	exports com.sqlapp.data.db.dialect.firebird.sql to com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.firebird.bulk.FirebirdBulkInsertProvider;
 }
