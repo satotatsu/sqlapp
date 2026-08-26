@@ -90,6 +90,13 @@ followed by an `INSERT ... SELECT ... WHERE NOT EXISTS` in the same transaction.
 Generated identity columns are omitted by default, and the local table is
 dropped after success or failure.
 
+Firebird does not require a staging table. Rows are consumed incrementally by
+the shared JDBC batch executor and Jaybird. Normal upsert uses Firebird's
+`UPDATE OR INSERT ... MATCHING` statement; update-only operation uses batched
+`UPDATE`, and insert-only operation uses batched `INSERT ... SELECT ... WHERE
+NOT EXISTS`. An auto-commit connection is temporarily wrapped in one
+transaction when `useTransaction` is enabled.
+
 ## SQL Server
 
 The SQL Server provider uses Microsoft JDBC `SQLServerBulkCopy` and
