@@ -23,21 +23,26 @@ public final class BulkMigrationJobExecutor {
 		final List<BulkMigrationJobTask> ordered = order(tasks);
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
 		for (final BulkMigrationJobTask task : ordered) {
-			final ChunkedBulkMigrationResult result;
-			if (task.getKeysetSource() != null) {
-				result = task.getCheckpointStore() == null
-						? ChunkedBulkMigrationExecutor.execute(targetConnection,
-								task.getKeysetSource(), task.getOptions())
-						: ChunkedBulkMigrationExecutor.execute(targetConnection,
-								task.getKeysetSource(), task.getOptions(), task.getCheckpointStore());
-			} else {
-				result = task.getCheckpointStore() == null
-						? ChunkedBulkMigrationExecutor.execute(targetConnection,
-								task.getSourceTable(), task.getOptions())
-						: ChunkedBulkMigrationExecutor.execute(targetConnection,
-								task.getSourceTable(), task.getOptions(), task.getCheckpointStore());
+			try {
+				final ChunkedBulkMigrationResult result;
+				if (task.getKeysetSource() != null) {
+					result = task.getCheckpointStore() == null
+							? ChunkedBulkMigrationExecutor.execute(targetConnection,
+									task.getKeysetSource(), task.getOptions())
+							: ChunkedBulkMigrationExecutor.execute(targetConnection,
+									task.getKeysetSource(), task.getOptions(), task.getCheckpointStore());
+				} else {
+					result = task.getCheckpointStore() == null
+							? ChunkedBulkMigrationExecutor.execute(targetConnection,
+									task.getSourceTable(), task.getOptions())
+							: ChunkedBulkMigrationExecutor.execute(targetConnection,
+									task.getSourceTable(), task.getOptions(), task.getCheckpointStore());
+				}
+				results.add(new BulkMigrationJobTaskResult(task.getTaskId(), result));
+			} catch (SQLException e) {
+				throw new BulkMigrationJobException(task.getTaskId(),
+						new BulkMigrationJobResult(List.copyOf(results)), e);
 			}
-			results.add(new BulkMigrationJobTaskResult(task.getTaskId(), result));
 		}
 		return new BulkMigrationJobResult(List.copyOf(results));
 	}

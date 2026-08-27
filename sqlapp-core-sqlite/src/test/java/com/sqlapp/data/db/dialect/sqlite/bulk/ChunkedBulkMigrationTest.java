@@ -22,6 +22,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
@@ -398,8 +399,14 @@ class ChunkedBulkMigrationTest {
 					.sourceTable(child).options(ChunkedBulkMigrationOption.builder()
 							.migrationId("fail-job-child-" + suffix).chunkSize(1).build()).build();
 
-			assertThrows(SQLException.class, () -> BulkMigrationJobExecutor.execute(connection,
-					List.of(childTask, parentTask)));
+			final var failure = assertThrows(BulkMigrationJobException.class,
+					() -> BulkMigrationJobExecutor.execute(connection,
+							List.of(childTask, parentTask)));
+			assertEquals("child", failure.getFailedTaskId());
+			assertEquals(List.of("parent"), failure.getCompletedResult().getTasks().stream()
+					.map(result -> result.getTaskId()).toList());
+			assertEquals(1, failure.getCompletedResult().getProcessedRows());
+			assertTrue(failure.getCause() instanceof SQLException);
 			child.getRows().get(0).put("PARENT_ID", 1);
 			final var resumed = BulkMigrationJobExecutor.execute(connection,
 					List.of(childTask, parentTask));

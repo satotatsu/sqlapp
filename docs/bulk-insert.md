@@ -392,4 +392,13 @@ retains the checkpoint mode and transaction guarantees of
 `ChunkedBulkMigrationExecutor`. The job itself is not one database transaction:
 if a later child task fails, earlier completed tasks remain committed. Rerunning
 the same job skips those completed task checkpoints and resumes the unfinished
-table. Tables without modeled foreign keys retain the input order.
+table. A failure is reported as `BulkMigrationJobException`; its failed task ID
+and completed job result allow callers to record precise job progress before
+retrying. The original SQL exception is retained as the cause. Tables without
+modeled foreign keys retain the input order.
+
+After migration, `BulkMigrationJobVerifier` applies the existing streaming
+chunk verification to every expected/actual table pair and returns aggregate
+row counts and the number of mismatched tasks. Verification tasks use the same
+Schema FK dependency order as migration tasks. Each expected and actual row
+stream must still use the same deterministic order within its table.
