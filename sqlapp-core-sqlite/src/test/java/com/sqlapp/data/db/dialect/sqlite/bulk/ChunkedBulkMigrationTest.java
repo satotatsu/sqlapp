@@ -24,6 +24,9 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
@@ -415,6 +418,106 @@ class ChunkedBulkMigrationTest {
 			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM FAIL_JOB_CHILD")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void multiTableJobRepairsMismatchesInDependencyOrder() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("PRAGMA foreign_keys = ON");
+			statement.execute("CREATE TABLE REPAIR_JOB_PARENT (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			statement.execute("CREATE TABLE REPAIR_JOB_CHILD (ID INTEGER PRIMARY KEY, PARENT_ID INTEGER, "
+					+ "TXT TEXT, FOREIGN KEY (PARENT_ID) REFERENCES REPAIR_JOB_PARENT(ID))");
+			statement.execute("INSERT INTO REPAIR_JOB_PARENT VALUES (1, 'old parent')");
+			statement.execute("INSERT INTO REPAIR_JOB_CHILD VALUES (10, 1, 'old child')");
+			final Table expectedParent = jobTable("REPAIR_JOB_PARENT", false);
+			expectedParent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table expectedChild = jobTable("REPAIR_JOB_CHILD", true);
+			expectedChild.getConstraints().addForeignKeyConstraint("FK_REPAIR_JOB_CHILD_PARENT",
+					new Column[] { expectedChild.getColumns().get("PARENT_ID") },
+					new Column[] { expectedParent.getColumns().get("ID") });
+			expectedChild.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+			});
+			final Table actualParent = jobTable("REPAIR_JOB_PARENT", false);
+			actualParent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "old parent"); });
+			final Table actualChild = jobTable("REPAIR_JOB_CHILD", true);
+			actualChild.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "old child");
+			});
+			final var option = BulkMigrationRepairOption.builder().chunkSize(1).build();
+			final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent")
+					.expected(expectedParent)
+					.verificationResult(BulkMigrationVerifier.verify(expectedParent, actualParent, 1))
+					.options(option).build();
+			final var childTask = BulkMigrationJobRepairTask.builder().taskId("child")
+					.expected(expectedChild)
+					.verificationResult(BulkMigrationVerifier.verify(expectedChild, actualChild, 1))
+					.options(option).build();
+
+			final var repaired = BulkMigrationJobRepairExecutor.execute(connection,
+					List.of(childTask, parentTask));
+
+			assertEquals(List.of("parent", "child"), repaired.getTasks().stream()
+					.map(result -> result.getTaskId()).toList());
+			assertEquals(2, repaired.getMismatchChunks());
+			assertEquals(2, repaired.getReplayedChunks());
+			assertEquals(2, repaired.getReplayedRows());
+			assertFalse(repaired.requiresManualReconciliation());
+			try (var resultSet = statement.executeQuery("SELECT p.TXT, c.TXT FROM REPAIR_JOB_PARENT p "
+					+ "JOIN REPAIR_JOB_CHILD c ON c.PARENT_ID = p.ID")) {
+				resultSet.next();
+				assertEquals("parent", resultSet.getString(1));
+				assertEquals("child", resultSet.getString(2));
+			}
+		}
+	}
+
+	@Test
+	void multiTableJobRepairReportsFailedTaskAndCompletedResults() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE REPAIR_FAIL_PARENT (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO REPAIR_FAIL_PARENT VALUES (1, 'old')");
+			final Table expectedParent = jobTable("REPAIR_FAIL_PARENT", false);
+			expectedParent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "new"); });
+			final Table actualParent = jobTable("REPAIR_FAIL_PARENT", false);
+			actualParent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "old"); });
+			final Table expectedChild = jobTable("REPAIR_FAIL_MISSING_CHILD", true);
+			expectedChild.getConstraints().addForeignKeyConstraint("FK_REPAIR_FAIL_CHILD_PARENT",
+					new Column[] { expectedChild.getColumns().get("PARENT_ID") },
+					new Column[] { expectedParent.getColumns().get("ID") });
+			expectedChild.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "new");
+			});
+			final Table actualChild = jobTable("REPAIR_FAIL_MISSING_CHILD", true);
+			actualChild.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "old");
+			});
+			final var option = BulkMigrationRepairOption.builder().chunkSize(1).build();
+			final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent")
+					.expected(expectedParent)
+					.verificationResult(BulkMigrationVerifier.verify(expectedParent, actualParent, 1))
+					.options(option).build();
+			final var childTask = BulkMigrationJobRepairTask.builder().taskId("child")
+					.expected(expectedChild)
+					.verificationResult(BulkMigrationVerifier.verify(expectedChild, actualChild, 1))
+					.options(option).build();
+
+			final var failure = assertThrows(BulkMigrationJobRepairException.class,
+					() -> BulkMigrationJobRepairExecutor.execute(connection,
+							List.of(childTask, parentTask)));
+
+			assertEquals("child", failure.getFailedTaskId());
+			assertEquals(List.of("parent"), failure.getCompletedResult().getTasks().stream()
+					.map(result -> result.getTaskId()).toList());
+			assertEquals(1, failure.getCompletedResult().getReplayedRows());
+			assertTrue(failure.getCause() instanceof SQLException);
+			try (var resultSet = statement.executeQuery("SELECT TXT FROM REPAIR_FAIL_PARENT")) {
+				resultSet.next();
+				assertEquals("new", resultSet.getString(1));
 			}
 		}
 	}

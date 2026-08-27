@@ -402,3 +402,11 @@ chunk verification to every expected/actual table pair and returns aggregate
 row counts and the number of mismatched tasks. Verification tasks use the same
 Schema FK dependency order as migration tasks. Each expected and actual row
 stream must still use the same deterministic order within its table.
+
+`BulkMigrationJobRepairExecutor` accepts the expected table and verification
+result for each task, then delegates mismatched chunks to the existing UPSERT
+repair executor in parent-before-child order. Its aggregate result reports
+replayed chunks and rows, affected rows, and tasks that still require manual
+reconciliation. The repair job is not atomic across tables. A SQL failure is
+reported as `BulkMigrationJobRepairException` with the failed task ID and all
+completed repair results; follow-up verification remains required.
