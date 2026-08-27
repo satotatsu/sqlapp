@@ -18,6 +18,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
+import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
@@ -153,6 +154,21 @@ class PostgresBulkUpsertTest {
 		}
 	}
 
+	@Test
+	void readsAfterACompositeJdbcKeyset() throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.keyset_source");
+			statement.execute("CREATE TABLE public.keyset_source ("
+					+ "\"KEY1\" INTEGER NOT NULL, \"KEY2\" INTEGER NOT NULL, "
+					+ "\"TXT\" TEXT, PRIMARY KEY (\"KEY1\", \"KEY2\"))");
+			statement.executeUpdate("INSERT INTO public.keyset_source VALUES "
+					+ "(1,1,'a'),(1,2,'b'),(2,1,'c'),(2,2,'d')");
+			BulkMigrationKeysetAssertions.assertCompositeResume(connection,
+					compositeKeysetTable("keyset_source", "public"));
+		}
+	}
+
 	private static int scalar(final java.sql.Statement statement, final String sql)
 			throws java.sql.SQLException {
 		try (var resultSet = statement.executeQuery(sql)) {
@@ -175,6 +191,17 @@ class PostgresBulkUpsertTest {
 		table.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY));
 		table.getColumns().add(new Column("tags").setDataType(DataType.ARRAY));
 		table.setPrimaryKey("target_pkey", code);
+		return table;
+	}
+
+	private static Table compositeKeysetTable(final String name, final String schema) {
+		final Table table = new Table(name).setSchemaName(schema);
+		final Column key1 = new Column("KEY1").setDataType(DataType.INT).setNotNull(true);
+		final Column key2 = new Column("KEY2").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(key1);
+		table.getColumns().add(key2);
+		table.getColumns().add(new Column("TXT").setDataType(DataType.LONGVARCHAR));
+		table.setPrimaryKey("keyset_source_pkey", key1, key2);
 		return table;
 	}
 }

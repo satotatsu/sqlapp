@@ -19,6 +19,7 @@ import org.testcontainers.mssqlserver.MSSQLServerContainer;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
+import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
@@ -171,6 +172,23 @@ class SqlServerBulkUpsertTest {
 		}
 	}
 
+	@Test
+	void readsAfterACompositeJdbcKeyset() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_KEYSET_SOURCE') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_KEYSET_SOURCE");
+			statement.execute("CREATE TABLE dbo.SQLAPP_KEYSET_SOURCE ("
+					+ "KEY1 INT NOT NULL, KEY2 INT NOT NULL, TXT NVARCHAR(20), "
+					+ "PRIMARY KEY (KEY1, KEY2))");
+			statement.executeUpdate("INSERT INTO dbo.SQLAPP_KEYSET_SOURCE VALUES "
+					+ "(1,1,'a'),(1,2,'b'),(2,1,'c'),(2,2,'d')");
+			BulkMigrationKeysetAssertions.assertCompositeResume(connection,
+					compositeKeysetTable());
+		}
+	}
+
 	private static Table createTable() {
 		final Table table = new Table("SQLAPP_BULK_UPSERT_TEST");
 		table.setSchemaName("dbo");
@@ -187,6 +205,17 @@ class SqlServerBulkUpsertTest {
 		table.getColumns().add(new Column("PAYLOAD")
 				.setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_TEST", code);
+		return table;
+	}
+
+	private static Table compositeKeysetTable() {
+		final Table table = new Table("SQLAPP_KEYSET_SOURCE").setSchemaName("dbo");
+		final Column key1 = new Column("KEY1").setDataType(DataType.INT).setNotNull(true);
+		final Column key2 = new Column("KEY2").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(key1);
+		table.getColumns().add(key2);
+		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(20));
+		table.setPrimaryKey("PK_SQLAPP_KEYSET_SOURCE", key1, key2);
 		return table;
 	}
 }
