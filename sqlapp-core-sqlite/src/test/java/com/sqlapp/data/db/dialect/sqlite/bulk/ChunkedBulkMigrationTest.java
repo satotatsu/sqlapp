@@ -22,6 +22,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
@@ -220,6 +222,104 @@ class ChunkedBulkMigrationTest {
 			assertEquals(Integer.valueOf(1), first.get("KEY2"));
 			assertEquals("d", resumed.next().get("TXT"));
 			assertFalse(resumed.hasNext());
+		}
+	}
+
+	@Test
+	void repairsOnlyExpectedRowsFromMismatchedChunksAndReverifies() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE REPAIR_TARGET (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table expected = table("REPAIR_TARGET");
+			final Table actual = table("REPAIR_TARGET");
+			for (int id = 1; id <= 4; id++) {
+				final int value = id;
+				expected.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", "value-" + value);
+				});
+				actual.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", value == 3 ? "wrong" : "value-" + value);
+				});
+			}
+			statement.executeUpdate("INSERT INTO REPAIR_TARGET VALUES "
+					+ "(1,'value-1'),(2,'value-2'),(3,'wrong'),(4,'value-4')");
+			final var verification = BulkMigrationVerifier.verify(expected, actual, 2);
+			assertEquals(1, verification.getMismatches().size());
+			assertEquals(1, verification.getMismatches().get(0).getIndex());
+
+			final var repaired = BulkMigrationRepairExecutor.execute(connection, expected,
+					verification, BulkMigrationRepairOption.builder().chunkSize(2).build());
+			assertEquals(1, repaired.getReplayedChunks());
+			assertEquals(2, repaired.getReplayedRows());
+			assertFalse(repaired.requiresManualReconciliation());
+
+			final Table after = table("REPAIR_TARGET");
+			try (var resultSet = statement.executeQuery(
+					"SELECT ID, TXT FROM REPAIR_TARGET ORDER BY ID")) {
+				while (resultSet.next()) {
+					after.getRows().add(row -> {
+						try {
+							row.put("ID", resultSet.getInt(1));
+							row.put("TXT", resultSet.getString(2));
+						} catch (SQLException e) {
+							throw new IllegalStateException(e);
+						}
+					});
+				}
+			}
+			assertTrue(BulkMigrationVerifier.verify(expected, after, 2).isMatch());
+		}
+	}
+
+	@Test
+	void rejectsRepairWhenExpectedRowsChangedAfterVerification() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CHANGED_REPAIR_TARGET (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table expected = table("CHANGED_REPAIR_TARGET");
+			final Table actual = table("CHANGED_REPAIR_TARGET");
+			expected.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "expected"); });
+			actual.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "wrong"); });
+			statement.executeUpdate("INSERT INTO CHANGED_REPAIR_TARGET VALUES (1,'wrong')");
+			final var verification = BulkMigrationVerifier.verify(expected, actual, 1);
+			expected.getRows().get(0).put("TXT", "changed-after-verification");
+
+			assertThrows(IllegalStateException.class, () -> BulkMigrationRepairExecutor.execute(
+					connection, expected, verification,
+					BulkMigrationRepairOption.builder().chunkSize(1).build()));
+			try (var resultSet = statement.executeQuery(
+					"SELECT TXT FROM CHANGED_REPAIR_TARGET WHERE ID = 1")) {
+				resultSet.next();
+				assertEquals("wrong", resultSet.getString(1));
+			}
+		}
+	}
+
+	@Test
+	void repairReportsTargetOnlyRowsWithoutDeletingThem() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE EXTRA_REPAIR_TARGET (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table expected = table("EXTRA_REPAIR_TARGET");
+			final Table actual = table("EXTRA_REPAIR_TARGET");
+			expected.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			actual.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "wrong"); });
+			actual.getRows().add(row -> { row.put("ID", 99); row.put("TXT", "target-only"); });
+			statement.executeUpdate("INSERT INTO EXTRA_REPAIR_TARGET VALUES "
+					+ "(1,'wrong'),(99,'target-only')");
+
+			final var verification = BulkMigrationVerifier.verify(expected, actual, 10);
+			final var result = BulkMigrationRepairExecutor.execute(connection, expected,
+					verification, BulkMigrationRepairOption.builder().chunkSize(10).build());
+			assertTrue(result.requiresManualReconciliation());
+			assertEquals(List.of(0L), result.getChunksWithExtraActualRows());
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM EXTRA_REPAIR_TARGET WHERE ID = 99")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
 		}
 	}
 

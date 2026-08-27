@@ -219,7 +219,7 @@ public final class ChunkedBulkMigrationExecutor {
 		}
 	}
 
-	private static BulkUpsertOption copyWithKeys(final BulkUpsertOption option,
+	static BulkUpsertOption copyWithKeys(final BulkUpsertOption option,
 			final List<String> keys) {
 		final var builder = BulkUpsertOption.builder().keyColumns(keys)
 				.updateColumns(option.getUpdateColumns())
@@ -233,7 +233,7 @@ public final class ChunkedBulkMigrationExecutor {
 		return builder.build();
 	}
 
-	private static List<String> primaryKeyNames(final Table table) {
+	static List<String> primaryKeyNames(final Table table) {
 		if (table.getPrimaryKeyConstraint() == null) {
 			return List.of();
 		}
@@ -241,7 +241,7 @@ public final class ChunkedBulkMigrationExecutor {
 				.map(column -> column.getName()).toList();
 	}
 
-	private static Table chunkTable(final Table source, final List<Row> rows) {
+	static Table chunkTable(final Table source, final List<Row> rows) {
 		final Table chunk = new Table(source.getName()).setCatalogName(source.getCatalogName())
 				.setSchemaName(source.getSchemaName());
 		for (final Column column : source.getColumns()) {

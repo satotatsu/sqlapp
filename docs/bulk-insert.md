@@ -331,3 +331,34 @@ Verification uses expected-table column order and resolves actual columns by
 name. Both row streams must use the same deterministic ordering. Chunk hashes
 are intended to detect migration differences; they are not authentication or
 digital-signature values.
+
+### Repairing mismatched chunks
+
+`BulkMigrationRepairExecutor` replays only the expected-side rows from chunks
+reported by `BulkMigrationVerificationResult.getMismatches()`. Repair uses
+UPSERT, so changed target values and missing target rows can be corrected
+without rewriting chunks whose hashes already match.
+
+```java
+var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
+var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
+		verification, BulkMigrationRepairOption.builder()
+				.chunkSize(10_000)
+				.build());
+var after = BulkMigrationVerifier.verify(expected, rereadTarget, 10_000);
+```
+
+The repair chunk size must be identical to the verification chunk size. By
+default, each replay asks the selected UPSERT provider to use a transaction.
+The executor validates each selected expected hash before writing it and stops
+if the source changed after verification. Already repaired chunks may remain
+committed if a later chunk fails; callers that require a wider transaction may
+provide a non-auto-commit connection, subject to the selected provider's
+transaction capabilities.
+
+Repair never deletes target rows. A chunk with more actual than expected rows,
+or one with no corresponding expected rows, is reported by
+`requiresManualReconciliation()`. Positional chunk hashing can also cause one
+missing or extra row to shift later chunk boundaries. Always reread and verify
+the target after repair; use key-aware reconciliation before deleting any
+remaining target-only rows.
