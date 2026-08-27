@@ -23,6 +23,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
@@ -31,7 +33,9 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobStatusInspector;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
@@ -47,6 +51,72 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 class ChunkedBulkMigrationTest {
+	@Test
+	void jdbcJobStatusAndResetKeepMigratedRowsAndAllowUpsertRestart() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE JOB_RESET (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("JOB_RESET");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
+			final var options = ChunkedBulkMigrationOption.builder().migrationId("job-reset")
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.chunkSize(1).build();
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					options.getCheckpointTableName());
+			final var task = BulkMigrationJobTask.builder().taskId("reset")
+					.sourceTable(source).options(options).checkpointStore(store).build();
+			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+
+			final var first = BulkMigrationJobExecutor.executePlan(connection, plan);
+			assertEquals(2, first.getProcessedRows());
+			assertEquals(BulkMigrationJobTaskState.COMPLETE,
+					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
+
+			final var reset = BulkMigrationJobCheckpointManager.reset(plan, plan.getFingerprint());
+			assertEquals(List.of("reset"), reset.getResetTaskIds());
+			assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM JOB_RESET")) {
+				resultSet.next();
+				assertEquals(2, resultSet.getInt(1));
+			}
+
+			final var restarted = BulkMigrationJobExecutor.executePlan(connection, plan);
+			assertEquals(2, restarted.getProcessedRows());
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM JOB_RESET")) {
+				resultSet.next();
+				assertEquals(2, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void checkpointResetDoesNotMakeInsertRestartSafe() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE INSERT_RESET (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("INSERT_RESET");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			final var options = ChunkedBulkMigrationOption.builder().migrationId("insert-reset")
+					.mode(BulkMigrationMode.INSERT).chunkSize(1).build();
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					options.getCheckpointTableName());
+			final var task = BulkMigrationJobTask.builder().taskId("insert")
+					.sourceTable(source).options(options).checkpointStore(store).build();
+			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+			BulkMigrationJobExecutor.executePlan(connection, plan);
+			BulkMigrationJobCheckpointManager.reset(plan, plan.getFingerprint());
+
+			assertThrows(BulkMigrationJobException.class,
+					() -> BulkMigrationJobExecutor.executePlan(connection, plan));
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM INSERT_RESET")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
 	@Test
 	void approvedJobPlanRejectsSchemaMutationBeforeWriting() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
