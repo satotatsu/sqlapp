@@ -15,6 +15,7 @@ import org.testcontainers.oracle.OracleContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
@@ -34,6 +35,24 @@ class OracleBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(ORACLE);
+	}
+
+	@Test
+	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
+		try (Connection connection = ORACLE.createConnection("");
+				var statement = connection.createStatement()) {
+			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_ORACLE"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_ORACLE "
+					+ "(CODE VARCHAR2(20) PRIMARY KEY, NAME VARCHAR2(100))");
+			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_ORACLE");
+			final Column code = new Column("CODE").setDataType(DataType.VARCHAR).setLength(20);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_ORACLE", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
+					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
+		}
 	}
 
 	@Test
