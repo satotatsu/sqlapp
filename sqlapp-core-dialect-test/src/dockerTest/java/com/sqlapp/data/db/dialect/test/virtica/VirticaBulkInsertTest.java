@@ -8,10 +8,12 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.Duration;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
@@ -47,7 +49,8 @@ class VirticaBulkInsertTest {
 	}
 
 	@Test
-	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
+	void databaseCheckpointRejectsTransactionBreakingStaging(
+			@TempDir final Path checkpointDirectory) throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS sqlapp_chunk_migration_vertica");
 			statement.execute("CREATE TABLE sqlapp_chunk_migration_vertica "
@@ -61,6 +64,9 @@ class VirticaBulkInsertTest {
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertRejected(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
+			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection,
+					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica",
+					checkpointDirectory);
 		}
 	}
 

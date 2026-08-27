@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.nio.file.Path;
 
+import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
@@ -103,6 +106,31 @@ public final class BulkMigrationTransactionAssertions {
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
 		assertEquals(0, count(connection, countSql));
+	}
+
+	public static void assertFileCheckpointCompletes(final Connection connection,
+			final Table table, final String codeColumn, final String nameColumn,
+			final String countSql, final Path checkpointDirectory) throws SQLException {
+		table.getRows().clear();
+		for (int i = 1; i <= 3; i++) {
+			final int value = i;
+			table.getRows().add(row -> {
+				row.put(codeColumn, "F" + value);
+				row.put(nameColumn, "file-" + value);
+			});
+		}
+		final String migrationId = "docker-file-" + java.util.UUID.randomUUID();
+		final var option = ChunkedBulkMigrationOption.builder()
+				.migrationId(migrationId).chunkSize(2)
+				.checkpointMode(BulkMigrationCheckpointMode.FILE).build();
+		final var store = new FileBulkMigrationCheckpointStore(checkpointDirectory);
+		final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option, store);
+		assertEquals(3, result.getProcessedRows());
+		assertEquals(2, result.getCompletedChunks());
+		assertEquals(3, count(connection, countSql));
+		assertTrue(store.load(migrationId).orElseThrow().isComplete());
+		assertTrue(ChunkedBulkMigrationExecutor.execute(connection, table, option, store)
+				.isAlreadyComplete());
 	}
 
 	private static int count(final Connection connection, final String sql) throws SQLException {

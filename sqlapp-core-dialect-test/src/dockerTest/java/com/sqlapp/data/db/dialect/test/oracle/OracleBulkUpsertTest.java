@@ -7,10 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.oracle.OracleContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
@@ -38,7 +40,8 @@ class OracleBulkUpsertTest {
 	}
 
 	@Test
-	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
+	void databaseCheckpointRejectsTransactionBreakingStaging(
+			@TempDir final Path checkpointDirectory) throws Exception {
 		try (Connection connection = ORACLE.createConnection("");
 				var statement = connection.createStatement()) {
 			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_ORACLE"); }
@@ -54,6 +57,10 @@ class OracleBulkUpsertTest {
 					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
 					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
+			statement.execute("DELETE FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
+			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection,
+					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE",
+					checkpointDirectory);
 		}
 	}
 
