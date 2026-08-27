@@ -27,6 +27,7 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 class ChunkedBulkMigrationTest {
@@ -184,6 +185,41 @@ class ChunkedBulkMigrationTest {
 					.processedRows(2).completedChunks(1).resumeToken("2").build();
 			store.save(checkpoint);
 			assertEquals(checkpoint, store.load("keyset").orElseThrow());
+		}
+	}
+
+	@Test
+	void jdbcKeysetSourceResumesAfterACompositeKey() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE COMPOSITE_SOURCE ("
+					+ "KEY1 INTEGER NOT NULL, KEY2 INTEGER NOT NULL, TXT TEXT, "
+					+ "PRIMARY KEY (KEY1, KEY2))");
+			statement.executeUpdate("INSERT INTO COMPOSITE_SOURCE VALUES "
+					+ "(1, 1, 'a'), (1, 2, 'b'), (2, 1, 'c'), (2, 2, 'd')");
+			final Table table = new Table("COMPOSITE_SOURCE");
+			final Column key1 = new Column("KEY1").setDataType(DataType.INT).setNotNull(true);
+			final Column key2 = new Column("KEY2").setDataType(DataType.INT).setNotNull(true);
+			table.getColumns().add(key1);
+			table.getColumns().add(key2);
+			table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR));
+			table.setPrimaryKey("PK_COMPOSITE_SOURCE", key1, key2);
+			final var source = new JdbcBulkMigrationKeysetSource(connection, table);
+
+			final Iterator<Row> all = source.iterator(null);
+			assertEquals(Integer.valueOf(1), all.next().get("KEY1"));
+			final Row cursorRow = all.next();
+			assertEquals(Integer.valueOf(2), cursorRow.get("KEY2"));
+			if (all instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+
+			final Iterator<Row> resumed = source.iterator(source.resumeToken(cursorRow));
+			final Row first = resumed.next();
+			assertEquals(Integer.valueOf(2), first.get("KEY1"));
+			assertEquals(Integer.valueOf(1), first.get("KEY2"));
+			assertEquals("d", resumed.next().get("TXT"));
+			assertFalse(resumed.hasNext());
 		}
 	}
 

@@ -232,11 +232,18 @@ should be encoded together in the token. Token encoding and database-specific
 `WHERE`/`ORDER BY` SQL belong to the source implementation.
 
 ```java
-BulkMigrationKeysetSource source = new CustomerKeysetSource(sourceConnection,
-        customerTable); // SELECT ... WHERE (key...) > token ORDER BY key...
+BulkMigrationKeysetSource source = new JdbcBulkMigrationKeysetSource(
+		sourceConnection, customerTable); // uses the complete primary key
 var result = ChunkedBulkMigrationExecutor.execute(targetConnection, source,
-        options);
+		options);
 ```
+
+`JdbcBulkMigrationKeysetSource` generates a portable lexicographic predicate
+for single or composite ascending keys and streams the `ResultSet`. Pass key
+column names explicitly when using a unique key other than the primary key.
+The default JSON token codec supports standard Schema column converters;
+provide a `BulkMigrationKeysetCodec` for vendor-specific key types or a custom
+token format.
 
 Count and keyset checkpoints cannot be interchanged after progress has been
 recorded. Changing key columns, ordering, collation or token format requires a
