@@ -362,3 +362,34 @@ or one with no corresponding expected rows, is reported by
 missing or extra row to shift later chunk boundaries. Always reread and verify
 the target after repair; use key-aware reconciliation before deleting any
 remaining target-only rows.
+
+## Multi-table migration jobs
+
+`BulkMigrationJobExecutor` groups table and keyset migrations into one ordered
+job result. Tasks are sorted with `TableOrder.CREATE`, the same Schema foreign
+key dependency sorter used by `GenerateDataInsertCommand`. Real and virtual
+foreign keys already attached to the Schema model therefore determine the
+parent-before-child order; job configuration does not duplicate dependency
+IDs.
+
+```java
+var customerTask = BulkMigrationJobTask.builder()
+		.taskId("customers")
+		.keysetSource(customerSource)
+		.options(customerOptions) // unique migrationId
+		.build();
+var orderTask = BulkMigrationJobTask.builder()
+		.taskId("orders")
+		.keysetSource(orderSource)
+		.options(orderOptions) // unique migrationId
+		.build();
+var job = BulkMigrationJobExecutor.execute(targetConnection,
+		List.of(orderTask, customerTask));
+```
+
+Every task must have a unique task ID and checkpoint migration ID. Each task
+retains the checkpoint mode and transaction guarantees of
+`ChunkedBulkMigrationExecutor`. The job itself is not one database transaction:
+if a later child task fails, earlier completed tasks remain committed. Rerunning
+the same job skips those completed task checkpoints and resumes the unfinished
+table. Tables without modeled foreign keys retain the input order.

@@ -22,6 +22,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
@@ -323,10 +325,109 @@ class ChunkedBulkMigrationTest {
 		}
 	}
 
+	@Test
+	void multiTableJobOrdersDependenciesAndResumesCompletedTasks() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("PRAGMA foreign_keys = ON");
+			statement.execute("CREATE TABLE JOB_PARENT (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			statement.execute("CREATE TABLE JOB_CHILD (ID INTEGER PRIMARY KEY, PARENT_ID INTEGER, "
+					+ "TXT TEXT, FOREIGN KEY (PARENT_ID) REFERENCES JOB_PARENT(ID))");
+			final Table parent = jobTable("JOB_PARENT", false);
+			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table child = jobTable("JOB_CHILD", true);
+			child.getConstraints().addForeignKeyConstraint("FK_JOB_CHILD_PARENT",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
+			});
+			final String suffix = java.util.UUID.randomUUID().toString();
+			final var parentTask = BulkMigrationJobTask.builder().taskId("parent")
+					.sourceTable(parent).options(ChunkedBulkMigrationOption.builder()
+							.migrationId("job-parent-" + suffix).chunkSize(1).build()).build();
+			final var childTask = BulkMigrationJobTask.builder().taskId("child")
+					.sourceTable(child)
+					.options(ChunkedBulkMigrationOption.builder()
+							.migrationId("job-child-" + suffix).chunkSize(1).build()).build();
+
+			final var first = BulkMigrationJobExecutor.execute(connection,
+					List.of(childTask, parentTask));
+			assertEquals(List.of("parent", "child"), first.getTasks().stream()
+					.map(result -> result.getTaskId()).toList());
+			assertEquals(2, first.getProcessedRows());
+			assertEquals(0, first.getAlreadyCompleteTasks());
+			final var resumed = BulkMigrationJobExecutor.execute(connection,
+					List.of(childTask, parentTask));
+			assertEquals(0, resumed.getProcessedRows());
+			assertEquals(2, resumed.getAlreadyCompleteTasks());
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM JOB_CHILD c "
+					+ "JOIN JOB_PARENT p ON p.ID = c.PARENT_ID")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void multiTableJobKeepsCompletedParentCheckpointAfterChildFailure() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("PRAGMA foreign_keys = ON");
+			statement.execute("CREATE TABLE FAIL_JOB_PARENT (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			statement.execute("CREATE TABLE FAIL_JOB_CHILD (ID INTEGER PRIMARY KEY, PARENT_ID INTEGER, "
+					+ "TXT TEXT, FOREIGN KEY (PARENT_ID) REFERENCES FAIL_JOB_PARENT(ID))");
+			final Table parent = jobTable("FAIL_JOB_PARENT", false);
+			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table child = jobTable("FAIL_JOB_CHILD", true);
+			child.getConstraints().addForeignKeyConstraint("FK_FAIL_JOB_CHILD_PARENT",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10);
+				row.put("PARENT_ID", 999);
+				row.put("TXT", "child");
+			});
+			final String suffix = java.util.UUID.randomUUID().toString();
+			final var parentTask = BulkMigrationJobTask.builder().taskId("parent")
+					.sourceTable(parent).options(ChunkedBulkMigrationOption.builder()
+							.migrationId("fail-job-parent-" + suffix).chunkSize(1).build()).build();
+			final var childTask = BulkMigrationJobTask.builder().taskId("child")
+					.sourceTable(child).options(ChunkedBulkMigrationOption.builder()
+							.migrationId("fail-job-child-" + suffix).chunkSize(1).build()).build();
+
+			assertThrows(SQLException.class, () -> BulkMigrationJobExecutor.execute(connection,
+					List.of(childTask, parentTask)));
+			child.getRows().get(0).put("PARENT_ID", 1);
+			final var resumed = BulkMigrationJobExecutor.execute(connection,
+					List.of(childTask, parentTask));
+			assertTrue(resumed.getTasks().get(0).getMigrationResult().isAlreadyComplete());
+			assertEquals(1, resumed.getProcessedRows());
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM FAIL_JOB_CHILD")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
 	private static Table table(final String name) {
 		final Table table = new Table(name);
 		final Column id = new Column("ID").setDataType(DataType.INT);
 		table.getColumns().add(id);
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR));
+		table.setPrimaryKey("PK_" + name, id);
+		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		}
 		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR));
 		table.setPrimaryKey("PK_" + name, id);
 		return table;

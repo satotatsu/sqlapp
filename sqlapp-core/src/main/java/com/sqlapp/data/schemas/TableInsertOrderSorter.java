@@ -74,9 +74,11 @@ public final class TableInsertOrderSorter {
 	private static <T> List<T> sortInternal(Collection<T> tables, Function<T, Table> func) {
 		Map<T, Integer> indegree = new HashMap<>();
 		Map<T, Set<T>> graph = new HashMap<>();
+		Map<Table, List<T>> nodesByTable = new HashMap<>();
 		for (T table : tables) {
 			indegree.put(table, 0);
 			graph.put(table, new LinkedHashSet<>());
+			nodesByTable.computeIfAbsent(func.apply(table), k -> new ArrayList<>()).add(table);
 		}
 		//
 		// FK
@@ -91,11 +93,14 @@ public final class TableInsertOrderSorter {
 				if (parent == null) {
 					continue;
 				}
-				if (!indegree.containsKey(parent)) {
+				List<T> parents = nodesByTable.get(parent);
+				if (parents == null) {
 					continue;
 				}
-				if (graph.get(parent).add(child)) {
-					indegree.put(child, indegree.get(child) + 1);
+				for (T parentNode : parents) {
+					if (graph.get(parentNode).add(child)) {
+						indegree.put(child, indegree.get(child) + 1);
+					}
 				}
 			}
 		}
