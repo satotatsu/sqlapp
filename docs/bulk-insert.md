@@ -410,3 +410,11 @@ replayed chunks and rows, affected rows, and tasks that still require manual
 reconciliation. The repair job is not atomic across tables. A SQL failure is
 reported as `BulkMigrationJobRepairException` with the failed task ID and all
 completed repair results; follow-up verification remains required.
+
+For long-running migration jobs, the `BulkMigrationJobExecutor.execute`
+overload accepting a `BulkMigrationJobListener` reports synchronous task
+start, completion, and SQL failure events with the dependency-order index and
+total task count. This can feed application logging or metrics without adding
+such dependencies to sqlapp-core. Listener runtime failures abort execution;
+an exception thrown while reporting an SQL failure is attached to the original
+SQL exception as a suppressed exception.

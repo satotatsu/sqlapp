@@ -19,10 +19,19 @@ public final class BulkMigrationJobExecutor {
 
 	public static BulkMigrationJobResult execute(final Connection targetConnection,
 			final List<BulkMigrationJobTask> tasks) throws SQLException {
+		return execute(targetConnection, tasks, BulkMigrationJobListener.NO_OP);
+	}
+
+	public static BulkMigrationJobResult execute(final Connection targetConnection,
+			final List<BulkMigrationJobTask> tasks,
+			final BulkMigrationJobListener listener) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
+		Objects.requireNonNull(listener, "listener");
 		final List<BulkMigrationJobTask> ordered = order(tasks);
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
-		for (final BulkMigrationJobTask task : ordered) {
+		for (int taskIndex = 0; taskIndex < ordered.size(); taskIndex++) {
+			final BulkMigrationJobTask task = ordered.get(taskIndex);
+			listener.onTaskStarted(task.getTaskId(), taskIndex, ordered.size());
 			try {
 				final ChunkedBulkMigrationResult result;
 				if (task.getKeysetSource() != null) {
@@ -39,7 +48,13 @@ public final class BulkMigrationJobExecutor {
 									task.getSourceTable(), task.getOptions(), task.getCheckpointStore());
 				}
 				results.add(new BulkMigrationJobTaskResult(task.getTaskId(), result));
+				listener.onTaskCompleted(task.getTaskId(), result, taskIndex, ordered.size());
 			} catch (SQLException e) {
+				try {
+					listener.onTaskFailed(task.getTaskId(), e, taskIndex, ordered.size());
+				} catch (RuntimeException listenerFailure) {
+					e.addSuppressed(listenerFailure);
+				}
 				throw new BulkMigrationJobException(task.getTaskId(),
 						new BulkMigrationJobResult(List.copyOf(results)), e);
 			}

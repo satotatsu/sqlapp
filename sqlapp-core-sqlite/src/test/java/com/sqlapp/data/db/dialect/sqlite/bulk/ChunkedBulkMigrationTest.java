@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
@@ -33,6 +35,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
@@ -357,10 +360,25 @@ class ChunkedBulkMigrationTest {
 					.options(ChunkedBulkMigrationOption.builder()
 							.migrationId("job-child-" + suffix).chunkSize(1).build()).build();
 
+			final List<String> events = new ArrayList<>();
 			final var first = BulkMigrationJobExecutor.execute(connection,
-					List.of(childTask, parentTask));
+					List.of(childTask, parentTask), new BulkMigrationJobListener() {
+						@Override
+						public void onTaskStarted(String taskId, int taskIndex, int taskCount) {
+							events.add("start:" + taskIndex + ":" + taskCount + ":" + taskId);
+						}
+
+						@Override
+						public void onTaskCompleted(String taskId,
+								ChunkedBulkMigrationResult result,
+								int taskIndex, int taskCount) {
+							events.add("complete:" + taskIndex + ":" + taskCount + ":" + taskId);
+						}
+					});
 			assertEquals(List.of("parent", "child"), first.getTasks().stream()
 					.map(result -> result.getTaskId()).toList());
+			assertEquals(List.of("start:0:2:parent", "complete:0:2:parent",
+					"start:1:2:child", "complete:1:2:child"), events);
 			assertEquals(2, first.getProcessedRows());
 			assertEquals(0, first.getAlreadyCompleteTasks());
 			final var resumed = BulkMigrationJobExecutor.execute(connection,
@@ -402,10 +420,18 @@ class ChunkedBulkMigrationTest {
 					.sourceTable(child).options(ChunkedBulkMigrationOption.builder()
 							.migrationId("fail-job-child-" + suffix).chunkSize(1).build()).build();
 
+			final List<String> events = new ArrayList<>();
 			final var failure = assertThrows(BulkMigrationJobException.class,
 					() -> BulkMigrationJobExecutor.execute(connection,
-							List.of(childTask, parentTask)));
+							List.of(childTask, parentTask), new BulkMigrationJobListener() {
+								@Override
+								public void onTaskFailed(String taskId, SQLException cause,
+										int taskIndex, int taskCount) {
+									events.add(taskIndex + ":" + taskCount + ":" + taskId);
+								}
+							}));
 			assertEquals("child", failure.getFailedTaskId());
+			assertEquals(List.of("1:2:child"), events);
 			assertEquals(List.of("parent"), failure.getCompletedResult().getTasks().stream()
 					.map(result -> result.getTaskId()).toList());
 			assertEquals(1, failure.getCompletedResult().getProcessedRows());
