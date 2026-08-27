@@ -23,6 +23,9 @@ import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
@@ -189,6 +192,55 @@ class SqlServerBulkUpsertTest {
 		}
 	}
 
+	@Test
+	void repairsOnlyMismatchedChunksAndReverifies() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_REPAIR_TARGET') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_REPAIR_TARGET");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_REPAIR_TARGET "
+					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.executeUpdate("INSERT INTO dbo.SQLAPP_BULK_REPAIR_TARGET VALUES "
+					+ "(1,'value-1'),(2,'value-2'),(3,'wrong'),(4,'value-4')");
+			final Table expected = repairTable();
+			final Table before = repairTable();
+			for (int id = 1; id <= 4; id++) {
+				final int value = id;
+				expected.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", "value-" + value);
+				});
+				before.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", value == 3 ? "wrong" : "value-" + value);
+				});
+			}
+			final var verification = BulkMigrationVerifier.verify(expected, before, 2);
+			assertEquals(1, verification.getMismatches().size());
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
+					verification, BulkMigrationRepairOption.builder().chunkSize(2).build());
+			assertEquals(1, repair.getReplayedChunks());
+			assertEquals(2, repair.getReplayedRows());
+
+			final Table after = repairTable();
+			try (var resultSet = statement.executeQuery(
+					"SELECT ID, TXT FROM dbo.SQLAPP_BULK_REPAIR_TARGET ORDER BY ID")) {
+				while (resultSet.next()) {
+					after.getRows().add(row -> {
+						try {
+							row.put("ID", resultSet.getInt(1));
+							row.put("TXT", resultSet.getString(2));
+						} catch (java.sql.SQLException e) {
+							throw new IllegalStateException(e);
+						}
+					});
+				}
+			}
+			assertTrue(BulkMigrationVerifier.verify(expected, after, 2).isMatch());
+		}
+	}
+
 	private static Table createTable() {
 		final Table table = new Table("SQLAPP_BULK_UPSERT_TEST");
 		table.setSchemaName("dbo");
@@ -216,6 +268,15 @@ class SqlServerBulkUpsertTest {
 		table.getColumns().add(key2);
 		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_KEYSET_SOURCE", key1, key2);
+		return table;
+	}
+
+	private static Table repairTable() {
+		final Table table = new Table("SQLAPP_BULK_REPAIR_TARGET").setSchemaName("dbo");
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(100));
+		table.setPrimaryKey("PK_SQLAPP_BULK_REPAIR_TARGET", id);
 		return table;
 	}
 }
