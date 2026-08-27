@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
@@ -28,6 +29,31 @@ class Db2BulkUpsertTest {
 	@BeforeAll
 	static void startContainer() {
 		DB2.start();
+	}
+
+	@Test
+	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
+		try (Connection connection = DB2.createConnection("");
+				var statement = connection.createStatement()) {
+			try {
+				statement.execute("CREATE USER TEMPORARY TABLESPACE SQLAPP_USERTEMP "
+						+ "MANAGED BY AUTOMATIC STORAGE");
+			} catch (java.sql.SQLException e) {
+				if (!"42710".equals(e.getSQLState())) throw e;
+			}
+			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_DB2"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_DB2 "
+					+ "(CODE VARCHAR(20) NOT NULL PRIMARY KEY, NAME VARCHAR(100))");
+			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_DB2");
+			final Column code = new Column("CODE").setDataType(DataType.VARCHAR)
+					.setLength(20).setNotNull(true);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_DB2", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
+					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_DB2");
+		}
 	}
 
 	@AfterAll
