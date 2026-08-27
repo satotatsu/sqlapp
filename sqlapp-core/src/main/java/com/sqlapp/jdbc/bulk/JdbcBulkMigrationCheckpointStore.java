@@ -111,9 +111,9 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		} catch (SQLException missing) {
 			final String create = "CREATE TABLE " + tableName + " ("
 					+ "migration_id VARCHAR(255) NOT NULL PRIMARY KEY, "
-					+ "source_fingerprint VARCHAR(255), target_fingerprint VARCHAR(255), "
+					+ "source_fingerprint VARCHAR(255) NULL, target_fingerprint VARCHAR(255) NULL, "
 					+ "processed_rows DECIMAL(19, 0) NOT NULL, completed_chunks DECIMAL(19, 0) NOT NULL, "
-					+ "last_chunk_hash VARCHAR(64), complete_flag CHAR(1) NOT NULL)";
+					+ "last_chunk_hash VARCHAR(64) NULL, complete_flag CHAR(1) NOT NULL)";
 			try (var statement = connection.createStatement()) {
 				statement.execute(create);
 			} catch (SQLException createFailure) {

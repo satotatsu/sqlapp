@@ -59,6 +59,8 @@ class VirticaBulkInsertTest {
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_vertica", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertRejected(connection,
+					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
 		}
 	}
 

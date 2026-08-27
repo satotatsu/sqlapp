@@ -14,6 +14,11 @@ import com.vertica.jdbc.VerticaCopyStream;
 
 /** Vertica bulk insert backed by VerticaCopyStream. */
 public class VirticaBulkInsertExecutor implements BulkInsertExecutor {
+	@Override
+	public boolean supportsCallerTransactionAtomicity() {
+		return false;
+	}
+
 	private final Dialect dialect;
 
 	public VirticaBulkInsertExecutor(final Dialect dialect) {

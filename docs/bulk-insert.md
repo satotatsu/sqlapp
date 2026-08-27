@@ -255,7 +255,9 @@ restriction for UPSERT. Vertica UPSERT has the same restriction because its
 temporary-table/COPY lifecycle does not roll back atomically with the caller's
 checkpoint transaction. Sybase ASE also rejects database-checkpoint UPSERT
 because its staging-table cleanup DDL is not permitted inside the caller-owned
-transaction. Their bulk INSERT paths do not use that staging DDL.
+transaction. Vertica also rejects database-checkpoint INSERT because COPY does
+not roll back with the checkpoint transaction. Oracle, SAP HANA, and Sybase
+bulk INSERT remain eligible for database checkpoints.
 
 ## Migration verification
 

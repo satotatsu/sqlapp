@@ -12,4 +12,9 @@ public interface BulkInsertExecutor {
 	/** Writes all rows and returns the number supplied to the driver. */
 	long execute(Connection connection, Table table, BulkOption options)
 			throws SQLException;
+
+	/** Whether all inserted rows participate in a caller-owned transaction. */
+	default boolean supportsCallerTransactionAtomicity() {
+		return true;
+	}
 }

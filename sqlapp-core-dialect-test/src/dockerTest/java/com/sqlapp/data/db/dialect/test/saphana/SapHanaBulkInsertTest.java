@@ -76,6 +76,9 @@ class SapHanaBulkInsertTest {
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
 					table, "CODE", "NAME",
 					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
+					table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
 		}
 	}
 

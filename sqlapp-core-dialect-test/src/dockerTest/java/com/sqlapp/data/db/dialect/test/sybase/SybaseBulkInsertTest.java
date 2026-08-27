@@ -61,6 +61,8 @@ class SybaseBulkInsertTest {
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_sybase", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
+					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
 		}
 	}
 

@@ -144,8 +144,12 @@ public final class ChunkedBulkMigrationExecutor {
 			final Table source, final ChunkedBulkMigrationOption options,
 			final boolean requireAtomicity) throws SQLException {
 		if (options.getMode() == BulkMigrationMode.INSERT) {
-			BulkInsertResolver.resolve(connection).execute(connection, chunk,
-					options.getBulkOption());
+			final BulkInsertExecutor executor = BulkInsertResolver.resolve(connection);
+			if (requireAtomicity && !executor.supportsCallerTransactionAtomicity()) {
+				throw new IllegalStateException("The selected bulk insert provider does not participate in the "
+						+ "caller transaction; use FILE checkpoint mode");
+			}
+			executor.execute(connection, chunk, options.getBulkOption());
 			return;
 		}
 		final BulkUpsertOption sourceOption = options.getBulkUpsertOption() == null

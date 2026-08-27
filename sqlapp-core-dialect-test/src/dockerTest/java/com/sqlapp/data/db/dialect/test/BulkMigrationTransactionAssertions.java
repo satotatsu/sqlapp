@@ -12,6 +12,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 
 /** Shared real-database assertions for atomic data/checkpoint commits. */
 public final class BulkMigrationTransactionAssertions {
@@ -55,6 +56,50 @@ public final class BulkMigrationTransactionAssertions {
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId("docker-rejected-" + java.util.UUID.randomUUID()).build();
+		assertThrows(IllegalStateException.class,
+				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
+		assertEquals(0, count(connection, countSql));
+	}
+
+	public static void assertDatabaseCheckpointInsertAtomic(final Connection connection,
+			final Table table, final String codeColumn, final String nameColumn,
+			final String countSql) throws SQLException {
+		table.getRows().clear();
+		for (int i = 1; i <= 3; i++) {
+			final int value = i;
+			table.getRows().add(row -> {
+				row.put(codeColumn, "I" + value);
+				row.put(nameColumn, "insert-" + value);
+			});
+		}
+		final String migrationId = "docker-insert-" + java.util.UUID.randomUUID();
+		final var option = ChunkedBulkMigrationOption.builder()
+				.migrationId(migrationId).chunkSize(2).mode(BulkMigrationMode.INSERT).build();
+		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
+				option.getCheckpointTableName());
+		assertThrows(SQLException.class,
+				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
+						new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+		assertEquals(0, count(connection, countSql));
+		assertTrue(checkpointStore.load(migrationId).isEmpty());
+
+		final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option);
+		assertEquals(3, result.getProcessedRows());
+		assertEquals(2, result.getCompletedChunks());
+		assertEquals(3, count(connection, countSql));
+	}
+
+	public static void assertDatabaseCheckpointInsertRejected(final Connection connection,
+			final Table table, final String codeColumn, final String nameColumn,
+			final String countSql) throws SQLException {
+		table.getRows().clear();
+		table.getRows().add(row -> {
+			row.put(codeColumn, "I1");
+			row.put(nameColumn, "insert-1");
+		});
+		final var option = ChunkedBulkMigrationOption.builder()
+				.migrationId("docker-insert-rejected-" + java.util.UUID.randomUUID())
+				.mode(BulkMigrationMode.INSERT).build();
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
 		assertEquals(0, count(connection, countSql));

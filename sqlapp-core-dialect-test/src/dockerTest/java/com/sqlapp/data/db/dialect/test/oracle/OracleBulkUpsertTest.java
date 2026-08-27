@@ -52,6 +52,8 @@ class OracleBulkUpsertTest {
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_ORACLE", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
 					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
+					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
 		}
 	}
 
