@@ -4,6 +4,8 @@ package com.sqlapp.data.db.dialect.test.sqlserver;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -16,12 +18,16 @@ import org.testcontainers.mssqlserver.MSSQLServerContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 
 /** Exercises staging-table bulk upsert against SQL Server 2022. */
 class SqlServerBulkUpsertTest {
@@ -111,6 +117,57 @@ class SqlServerBulkUpsertTest {
 				assertEquals("D", resultSet.getString("CODE"));
 				assertEquals("first", resultSet.getString("NAME"));
 			}
+		}
+	}
+
+	@Test
+	void resumesWithDatabaseCheckpointInTheTargetTransaction() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_CHUNK_MIGRATION_TARGET') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_CHUNK_MIGRATION_TARGET");
+			statement.execute("CREATE TABLE dbo.SQLAPP_CHUNK_MIGRATION_TARGET "
+					+ "(CODE NVARCHAR(20) NOT NULL PRIMARY KEY, NAME NVARCHAR(100))");
+			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_TARGET").setSchemaName("dbo");
+			final Column code = new Column("CODE").setDataType(DataType.NVARCHAR)
+					.setLength(20).setNotNull(true);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR)
+					.setLength(100));
+			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_TARGET", code);
+			for (int i = 1; i <= 3; i++) {
+				final int value = i;
+				table.getRows().add(row -> {
+					row.put("CODE", "C" + value);
+					row.put("NAME", "name-" + value);
+				});
+			}
+			final String migrationId = "sqlserver-" + java.util.UUID.randomUUID();
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId(migrationId).chunkSize(2).build();
+			final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
+					option.getCheckpointTableName());
+			assertThrows(java.sql.SQLException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
+							new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET")) {
+				resultSet.next();
+				assertEquals(0, resultSet.getInt(1));
+			}
+			assertTrue(checkpointStore.load(migrationId).isEmpty());
+
+			final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option);
+			assertEquals(3, result.getProcessedRows());
+			assertEquals(2, result.getCompletedChunks());
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET")) {
+				resultSet.next();
+				assertEquals(3, resultSet.getInt(1));
+			}
+			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection,
+					option.getCheckpointTableName()).load(migrationId).orElseThrow().getProcessedRows());
 		}
 	}
 

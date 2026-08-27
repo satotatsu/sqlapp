@@ -4,6 +4,8 @@ package com.sqlapp.data.db.dialect.test.postgres;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -15,10 +17,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 
 /** Exercises COPY staging and ON CONFLICT against PostgreSQL 18. */
 class PostgresBulkUpsertTest {
@@ -102,6 +108,56 @@ class PostgresBulkUpsertTest {
 				assertEquals("", resultSet.getString("name"));
 				assertArrayEquals(new byte[] { 2 }, resultSet.getBytes("payload"));
 			}
+		}
+	}
+
+	@Test
+	void resumesWithDatabaseCheckpointInTheTargetTransaction() throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.chunk_migration_target");
+			statement.execute("CREATE TABLE public.chunk_migration_target "
+					+ "(code TEXT PRIMARY KEY, name TEXT)");
+			final Table table = new Table("chunk_migration_target").setSchemaName("public");
+			final Column code = new Column("code").setDataType(DataType.LONGVARCHAR)
+					.setNotNull(true);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("name").setDataType(DataType.LONGVARCHAR));
+			table.setPrimaryKey("chunk_migration_target_pkey", code);
+			for (int i = 1; i <= 3; i++) {
+				final int value = i;
+				table.getRows().add(row -> {
+					row.put("code", "C" + value);
+					row.put("name", "name-" + value);
+				});
+			}
+			final String migrationId = "postgres-" + java.util.UUID.randomUUID();
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId(migrationId).chunkSize(2).build();
+			final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
+					option.getCheckpointTableName());
+			assertThrows(java.sql.SQLException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
+							new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+			assertEquals(0, scalar(statement,
+					"SELECT COUNT(*) FROM public.chunk_migration_target"));
+			assertTrue(checkpointStore.load(migrationId).isEmpty());
+
+			final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option);
+			assertEquals(3, result.getProcessedRows());
+			assertEquals(2, result.getCompletedChunks());
+			assertEquals(3, scalar(statement,
+					"SELECT COUNT(*) FROM public.chunk_migration_target"));
+			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection,
+					option.getCheckpointTableName()).load(migrationId).orElseThrow().getProcessedRows());
+		}
+	}
+
+	private static int scalar(final java.sql.Statement statement, final String sql)
+			throws java.sql.SQLException {
+		try (var resultSet = statement.executeQuery(sql)) {
+			resultSet.next();
+			return resultSet.getInt(1);
 		}
 	}
 
