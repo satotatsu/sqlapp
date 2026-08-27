@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-/** Options for a resumable, count-based chunk migration. */
+/** Options for a resumable chunk migration. */
 @Getter
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)

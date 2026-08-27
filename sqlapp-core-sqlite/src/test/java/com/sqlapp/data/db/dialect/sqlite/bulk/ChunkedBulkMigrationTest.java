@@ -8,16 +8,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
@@ -137,6 +141,52 @@ class ChunkedBulkMigrationTest {
 		}
 	}
 
+	@Test
+	void keysetResumeIsNotShiftedByRowsInsertedBeforeTheCursor() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE KEYSET_TARGET (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final var source = new IntegerKeysetSource("KEYSET_TARGET", 1, 2, 3, 4, 5);
+			final var delegate = new InMemoryBulkMigrationCheckpointStore();
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId("keyset-migration").chunkSize(2)
+					.checkpointMode(BulkMigrationCheckpointMode.FILE).build();
+
+			assertThrows(SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(
+					connection, source, option, new FailSecondSaveStore(delegate)));
+			assertEquals("2", delegate.load("keyset-migration").orElseThrow().getResumeToken());
+
+			// Count resume would shift when ID 0 is inserted. Keyset resumes after ID 2.
+			source.setIds(0, 1, 2, 3, 4, 5);
+			final var resumed = ChunkedBulkMigrationExecutor.execute(connection, source, option, delegate);
+			assertEquals(3, resumed.getProcessedRows());
+			assertEquals("5", delegate.load("keyset-migration").orElseThrow().getResumeToken());
+			try (var resultSet = statement.executeQuery("SELECT GROUP_CONCAT(ID, ',') FROM "
+					+ "(SELECT ID FROM KEYSET_TARGET ORDER BY ID)")) {
+				resultSet.next();
+				assertEquals("1,2,3,4,5", resultSet.getString(1));
+			}
+		}
+	}
+
+	@Test
+	void upgradesAnExistingCountCheckpointTableForKeysetTokens() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE OLD_CHECKPOINT ("
+					+ "migration_id VARCHAR(255) NOT NULL PRIMARY KEY, "
+					+ "source_fingerprint VARCHAR(255), target_fingerprint VARCHAR(255), "
+					+ "processed_rows DECIMAL(19, 0) NOT NULL, "
+					+ "completed_chunks DECIMAL(19, 0) NOT NULL, "
+					+ "last_chunk_hash VARCHAR(64), complete_flag CHAR(1) NOT NULL)");
+			final var store = new JdbcBulkMigrationCheckpointStore(connection, "OLD_CHECKPOINT");
+			final var checkpoint = BulkMigrationCheckpoint.builder().migrationId("keyset")
+					.processedRows(2).completedChunks(1).resumeToken("2").build();
+			store.save(checkpoint);
+			assertEquals(checkpoint, store.load("keyset").orElseThrow());
+		}
+	}
+
 	private static Table table(final String name) {
 		final Table table = new Table(name);
 		final Column id = new Column("ID").setDataType(DataType.INT);
@@ -202,6 +252,41 @@ class ChunkedBulkMigrationTest {
 		@Override
 		public void delete(final String migrationId) throws SQLException {
 			delegate.delete(migrationId);
+		}
+	}
+
+	private static final class IntegerKeysetSource implements BulkMigrationKeysetSource {
+		private final Table table;
+		private List<Integer> ids;
+
+		private IntegerKeysetSource(final String tableName, final Integer... ids) {
+			this.table = table(tableName);
+			this.ids = List.of(ids);
+		}
+
+		private void setIds(final Integer... ids) {
+			this.ids = List.of(ids);
+		}
+
+		@Override
+		public Table getTable() {
+			return table;
+		}
+
+		@Override
+		public Iterator<Row> iterator(final String resumeToken) {
+			final int after = resumeToken == null ? Integer.MIN_VALUE : Integer.parseInt(resumeToken);
+			return ids.stream().filter(id -> id > after).map(id -> {
+				final Row row = table.newRow();
+				row.put("ID", id);
+				row.put("TXT", "value-" + id);
+				return row;
+			}).iterator();
+		}
+
+		@Override
+		public String resumeToken(final Row row) {
+			return java.util.Objects.toString(row.get("ID"));
 		}
 	}
 }

@@ -34,7 +34,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	@Override
 	public Optional<BulkMigrationCheckpoint> load(final String migrationId) throws SQLException {
 		final String sql = "SELECT source_fingerprint, target_fingerprint, processed_rows, "
-				+ "completed_chunks, last_chunk_hash, complete_flag FROM " + tableName
+				+ "completed_chunks, last_chunk_hash, resume_token, complete_flag FROM " + tableName
 				+ " WHERE migration_id = ?";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, migrationId);
@@ -49,7 +49,8 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 						.processedRows(resultSet.getLong(3))
 						.completedChunks(resultSet.getLong(4))
 						.lastChunkHash(resultSet.getString(5))
-						.complete("1".equals(resultSet.getString(6))).build());
+						.resumeToken(resultSet.getString(6))
+						.complete("1".equals(resultSet.getString(7))).build());
 			}
 		}
 	}
@@ -58,7 +59,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
 		final String update = "UPDATE " + tableName + " SET source_fingerprint = ?, "
 				+ "target_fingerprint = ?, processed_rows = ?, completed_chunks = ?, "
-				+ "last_chunk_hash = ?, complete_flag = ? "
+				+ "last_chunk_hash = ?, resume_token = ?, complete_flag = ? "
 				+ "WHERE migration_id = ?";
 		try (var statement = connection.prepareStatement(update)) {
 			bind(statement, checkpoint);
@@ -68,7 +69,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		}
 		final String insert = "INSERT INTO " + tableName + " (source_fingerprint, "
 				+ "target_fingerprint, processed_rows, completed_chunks, last_chunk_hash, "
-				+ "complete_flag, migration_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+				+ "resume_token, complete_flag, migration_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 		try (var statement = connection.prepareStatement(insert)) {
 			bind(statement, checkpoint);
 			statement.executeUpdate();
@@ -91,8 +92,9 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		statement.setLong(3, checkpoint.getProcessedRows());
 		statement.setLong(4, checkpoint.getCompletedChunks());
 		setNullable(statement, 5, checkpoint.getLastChunkHash());
-		statement.setString(6, checkpoint.isComplete() ? "1" : "0");
-		statement.setString(7, checkpoint.getMigrationId());
+		setNullable(statement, 6, checkpoint.getResumeToken());
+		statement.setString(7, checkpoint.isComplete() ? "1" : "0");
+		statement.setString(8, checkpoint.getMigrationId());
 	}
 
 	private static void setNullable(final java.sql.PreparedStatement statement,
@@ -107,18 +109,34 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	private void ensureTable() throws SQLException {
 		try (var statement = connection.createStatement()) {
 			statement.executeQuery("SELECT migration_id FROM " + tableName + " WHERE 1 = 0").close();
-			return;
 		} catch (SQLException missing) {
 			final String create = "CREATE TABLE " + tableName + " ("
 					+ "migration_id VARCHAR(255) NOT NULL PRIMARY KEY, "
 					+ "source_fingerprint VARCHAR(255) NULL, target_fingerprint VARCHAR(255) NULL, "
 					+ "processed_rows DECIMAL(19, 0) NOT NULL, completed_chunks DECIMAL(19, 0) NOT NULL, "
-					+ "last_chunk_hash VARCHAR(64) NULL, complete_flag CHAR(1) NOT NULL)";
+					+ "last_chunk_hash VARCHAR(64) NULL, resume_token VARCHAR(4000) NULL, "
+					+ "complete_flag CHAR(1) NOT NULL)";
 			try (var statement = connection.createStatement()) {
 				statement.execute(create);
 			} catch (SQLException createFailure) {
 				createFailure.addSuppressed(missing);
 				throw createFailure;
+			}
+			return;
+		}
+		ensureResumeTokenColumn();
+	}
+
+	private void ensureResumeTokenColumn() throws SQLException {
+		try (var statement = connection.createStatement()) {
+			statement.executeQuery("SELECT resume_token FROM " + tableName + " WHERE 1 = 0").close();
+			return;
+		} catch (SQLException missing) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("ALTER TABLE " + tableName + " ADD resume_token VARCHAR(4000) NULL");
+			} catch (SQLException alterFailure) {
+				alterFailure.addSuppressed(missing);
+				throw alterFailure;
 			}
 		}
 	}

@@ -17,5 +17,6 @@ public class BulkMigrationCheckpoint implements Serializable {
 	long processedRows;
 	long completedChunks;
 	String lastChunkHash;
+	String resumeToken;
 	boolean complete;
 }

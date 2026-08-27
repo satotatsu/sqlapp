@@ -220,8 +220,27 @@ operation and chunk size, and can carry source and target fingerprints.
 
 Progress is saved through `BulkMigrationCheckpointStore` only after a chunk
 write succeeds. A subsequent execution with the same migration ID and matching
-fingerprints skips the recorded number of source rows and continues with the
-next chunk.
+fingerprints continues with the next chunk. The `Table` overload skips the
+recorded number of source rows for backward compatibility.
+
+For mutable or very large sources, implement `BulkMigrationKeysetSource` and
+use its executor overload. After every successful chunk, the executor stores
+the opaque token returned for the last row. On retry it passes that token back
+to `iterator`, which must query rows strictly after the complete key. The key
+must be unique, immutable, non-null and ordered consistently; composite keys
+should be encoded together in the token. Token encoding and database-specific
+`WHERE`/`ORDER BY` SQL belong to the source implementation.
+
+```java
+BulkMigrationKeysetSource source = new CustomerKeysetSource(sourceConnection,
+        customerTable); // SELECT ... WHERE (key...) > token ORDER BY key...
+var result = ChunkedBulkMigrationExecutor.execute(targetConnection, source,
+        options);
+```
+
+Count and keyset checkpoints cannot be interchanged after progress has been
+recorded. Changing key columns, ordering, collation or token format requires a
+new migration ID or source fingerprint.
 
 `DATABASE` is the default checkpoint mode. The overload without an explicit
 store creates `SQLAPP_BULK_MIGRATION_CHECKPOINT` in the target database and
@@ -263,10 +282,11 @@ The mode and store must agree. `DATABASE` requires a transactional store using
 the target connection, while `FILE` requires an external store. Invalid
 combinations fail before the first source chunk is written.
 
-The source iterator must produce a deterministic order that remains unchanged
-between attempts. For JDBC sources, use a unique ordering such as the complete
-primary key. Changing the source, target mapping, ordering, or transformation
-requires a new fingerprint or migration ID.
+The count-based source iterator must produce a deterministic order that remains
+unchanged between attempts. For JDBC sources, prefer keyset resume using a
+unique ordering such as the complete primary key. Changing the source, target
+mapping, ordering, or transformation requires a new fingerprint or migration
+ID.
 
 There is an unavoidable interval between committing a data chunk and saving a
 checkpoint in `FILE` mode. UPSERT safely replays that chunk and is therefore the

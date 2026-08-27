@@ -34,8 +34,41 @@ public final class ChunkedBulkMigrationExecutor {
 						options.getCheckpointTableName()));
 	}
 
+	/** Executes a keyset source using the default target-database checkpoint. */
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options)
+			throws SQLException {
+		Objects.requireNonNull(options, "options");
+		if (options.getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE) {
+			throw new IllegalArgumentException("A checkpoint store is required for checkpointMode="
+					+ options.getCheckpointMode());
+		}
+		if (!targetConnection.getAutoCommit()) {
+			throw new IllegalStateException("Database checkpoint mode requires an auto-commit connection so the "
+					+ "chunk executor can own transaction boundaries");
+		}
+		return execute(targetConnection, source, options,
+				new JdbcBulkMigrationCheckpointStore(targetConnection,
+						options.getCheckpointTableName()));
+	}
+
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final Table sourceTable, final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
+		return executeInternal(targetConnection, sourceTable, null, options, checkpointStore);
+	}
+
+	/** Executes a source that resumes by its unique ordered key rather than row count. */
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
+		Objects.requireNonNull(source, "source");
+		return executeInternal(targetConnection, source.getTable(), source, options, checkpointStore);
+	}
+
+	private static ChunkedBulkMigrationResult executeInternal(final Connection targetConnection,
+			final Table sourceTable, final BulkMigrationKeysetSource keysetSource,
+			final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(sourceTable, "sourceTable");
@@ -55,6 +88,7 @@ public final class ChunkedBulkMigrationExecutor {
 				? checkpointStore.load(options.getMigrationId()).orElse(null) : null;
 		if (checkpoint != null) {
 			validateCheckpoint(checkpoint, options);
+			validateResumeStyle(checkpoint, keysetSource != null);
 			if (checkpoint.isComplete()) {
 				return new ChunkedBulkMigrationResult(checkpoint.getProcessedRows(), 0,
 						checkpoint.getCompletedChunks(), true);
@@ -73,20 +107,33 @@ public final class ChunkedBulkMigrationExecutor {
 		final long previouslyProcessed = checkpoint.getProcessedRows();
 		long processed = 0;
 		long chunks = checkpoint.getCompletedChunks();
-		final Iterator<Row> iterator = sourceTable.getRows().iterator();
+		final Iterator<Row> iterator = keysetSource == null
+				? sourceTable.getRows().iterator()
+				: keysetSource.iterator(checkpoint.getResumeToken());
 		try {
-			skip(iterator, previouslyProcessed);
+			if (keysetSource == null) {
+				skip(iterator, previouslyProcessed);
+			}
 			while (true) {
 				final List<Row> rows = nextChunk(iterator, options.getChunkSize());
 				if (rows.isEmpty()) {
 					break;
 				}
 				final Table chunk = chunkTable(sourceTable, rows);
+				final String nextToken = keysetSource == null ? null
+						: keysetSource.resumeToken(rows.get(rows.size() - 1));
+				if (keysetSource != null && (nextToken == null || nextToken.isBlank())) {
+					throw new IllegalStateException("A keyset source must return a non-empty resume token");
+				}
+				if (keysetSource != null && Objects.equals(checkpoint.getResumeToken(), nextToken)) {
+					throw new IllegalStateException("A keyset source did not advance its resume token");
+				}
 				final BulkMigrationCheckpoint nextCheckpoint = checkpoint.toBuilder()
 						.processedRows(previouslyProcessed + processed + rows.size())
 						.completedChunks(chunks + 1)
 						.lastChunkHash(BulkMigrationHash.rows(rows,
-								sourceTable.getColumns())).complete(false).build();
+								sourceTable.getColumns()))
+						.resumeToken(nextToken).complete(false).build();
 				if (transactional) {
 					targetConnection.setAutoCommit(false);
 					try {
@@ -232,6 +279,21 @@ public final class ChunkedBulkMigrationExecutor {
 		if (!Objects.equals(checkpoint.getSourceFingerprint(), options.getSourceFingerprint())
 				|| !Objects.equals(checkpoint.getTargetFingerprint(), options.getTargetFingerprint())) {
 			throw new IllegalArgumentException("Checkpoint fingerprints do not match the migration options");
+		}
+	}
+
+	private static void validateResumeStyle(final BulkMigrationCheckpoint checkpoint,
+			final boolean keyset) {
+		if (checkpoint.getProcessedRows() == 0) {
+			return;
+		}
+		if (keyset && checkpoint.getResumeToken() == null) {
+			throw new IllegalArgumentException("The checkpoint was created by count-based resume and cannot "
+					+ "be resumed as a keyset source");
+		}
+		if (!keyset && checkpoint.getResumeToken() != null) {
+			throw new IllegalArgumentException("The checkpoint was created by keyset resume and requires "
+					+ "a BulkMigrationKeysetSource");
 		}
 	}
 

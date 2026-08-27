@@ -47,6 +47,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 					.processedRows(Long.parseLong(values.getProperty("processedRows")))
 					.completedChunks(Long.parseLong(values.getProperty("completedChunks")))
 					.lastChunkHash(emptyToNull(values.getProperty("lastChunkHash")))
+					.resumeToken(emptyToNull(values.getProperty("resumeToken")))
 					.complete(Boolean.parseBoolean(values.getProperty("complete"))).build());
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration checkpoint: " + file, e);
@@ -68,6 +69,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 			values.setProperty("processedRows", Long.toString(checkpoint.getProcessedRows()));
 			values.setProperty("completedChunks", Long.toString(checkpoint.getCompletedChunks()));
 			values.setProperty("lastChunkHash", nullToEmpty(checkpoint.getLastChunkHash()));
+			values.setProperty("resumeToken", nullToEmpty(checkpoint.getResumeToken()));
 			values.setProperty("complete", Boolean.toString(checkpoint.isComplete()));
 			try (OutputStream output = Files.newOutputStream(temporary)) {
 				values.store(output, "sqlapp bulk migration checkpoint");
