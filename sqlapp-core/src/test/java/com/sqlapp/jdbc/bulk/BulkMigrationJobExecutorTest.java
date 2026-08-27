@@ -48,7 +48,7 @@ class BulkMigrationJobExecutorTest {
 				() -> plan.getTasks().add(parentTask));
 		assertEquals(plan.getFingerprint(), BulkMigrationJobPlanner
 				.plan(List.of(parentTask, childTask)).getFingerprint());
-		final var changedChild = tableTask("child", "plan-child", child,
+		final var changedChild = tableTask("child", child,
 				ChunkedBulkMigrationOption.builder().migrationId("plan-child")
 						.chunkSize(123).build());
 		assertNotEquals(plan.getFingerprint(),
@@ -66,6 +66,25 @@ class BulkMigrationJobExecutorTest {
 
 		assertFalse(plan.isUnchanged());
 		assertThrows(IllegalStateException.class, plan::validateUnchanged);
+	}
+
+	@Test
+	void fingerprintDistinguishesStructuredColumnListsAndSourceStyles() {
+		final Table table = table("STRUCTURED");
+		final var commaName = ChunkedBulkMigrationOption.builder().migrationId("structured")
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("A, B").build()).build();
+		final var twoNames = ChunkedBulkMigrationOption.builder().migrationId("structured")
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("A").keyColumn("B").build())
+				.build();
+		final var tablePlan = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("task", table, commaName)));
+		final var otherColumnsPlan = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("task", table, twoNames)));
+		final var keysetPlan = BulkMigrationJobPlanner.plan(List.of(
+				keysetTask("task", table, commaName)));
+
+		assertNotEquals(tablePlan.getFingerprint(), otherColumnsPlan.getFingerprint());
+		assertNotEquals(tablePlan.getFingerprint(), keysetPlan.getFingerprint());
 	}
 
 	@Test
@@ -142,11 +161,11 @@ class BulkMigrationJobExecutorTest {
 
 	private static BulkMigrationJobTask tableTask(final String taskId,
 			final String migrationId, final Table table) {
-		return tableTask(taskId, migrationId, table, options(migrationId));
+		return tableTask(taskId, table, options(migrationId));
 	}
 
 	private static BulkMigrationJobTask tableTask(final String taskId,
-			final String migrationId, final Table table,
+			final Table table,
 			final ChunkedBulkMigrationOption options) {
 		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table)
 				.options(options).build();
@@ -154,8 +173,14 @@ class BulkMigrationJobExecutorTest {
 
 	private static BulkMigrationJobTask keysetTask(final String taskId,
 			final String migrationId, final Table table) {
+		return keysetTask(taskId, table, options(migrationId));
+	}
+
+	private static BulkMigrationJobTask keysetTask(final String taskId,
+			final Table table,
+			final ChunkedBulkMigrationOption options) {
 		return BulkMigrationJobTask.builder().taskId(taskId).keysetSource(keyset(table))
-				.options(options(migrationId)).build();
+				.options(options).build();
 	}
 
 	private static ChunkedBulkMigrationOption options(final String migrationId) {

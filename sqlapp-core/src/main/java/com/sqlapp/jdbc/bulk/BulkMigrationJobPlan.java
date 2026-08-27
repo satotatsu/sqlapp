@@ -45,7 +45,8 @@ public class BulkMigrationJobPlan {
 						: task.getKeysetSource().getTable();
 				final ChunkedBulkMigrationOption option = task.getOptions();
 				update(digest, task.getTaskId(), table.getCatalogName(), table.getSchemaName(),
-						table.getName(), option.getMigrationId(), option.getChunkSize(),
+						table.getName(), task.getKeysetSource() != null,
+						option.getMigrationId(), option.getChunkSize(),
 						option.getMode(), option.isResume(), option.getCheckpointMode(),
 						option.getCheckpointTableName(), option.getSourceFingerprint(),
 						option.getTargetFingerprint());
@@ -54,8 +55,9 @@ public class BulkMigrationJobPlan {
 				} else {
 					final BulkUpsertOption upsert = option.getBulkUpsertOption() == null
 							? BulkUpsertOption.defaults() : option.getBulkUpsertOption();
-					update(digest, upsert.getKeyColumns(), upsert.getUpdateColumns(),
-							upsert.isUpdateWhenMatched(), upsert.isInsertWhenNotMatched(),
+					list(digest, upsert.getKeyColumns());
+					list(digest, upsert.getUpdateColumns());
+					update(digest, upsert.isUpdateWhenMatched(), upsert.isInsertWhenNotMatched(),
 							upsert.isUseTransaction(), upsert.getDuplicateKeyStrategy(),
 							upsert.getDuplicateRowSelector() != null, upsert.getStagingTableName());
 					bulk(digest, upsert.getBulkOption());
@@ -76,6 +78,17 @@ public class BulkMigrationJobPlan {
 				option.isCheckConstraints(), option.isFireTriggers(), option.isKeepIdentity(),
 				option.isKeepNulls(), option.isTableLock(), option.isUseTransaction(),
 				option.isAllowEncryptedValueModifications());
+	}
+
+	private static void list(final MessageDigest digest, final List<String> values) {
+		if (values == null) {
+			update(digest, (Object) null);
+			return;
+		}
+		update(digest, values.size());
+		for (final String value : values) {
+			update(digest, value);
+		}
 	}
 
 	private static void update(final MessageDigest digest, final Object... values) {

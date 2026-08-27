@@ -442,6 +442,15 @@ control table, which would violate the inspector's read-only contract. Supply
 an already initialized JDBC store, file store, or another explicit store when
 status-only access is required.
 
+To deliberately restart a job from the beginning,
+`BulkMigrationJobCheckpointManager.reset(plan, expectedFingerprint)` deletes
+only the task checkpoints. It requires the exact plan fingerprint and an
+explicit store on every task; all stores are validated before the first
+deletion. A partial reset failure reports the failed task and checkpoints
+already deleted. Migrated table rows are never removed. In `INSERT` mode,
+rerunning after reset can therefore create duplicates or constraint failures;
+clear or reconcile target data separately when a true restart is intended.
+
 After migration, `BulkMigrationJobVerifier` applies the existing streaming
 chunk verification to every expected/actual table pair and returns aggregate
 row counts and the number of mismatched tasks. Verification tasks use the same
