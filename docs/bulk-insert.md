@@ -397,6 +397,13 @@ and completed job result allow callers to record precise job progress before
 retrying. The original SQL exception is retained as the cause. Tables without
 modeled foreign keys retain the input order.
 
+Because a job does not provide one transaction spanning all tables, a cycle of
+table-to-table foreign keys cannot be made safe merely by choosing an order.
+The executor rejects cyclic and cycle-dependent task graphs before writing any
+rows. Self-referencing foreign keys are allowed because they do not create an
+ordering dependency between job tasks; row ordering and constraint semantics
+within that table remain the caller's responsibility.
+
 After migration, `BulkMigrationJobVerifier` applies the existing streaming
 chunk verification to every expected/actual table pair and returns aggregate
 row counts and the number of mismatched tasks. Verification tasks use the same

@@ -3,10 +3,15 @@ package com.sqlapp.jdbc.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 
 import com.sqlapp.data.schemas.Table;
@@ -91,7 +96,58 @@ public final class BulkMigrationJobExecutor {
 						+ task.getOptions().getMigrationId());
 			}
 		}
+		validateAcyclic(tasks);
 		return TableOrder.CREATE.sort(tasks, BulkMigrationJobExecutor::sourceTable);
+	}
+
+	private static void validateAcyclic(final List<BulkMigrationJobTask> tasks) {
+		final Map<Table, List<BulkMigrationJobTask>> tasksByTable = new HashMap<>();
+		final Map<BulkMigrationJobTask, Integer> indegree = new HashMap<>();
+		final Map<BulkMigrationJobTask, Set<BulkMigrationJobTask>> graph = new HashMap<>();
+		for (final BulkMigrationJobTask task : tasks) {
+			tasksByTable.computeIfAbsent(sourceTable(task), key -> new ArrayList<>()).add(task);
+			indegree.put(task, 0);
+			graph.put(task, new LinkedHashSet<>());
+		}
+		for (final BulkMigrationJobTask child : tasks) {
+			final Table childTable = sourceTable(child);
+			childTable.getConstraints().getForeignKeyConstraints(
+					fk -> !fk.getRelatedTable().equals(childTable)).forEach(fk -> {
+				final List<BulkMigrationJobTask> parents = tasksByTable.get(fk.getRelatedTable());
+				if (parents == null) {
+					return;
+				}
+				for (final BulkMigrationJobTask parent : parents) {
+					if (graph.get(parent).add(child)) {
+						indegree.put(child, indegree.get(child) + 1);
+					}
+				}
+			});
+		}
+		final Queue<BulkMigrationJobTask> ready = new ArrayDeque<>();
+		indegree.forEach((task, count) -> {
+			if (count == 0) {
+				ready.add(task);
+			}
+		});
+		int visited = 0;
+		while (!ready.isEmpty()) {
+			final BulkMigrationJobTask parent = ready.remove();
+			visited++;
+			for (final BulkMigrationJobTask child : graph.get(parent)) {
+				final int count = indegree.get(child) - 1;
+				indegree.put(child, count);
+				if (count == 0) {
+					ready.add(child);
+				}
+			}
+		}
+		if (visited != tasks.size()) {
+			final List<String> blocked = tasks.stream().filter(task -> indegree.get(task) > 0)
+					.map(BulkMigrationJobTask::getTaskId).toList();
+			throw new IllegalArgumentException("Migration job contains cyclic or cycle-dependent tasks: "
+					+ blocked);
+		}
 	}
 
 	private static Table sourceTable(final BulkMigrationJobTask task) {
