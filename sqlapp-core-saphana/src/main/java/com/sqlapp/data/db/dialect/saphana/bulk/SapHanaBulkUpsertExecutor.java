@@ -26,6 +26,11 @@ public class SapHanaBulkUpsertExecutor implements BulkUpsertExecutor {
 		this.dialect = java.util.Objects.requireNonNull(dialect, "dialect");
 	}
 
+	@Override
+	public boolean supportsCallerTransactionAtomicity() {
+		return false;
+	}
+
 	@Override public long execute(final Connection connection, final Table table,
 			final BulkUpsertOption options) throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");

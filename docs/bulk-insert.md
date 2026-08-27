@@ -210,3 +210,59 @@ Firebird uses Jaybird batching, Informix uses the Informix JDBC driver, and
 SQLite uses Xerial JDBC batching. Oracle retains its native
 empty-string-is-NULL semantics. Informix character conversion follows the
 database and client locales configured for the JDBC connection.
+
+## Resumable chunk migration
+
+`ChunkedBulkMigrationExecutor` splits a Schema `Table` row iterator into
+bounded chunks and sends each chunk through the existing bulk INSERT or UPSERT
+provider. `ChunkedBulkMigrationOption` identifies the migration, selects the
+operation and chunk size, and can carry source and target fingerprints.
+
+Progress is saved through `BulkMigrationCheckpointStore` only after a chunk
+write succeeds. A subsequent execution with the same migration ID and matching
+fingerprints skips the recorded number of source rows and continues with the
+next chunk.
+
+`DATABASE` is the default checkpoint mode. The overload without an explicit
+store creates `SQLAPP_BULK_MIGRATION_CHECKPOINT` in the target database and
+commits each data chunk and its checkpoint in the same JDBC transaction. The
+control-table name can be changed with `checkpointTableName`. The executor
+requires an initially auto-commit connection because it owns the per-chunk
+transaction boundaries.
+
+Set `checkpointMode` to `FILE` and pass a
+`FileBulkMigrationCheckpointStore` from `sqlapp-command` to keep one atomically
+replaced checkpoint file per migration. File mode cannot atomically commit the
+target write and checkpoint, so it provides at-least-once replay semantics.
+`CUSTOM` accepts caller-managed stores; `InMemoryBulkMigrationCheckpointStore`
+is intended primarily for embedding and tests.
+
+The source iterator must produce a deterministic order that remains unchanged
+between attempts. For JDBC sources, use a unique ordering such as the complete
+primary key. Changing the source, target mapping, ordering, or transformation
+requires a new fingerprint or migration ID.
+
+There is an unavoidable interval between committing a data chunk and saving a
+checkpoint in `FILE` mode. UPSERT safely replays that chunk and is therefore the
+default migration operation. INSERT with `FILE` is suitable only when duplicate
+replay is acceptable or recoverable.
+
+Some UPSERT providers create staging objects with transaction-breaking DDL.
+Such providers reject `DATABASE` checkpoint mode instead of claiming atomic
+resume guarantees; use `FILE` mode until that provider can use externally
+managed or transaction-safe staging. Oracle and SAP HANA currently have this
+restriction for UPSERT. Their bulk INSERT path does not use that staging DDL.
+
+## Migration verification
+
+`BulkMigrationVerifier` compares two ordered Schema `Table` row streams. It
+returns total expected and actual counts plus a SHA-256 digest for each chunk.
+`BulkMigrationVerificationResult.getMismatches()` identifies the exact chunk
+indexes that need detailed investigation or replay. Expected and actual tables
+may use JDBC row iterator handlers, so verification remains streaming and keeps
+at most two chunks in memory.
+
+Verification uses expected-table column order and resolves actual columns by
+name. Both row streams must use the same deterministic ordering. Chunk hashes
+are intended to detect migration differences; they are not authentication or
+digital-signature values.
