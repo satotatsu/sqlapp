@@ -18,6 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
@@ -44,6 +45,23 @@ class SybaseBulkInsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(ASE);
+	}
+
+	@Test
+	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try { statement.execute("DROP TABLE sqlapp_chunk_migration_sybase"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE TABLE sqlapp_chunk_migration_sybase "
+					+ "(code VARCHAR(20) PRIMARY KEY, name VARCHAR(100) NULL)");
+			final Table table = new Table("sqlapp_chunk_migration_sybase");
+			final Column code = new Column("code").setDataType(DataType.VARCHAR).setLength(20);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("pk_sqlapp_chunk_migration_sybase", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
+					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
+		}
 	}
 
 	@Test

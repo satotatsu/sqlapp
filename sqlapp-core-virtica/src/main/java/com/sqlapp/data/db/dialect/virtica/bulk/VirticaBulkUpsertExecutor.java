@@ -27,6 +27,11 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 	}
 
 	@Override
+	public boolean supportsCallerTransactionAtomicity() {
+		return false;
+	}
+
+	@Override
 	public long execute(final Connection c, final Table table, final BulkUpsertOption options) throws SQLException {
 		java.util.Objects.requireNonNull(c, "connection");
 		java.util.Objects.requireNonNull(table, "table");

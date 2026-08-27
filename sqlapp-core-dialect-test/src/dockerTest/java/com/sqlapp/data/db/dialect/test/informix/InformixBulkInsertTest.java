@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
@@ -34,6 +35,26 @@ class InformixBulkInsertTest {
 
 	@BeforeAll static void start() { ReusableTestcontainers.start(INFORMIX); }
 	@AfterAll static void stop() { ReusableTestcontainers.stop(INFORMIX); }
+
+	@Test
+	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
+		final String url = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088)
+				+ "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var connection = DriverManager.getConnection(url, "informix", "in4mix");
+				var statement = connection.createStatement()) {
+			try { statement.execute("DROP TABLE sqlapp_chunk_migration_informix"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE TABLE sqlapp_chunk_migration_informix "
+					+ "(code VARCHAR(20) PRIMARY KEY, name VARCHAR(100))");
+			final Table table = new Table("sqlapp_chunk_migration_informix");
+			final Column code = new Column("code").setDataType(DataType.VARCHAR).setLength(20);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("pk_sqlapp_chunk_migration_informix", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
+					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_informix");
+		}
+	}
 
 	@Test
 	void insertsBatchesAndSerialValues() throws Exception {

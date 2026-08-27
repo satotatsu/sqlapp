@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
@@ -32,6 +33,26 @@ class FirebirdBulkInsertTest {
 
 	@BeforeAll static void start() { ReusableTestcontainers.start(FIREBIRD); }
 	@AfterAll static void stop() { ReusableTestcontainers.stop(FIREBIRD); }
+
+	@Test
+	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
+		final String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
+				+ "//firebird/data/test.fdb?encoding=UTF8";
+		try (var connection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
+				var statement = connection.createStatement()) {
+			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_FIREBIRD"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_FIREBIRD "
+					+ "(CODE VARCHAR(20) PRIMARY KEY, NAME VARCHAR(100))");
+			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_FIREBIRD");
+			final Column code = new Column("CODE").setDataType(DataType.VARCHAR).setLength(20);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_FIREBIRD", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
+					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_FIREBIRD");
+		}
+	}
 
 	@Test
 	void insertsBatchesAndIdentityValues() throws Exception {

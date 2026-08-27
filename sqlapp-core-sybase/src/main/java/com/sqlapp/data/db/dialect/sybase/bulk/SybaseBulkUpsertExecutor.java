@@ -30,6 +30,11 @@ public class SybaseBulkUpsertExecutor implements BulkUpsertExecutor {
 	}
 
 	@Override
+	public boolean supportsCallerTransactionAtomicity() {
+		return false;
+	}
+
+	@Override
 	public long execute(final Connection connection, final Table table, final BulkUpsertOption options)
 			throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");

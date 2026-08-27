@@ -18,6 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
@@ -43,6 +44,22 @@ class VirticaBulkInsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(VERTICA);
+	}
+
+	@Test
+	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS sqlapp_chunk_migration_vertica");
+			statement.execute("CREATE TABLE sqlapp_chunk_migration_vertica "
+					+ "(code VARCHAR(20) PRIMARY KEY, name VARCHAR(100))");
+			final Table table = new Table("sqlapp_chunk_migration_vertica");
+			final Column code = new Column("code").setDataType(DataType.VARCHAR).setLength(20);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("pk_sqlapp_chunk_migration_vertica", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
+					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
+		}
 	}
 
 	@Test

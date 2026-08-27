@@ -251,7 +251,11 @@ Some UPSERT providers create staging objects with transaction-breaking DDL.
 Such providers reject `DATABASE` checkpoint mode instead of claiming atomic
 resume guarantees; use `FILE` mode until that provider can use externally
 managed or transaction-safe staging. Oracle and SAP HANA currently have this
-restriction for UPSERT. Their bulk INSERT path does not use that staging DDL.
+restriction for UPSERT. Vertica UPSERT has the same restriction because its
+temporary-table/COPY lifecycle does not roll back atomically with the caller's
+checkpoint transaction. Sybase ASE also rejects database-checkpoint UPSERT
+because its staging-table cleanup DDL is not permitted inside the caller-owned
+transaction. Their bulk INSERT paths do not use that staging DDL.
 
 ## Migration verification
 
