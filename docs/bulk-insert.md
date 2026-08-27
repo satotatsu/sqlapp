@@ -395,7 +395,7 @@ the same job skips those completed task checkpoints and resumes the unfinished
 table. A failure is reported as `BulkMigrationJobException`; its failed task ID
 and completed job result allow callers to record precise job progress before
 retrying. The original SQL exception is retained as the cause. Tables without
-modeled foreign keys retain the input order.
+modeled foreign keys use the shared sorter's deterministic name ordering.
 
 Because a job does not provide one transaction spanning all tables, a cycle of
 table-to-table foreign keys cannot be made safe merely by choosing an order.
@@ -415,6 +415,10 @@ task IDs, table identities, migration and schema fingerprints, migration mode,
 chunk/checkpoint settings, and bulk/UPSERT options. Execution-only objects such
 as listeners and checkpoint-store instances are intentionally excluded. The
 value is for dry-run approval and reproducibility checks, not authentication.
+List-valued column settings are encoded element by element, and source style
+(row-count or keyset) is included. The implementation of a custom duplicate
+row selector or keyset query cannot be serialized generically; callers should
+represent changes to such source logic in `sourceFingerprint`.
 
 An approved plan can be passed directly to
 `BulkMigrationJobExecutor.executePlan(connection, plan)`. Immediately before any
@@ -422,6 +426,21 @@ database work, the executor recalculates the fingerprint and rejects a plan if
 its mutable Schema tables or task options no longer match the state captured
 at planning time. The list-based overload remains available and creates a plan
 internally.
+
+Every executor-created `BulkMigrationJobResult` includes the plan fingerprint.
+The partial result carried by SQL-failure and pause exceptions includes the
+same value, allowing successful, failed, and paused executions to be correlated
+with the exact dry-run approval. The legacy result constructor remains
+available and leaves the fingerprint null for caller-created results.
+
+`BulkMigrationJobStatusInspector.inspect(plan)` reads explicitly configured
+checkpoint stores and classifies each task as `NOT_STARTED`, `IN_PROGRESS`,
+`COMPLETE`, or `INCOMPATIBLE`. It also returns aggregate processed rows and the
+plan fingerprint. Inspection intentionally rejects tasks relying on the
+implicit database store: constructing that store may create or upgrade its
+control table, which would violate the inspector's read-only contract. Supply
+an already initialized JDBC store, file store, or another explicit store when
+status-only access is required.
 
 After migration, `BulkMigrationJobVerifier` applies the existing streaming
 chunk verification to every expected/actual table pair and returns aggregate

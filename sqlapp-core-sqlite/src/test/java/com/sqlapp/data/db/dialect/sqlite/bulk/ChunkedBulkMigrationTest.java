@@ -172,6 +172,7 @@ class ChunkedBulkMigrationTest {
 								}
 							}));
 			assertEquals("paused", paused.getPausedTaskId());
+			assertTrue(paused.getCompletedResult().getPlanFingerprint() != null);
 			assertTrue(paused.getCompletedResult().getTasks().isEmpty());
 			assertEquals(1, paused.getProgress().getProcessedRowsAfter());
 			assertEquals(List.of("paused:0:1"), events);
@@ -504,8 +505,9 @@ class ChunkedBulkMigrationTest {
 							.migrationId("job-child-" + suffix).chunkSize(1).build()).build();
 
 			final List<String> events = new ArrayList<>();
-			final var first = BulkMigrationJobExecutor.execute(connection,
-					List.of(childTask, parentTask), new BulkMigrationJobListener() {
+			final var plan = BulkMigrationJobPlanner.plan(List.of(childTask, parentTask));
+			final var first = BulkMigrationJobExecutor.executePlan(connection,
+					plan, new BulkMigrationJobListener() {
 						@Override
 						public void onTaskStarted(String taskId, int taskIndex, int taskCount) {
 							events.add("start:" + taskIndex + ":" + taskCount + ":" + taskId);
@@ -520,6 +522,7 @@ class ChunkedBulkMigrationTest {
 					});
 			assertEquals(List.of("parent", "child"), first.getTasks().stream()
 					.map(result -> result.getTaskId()).toList());
+			assertEquals(plan.getFingerprint(), first.getPlanFingerprint());
 			assertEquals(List.of("start:0:2:parent", "complete:0:2:parent",
 					"start:1:2:child", "complete:1:2:child"), events);
 			assertEquals(2, first.getProcessedRows());
@@ -580,6 +583,7 @@ class ChunkedBulkMigrationTest {
 								}
 							}));
 			assertEquals("child", failure.getFailedTaskId());
+			assertTrue(failure.getCompletedResult().getPlanFingerprint() != null);
 			assertEquals(List.of("chunk-failed:0", "1:2:child"), events);
 			assertEquals(List.of("parent"), failure.getCompletedResult().getTasks().stream()
 					.map(result -> result.getTaskId()).toList());

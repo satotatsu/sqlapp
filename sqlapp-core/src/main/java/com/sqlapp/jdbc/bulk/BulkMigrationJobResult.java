@@ -3,12 +3,27 @@ package com.sqlapp.jdbc.bulk;
 
 import java.util.List;
 
-import lombok.Value;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 
 /** Completed multi-table job results in dependency execution order. */
-@Value
+@Getter
+@EqualsAndHashCode
+@ToString
 public class BulkMigrationJobResult {
-	List<BulkMigrationJobTaskResult> tasks;
+	private final String planFingerprint;
+	private final List<BulkMigrationJobTaskResult> tasks;
+
+	public BulkMigrationJobResult(final List<BulkMigrationJobTaskResult> tasks) {
+		this(null, tasks);
+	}
+
+	public BulkMigrationJobResult(final String planFingerprint,
+			final List<BulkMigrationJobTaskResult> tasks) {
+		this.planFingerprint = planFingerprint;
+		this.tasks = List.copyOf(tasks);
+	}
 
 	public long getProcessedRows() {
 		return tasks.stream().map(BulkMigrationJobTaskResult::getMigrationResult)

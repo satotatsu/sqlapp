@@ -78,7 +78,7 @@ public final class BulkMigrationJobExecutor {
 					e.addSuppressed(listenerFailure);
 				}
 				throw new BulkMigrationJobPausedException(task.getTaskId(),
-						new BulkMigrationJobResult(List.copyOf(results)), e);
+						result(plan, results), e);
 			} catch (SQLException e) {
 				try {
 					listener.onTaskFailed(task.getTaskId(), e, taskIndex, ordered.size());
@@ -86,10 +86,15 @@ public final class BulkMigrationJobExecutor {
 					e.addSuppressed(listenerFailure);
 				}
 				throw new BulkMigrationJobException(task.getTaskId(),
-						new BulkMigrationJobResult(List.copyOf(results)), e);
+						result(plan, results), e);
 			}
 		}
-		return new BulkMigrationJobResult(List.copyOf(results));
+		return result(plan, results);
+	}
+
+	private static BulkMigrationJobResult result(final BulkMigrationJobPlan plan,
+			final List<BulkMigrationJobTaskResult> results) {
+		return new BulkMigrationJobResult(plan.getFingerprint(), results);
 	}
 
 	static List<BulkMigrationJobTask> order(final List<BulkMigrationJobTask> tasks) {
