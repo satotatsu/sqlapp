@@ -18,4 +18,9 @@ public interface BulkMigrationJobListener {
 	default void onTaskFailed(final String taskId, final SQLException cause,
 			final int taskIndex, final int taskCount) {
 	}
+
+	default void onTaskPaused(final String taskId,
+			final ChunkedBulkMigrationProgress progress,
+			final int taskIndex, final int taskCount) {
+	}
 }

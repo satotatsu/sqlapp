@@ -199,6 +199,9 @@ public final class ChunkedBulkMigrationExecutor {
 				chunks++;
 				checkpoint = nextCheckpoint;
 				listener.onChunkCompleted(progress);
+				if (listener.pauseAfterChunk(progress)) {
+					throw new ChunkedBulkMigrationPausedException(progress);
+				}
 			}
 			final BulkMigrationCheckpoint complete = checkpoint.toBuilder().complete(true).build();
 			if (transactional) {

@@ -58,6 +58,14 @@ public final class BulkMigrationJobExecutor {
 				}
 				results.add(new BulkMigrationJobTaskResult(task.getTaskId(), result));
 				listener.onTaskCompleted(task.getTaskId(), result, taskIndex, ordered.size());
+			} catch (ChunkedBulkMigrationPausedException e) {
+				try {
+					listener.onTaskPaused(task.getTaskId(), e.getProgress(), taskIndex, ordered.size());
+				} catch (RuntimeException listenerFailure) {
+					e.addSuppressed(listenerFailure);
+				}
+				throw new BulkMigrationJobPausedException(task.getTaskId(),
+						new BulkMigrationJobResult(List.copyOf(results)), e);
 			} catch (SQLException e) {
 				try {
 					listener.onTaskFailed(task.getTaskId(), e, taskIndex, ordered.size());

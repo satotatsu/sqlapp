@@ -26,6 +26,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPausedException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
@@ -36,6 +37,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationPausedException;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
@@ -75,6 +77,88 @@ class ChunkedBulkMigrationTest {
 
 			assertEquals(List.of("start:0:2:0:2", "complete:0",
 					"start:1:1:2:3", "complete:1"), events);
+		}
+	}
+
+	@Test
+	void pausesAfterDurableChunkAndResumesFromItsBoundary() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE PAUSE_PROGRESS (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("PAUSE_PROGRESS");
+			for (int i = 1; i <= 3; i++) {
+				final int id = i;
+				source.getRows().add(row -> { row.put("ID", id); row.put("TXT", "row" + id); });
+			}
+			final var options = ChunkedBulkMigrationOption.builder()
+					.migrationId("pause-progress").chunkSize(2).build();
+
+			final var paused = assertThrows(ChunkedBulkMigrationPausedException.class,
+					() -> ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
+							options, new ChunkedBulkMigrationListener() {
+								@Override
+								public boolean pauseAfterChunk(ChunkedBulkMigrationProgress progress) {
+									return true;
+								}
+							}));
+			assertEquals(0, paused.getProgress().getChunkIndex());
+			assertEquals(2, paused.getProgress().getProcessedRowsAfter());
+			final var checkpoint = new JdbcBulkMigrationCheckpointStore(connection,
+					options.getCheckpointTableName()).load("pause-progress").orElseThrow();
+			assertEquals(2, checkpoint.getProcessedRows());
+			assertFalse(checkpoint.isComplete());
+
+			final var resumed = ChunkedBulkMigrationExecutor.execute(connection, source, options);
+			assertEquals(2, resumed.getPreviouslyProcessedRows());
+			assertEquals(1, resumed.getProcessedRows());
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM PAUSE_PROGRESS")) {
+				resultSet.next();
+				assertEquals(3, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void jobPauseReportsTaskAndCompletedJobProgress() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE JOB_PAUSE (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("JOB_PAUSE");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
+			final var options = ChunkedBulkMigrationOption.builder()
+					.migrationId("job-pause").chunkSize(1).build();
+			final List<String> events = new ArrayList<>();
+			final var pausedTask = BulkMigrationJobTask.builder().taskId("paused")
+					.sourceTable(source).options(options)
+					.chunkListener(new ChunkedBulkMigrationListener() {
+						@Override
+						public boolean pauseAfterChunk(ChunkedBulkMigrationProgress progress) {
+							return true;
+						}
+					}).build();
+
+			final var paused = assertThrows(BulkMigrationJobPausedException.class,
+					() -> BulkMigrationJobExecutor.execute(connection, List.of(pausedTask),
+							new BulkMigrationJobListener() {
+								@Override
+								public void onTaskPaused(String taskId,
+										ChunkedBulkMigrationProgress progress,
+										int taskIndex, int taskCount) {
+									events.add(taskId + ":" + taskIndex + ":" + taskCount);
+								}
+							}));
+			assertEquals("paused", paused.getPausedTaskId());
+			assertTrue(paused.getCompletedResult().getTasks().isEmpty());
+			assertEquals(1, paused.getProgress().getProcessedRowsAfter());
+			assertEquals(List.of("paused:0:1"), events);
+
+			final var resumedTask = BulkMigrationJobTask.builder().taskId("paused")
+					.sourceTable(source).options(options).build();
+			final var resumed = BulkMigrationJobExecutor.execute(connection, List.of(resumedTask));
+			assertEquals(1, resumed.getTasks().get(0).getMigrationResult()
+					.getPreviouslyProcessedRows());
+			assertEquals(1, resumed.getProcessedRows());
 		}
 	}
 

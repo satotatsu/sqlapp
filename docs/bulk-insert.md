@@ -436,3 +436,13 @@ No chunk-completed event is emitted until the checkpoint save (and database
 checkpoint transaction commit) succeeds. Listener runtime failures abort the
 current invocation; completion-callback failure is safe to resume because that
 chunk is already checkpointed.
+
+For cooperative shutdown, a chunk listener can return `true` from
+`pauseAfterChunk`. The executor then throws
+`ChunkedBulkMigrationPausedException` only after the chunk-completed event and
+durable checkpoint. Its progress identifies the exact resume boundary. Inside
+a multi-table job this becomes `BulkMigrationJobPausedException`, containing
+the paused task, previously completed task results, and chunk progress; the job
+listener also receives `onTaskPaused`. Rerun with the same migration IDs and
+checkpoint stores to continue. A pause is not reported as a chunk or SQL
+failure.

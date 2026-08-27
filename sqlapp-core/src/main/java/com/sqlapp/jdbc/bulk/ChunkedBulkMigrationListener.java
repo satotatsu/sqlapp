@@ -14,4 +14,9 @@ public interface ChunkedBulkMigrationListener {
 
 	default void onChunkFailed(final ChunkedBulkMigrationProgress progress, final Throwable cause) {
 	}
+
+	/** Requests a safe pause after this completed chunk. */
+	default boolean pauseAfterChunk(final ChunkedBulkMigrationProgress progress) {
+		return false;
+	}
 }
