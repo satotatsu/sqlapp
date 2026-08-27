@@ -23,6 +23,9 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
@@ -169,6 +172,53 @@ class PostgresBulkUpsertTest {
 		}
 	}
 
+	@Test
+	void repairsOnlyMismatchedChunksAndReverifies() throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.bulk_repair_target");
+			statement.execute("CREATE TABLE public.bulk_repair_target "
+					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.executeUpdate("INSERT INTO public.bulk_repair_target VALUES "
+					+ "(1,'value-1'),(2,'value-2'),(3,'wrong'),(4,'value-4')");
+			final Table expected = repairTable();
+			final Table before = repairTable();
+			for (int id = 1; id <= 4; id++) {
+				final int value = id;
+				expected.getRows().add(row -> {
+					row.put("id", value);
+					row.put("txt", "value-" + value);
+				});
+				before.getRows().add(row -> {
+					row.put("id", value);
+					row.put("txt", value == 3 ? "wrong" : "value-" + value);
+				});
+			}
+			final var verification = BulkMigrationVerifier.verify(expected, before, 2);
+			assertEquals(1, verification.getMismatches().size());
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
+					verification, BulkMigrationRepairOption.builder().chunkSize(2).build());
+			assertEquals(1, repair.getReplayedChunks());
+			assertEquals(2, repair.getReplayedRows());
+
+			final Table after = repairTable();
+			try (var resultSet = statement.executeQuery(
+					"SELECT id, txt FROM public.bulk_repair_target ORDER BY id")) {
+				while (resultSet.next()) {
+					after.getRows().add(row -> {
+						try {
+							row.put("id", resultSet.getInt(1));
+							row.put("txt", resultSet.getString(2));
+						} catch (java.sql.SQLException e) {
+							throw new IllegalStateException(e);
+						}
+					});
+				}
+			}
+			assertTrue(BulkMigrationVerifier.verify(expected, after, 2).isMatch());
+		}
+	}
+
 	private static int scalar(final java.sql.Statement statement, final String sql)
 			throws java.sql.SQLException {
 		try (var resultSet = statement.executeQuery(sql)) {
@@ -202,6 +252,15 @@ class PostgresBulkUpsertTest {
 		table.getColumns().add(key2);
 		table.getColumns().add(new Column("TXT").setDataType(DataType.LONGVARCHAR));
 		table.setPrimaryKey("keyset_source_pkey", key1, key2);
+		return table;
+	}
+
+	private static Table repairTable() {
+		final Table table = new Table("bulk_repair_target").setSchemaName("public");
+		final Column id = new Column("id").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		table.getColumns().add(new Column("txt").setDataType(DataType.LONGVARCHAR));
+		table.setPrimaryKey("bulk_repair_target_pkey", id);
 		return table;
 	}
 }
