@@ -32,7 +32,7 @@ public final class BulkMigrationJobExecutor {
 			final BulkMigrationJobListener listener) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(listener, "listener");
-		final List<BulkMigrationJobTask> ordered = order(tasks);
+		final List<BulkMigrationJobTask> ordered = BulkMigrationJobPlanner.plan(tasks).getTasks();
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
 		for (int taskIndex = 0; taskIndex < ordered.size(); taskIndex++) {
 			final BulkMigrationJobTask task = ordered.get(taskIndex);

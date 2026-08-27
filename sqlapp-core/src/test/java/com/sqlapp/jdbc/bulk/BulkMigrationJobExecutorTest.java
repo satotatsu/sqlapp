@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Iterator;
@@ -27,6 +28,29 @@ class BulkMigrationJobExecutorTest {
 
 		assertEquals(List.of("parent", "child"), ordered.stream()
 				.map(BulkMigrationJobTask::getTaskId).toList());
+	}
+
+	@Test
+	void publicPlannerReturnsAnImmutableValidatedDryRunOrder() {
+		final Table parent = table("PARENT");
+		final Table child = table("CHILD");
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
+				child.getColumns().get("ID"), parent.getColumns().get("ID"));
+		final var parentTask = tableTask("parent", "plan-parent", parent);
+		final var childTask = tableTask("child", "plan-child", child);
+
+		final var plan = BulkMigrationJobPlanner.plan(List.of(childTask, parentTask));
+
+		assertEquals(List.of("parent", "child"), plan.getTaskIds());
+		assertThrows(UnsupportedOperationException.class,
+				() -> plan.getTasks().add(parentTask));
+		assertEquals(plan.getFingerprint(), BulkMigrationJobPlanner
+				.plan(List.of(parentTask, childTask)).getFingerprint());
+		final var changedChild = tableTask("child", "plan-child", child,
+				ChunkedBulkMigrationOption.builder().migrationId("plan-child")
+						.chunkSize(123).build());
+		assertNotEquals(plan.getFingerprint(),
+				BulkMigrationJobPlanner.plan(List.of(changedChild, parentTask)).getFingerprint());
 	}
 
 	@Test
@@ -103,8 +127,14 @@ class BulkMigrationJobExecutorTest {
 
 	private static BulkMigrationJobTask tableTask(final String taskId,
 			final String migrationId, final Table table) {
+		return tableTask(taskId, migrationId, table, options(migrationId));
+	}
+
+	private static BulkMigrationJobTask tableTask(final String taskId,
+			final String migrationId, final Table table,
+			final ChunkedBulkMigrationOption options) {
 		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table)
-				.options(options(migrationId)).build();
+				.options(options).build();
 	}
 
 	private static BulkMigrationJobTask keysetTask(final String taskId,

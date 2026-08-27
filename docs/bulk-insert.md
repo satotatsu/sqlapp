@@ -404,6 +404,18 @@ rows. Self-referencing foreign keys are allowed because they do not create an
 ordering dependency between job tasks; row ordering and constraint semantics
 within that table remain the caller's responsibility.
 
+`BulkMigrationJobPlanner.plan(tasks)` performs the same validation and returns
+the immutable final task order without requiring a database connection. This
+is suitable for command or Gradle-task dry runs and approval displays. The
+executor uses this planner internally, so a displayed plan and the subsequent
+execution apply identical ordering and safety checks.
+
+The plan also exposes a deterministic SHA-256 fingerprint over the ordered
+task IDs, table identities, migration and schema fingerprints, migration mode,
+chunk/checkpoint settings, and bulk/UPSERT options. Execution-only objects such
+as listeners and checkpoint-store instances are intentionally excluded. The
+value is for dry-run approval and reproducibility checks, not authentication.
+
 After migration, `BulkMigrationJobVerifier` applies the existing streaming
 chunk verification to every expected/actual table pair and returns aggregate
 row counts and the number of mismatched tasks. Verification tasks use the same
