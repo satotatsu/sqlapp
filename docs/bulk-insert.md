@@ -237,6 +237,32 @@ target write and checkpoint, so it provides at-least-once replay semantics.
 `CUSTOM` accepts caller-managed stores; `InMemoryBulkMigrationCheckpointStore`
 is intended primarily for embedding and tests.
 
+Database checkpointing needs no explicit store:
+
+```java
+var options = ChunkedBulkMigrationOption.builder()
+        .migrationId("customer-v2")
+        .chunkSize(10_000)
+        .build(); // checkpointMode defaults to DATABASE
+var result = ChunkedBulkMigrationExecutor.execute(connection, table, options);
+```
+
+File checkpointing is selected explicitly:
+
+```java
+var options = ChunkedBulkMigrationOption.builder()
+        .migrationId("customer-v2")
+        .chunkSize(10_000)
+        .checkpointMode(BulkMigrationCheckpointMode.FILE)
+        .build();
+var store = new FileBulkMigrationCheckpointStore(checkpointDirectory);
+var result = ChunkedBulkMigrationExecutor.execute(connection, table, options, store);
+```
+
+The mode and store must agree. `DATABASE` requires a transactional store using
+the target connection, while `FILE` requires an external store. Invalid
+combinations fail before the first source chunk is written.
+
 The source iterator must produce a deterministic order that remains unchanged
 between attempts. For JDBC sources, use a unique ordering such as the complete
 primary key. Changing the source, target mapping, ordering, or transformation
@@ -258,6 +284,12 @@ because its staging-table cleanup DDL is not permitted inside the caller-owned
 transaction. Vertica also rejects database-checkpoint INSERT because COPY does
 not roll back with the checkpoint transaction. Oracle, SAP HANA, and Sybase
 bulk INSERT remain eligible for database checkpoints.
+
+| Database | INSERT with `DATABASE` | UPSERT with `DATABASE` |
+| --- | --- | --- |
+| PostgreSQL, SQL Server, DB2, MySQL, MariaDB, SQLite, Firebird, Informix | supported | supported |
+| Oracle, SAP HANA, Sybase ASE | supported | use `FILE` |
+| Vertica | use `FILE` | use `FILE` |
 
 ## Migration verification
 
