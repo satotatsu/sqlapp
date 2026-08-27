@@ -2,8 +2,10 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
 import java.util.List;
@@ -51,6 +53,19 @@ class BulkMigrationJobExecutorTest {
 						.chunkSize(123).build());
 		assertNotEquals(plan.getFingerprint(),
 				BulkMigrationJobPlanner.plan(List.of(changedChild, parentTask)).getFingerprint());
+	}
+
+	@Test
+	void detectsSchemaMutationAfterPlanning() {
+		final Table table = table("BEFORE");
+		final var plan = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("task", "mutation-plan", table)));
+		assertTrue(plan.isUnchanged());
+
+		table.setName("AFTER");
+
+		assertFalse(plan.isUnchanged());
+		assertThrows(IllegalStateException.class, plan::validateUnchanged);
 	}
 
 	@Test

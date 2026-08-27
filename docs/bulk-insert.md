@@ -416,6 +416,13 @@ chunk/checkpoint settings, and bulk/UPSERT options. Execution-only objects such
 as listeners and checkpoint-store instances are intentionally excluded. The
 value is for dry-run approval and reproducibility checks, not authentication.
 
+An approved plan can be passed directly to
+`BulkMigrationJobExecutor.executePlan(connection, plan)`. Immediately before any
+database work, the executor recalculates the fingerprint and rejects a plan if
+its mutable Schema tables or task options no longer match the state captured
+at planning time. The list-based overload remains available and creates a plan
+internally.
+
 After migration, `BulkMigrationJobVerifier` applies the existing streaming
 chunk verification to every expected/actual table pair and returns aggregate
 row counts and the number of mismatched tasks. Verification tasks use the same

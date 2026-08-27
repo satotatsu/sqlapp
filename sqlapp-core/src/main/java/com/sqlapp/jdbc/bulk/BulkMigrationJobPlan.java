@@ -27,6 +27,16 @@ public class BulkMigrationJobPlan {
 		return tasks.stream().map(BulkMigrationJobTask::getTaskId).toList();
 	}
 
+	public boolean isUnchanged() {
+		return fingerprint.equals(fingerprint(tasks));
+	}
+
+	public void validateUnchanged() {
+		if (!isUnchanged()) {
+			throw new IllegalStateException("Migration job plan changed after it was created");
+		}
+	}
+
 	private static String fingerprint(final List<BulkMigrationJobTask> tasks) {
 		try {
 			final MessageDigest digest = MessageDigest.getInstance("SHA-256");

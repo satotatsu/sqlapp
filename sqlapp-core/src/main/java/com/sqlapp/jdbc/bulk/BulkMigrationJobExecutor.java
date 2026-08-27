@@ -30,9 +30,22 @@ public final class BulkMigrationJobExecutor {
 	public static BulkMigrationJobResult execute(final Connection targetConnection,
 			final List<BulkMigrationJobTask> tasks,
 			final BulkMigrationJobListener listener) throws SQLException {
+		return executePlan(targetConnection, BulkMigrationJobPlanner.plan(tasks), listener);
+	}
+
+	public static BulkMigrationJobResult executePlan(final Connection targetConnection,
+			final BulkMigrationJobPlan plan) throws SQLException {
+		return executePlan(targetConnection, plan, BulkMigrationJobListener.NO_OP);
+	}
+
+	public static BulkMigrationJobResult executePlan(final Connection targetConnection,
+			final BulkMigrationJobPlan plan,
+			final BulkMigrationJobListener listener) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
+		Objects.requireNonNull(plan, "plan");
 		Objects.requireNonNull(listener, "listener");
-		final List<BulkMigrationJobTask> ordered = BulkMigrationJobPlanner.plan(tasks).getTasks();
+		plan.validateUnchanged();
+		final List<BulkMigrationJobTask> ordered = plan.getTasks();
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
 		for (int taskIndex = 0; taskIndex < ordered.size(); taskIndex++) {
 			final BulkMigrationJobTask task = ordered.get(taskIndex);

@@ -27,6 +27,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPausedException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
@@ -46,6 +47,28 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 class ChunkedBulkMigrationTest {
+	@Test
+	void approvedJobPlanRejectsSchemaMutationBeforeWriting() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE PLAN_GUARD (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("PLAN_GUARD");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			final var task = BulkMigrationJobTask.builder().taskId("guard")
+					.sourceTable(source).options(ChunkedBulkMigrationOption.builder()
+							.migrationId("plan-guard").chunkSize(1).build()).build();
+			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+			source.setName("PLAN_GUARD_CHANGED");
+
+			assertThrows(IllegalStateException.class,
+					() -> BulkMigrationJobExecutor.executePlan(connection, plan));
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM PLAN_GUARD")) {
+				resultSet.next();
+				assertEquals(0, resultSet.getInt(1));
+			}
+		}
+	}
+
 	@Test
 	void reportsChunkProgressOnlyAfterDurableCheckpoint() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
