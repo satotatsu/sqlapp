@@ -18,4 +18,5 @@ public class BulkMigrationJobTask {
 	private final BulkMigrationKeysetSource keysetSource;
 	private final ChunkedBulkMigrationOption options;
 	private final BulkMigrationCheckpointStore checkpointStore;
+	private final ChunkedBulkMigrationListener chunkListener;
 }

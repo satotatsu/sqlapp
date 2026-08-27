@@ -34,7 +34,9 @@ import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
@@ -42,6 +44,40 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 class ChunkedBulkMigrationTest {
+	@Test
+	void reportsChunkProgressOnlyAfterDurableCheckpoint() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CHUNK_PROGRESS (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("CHUNK_PROGRESS");
+			for (int i = 1; i <= 3; i++) {
+				final int id = i;
+				source.getRows().add(row -> { row.put("ID", id); row.put("TXT", "row" + id); });
+			}
+			final List<String> events = new ArrayList<>();
+			final var listener = new ChunkedBulkMigrationListener() {
+				@Override
+				public void onChunkStarted(ChunkedBulkMigrationProgress progress) {
+					events.add("start:" + progress.getChunkIndex() + ":" + progress.getChunkRows()
+							+ ":" + progress.getProcessedRowsBefore() + ":"
+							+ progress.getProcessedRowsAfter());
+				}
+
+				@Override
+				public void onChunkCompleted(ChunkedBulkMigrationProgress progress) {
+					events.add("complete:" + progress.getChunkIndex());
+				}
+			};
+
+			ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
+					ChunkedBulkMigrationOption.builder().migrationId("chunk-progress")
+							.chunkSize(2).build(), listener);
+
+			assertEquals(List.of("start:0:2:0:2", "complete:0",
+					"start:1:1:2:3", "complete:1"), events);
+		}
+	}
+
 	@Test
 	void databaseCheckpointIsDefaultAndRollsBackDataWithCheckpoint() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -412,15 +448,21 @@ class ChunkedBulkMigrationTest {
 				row.put("PARENT_ID", 999);
 				row.put("TXT", "child");
 			});
+			final List<String> events = new ArrayList<>();
 			final String suffix = java.util.UUID.randomUUID().toString();
 			final var parentTask = BulkMigrationJobTask.builder().taskId("parent")
 					.sourceTable(parent).options(ChunkedBulkMigrationOption.builder()
 							.migrationId("fail-job-parent-" + suffix).chunkSize(1).build()).build();
 			final var childTask = BulkMigrationJobTask.builder().taskId("child")
 					.sourceTable(child).options(ChunkedBulkMigrationOption.builder()
-							.migrationId("fail-job-child-" + suffix).chunkSize(1).build()).build();
+							.migrationId("fail-job-child-" + suffix).chunkSize(1).build())
+					.chunkListener(new ChunkedBulkMigrationListener() {
+						@Override
+						public void onChunkFailed(ChunkedBulkMigrationProgress progress, Throwable cause) {
+							events.add("chunk-failed:" + progress.getChunkIndex());
+						}
+					}).build();
 
-			final List<String> events = new ArrayList<>();
 			final var failure = assertThrows(BulkMigrationJobException.class,
 					() -> BulkMigrationJobExecutor.execute(connection,
 							List.of(childTask, parentTask), new BulkMigrationJobListener() {
@@ -431,7 +473,7 @@ class ChunkedBulkMigrationTest {
 								}
 							}));
 			assertEquals("child", failure.getFailedTaskId());
-			assertEquals(List.of("1:2:child"), events);
+			assertEquals(List.of("chunk-failed:0", "1:2:child"), events);
 			assertEquals(List.of("parent"), failure.getCompletedResult().getTasks().stream()
 					.map(result -> result.getTaskId()).toList());
 			assertEquals(1, failure.getCompletedResult().getProcessedRows());

@@ -34,18 +34,22 @@ public final class BulkMigrationJobExecutor {
 			listener.onTaskStarted(task.getTaskId(), taskIndex, ordered.size());
 			try {
 				final ChunkedBulkMigrationResult result;
+				final ChunkedBulkMigrationListener chunkListener = task.getChunkListener() == null
+						? ChunkedBulkMigrationListener.NO_OP : task.getChunkListener();
 				if (task.getKeysetSource() != null) {
 					result = task.getCheckpointStore() == null
-							? ChunkedBulkMigrationExecutor.execute(targetConnection,
-									task.getKeysetSource(), task.getOptions())
+							? ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,
+									task.getKeysetSource(), task.getOptions(), chunkListener)
 							: ChunkedBulkMigrationExecutor.execute(targetConnection,
-									task.getKeysetSource(), task.getOptions(), task.getCheckpointStore());
+									task.getKeysetSource(), task.getOptions(), task.getCheckpointStore(),
+									chunkListener);
 				} else {
 					result = task.getCheckpointStore() == null
-							? ChunkedBulkMigrationExecutor.execute(targetConnection,
-									task.getSourceTable(), task.getOptions())
+							? ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,
+									task.getSourceTable(), task.getOptions(), chunkListener)
 							: ChunkedBulkMigrationExecutor.execute(targetConnection,
-									task.getSourceTable(), task.getOptions(), task.getCheckpointStore());
+									task.getSourceTable(), task.getOptions(), task.getCheckpointStore(),
+									chunkListener);
 				}
 				results.add(new BulkMigrationJobTaskResult(task.getTaskId(), result));
 				listener.onTaskCompleted(task.getTaskId(), result, taskIndex, ordered.size());

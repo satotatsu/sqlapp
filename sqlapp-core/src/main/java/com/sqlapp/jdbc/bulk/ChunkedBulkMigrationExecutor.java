@@ -20,6 +20,13 @@ public final class ChunkedBulkMigrationExecutor {
 	/** Uses the target-database checkpoint table, which is the default mode. */
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final Table sourceTable, final ChunkedBulkMigrationOption options) throws SQLException {
+		return executeWithListener(targetConnection, sourceTable, options,
+				ChunkedBulkMigrationListener.NO_OP);
+	}
+
+	public static ChunkedBulkMigrationResult executeWithListener(final Connection targetConnection,
+			final Table sourceTable, final ChunkedBulkMigrationOption options,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(options, "options");
 		if (options.getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE) {
 			throw new IllegalArgumentException("A checkpoint store is required for checkpointMode="
@@ -31,13 +38,20 @@ public final class ChunkedBulkMigrationExecutor {
 		}
 		return execute(targetConnection, sourceTable, options,
 				new JdbcBulkMigrationCheckpointStore(targetConnection,
-						options.getCheckpointTableName()));
+						options.getCheckpointTableName()), listener);
 	}
 
 	/** Executes a keyset source using the default target-database checkpoint. */
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options)
 			throws SQLException {
+		return executeWithListener(targetConnection, source, options,
+				ChunkedBulkMigrationListener.NO_OP);
+	}
+
+	public static ChunkedBulkMigrationResult executeWithListener(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(options, "options");
 		if (options.getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE) {
 			throw new IllegalArgumentException("A checkpoint store is required for checkpointMode="
@@ -49,31 +63,49 @@ public final class ChunkedBulkMigrationExecutor {
 		}
 		return execute(targetConnection, source, options,
 				new JdbcBulkMigrationCheckpointStore(targetConnection,
-						options.getCheckpointTableName()));
+						options.getCheckpointTableName()), listener);
 	}
 
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final Table sourceTable, final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
-		return executeInternal(targetConnection, sourceTable, null, options, checkpointStore);
+		return execute(targetConnection, sourceTable, options, checkpointStore,
+				ChunkedBulkMigrationListener.NO_OP);
+	}
+
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final Table sourceTable, final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		return executeInternal(targetConnection, sourceTable, null, options, checkpointStore, listener);
 	}
 
 	/** Executes a source that resumes by its unique ordered key rather than row count. */
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
+		return execute(targetConnection, source, options, checkpointStore,
+				ChunkedBulkMigrationListener.NO_OP);
+	}
+
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(source, "source");
-		return executeInternal(targetConnection, source.getTable(), source, options, checkpointStore);
+		return executeInternal(targetConnection, source.getTable(), source, options, checkpointStore, listener);
 	}
 
 	private static ChunkedBulkMigrationResult executeInternal(final Connection targetConnection,
 			final Table sourceTable, final BulkMigrationKeysetSource keysetSource,
 			final ChunkedBulkMigrationOption options,
-			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
+			final BulkMigrationCheckpointStore checkpointStore,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(sourceTable, "sourceTable");
 		Objects.requireNonNull(options, "options");
 		Objects.requireNonNull(checkpointStore, "checkpointStore");
+		Objects.requireNonNull(listener, "listener");
 		if (options.getMigrationId() == null || options.getMigrationId().isBlank()) {
 			throw new IllegalArgumentException("migrationId must not be empty");
 		}
@@ -134,25 +166,39 @@ public final class ChunkedBulkMigrationExecutor {
 						.lastChunkHash(BulkMigrationHash.rows(rows,
 								sourceTable.getColumns()))
 						.resumeToken(nextToken).complete(false).build();
-				if (transactional) {
-					targetConnection.setAutoCommit(false);
-					try {
-						write(targetConnection, chunk, sourceTable, options, true);
+				final ChunkedBulkMigrationProgress progress = new ChunkedBulkMigrationProgress(
+						options.getMigrationId(), chunks, rows.size(),
+						previouslyProcessed + processed, nextCheckpoint.getProcessedRows());
+				listener.onChunkStarted(progress);
+				try {
+					if (transactional) {
+						targetConnection.setAutoCommit(false);
+						try {
+							write(targetConnection, chunk, sourceTable, options, true);
+							checkpointStore.save(nextCheckpoint);
+							targetConnection.commit();
+						} catch (SQLException | RuntimeException e) {
+							rollback(targetConnection, e);
+							throw e;
+						} finally {
+							targetConnection.setAutoCommit(true);
+						}
+					} else {
+						write(targetConnection, chunk, sourceTable, options, false);
 						checkpointStore.save(nextCheckpoint);
-						targetConnection.commit();
-					} catch (SQLException | RuntimeException e) {
-						rollback(targetConnection, e);
-						throw e;
-					} finally {
-						targetConnection.setAutoCommit(true);
 					}
-				} else {
-					write(targetConnection, chunk, sourceTable, options, false);
-					checkpointStore.save(nextCheckpoint);
+				} catch (SQLException | RuntimeException e) {
+					try {
+						listener.onChunkFailed(progress, e);
+					} catch (RuntimeException listenerFailure) {
+						e.addSuppressed(listenerFailure);
+					}
+					throw e;
 				}
 				processed += rows.size();
 				chunks++;
 				checkpoint = nextCheckpoint;
+				listener.onChunkCompleted(progress);
 			}
 			final BulkMigrationCheckpoint complete = checkpoint.toBuilder().complete(true).build();
 			if (transactional) {

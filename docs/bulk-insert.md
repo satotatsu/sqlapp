@@ -418,3 +418,14 @@ total task count. This can feed application logging or metrics without adding
 such dependencies to sqlapp-core. Listener runtime failures abort execution;
 an exception thrown while reporting an SQL failure is attached to the original
 SQL exception as a suppressed exception.
+
+`ChunkedBulkMigrationExecutor.executeWithListener` and the five-argument
+`execute` overload accept a `ChunkedBulkMigrationListener`. It reports each chunk before writing, after its
+checkpoint is durable, and when the write or checkpoint operation fails. The
+progress value contains the migration ID, zero-based durable chunk index,
+chunk row count, and processed-row counters before and after the chunk. A job
+task can set the same listener through `BulkMigrationJobTask.chunkListener`.
+No chunk-completed event is emitted until the checkpoint save (and database
+checkpoint transaction commit) succeeds. Listener runtime failures abort the
+current invocation; completion-callback failure is safe to resume because that
+chunk is already checkpointed.
