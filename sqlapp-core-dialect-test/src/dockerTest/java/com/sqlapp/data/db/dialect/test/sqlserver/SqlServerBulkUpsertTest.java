@@ -21,6 +21,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
@@ -54,6 +55,38 @@ class SqlServerBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(SQL_SERVER);
+	}
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
+			throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_CHILD') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_JOB_CHILD");
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_PARENT') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_JOB_PARENT");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_JOB_PARENT "
+					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_JOB_CHILD "
+					+ "(ID INT NOT NULL PRIMARY KEY, PARENT_ID INT NOT NULL "
+					+ "REFERENCES dbo.SQLAPP_BULK_JOB_PARENT(ID), TXT NVARCHAR(100))");
+			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT", false);
+			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD", true);
+			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_BULK_JOB_CHILD_PARENT",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child);
+			assertEquals(1, scalar(statement, "SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_CHILD c "
+					+ "JOIN dbo.SQLAPP_BULK_JOB_PARENT p ON p.ID = c.PARENT_ID"));
+		}
 	}
 
 	@Test
@@ -330,6 +363,15 @@ class SqlServerBulkUpsertTest {
 		table.getColumns().add(id);
 		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(100));
 		table.setPrimaryKey("PK_" + name, id);
+		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = repairTable(name);
+		if (child) {
+			table.getColumns().add(1, new Column("PARENT_ID").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
 		return table;
 	}
 

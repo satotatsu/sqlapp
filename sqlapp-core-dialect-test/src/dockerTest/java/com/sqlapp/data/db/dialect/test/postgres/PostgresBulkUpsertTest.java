@@ -20,6 +20,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
@@ -50,6 +51,35 @@ class PostgresBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(POSTGRES);
+	}
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
+			throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.bulk_job_child");
+			statement.execute("DROP TABLE IF EXISTS public.bulk_job_parent");
+			statement.execute("CREATE TABLE public.bulk_job_parent "
+					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_job_child "
+					+ "(id INTEGER PRIMARY KEY, parent_id INTEGER NOT NULL "
+					+ "REFERENCES public.bulk_job_parent(id), txt TEXT)");
+			final Table parent = jobTable("bulk_job_parent", false);
+			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			final Table child = jobTable("bulk_job_child", true);
+			child.getConstraints().addForeignKeyConstraint("bulk_job_child_parent_fk",
+					new Column[] { child.getColumns().get("parent_id") },
+					new Column[] { parent.getColumns().get("id") });
+			child.getRows().add(row -> {
+				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child);
+			assertEquals(1, scalar(statement, "SELECT COUNT(*) FROM public.bulk_job_child c "
+					+ "JOIN public.bulk_job_parent p ON p.id = c.parent_id"));
+		}
 	}
 
 	@Test
@@ -312,6 +342,15 @@ class PostgresBulkUpsertTest {
 		table.getColumns().add(id);
 		table.getColumns().add(new Column("txt").setDataType(DataType.LONGVARCHAR));
 		table.setPrimaryKey(name + "_pkey", id);
+		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = repairTable(name);
+		if (child) {
+			table.getColumns().add(1,
+					new Column("parent_id").setDataType(DataType.INT).setNotNull(true));
+		}
 		return table;
 	}
 }
