@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,6 +24,12 @@ import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobStatusInspector;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
@@ -47,6 +54,48 @@ class SqlServerBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(SQL_SERVER);
+	}
+
+	@Test
+	void inspectsAndResetsJdbcJobCheckpointWithoutRemovingUpsertedRows()
+			throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_RESET_TARGET') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_JOB_RESET_TARGET");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_JOB_RESET_TARGET "
+					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			final Table source = repairTable("SQLAPP_BULK_JOB_RESET_TARGET");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
+			final var options = ChunkedBulkMigrationOption.builder()
+					.migrationId("sqlserver-job-reset-" + java.util.UUID.randomUUID())
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.chunkSize(1).build();
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					options.getCheckpointTableName());
+			final var task = BulkMigrationJobTask.builder().taskId("reset")
+					.sourceTable(source).options(options).checkpointStore(store).build();
+			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
+					.getProcessedRows());
+			assertEquals(BulkMigrationJobTaskState.COMPLETE,
+					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
+
+			assertEquals(List.of("reset"), BulkMigrationJobCheckpointManager
+					.reset(plan, plan.getFingerprint()).getResetTaskIds());
+			assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
+			assertEquals(2, scalar(statement,
+					"SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_RESET_TARGET"));
+
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
+					.getProcessedRows());
+			assertEquals(2, scalar(statement,
+					"SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_RESET_TARGET"));
+		}
 	}
 
 	@Test
@@ -272,11 +321,23 @@ class SqlServerBulkUpsertTest {
 	}
 
 	private static Table repairTable() {
-		final Table table = new Table("SQLAPP_BULK_REPAIR_TARGET").setSchemaName("dbo");
+		return repairTable("SQLAPP_BULK_REPAIR_TARGET");
+	}
+
+	private static Table repairTable(final String name) {
+		final Table table = new Table(name).setSchemaName("dbo");
 		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(id);
 		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(100));
-		table.setPrimaryKey("PK_SQLAPP_BULK_REPAIR_TARGET", id);
+		table.setPrimaryKey("PK_" + name, id);
 		return table;
+	}
+
+	private static int scalar(final java.sql.Statement statement, final String sql)
+			throws java.sql.SQLException {
+		try (var resultSet = statement.executeQuery(sql)) {
+			resultSet.next();
+			return resultSet.getInt(1);
+		}
 	}
 }

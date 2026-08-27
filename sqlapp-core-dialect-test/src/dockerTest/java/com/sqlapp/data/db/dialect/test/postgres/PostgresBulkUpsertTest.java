@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,6 +24,12 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobStatusInspector;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
@@ -43,6 +50,46 @@ class PostgresBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(POSTGRES);
+	}
+
+	@Test
+	void inspectsAndResetsJdbcJobCheckpointWithoutRemovingUpsertedRows()
+			throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.bulk_job_reset_target");
+			statement.execute("CREATE TABLE public.bulk_job_reset_target "
+					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			final Table source = repairTable("bulk_job_reset_target");
+			source.getRows().add(row -> { row.put("id", 1); row.put("txt", "one"); });
+			source.getRows().add(row -> { row.put("id", 2); row.put("txt", "two"); });
+			final var options = ChunkedBulkMigrationOption.builder()
+					.migrationId("postgres-job-reset-" + java.util.UUID.randomUUID())
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.chunkSize(1).build();
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					options.getCheckpointTableName());
+			final var task = BulkMigrationJobTask.builder().taskId("reset")
+					.sourceTable(source).options(options).checkpointStore(store).build();
+			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
+					.getProcessedRows());
+			assertEquals(BulkMigrationJobTaskState.COMPLETE,
+					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
+
+			assertEquals(List.of("reset"), BulkMigrationJobCheckpointManager
+					.reset(plan, plan.getFingerprint()).getResetTaskIds());
+			assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
+			assertEquals(2, scalar(statement,
+					"SELECT COUNT(*) FROM public.bulk_job_reset_target"));
+
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
+					.getProcessedRows());
+			assertEquals(2, scalar(statement,
+					"SELECT COUNT(*) FROM public.bulk_job_reset_target"));
+		}
 	}
 
 	@Test
@@ -256,11 +303,15 @@ class PostgresBulkUpsertTest {
 	}
 
 	private static Table repairTable() {
-		final Table table = new Table("bulk_repair_target").setSchemaName("public");
+		return repairTable("bulk_repair_target");
+	}
+
+	private static Table repairTable(final String name) {
+		final Table table = new Table(name).setSchemaName("public");
 		final Column id = new Column("id").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(id);
 		table.getColumns().add(new Column("txt").setDataType(DataType.LONGVARCHAR));
-		table.setPrimaryKey("bulk_repair_target_pkey", id);
+		table.setPrimaryKey(name + "_pkey", id);
 		return table;
 	}
 }
