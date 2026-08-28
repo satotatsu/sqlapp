@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -32,15 +33,45 @@ class Db2BulkUpsertTest {
 	}
 
 	@Test
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
+			throws Exception {
+		try (Connection connection = DB2.createConnection("");
+				var statement = connection.createStatement()) {
+			ensureUserTemporaryTablespace(statement);
+			dropTable(statement, "SQLAPP_BULK_JOB_CHILD_DB2");
+			dropTable(statement, "SQLAPP_BULK_JOB_PARENT_DB2");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_PARENT_DB2 "
+					+ "(ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_CHILD_DB2 "
+					+ "(ID INTEGER NOT NULL PRIMARY KEY, PARENT_ID INTEGER NOT NULL, "
+					+ "TXT VARCHAR(100), CONSTRAINT FK_SQLAPP_JOB_CHILD_PARENT "
+					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB_PARENT_DB2(ID))");
+			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT_DB2", false);
+			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD_DB2", true);
+			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_JOB_CHILD_PARENT",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child);
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_DB2 c "
+					+ "JOIN SQLAPP_BULK_JOB_PARENT_DB2 p ON p.ID = c.PARENT_ID")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
 	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
 		try (Connection connection = DB2.createConnection("");
 				var statement = connection.createStatement()) {
-			try {
-				statement.execute("CREATE USER TEMPORARY TABLESPACE SQLAPP_USERTEMP "
-						+ "MANAGED BY AUTOMATIC STORAGE");
-			} catch (java.sql.SQLException e) {
-				if (!"42710".equals(e.getSQLState())) throw e;
-			}
+			ensureUserTemporaryTablespace(statement);
 			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_DB2"); }
 			catch (java.sql.SQLException ignored) { }
 			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_DB2 "
@@ -67,14 +98,7 @@ class Db2BulkUpsertTest {
 	void updatesMatchesAndInsertsMissingRowsThroughBatchStaging() throws Exception {
 		try (Connection connection = DB2.createConnection("");
 				var statement = connection.createStatement()) {
-			try {
-				statement.execute("CREATE USER TEMPORARY TABLESPACE SQLAPP_USERTEMP "
-						+ "MANAGED BY AUTOMATIC STORAGE");
-			} catch (java.sql.SQLException e) {
-				if (!"42710".equals(e.getSQLState())) {
-					throw e;
-				}
-			}
+			ensureUserTemporaryTablespace(statement);
 			try {
 				statement.execute("DROP TABLE SQLAPP_BULK_UPSERT_DB2");
 			} catch (java.sql.SQLException ignored) {
@@ -141,5 +165,41 @@ class Db2BulkUpsertTest {
 		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_DB2", code);
 		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("PK_" + name, id);
+		return table;
+	}
+
+	private static void ensureUserTemporaryTablespace(final java.sql.Statement statement)
+			throws java.sql.SQLException {
+		try {
+			statement.execute("CREATE USER TEMPORARY TABLESPACE SQLAPP_USERTEMP "
+					+ "MANAGED BY AUTOMATIC STORAGE");
+		} catch (java.sql.SQLException e) {
+			if (!"42710".equals(e.getSQLState())) {
+				throw e;
+			}
+		}
+	}
+
+	private static void dropTable(final java.sql.Statement statement, final String tableName)
+			throws java.sql.SQLException {
+		try {
+			statement.execute("DROP TABLE " + tableName);
+		} catch (java.sql.SQLException e) {
+			if (!"42704".equals(e.getSQLState())) {
+				throw e;
+			}
+		}
 	}
 }

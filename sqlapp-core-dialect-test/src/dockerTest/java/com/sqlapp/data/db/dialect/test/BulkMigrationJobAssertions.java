@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
@@ -29,11 +31,19 @@ public final class BulkMigrationJobAssertions {
 	public static void assertDependencyOrderAndAggregatedStatus(
 			final Connection connection, final Table parent, final Table child)
 			throws SQLException {
-		final String suffix = UUID.randomUUID().toString();
-		final var parentOptions = options("parent-" + suffix);
-		final var childOptions = options("child-" + suffix);
 		final var store = new JdbcBulkMigrationCheckpointStore(connection,
-				parentOptions.getCheckpointTableName());
+				ChunkedBulkMigrationOption.builder().build().getCheckpointTableName());
+		assertDependencyOrderAndAggregatedStatus(connection, parent, child, store,
+				BulkMigrationCheckpointMode.DATABASE);
+	}
+
+	public static void assertDependencyOrderAndAggregatedStatus(
+			final Connection connection, final Table parent, final Table child,
+			final BulkMigrationCheckpointStore store,
+			final BulkMigrationCheckpointMode checkpointMode) throws SQLException {
+		final String suffix = UUID.randomUUID().toString();
+		final var parentOptions = options("parent-" + suffix, checkpointMode);
+		final var childOptions = options("child-" + suffix, checkpointMode);
 		final var parentTask = BulkMigrationJobTask.builder().taskId("parent")
 				.sourceTable(parent).options(parentOptions).checkpointStore(store).build();
 		final var childTask = BulkMigrationJobTask.builder().taskId("child")
@@ -64,9 +74,10 @@ public final class BulkMigrationJobAssertions {
 				.allMatch(task -> task.getState() == BulkMigrationJobTaskState.COMPLETE));
 	}
 
-	private static ChunkedBulkMigrationOption options(final String migrationId) {
+	private static ChunkedBulkMigrationOption options(final String migrationId,
+			final BulkMigrationCheckpointMode checkpointMode) {
 		return ChunkedBulkMigrationOption.builder().migrationId(migrationId)
 				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.chunkSize(1).build();
+				.checkpointMode(checkpointMode).chunkSize(1).build();
 	}
 }

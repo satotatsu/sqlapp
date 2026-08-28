@@ -17,10 +17,13 @@ import org.testcontainers.oracle.OracleContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
@@ -37,6 +40,42 @@ class OracleBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(ORACLE);
+	}
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
+			@TempDir final Path checkpointDirectory) throws Exception {
+		try (Connection connection = ORACLE.createConnection("");
+				var statement = connection.createStatement()) {
+			dropTable(statement, "SQLAPP_BULK_JOB_CHILD_ORACLE");
+			dropTable(statement, "SQLAPP_BULK_JOB_PARENT_ORACLE");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_PARENT_ORACLE "
+					+ "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_CHILD_ORACLE "
+					+ "(ID NUMBER(10) PRIMARY KEY, PARENT_ID NUMBER(10) NOT NULL, "
+					+ "TXT VARCHAR2(100), CONSTRAINT FK_SQLAPP_JOB_CHILD_ORACLE "
+					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB_PARENT_ORACLE(ID))");
+			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT_ORACLE", false);
+			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD_ORACLE", true);
+			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_JOB_CHILD_ORACLE",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory),
+					BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_ORACLE c "
+					+ "JOIN SQLAPP_BULK_JOB_PARENT_ORACLE p ON p.ID = c.PARENT_ID")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
 	}
 
 	@Test
@@ -139,5 +178,29 @@ class OracleBulkUpsertTest {
 				.setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_ORACLE", code);
 		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("PK_" + name, id);
+		return table;
+	}
+
+	private static void dropTable(final java.sql.Statement statement, final String tableName)
+			throws java.sql.SQLException {
+		try {
+			statement.execute("DROP TABLE " + tableName);
+		} catch (java.sql.SQLException e) {
+			if (e.getErrorCode() != 942) {
+				throw e;
+			}
+		}
 	}
 }
