@@ -61,6 +61,24 @@ public class ConstraintCollectionTest {
 		assertTrue(constraints.stream().anyMatch(ForeignKeyConstraint.class::isInstance));
 	}
 
+	@Test
+	public void testGetUniqueConstraintsByColumns() {
+		Table table = new Table("tableA");
+		Column columnA = new Column("columnA");
+		Column columnB = new Column("columnB");
+		Column columnC = new Column("columnC");
+		table.getColumns().add(columnA);
+		table.getColumns().add(columnB);
+		table.getColumns().add(columnC);
+		UniqueConstraint constraint = table.getConstraints()
+				.addUniqueConstraint("UK_tableA", columnA, columnB);
+
+		assertEquals(java.util.List.of(constraint), table.getConstraints()
+				.getUniqueConstraints(columnA, columnB));
+		assertTrue(table.getConstraints().getUniqueConstraints(columnA).isEmpty());
+		assertTrue(table.getConstraints().getUniqueConstraints(columnC).isEmpty());
+	}
+
 	protected ConstraintCollection createConstraintCollection1(){
 		ConstraintCollection cc=new ConstraintCollection();
 		CheckConstraintTest ccTest=new CheckConstraintTest();

@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -71,6 +73,34 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 			resolved.add(column);
 		}
 		this.keyColumns = List.copyOf(resolved);
+		validateKeyColumns(table, this.keyColumns);
+	}
+
+	private static void validateKeyColumns(final Table table, final List<Column> columns) {
+		for (final Column column : columns) {
+			if (!column.isNotNull()) {
+				throw new IllegalArgumentException("Keyset column must be NOT NULL: "
+						+ column.getName());
+			}
+		}
+		final Set<String> names = columns.stream().map(Column::getName)
+				.collect(Collectors.toSet());
+		final boolean uniqueConstraint = table.getConstraints().getUniqueConstraints().stream()
+				.anyMatch(constraint -> constraint.getColumns().size() == names.size()
+						&& constraint.getColumns().stream()
+								.allMatch(column -> names.contains(column.getName())));
+		final boolean uniqueIndex = table.getIndexes().stream().filter(index -> index.isUnique())
+				.anyMatch(index -> {
+					final var indexColumns = index.getColumns().stream()
+							.filter(column -> !column.isIncludedColumn()).toList();
+					return indexColumns.size() == names.size() && indexColumns.stream()
+							.allMatch(column -> names.contains(column.getName()));
+				});
+		if (!uniqueConstraint && !uniqueIndex) {
+			throw new IllegalArgumentException(
+					"Keyset columns must exactly match a primary key, unique constraint, "
+							+ "or unique index: " + names);
+		}
 	}
 
 	private static List<String> primaryKeyNames(final Table table) {

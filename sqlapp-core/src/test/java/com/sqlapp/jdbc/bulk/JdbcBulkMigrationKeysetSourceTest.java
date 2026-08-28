@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,36 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 			checkpointRow.put("KEY2", 1);
 			assertEquals(List.of("second", "third"),
 					values(source.iterator(source.resumeToken(checkpointRow))));
+		});
+	}
+
+	@Test
+	void acceptsOnlyCompleteNonNullUniqueKeys() throws Exception {
+		testDb(connection -> {
+			final Table table = new Table("KEYSET_VALIDATION");
+			final Column key1 = new Column("KEY1").setDataType(DataType.INT).setNotNull(true);
+			final Column key2 = new Column("KEY2").setDataType(DataType.INT).setNotNull(true);
+			final Column value = new Column("VALUE").setDataType(DataType.VARCHAR);
+			table.getColumns().add(key1);
+			table.getColumns().add(key2);
+			table.getColumns().add(value);
+			table.getConstraints().addUniqueConstraint("UK_KEYSET", key1, key2);
+
+			new JdbcBulkMigrationKeysetSource(connection, table, List.of("KEY1", "KEY2"));
+			assertThrows(IllegalArgumentException.class,
+					() -> new JdbcBulkMigrationKeysetSource(connection, table, List.of("KEY1")));
+			assertThrows(IllegalArgumentException.class,
+					() -> new JdbcBulkMigrationKeysetSource(connection, table, List.of("VALUE")));
+
+			final Table indexed = new Table("KEYSET_INDEX_VALIDATION");
+			final Column indexKey1 = new Column("KEY1").setDataType(DataType.INT)
+					.setNotNull(true);
+			final Column indexKey2 = new Column("KEY2").setDataType(DataType.INT)
+					.setNotNull(true);
+			indexed.getColumns().add(indexKey1);
+			indexed.getColumns().add(indexKey2);
+			indexed.getIndexes().add("UIX_KEYSET", indexKey1, indexKey2).setUnique(true);
+			new JdbcBulkMigrationKeysetSource(connection, indexed, List.of("KEY2", "KEY1"));
 		});
 	}
 
