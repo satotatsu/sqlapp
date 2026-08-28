@@ -35,6 +35,7 @@ public class SybaseSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, SybaseCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SybaseAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SybaseCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SybaseTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, SybaseLockTableFactory.class);

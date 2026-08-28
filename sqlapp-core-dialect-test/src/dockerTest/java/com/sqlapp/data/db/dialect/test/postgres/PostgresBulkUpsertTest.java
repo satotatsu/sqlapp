@@ -54,6 +54,26 @@ class PostgresBulkUpsertTest {
 	}
 
 	@Test
+	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS \"SQLAPP_BMC_LEGACY_PG\"");
+			statement.execute("CREATE TABLE \"SQLAPP_BMC_LEGACY_PG\" ("
+					+ "\"MIGRATION_ID\" VARCHAR(255) NOT NULL PRIMARY KEY, "
+					+ "\"SOURCE_FINGERPRINT\" VARCHAR(255), \"TARGET_FINGERPRINT\" VARCHAR(255), "
+					+ "\"PROCESSED_ROWS\" NUMERIC(19,0) NOT NULL, "
+					+ "\"COMPLETED_CHUNKS\" NUMERIC(19,0) NOT NULL, "
+					+ "\"LAST_CHUNK_HASH\" VARCHAR(64), \"COMPLETE_FLAG\" CHAR(1) NOT NULL)");
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					"SQLAPP_BMC_LEGACY_PG");
+			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
+					.migrationId("legacy-pg").processedRows(1).completedChunks(1)
+					.resumeToken("token-pg").complete(false).build());
+			assertEquals("token-pg", store.load("legacy-pg").orElseThrow().getResumeToken());
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
 			throws Exception {
 		try (Connection connection = POSTGRES.createConnection("");

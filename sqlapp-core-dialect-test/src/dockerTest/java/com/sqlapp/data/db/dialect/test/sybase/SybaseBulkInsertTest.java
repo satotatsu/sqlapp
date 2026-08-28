@@ -30,6 +30,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 
 /** Exercises streaming JDBC batches against Sybase ASE 16.0 SP03. */
 class SybaseBulkInsertTest {
@@ -50,6 +51,25 @@ class SybaseBulkInsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(ASE);
+	}
+
+	@Test
+	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			dropTable(statement, "SQLAPP_BMC_LEGACY_ASE");
+			statement.execute("CREATE TABLE SQLAPP_BMC_LEGACY_ASE ("
+					+ "MIGRATION_ID VARCHAR(255) NOT NULL PRIMARY KEY, "
+					+ "SOURCE_FINGERPRINT VARCHAR(255) NULL, TARGET_FINGERPRINT VARCHAR(255) NULL, "
+					+ "PROCESSED_ROWS DECIMAL(19,0) NOT NULL, "
+					+ "COMPLETED_CHUNKS DECIMAL(19,0) NOT NULL, "
+					+ "LAST_CHUNK_HASH VARCHAR(64) NULL, COMPLETE_FLAG CHAR(1) NOT NULL)");
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					"SQLAPP_BMC_LEGACY_ASE");
+			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
+					.migrationId("legacy-ase").processedRows(1).completedChunks(1)
+					.resumeToken("token-ase").complete(false).build());
+			assertEquals("token-ase", store.load("legacy-ase").orElseThrow().getResumeToken());
+		}
 	}
 
 	@Test

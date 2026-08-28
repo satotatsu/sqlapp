@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.dialect.sybase.sql;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -22,5 +23,20 @@ class SybaseCreateTableFactoryTest extends AbstractSybaseSqlFactoryRegistryTest 
 				.get(0).getSqlText().replaceAll("\\s+", " ").toUpperCase();
 
 		assertTrue(sql.contains("VALUE VARCHAR(100) NULL"), sql);
+	}
+
+	@Test
+	void addsNullableColumnWithoutColumnKeyword() {
+		final Table original = new Table("CHECKPOINT");
+		original.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		final Table target = original.clone();
+		target.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR)
+				.setLength(4000).setNotNull(false));
+
+		final String sql = sqlFactoryRegistry.createSql(original.diff(target), SqlType.ALTER)
+				.get(0).getSqlText().replaceAll("\\s+", " ").toUpperCase();
+
+		assertTrue(sql.contains("ALTER TABLE CHECKPOINT ADD RESUME_TOKEN VARCHAR(4000) NULL"), sql);
+		assertFalse(sql.contains("ADD COLUMN"), sql);
 	}
 }

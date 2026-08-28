@@ -3,20 +3,26 @@ package com.sqlapp.jdbc.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.State;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.sql.ConnectionSqlExecutor;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.JdbcHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** Checkpoint store backed by a control table in the target database. */
 public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrationCheckpointStore {
@@ -25,6 +31,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	private final String rawTableName;
 	private final String resumeTokenType;
 	private final Dialect dialect;
+	private final Map<SqlType, SqlNode> sqlNodes = new EnumMap<>(SqlType.class);
 
 	public JdbcBulkMigrationCheckpointStore(final Connection connection,
 			final String tableName) throws SQLException {
@@ -38,6 +45,12 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		this.resumeTokenType = connection.getMetaData().getDatabaseProductName()
 				.toLowerCase(java.util.Locale.ROOT).contains("informix")
 						? "LVARCHAR(4000)" : "VARCHAR(4000)";
+		final var registry = dialect.createSqlFactoryRegistry();
+		final Table checkpointTable = checkpointTable();
+		for (final SqlType sqlType : new SqlType[] { SqlType.SELECT, SqlType.UPDATE,
+				SqlType.INSERT, SqlType.DELETE }) {
+			sqlNodes.put(sqlType, registry.createSqlNodes(checkpointTable, sqlType).get(0));
+		}
 		ensureTable();
 	}
 
@@ -49,17 +62,26 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	@Override
 	public Optional<BulkMigrationCheckpoint> load(final String migrationId) throws SQLException {
 		final BulkMigrationCheckpoint[] result = new BulkMigrationCheckpoint[1];
-		new JdbcHandler(sqlNode(SqlType.SELECT), rs -> result[0] = BulkMigrationCheckpoint.builder()
-				.migrationId(migrationId)
-				.sourceFingerprint(rs.getString(2))
-				.targetFingerprint(rs.getString(3))
-				.processedRows(rs.getLong(4))
-				.completedChunks(rs.getLong(5))
-				.lastChunkHash(rs.getString(6))
-				.resumeToken(rs.getString(7))
-				.complete("1".equals(rs.getString(8))).build())
+		new JdbcHandler(sqlNode(SqlType.SELECT), rs -> result[0] = checkpoint(rs, migrationId))
 				.execute(connection, parameters(migrationId));
 		return Optional.ofNullable(result[0]);
+	}
+
+	private static BulkMigrationCheckpoint checkpoint(final ExResultSet resultSet,
+			final String migrationId) throws SQLException {
+		final Map<String, Integer> columns = new LinkedHashMap<>();
+		final var metadata = resultSet.getMetaData();
+		for (int i = 1; i <= metadata.getColumnCount(); i++) {
+			columns.put(metadata.getColumnLabel(i).toUpperCase(Locale.ROOT), i);
+		}
+		return BulkMigrationCheckpoint.builder().migrationId(migrationId)
+				.sourceFingerprint(resultSet.getString(columns.get("SOURCE_FINGERPRINT")))
+				.targetFingerprint(resultSet.getString(columns.get("TARGET_FINGERPRINT")))
+				.processedRows(resultSet.getLong(columns.get("PROCESSED_ROWS")))
+				.completedChunks(resultSet.getLong(columns.get("COMPLETED_CHUNKS")))
+				.lastChunkHash(resultSet.getString(columns.get("LAST_CHUNK_HASH")))
+				.resumeToken(resultSet.getString(columns.get("RESUME_TOKEN")))
+				.complete("1".equals(resultSet.getString(columns.get("COMPLETE_FLAG")))).build();
 	}
 
 	@Override
@@ -77,8 +99,8 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		new JdbcHandler(sqlNode(SqlType.DELETE)).execute(connection, parameters(migrationId));
 	}
 
-	private com.sqlapp.jdbc.sql.node.SqlNode sqlNode(final SqlType sqlType) {
-		return dialect.createSqlFactoryRegistry().createSqlNodes(checkpointTable(), sqlType).get(0);
+	private SqlNode sqlNode(final SqlType sqlType) {
+		return sqlNodes.get(sqlType);
 	}
 
 	private static ParametersContext parameters(final String migrationId) {
