@@ -34,7 +34,8 @@ public final class BulkMigrationTransactionAssertions {
 		}
 		final String migrationId = "docker-" + java.util.UUID.randomUUID();
 		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId(migrationId).chunkSize(2).build();
+				.migrationId(migrationId).checkpointTableName(checkpointTableName())
+				.chunkSize(2).build();
 		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 				option.getCheckpointTableName());
 		assertThrows(SQLException.class,
@@ -58,7 +59,8 @@ public final class BulkMigrationTransactionAssertions {
 			row.put(nameColumn, "name-1");
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId("docker-rejected-" + java.util.UUID.randomUUID()).build();
+				.migrationId("docker-rejected-" + java.util.UUID.randomUUID())
+				.checkpointTableName(checkpointTableName()).build();
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
 		assertEquals(0, count(connection, countSql));
@@ -77,7 +79,8 @@ public final class BulkMigrationTransactionAssertions {
 		}
 		final String migrationId = "docker-insert-" + java.util.UUID.randomUUID();
 		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId(migrationId).chunkSize(2).mode(BulkMigrationMode.INSERT).build();
+				.migrationId(migrationId).checkpointTableName(checkpointTableName())
+				.chunkSize(2).mode(BulkMigrationMode.INSERT).build();
 		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 				option.getCheckpointTableName());
 		assertThrows(SQLException.class,
@@ -102,6 +105,7 @@ public final class BulkMigrationTransactionAssertions {
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId("docker-insert-rejected-" + java.util.UUID.randomUUID())
+				.checkpointTableName(checkpointTableName())
 				.mode(BulkMigrationMode.INSERT).build();
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
@@ -139,5 +143,10 @@ public final class BulkMigrationTransactionAssertions {
 			resultSet.next();
 			return resultSet.getInt(1);
 		}
+	}
+
+	private static String checkpointTableName() {
+		return "SQLAPP_BMC_" + java.util.UUID.randomUUID().toString()
+				.replace("-", "").substring(0, 8).toUpperCase(java.util.Locale.ROOT);
 	}
 }

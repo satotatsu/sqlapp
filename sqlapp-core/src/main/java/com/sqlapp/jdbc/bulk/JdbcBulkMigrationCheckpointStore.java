@@ -13,7 +13,8 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.sql.ConnectionSqlExecutor;
+import com.sqlapp.data.db.sql.ConnectionSqlExecutor;
+import com.sqlapp.data.db.sql.SqlFactory;
 
 /** Checkpoint store backed by a control table in the target database. */
 public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrationCheckpointStore {
@@ -45,9 +46,9 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	@Override
 	public Optional<BulkMigrationCheckpoint> load(final String migrationId) throws SQLException {
-		final String sql = "SELECT source_fingerprint, target_fingerprint, processed_rows, "
-				+ "completed_chunks, last_chunk_hash, resume_token, complete_flag FROM " + tableName
-				+ " WHERE migration_id = ?";
+		final String sql = "SELECT SOURCE_FINGERPRINT, TARGET_FINGERPRINT, PROCESSED_ROWS, "
+				+ "COMPLETED_CHUNKS, LAST_CHUNK_HASH, RESUME_TOKEN, COMPLETE_FLAG FROM " + tableName
+				+ " WHERE MIGRATION_ID = ?";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, migrationId);
 			try (var resultSet = statement.executeQuery()) {
@@ -69,19 +70,19 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	@Override
 	public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
-		final String update = "UPDATE " + tableName + " SET source_fingerprint = ?, "
-				+ "target_fingerprint = ?, processed_rows = ?, completed_chunks = ?, "
-				+ "last_chunk_hash = ?, resume_token = ?, complete_flag = ? "
-				+ "WHERE migration_id = ?";
+		final String update = "UPDATE " + tableName + " SET SOURCE_FINGERPRINT = ?, "
+				+ "TARGET_FINGERPRINT = ?, PROCESSED_ROWS = ?, COMPLETED_CHUNKS = ?, "
+				+ "LAST_CHUNK_HASH = ?, RESUME_TOKEN = ?, COMPLETE_FLAG = ? "
+				+ "WHERE MIGRATION_ID = ?";
 		try (var statement = connection.prepareStatement(update)) {
 			bind(statement, checkpoint);
 			if (statement.executeUpdate() != 0) {
 				return;
 			}
 		}
-		final String insert = "INSERT INTO " + tableName + " (source_fingerprint, "
-				+ "target_fingerprint, processed_rows, completed_chunks, last_chunk_hash, "
-				+ "resume_token, complete_flag, migration_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		final String insert = "INSERT INTO " + tableName + " (SOURCE_FINGERPRINT, "
+				+ "TARGET_FINGERPRINT, PROCESSED_ROWS, COMPLETED_CHUNKS, LAST_CHUNK_HASH, "
+				+ "RESUME_TOKEN, COMPLETE_FLAG, MIGRATION_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 		try (var statement = connection.prepareStatement(insert)) {
 			bind(statement, checkpoint);
 			statement.executeUpdate();
@@ -91,7 +92,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	@Override
 	public void delete(final String migrationId) throws SQLException {
 		try (var statement = connection.prepareStatement(
-				"DELETE FROM " + tableName + " WHERE migration_id = ?")) {
+				"DELETE FROM " + tableName + " WHERE MIGRATION_ID = ?")) {
 			statement.setString(1, migrationId);
 			statement.executeUpdate();
 		}
@@ -119,37 +120,64 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	}
 
 	private void ensureTable() throws SQLException {
+		String generatedDdl = null;
 		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT migration_id FROM " + tableName + " WHERE 1 = 0").close();
+			statement.executeQuery("SELECT MIGRATION_ID FROM " + tableName + " WHERE 1 = 0").close();
 		} catch (SQLException missing) {
 			try {
 				final Table table = checkpointTable();
-				final var factory = dialect.createSqlFactoryRegistry()
+				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 						.getSqlFactory(table, State.Added);
-				new ConnectionSqlExecutor(connection, false).execute(factory.createSql(table));
+				final var operations = factory.createSql(table);
+				generatedDdl = operations.stream().map(op -> op.getSqlText())
+						.collect(java.util.stream.Collectors.joining("; "));
+				try {
+					new ConnectionSqlExecutor(connection, false).execute(operations);
+				} catch (SQLException e) {
+					e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
+					throw e;
+				}
 			} catch (SQLException createFailure) {
 				createFailure.addSuppressed(missing);
 				throw createFailure;
 			}
-			return;
 		}
-		ensureResumeTokenColumn();
+		try {
+			ensureResumeTokenColumn();
+		} catch (SQLException e) {
+			if (generatedDdl != null) {
+				e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
+			}
+			throw e;
+		}
+		try (var statement = connection.createStatement()) {
+			statement.executeQuery("SELECT SOURCE_FINGERPRINT, TARGET_FINGERPRINT, "
+					+ "PROCESSED_ROWS, COMPLETED_CHUNKS, LAST_CHUNK_HASH, COMPLETE_FLAG FROM "
+					+ tableName + " WHERE 1 = 0").close();
+		} catch (SQLException e) {
+			if (generatedDdl != null) {
+				e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
+			}
+			throw e;
+		}
 	}
 
 	private Table checkpointTable() {
 		final Table table = new Table(rawTableName);
-		final Column migrationId = column("migration_id", DataType.VARCHAR, 255, true);
+		final Column migrationId = column("MIGRATION_ID", DataType.VARCHAR, 255, true);
 		table.getColumns().add(migrationId);
-		table.getColumns().add(column("source_fingerprint", DataType.VARCHAR, 255, false));
-		table.getColumns().add(column("target_fingerprint", DataType.VARCHAR, 255, false));
-		table.getColumns().add(new Column("processed_rows").setDataType(DataType.DECIMAL)
+		table.getColumns().add(column("SOURCE_FINGERPRINT", DataType.VARCHAR, 255, false));
+		table.getColumns().add(column("TARGET_FINGERPRINT", DataType.VARCHAR, 255, false));
+		table.getColumns().add(new Column("PROCESSED_ROWS").setDataType(DataType.DECIMAL)
 				.setLength(19).setScale(0).setNotNull(true));
-		table.getColumns().add(new Column("completed_chunks").setDataType(DataType.DECIMAL)
+		table.getColumns().add(new Column("COMPLETED_CHUNKS").setDataType(DataType.DECIMAL)
 				.setLength(19).setScale(0).setNotNull(true));
-		table.getColumns().add(column("last_chunk_hash", DataType.VARCHAR, 64, false));
-		table.getColumns().add(column("resume_token", DataType.LONGVARCHAR, 4000, false));
-		table.getColumns().add(column("complete_flag", DataType.CHAR, 1, true));
-		table.setPrimaryKey("PK_" + rawTableName, migrationId);
+		table.getColumns().add(column("LAST_CHUNK_HASH", DataType.VARCHAR, 64, false));
+		table.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR)
+				.setDataTypeName(resumeTokenType.startsWith("LVARCHAR") ? "LVARCHAR" : "VARCHAR")
+				.setLength(4000));
+		table.getColumns().add(column("COMPLETE_FLAG", DataType.CHAR, 1, true));
+		table.setPrimaryKey((String) null, migrationId);
 		return table;
 	}
 
@@ -160,11 +188,11 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	private void ensureResumeTokenColumn() throws SQLException {
 		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT resume_token FROM " + tableName + " WHERE 1 = 0").close();
+			statement.executeQuery("SELECT RESUME_TOKEN FROM " + tableName + " WHERE 1 = 0").close();
 			return;
 		} catch (SQLException missing) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("ALTER TABLE " + tableName + " ADD resume_token " + resumeTokenType);
+				statement.execute("ALTER TABLE " + tableName + " ADD RESUME_TOKEN " + resumeTokenType);
 			} catch (SQLException alterFailure) {
 				alterFailure.addSuppressed(missing);
 				throw alterFailure;

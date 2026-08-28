@@ -8,20 +8,25 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.Duration;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
@@ -48,8 +53,43 @@ class SybaseBulkInsertTest {
 	}
 
 	@Test
+	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
+			@TempDir final Path checkpointDirectory) throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			dropTable(statement, "sqlapp_bulk_job_child_sybase");
+			dropTable(statement, "sqlapp_bulk_job_parent_sybase");
+			statement.execute("CREATE TABLE sqlapp_bulk_job_parent_sybase "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute("CREATE TABLE sqlapp_bulk_job_child_sybase "
+					+ "(id INT PRIMARY KEY, parent_id INT NOT NULL, txt VARCHAR(100) NULL, "
+					+ "FOREIGN KEY (parent_id) REFERENCES sqlapp_bulk_job_parent_sybase(id))");
+			final Table parent = jobTable("sqlapp_bulk_job_parent_sybase", false);
+			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			final Table child = jobTable("sqlapp_bulk_job_child_sybase", true);
+			child.getConstraints().addForeignKeyConstraint("fk_sqlapp_job_child_sybase",
+					new Column[] { child.getColumns().get("parent_id") },
+					new Column[] { parent.getColumns().get("id") });
+			child.getRows().add(row -> {
+				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory),
+					BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM sqlapp_bulk_job_child_sybase c "
+					+ "JOIN sqlapp_bulk_job_parent_sybase p ON p.id = c.parent_id")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
 	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			dropTable(statement, "sqlapp_bulk_migration_checkpoint");
 			try { statement.execute("DROP TABLE sqlapp_chunk_migration_sybase"); }
 			catch (java.sql.SQLException ignored) { }
 			statement.execute("CREATE TABLE sqlapp_chunk_migration_sybase "
@@ -187,5 +227,25 @@ class SybaseBulkInsertTest {
 		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR));
 		table.setPrimaryKey("pk_sqlapp_upsert_sybase", table.getColumns().get("id"));
 		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("id").setDataType(DataType.INT);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("parent_id").setDataType(DataType.INT));
+		}
+		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("pk_" + name, id);
+		return table;
+	}
+
+	private static void dropTable(final java.sql.Statement statement, final String tableName) {
+		try {
+			statement.execute("DROP TABLE " + tableName);
+		} catch (java.sql.SQLException ignored) {
+			// The isolated test database can start without the table.
+		}
 	}
 }

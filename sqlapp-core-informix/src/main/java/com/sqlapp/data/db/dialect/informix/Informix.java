@@ -25,7 +25,9 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.informix.metadata.InformixCatalogReader;
+import com.sqlapp.data.db.dialect.informix.sql.InformixSqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * Informix固有情報クラス
@@ -177,6 +179,11 @@ public class Informix extends Dialect {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new InformixCatalogReader(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new InformixSqlFactoryRegistry(this);
 	}
 
 	@Override
