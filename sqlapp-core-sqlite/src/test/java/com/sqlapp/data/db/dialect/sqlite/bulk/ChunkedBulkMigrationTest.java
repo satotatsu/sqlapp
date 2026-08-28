@@ -870,6 +870,11 @@ class ChunkedBulkMigrationTest {
 		}
 
 		@Override
+		public String getConfigurationFingerprint() {
+			return "integer-keyset-v1";
+		}
+
+		@Override
 		public Iterator<Row> iterator(final String resumeToken) {
 			final int after = resumeToken == null ? Integer.MIN_VALUE : Integer.parseInt(resumeToken);
 			return ids.stream().filter(id -> id > after).map(id -> {

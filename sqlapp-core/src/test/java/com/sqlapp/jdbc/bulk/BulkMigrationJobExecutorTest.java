@@ -88,6 +88,24 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void fingerprintIncludesKeysetResumeConfiguration() {
+		final Table table = table("KEYSET_CONFIG");
+		final var first = BulkMigrationJobTask.builder().taskId("task")
+				.keysetSource(keyset(table, "keys=[A,B]"))
+				.options(options("keyset-config")).build();
+		final var reordered = BulkMigrationJobTask.builder().taskId("task")
+				.keysetSource(keyset(table, "keys=[B,A]"))
+				.options(options("keyset-config")).build();
+
+		assertNotEquals(BulkMigrationJobPlanner.plan(List.of(first)).getFingerprint(),
+				BulkMigrationJobPlanner.plan(List.of(reordered)).getFingerprint());
+		final var missing = BulkMigrationJobTask.builder().taskId("missing-config")
+				.keysetSource(keyset(table, " ")).options(options("missing-config")).build();
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobPlanner.plan(List.of(missing)));
+	}
+
+	@Test
 	void rejectsDuplicateTaskIds() {
 		final var first = tableTask("duplicate", "migration-1", table("A"));
 		final var second = tableTask("duplicate", "migration-2", table("B"));
@@ -188,10 +206,20 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	private static BulkMigrationKeysetSource keyset(final Table table) {
+		return keyset(table, "test-keyset-v1");
+	}
+
+	private static BulkMigrationKeysetSource keyset(final Table table,
+			final String configurationFingerprint) {
 		return new BulkMigrationKeysetSource() {
 			@Override
 			public Table getTable() {
 				return table;
+			}
+
+			@Override
+			public String getConfigurationFingerprint() {
+				return configurationFingerprint;
 			}
 
 			@Override

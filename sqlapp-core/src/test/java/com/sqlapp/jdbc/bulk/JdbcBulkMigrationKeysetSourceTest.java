@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
@@ -64,7 +65,12 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 			indexed.getColumns().add(indexKey1);
 			indexed.getColumns().add(indexKey2);
 			indexed.getIndexes().add("UIX_KEYSET", indexKey1, indexKey2).setUnique(true);
-			new JdbcBulkMigrationKeysetSource(connection, indexed, List.of("KEY2", "KEY1"));
+			final var indexOrder = new JdbcBulkMigrationKeysetSource(connection, indexed,
+					List.of("KEY2", "KEY1"));
+			final var reverseIndexOrder = new JdbcBulkMigrationKeysetSource(connection, indexed,
+					List.of("KEY1", "KEY2"));
+			assertNotEquals(indexOrder.getConfigurationFingerprint(),
+					reverseIndexOrder.getConfigurationFingerprint());
 
 			final Table caseInsensitive = new Table("KEYSET_CASE_VALIDATION")
 					.setCaseSensitive(false);
@@ -75,6 +81,39 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 					new ReferenceColumn("key_id"));
 			new JdbcBulkMigrationKeysetSource(connection, caseInsensitive, List.of("KEY_ID"));
 		});
+	}
+
+	@Test
+	void rejectsInvalidCustomCodecResultsBeforeExecutingSql() throws Exception {
+		testDb(connection -> {
+			final Table table = table();
+			assertThrows(IllegalArgumentException.class,
+					() -> source(connection, table, null).iterator("token"));
+			assertThrows(IllegalArgumentException.class,
+					() -> source(connection, table, List.of(1)).iterator("token"));
+			assertThrows(IllegalArgumentException.class,
+					() -> source(connection, table, java.util.Arrays.asList(1, null))
+							.iterator("token"));
+			assertThrows(IllegalArgumentException.class,
+					() -> source(connection, table, List.of(1, 2, 3)).iterator("token"));
+		});
+	}
+
+	private static JdbcBulkMigrationKeysetSource source(final java.sql.Connection connection,
+			final Table table, final List<Object> decoded) {
+		final BulkMigrationKeysetCodec codec = new BulkMigrationKeysetCodec() {
+			@Override
+			public String encode(final List<Column> keyColumns, final Row row) {
+				return "token";
+			}
+
+			@Override
+			public List<Object> decode(final List<Column> keyColumns, final String token) {
+				return decoded;
+			}
+		};
+		return new JdbcBulkMigrationKeysetSource(connection, table,
+				List.of("KEY1", "KEY2"), codec, 100);
 	}
 
 	private static List<String> values(final java.util.Iterator<Row> rows) {

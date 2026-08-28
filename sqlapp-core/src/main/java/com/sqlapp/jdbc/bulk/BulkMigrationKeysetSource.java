@@ -18,6 +18,12 @@ public interface BulkMigrationKeysetSource {
 	/** Schema and target identity used to build migration chunks. */
 	Table getTable();
 
+	/**
+	 * Returns a non-empty, stable fingerprint of every setting that affects token
+	 * interpretation or row order.
+	 */
+	String getConfigurationFingerprint();
+
 	/** Opens the source at its beginning when the token is {@code null}. */
 	Iterator<Row> iterator(String resumeToken) throws SQLException;
 

@@ -50,6 +50,15 @@ public class BulkMigrationJobPlan {
 						option.getMode(), option.isResume(), option.getCheckpointMode(),
 						option.getCheckpointTableName(), option.getSourceFingerprint(),
 						option.getTargetFingerprint());
+				if (task.getKeysetSource() != null) {
+					final String keysetFingerprint = task.getKeysetSource()
+							.getConfigurationFingerprint();
+					if (keysetFingerprint == null || keysetFingerprint.isBlank()) {
+						throw new IllegalArgumentException("Keyset source configuration fingerprint "
+								+ "must not be blank: " + task.getTaskId());
+					}
+					update(digest, keysetFingerprint);
+				}
 				if (option.getMode() == BulkMigrationMode.INSERT) {
 					bulk(digest, option.getBulkOption());
 				} else {

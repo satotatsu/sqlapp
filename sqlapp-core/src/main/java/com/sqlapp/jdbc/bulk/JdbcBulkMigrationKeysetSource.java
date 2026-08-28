@@ -24,6 +24,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.DbUtils;
+import com.sqlapp.util.JsonUtils;
 
 /** Portable ascending JDBC keyset source for one or more unique key columns. */
 public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource {
@@ -134,10 +135,16 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 	}
 
 	@Override
+	public String getConfigurationFingerprint() {
+		return JsonUtils.toJsonString(List.of(
+				keyColumns.stream().map(Column::getName).toList(),
+				codec.getConfigurationFingerprint(), fetchSize));
+	}
+
+	@Override
 	public Iterator<Row> iterator(final String resumeToken) throws SQLException {
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-		final List<Object> values = resumeToken == null ? List.of()
-				: codec.decode(keyColumns, resumeToken);
+		final List<Object> values = decode(resumeToken);
 		final Table queryTable = queryTable();
 		final TableRelation relation = new TableRelation(queryTable);
 		final SqlNode node = selectNode(dialect, relation);
@@ -152,6 +159,27 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 			DbUtils.close(statement);
 			throw e;
 		}
+	}
+
+	private List<Object> decode(final String resumeToken) {
+		if (resumeToken == null) {
+			return List.of();
+		}
+		final List<Object> values = codec.decode(keyColumns, resumeToken);
+		if (values == null) {
+			throw new IllegalArgumentException("Keyset codec returned null values");
+		}
+		if (values.size() != keyColumns.size()) {
+			throw new IllegalArgumentException("Keyset codec returned " + values.size()
+					+ " values but " + keyColumns.size() + " key columns are configured");
+		}
+		for (int i = 0; i < values.size(); i++) {
+			if (values.get(i) == null) {
+				throw new IllegalArgumentException(
+						"Keyset codec returned a null value at index " + i);
+			}
+		}
+		return List.copyOf(values);
 	}
 
 	@Override
