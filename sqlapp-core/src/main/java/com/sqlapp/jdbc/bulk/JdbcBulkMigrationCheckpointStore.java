@@ -14,6 +14,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrationCheckpointStore {
 	private final Connection connection;
 	private final String tableName;
+	private final String resumeTokenType;
 
 	public JdbcBulkMigrationCheckpointStore(final Connection connection,
 			final String tableName) throws SQLException {
@@ -23,6 +24,9 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		}
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tableName = dialect.quote(tableName);
+		this.resumeTokenType = connection.getMetaData().getDatabaseProductName()
+				.toLowerCase(java.util.Locale.ROOT).contains("informix")
+						? "LVARCHAR(4000)" : "VARCHAR(4000)";
 		ensureTable();
 	}
 
@@ -114,7 +118,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 					+ "migration_id VARCHAR(255) NOT NULL PRIMARY KEY, "
 					+ "source_fingerprint VARCHAR(255), target_fingerprint VARCHAR(255), "
 					+ "processed_rows DECIMAL(19, 0) NOT NULL, completed_chunks DECIMAL(19, 0) NOT NULL, "
-					+ "last_chunk_hash VARCHAR(64), resume_token VARCHAR(4000), "
+					+ "last_chunk_hash VARCHAR(64), resume_token " + resumeTokenType + ", "
 					+ "complete_flag CHAR(1) NOT NULL)";
 			try (var statement = connection.createStatement()) {
 				statement.execute(create);
@@ -133,7 +137,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 			return;
 		} catch (SQLException missing) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("ALTER TABLE " + tableName + " ADD resume_token VARCHAR(4000)");
+				statement.execute("ALTER TABLE " + tableName + " ADD resume_token " + resumeTokenType);
 			} catch (SQLException alterFailure) {
 				alterFailure.addSuppressed(missing);
 				throw alterFailure;

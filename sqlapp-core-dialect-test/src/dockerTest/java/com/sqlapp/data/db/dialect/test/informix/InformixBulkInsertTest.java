@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -35,6 +36,40 @@ class InformixBulkInsertTest {
 
 	@BeforeAll static void start() { ReusableTestcontainers.start(INFORMIX); }
 	@AfterAll static void stop() { ReusableTestcontainers.stop(INFORMIX); }
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
+		final String url = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088)
+				+ "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var connection = DriverManager.getConnection(url, "informix", "in4mix");
+				var statement = connection.createStatement()) {
+			dropTable(statement, "sqlapp_bulk_job_child_informix");
+			dropTable(statement, "sqlapp_bulk_job_parent_informix");
+			statement.execute("CREATE TABLE sqlapp_bulk_job_parent_informix "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute("CREATE TABLE sqlapp_bulk_job_child_informix "
+					+ "(id INT PRIMARY KEY, parent_id INT NOT NULL, txt VARCHAR(100), "
+					+ "FOREIGN KEY (parent_id) REFERENCES sqlapp_bulk_job_parent_informix(id))");
+			final Table parent = jobTable("sqlapp_bulk_job_parent_informix", false);
+			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			final Table child = jobTable("sqlapp_bulk_job_child_informix", true);
+			child.getConstraints().addForeignKeyConstraint("fk_sqlapp_job_child_informix",
+					new Column[] { child.getColumns().get("parent_id") },
+					new Column[] { parent.getColumns().get("id") });
+			child.getRows().add(row -> {
+				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child);
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM sqlapp_bulk_job_child_informix c "
+					+ "JOIN sqlapp_bulk_job_parent_informix p ON p.id = c.parent_id")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
 
 	@Test
 	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
@@ -134,5 +169,29 @@ class InformixBulkInsertTest {
 		table.getColumns().add(new Column("nullable_value").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("empty_value").setDataType(DataType.VARCHAR));
 		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("id").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("parent_id").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
+		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("pk_" + name, id);
+		return table;
+	}
+
+	private static void dropTable(final java.sql.Statement statement, final String tableName)
+			throws java.sql.SQLException {
+		try {
+			statement.execute("DROP TABLE " + tableName);
+		} catch (java.sql.SQLException e) {
+			if (e.getErrorCode() != -206) {
+				throw e;
+			}
+		}
 	}
 }
