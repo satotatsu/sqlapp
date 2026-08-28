@@ -96,12 +96,26 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 							.iterator("token"));
 			assertThrows(IllegalArgumentException.class,
 					() -> source(connection, table, List.of(1, 2, 3)).iterator("token"));
+			assertThrows(IllegalStateException.class,
+					() -> source(connection, table, List.of(1, 2), " ")
+							.getConfigurationFingerprint());
 		});
 	}
 
 	private static JdbcBulkMigrationKeysetSource source(final java.sql.Connection connection,
 			final Table table, final List<Object> decoded) {
+		return source(connection, table, decoded, "test-codec-v1");
+	}
+
+	private static JdbcBulkMigrationKeysetSource source(final java.sql.Connection connection,
+			final Table table, final List<Object> decoded,
+			final String configurationFingerprint) {
 		final BulkMigrationKeysetCodec codec = new BulkMigrationKeysetCodec() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return configurationFingerprint;
+			}
+
 			@Override
 			public String encode(final List<Column> keyColumns, final Row row) {
 				return "token";

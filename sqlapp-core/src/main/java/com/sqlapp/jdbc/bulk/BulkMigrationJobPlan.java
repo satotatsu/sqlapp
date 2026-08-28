@@ -50,6 +50,7 @@ public class BulkMigrationJobPlan {
 						option.getMode(), option.isResume(), option.getCheckpointMode(),
 						option.getCheckpointTableName(), option.getSourceFingerprint(),
 						option.getTargetFingerprint());
+				table(digest, table);
 				if (task.getKeysetSource() != null) {
 					final String keysetFingerprint = task.getKeysetSource()
 							.getConfigurationFingerprint();
@@ -76,6 +77,32 @@ public class BulkMigrationJobPlan {
 		} catch (NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+
+	private static void table(final MessageDigest digest, final Table table) {
+		update(digest, table.getColumns().size());
+		table.getColumns().forEach(column -> update(digest, column.getName(),
+				column.getDataType(), column.getDataTypeName(), column.getLength(),
+				column.getScale(), column.isNotNull(), column.isIdentity(), column.isHidden(),
+				column.getFormula(), column.getDefaultValue()));
+		if (table.getPrimaryKeyConstraint() == null) {
+			update(digest, (Object) null);
+		} else {
+			update(digest, table.getPrimaryKeyConstraint().getName());
+			update(digest, table.getPrimaryKeyConstraint().getColumns().size());
+			table.getPrimaryKeyConstraint().getColumns()
+					.forEach(column -> update(digest, column.getName()));
+		}
+		final var foreignKeys = table.getConstraints().getForeignKeyConstraints();
+		update(digest, foreignKeys.size());
+		foreignKeys.forEach(foreignKey -> {
+			update(digest, foreignKey.getName(), foreignKey.getRelatedTableSchemaName(),
+					foreignKey.getRelatedTableName(), foreignKey.getColumns().size(),
+					foreignKey.getRelatedColumns().size());
+			foreignKey.getColumns().forEach(column -> update(digest, column.getName()));
+			foreignKey.getRelatedColumns()
+					.forEach(column -> update(digest, column.getName()));
+		});
 	}
 
 	private static void bulk(final MessageDigest digest, final BulkOption option) {

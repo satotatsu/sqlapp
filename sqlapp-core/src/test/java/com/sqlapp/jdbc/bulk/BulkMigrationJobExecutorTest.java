@@ -69,6 +69,30 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void detectsColumnKeyAndDependencyMutationAfterPlanning() {
+		final Table columns = table("COLUMN_MUTATION");
+		final var columnPlan = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("columns", "column-mutation", columns)));
+		columns.getColumns().add(new Column("ADDED"));
+		assertFalse(columnPlan.isUnchanged());
+
+		final Table keys = table("KEY_MUTATION");
+		final var keyPlan = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("keys", "key-mutation", keys)));
+		keys.setPrimaryKey("PK_KEY_MUTATION", keys.getColumns().get("ID"));
+		assertFalse(keyPlan.isUnchanged());
+
+		final Table parent = table("DEPENDENCY_PARENT");
+		final Table child = table("DEPENDENCY_CHILD");
+		final var dependencyPlan = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("parent", "dependency-parent", parent),
+				tableTask("child", "dependency-child", child)));
+		child.getConstraints().addForeignKeyConstraint("FK_DEPENDENCY",
+				child.getColumns().get("ID"), parent.getColumns().get("ID"));
+		assertFalse(dependencyPlan.isUnchanged());
+	}
+
+	@Test
 	void fingerprintDistinguishesStructuredColumnListsAndSourceStyles() {
 		final Table table = table("STRUCTURED");
 		final var commaName = ChunkedBulkMigrationOption.builder().migrationId("structured")

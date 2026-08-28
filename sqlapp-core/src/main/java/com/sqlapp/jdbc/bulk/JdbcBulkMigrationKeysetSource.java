@@ -136,9 +136,14 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 
 	@Override
 	public String getConfigurationFingerprint() {
+		final String codecFingerprint = codec.getConfigurationFingerprint();
+		if (codecFingerprint == null || codecFingerprint.isBlank()) {
+			throw new IllegalStateException(
+					"Keyset codec configuration fingerprint must not be blank");
+		}
 		return JsonUtils.toJsonString(List.of(
 				keyColumns.stream().map(Column::getName).toList(),
-				codec.getConfigurationFingerprint(), fetchSize));
+				codecFingerprint, fetchSize));
 	}
 
 	@Override
