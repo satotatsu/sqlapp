@@ -9,12 +9,19 @@ import java.util.Optional;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.ConnectionSqlExecutor;
 
 /** Checkpoint store backed by a control table in the target database. */
 public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrationCheckpointStore {
 	private final Connection connection;
 	private final String tableName;
+	private final String rawTableName;
 	private final String resumeTokenType;
+	private final Dialect dialect;
 
 	public JdbcBulkMigrationCheckpointStore(final Connection connection,
 			final String tableName) throws SQLException {
@@ -22,7 +29,8 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		if (tableName == null || !tableName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
 			throw new IllegalArgumentException("Invalid checkpoint table name: " + tableName);
 		}
-		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+		this.dialect = DialectResolver.getInstance().getDialect(connection);
+		this.rawTableName = tableName;
 		this.tableName = dialect.quote(tableName);
 		this.resumeTokenType = connection.getMetaData().getDatabaseProductName()
 				.toLowerCase(java.util.Locale.ROOT).contains("informix")
@@ -114,14 +122,11 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		try (var statement = connection.createStatement()) {
 			statement.executeQuery("SELECT migration_id FROM " + tableName + " WHERE 1 = 0").close();
 		} catch (SQLException missing) {
-			final String create = "CREATE TABLE " + tableName + " ("
-					+ "migration_id VARCHAR(255) NOT NULL PRIMARY KEY, "
-					+ "source_fingerprint VARCHAR(255), target_fingerprint VARCHAR(255), "
-					+ "processed_rows DECIMAL(19, 0) NOT NULL, completed_chunks DECIMAL(19, 0) NOT NULL, "
-					+ "last_chunk_hash VARCHAR(64), resume_token " + resumeTokenType + ", "
-					+ "complete_flag CHAR(1) NOT NULL)";
-			try (var statement = connection.createStatement()) {
-				statement.execute(create);
+			try {
+				final Table table = checkpointTable();
+				final var factory = dialect.createSqlFactoryRegistry()
+						.getSqlFactory(table, State.Added);
+				new ConnectionSqlExecutor(connection, false).execute(factory.createSql(table));
 			} catch (SQLException createFailure) {
 				createFailure.addSuppressed(missing);
 				throw createFailure;
@@ -129,6 +134,28 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 			return;
 		}
 		ensureResumeTokenColumn();
+	}
+
+	private Table checkpointTable() {
+		final Table table = new Table(rawTableName);
+		final Column migrationId = column("migration_id", DataType.VARCHAR, 255, true);
+		table.getColumns().add(migrationId);
+		table.getColumns().add(column("source_fingerprint", DataType.VARCHAR, 255, false));
+		table.getColumns().add(column("target_fingerprint", DataType.VARCHAR, 255, false));
+		table.getColumns().add(new Column("processed_rows").setDataType(DataType.DECIMAL)
+				.setLength(19).setScale(0).setNotNull(true));
+		table.getColumns().add(new Column("completed_chunks").setDataType(DataType.DECIMAL)
+				.setLength(19).setScale(0).setNotNull(true));
+		table.getColumns().add(column("last_chunk_hash", DataType.VARCHAR, 64, false));
+		table.getColumns().add(column("resume_token", DataType.LONGVARCHAR, 4000, false));
+		table.getColumns().add(column("complete_flag", DataType.CHAR, 1, true));
+		table.setPrimaryKey("PK_" + rawTableName, migrationId);
+		return table;
+	}
+
+	private static Column column(final String name, final DataType type,
+			final long length, final boolean notNull) {
+		return new Column(name).setDataType(type).setLength(length).setNotNull(notNull);
 	}
 
 	private void ensureResumeTokenColumn() throws SQLException {
