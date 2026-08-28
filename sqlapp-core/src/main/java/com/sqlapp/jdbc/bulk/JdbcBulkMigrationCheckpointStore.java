@@ -146,6 +146,10 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	}
 
 	private Table checkpointTable() {
+		return checkpointTable(true);
+	}
+
+	private Table checkpointTable(final boolean includeResumeToken) {
 		final Table table = new Table(rawTableName);
 		final Column migrationId = column("MIGRATION_ID", DataType.VARCHAR, 255, true);
 		table.getColumns().add(migrationId);
@@ -156,9 +160,11 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		table.getColumns().add(new Column("COMPLETED_CHUNKS").setDataType(DataType.DECIMAL)
 				.setLength(19).setScale(0).setNotNull(true));
 		table.getColumns().add(column("LAST_CHUNK_HASH", DataType.VARCHAR, 64, false));
-		table.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR)
-				.setDataTypeName(resumeTokenType.startsWith("LVARCHAR") ? "LVARCHAR" : "VARCHAR")
-				.setLength(4000));
+		if (includeResumeToken) {
+			table.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR)
+					.setDataTypeName(resumeTokenType.startsWith("LVARCHAR") ? "LVARCHAR" : "VARCHAR")
+					.setLength(4000));
+		}
 		table.getColumns().add(column("COMPLETE_FLAG", DataType.CHAR, 1, true));
 		table.setPrimaryKey((String) null, migrationId);
 		return table;
@@ -175,9 +181,14 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 					+ tableName + " WHERE 1 = 0").close();
 			return;
 		} catch (SQLException missing) {
-			try (var statement = connection.createStatement()) {
-				statement.execute("ALTER TABLE " + tableName + " ADD "
-						+ columnName("RESUME_TOKEN") + " " + resumeTokenType);
+			try {
+				final Table original = checkpointTable(false);
+				final Table target = checkpointTable(true);
+				final var difference = original.diff(target);
+				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+						.getSqlFactory(target, SqlType.ALTER);
+				final var operations = factory.createDiffSql(difference);
+				new ConnectionSqlExecutor(connection, false).execute(operations);
 			} catch (SQLException alterFailure) {
 				alterFailure.addSuppressed(missing);
 				throw alterFailure;
