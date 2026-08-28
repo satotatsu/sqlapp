@@ -277,6 +277,7 @@ public final class ChunkedBulkMigrationExecutor {
 				.useTransaction(option.isUseTransaction())
 				.duplicateKeyStrategy(option.getDuplicateKeyStrategy())
 				.duplicateRowSelector(option.getDuplicateRowSelector())
+				.duplicateRowSelectorFingerprint(option.getDuplicateRowSelectorFingerprint())
 				.stagingTableName(option.getStagingTableName())
 				.bulkOption(option.getBulkOption());
 		return builder.build();

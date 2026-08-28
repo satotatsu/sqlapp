@@ -130,6 +130,35 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void fingerprintIncludesCustomDuplicateSelectorIdentity() {
+		final Table table = table("CUSTOM_SELECTOR");
+		final BulkUpsertDuplicateRowSelector selector = (retained, candidate) -> retained;
+		final var first = ChunkedBulkMigrationOption.builder().migrationId("custom-selector")
+				.bulkUpsertOption(BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelector(selector)
+						.duplicateRowSelectorFingerprint("selector-v1").build()).build();
+		final var changed = ChunkedBulkMigrationOption.builder().migrationId("custom-selector")
+				.bulkUpsertOption(BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelector(selector)
+						.duplicateRowSelectorFingerprint("selector-v2").build()).build();
+
+		assertNotEquals(BulkMigrationJobPlanner.plan(List.of(
+				tableTask("task", table, first))).getFingerprint(),
+				BulkMigrationJobPlanner.plan(List.of(
+						tableTask("task", table, changed))).getFingerprint());
+
+		final var missingFingerprint = ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-selector-fingerprint")
+				.bulkUpsertOption(BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelector(selector).build()).build();
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(List.of(
+				tableTask("missing", table, missingFingerprint))));
+	}
+
+	@Test
 	void rejectsDuplicateTaskIds() {
 		final var first = tableTask("duplicate", "migration-1", table("A"));
 		final var second = tableTask("duplicate", "migration-2", table("B"));

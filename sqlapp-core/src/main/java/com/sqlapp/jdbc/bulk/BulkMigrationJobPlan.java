@@ -65,11 +65,12 @@ public class BulkMigrationJobPlan {
 				} else {
 					final BulkUpsertOption upsert = option.getBulkUpsertOption() == null
 							? BulkUpsertOption.defaults() : option.getBulkUpsertOption();
+					upsert.validateDuplicateKeyStrategy();
 					list(digest, upsert.getKeyColumns());
 					list(digest, upsert.getUpdateColumns());
 					update(digest, upsert.isUpdateWhenMatched(), upsert.isInsertWhenNotMatched(),
 							upsert.isUseTransaction(), upsert.getDuplicateKeyStrategy(),
-							upsert.getDuplicateRowSelector() != null, upsert.getStagingTableName());
+							upsert.getDuplicateRowSelectorFingerprint(), upsert.getStagingTableName());
 					bulk(digest, upsert.getBulkOption());
 				}
 			}

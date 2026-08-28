@@ -35,6 +35,7 @@ public final class BulkUpsertPlan {
 		this.option = java.util.Objects.requireNonNull(option, "option");
 		if (!option.isUpdateWhenMatched() && !option.isInsertWhenNotMatched())
 			throw new IllegalArgumentException("At least one upsert action must be enabled");
+		option.validateDuplicateKeyStrategy();
 		keyColumns = List.copyOf(resolveKeys());
 		stagingColumns = List.copyOf(resolveStagingColumns());
 		updateColumns = List.copyOf(resolveUpdateColumns());

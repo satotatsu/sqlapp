@@ -42,8 +42,32 @@ public class BulkUpsertOption implements Serializable {
 	private final BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy = BulkUpsertDuplicateKeyStrategy.ERROR;
 	/** Selector required when duplicateKeyStrategy is CUSTOM. */
 	private final BulkUpsertDuplicateRowSelector duplicateRowSelector;
+	/** Stable identity of the custom selector logic, required for CUSTOM. */
+	private final String duplicateRowSelectorFingerprint;
 	/** Optional deterministic staging name, mainly for diagnostics/tests. */
 	private final String stagingTableName;
 	@Builder.Default
 	private final BulkOption bulkOption = BulkOption.defaults();
+
+	void validateDuplicateKeyStrategy() {
+		if (duplicateKeyStrategy == null) {
+			throw new IllegalArgumentException("duplicateKeyStrategy must not be null");
+		}
+		if (duplicateKeyStrategy == BulkUpsertDuplicateKeyStrategy.CUSTOM) {
+			if (duplicateRowSelector == null) {
+				throw new IllegalArgumentException(
+						"duplicateRowSelector is required for CUSTOM duplicate keys");
+			}
+			if (duplicateRowSelectorFingerprint == null
+					|| duplicateRowSelectorFingerprint.isBlank()) {
+				throw new IllegalArgumentException(
+						"duplicateRowSelectorFingerprint is required for CUSTOM duplicate keys");
+			}
+		} else if (duplicateRowSelector != null
+				|| (duplicateRowSelectorFingerprint != null
+						&& !duplicateRowSelectorFingerprint.isBlank())) {
+			throw new IllegalArgumentException(
+					"duplicateRowSelector and its fingerprint require CUSTOM duplicate keys");
+		}
+	}
 }

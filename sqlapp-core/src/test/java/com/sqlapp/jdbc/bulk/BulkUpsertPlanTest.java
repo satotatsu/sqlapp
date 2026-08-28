@@ -46,6 +46,7 @@ class BulkUpsertPlanTest {
 	void canSelectDuplicateSourceRowWithCustomCondition() {
 		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
 				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+				.duplicateRowSelectorFingerprint("lexical-name-v1")
 				.duplicateRowSelector((retained, candidate) ->
 						((String) retained.get("name")).compareTo((String) candidate.get("name")) <= 0
 								? retained : candidate)
@@ -59,9 +60,24 @@ class BulkUpsertPlanTest {
 		final Table table = tableWithDuplicateKeys();
 		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.builder()
 				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+				.duplicateRowSelectorFingerprint("invalid-selector-v1")
 				.duplicateRowSelector((retained, candidate) -> new com.sqlapp.data.schemas.Row())
 				.build()).createStagingTable("stage").getRows().iterator();
 		assertThrows(IllegalArgumentException.class, rows::hasNext);
+	}
+
+	@Test
+	void customSelectorRequiresAStableFingerprint() {
+		final Table table = tableWithDuplicateKeys();
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertPlan.resolve(table,
+				BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelector((retained, candidate) -> retained).build()));
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertPlan.resolve(table,
+				BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
+						.duplicateRowSelector((retained, candidate) -> retained)
+						.duplicateRowSelectorFingerprint("ignored-selector").build()));
 	}
 
 	private static Table tableWithDuplicateKeys() {
