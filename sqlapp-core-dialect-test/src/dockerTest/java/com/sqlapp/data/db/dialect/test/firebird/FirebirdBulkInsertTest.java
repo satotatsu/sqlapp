@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -33,6 +34,40 @@ class FirebirdBulkInsertTest {
 
 	@BeforeAll static void start() { ReusableTestcontainers.start(FIREBIRD); }
 	@AfterAll static void stop() { ReusableTestcontainers.stop(FIREBIRD); }
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
+		final String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
+				+ "//firebird/data/test.fdb?encoding=UTF8";
+		try (var connection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
+				var statement = connection.createStatement()) {
+			dropTable(statement, "SQLAPP_BULK_JOB_CHILD_FIREBIRD");
+			dropTable(statement, "SQLAPP_BULK_JOB_PARENT_FIREBIRD");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_PARENT_FIREBIRD "
+					+ "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_CHILD_FIREBIRD "
+					+ "(ID INTEGER PRIMARY KEY, PARENT_ID INTEGER NOT NULL, TXT VARCHAR(100), "
+					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB_PARENT_FIREBIRD(ID))");
+			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT_FIREBIRD", false);
+			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD_FIREBIRD", true);
+			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_JOB_CHILD_FIREBIRD",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child);
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_FIREBIRD c "
+					+ "JOIN SQLAPP_BULK_JOB_PARENT_FIREBIRD p ON p.ID = c.PARENT_ID")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
 
 	@Test
 	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
@@ -134,5 +169,29 @@ class FirebirdBulkInsertTest {
 		table.getColumns().add(new Column("EMPTY_VALUE").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY));
 		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("PK_" + name, id);
+		return table;
+	}
+
+	private static void dropTable(final java.sql.Statement statement, final String tableName)
+			throws java.sql.SQLException {
+		try {
+			statement.execute("DROP TABLE " + tableName);
+		} catch (java.sql.SQLException e) {
+			if (e.getErrorCode() != 335544351) {
+				throw e;
+			}
+		}
 	}
 }

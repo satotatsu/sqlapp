@@ -112,9 +112,9 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		} catch (SQLException missing) {
 			final String create = "CREATE TABLE " + tableName + " ("
 					+ "migration_id VARCHAR(255) NOT NULL PRIMARY KEY, "
-					+ "source_fingerprint VARCHAR(255) NULL, target_fingerprint VARCHAR(255) NULL, "
+					+ "source_fingerprint VARCHAR(255), target_fingerprint VARCHAR(255), "
 					+ "processed_rows DECIMAL(19, 0) NOT NULL, completed_chunks DECIMAL(19, 0) NOT NULL, "
-					+ "last_chunk_hash VARCHAR(64) NULL, resume_token VARCHAR(4000) NULL, "
+					+ "last_chunk_hash VARCHAR(64), resume_token VARCHAR(4000), "
 					+ "complete_flag CHAR(1) NOT NULL)";
 			try (var statement = connection.createStatement()) {
 				statement.execute(create);
@@ -133,7 +133,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 			return;
 		} catch (SQLException missing) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("ALTER TABLE " + tableName + " ADD resume_token VARCHAR(4000) NULL");
+				statement.execute("ALTER TABLE " + tableName + " ADD resume_token VARCHAR(4000)");
 			} catch (SQLException alterFailure) {
 				alterFailure.addSuppressed(missing);
 				throw alterFailure;

@@ -14,6 +14,7 @@ import org.testcontainers.mariadb.MariaDBContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -31,6 +32,39 @@ class MariadbBulkInsertTest {
 	@BeforeAll
 	static void startContainer() {
 		ReusableTestcontainers.start(MARIADB);
+	}
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
+		try (Connection connection = MARIADB.createConnection("?allowLocalInfile=true");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_job_child_mariadb");
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_job_parent_mariadb");
+			statement.execute("CREATE TABLE sqlapp_bulk_job_parent_mariadb "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100)) ENGINE=InnoDB");
+			statement.execute("CREATE TABLE sqlapp_bulk_job_child_mariadb "
+					+ "(id INT PRIMARY KEY, parent_id INT NOT NULL, txt VARCHAR(100), "
+					+ "FOREIGN KEY (parent_id) REFERENCES sqlapp_bulk_job_parent_mariadb(id)) "
+					+ "ENGINE=InnoDB");
+			final Table parent = jobTable("sqlapp_bulk_job_parent_mariadb", false);
+			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			final Table child = jobTable("sqlapp_bulk_job_child_mariadb", true);
+			child.getConstraints().addForeignKeyConstraint("fk_sqlapp_job_child_mariadb",
+					new Column[] { child.getColumns().get("parent_id") },
+					new Column[] { parent.getColumns().get("id") });
+			child.getRows().add(row -> {
+				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
+					connection, parent, child);
+			try (var resultSet = statement.executeQuery(
+					"SELECT COUNT(*) FROM sqlapp_bulk_job_child_mariadb c "
+					+ "JOIN sqlapp_bulk_job_parent_mariadb p ON p.id = c.parent_id")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
 	}
 
 	@Test
@@ -116,4 +150,17 @@ class MariadbBulkInsertTest {
 		final Column id=new Column("id").setDataType(DataType.BIGINT).setIdentity(true);final Column code=new Column("code").setDataType(DataType.VARCHAR).setLength(20);
 		t.getColumns().add(id);t.getColumns().add(code);t.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(200));t.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY).setLength(20));
 		t.setPrimaryKey("pk_sqlapp_upsert_mariadb",code);return t;}
+
+	private static Table jobTable(final String name, final boolean child) {
+		final Table table = new Table(name);
+		final Column id = new Column("id").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("parent_id").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
+		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("pk_" + name, id);
+		return table;
+	}
 }
