@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -94,23 +95,22 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 	}
 
 	protected String createInsertSql(final Table table, final List<Column> columns) {
-		final StringBuilder sql = new StringBuilder("INSERT INTO ")
-				.append(dialect.getObjectFullName(table.getSchemaName(), table.getName()))
-				.append(" (");
-		for (int i = 0; i < columns.size(); i++) {
-			if (i > 0) {
-				sql.append(", ");
-			}
-			sql.append(dialect.quote(columns.get(i).getName()));
+		final Table insertTable = new Table(table.getName())
+				.setCatalogName(table.getCatalogName()).setSchemaName(table.getSchemaName());
+		for (final Column source : columns) {
+			final Column column = source.clone();
+			// JDBC bulk binds every selected value explicitly. Remove generation
+			// metadata so the regular INSERT factory preserves that contract.
+			column.setIdentity(false).setDefaultValue(null);
+			insertTable.getColumns().add(column);
 		}
-		sql.append(") VALUES (");
-		for (int i = 0; i < columns.size(); i++) {
-			if (i > 0) {
-				sql.append(", ");
-			}
-			sql.append('?');
+		final var nodes = dialect.createSqlFactoryRegistry()
+				.createSqlNodes(insertTable, SqlType.INSERT);
+		if (nodes.isEmpty()) {
+			throw new IllegalStateException("No INSERT SQL factory is available for "
+					+ dialect.getClass().getName());
 		}
-		return sql.append(')').toString();
+		return nodes.get(0).eval(insertTable.newRow()).getSql();
 	}
 
 	protected void bind(final PreparedStatement statement, final Row row,

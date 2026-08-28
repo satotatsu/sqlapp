@@ -39,7 +39,7 @@ public class RowComparisonOperatorBindVariableNodeFactory
 
 	static {
 		MATCH_PATTERNS = new Pattern[] { Pattern
-				.compile("(?<value>\\s*/\\*ROW\\s*(?<operator>>=|>|<=|<|=)\\s*\\((?<selector>([^)]+))\\)\\*/)") };
+				.compile("(?<value>\\s*/\\*ROW\\s*(?<operator>>=|>|<=|<|=)\\s*\\((?<selector>.*?)\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
@@ -55,8 +55,12 @@ public class RowComparisonOperatorBindVariableNodeFactory
 		node.setTarget(keyMap.get("target"));
 		node.setKeyType(ColumnSelectionStrategy.parse(keyMap.get("keyType")));
 		node.setPrefix(keyMap.get("prefix"));
-		final String columnsArg = keyMap.get("columns");
+		String columnsArg = keyMap.get("columns");
 		if (!CommonUtils.isEmpty(columnsArg)) {
+			columnsArg = columnsArg.trim();
+			if (columnsArg.startsWith("(") && columnsArg.endsWith(")")) {
+				columnsArg = columnsArg.substring(1, columnsArg.length() - 1);
+			}
 			final Set<String> columns = CommonUtils.linkedSet();
 			String[] colArgs = columnsArg.split("\\s*,\\s*");
 			for (int i = 0; i < colArgs.length; i++) {

@@ -70,10 +70,10 @@ public class RowComparisonOperatorBindVariableNodeTest {
 					)
 								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(2, sqlParameterCollection.getParameterSize());
+		assertEquals(3, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
-		assertEquals(2, bindParameters.size());
+		assertEquals(3, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(0, bindParameter.getValue());
@@ -106,10 +106,10 @@ public class RowComparisonOperatorBindVariableNodeTest {
 					)
 								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(2, sqlParameterCollection.getParameterSize());
+		assertEquals(3, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
-		assertEquals(2, bindParameters.size());
+		assertEquals(3, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(0, bindParameter.getValue());
@@ -141,10 +141,10 @@ public class RowComparisonOperatorBindVariableNodeTest {
 						OR ( a."colBA" = ? AND a."colBE" < ? )
 					)""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(2, sqlParameterCollection.getParameterSize());
+		assertEquals(3, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
-		assertEquals(2, bindParameters.size());
+		assertEquals(3, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(0, bindParameter.getValue());
@@ -177,10 +177,10 @@ public class RowComparisonOperatorBindVariableNodeTest {
 					)
 								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(2, sqlParameterCollection.getParameterSize());
+		assertEquals(3, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
-		assertEquals(2, bindParameters.size());
+		assertEquals(3, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(0, bindParameter.getValue());
@@ -251,10 +251,10 @@ public class RowComparisonOperatorBindVariableNodeTest {
 						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" >= ? )
 					)""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(2, sqlParameterCollection.getParameterSize());
+		assertEquals(3, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
-		assertEquals(2, bindParameters.size());
+		assertEquals(3, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(0, bindParameter.getValue());

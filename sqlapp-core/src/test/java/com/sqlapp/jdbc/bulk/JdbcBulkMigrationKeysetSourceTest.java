@@ -1,0 +1,57 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.jdbc.bulk;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.AbstractDbTest;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
+
+class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
+	@Test
+	void readsAndResumesACompositeKeyThroughSelectByRowFactory() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE SQLAPP_KEYSET_FACTORY_TEST ("
+					+ "KEY1 INTEGER NOT NULL, KEY2 INTEGER NOT NULL, VALUE VARCHAR(32), "
+					+ "PRIMARY KEY (KEY1, KEY2))",
+					"INSERT INTO SQLAPP_KEYSET_FACTORY_TEST VALUES "
+							+ "(2, 1, 'third'), (1, 2, 'second'), (1, 1, 'first')");
+			final Table table = table();
+			final var source = new JdbcBulkMigrationKeysetSource(connection, table);
+
+			assertEquals(List.of("first", "second", "third"), values(source.iterator(null)));
+
+			final Row checkpointRow = table.newRow();
+			checkpointRow.put("KEY1", 1);
+			checkpointRow.put("KEY2", 1);
+			assertEquals(List.of("second", "third"),
+					values(source.iterator(source.resumeToken(checkpointRow))));
+		});
+	}
+
+	private static List<String> values(final java.util.Iterator<Row> rows) {
+		final List<String> values = new ArrayList<>();
+		while (rows.hasNext()) {
+			values.add((String) rows.next().get("VALUE"));
+		}
+		return values;
+	}
+
+	private static Table table() {
+		final Table table = new Table("SQLAPP_KEYSET_FACTORY_TEST");
+		final Column key1 = new Column("KEY1").setDataType(DataType.INT).setNotNull(true);
+		final Column key2 = new Column("KEY2").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(key1);
+		table.getColumns().add(key2);
+		table.getColumns().add(new Column("VALUE").setDataType(DataType.VARCHAR).setLength(32));
+		table.setPrimaryKey((String) null, key1, key2);
+		return table;
+	}
+}

@@ -14,9 +14,13 @@ import java.util.Objects;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.RowComparisonOperator;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.DbUtils;
 
 /** Portable ascending JDBC keyset source for one or more unique key columns. */
@@ -89,12 +93,15 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final List<Object> values = resumeToken == null ? List.of()
 				: codec.decode(keyColumns, resumeToken);
-		final PreparedStatement statement = connection.prepareStatement(sql(dialect, !values.isEmpty()));
+		final Table queryTable = queryTable();
+		final TableRelation relation = new TableRelation(queryTable);
+		final SqlNode node = selectNode(dialect, relation);
+		final var parameters = values.isEmpty() ? node.eval(relation)
+				: node.eval(relation, resumeRow(queryTable, values));
+		final PreparedStatement statement = parameters.createStatement(connection);
 		try {
 			statement.setFetchSize(fetchSize);
-			if (!values.isEmpty()) {
-				bind(statement, dialect, values);
-			}
+			parameters.setBind(statement);
 			return new KeysetIterator(statement, statement.executeQuery(), dialect);
 		} catch (SQLException | RuntimeException e) {
 			DbUtils.close(statement);
@@ -107,52 +114,30 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		return codec.encode(keyColumns, row);
 	}
 
-	private String sql(final Dialect dialect, final boolean resumed) {
-		final StringBuilder sql = new StringBuilder("SELECT ");
-		for (int i = 0; i < table.getColumns().size(); i++) {
-			if (i > 0) {
-				sql.append(", ");
-			}
-			sql.append(dialect.quote(table.getColumns().get(i).getName()));
+	private Table queryTable() {
+		final Table query = new Table(table.getName()).setCatalogName(table.getCatalogName())
+				.setSchemaName(table.getSchemaName());
+		for (final Column column : table.getColumns()) {
+			query.getColumns().add(column.clone());
 		}
-		sql.append(" FROM ").append(dialect.getObjectFullName(table.getCatalogName(),
-				table.getSchemaName(), table.getName()));
-		if (resumed) {
-			sql.append(" WHERE ");
-			for (int i = 0; i < keyColumns.size(); i++) {
-				if (i > 0) {
-					sql.append(" OR ");
-				}
-				sql.append('(');
-				for (int j = 0; j < i; j++) {
-					sql.append(dialect.quote(keyColumns.get(j).getName())).append(" = ? AND ");
-				}
-				sql.append(dialect.quote(keyColumns.get(i).getName())).append(" > ?)");
-			}
-		}
-		sql.append(" ORDER BY ");
-		for (int i = 0; i < keyColumns.size(); i++) {
-			if (i > 0) {
-				sql.append(", ");
-			}
-			sql.append(dialect.quote(keyColumns.get(i).getName())).append(" ASC");
-		}
-		return sql.toString();
+		query.setPrimaryKey((String) null, keyColumns.stream()
+				.map(column -> query.getColumns().get(column.getName())).toArray(Column[]::new));
+		return query;
 	}
 
-	private void bind(final PreparedStatement statement, final Dialect dialect,
-			final List<Object> values) throws SQLException {
-		int parameter = 1;
+	private SqlNode selectNode(final Dialect dialect, final TableRelation relation) {
+		final var registry = dialect.createSqlFactoryRegistry();
+		return registry.getTableOptions().useSelectByRowComparisonOperatorStrategy(
+				table -> RowComparisonOperator.GREATER_THAN,
+				() -> registry.createSqlNodes(relation, SqlType.SELECT_BY_ROW).get(0));
+	}
+
+	private Row resumeRow(final Table queryTable, final List<Object> values) {
+		final Row row = queryTable.newRow();
 		for (int i = 0; i < keyColumns.size(); i++) {
-			for (int j = 0; j <= i; j++) {
-				final DbDataType<?> type = dialect.getDbDataType(keyColumns.get(j));
-				if (type == null) {
-					throw new IllegalArgumentException("No JDBC type is available for keyset column: "
-							+ keyColumns.get(j).getName());
-				}
-				type.getJdbcTypeHandler().setObject(statement, parameter++, values.get(j));
-			}
+			row.put(keyColumns.get(i).getName(), values.get(i));
 		}
+		return row;
 	}
 
 	private final class KeysetIterator implements Iterator<Row>, AutoCloseable {
