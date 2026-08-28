@@ -42,6 +42,9 @@ public API risks, the smallest implementation location and required tests.
 ## Architecture
 
 - Treat the sqlapp Schema model as the canonical database representation.
+- Prefer the Schema model and sqlapp-core SQL factories for DDL and DML generation.
+  Build SQL strings directly only when the shared generator cannot represent required
+  vendor-specific behavior, and keep that SQL in the owning dialect module where possible.
 - Cross-cutting schema features should consume the shared Schema model.
 - Shared abstractions belong in `sqlapp-core`.
 - Command behavior and YAML/file handling belong in `sqlapp-command`.
