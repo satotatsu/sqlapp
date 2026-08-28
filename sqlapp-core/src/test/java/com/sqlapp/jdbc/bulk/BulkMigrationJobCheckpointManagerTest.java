@@ -61,6 +61,7 @@ class BulkMigrationJobCheckpointManagerTest {
 			final BulkMigrationCheckpointStore store) {
 		final Table table = new Table(id);
 		table.getColumns().add(new Column("ID"));
+		table.setPrimaryKey("PK_" + id, table.getColumns().get("ID"));
 		return BulkMigrationJobTask.builder().taskId(id).sourceTable(table)
 				.options(ChunkedBulkMigrationOption.builder().migrationId(id).build())
 				.checkpointStore(store).build();

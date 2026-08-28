@@ -113,10 +113,10 @@ public final class BulkMigrationJobExecutor {
 				throw new IllegalArgumentException("Task must have exactly one Table or keyset source: "
 						+ task.getTaskId());
 			}
-			if (task.getOptions() == null || task.getOptions().getMigrationId() == null
-					|| task.getOptions().getMigrationId().isBlank()) {
+			if (task.getOptions() == null) {
 				throw new IllegalArgumentException("Task options require a migrationId: " + task.getTaskId());
 			}
+			task.getOptions().validate();
 			if (!migrationIds.add(task.getOptions().getMigrationId())) {
 				throw new IllegalArgumentException("Duplicate checkpoint migrationId: "
 						+ task.getOptions().getMigrationId());

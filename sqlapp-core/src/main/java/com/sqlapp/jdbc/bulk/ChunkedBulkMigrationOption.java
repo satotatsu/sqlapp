@@ -31,4 +31,24 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	private final BulkOption bulkOption = BulkOption.defaults();
 	@Builder.Default
 	private final BulkUpsertOption bulkUpsertOption = BulkUpsertOption.defaults();
+
+	void validate() {
+		if (migrationId == null || migrationId.isBlank()) {
+			throw new IllegalArgumentException("migrationId must not be empty");
+		}
+		if (chunkSize <= 0) {
+			throw new IllegalArgumentException("chunkSize must be greater than zero");
+		}
+		if (mode == null) {
+			throw new IllegalArgumentException("mode must not be null");
+		}
+		if (checkpointMode == null) {
+			throw new IllegalArgumentException("checkpointMode must not be null");
+		}
+		if (checkpointMode == BulkMigrationCheckpointMode.DATABASE
+				&& (checkpointTableName == null || checkpointTableName.isBlank())) {
+			throw new IllegalArgumentException(
+					"checkpointTableName must not be empty for DATABASE checkpoints");
+		}
+	}
 }

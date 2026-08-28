@@ -106,12 +106,7 @@ public final class ChunkedBulkMigrationExecutor {
 		Objects.requireNonNull(options, "options");
 		Objects.requireNonNull(checkpointStore, "checkpointStore");
 		Objects.requireNonNull(listener, "listener");
-		if (options.getMigrationId() == null || options.getMigrationId().isBlank()) {
-			throw new IllegalArgumentException("migrationId must not be empty");
-		}
-		if (options.getChunkSize() <= 0) {
-			throw new IllegalArgumentException("chunkSize must be greater than zero");
-		}
+		options.validate();
 		final boolean transactional = checkpointStore instanceof TransactionalBulkMigrationCheckpointStore store
 				&& store.participatesIn(targetConnection);
 		validateCheckpointMode(options.getCheckpointMode(), transactional);

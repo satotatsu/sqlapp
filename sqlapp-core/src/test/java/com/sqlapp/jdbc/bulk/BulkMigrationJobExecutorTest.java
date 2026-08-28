@@ -79,7 +79,7 @@ class BulkMigrationJobExecutorTest {
 		final Table keys = table("KEY_MUTATION");
 		final var keyPlan = BulkMigrationJobPlanner.plan(List.of(
 				tableTask("keys", "key-mutation", keys)));
-		keys.setPrimaryKey("PK_KEY_MUTATION", keys.getColumns().get("ID"));
+		keys.getPrimaryKeyConstraint().setName("PK_KEY_MUTATION_CHANGED");
 		assertFalse(keyPlan.isUnchanged());
 
 		final Table parent = table("DEPENDENCY_PARENT");
@@ -95,6 +95,9 @@ class BulkMigrationJobExecutorTest {
 	@Test
 	void fingerprintDistinguishesStructuredColumnListsAndSourceStyles() {
 		final Table table = table("STRUCTURED");
+		table.getColumns().add(new Column("A, B"));
+		table.getColumns().add(new Column("A"));
+		table.getColumns().add(new Column("B"));
 		final var commaName = ChunkedBulkMigrationOption.builder().migrationId("structured")
 				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("A, B").build()).build();
 		final var twoNames = ChunkedBulkMigrationOption.builder().migrationId("structured")
@@ -203,6 +206,49 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void validatesAllStructuralMigrationOptionsWhilePlanning() {
+		final Table table = table("INVALID_OPTIONS");
+		final var invalidChunk = ChunkedBulkMigrationOption.builder()
+				.migrationId("invalid-chunk").chunkSize(0).build();
+		final var missingMode = ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-mode").mode(null).build();
+		final var missingCheckpointMode = ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-checkpoint-mode").checkpointMode(null).build();
+		final var missingCheckpointTable = ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-checkpoint-table")
+				.checkpointMode(BulkMigrationCheckpointMode.DATABASE)
+				.checkpointTableName(" ").build();
+
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("chunk", table, invalidChunk))));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("mode", table, missingMode))));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("checkpoint-mode", table, missingCheckpointMode))));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("checkpoint-table", table, missingCheckpointTable))));
+	}
+
+	@Test
+	void resolvesAndValidatesUpsertBeforeExecution() {
+		final Table table = table("INVALID_UPSERT");
+		final var unknownKey = ChunkedBulkMigrationOption.builder()
+				.migrationId("unknown-key")
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("MISSING").build())
+				.build();
+		final var noActions = ChunkedBulkMigrationOption.builder()
+				.migrationId("no-actions")
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("ID")
+						.updateWhenMatched(false).insertWhenNotMatched(false).build())
+				.build();
+
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("unknown-key", table, unknownKey))));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("no-actions", table, noActions))));
+	}
+
+	@Test
 	void rejectsCyclicForeignKeyDependencies() {
 		final Table firstTable = table("FIRST");
 		final Table secondTable = table("SECOND");
@@ -290,6 +336,7 @@ class BulkMigrationJobExecutorTest {
 	private static Table table(final String name) {
 		final Table table = new Table(name);
 		table.getColumns().add(new Column("ID"));
+		table.setPrimaryKey("PK_" + name, table.getColumns().get("ID"));
 		return table;
 	}
 }

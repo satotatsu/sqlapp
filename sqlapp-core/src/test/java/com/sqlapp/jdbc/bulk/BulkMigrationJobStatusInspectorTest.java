@@ -70,6 +70,7 @@ class BulkMigrationJobStatusInspectorTest {
 	private static Table table(final String name) {
 		final Table table = new Table(name);
 		table.getColumns().add(new Column("ID"));
+		table.setPrimaryKey("PK_" + name, table.getColumns().get("ID"));
 		return table;
 	}
 }
