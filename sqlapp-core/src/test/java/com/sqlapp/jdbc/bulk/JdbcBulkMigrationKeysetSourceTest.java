@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.AbstractDbTest;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
@@ -64,6 +65,15 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 			indexed.getColumns().add(indexKey2);
 			indexed.getIndexes().add("UIX_KEYSET", indexKey1, indexKey2).setUnique(true);
 			new JdbcBulkMigrationKeysetSource(connection, indexed, List.of("KEY2", "KEY1"));
+
+			final Table caseInsensitive = new Table("KEYSET_CASE_VALIDATION")
+					.setCaseSensitive(false);
+			final Column caseKey = new Column("KEY_ID").setDataType(DataType.INT)
+					.setNotNull(true);
+			caseInsensitive.getColumns().add(caseKey);
+			caseInsensitive.getConstraints().addUniqueConstraint("UK_CASE_KEY",
+					new ReferenceColumn("key_id"));
+			new JdbcBulkMigrationKeysetSource(connection, caseInsensitive, List.of("KEY_ID"));
 		});
 	}
 

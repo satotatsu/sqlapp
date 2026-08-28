@@ -6,12 +6,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -19,6 +18,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.RowComparisonOperator;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
@@ -38,6 +38,11 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		this(connection, table, primaryKeyNames(table));
 	}
 
+	/**
+	 * Uses the specified columns in the given order. The columns must be non-null
+	 * and exactly match a primary key, unique constraint, or unique index modeled
+	 * on the table.
+	 */
 	public JdbcBulkMigrationKeysetSource(final Connection connection, final Table table,
 			final List<String> keyColumnNames) {
 		this(connection, table, keyColumnNames, new DefaultBulkMigrationKeysetCodec(), 10_000);
@@ -83,24 +88,34 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 						+ column.getName());
 			}
 		}
-		final Set<String> names = columns.stream().map(Column::getName)
-				.collect(Collectors.toSet());
 		final boolean uniqueConstraint = table.getConstraints().getUniqueConstraints().stream()
-				.anyMatch(constraint -> constraint.getColumns().size() == names.size()
-						&& constraint.getColumns().stream()
-								.allMatch(column -> names.contains(column.getName())));
+				.anyMatch(constraint -> matchesKeyColumns(table, constraint.getColumns(), columns));
 		final boolean uniqueIndex = table.getIndexes().stream().filter(index -> index.isUnique())
-				.anyMatch(index -> {
-					final var indexColumns = index.getColumns().stream()
-							.filter(column -> !column.isIncludedColumn()).toList();
-					return indexColumns.size() == names.size() && indexColumns.stream()
-							.allMatch(column -> names.contains(column.getName()));
-				});
+				.anyMatch(index -> matchesKeyColumns(table, index.getColumns().stream()
+						.filter(column -> !column.isIncludedColumn()).toList(), columns));
 		if (!uniqueConstraint && !uniqueIndex) {
 			throw new IllegalArgumentException(
 					"Keyset columns must exactly match a primary key, unique constraint, "
-							+ "or unique index: " + names);
+							+ "or unique index: "
+							+ columns.stream().map(Column::getName).toList());
 		}
+	}
+
+	private static boolean matchesKeyColumns(final Table table,
+			final Collection<? extends ReferenceColumn> references,
+			final List<Column> columns) {
+		if (references.size() != columns.size()) {
+			return false;
+		}
+		return references.stream().allMatch(reference -> {
+			final Column resolved = reference.getColumn();
+			if (resolved != null && columns.contains(resolved)) {
+				return true;
+			}
+			return columns.stream().anyMatch(column -> table.getColumns().isCaseSensitive()
+					? Objects.equals(column.getName(), reference.getName())
+					: column.getName().equalsIgnoreCase(reference.getName()));
+		});
 	}
 
 	private static List<String> primaryKeyNames(final Table table) {

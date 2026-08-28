@@ -10,9 +10,9 @@ import com.sqlapp.data.schemas.Table;
 /**
  * Opens an ordered source after an opaque, durable keyset token.
  *
- * <p>The source must order rows by a unique, immutable key. The token returned
- * for a row must reopen the source strictly after that row. Tokens are stored
- * verbatim and are interpreted only by this source.</p>
+ * <p>The source must order rows by a unique, immutable, non-null key. The token
+ * returned for a row must reopen the source strictly after that row. Tokens are
+ * stored verbatim and are interpreted only by this source.</p>
  */
 public interface BulkMigrationKeysetSource {
 	/** Schema and target identity used to build migration chunks. */
