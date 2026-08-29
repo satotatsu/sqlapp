@@ -33,9 +33,7 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	private final BulkUpsertOption bulkUpsertOption = BulkUpsertOption.defaults();
 
 	void validate() {
-		if (migrationId == null || migrationId.isBlank()) {
-			throw new IllegalArgumentException("migrationId must not be empty");
-		}
+		BulkMigrationCheckpoint.validateMigrationId(migrationId);
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
@@ -57,6 +55,16 @@ public class ChunkedBulkMigrationOption implements Serializable {
 		if (resume && (targetFingerprint == null || targetFingerprint.isBlank())) {
 			throw new IllegalArgumentException(
 					"targetFingerprint must not be empty when resume is enabled");
+		}
+		if (sourceFingerprint != null
+				&& sourceFingerprint.length() > BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH) {
+			throw new IllegalArgumentException("sourceFingerprint must not exceed "
+					+ BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH + " characters");
+		}
+		if (targetFingerprint != null
+				&& targetFingerprint.length() > BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH) {
+			throw new IllegalArgumentException("targetFingerprint must not exceed "
+					+ BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH + " characters");
 		}
 	}
 }

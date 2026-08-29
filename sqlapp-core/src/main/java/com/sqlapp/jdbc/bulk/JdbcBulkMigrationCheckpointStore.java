@@ -61,6 +61,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	@Override
 	public Optional<BulkMigrationCheckpoint> load(final String migrationId) throws SQLException {
+		BulkMigrationCheckpoint.validateMigrationId(migrationId);
 		final BulkMigrationCheckpoint[] result = new BulkMigrationCheckpoint[1];
 		new JdbcHandler(sqlNode(SqlType.SELECT), rs -> result[0] = checkpoint(rs, migrationId))
 				.execute(connection, parameters(migrationId));
@@ -81,11 +82,13 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 				.completedChunks(resultSet.getLong(columns.get("COMPLETED_CHUNKS")))
 				.lastChunkHash(resultSet.getString(columns.get("LAST_CHUNK_HASH")))
 				.resumeToken(resultSet.getString(columns.get("RESUME_TOKEN")))
-				.complete("1".equals(resultSet.getString(columns.get("COMPLETE_FLAG")))).build();
+				.complete("1".equals(resultSet.getString(columns.get("COMPLETE_FLAG")))).build()
+				.validate();
 	}
 
 	@Override
 	public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
+		Objects.requireNonNull(checkpoint, "checkpoint").validate();
 		final ParametersContext parameters = parameters(checkpoint);
 		final JdbcHandler update = new JdbcHandler(sqlNode(SqlType.UPDATE));
 		update.execute(connection, parameters);
@@ -96,6 +99,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	@Override
 	public void delete(final String migrationId) throws SQLException {
+		BulkMigrationCheckpoint.validateMigrationId(migrationId);
 		new JdbcHandler(sqlNode(SqlType.DELETE)).execute(connection, parameters(migrationId));
 	}
 

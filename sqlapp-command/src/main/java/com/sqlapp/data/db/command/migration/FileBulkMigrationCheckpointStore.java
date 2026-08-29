@@ -48,7 +48,8 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 					.completedChunks(Long.parseLong(values.getProperty("completedChunks")))
 					.lastChunkHash(emptyToNull(values.getProperty("lastChunkHash")))
 					.resumeToken(emptyToNull(values.getProperty("resumeToken")))
-					.complete(Boolean.parseBoolean(values.getProperty("complete"))).build());
+					.complete(Boolean.parseBoolean(values.getProperty("complete"))).build()
+					.validate());
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration checkpoint: " + file, e);
 		}
@@ -56,7 +57,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 
 	@Override
 	public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
-		java.util.Objects.requireNonNull(checkpoint, "checkpoint");
+		java.util.Objects.requireNonNull(checkpoint, "checkpoint").validate();
 		final Path file = file(checkpoint.getMigrationId());
 		Path temporary = null;
 		try {
@@ -104,9 +105,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 	}
 
 	private Path file(final String migrationId) {
-		if (migrationId == null || migrationId.isBlank()) {
-			throw new IllegalArgumentException("migrationId must not be empty");
-		}
+		BulkMigrationCheckpoint.validateMigrationId(migrationId);
 		try {
 			final byte[] hash = MessageDigest.getInstance("SHA-256")
 					.digest(migrationId.getBytes(StandardCharsets.UTF_8));
