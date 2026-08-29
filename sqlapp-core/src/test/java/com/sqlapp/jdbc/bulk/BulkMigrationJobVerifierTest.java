@@ -61,6 +61,23 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void rejectsInternallyInconsistentVerificationResults() {
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationChunk(-1, 0, 0, "x", "x"));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationVerificationChunk(0, 0, 0, null, "x"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationResult(2, 1, 1, List.of(
+						new BulkMigrationVerificationChunk(1, 1, 1, "x", "x"))));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationResult(2, 3, 1, List.of(
+						new BulkMigrationVerificationChunk(0, 3, 1, "x", "x"))));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationResult(2, 2, 2, List.of(
+						new BulkMigrationVerificationChunk(0, 1, 1, "x", "x"))));
+	}
+
+	@Test
 	void aggregatesResultsInDependencyOrder() {
 		final Table expectedParent = table("PARENT", "parent");
 		final Table expectedChild = table("CHILD", "child");

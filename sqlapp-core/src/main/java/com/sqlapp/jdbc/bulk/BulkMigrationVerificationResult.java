@@ -22,10 +22,31 @@ public class BulkMigrationVerificationResult {
 		if (expectedRows < 0 || actualRows < 0) {
 			throw new IllegalArgumentException("row counts must not be negative");
 		}
+		final List<BulkMigrationVerificationChunk> copy = List.copyOf(
+				Objects.requireNonNull(chunks, "chunks"));
+		long chunkExpectedRows = 0;
+		long chunkActualRows = 0;
+		for (int i = 0; i < copy.size(); i++) {
+			final BulkMigrationVerificationChunk chunk = copy.get(i);
+			if (chunk.getIndex() != i) {
+				throw new IllegalArgumentException(
+						"chunk indexes must be contiguous from zero: " + chunk.getIndex());
+			}
+			if (chunk.getExpectedRows() > chunkSize || chunk.getActualRows() > chunkSize) {
+				throw new IllegalArgumentException(
+						"chunk row count exceeds chunkSize at index " + i);
+			}
+			chunkExpectedRows += chunk.getExpectedRows();
+			chunkActualRows += chunk.getActualRows();
+		}
+		if (chunkExpectedRows != expectedRows || chunkActualRows != actualRows) {
+			throw new IllegalArgumentException(
+					"chunk row counts do not match verification totals");
+		}
 		this.chunkSize = chunkSize;
 		this.expectedRows = expectedRows;
 		this.actualRows = actualRows;
-		this.chunks = List.copyOf(Objects.requireNonNull(chunks, "chunks"));
+		this.chunks = copy;
 	}
 
 	public boolean isMatch() {
