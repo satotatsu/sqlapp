@@ -45,7 +45,7 @@ public final class BulkMigrationVerifier {
 				actualCount += right.size();
 				chunks.add(new BulkMigrationVerificationChunk(index++, left.size(), right.size(),
 						BulkMigrationHash.rows(left, expectedColumns),
-						BulkMigrationHash.rows(right, actualColumns)));
+						BulkMigrationHash.rows(right, actualColumns, expectedColumns)));
 			}
 			return new BulkMigrationVerificationResult(chunkSize, expectedCount, actualCount,
 					List.copyOf(chunks));

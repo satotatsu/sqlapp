@@ -7,16 +7,45 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.sql.rowset.serial.SerialBlob;
+
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobVerifierTest {
+	@Test
+	void normalizesDriverValueTypesThroughTheExpectedSchema() throws Exception {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
+		expected.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL));
+		expected.getColumns().add(new Column("PAYLOAD").setDataType(DataType.BLOB));
+		expected.getRows().add(row -> {
+			row.put("ID", 1);
+			row.put("AMOUNT", new BigDecimal("1.00"));
+			row.put("PAYLOAD", new byte[] { 1, 2, 3 });
+		});
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		actual.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL));
+		actual.getColumns().add(new Column("PAYLOAD").setDataType(DataType.BLOB));
+		final SerialBlob payload = new SerialBlob(new byte[] { 1, 2, 3 });
+		actual.getRows().add(row -> {
+			row.put("ID", 1L);
+			row.put("AMOUNT", new BigDecimal("1.0"));
+			row.put("PAYLOAD", payload);
+		});
+
+		assertTrue(BulkMigrationVerifier.verify(expected, actual, 10).isMatch());
+	}
+
 	@Test
 	void closesEveryStreamWithoutMaskingTheProcessingFailure() {
 		final var processingFailure = new IllegalArgumentException("read failed");
