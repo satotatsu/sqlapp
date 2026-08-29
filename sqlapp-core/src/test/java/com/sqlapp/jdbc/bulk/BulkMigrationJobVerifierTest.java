@@ -47,6 +47,30 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void numericNormalizationDoesNotWrapValuesToTheExpectedJavaType() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		expected.getRows().add(row -> row.put("ID", Integer.MIN_VALUE));
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
+		actual.getRows().add(row -> row.put("ID", 2_147_483_648L));
+
+		assertFalse(BulkMigrationVerifier.verify(expected, actual, 10).isMatch());
+	}
+
+	@Test
+	void normalizesEquivalentFloatAndDoubleDriverValues() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("VALUE").setDataType(DataType.REAL));
+		expected.getRows().add(row -> row.put("VALUE", 0.1f));
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("VALUE").setDataType(DataType.DOUBLE));
+		actual.getRows().add(row -> row.put("VALUE", 0.1d));
+
+		assertTrue(BulkMigrationVerifier.verify(expected, actual, 10).isMatch());
+	}
+
+	@Test
 	void closesEveryStreamWithoutMaskingTheProcessingFailure() {
 		final var processingFailure = new IllegalArgumentException("read failed");
 		final var first = new FailingCloseIterator("first close failed");

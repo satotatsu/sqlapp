@@ -31,13 +31,28 @@ final class BulkMigrationHash {
 			for (final Row row : rows) {
 				for (int i = 0; i < valueColumns.size(); i++) {
 					final Object value = row.get(valueColumns.get(i));
-					value(digest, canonicalColumns.get(i).getConverter().convertObject(value));
+					value(digest, canonicalValue(canonicalColumns.get(i), value));
 				}
 			}
 			return java.util.HexFormat.of().formatHex(digest.digest());
 		} catch (NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+
+	private static Object canonicalValue(final Column column, final Object value) {
+		if (value == null) {
+			return null;
+		}
+		if (column.getDataType() != null && column.getDataType().isNumeric()) {
+			if (value instanceof Number) {
+				return value;
+			}
+			if (value instanceof CharSequence text) {
+				return new BigDecimal(text.toString().trim());
+			}
+		}
+		return column.getConverter().convertObject(value);
 	}
 
 	private static void value(final MessageDigest digest, final Object value) {
@@ -85,7 +100,7 @@ final class BulkMigrationHash {
 				|| value instanceof Integer || value instanceof Long) {
 			decimal = BigDecimal.valueOf(value.longValue());
 		} else {
-			decimal = BigDecimal.valueOf(value.doubleValue());
+			decimal = new BigDecimal(value.toString());
 		}
 		return decimal.signum() == 0 ? "0" : decimal.stripTrailingZeros().toPlainString();
 	}
