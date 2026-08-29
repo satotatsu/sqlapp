@@ -35,6 +35,7 @@ public final class BulkMigrationTransactionAssertions {
 		final String migrationId = "docker-" + java.util.UUID.randomUUID();
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId(migrationId).checkpointTableName(checkpointTableName())
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.chunkSize(2).build();
 		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 				option.getCheckpointTableName());
@@ -60,6 +61,7 @@ public final class BulkMigrationTransactionAssertions {
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId("docker-rejected-" + java.util.UUID.randomUUID())
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.checkpointTableName(checkpointTableName()).build();
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
@@ -80,6 +82,7 @@ public final class BulkMigrationTransactionAssertions {
 		final String migrationId = "docker-insert-" + java.util.UUID.randomUUID();
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId(migrationId).checkpointTableName(checkpointTableName())
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.chunkSize(2).mode(BulkMigrationMode.INSERT).build();
 		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 				option.getCheckpointTableName());
@@ -105,6 +108,7 @@ public final class BulkMigrationTransactionAssertions {
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId("docker-insert-rejected-" + java.util.UUID.randomUUID())
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.checkpointTableName(checkpointTableName())
 				.mode(BulkMigrationMode.INSERT).build();
 		assertThrows(IllegalStateException.class,
@@ -126,6 +130,7 @@ public final class BulkMigrationTransactionAssertions {
 		final String migrationId = "docker-file-" + java.util.UUID.randomUUID();
 		final var option = ChunkedBulkMigrationOption.builder()
 				.migrationId(migrationId).chunkSize(2)
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.checkpointMode(BulkMigrationCheckpointMode.FILE).build();
 		final var store = new FileBulkMigrationCheckpointStore(checkpointDirectory);
 		final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option, store);

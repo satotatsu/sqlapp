@@ -99,6 +99,7 @@ class ChunkedBulkMigrationTest {
 			final Table source = table("INSERT_RESET");
 			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
 			final var options = ChunkedBulkMigrationOption.builder().migrationId("insert-reset")
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 					.mode(BulkMigrationMode.INSERT).chunkSize(1).build();
 			final var store = new JdbcBulkMigrationCheckpointStore(connection,
 					options.getCheckpointTableName());
@@ -126,7 +127,8 @@ class ChunkedBulkMigrationTest {
 			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
 			final var task = BulkMigrationJobTask.builder().taskId("guard")
 					.sourceTable(source).options(ChunkedBulkMigrationOption.builder()
-							.migrationId("plan-guard").chunkSize(1).build()).build();
+							.migrationId("plan-guard").sourceFingerprint("source-v1")
+							.targetFingerprint("target-v1").chunkSize(1).build()).build();
 			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
 			source.setName("PLAN_GUARD_CHANGED");
 
@@ -166,6 +168,7 @@ class ChunkedBulkMigrationTest {
 
 			ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
 					ChunkedBulkMigrationOption.builder().migrationId("chunk-progress")
+							.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 							.chunkSize(2).build(), listener);
 
 			assertEquals(List.of("start:0:2:0:2", "complete:0",
@@ -184,7 +187,8 @@ class ChunkedBulkMigrationTest {
 				source.getRows().add(row -> { row.put("ID", id); row.put("TXT", "row" + id); });
 			}
 			final var options = ChunkedBulkMigrationOption.builder()
-					.migrationId("pause-progress").chunkSize(2).build();
+					.migrationId("pause-progress").sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(2).build();
 
 			final var paused = assertThrows(ChunkedBulkMigrationPausedException.class,
 					() -> ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
@@ -220,7 +224,8 @@ class ChunkedBulkMigrationTest {
 			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
 			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
 			final var options = ChunkedBulkMigrationOption.builder()
-					.migrationId("job-pause").chunkSize(1).build();
+					.migrationId("job-pause").sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(1).build();
 			final List<String> events = new ArrayList<>();
 			final var pausedTask = BulkMigrationJobTask.builder().taskId("paused")
 					.sourceTable(source).options(options)
@@ -265,7 +270,8 @@ class ChunkedBulkMigrationTest {
 			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
 			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
 			final var option = ChunkedBulkMigrationOption.builder()
-					.migrationId("atomic-migration").chunkSize(2).build();
+					.migrationId("atomic-migration").sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(2).build();
 			final var jdbcStore = new JdbcBulkMigrationCheckpointStore(connection,
 					option.getCheckpointTableName());
 			final TransactionalBulkMigrationCheckpointStore failing =
@@ -376,7 +382,8 @@ class ChunkedBulkMigrationTest {
 			final var delegate = new InMemoryBulkMigrationCheckpointStore();
 			final var option = ChunkedBulkMigrationOption.builder()
 					.migrationId("keyset-migration").chunkSize(2)
-					.checkpointMode(BulkMigrationCheckpointMode.FILE).build();
+					.checkpointMode(BulkMigrationCheckpointMode.FILE)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1").build();
 
 			assertThrows(SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(
 					connection, source, option, new FailSecondSaveStore(delegate)));
@@ -473,7 +480,7 @@ class ChunkedBulkMigrationTest {
 			assertEquals(1, verification.getMismatches().get(0).getIndex());
 
 			final var repaired = BulkMigrationRepairExecutor.execute(connection, expected,
-					verification, BulkMigrationRepairOption.builder().chunkSize(2).build());
+					verification, BulkMigrationRepairOption.builder().build());
 			assertEquals(1, repaired.getReplayedChunks());
 			assertEquals(2, repaired.getReplayedRows());
 			assertFalse(repaired.requiresManualReconciliation());
@@ -511,7 +518,7 @@ class ChunkedBulkMigrationTest {
 
 			assertThrows(IllegalStateException.class, () -> BulkMigrationRepairExecutor.execute(
 					connection, expected, verification,
-					BulkMigrationRepairOption.builder().chunkSize(1).build()));
+					BulkMigrationRepairOption.builder().build()));
 			try (var resultSet = statement.executeQuery(
 					"SELECT TXT FROM CHANGED_REPAIR_TARGET WHERE ID = 1")) {
 				resultSet.next();
@@ -535,7 +542,7 @@ class ChunkedBulkMigrationTest {
 
 			final var verification = BulkMigrationVerifier.verify(expected, actual, 10);
 			final var result = BulkMigrationRepairExecutor.execute(connection, expected,
-					verification, BulkMigrationRepairOption.builder().chunkSize(10).build());
+					verification, BulkMigrationRepairOption.builder().build());
 			assertTrue(result.requiresManualReconciliation());
 			assertEquals(List.of(0L), result.getChunksWithExtraActualRows());
 			try (var resultSet = statement.executeQuery(
@@ -568,11 +575,13 @@ class ChunkedBulkMigrationTest {
 			final String suffix = java.util.UUID.randomUUID().toString();
 			final var parentTask = BulkMigrationJobTask.builder().taskId("parent")
 					.sourceTable(parent).options(ChunkedBulkMigrationOption.builder()
-							.migrationId("job-parent-" + suffix).chunkSize(1).build()).build();
+							.migrationId("job-parent-" + suffix).sourceFingerprint("parent-v1")
+							.targetFingerprint("target-v1").chunkSize(1).build()).build();
 			final var childTask = BulkMigrationJobTask.builder().taskId("child")
 					.sourceTable(child)
 					.options(ChunkedBulkMigrationOption.builder()
-							.migrationId("job-child-" + suffix).chunkSize(1).build()).build();
+							.migrationId("job-child-" + suffix).sourceFingerprint("child-v1")
+							.targetFingerprint("target-v1").chunkSize(1).build()).build();
 
 			final List<String> events = new ArrayList<>();
 			final var plan = BulkMigrationJobPlanner.plan(List.of(childTask, parentTask));
@@ -632,10 +641,12 @@ class ChunkedBulkMigrationTest {
 			final String suffix = java.util.UUID.randomUUID().toString();
 			final var parentTask = BulkMigrationJobTask.builder().taskId("parent")
 					.sourceTable(parent).options(ChunkedBulkMigrationOption.builder()
-							.migrationId("fail-job-parent-" + suffix).chunkSize(1).build()).build();
+							.migrationId("fail-job-parent-" + suffix).sourceFingerprint("parent-v1")
+							.targetFingerprint("target-v1").chunkSize(1).build()).build();
 			final var childTask = BulkMigrationJobTask.builder().taskId("child")
 					.sourceTable(child).options(ChunkedBulkMigrationOption.builder()
-							.migrationId("fail-job-child-" + suffix).chunkSize(1).build())
+							.migrationId("fail-job-child-" + suffix).sourceFingerprint("child-v1")
+							.targetFingerprint("target-v1").chunkSize(1).build())
 					.chunkListener(new ChunkedBulkMigrationListener() {
 						@Override
 						public void onChunkFailed(ChunkedBulkMigrationProgress progress, Throwable cause) {
@@ -696,7 +707,7 @@ class ChunkedBulkMigrationTest {
 			actualChild.getRows().add(row -> {
 				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "old child");
 			});
-			final var option = BulkMigrationRepairOption.builder().chunkSize(1).build();
+			final var option = BulkMigrationRepairOption.builder().build();
 			final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent")
 					.expected(expectedParent)
 					.verificationResult(BulkMigrationVerifier.verify(expectedParent, actualParent, 1))
@@ -745,7 +756,7 @@ class ChunkedBulkMigrationTest {
 			actualChild.getRows().add(row -> {
 				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "old");
 			});
-			final var option = BulkMigrationRepairOption.builder().chunkSize(1).build();
+			final var option = BulkMigrationRepairOption.builder().build();
 			final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent")
 					.expected(expectedParent)
 					.verificationResult(BulkMigrationVerifier.verify(expectedParent, actualParent, 1))

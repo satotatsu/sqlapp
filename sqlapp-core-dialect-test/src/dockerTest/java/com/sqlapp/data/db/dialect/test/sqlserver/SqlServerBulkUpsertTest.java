@@ -231,7 +231,8 @@ class SqlServerBulkUpsertTest {
 			}
 			final String migrationId = "sqlserver-" + java.util.UUID.randomUUID();
 			final var option = ChunkedBulkMigrationOption.builder()
-					.migrationId(migrationId).chunkSize(2).build();
+					.migrationId(migrationId).sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(2).build();
 			final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 					option.getCheckpointTableName());
 			assertThrows(java.sql.SQLException.class,

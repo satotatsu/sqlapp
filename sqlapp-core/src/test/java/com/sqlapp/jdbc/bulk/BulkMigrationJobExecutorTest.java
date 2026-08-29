@@ -50,6 +50,7 @@ class BulkMigrationJobExecutorTest {
 				.plan(List.of(parentTask, childTask)).getFingerprint());
 		final var changedChild = tableTask("child", child,
 				ChunkedBulkMigrationOption.builder().migrationId("plan-child")
+						.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 						.chunkSize(123).build());
 		assertNotEquals(plan.getFingerprint(),
 				BulkMigrationJobPlanner.plan(List.of(changedChild, parentTask)).getFingerprint());
@@ -99,8 +100,10 @@ class BulkMigrationJobExecutorTest {
 		table.getColumns().add(new Column("A"));
 		table.getColumns().add(new Column("B"));
 		final var commaName = ChunkedBulkMigrationOption.builder().migrationId("structured")
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("A, B").build()).build();
 		final var twoNames = ChunkedBulkMigrationOption.builder().migrationId("structured")
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("A").keyColumn("B").build())
 				.build();
 		final var tablePlan = BulkMigrationJobPlanner.plan(List.of(
@@ -137,11 +140,13 @@ class BulkMigrationJobExecutorTest {
 		final Table table = table("CUSTOM_SELECTOR");
 		final BulkUpsertDuplicateRowSelector selector = (retained, candidate) -> retained;
 		final var first = ChunkedBulkMigrationOption.builder().migrationId("custom-selector")
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.bulkUpsertOption(BulkUpsertOption.builder()
 						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
 						.duplicateRowSelector(selector)
 						.duplicateRowSelectorFingerprint("selector-v1").build()).build();
 		final var changed = ChunkedBulkMigrationOption.builder().migrationId("custom-selector")
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.bulkUpsertOption(BulkUpsertOption.builder()
 						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
 						.duplicateRowSelector(selector)
@@ -154,6 +159,7 @@ class BulkMigrationJobExecutorTest {
 
 		final var missingFingerprint = ChunkedBulkMigrationOption.builder()
 				.migrationId("missing-selector-fingerprint")
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.bulkUpsertOption(BulkUpsertOption.builder()
 						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
 						.duplicateRowSelector(selector).build()).build();
@@ -230,6 +236,26 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void requiresFingerprintsOnlyForResumableMigrations() {
+		final Table table = table("RESUME_FINGERPRINTS");
+		final var missingSource = ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-source-fingerprint")
+				.targetFingerprint("target-v1").build();
+		final var missingTarget = ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-target-fingerprint")
+				.sourceFingerprint("source-v1").build();
+		final var noResume = ChunkedBulkMigrationOption.builder()
+				.migrationId("no-resume").resume(false).build();
+
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("missing-source", table, missingSource))));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(tableTask("missing-target", table, missingTarget))));
+		assertEquals(List.of("no-resume"), BulkMigrationJobPlanner.plan(
+				List.of(tableTask("no-resume", table, noResume))).getTaskIds());
+	}
+
+	@Test
 	void resolvesAndValidatesUpsertBeforeExecution() {
 		final Table table = table("INVALID_UPSERT");
 		final var unknownKey = ChunkedBulkMigrationOption.builder()
@@ -301,7 +327,8 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	private static ChunkedBulkMigrationOption options(final String migrationId) {
-		return ChunkedBulkMigrationOption.builder().migrationId(migrationId).build();
+		return ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1").build();
 	}
 
 	private static BulkMigrationKeysetSource keyset(final Table table) {

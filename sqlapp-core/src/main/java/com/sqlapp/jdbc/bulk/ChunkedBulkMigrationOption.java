@@ -50,5 +50,13 @@ public class ChunkedBulkMigrationOption implements Serializable {
 			throw new IllegalArgumentException(
 					"checkpointTableName must not be empty for DATABASE checkpoints");
 		}
+		if (resume && (sourceFingerprint == null || sourceFingerprint.isBlank())) {
+			throw new IllegalArgumentException(
+					"sourceFingerprint must not be empty when resume is enabled");
+		}
+		if (resume && (targetFingerprint == null || targetFingerprint.isBlank())) {
+			throw new IllegalArgumentException(
+					"targetFingerprint must not be empty when resume is enabled");
+		}
 	}
 }
