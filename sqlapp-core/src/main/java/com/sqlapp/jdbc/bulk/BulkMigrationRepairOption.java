@@ -15,8 +15,6 @@ import lombok.Getter;
 public class BulkMigrationRepairOption implements Serializable {
 	private static final long serialVersionUID = 1L;
 	@Builder.Default
-	private final int chunkSize = 10_000;
-	@Builder.Default
 	private final boolean verifyExpectedHashes = true;
 	@Builder.Default
 	private final BulkUpsertOption bulkUpsertOption = BulkUpsertOption.builder()

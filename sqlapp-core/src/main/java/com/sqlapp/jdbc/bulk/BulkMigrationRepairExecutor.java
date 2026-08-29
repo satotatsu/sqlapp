@@ -25,8 +25,9 @@ public final class BulkMigrationRepairExecutor {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
-		if (options.getChunkSize() <= 0) {
-			throw new IllegalArgumentException("chunkSize must be greater than zero");
+		if (verification.getChunkSize() <= 0) {
+			throw new IllegalArgumentException(
+					"Verification result chunkSize must be greater than zero");
 		}
 		final List<BulkMigrationVerificationChunk> mismatches = verification.getMismatches();
 		if (mismatches.isEmpty()) {
@@ -50,7 +51,7 @@ public final class BulkMigrationRepairExecutor {
 		final Iterator<Row> iterator = expected.getRows().iterator();
 		try {
 			while (iterator.hasNext()) {
-				final List<Row> rows = take(iterator, options.getChunkSize());
+				final List<Row> rows = take(iterator, verification.getChunkSize());
 				final BulkMigrationVerificationChunk mismatch = byIndex.remove(chunkIndex);
 				if (mismatch != null) {
 					if (options.isVerifyExpectedHashes()) {

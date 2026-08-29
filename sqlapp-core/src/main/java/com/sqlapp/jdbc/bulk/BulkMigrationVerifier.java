@@ -46,7 +46,7 @@ public final class BulkMigrationVerifier {
 						BulkMigrationHash.rows(left, expectedColumns),
 						BulkMigrationHash.rows(right, actualColumns)));
 			}
-			return new BulkMigrationVerificationResult(expectedCount, actualCount,
+			return new BulkMigrationVerificationResult(chunkSize, expectedCount, actualCount,
 					List.copyOf(chunks));
 		} finally {
 			close(expectedRows);

@@ -301,7 +301,7 @@ class SqlServerBulkUpsertTest {
 			final var verification = BulkMigrationVerifier.verify(expected, before, 2);
 			assertEquals(1, verification.getMismatches().size());
 			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
-					verification, BulkMigrationRepairOption.builder().chunkSize(2).build());
+					verification, BulkMigrationRepairOption.builder().build());
 			assertEquals(1, repair.getReplayedChunks());
 			assertEquals(2, repair.getReplayedRows());
 
