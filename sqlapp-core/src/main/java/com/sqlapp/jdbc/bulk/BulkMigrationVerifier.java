@@ -36,6 +36,7 @@ public final class BulkMigrationVerifier {
 		long expectedCount = 0;
 		long actualCount = 0;
 		long index = 0;
+		Throwable failure = null;
 		try {
 			while (expectedRows.hasNext() || actualRows.hasNext()) {
 				final List<Row> left = take(expectedRows, chunkSize);
@@ -48,9 +49,11 @@ public final class BulkMigrationVerifier {
 			}
 			return new BulkMigrationVerificationResult(chunkSize, expectedCount, actualCount,
 					List.copyOf(chunks));
+		} catch (RuntimeException | Error e) {
+			failure = e;
+			throw e;
 		} finally {
-			close(expectedRows);
-			close(actualRows);
+			BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
 		}
 	}
 
@@ -62,13 +65,4 @@ public final class BulkMigrationVerifier {
 		return rows;
 	}
 
-	private static void close(final Iterator<Row> iterator) {
-		if (iterator instanceof AutoCloseable closeable) {
-			try {
-				closeable.close();
-			} catch (Exception e) {
-				throw e instanceof RuntimeException runtime ? runtime : new IllegalStateException(e);
-			}
-		}
-	}
 }

@@ -3,16 +3,50 @@ package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobVerifierTest {
+	@Test
+	void closesEveryStreamWithoutMaskingTheProcessingFailure() {
+		final var processingFailure = new IllegalArgumentException("read failed");
+		final var first = new FailingCloseIterator("first close failed");
+		final var second = new FailingCloseIterator("second close failed");
+
+		BulkMigrationIteratorSupport.close(processingFailure, first, second);
+
+		assertTrue(first.closed);
+		assertTrue(second.closed);
+		assertEquals(2, processingFailure.getSuppressed().length);
+		assertSame(first.failure, processingFailure.getSuppressed()[0]);
+		assertSame(second.failure, processingFailure.getSuppressed()[1]);
+	}
+
+	@Test
+	void closesRemainingStreamsWhenTheFirstCloseFails() {
+		final var first = new FailingCloseIterator("first close failed");
+		final var second = new FailingCloseIterator("second close failed");
+
+		final var failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationIteratorSupport.close(null, first, second));
+
+		assertSame(first.failure, failure);
+		assertTrue(first.closed);
+		assertTrue(second.closed);
+		assertEquals(1, failure.getSuppressed().length);
+		assertSame(second.failure, failure.getSuppressed()[0]);
+	}
+
 	@Test
 	void verificationResultOwnsValidImmutableChunkBoundaries() {
 		final var chunks = new java.util.ArrayList<BulkMigrationVerificationChunk>();
@@ -60,5 +94,31 @@ class BulkMigrationJobVerifierTest {
 			row.put("TXT", text);
 		});
 		return table;
+	}
+
+	private static final class FailingCloseIterator
+			implements Iterator<Row>, AutoCloseable {
+		private final IllegalStateException failure;
+		private boolean closed;
+
+		private FailingCloseIterator(final String message) {
+			this.failure = new IllegalStateException(message);
+		}
+
+		@Override
+		public boolean hasNext() {
+			return false;
+		}
+
+		@Override
+		public Row next() {
+			throw new java.util.NoSuchElementException();
+		}
+
+		@Override
+		public void close() {
+			closed = true;
+			throw failure;
+		}
 	}
 }

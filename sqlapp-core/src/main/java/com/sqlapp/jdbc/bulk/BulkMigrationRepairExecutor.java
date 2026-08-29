@@ -49,6 +49,7 @@ public final class BulkMigrationRepairExecutor {
 		int replayedChunks = 0;
 		long chunkIndex = 0;
 		final Iterator<Row> iterator = expected.getRows().iterator();
+		Throwable failure = null;
 		try {
 			while (iterator.hasNext()) {
 				final List<Row> rows = take(iterator, verification.getChunkSize());
@@ -81,8 +82,11 @@ public final class BulkMigrationRepairExecutor {
 			return new BulkMigrationRepairResult(mismatches.size(), replayedChunks,
 					replayedRows, affectedRows, List.copyOf(extraActual),
 					List.copyOf(withoutExpected));
+		} catch (RuntimeException | Error e) {
+			failure = e;
+			throw e;
 		} finally {
-			close(iterator);
+			BulkMigrationIteratorSupport.close(failure, iterator);
 		}
 	}
 
@@ -94,13 +98,4 @@ public final class BulkMigrationRepairExecutor {
 		return rows;
 	}
 
-	private static void close(final Iterator<Row> iterator) {
-		if (iterator instanceof AutoCloseable closeable) {
-			try {
-				closeable.close();
-			} catch (Exception e) {
-				throw e instanceof RuntimeException runtime ? runtime : new IllegalStateException(e);
-			}
-		}
-	}
 }
