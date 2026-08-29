@@ -71,14 +71,34 @@ public final class BulkMigrationRepairExecutor {
 				validateExpectedEnd(expected, verification, chunkIndex);
 			}
 			withoutExpected.addAll(byIndex.keySet().stream().sorted().toList());
+			if (replayChunks.isEmpty()) {
+				return new BulkMigrationRepairResult(mismatches.size(), 0, 0, 0,
+						List.copyOf(extraActual), List.copyOf(withoutExpected));
+			}
 			final BulkUpsertOption configured = options.getBulkUpsertOption() == null
 					? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
 			final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
 					? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
 							ChunkedBulkMigrationExecutor.primaryKeyNames(expected))
 					: configured;
-			for (final Table chunk : replayChunks) {
-				affectedRows += BulkUpsertResolver.execute(targetConnection, chunk, effective);
+			final BulkUpsertExecutor executor = BulkUpsertResolver.resolve(targetConnection);
+			if (effective.isUseTransaction()
+					&& !executor.supportsCallerTransactionAtomicity()) {
+				throw new IllegalStateException("The selected bulk upsert provider uses "
+						+ "transaction-breaking staging DDL and cannot atomically repair all chunks; "
+						+ "set bulkUpsertOption.useTransaction=false to allow non-atomic repair");
+			}
+			try (var transaction = BulkUpsertTransaction.begin(targetConnection,
+					effective.isUseTransaction())) {
+				try {
+					for (final Table chunk : replayChunks) {
+						affectedRows += executor.execute(targetConnection, chunk, effective);
+					}
+					transaction.commit();
+				} catch (SQLException | RuntimeException e) {
+					transaction.rollback(e);
+					throw e;
+				}
 			}
 			return new BulkMigrationRepairResult(mismatches.size(), replayChunks.size(),
 					replayedRows, affectedRows, List.copyOf(extraActual),

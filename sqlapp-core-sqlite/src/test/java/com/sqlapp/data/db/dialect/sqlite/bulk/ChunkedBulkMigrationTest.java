@@ -561,6 +561,39 @@ class ChunkedBulkMigrationTest {
 	}
 
 	@Test
+	void rollsBackEveryRepairChunkWhenALaterChunkFails() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ATOMIC_REPAIR_TARGET (ID INTEGER PRIMARY KEY, "
+					+ "TXT TEXT CHECK (ID <> 3 OR TXT <> 'value-3'))");
+			statement.executeUpdate("INSERT INTO ATOMIC_REPAIR_TARGET VALUES "
+					+ "(1,'wrong-1'),(2,'wrong-2'),(3,'wrong-3'),(4,'wrong-4')");
+			final Table expected = table("ATOMIC_REPAIR_TARGET");
+			final Table actual = table("ATOMIC_REPAIR_TARGET");
+			for (int id = 1; id <= 4; id++) {
+				final int value = id;
+				expected.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", "value-" + value);
+				});
+				actual.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", "wrong-" + value);
+				});
+			}
+			final var verification = BulkMigrationVerifier.verify(expected, actual, 2);
+
+			assertThrows(SQLException.class, () -> BulkMigrationRepairExecutor.execute(
+					connection, expected, verification, BulkMigrationRepairOption.builder().build()));
+			try (var resultSet = statement.executeQuery(
+					"SELECT TXT FROM ATOMIC_REPAIR_TARGET WHERE ID = 1")) {
+				resultSet.next();
+				assertEquals("wrong-1", resultSet.getString(1));
+			}
+		}
+	}
+
+	@Test
 	void repairReportsTargetOnlyRowsWithoutDeletingThem() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 				var statement = connection.createStatement()) {
