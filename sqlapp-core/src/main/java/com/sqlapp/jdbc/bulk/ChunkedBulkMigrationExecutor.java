@@ -114,6 +114,7 @@ public final class ChunkedBulkMigrationExecutor {
 		BulkMigrationCheckpoint checkpoint = options.isResume()
 				? checkpointStore.load(options.getMigrationId()).orElse(null) : null;
 		if (checkpoint != null) {
+			checkpoint.validate();
 			validateCheckpoint(checkpoint, options);
 			validateResumeStyle(checkpoint, keysetSource != null);
 			if (checkpoint.isComplete()) {

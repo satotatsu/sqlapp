@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +48,30 @@ class BulkMigrationJobStatusInspectorTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkMigrationJobStatusInspector.inspect(
 						BulkMigrationJobPlanner.plan(List.of(task))));
+	}
+
+	@Test
+	void rejectsInvalidCheckpointsReturnedByCustomStores() {
+		final BulkMigrationCheckpoint invalid = BulkMigrationCheckpoint.builder()
+				.migrationId("invalid").processedRows(-1).build();
+		final BulkMigrationCheckpointStore store = new BulkMigrationCheckpointStore() {
+			@Override
+			public Optional<BulkMigrationCheckpoint> load(String migrationId) {
+				return Optional.of(invalid);
+			}
+
+			@Override
+			public void save(BulkMigrationCheckpoint checkpoint) {
+			}
+
+			@Override
+			public void delete(String migrationId) {
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task("invalid", store)));
+
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobStatusInspector.inspect(plan));
 	}
 
 	private static BulkMigrationJobTask task(final String id,

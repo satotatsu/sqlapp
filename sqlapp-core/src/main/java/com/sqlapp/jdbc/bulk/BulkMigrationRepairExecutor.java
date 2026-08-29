@@ -46,40 +46,41 @@ public final class BulkMigrationRepairExecutor {
 		final List<Long> withoutExpected = new ArrayList<>();
 		long replayedRows = 0;
 		long affectedRows = 0;
-		int replayedChunks = 0;
 		long chunkIndex = 0;
+		final List<Table> replayChunks = new ArrayList<>(mismatches.size());
 		final Iterator<Row> iterator = expected.getRows().iterator();
 		Throwable failure = null;
 		try {
 			while (iterator.hasNext()) {
 				final List<Row> rows = take(iterator, verification.getChunkSize());
+				final BulkMigrationVerificationChunk verified = chunkIndex < verification.getChunks().size()
+						? verification.getChunks().get((int) chunkIndex) : null;
+				if (options.isVerifyExpectedHashes()) {
+					validateExpectedChunk(expected, rows, verified, chunkIndex);
+				}
 				final BulkMigrationVerificationChunk mismatch = byIndex.remove(chunkIndex);
 				if (mismatch != null) {
-					if (options.isVerifyExpectedHashes()) {
-						final String hash = BulkMigrationHash.rows(rows, expected.getColumns());
-						if (rows.size() != mismatch.getExpectedRows()
-								|| !hash.equals(mismatch.getExpectedHash())) {
-							throw new IllegalStateException("Expected source changed after verification at chunk "
-									+ chunkIndex);
-						}
-					}
 					if (!rows.isEmpty()) {
-						final Table chunk = ChunkedBulkMigrationExecutor.chunkTable(expected, rows);
-						final BulkUpsertOption configured = options.getBulkUpsertOption() == null
-								? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
-						final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
-								? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
-										ChunkedBulkMigrationExecutor.primaryKeyNames(expected))
-								: configured;
-						affectedRows += BulkUpsertResolver.execute(targetConnection, chunk, effective);
+						replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(expected, rows));
 						replayedRows += rows.size();
-						replayedChunks++;
 					}
 				}
 				chunkIndex++;
 			}
+			if (options.isVerifyExpectedHashes()) {
+				validateExpectedEnd(expected, verification, chunkIndex);
+			}
 			withoutExpected.addAll(byIndex.keySet().stream().sorted().toList());
-			return new BulkMigrationRepairResult(mismatches.size(), replayedChunks,
+			final BulkUpsertOption configured = options.getBulkUpsertOption() == null
+					? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
+			final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
+					? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
+							ChunkedBulkMigrationExecutor.primaryKeyNames(expected))
+					: configured;
+			for (final Table chunk : replayChunks) {
+				affectedRows += BulkUpsertResolver.execute(targetConnection, chunk, effective);
+			}
+			return new BulkMigrationRepairResult(mismatches.size(), replayChunks.size(),
 					replayedRows, affectedRows, List.copyOf(extraActual),
 					List.copyOf(withoutExpected));
 		} catch (RuntimeException | Error e) {
@@ -88,6 +89,31 @@ public final class BulkMigrationRepairExecutor {
 		} finally {
 			BulkMigrationIteratorSupport.close(failure, iterator);
 		}
+	}
+
+	private static void validateExpectedChunk(final Table expected, final List<Row> rows,
+			final BulkMigrationVerificationChunk verified, final long chunkIndex) {
+		if (verified == null || rows.size() != verified.getExpectedRows()
+				|| !BulkMigrationHash.rows(rows, expected.getColumns())
+						.equals(verified.getExpectedHash())) {
+			throw changed(chunkIndex);
+		}
+	}
+
+	private static void validateExpectedEnd(final Table expected,
+			final BulkMigrationVerificationResult verification, final long chunkIndex) {
+		final String emptyHash = BulkMigrationHash.rows(List.of(), expected.getColumns());
+		for (long i = chunkIndex; i < verification.getChunks().size(); i++) {
+			final BulkMigrationVerificationChunk chunk = verification.getChunks().get((int) i);
+			if (chunk.getExpectedRows() != 0 || !emptyHash.equals(chunk.getExpectedHash())) {
+				throw changed(i);
+			}
+		}
+	}
+
+	private static IllegalStateException changed(final long chunkIndex) {
+		return new IllegalStateException(
+				"Expected source changed after verification at chunk " + chunkIndex);
 	}
 
 	private static List<Row> take(final Iterator<Row> iterator, final int size) {

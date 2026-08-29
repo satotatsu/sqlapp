@@ -23,6 +23,9 @@ public final class BulkMigrationJobStatusInspector {
 			}
 			final BulkMigrationCheckpoint checkpoint = task.getCheckpointStore()
 					.load(task.getOptions().getMigrationId()).orElse(null);
+			if (checkpoint != null) {
+				checkpoint.validate();
+			}
 			final BulkMigrationJobTaskState state;
 			if (checkpoint == null) {
 				state = BulkMigrationJobTaskState.NOT_STARTED;
