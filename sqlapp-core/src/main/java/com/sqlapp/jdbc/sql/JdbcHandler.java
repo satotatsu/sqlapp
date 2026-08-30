@@ -23,6 +23,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.List;
 
@@ -294,7 +295,8 @@ public class JdbcHandler {
 	protected static long getUpdateCount(final Statement statement) throws SQLException {
 		try {
 			return statement.getLargeUpdateCount();
-		} catch (UnsupportedOperationException | AbstractMethodError e) {
+		} catch (SQLFeatureNotSupportedException | UnsupportedOperationException
+				| AbstractMethodError e) {
 			return statement.getUpdateCount();
 		}
 	}

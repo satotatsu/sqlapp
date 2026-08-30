@@ -22,7 +22,10 @@ package com.sqlapp.jdbc.sql;
 import static com.sqlapp.util.CommonUtils.list;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.lang.reflect.Proxy;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Statement;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -81,6 +84,22 @@ public class JdbcHandlerTest extends AbstractDbTest {
 		table.getColumns().add(column);
 		//
 		sqlRegistory.put(INSERT, INSERT_SQL);
+	}
+
+	@Test
+	void fallsBackWhenLargeUpdateCountIsNotSupported() throws Exception {
+		final Statement statement = (Statement) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Statement.class },
+				(proxy, method, args) -> {
+					if (method.getName().equals("getLargeUpdateCount")) {
+						throw new SQLFeatureNotSupportedException("not supported");
+					}
+					if (method.getName().equals("getUpdateCount")) {
+						return 7;
+					}
+					throw new UnsupportedOperationException(method.getName());
+				});
+		assertEquals(7, JdbcHandler.getUpdateCount(statement));
 	}
 
 	@Test
