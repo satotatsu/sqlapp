@@ -191,8 +191,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		table.getColumns().add(new Column("COMPLETED_CHUNKS").setDataType(DataType.DECIMAL)
 				.setLength(19).setScale(0).setNotNull(true));
 		if (includeChunkSize) {
-			table.getColumns().add(new Column("CHUNK_SIZE").setDataType(DataType.INT)
-					.setNotNull(true));
+			table.getColumns().add(new Column("CHUNK_SIZE").setDataType(DataType.INT));
 		}
 		table.getColumns().add(column("LAST_CHUNK_HASH", DataType.VARCHAR, 64, false));
 		if (includeResumeToken) {
