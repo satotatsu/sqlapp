@@ -3,6 +3,8 @@ package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.AbstractDbTest;
@@ -77,6 +79,31 @@ class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 				assertEquals(0, resultSet.getInt(1));
 				assertEquals("generated", resultSet.getString(2));
 			}
+		});
+	}
+
+	@Test
+	void keepsExplicitAutoIncrementTypeInTheGeneratedInsertContract() throws Exception {
+		testDb(connection -> {
+			final Table table = new Table("SQLAPP_SERIAL_INSERT_TEST");
+			final Column id = new Column("ID").setDataType(DataType.SERIAL)
+					.setIdentity(true);
+			final Column value = new Column("VALUE").setDataType(DataType.VARCHAR);
+			table.getColumns().add(id);
+			table.getColumns().add(value);
+			final var dialect = getDialect(connection);
+
+			final class TestExecutor extends JdbcBatchBulkInsertExecutor {
+				private TestExecutor() {
+					super(dialect);
+				}
+
+				private String sql() {
+					return createInsertSql(table, List.of(id, value));
+				}
+			}
+			final String sql = new TestExecutor().sql();
+			assertEquals(2, sql.chars().filter(ch -> ch == '?').count(), sql);
 		});
 	}
 

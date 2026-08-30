@@ -102,6 +102,9 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 			// JDBC bulk binds every selected value explicitly. Remove generation
 			// metadata so the regular INSERT factory preserves that contract.
 			column.setIdentity(false).setDefaultValue(null);
+			if (column.getDataType().isAutoIncrementable()) {
+				column.setDataType(column.getDataType().getSurrogate());
+			}
 			insertTable.getColumns().add(column);
 		}
 		final var nodes = dialect.createSqlFactoryRegistry()
