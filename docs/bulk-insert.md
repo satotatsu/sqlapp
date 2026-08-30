@@ -452,6 +452,16 @@ them after a partially completed preparation. Process termination cannot be
 recovered by an in-memory lifecycle alone; durable maintenance-state recording
 is required before automatically recovering such an interrupted job.
 
+`DurableBulkMigrationJobLifecycle` wraps a lifecycle with a
+`BulkMigrationMaintenanceStateStore`. It records `PREPARING`, `PREPARED`,
+`POST_PROCESSING`, `RESTORING`, `RESTORED`, `RESTORE_FAILED`, and `COMPLETE`
+against the plan fingerprint. `RESTORE_FAILED` also retains the failure
+message. The core module supplies an in-memory store for tests and embedded
+use; operational command integrations should use a database or atomically
+replaced file implementation. A nonterminal state is evidence of an
+interrupted job, but automatic recovery should run only after the same plan
+fingerprint has been verified.
+
 The plan also exposes a deterministic SHA-256 fingerprint over the ordered
 task IDs, table identities, migration and schema fingerprints, migration mode,
 chunk/checkpoint settings, and bulk/UPSERT options. Execution-only objects such
