@@ -434,6 +434,24 @@ is suitable for command or Gradle-task dry runs and approval displays. The
 executor uses this planner internally, so a displayed plan and the subsequent
 execution apply identical ordering and safety checks.
 
+`BulkMigrationJobPlanner.plan(tasks, lifecycle)` also includes migration
+maintenance in the dry-run. A lifecycle describes its constraint, trigger,
+identity/sequence, statistics, or other operations as immutable
+`BulkMigrationJobOperation` values. Those operations and the lifecycle
+configuration fingerprint are included in the plan fingerprint. Independent
+maintenance implementations can be combined with
+`CompositeBulkMigrationJobLifecycle`; operation IDs must be unique.
+
+The executor calls lifecycle preparation before the first table and successful
+post-processing after the last table. If preparation or migration fails, it
+calls restoration and preserves a restoration failure as a suppressed
+exception on the original failure. A composite restores components in reverse
+order and continues restoring remaining components after one restore fails.
+Restore implementations must be idempotent because the executor may invoke
+them after a partially completed preparation. Process termination cannot be
+recovered by an in-memory lifecycle alone; durable maintenance-state recording
+is required before automatically recovering such an interrupted job.
+
 The plan also exposes a deterministic SHA-256 fingerprint over the ordered
 task IDs, table identities, migration and schema fingerprints, migration mode,
 chunk/checkpoint settings, and bulk/UPSERT options. Execution-only objects such
