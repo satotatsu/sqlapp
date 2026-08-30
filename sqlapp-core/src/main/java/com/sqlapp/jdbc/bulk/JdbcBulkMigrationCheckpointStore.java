@@ -80,6 +80,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 				.targetFingerprint(resultSet.getString(columns.get("TARGET_FINGERPRINT")))
 				.processedRows(resultSet.getLong(columns.get("PROCESSED_ROWS")))
 				.completedChunks(resultSet.getLong(columns.get("COMPLETED_CHUNKS")))
+				.chunkSize(resultSet.getInt(columns.get("CHUNK_SIZE")))
 				.lastChunkHash(resultSet.getString(columns.get("LAST_CHUNK_HASH")))
 				.resumeToken(resultSet.getString(columns.get("RESUME_TOKEN")))
 				.complete("1".equals(resultSet.getString(columns.get("COMPLETE_FLAG")))).build()
@@ -119,6 +120,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		parameters.put("TARGET_FINGERPRINT", checkpoint.getTargetFingerprint());
 		parameters.put("PROCESSED_ROWS", checkpoint.getProcessedRows());
 		parameters.put("COMPLETED_CHUNKS", checkpoint.getCompletedChunks());
+		parameters.put("CHUNK_SIZE", checkpoint.getChunkSize());
 		parameters.put("LAST_CHUNK_HASH", checkpoint.getLastChunkHash());
 		parameters.put("RESUME_TOKEN", checkpoint.getResumeToken());
 		parameters.put("COMPLETE_FLAG", checkpoint.isComplete() ? "1" : "0");
@@ -151,6 +153,7 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		}
 		try {
 			ensureResumeTokenColumn();
+			ensureChunkSizeColumn();
 		} catch (SQLException e) {
 			if (generatedDdl != null) {
 				e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
@@ -160,7 +163,8 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		try (var statement = connection.createStatement()) {
 			statement.executeQuery("SELECT " + columnName("SOURCE_FINGERPRINT") + ", "
 					+ columnName("TARGET_FINGERPRINT") + ", " + columnName("PROCESSED_ROWS") + ", "
-					+ columnName("COMPLETED_CHUNKS") + ", " + columnName("LAST_CHUNK_HASH") + ", "
+					+ columnName("COMPLETED_CHUNKS") + ", " + columnName("CHUNK_SIZE") + ", "
+					+ columnName("LAST_CHUNK_HASH") + ", "
 					+ columnName("COMPLETE_FLAG") + " FROM "
 					+ tableName + " WHERE 1 = 0").close();
 		} catch (SQLException e) {
@@ -172,10 +176,11 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	}
 
 	private Table checkpointTable() {
-		return checkpointTable(true);
+		return checkpointTable(true, true);
 	}
 
-	private Table checkpointTable(final boolean includeResumeToken) {
+	private Table checkpointTable(final boolean includeResumeToken,
+			final boolean includeChunkSize) {
 		final Table table = new Table(rawTableName);
 		final Column migrationId = column("MIGRATION_ID", DataType.VARCHAR, 255, true);
 		table.getColumns().add(migrationId);
@@ -185,6 +190,10 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 				.setLength(19).setScale(0).setNotNull(true));
 		table.getColumns().add(new Column("COMPLETED_CHUNKS").setDataType(DataType.DECIMAL)
 				.setLength(19).setScale(0).setNotNull(true));
+		if (includeChunkSize) {
+			table.getColumns().add(new Column("CHUNK_SIZE").setDataType(DataType.INT)
+					.setNotNull(true));
+		}
 		table.getColumns().add(column("LAST_CHUNK_HASH", DataType.VARCHAR, 64, false));
 		if (includeResumeToken) {
 			table.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR)
@@ -208,13 +217,34 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 			return;
 		} catch (SQLException missing) {
 			try {
-				final Table original = checkpointTable(false);
-				final Table target = checkpointTable(true);
+				final Table original = checkpointTable(false, false);
+				final Table target = checkpointTable(true, false);
 				final var difference = original.diff(target);
 				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 						.getSqlFactory(target, SqlType.ALTER);
 				final var operations = factory.createDiffSql(difference);
 				new ConnectionSqlExecutor(connection, false).execute(operations);
+			} catch (SQLException alterFailure) {
+				alterFailure.addSuppressed(missing);
+				throw alterFailure;
+			}
+		}
+	}
+
+	private void ensureChunkSizeColumn() throws SQLException {
+		try (var statement = connection.createStatement()) {
+			statement.executeQuery("SELECT " + columnName("CHUNK_SIZE") + " FROM "
+					+ tableName + " WHERE 1 = 0").close();
+			return;
+		} catch (SQLException missing) {
+			try {
+				final Table original = checkpointTable(true, false);
+				final Table target = checkpointTable(true, true);
+				final var difference = original.diff(target);
+				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+						.getSqlFactory(target, SqlType.ALTER);
+				new ConnectionSqlExecutor(connection, false)
+						.execute(factory.createDiffSql(difference));
 			} catch (SQLException alterFailure) {
 				alterFailure.addSuppressed(missing);
 				throw alterFailure;

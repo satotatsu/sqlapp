@@ -21,7 +21,7 @@ class FileBulkMigrationCheckpointStoreTest {
 		final var store = new FileBulkMigrationCheckpointStore(directory);
 		final var first = BulkMigrationCheckpoint.builder().migrationId("schema/table 日本語")
 				.sourceFingerprint("source-1").targetFingerprint("target-1")
-				.processedRows(20).completedChunks(2).lastChunkHash("abc")
+				.processedRows(20).completedChunks(2).chunkSize(10).lastChunkHash("abc")
 				.resumeToken("[customer-id,20]").build();
 		store.save(first);
 		assertEquals(first, store.load(first.getMigrationId()).orElseThrow());

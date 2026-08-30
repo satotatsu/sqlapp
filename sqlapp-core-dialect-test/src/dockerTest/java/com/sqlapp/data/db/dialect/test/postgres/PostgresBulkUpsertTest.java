@@ -68,6 +68,7 @@ class PostgresBulkUpsertTest {
 					"SQLAPP_BMC_LEGACY_PG");
 			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
 					.migrationId("legacy-pg").processedRows(1).completedChunks(1)
+					.chunkSize(1).lastChunkHash("checkpoint-hash")
 					.resumeToken("token-pg").complete(false).build());
 			assertEquals("token-pg", store.load("legacy-pg").orElseThrow().getResumeToken());
 		}

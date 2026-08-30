@@ -58,6 +58,32 @@ class SqlServerBulkUpsertTest {
 	}
 
 	@Test
+	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BMC_LEGACY_SQLSERVER') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BMC_LEGACY_SQLSERVER");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BMC_LEGACY_SQLSERVER ("
+					+ "MIGRATION_ID VARCHAR(255) NOT NULL PRIMARY KEY, "
+					+ "SOURCE_FINGERPRINT VARCHAR(255), TARGET_FINGERPRINT VARCHAR(255), "
+					+ "PROCESSED_ROWS DECIMAL(19,0) NOT NULL, "
+					+ "COMPLETED_CHUNKS DECIMAL(19,0) NOT NULL, "
+					+ "LAST_CHUNK_HASH VARCHAR(64), COMPLETE_FLAG CHAR(1) NOT NULL)");
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					"SQLAPP_BMC_LEGACY_SQLSERVER");
+			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
+					.migrationId("legacy-sqlserver").processedRows(1).completedChunks(1)
+					.chunkSize(1).lastChunkHash("checkpoint-hash")
+					.resumeToken("token-sqlserver").build());
+
+			final var loaded = store.load("legacy-sqlserver").orElseThrow();
+			assertEquals(1, loaded.getChunkSize());
+			assertEquals("token-sqlserver", loaded.getResumeToken());
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
 			throws Exception {
 		try (Connection connection = DriverManager.getConnection(

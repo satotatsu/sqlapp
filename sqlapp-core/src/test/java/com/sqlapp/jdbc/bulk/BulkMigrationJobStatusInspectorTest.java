@@ -51,6 +51,19 @@ class BulkMigrationJobStatusInspectorTest {
 	}
 
 	@Test
+	void reportsChangedChunkSizeAsIncompatible() throws Exception {
+		final var store = new InMemoryBulkMigrationCheckpointStore();
+		store.save(checkpoint("changed-size", "source", false, 12).toBuilder()
+				.chunkSize(500).build());
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task("changed-size", store)));
+
+		final var status = BulkMigrationJobStatusInspector.inspect(plan);
+
+		assertEquals(BulkMigrationJobTaskState.INCOMPATIBLE,
+				status.getTasks().get(0).getState());
+	}
+
+	@Test
 	void rejectsInvalidCheckpointsReturnedByCustomStores() {
 		final BulkMigrationCheckpoint invalid = BulkMigrationCheckpoint.builder()
 				.migrationId("invalid").processedRows(-1).build();
@@ -89,7 +102,8 @@ class BulkMigrationJobStatusInspectorTest {
 			final String sourceFingerprint, final boolean complete, final long rows) {
 		return BulkMigrationCheckpoint.builder().migrationId(id)
 				.sourceFingerprint(sourceFingerprint).targetFingerprint("target")
-				.processedRows(rows).completedChunks(1).complete(complete).build();
+				.processedRows(rows).completedChunks(1).chunkSize(10_000)
+				.lastChunkHash("checkpoint-hash").complete(complete).build();
 	}
 
 	private static Table table(final String name) {

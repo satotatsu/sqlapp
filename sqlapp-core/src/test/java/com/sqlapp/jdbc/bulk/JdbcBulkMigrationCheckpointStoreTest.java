@@ -17,6 +17,7 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 			store.save(checkpoint(2, false, "token-2"));
 			var loaded = store.load("migration-1").orElseThrow();
 			assertEquals(2, loaded.getProcessedRows());
+			assertEquals(1, loaded.getChunkSize());
 			assertEquals("token-2", loaded.getResumeToken());
 
 			store.save(checkpoint(5, true, "token-5"));
@@ -52,7 +53,7 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 			final boolean complete, final String resumeToken) {
 		return BulkMigrationCheckpoint.builder().migrationId("migration-1")
 				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.processedRows(processedRows).completedChunks(processedRows)
+				.processedRows(processedRows).completedChunks(processedRows).chunkSize(1)
 				.lastChunkHash("hash-" + processedRows).resumeToken(resumeToken)
 				.complete(complete).build();
 	}

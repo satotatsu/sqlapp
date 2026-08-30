@@ -30,5 +30,28 @@ class BulkMigrationCheckpointTest {
 				.migrationId("migration").processedRows(-1).build().validate());
 		assertThrows(IllegalArgumentException.class, () -> BulkMigrationCheckpoint.builder()
 				.migrationId("migration").completedChunks(-1).build().validate());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationCheckpoint.builder()
+				.migrationId("migration").chunkSize(-1).build().validate());
+	}
+
+	@Test
+	void requiresInternallyConsistentChunkProgress() {
+		final var valid = BulkMigrationCheckpoint.builder().migrationId("migration")
+				.processedRows(21).completedChunks(3).chunkSize(10)
+				.lastChunkHash("hash").build();
+		assertSame(valid, valid.validate());
+
+		assertThrows(IllegalArgumentException.class, () -> valid.toBuilder()
+				.chunkSize(0).build().validate());
+		assertThrows(IllegalArgumentException.class, () -> valid.toBuilder()
+				.completedChunks(0).build().validate());
+		assertThrows(IllegalArgumentException.class, () -> valid.toBuilder()
+				.lastChunkHash(null).build().validate());
+		assertThrows(IllegalArgumentException.class, () -> valid.toBuilder()
+				.processedRows(20).build().validate());
+		assertThrows(IllegalArgumentException.class, () -> valid.toBuilder()
+				.processedRows(31).build().validate());
+		assertThrows(IllegalArgumentException.class, () -> valid.toBuilder()
+				.processedRows(0).build().validate());
 	}
 }

@@ -27,6 +27,7 @@ import com.sqlapp.data.db.sql.AbstractAlterTableFactory;
 import com.sqlapp.data.db.sql.AddObjectDetail;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Constraint;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.Difference;
@@ -42,6 +43,21 @@ import com.sqlapp.data.schemas.Table;
  */
 public class SqlServer2005AlterTableFactory extends
 		AbstractAlterTableFactory<SqlServerSqlBuilder> {
+
+	/** SQL Server omits the optional COLUMN keyword in ADD column syntax. */
+	@Override
+	protected void addAddColumn(final Table originalTable, final Table table,
+			final DbObjectDifference diff, final List<SqlOperation> result) {
+		final Column column = diff.getTarget(Column.class);
+		final SqlServerSqlBuilder builder = createSqlBuilder();
+		builder.alter().table();
+		builder.name(table, this.getOptions().isDecorateSchemaName());
+		builder.add();
+		builder.name(column);
+		builder.space().definition(column,
+				this.getTableOptions().getWithColumnRemarks().test(column));
+		add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
+	}
 
 	/**
 	 * 制約定義を追加します

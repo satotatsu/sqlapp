@@ -20,6 +20,7 @@ public class BulkMigrationCheckpoint implements Serializable {
 	String targetFingerprint;
 	long processedRows;
 	long completedChunks;
+	int chunkSize;
 	String lastChunkHash;
 	String resumeToken;
 	boolean complete;
@@ -30,8 +31,35 @@ public class BulkMigrationCheckpoint implements Serializable {
 		maxLength(targetFingerprint, FINGERPRINT_MAX_LENGTH, "targetFingerprint");
 		maxLength(lastChunkHash, HASH_MAX_LENGTH, "lastChunkHash");
 		maxLength(resumeToken, RESUME_TOKEN_MAX_LENGTH, "resumeToken");
-		if (processedRows < 0 || completedChunks < 0) {
+		if (processedRows < 0 || completedChunks < 0 || chunkSize < 0) {
 			throw new IllegalArgumentException("checkpoint progress must not be negative");
+		}
+		if (processedRows == 0) {
+			if (completedChunks != 0) {
+				throw new IllegalArgumentException(
+						"a checkpoint without processed rows cannot have completed chunks");
+			}
+		} else {
+			if (chunkSize <= 0 || completedChunks <= 0) {
+				throw new IllegalArgumentException("a checkpoint with processed rows requires "
+						+ "a positive chunkSize and completedChunks");
+			}
+			if (lastChunkHash == null || lastChunkHash.isBlank()) {
+				throw new IllegalArgumentException("a checkpoint with processed rows requires "
+						+ "lastChunkHash");
+			}
+			final long preceding;
+			final long maximum;
+			try {
+				preceding = Math.multiplyExact(completedChunks - 1L, (long) chunkSize);
+				maximum = Math.multiplyExact(completedChunks, (long) chunkSize);
+			} catch (ArithmeticException e) {
+				throw new IllegalArgumentException("checkpoint chunk progress exceeds the supported range", e);
+			}
+			if (processedRows <= preceding || processedRows > maximum) {
+				throw new IllegalArgumentException("checkpoint rows and chunks are inconsistent "
+						+ "with chunkSize=" + chunkSize);
+			}
 		}
 		return this;
 	}

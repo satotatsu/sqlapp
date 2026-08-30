@@ -214,6 +214,57 @@ class ChunkedBulkMigrationTest {
 	}
 
 	@Test
+	void rejectsResumeWhenCheckpointChunkSizeChangedOrBoundaryHashIsMissing() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CHECKPOINT_SHAPE (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("CHECKPOINT_SHAPE");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
+			final var store = new JdbcBulkMigrationCheckpointStore(connection,
+					"CHECKPOINT_SHAPE_STATE");
+			store.save(BulkMigrationCheckpoint.builder().migrationId("checkpoint-shape")
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.processedRows(2).completedChunks(1).chunkSize(2)
+					.lastChunkHash("placeholder").build());
+			final var changedSize = ChunkedBulkMigrationOption.builder()
+					.migrationId("checkpoint-shape").chunkSize(3)
+					.checkpointMode(BulkMigrationCheckpointMode.CUSTOM)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1").build();
+
+			final var sizeFailure = assertThrows(IllegalArgumentException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection, source,
+							changedSize, store));
+			assertTrue(sizeFailure.getMessage().contains("does not match migration chunkSize"));
+
+			final BulkMigrationCheckpoint missingHashCheckpoint = store.load("checkpoint-shape")
+					.orElseThrow().toBuilder().lastChunkHash(null).build();
+			final BulkMigrationCheckpointStore missingHashStore = new BulkMigrationCheckpointStore() {
+				@Override
+				public Optional<BulkMigrationCheckpoint> load(String migrationId) {
+					return Optional.of(missingHashCheckpoint);
+				}
+
+				@Override
+				public void save(BulkMigrationCheckpoint checkpoint) {
+				}
+
+				@Override
+				public void delete(String migrationId) {
+				}
+			};
+			final var missingHash = ChunkedBulkMigrationOption.builder()
+					.migrationId("checkpoint-shape").chunkSize(2)
+					.checkpointMode(BulkMigrationCheckpointMode.CUSTOM)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1").build();
+			final var hashFailure = assertThrows(IllegalArgumentException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection, source,
+							missingHash, missingHashStore));
+			assertTrue(hashFailure.getMessage().contains("requires lastChunkHash"));
+		}
+	}
+
+	@Test
 	void jdbcJobStatusAndResetKeepMigratedRowsAndAllowUpsertRestart() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 				var statement = connection.createStatement()) {
@@ -573,7 +624,8 @@ class ChunkedBulkMigrationTest {
 			final var store = new InMemoryBulkMigrationCheckpointStore();
 			store.save(BulkMigrationCheckpoint.builder().migrationId("keyset-duplicate-error")
 					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-					.processedRows(1).completedChunks(1).resumeToken("1").build());
+					.processedRows(1).completedChunks(1).chunkSize(1)
+					.lastChunkHash("checkpoint-hash").resumeToken("1").build());
 			final var option = ChunkedBulkMigrationOption.builder()
 					.migrationId("keyset-duplicate-error").chunkSize(1)
 					.checkpointMode(BulkMigrationCheckpointMode.CUSTOM)
@@ -602,7 +654,8 @@ class ChunkedBulkMigrationTest {
 					+ "last_chunk_hash VARCHAR(64), complete_flag CHAR(1) NOT NULL)");
 			final var store = new JdbcBulkMigrationCheckpointStore(connection, "OLD_CHECKPOINT");
 			final var checkpoint = BulkMigrationCheckpoint.builder().migrationId("keyset")
-					.processedRows(2).completedChunks(1).resumeToken("2").build();
+					.processedRows(2).completedChunks(1).chunkSize(2)
+					.lastChunkHash("checkpoint-hash").resumeToken("2").build();
 			store.save(checkpoint);
 			assertEquals(checkpoint, store.load("keyset").orElseThrow());
 		}

@@ -67,6 +67,7 @@ class SybaseBulkInsertTest {
 					"SQLAPP_BMC_LEGACY_ASE");
 			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
 					.migrationId("legacy-ase").processedRows(1).completedChunks(1)
+					.chunkSize(1).lastChunkHash("checkpoint-hash")
 					.resumeToken("token-ase").complete(false).build());
 			assertEquals("token-ase", store.load("legacy-ase").orElseThrow().getResumeToken());
 		}

@@ -46,6 +46,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 					.targetFingerprint(emptyToNull(values.getProperty("targetFingerprint")))
 					.processedRows(Long.parseLong(values.getProperty("processedRows")))
 					.completedChunks(Long.parseLong(values.getProperty("completedChunks")))
+					.chunkSize(Integer.parseInt(values.getProperty("chunkSize")))
 					.lastChunkHash(emptyToNull(values.getProperty("lastChunkHash")))
 					.resumeToken(emptyToNull(values.getProperty("resumeToken")))
 					.complete(Boolean.parseBoolean(values.getProperty("complete"))).build()
@@ -69,6 +70,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 			values.setProperty("targetFingerprint", nullToEmpty(checkpoint.getTargetFingerprint()));
 			values.setProperty("processedRows", Long.toString(checkpoint.getProcessedRows()));
 			values.setProperty("completedChunks", Long.toString(checkpoint.getCompletedChunks()));
+			values.setProperty("chunkSize", Integer.toString(checkpoint.getChunkSize()));
 			values.setProperty("lastChunkHash", nullToEmpty(checkpoint.getLastChunkHash()));
 			values.setProperty("resumeToken", nullToEmpty(checkpoint.getResumeToken()));
 			values.setProperty("complete", Boolean.toString(checkpoint.isComplete()));

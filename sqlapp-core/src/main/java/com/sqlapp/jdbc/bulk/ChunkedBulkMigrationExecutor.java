@@ -127,7 +127,8 @@ public final class ChunkedBulkMigrationExecutor {
 			checkpoint = BulkMigrationCheckpoint.builder()
 					.migrationId(options.getMigrationId())
 					.sourceFingerprint(options.getSourceFingerprint())
-					.targetFingerprint(options.getTargetFingerprint()).build();
+					.targetFingerprint(options.getTargetFingerprint())
+					.chunkSize(options.getChunkSize()).build();
 		}
 
 		if (transactional && !targetConnection.getAutoCommit()) {
@@ -411,6 +412,10 @@ public final class ChunkedBulkMigrationExecutor {
 		if (!Objects.equals(checkpoint.getSourceFingerprint(), options.getSourceFingerprint())
 				|| !Objects.equals(checkpoint.getTargetFingerprint(), options.getTargetFingerprint())) {
 			throw new IllegalArgumentException("Checkpoint fingerprints do not match the migration options");
+		}
+		if (checkpoint.getChunkSize() != options.getChunkSize()) {
+			throw new IllegalArgumentException("Checkpoint chunkSize=" + checkpoint.getChunkSize()
+					+ " does not match migration chunkSize=" + options.getChunkSize());
 		}
 	}
 

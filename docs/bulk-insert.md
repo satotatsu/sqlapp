@@ -268,7 +268,8 @@ fails and needs to resume.
 While rereading a count-based source, the executor also hashes the rows at the
 last completed chunk boundary and compares them with `lastChunkHash`. Missing
 or changed boundary data and progress inconsistent with the configured chunk
-size fail before another target row is written. This boundary check supplements
+size fail before another target row is written. The chunk size is stored in the
+checkpoint and cannot be changed when resuming. This boundary check supplements
 the caller-provided source fingerprint; it does not prove that rows in older
 chunks are unchanged.
 

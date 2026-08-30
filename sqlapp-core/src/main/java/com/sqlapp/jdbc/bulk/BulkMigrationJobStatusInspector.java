@@ -45,7 +45,8 @@ public final class BulkMigrationJobStatusInspector {
 			final BulkMigrationCheckpoint checkpoint) {
 		final ChunkedBulkMigrationOption option = task.getOptions();
 		if (!Objects.equals(checkpoint.getSourceFingerprint(), option.getSourceFingerprint())
-				|| !Objects.equals(checkpoint.getTargetFingerprint(), option.getTargetFingerprint())) {
+				|| !Objects.equals(checkpoint.getTargetFingerprint(), option.getTargetFingerprint())
+				|| checkpoint.getChunkSize() != option.getChunkSize()) {
 			return false;
 		}
 		if (checkpoint.getProcessedRows() == 0) {
