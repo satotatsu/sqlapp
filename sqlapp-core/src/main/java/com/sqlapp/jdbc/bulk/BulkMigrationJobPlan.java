@@ -16,11 +16,20 @@ import lombok.Getter;
 @Getter
 public class BulkMigrationJobPlan {
 	private final List<BulkMigrationJobTask> tasks;
+	private final BulkMigrationJobLifecycle lifecycle;
+	private final List<BulkMigrationJobOperation> operations;
 	private final String fingerprint;
 
 	public BulkMigrationJobPlan(final List<BulkMigrationJobTask> tasks) {
+		this(tasks, BulkMigrationJobLifecycle.NO_OP);
+	}
+
+	public BulkMigrationJobPlan(final List<BulkMigrationJobTask> tasks,
+			final BulkMigrationJobLifecycle lifecycle) {
 		this.tasks = List.copyOf(tasks);
-		this.fingerprint = fingerprint(this.tasks);
+		this.lifecycle = java.util.Objects.requireNonNull(lifecycle, "lifecycle");
+		this.operations = List.copyOf(lifecycle.plan(this.tasks));
+		this.fingerprint = fingerprint(this.tasks, lifecycle, operations);
 	}
 
 	public List<String> getTaskIds() {
@@ -28,7 +37,8 @@ public class BulkMigrationJobPlan {
 	}
 
 	public boolean isUnchanged() {
-		return fingerprint.equals(fingerprint(tasks));
+		return fingerprint.equals(fingerprint(tasks, lifecycle,
+				List.copyOf(lifecycle.plan(tasks))));
 	}
 
 	public void validateUnchanged() {
@@ -37,9 +47,14 @@ public class BulkMigrationJobPlan {
 		}
 	}
 
-	private static String fingerprint(final List<BulkMigrationJobTask> tasks) {
+	private static String fingerprint(final List<BulkMigrationJobTask> tasks,
+			final BulkMigrationJobLifecycle lifecycle,
+			final List<BulkMigrationJobOperation> operations) {
 		try {
 			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			update(digest, lifecycle.getConfigurationFingerprint(), operations.size());
+			operations.forEach(operation -> update(digest, operation.id(), operation.phase(),
+					operation.description(), operation.transactionBreaking()));
 			for (final BulkMigrationJobTask task : tasks) {
 				final Table table = task.getSourceTable() != null ? task.getSourceTable()
 						: task.getKeysetSource().getTable();

@@ -11,4 +11,10 @@ public final class BulkMigrationJobPlanner {
 	public static BulkMigrationJobPlan plan(final List<BulkMigrationJobTask> tasks) {
 		return new BulkMigrationJobPlan(List.copyOf(BulkMigrationJobExecutor.order(tasks)));
 	}
+
+	public static BulkMigrationJobPlan plan(final List<BulkMigrationJobTask> tasks,
+			final BulkMigrationJobLifecycle lifecycle) {
+		return new BulkMigrationJobPlan(List.copyOf(BulkMigrationJobExecutor.order(tasks)),
+				lifecycle);
+	}
 }

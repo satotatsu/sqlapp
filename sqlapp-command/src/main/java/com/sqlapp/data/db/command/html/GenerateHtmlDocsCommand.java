@@ -400,14 +400,14 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		final String largeName = "_summary_relations_large";
 		execute(() -> {
 			RelationImageHolder holder = createCatalogRelationImage(largeName, catalog, false);
-			context.put(largeName, holder);
+			putImage(context, largeName, holder);
 		}, futures);
 		//
 		final String largeNameLogical = largeName + "_logical";
 		execute(() -> {
 			RelationImageHolder holder = createCatalogRelationImage(largeNameLogical, catalog, true);
 			if (holder != null) {
-				context.put(largeNameLogical, holder);
+				putImage(context, largeNameLogical, holder);
 			}
 		}, futures);
 		//
@@ -415,7 +415,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		execute(() -> {
 			RelationImageHolder imapSmall = createRelationSmallImage(smallName, list, false);
 			if (imapSmall != null) {
-				context.put(smallName, imapSmall);
+				putImage(context, smallName, imapSmall);
 			}
 		}, futures);
 		//
@@ -423,9 +423,16 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		execute(() -> {
 			RelationImageHolder imapSmall = createRelationSmallImage(smallNameLogical, list, true);
 			if (imapSmall != null) {
-				context.put(smallNameLogical, imapSmall);
+				putImage(context, smallNameLogical, imapSmall);
 			}
 		}, futures);
+	}
+
+	private void putImage(ParametersContext context, String name,
+			RelationImageHolder holder) {
+		synchronized (context) {
+			context.put(name, holder);
+		}
 	}
 
 	private Future<?> submit(Runnable ｒunnable) {

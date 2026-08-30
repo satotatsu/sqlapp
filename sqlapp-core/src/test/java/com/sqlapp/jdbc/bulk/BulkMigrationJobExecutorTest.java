@@ -7,6 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -17,6 +21,70 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
+	@Test
+	void plansAndExecutesLifecycleAndRestoresAfterFailure() throws Exception {
+		final List<String> events = new ArrayList<>();
+		final BulkMigrationJobLifecycle lifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "lifecycle-v1";
+			}
+
+			@Override
+			public List<BulkMigrationJobOperation> plan(List<BulkMigrationJobTask> tasks) {
+				return List.of(new BulkMigrationJobOperation("constraints", 
+						BulkMigrationJobOperationPhase.BEFORE,
+						"Disable constraints", true));
+			}
+
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) {
+				events.add("before");
+			}
+
+			@Override
+			public void after(Connection connection, BulkMigrationJobPlan plan,
+					BulkMigrationJobResult result) {
+				events.add("after");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) {
+				events.add("restore");
+			}
+		};
+		final BulkMigrationJobPlan plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		assertEquals("constraints", plan.getOperations().get(0).id());
+		assertThrows(UnsupportedOperationException.class,
+				() -> plan.getOperations().clear());
+		final Connection connection = connection();
+
+		BulkMigrationJobExecutor.executePlan(connection, plan);
+		assertEquals(List.of("before", "after"), events);
+
+		events.clear();
+		final BulkMigrationJobLifecycle failing = new BulkMigrationJobLifecycle() {
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan)
+					throws SQLException {
+				throw new SQLException("before failed");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) throws SQLException {
+				events.add("restore");
+				throw new SQLException("restore failed");
+			}
+		};
+		final SQLException failure = assertThrows(SQLException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection,
+						BulkMigrationJobPlanner.plan(List.of(), failing)));
+		assertEquals(List.of("restore"), events);
+		assertEquals("restore failed", failure.getSuppressed()[0].getMessage());
+	}
+
 	@Test
 	void ordersKeysetTasksUsingTheirSchemaTables() {
 		final Table parent = table("PARENT");
@@ -365,5 +433,14 @@ class BulkMigrationJobExecutorTest {
 		table.getColumns().add(new Column("ID"));
 		table.setPrimaryKey("PK_" + name, table.getColumns().get("ID"));
 		return table;
+	}
+
+	private static Connection connection() {
+		return (Connection) Proxy.newProxyInstance(
+				BulkMigrationJobExecutorTest.class.getClassLoader(),
+				new Class<?>[] { Connection.class },
+				(proxy, method, args) -> {
+					throw new UnsupportedOperationException(method.getName());
+				});
 	}
 }

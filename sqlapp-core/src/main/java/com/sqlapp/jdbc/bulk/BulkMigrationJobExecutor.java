@@ -45,6 +45,25 @@ public final class BulkMigrationJobExecutor {
 		Objects.requireNonNull(plan, "plan");
 		Objects.requireNonNull(listener, "listener");
 		plan.validateUnchanged();
+		final BulkMigrationJobLifecycle lifecycle = plan.getLifecycle();
+		try {
+			lifecycle.before(targetConnection, plan);
+			final BulkMigrationJobResult result = executeTasks(targetConnection, plan, listener);
+			lifecycle.after(targetConnection, plan, result);
+			return result;
+		} catch (SQLException | RuntimeException | Error failure) {
+			try {
+				lifecycle.restore(targetConnection, plan, failure);
+			} catch (SQLException | RuntimeException | Error restoreFailure) {
+				failure.addSuppressed(restoreFailure);
+			}
+			throw failure;
+		}
+	}
+
+	private static BulkMigrationJobResult executeTasks(final Connection targetConnection,
+			final BulkMigrationJobPlan plan, final BulkMigrationJobListener listener)
+			throws SQLException {
 		final List<BulkMigrationJobTask> ordered = plan.getTasks();
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
 		for (int taskIndex = 0; taskIndex < ordered.size(); taskIndex++) {
