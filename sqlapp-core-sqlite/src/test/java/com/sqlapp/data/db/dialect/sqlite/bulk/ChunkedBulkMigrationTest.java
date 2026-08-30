@@ -22,8 +22,6 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
-import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
-import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
@@ -36,9 +34,13 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobStatusInspector;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
+import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
@@ -51,6 +53,166 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 class ChunkedBulkMigrationTest {
+	@Test
+	void appliesDuplicateSelectionAcrossChunkBoundaries() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE DUP_FIRST (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			statement.execute("CREATE TABLE DUP_LAST (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table first = duplicateTable("DUP_FIRST");
+			final Table last = duplicateTable("DUP_LAST");
+			ChunkedBulkMigrationExecutor.execute(connection, first,
+					duplicateOption("dup-first", BulkUpsertDuplicateKeyStrategy.KEEP_FIRST));
+			ChunkedBulkMigrationExecutor.execute(connection, last,
+					duplicateOption("dup-last", BulkUpsertDuplicateKeyStrategy.KEEP_LAST));
+
+			assertEquals("first", text(statement, "DUP_FIRST", 1));
+			assertEquals("last", text(statement, "DUP_LAST", 1));
+		}
+	}
+
+	@Test
+	void rejectsDuplicateKeysAcrossChunkBoundaries() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE DUP_ERROR (ID INTEGER PRIMARY KEY, TXT TEXT)");
+
+			final var failure = assertThrows(IllegalArgumentException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection,
+							duplicateTable("DUP_ERROR"),
+							duplicateOption("dup-error",
+									BulkUpsertDuplicateKeyStrategy.ERROR)));
+
+			assertTrue(failure.getMessage().contains("source rows 1 and 3"));
+			assertEquals("first", text(statement, "DUP_ERROR", 1));
+		}
+	}
+
+	@Test
+	void appliesCustomDuplicateSelectionAcrossChunkBoundaries() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE DUP_CUSTOM (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("DUP_CUSTOM");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "zulu"); });
+			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "middle"); });
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "alpha"); });
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId("dup-custom").chunkSize(1)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.bulkUpsertOption(BulkUpsertOption.builder()
+							.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+							.duplicateRowSelectorFingerprint("minimum-text-v1")
+							.duplicateRowSelector((retained, candidate) ->
+									((String) retained.get("TXT")).compareTo(
+											(String) candidate.get("TXT")) <= 0
+											? retained : candidate)
+							.build()).build();
+
+			ChunkedBulkMigrationExecutor.execute(connection, source, option);
+
+			assertEquals("alpha", text(statement, "DUP_CUSTOM", 1));
+		}
+	}
+
+	@Test
+	void appliesDuplicateSelectionToCompleteCompositeKeysAcrossChunks() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE DUP_COMPOSITE ("
+					+ "KEY1 INTEGER NOT NULL, KEY2 INTEGER NOT NULL, TXT TEXT, "
+					+ "PRIMARY KEY (KEY1, KEY2))");
+			final Table source = new Table("DUP_COMPOSITE");
+			final Column key1 = new Column("KEY1").setDataType(DataType.INT);
+			final Column key2 = new Column("KEY2").setDataType(DataType.INT);
+			source.getColumns().add(key1);
+			source.getColumns().add(key2);
+			source.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR));
+			source.setPrimaryKey("PK_DUP_COMPOSITE", key1, key2);
+			source.getRows().add(row -> {
+				row.put("KEY1", 1); row.put("KEY2", 1); row.put("TXT", "first");
+			});
+			source.getRows().add(row -> {
+				row.put("KEY1", 1); row.put("KEY2", 2); row.put("TXT", "distinct");
+			});
+			source.getRows().add(row -> {
+				row.put("KEY1", 1); row.put("KEY2", 1); row.put("TXT", "last");
+			});
+
+			ChunkedBulkMigrationExecutor.execute(connection, source,
+					duplicateOption("dup-composite",
+							BulkUpsertDuplicateKeyStrategy.KEEP_FIRST));
+
+			try (var resultSet = statement.executeQuery(
+					"SELECT KEY2, TXT FROM DUP_COMPOSITE ORDER BY KEY2")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+				assertEquals("first", resultSet.getString(2));
+				resultSet.next();
+				assertEquals(2, resultSet.getInt(1));
+				assertEquals("distinct", resultSet.getString(2));
+				assertFalse(resultSet.next());
+			}
+		}
+	}
+
+	@Test
+	void rebuildsKeepFirstDuplicateHistoryWhenResumingByRowCount() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE DUP_RESUME_FIRST (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = duplicateTable("DUP_RESUME_FIRST");
+			final ChunkedBulkMigrationOption option = duplicateOption("dup-resume-first",
+					BulkUpsertDuplicateKeyStrategy.KEEP_FIRST);
+
+			assertThrows(ChunkedBulkMigrationPausedException.class,
+					() -> ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
+							option, new ChunkedBulkMigrationListener() {
+								@Override
+								public boolean pauseAfterChunk(ChunkedBulkMigrationProgress progress) {
+									return true;
+								}
+							}));
+			ChunkedBulkMigrationExecutor.execute(connection, source, option);
+
+			assertEquals("first", text(statement, "DUP_RESUME_FIRST", 1));
+			assertEquals("middle", text(statement, "DUP_RESUME_FIRST", 2));
+		}
+	}
+
+	@Test
+	void rejectsRowCountResumeWhenTheCheckpointBoundaryChanged() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CHANGED_BOUNDARY (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("CHANGED_BOUNDARY");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
+			source.getRows().add(row -> { row.put("ID", 3); row.put("TXT", "three"); });
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId("changed-boundary").chunkSize(2)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1").build();
+			assertThrows(ChunkedBulkMigrationPausedException.class,
+					() -> ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
+							option, new ChunkedBulkMigrationListener() {
+								@Override
+								public boolean pauseAfterChunk(ChunkedBulkMigrationProgress progress) {
+									return true;
+								}
+							}));
+			source.getRows().get(1).put("TXT", "changed");
+
+			final var failure = assertThrows(IllegalStateException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection, source, option));
+
+			assertTrue(failure.getMessage().contains("no longer match lastChunkHash"));
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM CHANGED_BOUNDARY")) {
+				resultSet.next();
+				assertEquals(2, resultSet.getInt(1));
+			}
+		}
+	}
+
 	@Test
 	void jdbcJobStatusAndResetKeepMigratedRowsAndAllowUpsertRestart() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -383,7 +545,10 @@ class ChunkedBulkMigrationTest {
 			final var option = ChunkedBulkMigrationOption.builder()
 					.migrationId("keyset-migration").chunkSize(2)
 					.checkpointMode(BulkMigrationCheckpointMode.FILE)
-					.sourceFingerprint("source-v1").targetFingerprint("target-v1").build();
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.bulkUpsertOption(BulkUpsertOption.builder()
+							.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_LAST)
+							.build()).build();
 
 			assertThrows(SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(
 					connection, source, option, new FailSecondSaveStore(delegate)));
@@ -399,6 +564,29 @@ class ChunkedBulkMigrationTest {
 				resultSet.next();
 				assertEquals("1,2,3,4,5", resultSet.getString(1));
 			}
+		}
+	}
+
+	@Test
+	void rejectsKeysetResumeWhenDuplicateHistoryCannotBeReconstructed() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+			final var store = new InMemoryBulkMigrationCheckpointStore();
+			store.save(BulkMigrationCheckpoint.builder().migrationId("keyset-duplicate-error")
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.processedRows(1).completedChunks(1).resumeToken("1").build());
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId("keyset-duplicate-error").chunkSize(1)
+					.checkpointMode(BulkMigrationCheckpointMode.CUSTOM)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+					.bulkUpsertOption(BulkUpsertOption.builder()
+							.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.ERROR)
+							.build()).build();
+
+			final var failure = assertThrows(IllegalStateException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(connection,
+							new IntegerKeysetSource("KEYSET_TARGET", 1, 2), option, store));
+
+			assertTrue(failure.getMessage().contains("cannot reconstruct duplicate-key history"));
 		}
 	}
 
@@ -855,6 +1043,31 @@ class ChunkedBulkMigrationTest {
 		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR));
 		table.setPrimaryKey("PK_" + name, id);
 		return table;
+	}
+
+	private static Table duplicateTable(final String name) {
+		final Table table = table(name);
+		table.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "first"); });
+		table.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "middle"); });
+		table.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "last"); });
+		return table;
+	}
+
+	private static ChunkedBulkMigrationOption duplicateOption(final String migrationId,
+			final BulkUpsertDuplicateKeyStrategy strategy) {
+		return ChunkedBulkMigrationOption.builder().migrationId(migrationId).chunkSize(1)
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
+				.bulkUpsertOption(BulkUpsertOption.builder()
+						.duplicateKeyStrategy(strategy).build()).build();
+	}
+
+	private static String text(final java.sql.Statement statement, final String table,
+			final int id) throws SQLException {
+		try (var resultSet = statement.executeQuery(
+				"SELECT TXT FROM " + table + " WHERE ID = " + id)) {
+			resultSet.next();
+			return resultSet.getString(1);
+		}
 	}
 
 	private static Table jobTable(final String name, final boolean child) {

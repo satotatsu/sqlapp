@@ -218,6 +218,14 @@ bounded chunks and sends each chunk through the existing bulk INSERT or UPSERT
 provider. `ChunkedBulkMigrationOption` identifies the migration, selects the
 operation and chunk size, and can carry source and target fingerprints.
 
+Duplicate-key selection for UPSERT applies to the complete migration, not
+independently to each chunk. `ERROR` therefore detects the same non-null key in
+different chunks, while `KEEP_FIRST` and `CUSTOM` retain their selected source
+row across chunk boundaries. These strategies keep one entry per distinct
+non-null key in memory. `KEEP_LAST` needs no global key set: later chunks
+naturally overwrite earlier rows and is consequently the bounded-memory choice
+for large inputs.
+
 Progress is saved through `BulkMigrationCheckpointStore` only after a chunk
 write succeeds. A subsequent execution with the same migration ID and matching
 fingerprints continues with the next chunk. The `Table` overload skips the
@@ -248,6 +256,21 @@ token format.
 Count and keyset checkpoints cannot be interchanged after progress has been
 recorded. Changing key columns, ordering, collation or token format requires a
 new migration ID or source fingerprint.
+
+Count-based resume rereads skipped source rows to reconstruct the duplicate-key
+history required by `ERROR`, `KEEP_FIRST`, and `CUSTOM`. A keyset source starts
+strictly after its stored token and cannot reconstruct that history. Resuming a
+partially processed keyset UPSERT therefore requires `KEEP_LAST`; use a new
+migration without the old checkpoint when another duplicate strategy is
+required. A fresh keyset execution may use every strategy until it is paused or
+fails and needs to resume.
+
+While rereading a count-based source, the executor also hashes the rows at the
+last completed chunk boundary and compares them with `lastChunkHash`. Missing
+or changed boundary data and progress inconsistent with the configured chunk
+size fail before another target row is written. This boundary check supplements
+the caller-provided source fingerprint; it does not prove that rows in older
+chunks are unchanged.
 
 `DATABASE` is the default checkpoint mode. The overload without an explicit
 store creates `SQLAPP_BULK_MIGRATION_CHECKPOINT` in the target database and

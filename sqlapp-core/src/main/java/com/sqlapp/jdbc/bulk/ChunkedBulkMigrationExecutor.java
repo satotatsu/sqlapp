@@ -3,7 +3,9 @@ package com.sqlapp.jdbc.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -135,19 +137,24 @@ public final class ChunkedBulkMigrationExecutor {
 		final long previouslyProcessed = checkpoint.getProcessedRows();
 		long processed = 0;
 		long chunks = checkpoint.getCompletedChunks();
+		final BulkUpsertDuplicateTracker duplicateTracker = duplicateTracker(sourceTable,
+				options, keysetSource != null, checkpoint);
 		final Iterator<Row> iterator = keysetSource == null
 				? sourceTable.getRows().iterator()
 				: keysetSource.iterator(checkpoint.getResumeToken());
 		try {
 			if (keysetSource == null) {
-				skip(iterator, previouslyProcessed);
+				skipAndValidateBoundary(iterator, checkpoint, sourceTable,
+						options.getChunkSize(), duplicateTracker);
 			}
 			while (true) {
 				final List<Row> rows = nextChunk(iterator, options.getChunkSize());
 				if (rows.isEmpty()) {
 					break;
 				}
-				final Table chunk = chunkTable(sourceTable, rows);
+				final List<Row> writeRows = duplicateTracker == null
+						? rows : duplicateTracker.filter(rows);
+				final Table chunk = chunkTable(sourceTable, writeRows);
 				final String nextToken = keysetSource == null ? null
 						: keysetSource.resumeToken(rows.get(rows.size() - 1));
 				if (keysetSource != null && (nextToken == null || nextToken.isBlank())) {
@@ -170,7 +177,9 @@ public final class ChunkedBulkMigrationExecutor {
 					if (transactional) {
 						targetConnection.setAutoCommit(false);
 						try {
-							write(targetConnection, chunk, sourceTable, options, true);
+							if (!writeRows.isEmpty()) {
+								write(targetConnection, chunk, sourceTable, options, true);
+							}
 							checkpointStore.save(nextCheckpoint);
 							targetConnection.commit();
 						} catch (SQLException | RuntimeException e) {
@@ -180,7 +189,9 @@ public final class ChunkedBulkMigrationExecutor {
 							targetConnection.setAutoCommit(true);
 						}
 					} else {
-						write(targetConnection, chunk, sourceTable, options, false);
+						if (!writeRows.isEmpty()) {
+							write(targetConnection, chunk, sourceTable, options, false);
+						}
 						checkpointStore.save(nextCheckpoint);
 					}
 				} catch (SQLException | RuntimeException e) {
@@ -311,13 +322,88 @@ public final class ChunkedBulkMigrationExecutor {
 		return rows;
 	}
 
-	private static void skip(final Iterator<Row> iterator, final long count) {
+	private static void skipAndValidateBoundary(final Iterator<Row> iterator,
+			final BulkMigrationCheckpoint checkpoint, final Table source,
+			final int chunkSize, final BulkUpsertDuplicateTracker duplicateTracker) {
+		final long count = checkpoint.getProcessedRows();
+		final int boundarySize = boundarySize(checkpoint, chunkSize);
+		final Deque<Row> boundary = new ArrayDeque<>(Math.max(1, boundarySize));
 		for (long i = 0; i < count; i++) {
 			if (!iterator.hasNext()) {
 				throw new IllegalStateException("Checkpoint is beyond the end of the source at row " + (i + 1));
 			}
-			iterator.next();
+			final Row row = iterator.next();
+			if (duplicateTracker != null) {
+				duplicateTracker.skip(row);
+			}
+			if (boundarySize > 0) {
+				if (boundary.size() == boundarySize) {
+					boundary.removeFirst();
+				}
+				boundary.addLast(row);
+			}
 		}
+		if (boundarySize > 0) {
+			final String actual = BulkMigrationHash.rows(new ArrayList<>(boundary),
+					source.getColumns());
+			if (!actual.equals(checkpoint.getLastChunkHash())) {
+				throw new IllegalStateException("The source rows at the checkpoint boundary "
+						+ "no longer match lastChunkHash");
+			}
+		}
+	}
+
+	private static int boundarySize(final BulkMigrationCheckpoint checkpoint,
+			final int chunkSize) {
+		if (checkpoint.getProcessedRows() == 0) {
+			return 0;
+		}
+		if (checkpoint.getCompletedChunks() <= 0) {
+			throw new IllegalStateException("A checkpoint with processed rows must contain "
+					+ "at least one completed chunk");
+		}
+		if (checkpoint.getLastChunkHash() == null
+				|| checkpoint.getLastChunkHash().isBlank()) {
+			throw new IllegalStateException("A count-based resume checkpoint with processed "
+					+ "rows must contain lastChunkHash");
+		}
+		final long preceding;
+		try {
+			preceding = Math.multiplyExact(checkpoint.getCompletedChunks() - 1L,
+					(long) chunkSize);
+		} catch (ArithmeticException e) {
+			throw new IllegalStateException("Checkpoint chunk progress exceeds the supported range", e);
+		}
+		final long size = checkpoint.getProcessedRows() - preceding;
+		if (size <= 0 || size > chunkSize) {
+			throw new IllegalStateException("Checkpoint progress is inconsistent with chunkSize="
+					+ chunkSize);
+		}
+		return (int) size;
+	}
+
+	private static BulkUpsertDuplicateTracker duplicateTracker(final Table source,
+			final ChunkedBulkMigrationOption options, final boolean keyset,
+			final BulkMigrationCheckpoint checkpoint) {
+		if (options.getMode() != BulkMigrationMode.UPSERT) {
+			return null;
+		}
+		final BulkUpsertOption configured = options.getBulkUpsertOption() == null
+				? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
+		final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
+				? copyWithKeys(configured, primaryKeyNames(source)) : configured;
+		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(source, effective);
+		// Sequential upserts already give KEEP_LAST global semantics, including after
+		// resume. Avoid retaining every source key for this common migration mode.
+		if (effective.getDuplicateKeyStrategy() == BulkUpsertDuplicateKeyStrategy.KEEP_LAST) {
+			return null;
+		}
+		if (keyset && checkpoint.getProcessedRows() > 0) {
+			throw new IllegalStateException("A resumed keyset migration cannot reconstruct "
+					+ "duplicate-key history for " + effective.getDuplicateKeyStrategy()
+					+ "; use KEEP_LAST or restart without a checkpoint");
+		}
+		return new BulkUpsertDuplicateTracker(plan);
 	}
 
 	private static void validateCheckpoint(final BulkMigrationCheckpoint checkpoint,
