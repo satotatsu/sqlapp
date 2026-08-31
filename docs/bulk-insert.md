@@ -557,6 +557,12 @@ calculating the current invocation's rate, so resumed rows do not inflate
 throughput. When a reliable total row count was not supplied, ratio and ETA
 remain null instead of presenting a misleading estimate.
 
+Use `CompositeChunkedBulkMigrationListener` when progress reporting, logging,
+and cooperative pause logic are needed together. Events are dispatched in
+registration order. Every listener receives `pauseAfterChunk` even when an
+earlier listener already requested a pause, and the combined result pauses
+when any listener returns true.
+
 For cooperative shutdown, a chunk listener can return `true` from
 `pauseAfterChunk`. The executor then throws
 `ChunkedBulkMigrationPausedException` only after the chunk-completed event and
