@@ -158,6 +158,11 @@ public final class BulkMigrationOperationalReportJobListener
 		return latestExecution;
 	}
 
+	/** Refreshes from an automatic boundary using the configured failure policy. */
+	public void refresh() {
+		publishBoundary(latestExecution);
+	}
+
 	/** Writes a report immediately without running or changing the job. */
 	public synchronized BulkMigrationOperationalReport publish() {
 		try {

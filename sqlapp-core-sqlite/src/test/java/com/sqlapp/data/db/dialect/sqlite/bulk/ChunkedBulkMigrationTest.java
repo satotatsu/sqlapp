@@ -527,8 +527,9 @@ class ChunkedBulkMigrationTest {
 						}
 					}).build();
 
+			final var plan = BulkMigrationJobPlanner.plan(List.of(pausedTask));
 			final var paused = assertThrows(BulkMigrationJobPausedException.class,
-					() -> BulkMigrationJobExecutor.execute(connection, List.of(pausedTask),
+					() -> BulkMigrationJobExecutor.executePlan(connection, plan,
 							new BulkMigrationJobListener() {
 								@Override
 								public void onTaskPaused(String taskId,
@@ -543,12 +544,20 @@ class ChunkedBulkMigrationTest {
 									events.add("job:" + taskId + ":"
 											+ progress.getProcessedRowsAfter());
 								}
+							}, new ChunkedBulkMigrationListener() {
+								@Override
+								public void onChunkCompleted(
+										ChunkedBulkMigrationProgress progress) {
+									events.add("common-chunk:"
+											+ progress.getProcessedRowsAfter());
+								}
 							}));
 			assertEquals("paused", paused.getPausedTaskId());
 			assertTrue(paused.getCompletedResult().getPlanFingerprint() != null);
 			assertTrue(paused.getCompletedResult().getTasks().isEmpty());
 			assertEquals(1, paused.getProgress().getProcessedRowsAfter());
-			assertEquals(List.of("paused:0:1", "job:paused:1"), events);
+			assertEquals(List.of("common-chunk:1", "paused:0:1", "job:paused:1"),
+					events);
 
 			final var resumedTask = BulkMigrationJobTask.builder().taskId("paused")
 					.sourceTable(source).options(options).build();

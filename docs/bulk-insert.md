@@ -607,6 +607,20 @@ As with the synchronous listener contract, a listener exception stops dispatch
 to later listeners for that event; use the report listener's `CONTINUE_JOB`
 policy when report availability must not block other job observers.
 
+The four-argument `BulkMigrationJobExecutor.executePlan` overload accepts a
+common chunk listener in addition to the job listener. It combines that
+listener with each task-specific listener without changing the validated plan;
+task-specific callbacks run first. Use
+`BulkMigrationOperationalReportChunkListener` as the common listener to
+atomically refresh JSON after every checkpoint-durable chunk, rather than only
+at task boundaries. For per-table ETA, attach a separate
+`BulkMigrationProgressTracker` to each task and have its consumer update a
+shared latest-snapshot reference supplied to the report job listener. The
+task-specific tracker runs before the common report listener, so each JSON
+refresh sees the snapshot for the chunk that was just made durable. Do not
+share one progress tracker across tasks because totals and resume baselines are
+table-specific.
+
 `BulkMigrationOperationalReportBuilder` combines the immutable dry-run plan,
 read-only checkpoint status, optional durable maintenance state, and optional
 progress/ETA snapshot into one versioned operational report. The report keeps

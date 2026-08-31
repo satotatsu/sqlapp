@@ -41,16 +41,25 @@ public final class BulkMigrationJobExecutor {
 	public static BulkMigrationJobResult executePlan(final Connection targetConnection,
 			final BulkMigrationJobPlan plan,
 			final BulkMigrationJobListener listener) throws SQLException {
+		return executePlan(targetConnection, plan, listener,
+				ChunkedBulkMigrationListener.NO_OP);
+	}
+
+	public static BulkMigrationJobResult executePlan(final Connection targetConnection,
+			final BulkMigrationJobPlan plan,
+			final BulkMigrationJobListener listener,
+			final ChunkedBulkMigrationListener commonChunkListener) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(plan, "plan");
 		Objects.requireNonNull(listener, "listener");
+		Objects.requireNonNull(commonChunkListener, "commonChunkListener");
 		plan.validateUnchanged();
 		final BulkMigrationJobLifecycle lifecycle = plan.getLifecycle();
 		listener.onJobStarted(plan.getFingerprint(), plan.getTasks().size());
 		final BulkMigrationJobResult result;
 		try {
 			lifecycle.before(targetConnection, plan);
-			result = executeTasks(targetConnection, plan, listener);
+			result = executeTasks(targetConnection, plan, listener, commonChunkListener);
 			lifecycle.after(targetConnection, plan, result);
 		} catch (SQLException | RuntimeException | Error failure) {
 			try {
@@ -75,7 +84,8 @@ public final class BulkMigrationJobExecutor {
 	}
 
 	private static BulkMigrationJobResult executeTasks(final Connection targetConnection,
-			final BulkMigrationJobPlan plan, final BulkMigrationJobListener listener)
+			final BulkMigrationJobPlan plan, final BulkMigrationJobListener listener,
+			final ChunkedBulkMigrationListener commonChunkListener)
 			throws SQLException {
 		final List<BulkMigrationJobTask> ordered = plan.getTasks();
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
@@ -84,8 +94,17 @@ public final class BulkMigrationJobExecutor {
 			listener.onTaskStarted(task.getTaskId(), taskIndex, ordered.size());
 			try {
 				final ChunkedBulkMigrationResult result;
-				final ChunkedBulkMigrationListener chunkListener = task.getChunkListener() == null
+				final ChunkedBulkMigrationListener taskListener = task.getChunkListener() == null
 						? ChunkedBulkMigrationListener.NO_OP : task.getChunkListener();
+				final ChunkedBulkMigrationListener chunkListener;
+				if (taskListener == ChunkedBulkMigrationListener.NO_OP) {
+					chunkListener = commonChunkListener;
+				} else if (commonChunkListener == ChunkedBulkMigrationListener.NO_OP) {
+					chunkListener = taskListener;
+				} else {
+					chunkListener = CompositeChunkedBulkMigrationListener.of(taskListener,
+							commonChunkListener);
+				}
 				if (task.getKeysetSource() != null) {
 					result = task.getCheckpointStore() == null
 							? ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -201,6 +202,42 @@ class BulkMigrationOperationalReportTest {
 				(Map<String, Object>) json.get("execution");
 		assertEquals("JOB_COMPLETED", jobExecution.get("event"));
 		assertNull(jobExecution.get("taskId"));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void chunkListenerPublishesDurableProgressWithinALongTask() throws Exception {
+		final var store = new InMemoryBulkMigrationCheckpointStore();
+		final BulkMigrationJobPlan plan = plan(store);
+		final var latest = new AtomicReference<BulkMigrationProgressSnapshot>();
+		final Path target = directory.resolve("chunk-status.json");
+		final var jobListener = new BulkMigrationOperationalReportJobListener(plan,
+				target, () -> null, latest::get);
+		final var chunkListener =
+				new BulkMigrationOperationalReportChunkListener(jobListener);
+		jobListener.onJobStarted(plan.getFingerprint(), 1);
+
+		store.save(BulkMigrationCheckpoint.builder().migrationId("顧客移行")
+				.sourceFingerprint("source").targetFingerprint("target")
+				.processedRows(25).completedChunks(1).chunkSize(10_000)
+				.lastChunkHash("durable-hash").complete(false).build());
+		latest.set(new BulkMigrationProgressSnapshot("顧客移行", 25, 100L,
+				Duration.ofSeconds(5), 5, 0.25, Duration.ofSeconds(15)));
+		chunkListener.onChunkCompleted(
+				new com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress(
+						"顧客移行", 0, 25, 0, 25));
+
+		final Map<String, Object> json = new JsonConverter().fromJsonString(
+				target.toFile(), Map.class);
+		final Map<String, Object> progress =
+				(Map<String, Object>) json.get("progress");
+		assertEquals(25, ((Number) progress.get("processedRows")).longValue());
+		final List<Map<String, Object>> tasks =
+				(List<Map<String, Object>>) json.get("tasks");
+		assertEquals("IN_PROGRESS", tasks.get(0).get("state"));
+		final Map<String, Object> execution =
+				(Map<String, Object>) json.get("execution");
+		assertEquals("JOB_STARTED", execution.get("event"));
 	}
 
 	@Test
