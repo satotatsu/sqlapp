@@ -550,6 +550,13 @@ checkpoint transaction commit) succeeds. Listener runtime failures abort the
 current invocation; completion-callback failure is safe to resume because that
 chunk is already checkpointed.
 
+`BulkMigrationProgressTracker` is a chunk listener that derives elapsed time,
+rows per second, completion ratio, and estimated remaining duration only from
+durable chunk-completed events. It subtracts the initial checkpoint count when
+calculating the current invocation's rate, so resumed rows do not inflate
+throughput. When a reliable total row count was not supplied, ratio and ETA
+remain null instead of presenting a misleading estimate.
+
 For cooperative shutdown, a chunk listener can return `true` from
 `pauseAfterChunk`. The executor then throws
 `ChunkedBulkMigrationPausedException` only after the chunk-completed event and
