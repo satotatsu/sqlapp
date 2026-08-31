@@ -681,6 +681,12 @@ each read-modify-write operation at `TRANSACTION_SERIALIZABLE`, without
 handwritten vendor DML. Give it a dedicated auto-commit connection: the store
 temporarily owns that connection's transaction and isolation settings and must
 not share the data-writing connection used by the chunk executor.
+`FileBulkMigrationJobLeaseStore` is the switchable filesystem alternative. It
+uses a stable per-plan lock file for OS-level cross-process exclusion, an
+in-process lock to avoid overlapping Java file locks, and atomic replacement of
+the separate lease state file. Lock files intentionally remain after release;
+the owner-conditioned lease state file is removed, while the stable lock path
+continues coordinating later executions.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
