@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -104,5 +106,53 @@ class BulkMigrationJobLeaseManagerTest {
 			listener.onChunkCompleted(progress);
 		}
 		assertEquals(2, renewals.get());
+	}
+
+	@Test
+	void heartbeatRenewsAndExposesBackgroundFailure() throws Exception {
+		final var delegate = new InMemoryBulkMigrationJobLeaseStore();
+		final var renewal = new CountDownLatch(1);
+		final BulkMigrationJobLeaseStore store = new BulkMigrationJobLeaseStore() {
+			@Override
+			public Optional<BulkMigrationJobLease> load(String planFingerprint) {
+				return delegate.load(planFingerprint);
+			}
+
+			@Override
+			public boolean tryAcquire(BulkMigrationJobLease lease, Instant now) {
+				return delegate.tryAcquire(lease, now);
+			}
+
+			@Override
+			public boolean renew(BulkMigrationJobLease lease, Instant now) {
+				renewal.countDown();
+				return false;
+			}
+
+			@Override
+			public void release(String planFingerprint, String ownerId) {
+				delegate.release(planFingerprint, ownerId);
+			}
+		};
+		final var manager = new BulkMigrationJobLeaseManager(store, "owner",
+				Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
+		try (var handle = manager.acquire("plan");
+				var heartbeat = handle.startHeartbeat(Duration.ofMillis(1))) {
+			assertTrue(renewal.await(1, TimeUnit.SECONDS));
+			assertThrows(BulkMigrationJobLeaseLostException.class, heartbeat::check);
+		}
+	}
+
+	@Test
+	void heartbeatIntervalMustBeShorterThanLease() throws Exception {
+		final var manager = new BulkMigrationJobLeaseManager(
+				new InMemoryBulkMigrationJobLeaseStore(), "owner", Duration.ofSeconds(3),
+				Clock.fixed(NOW, ZoneOffset.UTC));
+		try (var handle = manager.acquire("plan")) {
+			assertThrows(IllegalArgumentException.class,
+					() -> handle.startHeartbeat(Duration.ofSeconds(3)));
+			assertThrows(IllegalArgumentException.class,
+					() -> handle.startHeartbeat(Duration.ZERO));
+		}
 	}
 }

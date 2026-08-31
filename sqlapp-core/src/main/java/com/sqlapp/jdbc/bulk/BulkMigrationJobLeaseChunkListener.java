@@ -8,10 +8,18 @@ import java.util.Objects;
 public final class BulkMigrationJobLeaseChunkListener
 		implements ChunkedBulkMigrationListener {
 	private final BulkMigrationJobLeaseManager.LeaseHandle handle;
+	private final BulkMigrationJobLeaseHeartbeat heartbeat;
 
 	public BulkMigrationJobLeaseChunkListener(
 			final BulkMigrationJobLeaseManager.LeaseHandle handle) {
+		this(handle, null);
+	}
+
+	public BulkMigrationJobLeaseChunkListener(
+			final BulkMigrationJobLeaseManager.LeaseHandle handle,
+			final BulkMigrationJobLeaseHeartbeat heartbeat) {
 		this.handle = Objects.requireNonNull(handle, "handle");
+		this.heartbeat = heartbeat;
 	}
 
 	@Override
@@ -25,6 +33,9 @@ public final class BulkMigrationJobLeaseChunkListener
 	}
 
 	private void renew() {
+		if (heartbeat != null) {
+			heartbeat.check();
+		}
 		try {
 			handle.renew();
 		} catch (SQLException e) {

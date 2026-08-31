@@ -705,6 +705,13 @@ task-level: lifecycle post-processing may still be pending. With execution
 history present, only `JOB_COMPLETED` confirms `COMPLETE`; an expired lease
 after `TASK_COMPLETED` is therefore `RESUMABLE`, allowing lifecycle completion
 without replaying durable chunks.
+Lease-aware job execution also starts a daemon heartbeat at one third of the
+configured lease duration. This keeps the lease alive while a single database
+chunk or lifecycle operation runs longer than a chunk boundary. Background
+renewal failure is retained and raised as `BulkMigrationJobLeaseLostException`
+at the next listener boundary; it is never silently converted into a successful
+renewal. Custom heartbeat intervals must be positive and shorter than the lease
+duration.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and

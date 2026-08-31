@@ -33,6 +33,9 @@ public final class BulkMigrationJobLeaseManager {
 		if (duration.isZero() || duration.isNegative()) {
 			throw new IllegalArgumentException("duration must be positive");
 		}
+		if (duration.compareTo(Duration.ofNanos(2)) < 0) {
+			throw new IllegalArgumentException("duration must be at least 2 nanoseconds");
+		}
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -73,6 +76,25 @@ public final class BulkMigrationJobLeaseManager {
 						lease.planFingerprint());
 			}
 			lease = renewed;
+		}
+
+		public BulkMigrationJobLeaseHeartbeat startHeartbeat() {
+			Duration interval = duration.dividedBy(3);
+			if (interval.isZero()) {
+				interval = Duration.ofNanos(1);
+			}
+			return startHeartbeat(interval);
+		}
+
+		public BulkMigrationJobLeaseHeartbeat startHeartbeat(
+				final Duration interval) {
+			Objects.requireNonNull(interval, "interval");
+			if (interval.isZero() || interval.isNegative()
+					|| interval.compareTo(duration) >= 0) {
+				throw new IllegalArgumentException(
+						"heartbeat interval must be positive and shorter than lease duration");
+			}
+			return new BulkMigrationJobLeaseHeartbeat(this, interval);
 		}
 
 		@Override
