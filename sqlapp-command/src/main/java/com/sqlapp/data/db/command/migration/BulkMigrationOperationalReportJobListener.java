@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.function.Consumer;
+import java.util.Map;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
@@ -26,6 +27,7 @@ public final class BulkMigrationOperationalReportJobListener
 	private final Path targetFile;
 	private final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier;
 	private final Supplier<BulkMigrationProgressSnapshot> progressSupplier;
+	private final Supplier<Map<String, BulkMigrationProgressSnapshot>> progressSnapshotsSupplier;
 	private final BulkMigrationOperationalReportBuilder builder;
 	private final BulkMigrationOperationalReportIO reportIO;
 	private final BulkMigrationOperationalReportFailurePolicy failurePolicy;
@@ -43,7 +45,8 @@ public final class BulkMigrationOperationalReportJobListener
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier,
-				BulkMigrationOperationalReportFailurePolicy.FAIL_JOB, failure -> { });
+				() -> Map.of(), BulkMigrationOperationalReportFailurePolicy.FAIL_JOB,
+				failure -> { });
 	}
 
 	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
@@ -52,8 +55,22 @@ public final class BulkMigrationOperationalReportJobListener
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer) {
-		this(plan, targetFile, maintenanceSupplier, progressSupplier, failurePolicy,
+		this(plan, targetFile, maintenanceSupplier, progressSupplier, () -> Map.of(),
+				failurePolicy,
 				failureConsumer,
+				new BulkMigrationOperationalReportBuilder(),
+				new BulkMigrationOperationalReportIO());
+	}
+
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
+			final Path targetFile,
+			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
+			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final Supplier<Map<String, BulkMigrationProgressSnapshot>> progressSnapshotsSupplier,
+			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
+			final Consumer<RuntimeException> failureConsumer) {
+		this(plan, targetFile, maintenanceSupplier, progressSupplier,
+				progressSnapshotsSupplier, failurePolicy, failureConsumer,
 				new BulkMigrationOperationalReportBuilder(),
 				new BulkMigrationOperationalReportIO());
 	}
@@ -62,6 +79,7 @@ public final class BulkMigrationOperationalReportJobListener
 			final Path targetFile,
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final Supplier<Map<String, BulkMigrationProgressSnapshot>> progressSnapshotsSupplier,
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer,
 			final BulkMigrationOperationalReportBuilder builder,
@@ -71,6 +89,8 @@ public final class BulkMigrationOperationalReportJobListener
 		this.maintenanceSupplier = maintenanceSupplier == null ? () -> null
 				: maintenanceSupplier;
 		this.progressSupplier = progressSupplier == null ? () -> null : progressSupplier;
+		this.progressSnapshotsSupplier = progressSnapshotsSupplier == null
+				? () -> Map.of() : progressSnapshotsSupplier;
 		this.failurePolicy = Objects.requireNonNull(failurePolicy, "failurePolicy");
 		this.failureConsumer = failureConsumer == null ? failure -> { } : failureConsumer;
 		this.builder = Objects.requireNonNull(builder, "builder");
@@ -168,7 +188,7 @@ public final class BulkMigrationOperationalReportJobListener
 		try {
 			final var status = BulkMigrationJobStatusInspector.inspect(plan);
 			final var report = builder.build(plan, status, maintenanceSupplier.get(),
-					progressSupplier.get(), latestExecution);
+					progressSupplier.get(), progressSnapshotsSupplier.get(), latestExecution);
 			reportIO.write(targetFile, report);
 			return report;
 		} catch (SQLException e) {

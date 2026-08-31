@@ -90,6 +90,10 @@ class BulkMigrationOperationalReportTest {
 		assertEquals("顧客移行", jsonProgress.get("migrationId"));
 		assertEquals(15_000,
 				((Number) jsonProgress.get("estimatedRemainingMillis")).longValue());
+		final List<Map<String, Object>> progressByMigration =
+				(List<Map<String, Object>>) json.get("progressByMigration");
+		assertEquals(1, progressByMigration.size());
+		assertEquals("顧客移行", progressByMigration.get(0).get("migrationId"));
 		final List<Map<String, Object>> operations =
 				(List<Map<String, Object>>) json.get("operations");
 		assertEquals("DISABLE_CONSTRAINTS", operations.get(0).get("id"));
@@ -139,6 +143,8 @@ class BulkMigrationOperationalReportTest {
 				"TASK_STARTED", "other", Instant.now(), null, null, null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, null, foreignExecution));
+		assertThrows(IllegalArgumentException.class, () -> builder.build(plan,
+				correctStatus, null, null, Map.of("other", foreignProgress), null));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationOperationalReport.Execution("UNKNOWN", "customers",
 						Instant.now(), null, null, null));

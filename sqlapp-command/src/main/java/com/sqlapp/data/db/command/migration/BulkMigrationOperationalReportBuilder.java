@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Map;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
@@ -36,6 +37,15 @@ public final class BulkMigrationOperationalReportBuilder {
 			final BulkMigrationMaintenanceState maintenance,
 			final BulkMigrationProgressSnapshot progress,
 			final BulkMigrationOperationalReport.Execution execution) {
+		return build(plan, status, maintenance, progress, Map.of(), execution);
+	}
+
+	public BulkMigrationOperationalReport build(final BulkMigrationJobPlan plan,
+			final BulkMigrationJobStatus status,
+			final BulkMigrationMaintenanceState maintenance,
+			final BulkMigrationProgressSnapshot progress,
+			final Map<String, BulkMigrationProgressSnapshot> progressByMigration,
+			final BulkMigrationOperationalReport.Execution execution) {
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
 		Objects.requireNonNull(status, "status");
 		if (!plan.getFingerprint().equals(status.getPlanFingerprint())) {
@@ -65,6 +75,18 @@ public final class BulkMigrationOperationalReportBuilder {
 			throw new IllegalArgumentException(
 					"Progress migrationId does not belong to the migration plan");
 		}
+		Objects.requireNonNull(progressByMigration, "progressByMigration");
+		progressByMigration.forEach((migrationId, snapshot) -> {
+			if (snapshot == null || !migrationId.equals(snapshot.migrationId())) {
+				throw new IllegalArgumentException(
+						"Progress map key must match its snapshot migrationId");
+			}
+			if (plan.getTasks().stream().noneMatch(task -> task.getOptions()
+					.getMigrationId().equals(migrationId))) {
+				throw new IllegalArgumentException(
+						"Progress migrationId does not belong to the migration plan");
+			}
+		});
 		if (execution != null && execution.taskId() != null
 				&& !plan.getTaskIds().contains(execution.taskId())) {
 			throw new IllegalArgumentException(
@@ -88,11 +110,17 @@ public final class BulkMigrationOperationalReportBuilder {
 				new BulkMigrationOperationalReport.Operation(operation.id(),
 						operation.phase().name(), operation.description(),
 						operation.transactionBreaking())).toList();
+		final var allProgress = plan.getTasks().stream()
+				.map(task -> progressByMigration.get(task.getOptions().getMigrationId()))
+				.filter(Objects::nonNull).map(BulkMigrationOperationalReportBuilder::progress)
+				.toList();
+		final var effectiveProgress = allProgress.isEmpty() && progress != null
+				? java.util.List.of(progress(progress)) : allProgress;
 		return new BulkMigrationOperationalReport(
 				BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION, Instant.now(clock),
 				plan.getFingerprint(), status.isCompatible(), status.getProcessedRows(),
 				status.getCompletedTasks(), tasks.size(), tasks, operations,
-				maintenance(maintenance), progress(progress), execution);
+				maintenance(maintenance), progress(progress), effectiveProgress, execution);
 	}
 
 	private static BulkMigrationOperationalReport.Checkpoint checkpoint(

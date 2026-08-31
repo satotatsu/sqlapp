@@ -10,7 +10,7 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 		String planFingerprint, boolean compatible, long processedRows,
 		long completedTasks, int totalTasks, List<Task> tasks,
 		List<Operation> operations, Maintenance maintenance, Progress progress,
-		Execution execution) {
+		List<Progress> progressByMigration, Execution execution) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
 
 	public record Task(String taskId, String migrationId, String catalogName,

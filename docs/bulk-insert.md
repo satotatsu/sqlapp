@@ -621,6 +621,11 @@ time, resume baseline, rate, and ETA for every migration, exposes immutable
 per-migration snapshots, and rejects events for IDs outside the configured
 job. A single `BulkMigrationProgressTracker` remains appropriate only for one
 table because its baseline and total are intentionally migration-specific.
+Supply both `BulkMigrationJobProgressTracker.getLatest` and `getSnapshots` to
+the report job listener to populate `progress` with the currently active
+migration and `progressByMigration` with every migration seen so far. The
+latter is emitted in validated plan order; mismatched map keys or migration IDs
+outside the plan are rejected.
 
 `BulkMigrationOperationalReportBuilder` combines the immutable dry-run plan,
 read-only checkpoint status, optional durable maintenance state, and optional
