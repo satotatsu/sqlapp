@@ -600,6 +600,13 @@ later requests cannot overwrite the operator-visible reason. Combine this
 listener with progress or logging listeners using
 `CompositeChunkedBulkMigrationListener`.
 
+Use `CompositeBulkMigrationJobListener` to combine job logging, metrics, and
+`BulkMigrationOperationalReportJobListener`. It dispatches every job-level and
+task-level event in registration order and exposes an immutable listener list.
+As with the synchronous listener contract, a listener exception stops dispatch
+to later listeners for that event; use the report listener's `CONTINUE_JOB`
+policy when report availability must not block other job observers.
+
 `BulkMigrationOperationalReportBuilder` combines the immutable dry-run plan,
 read-only checkpoint status, optional durable maintenance state, and optional
 progress/ETA snapshot into one versioned operational report. The report keeps
