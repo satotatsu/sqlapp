@@ -625,5 +625,9 @@ stores and atomically refreshes the same report at task start, completion,
 failure, and cooperative pause boundaries. Optional suppliers can attach the
 latest durable maintenance state and `BulkMigrationProgressTracker` snapshot.
 The listener follows the normal synchronous listener contract: a report read
-or write failure is not hidden and can abort a start/completion callback; on a
-task failure or pause it is retained as a suppressed listener failure.
+or write failure is not hidden. `FAIL_JOB` is the default and propagates the
+failure. `CONTINUE_JOB` preserves migration execution while delivering the
+failure to the configured consumer and `getLastFailure()`; a later successful
+publication clears that value. In strict mode, failures raised while reporting
+an existing task failure or pause are retained by the executor as suppressed
+listener failures.

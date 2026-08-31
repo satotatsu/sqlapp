@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,6 +14,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobOperation;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobOperationPhase;
@@ -175,12 +179,58 @@ class BulkMigrationOperationalReportTest {
 		assertEquals(25, ((Number) json.get("processedRows")).longValue());
 	}
 
+	@Test
+	void jobListenerCanContinueAfterObservableReportFailure() {
+		final var delegate = new InMemoryBulkMigrationCheckpointStore();
+		final var failing = new AtomicBoolean(true);
+		final BulkMigrationCheckpointStore store = new BulkMigrationCheckpointStore() {
+			@Override
+			public Optional<BulkMigrationCheckpoint> load(String migrationId)
+					throws java.sql.SQLException {
+				if (failing.get()) {
+					throw new java.sql.SQLException("status unavailable");
+				}
+				return delegate.load(migrationId);
+			}
+
+			@Override
+			public void save(BulkMigrationCheckpoint checkpoint) throws java.sql.SQLException {
+				delegate.save(checkpoint);
+			}
+
+			@Override
+			public void delete(String migrationId) throws java.sql.SQLException {
+				delegate.delete(migrationId);
+			}
+		};
+		final BulkMigrationJobPlan plan = plan(store);
+		final var failures = new java.util.ArrayList<RuntimeException>();
+		final var listener = new BulkMigrationOperationalReportJobListener(plan,
+				directory.resolve("best-effort.json"), () -> null, () -> null,
+				BulkMigrationOperationalReportFailurePolicy.CONTINUE_JOB, failures::add);
+
+		listener.onTaskStarted("customers", 0, 1);
+		assertEquals(1, failures.size());
+		assertNotNull(listener.getLastFailure());
+
+		failing.set(false);
+		listener.onTaskStarted("customers", 0, 1);
+		assertNull(listener.getLastFailure());
+		assertTrue(directory.resolve("best-effort.json").toFile().isFile());
+
+		failing.set(true);
+		final var strict = new BulkMigrationOperationalReportJobListener(plan,
+				directory.resolve("strict.json"));
+		assertThrows(RuntimeException.class,
+				() -> strict.onTaskStarted("customers", 0, 1));
+	}
+
 	private static BulkMigrationJobPlan plan() {
 		return plan(null);
 	}
 
 	private static BulkMigrationJobPlan plan(
-			final InMemoryBulkMigrationCheckpointStore checkpointStore) {
+			final BulkMigrationCheckpointStore checkpointStore) {
 		final Table table = new Table("CUSTOMERS");
 		table.getColumns().add(new Column("ID"));
 		table.setPrimaryKey("PK_CUSTOMERS", table.getColumns().get("ID"));

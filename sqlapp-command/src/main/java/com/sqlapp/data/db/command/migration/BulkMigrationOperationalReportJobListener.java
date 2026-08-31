@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
@@ -24,6 +25,9 @@ public final class BulkMigrationOperationalReportJobListener
 	private final Supplier<BulkMigrationProgressSnapshot> progressSupplier;
 	private final BulkMigrationOperationalReportBuilder builder;
 	private final BulkMigrationOperationalReportIO reportIO;
+	private final BulkMigrationOperationalReportFailurePolicy failurePolicy;
+	private final Consumer<RuntimeException> failureConsumer;
+	private volatile RuntimeException lastFailure;
 
 	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
 			final Path targetFile) {
@@ -35,6 +39,17 @@ public final class BulkMigrationOperationalReportJobListener
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier,
+				BulkMigrationOperationalReportFailurePolicy.FAIL_JOB, failure -> { });
+	}
+
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
+			final Path targetFile,
+			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
+			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
+			final Consumer<RuntimeException> failureConsumer) {
+		this(plan, targetFile, maintenanceSupplier, progressSupplier, failurePolicy,
+				failureConsumer,
 				new BulkMigrationOperationalReportBuilder(),
 				new BulkMigrationOperationalReportIO());
 	}
@@ -43,6 +58,8 @@ public final class BulkMigrationOperationalReportJobListener
 			final Path targetFile,
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
+			final Consumer<RuntimeException> failureConsumer,
 			final BulkMigrationOperationalReportBuilder builder,
 			final BulkMigrationOperationalReportIO reportIO) {
 		this.plan = Objects.requireNonNull(plan, "plan");
@@ -50,6 +67,8 @@ public final class BulkMigrationOperationalReportJobListener
 		this.maintenanceSupplier = maintenanceSupplier == null ? () -> null
 				: maintenanceSupplier;
 		this.progressSupplier = progressSupplier == null ? () -> null : progressSupplier;
+		this.failurePolicy = Objects.requireNonNull(failurePolicy, "failurePolicy");
+		this.failureConsumer = failureConsumer == null ? failure -> { } : failureConsumer;
 		this.builder = Objects.requireNonNull(builder, "builder");
 		this.reportIO = Objects.requireNonNull(reportIO, "reportIO");
 	}
@@ -57,27 +76,48 @@ public final class BulkMigrationOperationalReportJobListener
 	@Override
 	public void onTaskStarted(final String taskId, final int taskIndex,
 			final int taskCount) {
-		publish();
+		publishBoundary();
 	}
 
 	@Override
 	public void onTaskCompleted(final String taskId,
 			final ChunkedBulkMigrationResult result, final int taskIndex,
 			final int taskCount) {
-		publish();
+		publishBoundary();
 	}
 
 	@Override
 	public void onTaskFailed(final String taskId, final SQLException cause,
 			final int taskIndex, final int taskCount) {
-		publish();
+		publishBoundary();
 	}
 
 	@Override
 	public void onTaskPaused(final String taskId,
 			final ChunkedBulkMigrationProgress progress, final int taskIndex,
 			final int taskCount) {
-		publish();
+		publishBoundary();
+	}
+
+	private synchronized void publishBoundary() {
+		try {
+			publish();
+			lastFailure = null;
+		} catch (RuntimeException failure) {
+			lastFailure = failure;
+			try {
+				failureConsumer.accept(failure);
+			} catch (RuntimeException consumerFailure) {
+				failure.addSuppressed(consumerFailure);
+			}
+			if (failurePolicy == BulkMigrationOperationalReportFailurePolicy.FAIL_JOB) {
+				throw failure;
+			}
+		}
+	}
+
+	public RuntimeException getLastFailure() {
+		return lastFailure;
 	}
 
 	/** Writes a report immediately without running or changing the job. */
