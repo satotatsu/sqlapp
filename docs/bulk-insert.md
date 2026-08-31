@@ -613,13 +613,14 @@ listener with each task-specific listener without changing the validated plan;
 task-specific callbacks run first. Use
 `BulkMigrationOperationalReportChunkListener` as the common listener to
 atomically refresh JSON after every checkpoint-durable chunk, rather than only
-at task boundaries. For per-table ETA, attach a separate
-`BulkMigrationProgressTracker` to each task and have its consumer update a
-shared latest-snapshot reference supplied to the report job listener. The
-task-specific tracker runs before the common report listener, so each JSON
-refresh sees the snapshot for the chunk that was just made durable. Do not
-share one progress tracker across tasks because totals and resume baselines are
-table-specific.
+at task boundaries. `BulkMigrationJobProgressTracker` can be used as another
+common listener: configure total rows by migration ID, then place it before the
+report chunk listener in a `CompositeChunkedBulkMigrationListener` and supply
+`getLatest` to the report job listener. It maintains an independent elapsed
+time, resume baseline, rate, and ETA for every migration, exposes immutable
+per-migration snapshots, and rejects events for IDs outside the configured
+job. A single `BulkMigrationProgressTracker` remains appropriate only for one
+table because its baseline and total are intentionally migration-specific.
 
 `BulkMigrationOperationalReportBuilder` combines the immutable dry-run plan,
 read-only checkpoint status, optional durable maintenance state, and optional
