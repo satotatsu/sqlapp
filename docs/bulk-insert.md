@@ -621,6 +621,10 @@ time, resume baseline, rate, and ETA for every migration, exposes immutable
 per-migration snapshots, and rejects events for IDs outside the configured
 job. A single `BulkMigrationProgressTracker` remains appropriate only for one
 table because its baseline and total are intentionally migration-specific.
+Prefer the `BulkMigrationJobProgressTracker` constructor that accepts the
+validated job plan. It reorders totals to plan order and rejects missing or
+extra migration IDs before any chunk is executed; a null total remains the
+explicit representation for an unknown row count.
 Supply both `BulkMigrationJobProgressTracker.getLatest` and `getSnapshots` to
 the report job listener to populate `progress` with the currently active
 migration and `progressByMigration` with every migration seen so far. The

@@ -41,6 +41,12 @@ public final class BulkMigrationJobProgressTracker
 		this.totalRowsByMigration = Collections.unmodifiableMap(totals);
 	}
 
+	public BulkMigrationJobProgressTracker(final BulkMigrationJobPlan plan,
+			final Map<String, Long> totalRowsByMigration,
+			final Consumer<BulkMigrationProgressSnapshot> consumer) {
+		this(validatePlanTotals(plan, totalRowsByMigration), consumer);
+	}
+
 	@Override
 	public void onChunkStarted(final ChunkedBulkMigrationProgress progress) {
 		tracker(progress).onChunkStarted(progress);
@@ -72,5 +78,27 @@ public final class BulkMigrationJobProgressTracker
 					+ progress.getMigrationId());
 		}
 		return tracker;
+	}
+
+	private static Map<String, Long> validatePlanTotals(final BulkMigrationJobPlan plan,
+			final Map<String, Long> totals) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		Objects.requireNonNull(totals, "totalRowsByMigration");
+		final Map<String, Long> ordered = new LinkedHashMap<>();
+		for (final BulkMigrationJobTask task : plan.getTasks()) {
+			final String migrationId = task.getOptions().getMigrationId();
+			if (!totals.containsKey(migrationId)) {
+				throw new IllegalArgumentException(
+						"Missing total-row configuration for migrationId: " + migrationId);
+			}
+			ordered.put(migrationId, totals.get(migrationId));
+		}
+		if (ordered.size() != totals.size()) {
+			final var extra = new java.util.LinkedHashSet<>(totals.keySet());
+			extra.removeAll(ordered.keySet());
+			throw new IllegalArgumentException(
+					"Total-row configuration contains migration IDs outside the plan: " + extra);
+		}
+		return ordered;
 	}
 }

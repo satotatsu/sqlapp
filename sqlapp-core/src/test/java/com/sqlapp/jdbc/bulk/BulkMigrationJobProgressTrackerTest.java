@@ -11,6 +11,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+
 class BulkMigrationJobProgressTrackerTest {
 	@Test
 	void tracksEachMigrationWithAnIndependentResumeBaseline() {
@@ -46,5 +49,36 @@ class BulkMigrationJobProgressTrackerTest {
 
 		assertThrows(IllegalArgumentException.class, () -> tracker.onChunkStarted(
 				new ChunkedBulkMigrationProgress("other", 0, 1, 0, 1)));
+	}
+
+	@Test
+	void validatesTotalConfigurationAgainstThePlanBeforeExecution() {
+		final var plan = BulkMigrationJobPlanner.plan(java.util.List.of(
+				task("customers", "customers-copy"), task("orders", "orders-copy")));
+		final Map<String, Long> totals = new LinkedHashMap<>();
+		totals.put("orders-copy", 20L);
+		totals.put("customers-copy", 10L);
+		final var tracker = new BulkMigrationJobProgressTracker(plan, totals, null);
+		assertEquals(java.util.List.of("customers-copy", "orders-copy"),
+				tracker.getTotalRowsByMigration().keySet().stream().toList());
+
+		assertThrows(IllegalArgumentException.class, () ->
+				new BulkMigrationJobProgressTracker(plan,
+						Map.of("customers-copy", 10L), null));
+		assertThrows(IllegalArgumentException.class, () ->
+				new BulkMigrationJobProgressTracker(plan,
+						Map.of("customers-copy", 10L, "orders-copy", 20L,
+								"other", 1L), null));
+	}
+
+	private static BulkMigrationJobTask task(final String taskId,
+			final String migrationId) {
+		final Table table = new Table(taskId.toUpperCase());
+		table.getColumns().add(new Column("ID"));
+		table.setPrimaryKey("PK_" + table.getName(), table.getColumns().get("ID"));
+		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table)
+				.options(ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+						.sourceFingerprint("source").targetFingerprint("target").build())
+				.build();
 	}
 }
