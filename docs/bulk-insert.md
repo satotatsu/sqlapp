@@ -658,6 +658,15 @@ decision: `COMPLETE`, `RESUMABLE`, `POSSIBLY_RUNNING`, `RECOVERY_REQUIRED`, or
 to resume because the JSON file alone cannot prove that another worker has
 stopped. An unfinished durable maintenance phase takes precedence and requires
 recovery before ordinary resume.
+
+For execution fencing, `BulkMigrationJobLeaseStore` defines an atomic,
+owner-aware lease contract shared by database and file-backed implementations.
+`BulkMigrationJobLeaseManager` acquires a lease for the immutable plan
+fingerprint, renews it with the same owner ID, and releases it idempotently.
+Only an absent or expired lease may be acquired; an expired or replaced lease
+cannot be renewed or released by its former owner. The process-local
+`InMemoryBulkMigrationJobLeaseStore` is intended for tests and single-process
+execution, not coordination between application instances.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
