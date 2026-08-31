@@ -583,6 +583,16 @@ listener also receives `onTaskPaused`. Rerun with the same migration IDs and
 checkpoint stores to continue. A pause is not reported as a chunk or SQL
 failure.
 
+For operational cancellation, `BulkMigrationCancellationToken` is a
+thread-safe signal and `BulkMigrationCancellationListener` converts it into
+the existing cooperative pause. Cancellation never interrupts an in-flight
+SQL statement or rolls back an already durable chunk: it is acknowledged at
+the next completed checkpoint and execution exits through the normal paused
+exception, so the same plan can resume. The first cancellation reason wins;
+later requests cannot overwrite the operator-visible reason. Combine this
+listener with progress or logging listeners using
+`CompositeChunkedBulkMigrationListener`.
+
 `BulkMigrationOperationalReportBuilder` combines the immutable dry-run plan,
 read-only checkpoint status, optional durable maintenance state, and optional
 progress/ETA snapshot into one versioned operational report. The report keeps

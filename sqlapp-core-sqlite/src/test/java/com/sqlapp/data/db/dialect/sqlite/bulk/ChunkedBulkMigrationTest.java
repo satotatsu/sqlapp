@@ -23,6 +23,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationCancellationListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationCancellationToken;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
@@ -443,14 +445,11 @@ class ChunkedBulkMigrationTest {
 					.migrationId("pause-progress").sourceFingerprint("source-v1")
 					.targetFingerprint("target-v1").chunkSize(2).build();
 
+			final var cancellation = new BulkMigrationCancellationToken();
+			cancellation.requestCancellation("maintenance window ended");
 			final var paused = assertThrows(ChunkedBulkMigrationPausedException.class,
 					() -> ChunkedBulkMigrationExecutor.executeWithListener(connection, source,
-							options, new ChunkedBulkMigrationListener() {
-								@Override
-								public boolean pauseAfterChunk(ChunkedBulkMigrationProgress progress) {
-									return true;
-								}
-							}));
+							options, new BulkMigrationCancellationListener(cancellation)));
 			assertEquals(0, paused.getProgress().getChunkIndex());
 			assertEquals(2, paused.getProgress().getProcessedRowsAfter());
 			final var checkpoint = new JdbcBulkMigrationCheckpointStore(connection,
