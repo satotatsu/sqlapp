@@ -133,6 +133,33 @@ class BulkMigrationOperationalReportTest {
 	}
 
 	@Test
+	void reportReaderRejectsDuplicateAndForeignNestedIdentities() {
+		final var io = new BulkMigrationOperationalReportIO();
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final var report = new BulkMigrationOperationalReportBuilder().build(
+				plan, status, null, null);
+
+		final var duplicateTasks = copyWithContent(report,
+				List.of(report.tasks().get(0), report.tasks().get(0)), List.of());
+		final Path duplicateFile = directory.resolve("duplicate-tasks.json");
+		io.write(duplicateFile, duplicateTasks);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.read(duplicateFile));
+
+		final var foreignProgress = new BulkMigrationOperationalReport.Progress(
+				"other", 0, null, 0, 0, null, null);
+		final var foreignProgressReport = copyWithContent(report, report.tasks(),
+				List.of(foreignProgress));
+		final Path foreignProgressFile = directory.resolve("foreign-progress.json");
+		io.write(foreignProgressFile, foreignProgressReport);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.read(foreignProgressFile));
+	}
+
+	@Test
 	void rejectsStatusAndMaintenanceFromAnotherPlan() {
 		final BulkMigrationJobPlan plan = plan();
 		final BulkMigrationJobStatus wrongStatus = new BulkMigrationJobStatus("other",
@@ -344,6 +371,17 @@ class BulkMigrationOperationalReportTest {
 				source.completedTasks(), totalTasks, source.tasks(), source.operations(),
 				source.maintenance(), source.progress(), source.progressByMigration(),
 				source.execution());
+	}
+
+	private static BulkMigrationOperationalReport copyWithContent(
+			final BulkMigrationOperationalReport source,
+			final List<BulkMigrationOperationalReport.Task> tasks,
+			final List<BulkMigrationOperationalReport.Progress> progressByMigration) {
+		return new BulkMigrationOperationalReport(source.formatVersion(),
+				source.generatedAt(), source.planFingerprint(), source.compatible(),
+				source.processedRows(), source.completedTasks(), tasks.size(), tasks,
+				source.operations(), source.maintenance(), source.progress(),
+				progressByMigration, source.execution());
 	}
 
 	private static BulkMigrationJobPlan plan(

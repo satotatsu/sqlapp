@@ -6,7 +6,9 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
@@ -112,6 +114,33 @@ public final class BulkMigrationOperationalReportIO {
 				|| task.taskId().isBlank() || task.migrationId() == null
 				|| task.migrationId().isBlank())) {
 			throw new CommandException("Bulk migration report contains an invalid task identity");
+		}
+		final Set<String> taskIds = new HashSet<>();
+		final Set<String> migrationIds = new HashSet<>();
+		for (BulkMigrationOperationalReport.Task task : report.tasks()) {
+			if (!taskIds.add(task.taskId()) || !migrationIds.add(task.migrationId())) {
+				throw new CommandException(
+						"Bulk migration report contains duplicate task identities");
+			}
+			if (task.checkpoint() != null && !task.migrationId()
+					.equals(task.checkpoint().migrationId())) {
+				throw new CommandException(
+						"Bulk migration report checkpoint migrationId mismatch");
+			}
+		}
+		final Set<String> progressMigrationIds = new HashSet<>();
+		for (BulkMigrationOperationalReport.Progress progress : report.progressByMigration()) {
+			if (progress == null || progress.migrationId() == null
+					|| !migrationIds.contains(progress.migrationId())
+					|| !progressMigrationIds.add(progress.migrationId())) {
+				throw new CommandException(
+						"Bulk migration report contains invalid progress identities");
+			}
+		}
+		if (report.progress() != null
+				&& !migrationIds.contains(report.progress().migrationId())) {
+			throw new CommandException(
+					"Bulk migration report current progress migrationId mismatch");
 		}
 		return report;
 	}

@@ -645,7 +645,9 @@ using atomic replacement when supported by the file system. The report is
 read-only: creating it does not execute SQL, alter checkpoints, or recover
 maintenance. Its `read` operation provides the matching typed reader and
 strictly rejects missing files, unknown `formatVersion` values, absent required
-identity/list fields, and inconsistent aggregate task counts. This makes a
+identity/list fields, duplicate task or migration identities, nested checkpoint
+or progress identities outside their task plan, and inconsistent aggregate
+task counts. This makes a
 successfully read report safe to use for monitoring and resume decisions;
 invalid or newer reports must be handled explicitly rather than interpreted
 partially. The overload accepting an expected plan fingerprint additionally
