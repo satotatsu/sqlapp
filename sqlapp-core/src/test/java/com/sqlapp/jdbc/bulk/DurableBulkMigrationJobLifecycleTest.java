@@ -2,7 +2,9 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -85,6 +87,50 @@ class DurableBulkMigrationJobLifecycleTest {
 
 		assertEquals(message, failure.getSuppressed()[0].getMessage());
 		assertEquals(1_000, store.states.get(2).failureMessage().length());
+	}
+
+	@Test
+	void explicitlyRecoversOnlyAnApprovedNonterminalPlan() throws Exception {
+		final var events = new ArrayList<String>();
+		final var store = new RecordingStore();
+		final BulkMigrationJobLifecycle delegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "recover-v1";
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) {
+				events.add(failure.getMessage());
+			}
+		};
+		final var lifecycle = lifecycle(delegate, store);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		store.save(new BulkMigrationMaintenanceState(plan.getFingerprint(),
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
+
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED,
+				lifecycle.inspect(plan).orElseThrow().status());
+		assertThrows(IllegalArgumentException.class, () -> lifecycle.recoverInterrupted(
+				connection(), plan, "wrong-fingerprint"));
+		assertTrue(events.isEmpty());
+
+		final var recovered = lifecycle.recoverInterrupted(connection(), plan,
+				plan.getFingerprint());
+		assertTrue(recovered.recovered());
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED,
+				recovered.previousState().status());
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED,
+				recovered.currentState().status());
+		assertEquals(List.of("Recovering interrupted migration maintenance from PREPARED"),
+				events);
+
+		final var noOp = lifecycle.recoverInterrupted(connection(), plan,
+				plan.getFingerprint());
+		assertFalse(noOp.recovered());
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED,
+				noOp.currentState().status());
 	}
 
 	private static DurableBulkMigrationJobLifecycle lifecycle(

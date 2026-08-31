@@ -467,6 +467,15 @@ the filesystem supports it and validates every persisted field. A nonterminal
 state is evidence of an interrupted job, but automatic recovery should run
 only after the same plan fingerprint has been verified.
 
+`DurableBulkMigrationJobLifecycle.inspect(plan)` is read-only.
+`recoverInterrupted(connection, plan, expectedFingerprint)` requires the exact
+approved fingerprint and restores only `PREPARING`, `PREPARED`,
+`POST_PROCESSING`, `RESTORING`, or `RESTORE_FAILED`. Missing, `RESTORED`, and
+`COMPLETE` state is a no-op. Recovery records the normal `RESTORING` and
+`RESTORED` transitions and requires the plan to have been created with that
+same durable lifecycle instance, preventing a different maintenance
+configuration from being applied accidentally.
+
 The plan also exposes a deterministic SHA-256 fingerprint over the ordered
 task IDs, table identities, migration and schema fingerprints, migration mode,
 chunk/checkpoint settings, and bulk/UPSERT options. Execution-only objects such
