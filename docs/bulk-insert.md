@@ -457,10 +457,15 @@ is required before automatically recovering such an interrupted job.
 `POST_PROCESSING`, `RESTORING`, `RESTORED`, `RESTORE_FAILED`, and `COMPLETE`
 against the plan fingerprint. `RESTORE_FAILED` also retains the failure
 message. The core module supplies an in-memory store for tests and embedded
-use; operational command integrations should use a database or atomically
-replaced file implementation. A nonterminal state is evidence of an
-interrupted job, but automatic recovery should run only after the same plan
-fingerprint has been verified.
+use. `JdbcBulkMigrationMaintenanceStateStore` creates and updates its control
+table through the Schema model and dialect SQL factories. It participates in
+the transaction of its supplied connection; use a dedicated autocommit
+connection when maintenance evidence must survive a rollback of the data
+connection. The command module supplies
+`FileBulkMigrationMaintenanceStateStore`, which uses atomic replacement when
+the filesystem supports it and validates every persisted field. A nonterminal
+state is evidence of an interrupted job, but automatic recovery should run
+only after the same plan fingerprint has been verified.
 
 The plan also exposes a deterministic SHA-256 fingerprint over the ordered
 task IDs, table identities, migration and schema fingerprints, migration mode,

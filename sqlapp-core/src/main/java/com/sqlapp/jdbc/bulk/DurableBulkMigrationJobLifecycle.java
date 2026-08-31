@@ -81,6 +81,10 @@ public final class DurableBulkMigrationJobLifecycle
 
 	private static String message(final Throwable failure) {
 		final String value = failure.getMessage();
-		return value == null || value.isBlank() ? failure.getClass().getName() : value;
+		final String message = value == null || value.isBlank()
+				? failure.getClass().getName() : value;
+		return message.length() <= BulkMigrationMaintenanceState.FAILURE_MESSAGE_MAX_LENGTH
+				? message : message.substring(0,
+						BulkMigrationMaintenanceState.FAILURE_MESSAGE_MAX_LENGTH);
 	}
 }

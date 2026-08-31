@@ -61,6 +61,32 @@ class DurableBulkMigrationJobLifecycleTest {
 		assertEquals("restore failed", store.states.get(2).failureMessage());
 	}
 
+	@Test
+	void truncatesOnlyThePersistedRestoreFailureMessage() {
+		final var store = new RecordingStore();
+		final String message = "x".repeat(1_100);
+		final BulkMigrationJobLifecycle delegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan)
+					throws SQLException {
+				throw new SQLException("prepare failed");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) throws SQLException {
+				throw new SQLException(message);
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle(delegate, store));
+
+		final SQLException failure = assertThrows(SQLException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), plan));
+
+		assertEquals(message, failure.getSuppressed()[0].getMessage());
+		assertEquals(1_000, store.states.get(2).failureMessage().length());
+	}
+
 	private static DurableBulkMigrationJobLifecycle lifecycle(
 			final BulkMigrationJobLifecycle delegate, final RecordingStore store) {
 		return new DurableBulkMigrationJobLifecycle(delegate, store,
