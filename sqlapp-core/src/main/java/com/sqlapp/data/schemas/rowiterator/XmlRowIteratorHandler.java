@@ -109,7 +109,12 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 				return false;
 			});
 			try {
-				loadXml(table, options);
+				// XML loading also resolves and adds schema metadata. Multiple virtual
+				// producers may stream rows for the same Table, but its ColumnCollection
+				// is not safe for concurrent structural mutation.
+				synchronized (table) {
+					loadXml(table, options);
+				}
 			} catch (XMLStreamException | IOException e) {
 				throw new RuntimeException(e);
 			}

@@ -19,15 +19,35 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.File;
 
+import org.junit.jupiter.api.Test;
+
 import com.sqlapp.data.schemas.RowIteratorHandler;
+import com.sqlapp.data.schemas.Table;
 
 public class XmlRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {
 		return new XmlRowIteratorHandler(new File("src/test/resources/test.xml"));
+	}
+
+	@Test
+	void repeatedlyCombinesXmlProducersWithoutConcurrentSchemaMutation() {
+		for (int attempt = 0; attempt < 20; attempt++) {
+			final Table table = getTable();
+			table.setRowIteratorHandler(new CombinedRowIteratorHandler(
+					getRowIteratorHandler(), getRowIteratorHandler()));
+			int rows = 0;
+			for (var ignored : table.getRows()) {
+				rows++;
+			}
+			assertEquals(count() * 2, rows, "attempt=" + attempt);
+			assertEquals(6, table.getColumns().size(), "attempt=" + attempt);
+		}
 	}
 
 }
