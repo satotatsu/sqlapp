@@ -46,19 +46,32 @@ public final class BulkMigrationJobExecutor {
 		Objects.requireNonNull(listener, "listener");
 		plan.validateUnchanged();
 		final BulkMigrationJobLifecycle lifecycle = plan.getLifecycle();
+		listener.onJobStarted(plan.getFingerprint(), plan.getTasks().size());
+		final BulkMigrationJobResult result;
 		try {
 			lifecycle.before(targetConnection, plan);
-			final BulkMigrationJobResult result = executeTasks(targetConnection, plan, listener);
+			result = executeTasks(targetConnection, plan, listener);
 			lifecycle.after(targetConnection, plan, result);
-			return result;
 		} catch (SQLException | RuntimeException | Error failure) {
 			try {
 				lifecycle.restore(targetConnection, plan, failure);
 			} catch (SQLException | RuntimeException | Error restoreFailure) {
 				failure.addSuppressed(restoreFailure);
 			}
+			try {
+				if (failure instanceof BulkMigrationJobPausedException paused) {
+					listener.onJobPaused(plan.getFingerprint(), paused.getPausedTaskId(),
+							paused.getProgress());
+				} else {
+					listener.onJobFailed(plan.getFingerprint(), failure);
+				}
+			} catch (RuntimeException listenerFailure) {
+				failure.addSuppressed(listenerFailure);
+			}
 			throw failure;
 		}
+		listener.onJobCompleted(result);
+		return result;
 	}
 
 	private static BulkMigrationJobResult executeTasks(final Connection targetConnection,

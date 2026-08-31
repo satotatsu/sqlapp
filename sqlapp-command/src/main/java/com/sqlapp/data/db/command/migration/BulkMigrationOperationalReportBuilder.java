@@ -28,6 +28,14 @@ public final class BulkMigrationOperationalReportBuilder {
 			final BulkMigrationJobStatus status,
 			final BulkMigrationMaintenanceState maintenance,
 			final BulkMigrationProgressSnapshot progress) {
+		return build(plan, status, maintenance, progress, null);
+	}
+
+	public BulkMigrationOperationalReport build(final BulkMigrationJobPlan plan,
+			final BulkMigrationJobStatus status,
+			final BulkMigrationMaintenanceState maintenance,
+			final BulkMigrationProgressSnapshot progress,
+			final BulkMigrationOperationalReport.Execution execution) {
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
 		Objects.requireNonNull(status, "status");
 		if (!plan.getFingerprint().equals(status.getPlanFingerprint())) {
@@ -57,6 +65,11 @@ public final class BulkMigrationOperationalReportBuilder {
 			throw new IllegalArgumentException(
 					"Progress migrationId does not belong to the migration plan");
 		}
+		if (execution != null && execution.taskId() != null
+				&& !plan.getTaskIds().contains(execution.taskId())) {
+			throw new IllegalArgumentException(
+					"Execution taskId does not belong to the migration plan");
+		}
 		final var tasks = java.util.stream.IntStream.range(0, plan.getTasks().size())
 				.mapToObj(i -> {
 					final var planned = plan.getTasks().get(i);
@@ -79,7 +92,7 @@ public final class BulkMigrationOperationalReportBuilder {
 				BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION, Instant.now(clock),
 				plan.getFingerprint(), status.isCompatible(), status.getProcessedRows(),
 				status.getCompletedTasks(), tasks.size(), tasks, operations,
-				maintenance(maintenance), progress(progress));
+				maintenance(maintenance), progress(progress), execution);
 	}
 
 	private static BulkMigrationOperationalReport.Checkpoint checkpoint(

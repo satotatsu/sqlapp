@@ -536,12 +536,19 @@ class ChunkedBulkMigrationTest {
 										int taskIndex, int taskCount) {
 									events.add(taskId + ":" + taskIndex + ":" + taskCount);
 								}
+
+								@Override
+								public void onJobPaused(String planFingerprint, String taskId,
+										ChunkedBulkMigrationProgress progress) {
+									events.add("job:" + taskId + ":"
+											+ progress.getProcessedRowsAfter());
+								}
 							}));
 			assertEquals("paused", paused.getPausedTaskId());
 			assertTrue(paused.getCompletedResult().getPlanFingerprint() != null);
 			assertTrue(paused.getCompletedResult().getTasks().isEmpty());
 			assertEquals(1, paused.getProgress().getProcessedRowsAfter());
-			assertEquals(List.of("paused:0:1"), events);
+			assertEquals(List.of("paused:0:1", "job:paused:1"), events);
 
 			final var resumedTask = BulkMigrationJobTask.builder().taskId("paused")
 					.sourceTable(source).options(options).build();

@@ -22,6 +22,43 @@ import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
 	@Test
+	void reportsFinalJobLifecycleWithoutRestoringAfterCompletionNotification() throws Exception {
+		final List<String> events = new ArrayList<>();
+		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onJobStarted(String planFingerprint, int taskCount) {
+				events.add("started:" + taskCount);
+			}
+
+			@Override
+			public void onJobCompleted(BulkMigrationJobResult result) {
+				events.add("completed:" + result.getTasks().size());
+			}
+
+			@Override
+			public void onJobFailed(String planFingerprint, Throwable cause) {
+				events.add("failed:" + cause.getMessage());
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of());
+		BulkMigrationJobExecutor.executePlan(connection(), plan, listener);
+		assertEquals(List.of("started:0", "completed:0"), events);
+
+		events.clear();
+		final var failing = BulkMigrationJobPlanner.plan(List.of(),
+				new BulkMigrationJobLifecycle() {
+					@Override
+					public void before(Connection connection, BulkMigrationJobPlan plan)
+							throws SQLException {
+						throw new SQLException("prepare failed");
+					}
+				});
+		assertThrows(SQLException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), failing, listener));
+		assertEquals(List.of("started:0", "failed:prepare failed"), events);
+	}
+
+	@Test
 	void plansAndExecutesLifecycleAndRestoresAfterFailure() throws Exception {
 		final List<String> events = new ArrayList<>();
 		final BulkMigrationJobLifecycle lifecycle = new BulkMigrationJobLifecycle() {

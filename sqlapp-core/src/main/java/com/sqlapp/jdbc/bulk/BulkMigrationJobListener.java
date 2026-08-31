@@ -8,6 +8,19 @@ public interface BulkMigrationJobListener {
 	BulkMigrationJobListener NO_OP = new BulkMigrationJobListener() {
 	};
 
+	default void onJobStarted(final String planFingerprint, final int taskCount) {
+	}
+
+	default void onJobCompleted(final BulkMigrationJobResult result) {
+	}
+
+	default void onJobFailed(final String planFingerprint, final Throwable cause) {
+	}
+
+	default void onJobPaused(final String planFingerprint, final String taskId,
+			final ChunkedBulkMigrationProgress progress) {
+	}
+
 	default void onTaskStarted(final String taskId, final int taskIndex, final int taskCount) {
 	}
 

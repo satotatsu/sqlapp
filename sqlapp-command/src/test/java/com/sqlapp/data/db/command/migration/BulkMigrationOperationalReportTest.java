@@ -31,12 +31,15 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobStatus;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskStatus;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 import com.sqlapp.jdbc.bulk.BulkMigrationProgressSnapshot;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 import com.sqlapp.util.JsonConverter;
 
@@ -131,6 +134,13 @@ class BulkMigrationOperationalReportTest {
 				Duration.ZERO, 0, null, null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, foreignProgress));
+		final var foreignExecution = new BulkMigrationOperationalReport.Execution(
+				"TASK_STARTED", "other", Instant.now(), null, null, null);
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.build(plan, correctStatus, null, null, foreignExecution));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("UNKNOWN", "customers",
+						Instant.now(), null, null, null));
 	}
 
 	@Test
@@ -171,15 +181,30 @@ class BulkMigrationOperationalReportTest {
 				.sourceFingerprint("source").targetFingerprint("target")
 				.processedRows(25).completedChunks(1).chunkSize(10_000)
 				.lastChunkHash("durable-hash").complete(true).build());
-		listener.onTaskCompleted("customers", null, 0, 1);
+		listener.onTaskCompleted("customers",
+				new ChunkedBulkMigrationResult(0, 25, 1, false), 0, 1);
 
 		json = new JsonConverter().fromJsonString(target.toFile(), Map.class);
 		tasks = (List<Map<String, Object>>) json.get("tasks");
 		assertEquals("COMPLETE", tasks.get(0).get("state"));
 		assertEquals(25, ((Number) json.get("processedRows")).longValue());
+		final Map<String, Object> execution =
+				(Map<String, Object>) json.get("execution");
+		assertEquals("TASK_COMPLETED", execution.get("event"));
+		assertEquals(25, ((Number) execution.get("processedRows")).longValue());
+
+		listener.onJobCompleted(new BulkMigrationJobResult(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskResult("customers",
+						new ChunkedBulkMigrationResult(0, 25, 1, false)))));
+		json = new JsonConverter().fromJsonString(target.toFile(), Map.class);
+		final Map<String, Object> jobExecution =
+				(Map<String, Object>) json.get("execution");
+		assertEquals("JOB_COMPLETED", jobExecution.get("event"));
+		assertNull(jobExecution.get("taskId"));
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	void jobListenerCanContinueAfterObservableReportFailure() {
 		final var delegate = new InMemoryBulkMigrationCheckpointStore();
 		final var failing = new AtomicBoolean(true);
@@ -217,6 +242,13 @@ class BulkMigrationOperationalReportTest {
 		listener.onTaskStarted("customers", 0, 1);
 		assertNull(listener.getLastFailure());
 		assertTrue(directory.resolve("best-effort.json").toFile().isFile());
+		listener.onTaskFailed("customers", new java.sql.SQLException("write failed"), 0, 1);
+		final Map<String, Object> failedJson = new JsonConverter().fromJsonString(
+				directory.resolve("best-effort.json").toFile(), Map.class);
+		final Map<String, Object> execution =
+				(Map<String, Object>) failedJson.get("execution");
+		assertEquals("TASK_FAILED", execution.get("event"));
+		assertEquals("write failed", execution.get("failureMessage"));
 
 		failing.set(true);
 		final var strict = new BulkMigrationOperationalReportJobListener(plan,

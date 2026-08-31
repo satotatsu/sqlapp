@@ -631,3 +631,13 @@ failure to the configured consumer and `getLastFailure()`; a later successful
 publication clears that value. In strict mode, failures raised while reporting
 an existing task failure or pause are retained by the executor as suppressed
 listener failures.
+
+The report's `execution` object distinguishes job-level `JOB_STARTED`,
+`JOB_COMPLETED`, `JOB_FAILED`, and `JOB_PAUSED` as well as the corresponding
+task events, even when their durable checkpoint state is otherwise identical.
+It contains the applicable task ID, event time, known processed-row count, and
+bounded failure details. Event task IDs are validated against the plan before
+JSON is written. `JOB_COMPLETED` is emitted only after lifecycle post-processing
+succeeds. Job completion-listener failure is propagated after completion and
+does not invoke lifecycle restoration; failure and pause notifications occur
+after restoration has been attempted.
