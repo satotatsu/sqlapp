@@ -573,6 +573,13 @@ is rolled back before the same rows are retried. FILE checkpoint mode is
 rejected when retries are enabled because a partially successful INSERT cannot
 be replayed safely in general.
 
+After all rows are durable, the executor persists a final checkpoint with
+`complete=true`. A retryable failure of that final DATABASE-checkpoint
+transaction is retried with the same bounded backoff without replaying any
+data rows. `onCompletionCheckpointRetry` reports this separately from a chunk
+retry. Nontransactional FILE checkpoint writes are still never retried
+automatically.
+
 For cooperative shutdown, a chunk listener can return `true` from
 `pauseAfterChunk`. The executor then throws
 `ChunkedBulkMigrationPausedException` only after the chunk-completed event and

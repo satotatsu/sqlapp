@@ -22,6 +22,12 @@ public interface ChunkedBulkMigrationListener {
 			final long backoffMillis) {
 	}
 
+	/** Reports a retry of the final complete-checkpoint transaction. */
+	default void onCompletionCheckpointRetry(final String migrationId,
+			final SQLException cause, final int retryNumber,
+			final long backoffMillis) {
+	}
+
 	/** Requests a safe pause after this completed chunk. */
 	default boolean pauseAfterChunk(final ChunkedBulkMigrationProgress progress) {
 		return false;

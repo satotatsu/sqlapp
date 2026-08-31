@@ -199,16 +199,8 @@ public final class ChunkedBulkMigrationExecutor {
 			}
 			final BulkMigrationCheckpoint complete = checkpoint.toBuilder().complete(true).build();
 			if (transactional) {
-				targetConnection.setAutoCommit(false);
-				try {
-					checkpointStore.save(complete);
-					targetConnection.commit();
-				} catch (SQLException | RuntimeException e) {
-					rollback(targetConnection, e);
-					throw e;
-				} finally {
-					targetConnection.setAutoCommit(true);
-				}
+				saveCompletionWithRetry(targetConnection, checkpointStore, complete,
+						options, listener);
 			} else {
 				checkpointStore.save(complete);
 			}
@@ -216,6 +208,38 @@ public final class ChunkedBulkMigrationExecutor {
 					chunks, false);
 		} finally {
 			close(iterator);
+		}
+	}
+
+	private static void saveCompletionWithRetry(final Connection connection,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final BulkMigrationCheckpoint complete,
+			final ChunkedBulkMigrationOption options,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		int retries = 0;
+		while (true) {
+			connection.setAutoCommit(false);
+			try {
+				checkpointStore.save(complete);
+				connection.commit();
+				return;
+			} catch (SQLException failure) {
+				rollback(connection, failure);
+				final BulkMigrationRetryOption retry = options.getRetryOption();
+				if (!retry.shouldRetry(failure, retries)) {
+					throw failure;
+				}
+				retries++;
+				final long backoff = retry.backoffMillis(retries);
+				listener.onCompletionCheckpointRetry(options.getMigrationId(), failure,
+						retries, backoff);
+				sleepBeforeRetry(backoff, failure);
+			} catch (RuntimeException failure) {
+				rollback(connection, failure);
+				throw failure;
+			} finally {
+				connection.setAutoCommit(true);
+			}
 		}
 	}
 
@@ -240,18 +264,24 @@ public final class ChunkedBulkMigrationExecutor {
 				retries++;
 				final long backoff = retry.backoffMillis(retries);
 				listener.onChunkRetry(progress, failure, retries, backoff);
-				if (backoff > 0) {
-					try {
-						Thread.sleep(backoff);
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						final SQLException interrupted = new SQLException(
-								"Interrupted during migration retry backoff", e);
-						interrupted.addSuppressed(failure);
-						throw interrupted;
-					}
-				}
+				sleepBeforeRetry(backoff, failure);
 			}
+		}
+	}
+
+	private static void sleepBeforeRetry(final long backoff,
+			final SQLException failure) throws SQLException {
+		if (backoff <= 0) {
+			return;
+		}
+		try {
+			Thread.sleep(backoff);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			final SQLException interrupted = new SQLException(
+					"Interrupted during migration retry backoff", e);
+			interrupted.addSuppressed(failure);
+			throw interrupted;
 		}
 	}
 

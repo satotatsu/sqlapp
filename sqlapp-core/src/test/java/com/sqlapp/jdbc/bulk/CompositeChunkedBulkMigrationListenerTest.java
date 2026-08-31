@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.SQLException;
 
 import org.junit.jupiter.api.Test;
 
@@ -20,10 +21,13 @@ class CompositeChunkedBulkMigrationListenerTest {
 
 		composite.onChunkStarted(progress);
 		composite.onChunkCompleted(progress);
+		composite.onCompletionCheckpointRetry("migration", new SQLException("transient"),
+				1, 10);
 		assertTrue(composite.pauseAfterChunk(progress));
 
 		assertEquals(List.of("start-first", "start-second", "complete-first",
-				"complete-second", "pause-first", "pause-second"), events);
+				"complete-second", "completion-retry-first", "completion-retry-second",
+				"pause-first", "pause-second"), events);
 	}
 
 	private static ChunkedBulkMigrationListener listener(final String name,
@@ -37,6 +41,12 @@ class CompositeChunkedBulkMigrationListenerTest {
 			@Override
 			public void onChunkCompleted(ChunkedBulkMigrationProgress progress) {
 				events.add("complete-" + name);
+			}
+
+			@Override
+			public void onCompletionCheckpointRetry(String migrationId,
+					SQLException cause, int retryNumber, long backoffMillis) {
+				events.add("completion-retry-" + name);
 			}
 
 			@Override

@@ -96,6 +96,45 @@ class ChunkedBulkMigrationTest {
 	}
 
 	@Test
+	void retriesOnlyTheFinalCompleteCheckpointWithoutReplayingRows() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE RETRY_COMPLETE (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("RETRY_COMPLETE");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId("retry-complete").sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(1)
+					.retryOption(BulkMigrationRetryOption.builder().maxRetries(1)
+							.initialBackoffMillis(0).maxBackoffMillis(0).build())
+					.build();
+			final var delegate = new JdbcBulkMigrationCheckpointStore(connection,
+					option.getCheckpointTableName());
+			final var store = new FailFirstCompleteSaveTransientStore(delegate, connection);
+			final List<Integer> retries = new ArrayList<>();
+			final var listener = new ChunkedBulkMigrationListener() {
+				@Override
+				public void onCompletionCheckpointRetry(String migrationId,
+						SQLException cause, int retryNumber, long backoffMillis) {
+					assertEquals("retry-complete", migrationId);
+					retries.add(retryNumber);
+				}
+			};
+
+			final var result = ChunkedBulkMigrationExecutor.execute(connection, source,
+					option, store, listener);
+
+			assertEquals(1, result.getProcessedRows());
+			assertEquals(List.of(1), retries);
+			try (var rs = statement.executeQuery("SELECT COUNT(*) FROM RETRY_COMPLETE")) {
+				rs.next();
+				assertEquals(1, rs.getInt(1));
+			}
+			assertTrue(delegate.load("retry-complete").orElseThrow().isComplete());
+		}
+	}
+
+	@Test
 	void appliesDuplicateSelectionAcrossChunkBoundaries() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 				var statement = connection.createStatement()) {
@@ -1261,6 +1300,45 @@ class ChunkedBulkMigrationTest {
 			if (!failed) {
 				failed = true;
 				throw new SQLTransientException("retry once");
+			}
+			delegate.save(checkpoint);
+		}
+
+		@Override
+		public void delete(final String migrationId) throws SQLException {
+			delegate.delete(migrationId);
+		}
+	}
+
+	private static final class FailFirstCompleteSaveTransientStore
+			implements TransactionalBulkMigrationCheckpointStore {
+		private final BulkMigrationCheckpointStore delegate;
+		private final java.sql.Connection connection;
+		private boolean failed;
+
+		private FailFirstCompleteSaveTransientStore(
+				final BulkMigrationCheckpointStore delegate,
+				final java.sql.Connection connection) {
+			this.delegate = delegate;
+			this.connection = connection;
+		}
+
+		@Override
+		public boolean participatesIn(final java.sql.Connection candidate) {
+			return connection == candidate;
+		}
+
+		@Override
+		public Optional<BulkMigrationCheckpoint> load(final String migrationId)
+				throws SQLException {
+			return delegate.load(migrationId);
+		}
+
+		@Override
+		public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
+			if (checkpoint.isComplete() && !failed) {
+				failed = true;
+				throw new SQLTransientException("retry completion once");
 			}
 			delegate.save(checkpoint);
 		}

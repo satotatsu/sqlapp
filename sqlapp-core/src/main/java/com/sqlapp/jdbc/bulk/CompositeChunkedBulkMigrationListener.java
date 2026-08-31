@@ -51,6 +51,14 @@ public final class CompositeChunkedBulkMigrationListener
 	}
 
 	@Override
+	public void onCompletionCheckpointRetry(final String migrationId,
+			final SQLException cause, final int retryNumber,
+			final long backoffMillis) {
+		listeners.forEach(listener -> listener.onCompletionCheckpointRetry(migrationId,
+				cause, retryNumber, backoffMillis));
+	}
+
+	@Override
 	public boolean pauseAfterChunk(final ChunkedBulkMigrationProgress progress) {
 		boolean pause = false;
 		for (final ChunkedBulkMigrationListener listener : listeners) {
