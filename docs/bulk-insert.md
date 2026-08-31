@@ -675,6 +675,12 @@ durably completed chunk is never replayed merely because its post-chunk renewal
 failed. Configure the lease duration above the maximum expected duration of a
 single chunk because renewal occurs at chunk boundaries rather than on a
 background thread.
+`JdbcBulkMigrationJobLeaseStore` is the multi-process default building block.
+It creates its control table through the dialect's Schema SQL factory and runs
+each read-modify-write operation at `TRANSACTION_SERIALIZABLE`, without
+handwritten vendor DML. Give it a dedicated auto-commit connection: the store
+temporarily owns that connection's transaction and isolation settings and must
+not share the data-writing connection used by the chunk executor.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
