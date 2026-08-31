@@ -29,6 +29,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 public final class JdbcBulkMigrationJobLeaseStore
 		implements BulkMigrationJobLeaseStore {
 	public static final String DEFAULT_TABLE_NAME = "sqlapp_bulk_job_lease";
+	private static final int SERIALIZATION_RETRY_LIMIT = 3;
 
 	private final Connection connection;
 	private final String rawTableName;
@@ -139,6 +140,20 @@ public final class JdbcBulkMigrationJobLeaseStore
 	}
 
 	private <T> T transaction(final SqlCallable<T> callable) throws SQLException {
+		for (int attempt = 0;; attempt++) {
+			try {
+				return transactionOnce(callable);
+			} catch (SQLException e) {
+				if (attempt >= SERIALIZATION_RETRY_LIMIT
+						|| !isSerializationFailure(e)) {
+					throw e;
+				}
+			}
+		}
+	}
+
+	private <T> T transactionOnce(final SqlCallable<T> callable)
+			throws SQLException {
 		if (!connection.getAutoCommit()) {
 			throw new IllegalStateException(
 					"JDBC lease store requires a dedicated auto-commit connection");
@@ -165,6 +180,17 @@ public final class JdbcBulkMigrationJobLeaseStore
 			restoreConnection(isolation, e);
 			throw e;
 		}
+	}
+
+	private static boolean isSerializationFailure(final SQLException failure) {
+		for (SQLException current = failure; current != null;
+				current = current.getNextException()) {
+			if ("40001".equals(current.getSQLState())
+					|| current.getErrorCode() == 8177) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void restoreConnection(final int isolation, final Throwable failure)

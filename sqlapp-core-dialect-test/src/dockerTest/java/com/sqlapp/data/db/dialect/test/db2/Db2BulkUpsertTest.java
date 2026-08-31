@@ -33,6 +33,14 @@ class Db2BulkUpsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = DB2.createConnection("");
+				Connection second = DB2.createConnection("")) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
 			throws Exception {
 		try (Connection connection = DB2.createConnection("");

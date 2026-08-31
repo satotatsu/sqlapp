@@ -43,6 +43,14 @@ class OracleBulkUpsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = ORACLE.createConnection("");
+				Connection second = ORACLE.createConnection("")) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
 			@TempDir final Path checkpointDirectory) throws Exception {
 		try (Connection connection = ORACLE.createConnection("");
