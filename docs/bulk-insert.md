@@ -610,3 +610,13 @@ maintenance. Consumers should check `formatVersion` before relying on fields.
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
 matching status programmatically.
+
+For a running multi-table job, pass a
+`BulkMigrationOperationalReportJobListener` to
+`BulkMigrationJobExecutor.executePlan`. It reloads the explicit checkpoint
+stores and atomically refreshes the same report at task start, completion,
+failure, and cooperative pause boundaries. Optional suppliers can attach the
+latest durable maintenance state and `BulkMigrationProgressTracker` snapshot.
+The listener follows the normal synchronous listener contract: a report read
+or write failure is not hidden and can abort a start/completion callback; on a
+task failure or pause it is retained as a suppressed listener failure.

@@ -33,6 +33,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 import com.sqlapp.jdbc.bulk.BulkMigrationProgressSnapshot;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 import com.sqlapp.util.JsonConverter;
 
 class BulkMigrationOperationalReportTest {
@@ -149,14 +150,48 @@ class BulkMigrationOperationalReportTest {
 				new GenerateBulkMigrationOperationalReportCommand()::run);
 	}
 
+	@Test
+	@SuppressWarnings("unchecked")
+	void jobListenerRefreshesReportFromDurableCheckpointState() throws Exception {
+		final var store = new InMemoryBulkMigrationCheckpointStore();
+		final BulkMigrationJobPlan plan = plan(store);
+		final Path target = directory.resolve("live-status.json");
+		final var listener = new BulkMigrationOperationalReportJobListener(plan, target);
+
+		listener.onTaskStarted("customers", 0, 1);
+		Map<String, Object> json = new JsonConverter().fromJsonString(target.toFile(), Map.class);
+		List<Map<String, Object>> tasks = (List<Map<String, Object>>) json.get("tasks");
+		assertEquals("NOT_STARTED", tasks.get(0).get("state"));
+
+		store.save(BulkMigrationCheckpoint.builder().migrationId("顧客移行")
+				.sourceFingerprint("source").targetFingerprint("target")
+				.processedRows(25).completedChunks(1).chunkSize(10_000)
+				.lastChunkHash("durable-hash").complete(true).build());
+		listener.onTaskCompleted("customers", null, 0, 1);
+
+		json = new JsonConverter().fromJsonString(target.toFile(), Map.class);
+		tasks = (List<Map<String, Object>>) json.get("tasks");
+		assertEquals("COMPLETE", tasks.get(0).get("state"));
+		assertEquals(25, ((Number) json.get("processedRows")).longValue());
+	}
+
 	private static BulkMigrationJobPlan plan() {
+		return plan(null);
+	}
+
+	private static BulkMigrationJobPlan plan(
+			final InMemoryBulkMigrationCheckpointStore checkpointStore) {
 		final Table table = new Table("CUSTOMERS");
 		table.getColumns().add(new Column("ID"));
 		table.setPrimaryKey("PK_CUSTOMERS", table.getColumns().get("ID"));
-		final var task = BulkMigrationJobTask.builder().taskId("customers")
+		final var taskBuilder = BulkMigrationJobTask.builder().taskId("customers")
 				.sourceTable(table).options(ChunkedBulkMigrationOption.builder()
 						.migrationId("顧客移行").sourceFingerprint("source")
-						.targetFingerprint("target").build()).build();
+						.targetFingerprint("target").build());
+		if (checkpointStore != null) {
+			taskBuilder.checkpointStore(checkpointStore);
+		}
+		final var task = taskBuilder.build();
 		final BulkMigrationJobLifecycle lifecycle = new BulkMigrationJobLifecycle() {
 			@Override
 			public String getConfigurationFingerprint() {
