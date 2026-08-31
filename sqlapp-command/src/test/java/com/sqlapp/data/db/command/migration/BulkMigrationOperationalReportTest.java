@@ -160,6 +160,52 @@ class BulkMigrationOperationalReportTest {
 	}
 
 	@Test
+	void conservativelyAssessesResumeReadiness() {
+		final BulkMigrationJobPlan plan = plan();
+		final var builder = new BulkMigrationOperationalReportBuilder(
+				Clock.fixed(Instant.parse("2026-08-31T11:00:00Z"), ZoneOffset.UTC));
+		final var notStarted = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final var report = builder.build(plan, notStarted, null, null);
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				BulkMigrationOperationalReportResumeAssessor.assess(report));
+
+		final var started = copyWithExecution(report,
+				new BulkMigrationOperationalReport.Execution("JOB_STARTED", null,
+						report.generatedAt(), null, null, null));
+		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+				BulkMigrationOperationalReportResumeAssessor.assess(started));
+
+		final var prepared = builder.build(plan, notStarted,
+				new BulkMigrationMaintenanceState(plan.getFingerprint(),
+						BulkMigrationMaintenanceStatus.PREPARED, report.generatedAt(), null),
+				null);
+		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
+				BulkMigrationOperationalReportResumeAssessor.assess(prepared));
+
+		final var incompatible = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.INCOMPATIBLE, null)));
+		assertEquals(BulkMigrationResumeReadiness.INCOMPATIBLE,
+				BulkMigrationOperationalReportResumeAssessor.assess(
+						builder.build(plan, incompatible, null, null)));
+
+		final var complete = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.COMPLETE, null)));
+		final var completeReport = builder.build(plan, complete, null, null);
+		assertEquals(BulkMigrationResumeReadiness.COMPLETE,
+				BulkMigrationOperationalReportResumeAssessor.assess(completeReport));
+
+		final Path file = directory.resolve("resume-assessment.json");
+		final var io = new BulkMigrationOperationalReportIO();
+		io.write(file, started);
+		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+				io.assessResume(file, plan.getFingerprint()));
+	}
+
+	@Test
 	void rejectsStatusAndMaintenanceFromAnotherPlan() {
 		final BulkMigrationJobPlan plan = plan();
 		final BulkMigrationJobStatus wrongStatus = new BulkMigrationJobStatus("other",
@@ -382,6 +428,16 @@ class BulkMigrationOperationalReportTest {
 				source.processedRows(), source.completedTasks(), tasks.size(), tasks,
 				source.operations(), source.maintenance(), source.progress(),
 				progressByMigration, source.execution());
+	}
+
+	private static BulkMigrationOperationalReport copyWithExecution(
+			final BulkMigrationOperationalReport source,
+			final BulkMigrationOperationalReport.Execution execution) {
+		return new BulkMigrationOperationalReport(source.formatVersion(),
+				source.generatedAt(), source.planFingerprint(), source.compatible(),
+				source.processedRows(), source.completedTasks(), source.totalTasks(),
+				source.tasks(), source.operations(), source.maintenance(), source.progress(),
+				source.progressByMigration(), execution);
 	}
 
 	private static BulkMigrationJobPlan plan(

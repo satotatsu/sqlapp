@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 import com.sqlapp.util.JsonConverter;
 
 /** Atomically writes bulk migration operational reports as UTF-8 JSON. */
@@ -54,6 +56,12 @@ public final class BulkMigrationOperationalReportIO {
 			throw new CommandException("Bulk migration report plan fingerprint mismatch");
 		}
 		return report;
+	}
+
+	public BulkMigrationResumeReadiness assessResume(final Path file,
+			final String expectedPlanFingerprint) {
+		return BulkMigrationOperationalReportResumeAssessor.assess(
+				read(file, expectedPlanFingerprint));
 	}
 
 	public void write(final Path file, final BulkMigrationOperationalReport report) {
@@ -118,6 +126,10 @@ public final class BulkMigrationOperationalReportIO {
 		final Set<String> taskIds = new HashSet<>();
 		final Set<String> migrationIds = new HashSet<>();
 		for (BulkMigrationOperationalReport.Task task : report.tasks()) {
+			if (!knownTaskState(task.state())) {
+				throw new CommandException(
+						"Bulk migration report contains an unknown task state");
+			}
 			if (!taskIds.add(task.taskId()) || !migrationIds.add(task.migrationId())) {
 				throw new CommandException(
 						"Bulk migration report contains duplicate task identities");
@@ -142,6 +154,29 @@ public final class BulkMigrationOperationalReportIO {
 			throw new CommandException(
 					"Bulk migration report current progress migrationId mismatch");
 		}
+		if (report.maintenance() != null
+				&& !knownMaintenanceStatus(report.maintenance().status())) {
+			throw new CommandException(
+					"Bulk migration report contains an unknown maintenance status");
+		}
 		return report;
+	}
+
+	private static boolean knownTaskState(final String state) {
+		try {
+			BulkMigrationJobTaskState.valueOf(state);
+			return true;
+		} catch (IllegalArgumentException | NullPointerException e) {
+			return false;
+		}
+	}
+
+	private static boolean knownMaintenanceStatus(final String status) {
+		try {
+			BulkMigrationMaintenanceStatus.valueOf(status);
+			return true;
+		} catch (IllegalArgumentException | NullPointerException e) {
+			return false;
+		}
 	}
 }

@@ -652,6 +652,12 @@ successfully read report safe to use for monitoring and resume decisions;
 invalid or newer reports must be handled explicitly rather than interpreted
 partially. The overload accepting an expected plan fingerprint additionally
 rejects a valid report produced for a different migration plan.
+`assessResume` converts a validated report into a conservative operational
+decision: `COMPLETE`, `RESUMABLE`, `POSSIBLY_RUNNING`, `RECOVERY_REQUIRED`, or
+`INCOMPATIBLE`. Started or mid-task reports are deliberately not declared safe
+to resume because the JSON file alone cannot prove that another worker has
+stopped. An unfinished durable maintenance phase takes precedence and requires
+recovery before ordinary resume.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
