@@ -58,6 +58,16 @@ class SqlServerBulkUpsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(),
+				SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				Connection second = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(),
+						SQL_SERVER.getUsername(), SQL_SERVER.getPassword())) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
 		try (Connection connection = DriverManager.getConnection(
 				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());

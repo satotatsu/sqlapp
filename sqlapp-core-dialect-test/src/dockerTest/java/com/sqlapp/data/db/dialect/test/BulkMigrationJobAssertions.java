@@ -2,10 +2,13 @@
 package com.sqlapp.data.db.dialect.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -22,10 +25,44 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 
 /** Shared real-database assertions for dependency-ordered migration jobs. */
 public final class BulkMigrationJobAssertions {
 	private BulkMigrationJobAssertions() {
+	}
+
+	/**
+	 * Verifies that a JDBC-backed job lease fences owners across independent
+	 * database connections and permits takeover only after expiry.
+	 */
+	public static void assertJdbcLeaseOwnerFencing(final Connection firstConnection,
+			final Connection secondConnection) throws SQLException {
+		final String suffix = UUID.randomUUID().toString().replace("-", "");
+		final String tableName = "SQLAPP_BJL_" + suffix.substring(0, 12);
+		final String fingerprint = "plan-" + suffix;
+		final Instant acquiredAt = Instant.parse("2026-01-01T00:00:00Z");
+		final Duration duration = Duration.ofMinutes(5);
+		final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection,
+				tableName);
+		final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection,
+				tableName);
+		final var firstLease = new BulkMigrationJobLease(fingerprint,
+				"owner-first", acquiredAt.plus(duration));
+		assertTrue(first.tryAcquire(firstLease, acquiredAt));
+		assertFalse(second.tryAcquire(new BulkMigrationJobLease(fingerprint,
+				"owner-second", acquiredAt.plus(duration).plusSeconds(1)),
+				acquiredAt.plusSeconds(1)));
+
+		final Instant takeoverAt = acquiredAt.plus(duration).plusSeconds(1);
+		final var secondLease = new BulkMigrationJobLease(fingerprint,
+				"owner-second", takeoverAt.plus(duration));
+		assertTrue(second.tryAcquire(secondLease, takeoverAt));
+		first.release(fingerprint, "owner-first");
+		assertEquals("owner-second", first.load(fingerprint).orElseThrow().ownerId());
+		second.release(fingerprint, "owner-second");
+		assertTrue(first.load(fingerprint).isEmpty());
 	}
 
 	public static void assertDependencyOrderAndAggregatedStatus(

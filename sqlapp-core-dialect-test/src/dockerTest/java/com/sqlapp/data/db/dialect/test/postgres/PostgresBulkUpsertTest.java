@@ -54,6 +54,14 @@ class PostgresBulkUpsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = POSTGRES.createConnection("");
+				Connection second = POSTGRES.createConnection("")) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
 		try (Connection connection = POSTGRES.createConnection("");
 				var statement = connection.createStatement()) {
