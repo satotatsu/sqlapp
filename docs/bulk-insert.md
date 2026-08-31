@@ -582,3 +582,17 @@ the paused task, previously completed task results, and chunk progress; the job
 listener also receives `onTaskPaused`. Rerun with the same migration IDs and
 checkpoint stores to continue. A pause is not reported as a chunk or SQL
 failure.
+
+`BulkMigrationOperationalReportBuilder` combines the immutable dry-run plan,
+read-only checkpoint status, optional durable maintenance state, and optional
+progress/ETA snapshot into one versioned operational report. The report keeps
+the plan fingerprint, ordered task and lifecycle-operation descriptions,
+table/mode/chunk settings, checkpoint fingerprints and resume position so an
+operator can identify both the approved plan and its durable progress. It
+rejects status, checkpoints, maintenance state, or progress belonging to a
+different plan or migration ID.
+
+`BulkMigrationOperationalReportIO` writes that snapshot as indented UTF-8 JSON
+using atomic replacement when supported by the file system. The report is
+read-only: creating it does not execute SQL, alter checkpoints, or recover
+maintenance. Consumers should check `formatVersion` before relying on fields.
