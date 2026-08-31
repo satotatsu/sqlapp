@@ -83,6 +83,24 @@ public final class BulkMigrationJobExecutor {
 		return result;
 	}
 
+	public static BulkMigrationJobResult executePlan(final Connection targetConnection,
+			final BulkMigrationJobPlan plan,
+			final BulkMigrationJobListener listener,
+			final ChunkedBulkMigrationListener commonChunkListener,
+			final BulkMigrationJobLeaseManager leaseManager) throws SQLException {
+		Objects.requireNonNull(leaseManager, "leaseManager");
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		try (var lease = leaseManager.acquire(plan.getFingerprint())) {
+			final ChunkedBulkMigrationListener renewing =
+					new BulkMigrationJobLeaseChunkListener(lease);
+			final ChunkedBulkMigrationListener effective =
+					commonChunkListener == ChunkedBulkMigrationListener.NO_OP ? renewing
+							: CompositeChunkedBulkMigrationListener.of(renewing,
+									commonChunkListener);
+			return executePlan(targetConnection, plan, listener, effective);
+		}
+	}
+
 	private static BulkMigrationJobResult executeTasks(final Connection targetConnection,
 			final BulkMigrationJobPlan plan, final BulkMigrationJobListener listener,
 			final ChunkedBulkMigrationListener commonChunkListener)

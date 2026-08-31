@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -56,6 +57,31 @@ class BulkMigrationJobExecutorTest {
 		assertThrows(SQLException.class,
 				() -> BulkMigrationJobExecutor.executePlan(connection(), failing, listener));
 		assertEquals(List.of("started:0", "failed:prepare failed"), events);
+	}
+
+	@Test
+	void leaseIsHeldBeforeNotificationAndReleasedAfterExecution() throws Exception {
+		final var store = new InMemoryBulkMigrationJobLeaseStore();
+		final var manager = new BulkMigrationJobLeaseManager(store, "owner-1",
+				Duration.ofMinutes(1));
+		final var competitor = new BulkMigrationJobLeaseManager(store, "owner-2",
+				Duration.ofMinutes(1));
+		final var plan = BulkMigrationJobPlanner.plan(List.of());
+		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onJobStarted(String planFingerprint, int taskCount) {
+				assertThrows(BulkMigrationJobLeaseUnavailableException.class,
+						() -> competitor.acquire(planFingerprint));
+			}
+		};
+
+		BulkMigrationJobExecutor.executePlan(connection(), plan, listener,
+				ChunkedBulkMigrationListener.NO_OP, manager);
+
+		assertTrue(store.load(plan.getFingerprint()).isEmpty());
+		try (var lease = competitor.acquire(plan.getFingerprint())) {
+			assertEquals("owner-2", lease.getLease().ownerId());
+		}
 	}
 
 	@Test

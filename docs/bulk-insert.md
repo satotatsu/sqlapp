@@ -667,6 +667,14 @@ Only an absent or expired lease may be acquired; an expired or replaced lease
 cannot be renewed or released by its former owner. The process-local
 `InMemoryBulkMigrationJobLeaseStore` is intended for tests and single-process
 execution, not coordination between application instances.
+The lease-aware `BulkMigrationJobExecutor.executePlan` overload acquires the
+plan lease before publishing `JOB_STARTED`, renews it before and after every
+chunk, and owner-conditionally releases it after success, failure, or pause.
+Failure to renew stops the job with `BulkMigrationJobLeaseLostException`; a
+durably completed chunk is never replayed merely because its post-chunk renewal
+failed. Configure the lease duration above the maximum expected duration of a
+single chunk because renewal occurs at chunk boundaries rather than on a
+background thread.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and

@@ -10,6 +10,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -64,5 +66,43 @@ class BulkMigrationJobLeaseManagerTest {
 		handle.close();
 		assertTrue(store.load("plan").isEmpty());
 		assertThrows(IllegalStateException.class, handle::renew);
+	}
+
+	@Test
+	void chunkListenerRenewsBeforeAndAfterEachChunk() throws Exception {
+		final var delegate = new InMemoryBulkMigrationJobLeaseStore();
+		final var renewals = new AtomicInteger();
+		final BulkMigrationJobLeaseStore store = new BulkMigrationJobLeaseStore() {
+			@Override
+			public Optional<BulkMigrationJobLease> load(String planFingerprint) {
+				return delegate.load(planFingerprint);
+			}
+
+			@Override
+			public boolean tryAcquire(BulkMigrationJobLease lease, Instant now) {
+				return delegate.tryAcquire(lease, now);
+			}
+
+			@Override
+			public boolean renew(BulkMigrationJobLease lease, Instant now) {
+				renewals.incrementAndGet();
+				return delegate.renew(lease, now);
+			}
+
+			@Override
+			public void release(String planFingerprint, String ownerId) {
+				delegate.release(planFingerprint, ownerId);
+			}
+		};
+		final var manager = new BulkMigrationJobLeaseManager(store, "owner",
+				Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
+		try (var handle = manager.acquire("plan")) {
+			final var listener = new BulkMigrationJobLeaseChunkListener(handle);
+			final var progress = new ChunkedBulkMigrationProgress("migration", 0, 10,
+					0, 10);
+			listener.onChunkStarted(progress);
+			listener.onChunkCompleted(progress);
+		}
+		assertEquals(2, renewals.get());
 	}
 }
