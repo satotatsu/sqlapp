@@ -596,3 +596,7 @@ different plan or migration ID.
 using atomic replacement when supported by the file system. The report is
 read-only: creating it does not execute SQL, alter checkpoints, or recover
 maintenance. Consumers should check `formatVersion` before relying on fields.
+`GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
+command integrations. The Gradle plugin registers
+`generateBulkMigrationOperationalReport` for builds that assemble the plan and
+matching status programmatically.

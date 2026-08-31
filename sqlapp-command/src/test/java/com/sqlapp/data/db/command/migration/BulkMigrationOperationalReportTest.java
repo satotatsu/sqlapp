@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -125,6 +126,27 @@ class BulkMigrationOperationalReportTest {
 				Duration.ZERO, 0, null, null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, foreignProgress));
+	}
+
+	@Test
+	void commandWritesReportAndValidatesRequiredValues() {
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final Path target = directory.resolve("command-report.json");
+		final var command = new GenerateBulkMigrationOperationalReportCommand();
+		command.setPlan(plan);
+		command.setStatus(status);
+		command.setTargetFile(target.toFile());
+
+		command.run();
+
+		assertTrue(target.toFile().isFile());
+		assertNotNull(new JsonConverter().fromJsonString(target.toFile(), Map.class)
+				.get("generatedAt"));
+		assertThrows(RuntimeException.class,
+				new GenerateBulkMigrationOperationalReportCommand()::run);
 	}
 
 	private static BulkMigrationJobPlan plan() {

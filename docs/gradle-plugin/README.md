@@ -31,6 +31,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migration` | Apply versioned database migrations |
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
+| Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
 | Normalization | `columnRuleTransform` | Apply YAML-based column type and naming rules |
@@ -44,6 +45,17 @@ Some public task classes, such as data import/export, data generation, format
 conversion, SQL execution, and migration-down tasks, are not registered under
 a fixed name. A build may register those task types with a project-specific
 name. See the runnable examples for their configuration.
+
+### `generateBulkMigrationOperationalReport`
+
+This task is intended for builds that assemble a `BulkMigrationJobPlan` in
+Java or a Gradle plugin. Set `plan` and its matching read-only
+`BulkMigrationJobStatus`, then set `targetFile`. `maintenanceState` and
+`progress` are optional. The task only writes a JSON snapshot; it does not run
+the migration, modify checkpoints, or recover maintenance. All complex values
+are programmatic properties rather than a second migration-plan file format,
+and the task is deliberately not build-cacheable because their stores can
+change outside Gradle.
 
 ## Choose a workflow
 
