@@ -687,6 +687,13 @@ in-process lock to avoid overlapping Java file locks, and atomic replacement of
 the separate lease state file. Lock files intentionally remain after release;
 the owner-conditioned lease state file is removed, while the stable lock path
 continues coordinating later executions.
+`BulkMigrationJobLeaseConfiguration.database(ownerId)` is the default built-in
+configuration and uses a five-minute lease in
+`sqlapp_bulk_job_lease`. `file(ownerId, directory)` explicitly selects the file
+store. `BulkMigrationJobLeaseManagerFactory` validates the mutually exclusive
+table/directory settings and creates the corresponding manager; FILE mode does
+not require a JDBC connection. Applications needing a custom store continue to
+construct `BulkMigrationJobLeaseManager` directly.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
