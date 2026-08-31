@@ -35,6 +35,14 @@ class MariadbBulkInsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = MARIADB.createConnection("?allowLocalInfile=true");
+				Connection second = MARIADB.createConnection("?allowLocalInfile=true")) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
 		try (Connection connection = MARIADB.createConnection("?allowLocalInfile=true");
 				var statement = connection.createStatement()) {
