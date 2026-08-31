@@ -712,6 +712,11 @@ renewal failure is retained and raised as `BulkMigrationJobLeaseLostException`
 at the next listener boundary; it is never silently converted into a successful
 renewal. Custom heartbeat intervals must be positive and shorter than the lease
 duration.
+Heartbeat health is also checked before job/task start and completion callbacks.
+In particular, lifecycle post-processing cannot publish `JOB_COMPLETED` after a
+background lease failure. Failure and pause callbacks deliberately bypass this
+forward-progress check so the original job outcome still reaches operational
+listeners and any lease error can remain secondary context.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and

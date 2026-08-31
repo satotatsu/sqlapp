@@ -6,12 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -140,6 +142,26 @@ class BulkMigrationJobLeaseManagerTest {
 				var heartbeat = handle.startHeartbeat(Duration.ofMillis(1))) {
 			assertTrue(renewal.await(1, TimeUnit.SECONDS));
 			assertThrows(BulkMigrationJobLeaseLostException.class, heartbeat::check);
+			final var completed = new AtomicBoolean();
+			final var failed = new AtomicBoolean();
+			final var listener = new BulkMigrationJobLeaseJobListener(heartbeat,
+					new BulkMigrationJobListener() {
+						@Override
+						public void onJobCompleted(BulkMigrationJobResult result) {
+							completed.set(true);
+						}
+
+						@Override
+						public void onJobFailed(String planFingerprint, Throwable cause) {
+							failed.set(true);
+						}
+					});
+			assertThrows(BulkMigrationJobLeaseLostException.class,
+					() -> listener.onJobCompleted(
+							new BulkMigrationJobResult("plan", java.util.List.of())));
+			assertFalse(completed.get());
+			listener.onJobFailed("plan", new SQLException("job failure"));
+			assertTrue(failed.get());
 		}
 	}
 

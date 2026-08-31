@@ -92,13 +92,15 @@ public final class BulkMigrationJobExecutor {
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
 		try (var lease = leaseManager.acquire(plan.getFingerprint())) {
 			try (var heartbeat = lease.startHeartbeat()) {
+				final BulkMigrationJobListener leaseListener =
+						new BulkMigrationJobLeaseJobListener(heartbeat, listener);
 				final ChunkedBulkMigrationListener renewing =
 						new BulkMigrationJobLeaseChunkListener(lease, heartbeat);
 				final ChunkedBulkMigrationListener effective =
 						commonChunkListener == ChunkedBulkMigrationListener.NO_OP ? renewing
 								: CompositeChunkedBulkMigrationListener.of(renewing,
 										commonChunkListener);
-				return executePlan(targetConnection, plan, listener, effective);
+				return executePlan(targetConnection, plan, leaseListener, effective);
 			}
 		}
 	}
