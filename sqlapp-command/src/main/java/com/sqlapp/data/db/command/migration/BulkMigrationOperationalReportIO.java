@@ -24,6 +24,23 @@ public final class BulkMigrationOperationalReportIO {
 		this.converter.setIndentOutput(true);
 	}
 
+	public BulkMigrationOperationalReport read(final Path file) {
+		Objects.requireNonNull(file, "file");
+		final Path absolute = file.toAbsolutePath();
+		if (!Files.isRegularFile(absolute)) {
+			throw new CommandException("Bulk migration report does not exist: " + absolute);
+		}
+		try {
+			return validate(converter.fromJsonString(absolute.toFile(),
+					BulkMigrationOperationalReport.class));
+		} catch (RuntimeException e) {
+			if (e instanceof CommandException commandException) {
+				throw commandException;
+			}
+			throw new CommandException("Failed to read bulk migration report: " + absolute, e);
+		}
+	}
+
 	public void write(final Path file, final BulkMigrationOperationalReport report) {
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(report, "report");
@@ -51,5 +68,38 @@ public final class BulkMigrationOperationalReportIO {
 				}
 			}
 		}
+	}
+
+	private static BulkMigrationOperationalReport validate(
+			final BulkMigrationOperationalReport report) {
+		if (report == null) {
+			throw new CommandException("Bulk migration report must not be null");
+		}
+		if (report.formatVersion()
+				!= BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION) {
+			throw new CommandException("Unsupported bulk migration report formatVersion: "
+					+ report.formatVersion());
+		}
+		if (report.generatedAt() == null || report.planFingerprint() == null
+				|| report.planFingerprint().isBlank()) {
+			throw new CommandException(
+					"Bulk migration report requires generatedAt and planFingerprint");
+		}
+		if (report.processedRows() < 0 || report.completedTasks() < 0
+				|| report.totalTasks() < 0 || report.completedTasks() > report.totalTasks()) {
+			throw new CommandException("Bulk migration report contains invalid aggregate counts");
+		}
+		if (report.tasks() == null || report.operations() == null
+				|| report.progressByMigration() == null
+				|| report.tasks().size() != report.totalTasks()) {
+			throw new CommandException(
+					"Bulk migration report contains invalid task or operation lists");
+		}
+		if (report.tasks().stream().anyMatch(task -> task == null || task.taskId() == null
+				|| task.taskId().isBlank() || task.migrationId() == null
+				|| task.migrationId().isBlank())) {
+			throw new CommandException("Bulk migration report contains an invalid task identity");
+		}
+		return report;
 	}
 }

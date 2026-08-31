@@ -98,6 +98,32 @@ class BulkMigrationOperationalReportTest {
 				(List<Map<String, Object>>) json.get("operations");
 		assertEquals("DISABLE_CONSTRAINTS", operations.get(0).get("id"));
 		assertEquals("BEFORE", operations.get(0).get("phase"));
+		assertEquals(report, new BulkMigrationOperationalReportIO().read(output));
+	}
+
+	@Test
+	void reportReaderRejectsMissingUnsupportedAndInconsistentReports() {
+		final var io = new BulkMigrationOperationalReportIO();
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.read(directory.resolve("missing.json")));
+
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final var report = new BulkMigrationOperationalReportBuilder().build(
+				plan, status, null, null);
+		final var unsupported = copyWith(report, 2, report.totalTasks());
+		final Path unsupportedFile = directory.resolve("unsupported.json");
+		io.write(unsupportedFile, unsupported);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.read(unsupportedFile));
+
+		final var inconsistent = copyWith(report, report.formatVersion(), 2);
+		final Path inconsistentFile = directory.resolve("inconsistent.json");
+		io.write(inconsistentFile, inconsistent);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.read(inconsistentFile));
 	}
 
 	@Test
@@ -302,6 +328,16 @@ class BulkMigrationOperationalReportTest {
 
 	private static BulkMigrationJobPlan plan() {
 		return plan(null);
+	}
+
+	private static BulkMigrationOperationalReport copyWith(
+			final BulkMigrationOperationalReport source, final int formatVersion,
+			final int totalTasks) {
+		return new BulkMigrationOperationalReport(formatVersion, source.generatedAt(),
+				source.planFingerprint(), source.compatible(), source.processedRows(),
+				source.completedTasks(), totalTasks, source.tasks(), source.operations(),
+				source.maintenance(), source.progress(), source.progressByMigration(),
+				source.execution());
 	}
 
 	private static BulkMigrationJobPlan plan(

@@ -643,7 +643,12 @@ different plan or migration ID.
 `BulkMigrationOperationalReportIO` writes that snapshot as indented UTF-8 JSON
 using atomic replacement when supported by the file system. The report is
 read-only: creating it does not execute SQL, alter checkpoints, or recover
-maintenance. Consumers should check `formatVersion` before relying on fields.
+maintenance. Its `read` operation provides the matching typed reader and
+strictly rejects missing files, unknown `formatVersion` values, absent required
+identity/list fields, and inconsistent aggregate task counts. This makes a
+successfully read report safe to use for monitoring and resume decisions;
+invalid or newer reports must be handled explicitly rather than interpreted
+partially.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
