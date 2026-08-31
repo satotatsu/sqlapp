@@ -648,7 +648,8 @@ strictly rejects missing files, unknown `formatVersion` values, absent required
 identity/list fields, and inconsistent aggregate task counts. This makes a
 successfully read report safe to use for monitoring and resume decisions;
 invalid or newer reports must be handled explicitly rather than interpreted
-partially.
+partially. The overload accepting an expected plan fingerprint additionally
+rejects a valid report produced for a different migration plan.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and

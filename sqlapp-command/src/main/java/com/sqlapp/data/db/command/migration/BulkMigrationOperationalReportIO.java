@@ -41,6 +41,19 @@ public final class BulkMigrationOperationalReportIO {
 		}
 	}
 
+	public BulkMigrationOperationalReport read(final Path file,
+			final String expectedPlanFingerprint) {
+		if (expectedPlanFingerprint == null || expectedPlanFingerprint.isBlank()) {
+			throw new IllegalArgumentException(
+					"expectedPlanFingerprint must not be empty");
+		}
+		final BulkMigrationOperationalReport report = read(file);
+		if (!expectedPlanFingerprint.equals(report.planFingerprint())) {
+			throw new CommandException("Bulk migration report plan fingerprint mismatch");
+		}
+		return report;
+	}
+
 	public void write(final Path file, final BulkMigrationOperationalReport report) {
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(report, "report");

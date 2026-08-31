@@ -99,6 +99,12 @@ class BulkMigrationOperationalReportTest {
 		assertEquals("DISABLE_CONSTRAINTS", operations.get(0).get("id"));
 		assertEquals("BEFORE", operations.get(0).get("phase"));
 		assertEquals(report, new BulkMigrationOperationalReportIO().read(output));
+		assertEquals(report, new BulkMigrationOperationalReportIO().read(
+				output, plan.getFingerprint()));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> new BulkMigrationOperationalReportIO().read(output, "other-plan"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReportIO().read(output, " "));
 	}
 
 	@Test
