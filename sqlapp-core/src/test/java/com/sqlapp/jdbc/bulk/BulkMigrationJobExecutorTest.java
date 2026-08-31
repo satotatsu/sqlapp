@@ -11,9 +11,13 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -82,6 +86,64 @@ class BulkMigrationJobExecutorTest {
 		try (var lease = competitor.acquire(plan.getFingerprint())) {
 			assertEquals("owner-2", lease.getLease().ownerId());
 		}
+	}
+
+	@Test
+	void heartbeatLossDuringLifecyclePreventsJobCompletionNotification()
+			throws Exception {
+		final var delegateStore = new InMemoryBulkMigrationJobLeaseStore();
+		final var renewalAttempted = new CountDownLatch(1);
+		final BulkMigrationJobLeaseStore failingStore =
+				new BulkMigrationJobLeaseStore() {
+			@Override
+			public Optional<BulkMigrationJobLease> load(String planFingerprint) {
+				return delegateStore.load(planFingerprint);
+			}
+
+			@Override
+			public boolean tryAcquire(BulkMigrationJobLease lease, Instant now) {
+				return delegateStore.tryAcquire(lease, now);
+			}
+
+			@Override
+			public boolean renew(BulkMigrationJobLease lease, Instant now) {
+				renewalAttempted.countDown();
+				return false;
+			}
+
+			@Override
+			public void release(String planFingerprint, String ownerId) {
+				delegateStore.release(planFingerprint, ownerId);
+			}
+		};
+		final var lifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public void after(Connection connection, BulkMigrationJobPlan plan,
+					BulkMigrationJobResult result) throws SQLException {
+				try {
+					assertTrue(renewalAttempted.await(1, TimeUnit.SECONDS));
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new SQLException(e);
+				}
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		final var manager = new BulkMigrationJobLeaseManager(failingStore, "owner",
+				Duration.ofMillis(30));
+		final var completed = new java.util.concurrent.atomic.AtomicBoolean();
+		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onJobCompleted(BulkMigrationJobResult result) {
+				completed.set(true);
+			}
+		};
+
+		assertThrows(BulkMigrationJobLeaseLostException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), plan, listener,
+						ChunkedBulkMigrationListener.NO_OP, manager));
+		assertFalse(completed.get());
+		assertTrue(delegateStore.load(plan.getFingerprint()).isEmpty());
 	}
 
 	@Test

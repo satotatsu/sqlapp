@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class BulkMigrationJobLeaseHeartbeat implements AutoCloseable {
 	private final ScheduledExecutorService executor;
 	private final AtomicReference<Throwable> failure = new AtomicReference<>();
+	private final Object renewalMonitor = new Object();
 
 	BulkMigrationJobLeaseHeartbeat(
 			final BulkMigrationJobLeaseManager.LeaseHandle handle,
@@ -24,22 +25,26 @@ public final class BulkMigrationJobLeaseHeartbeat implements AutoCloseable {
 						runnable));
 		final long intervalNanos = nanos(interval);
 		executor.scheduleWithFixedDelay(() -> {
-			if (failure.get() != null) {
-				return;
-			}
-			try {
-				handle.renew();
-			} catch (SQLException | RuntimeException e) {
-				failure.compareAndSet(null, e);
+			synchronized (renewalMonitor) {
+				if (failure.get() != null) {
+					return;
+				}
+				try {
+					handle.renew();
+				} catch (SQLException | RuntimeException e) {
+					failure.compareAndSet(null, e);
+				}
 			}
 		}, intervalNanos, intervalNanos, TimeUnit.NANOSECONDS);
 	}
 
 	public void check() {
-		final Throwable cause = failure.get();
-		if (cause != null) {
-			throw cause instanceof BulkMigrationJobLeaseLostException lost ? lost
-					: new BulkMigrationJobLeaseLostException(cause);
+		synchronized (renewalMonitor) {
+			final Throwable cause = failure.get();
+			if (cause != null) {
+				throw cause instanceof BulkMigrationJobLeaseLostException lost ? lost
+						: new BulkMigrationJobLeaseLostException(cause);
+			}
 		}
 	}
 

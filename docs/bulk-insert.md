@@ -717,6 +717,10 @@ In particular, lifecycle post-processing cannot publish `JOB_COMPLETED` after a
 background lease failure. Failure and pause callbacks deliberately bypass this
 forward-progress check so the original job outcome still reaches operational
 listeners and any lease error can remain secondary context.
+Heartbeat renewal and health inspection are serialized with each other. A job
+completion check therefore waits for an already-running renewal attempt to
+finish and cannot race past the small window between a store rejecting renewal
+and the heartbeat recording that rejection.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
