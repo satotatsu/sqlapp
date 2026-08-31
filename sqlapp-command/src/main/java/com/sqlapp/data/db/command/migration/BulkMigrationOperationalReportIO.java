@@ -6,12 +6,15 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 import com.sqlapp.util.JsonConverter;
 
@@ -62,6 +65,18 @@ public final class BulkMigrationOperationalReportIO {
 			final String expectedPlanFingerprint) {
 		return BulkMigrationOperationalReportResumeAssessor.assess(
 				read(file, expectedPlanFingerprint));
+	}
+
+	public BulkMigrationResumeReadiness assessResume(final Path file,
+			final String expectedPlanFingerprint,
+			final BulkMigrationJobLeaseStore leaseStore, final Instant now)
+			throws SQLException {
+		Objects.requireNonNull(leaseStore, "leaseStore");
+		Objects.requireNonNull(now, "now");
+		final BulkMigrationOperationalReport report = read(file,
+				expectedPlanFingerprint);
+		return BulkMigrationOperationalReportResumeAssessor.assess(report,
+				leaseStore.load(expectedPlanFingerprint).orElse(null), now);
 	}
 
 	public void write(final Path file, final BulkMigrationOperationalReport report) {

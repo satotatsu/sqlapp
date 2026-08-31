@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobOperation;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobOperationPhase;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
@@ -42,6 +43,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationProgressSnapshot;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationJobLeaseStore;
 import com.sqlapp.util.JsonConverter;
 
 class BulkMigrationOperationalReportTest {
@@ -197,12 +199,53 @@ class BulkMigrationOperationalReportTest {
 		final var completeReport = builder.build(plan, complete, null, null);
 		assertEquals(BulkMigrationResumeReadiness.COMPLETE,
 				BulkMigrationOperationalReportResumeAssessor.assess(completeReport));
+		final var completedTaskOnly = copyWithExecution(completeReport,
+				new BulkMigrationOperationalReport.Execution("TASK_COMPLETED", "customers",
+						completeReport.generatedAt(), 0L, null, null));
+		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+				BulkMigrationOperationalReportResumeAssessor.assess(completedTaskOnly));
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				BulkMigrationOperationalReportResumeAssessor.assess(completedTaskOnly,
+						null, completeReport.generatedAt()));
 
 		final Path file = directory.resolve("resume-assessment.json");
 		final var io = new BulkMigrationOperationalReportIO();
 		io.write(file, started);
 		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 				io.assessResume(file, plan.getFingerprint()));
+	}
+
+	@Test
+	void currentLeaseResolvesPossiblyRunningReport() throws Exception {
+		final Instant now = Instant.parse("2026-08-31T12:00:00Z");
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.IN_PROGRESS, null)));
+		final var execution = new BulkMigrationOperationalReport.Execution(
+				"TASK_STARTED", "customers", now.minusSeconds(10), 0L,
+				null, null);
+		final var report = new BulkMigrationOperationalReportBuilder(
+				Clock.fixed(now, ZoneOffset.UTC)).build(plan, status, null, null,
+				execution);
+		final Path file = directory.resolve("lease-aware-report.json");
+		final var io = new BulkMigrationOperationalReportIO();
+		io.write(file, report);
+		final var store = new InMemoryBulkMigrationJobLeaseStore();
+
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				io.assessResume(file, plan.getFingerprint(), store, now));
+		store.tryAcquire(new BulkMigrationJobLease(plan.getFingerprint(), "worker",
+				now.plusSeconds(30)), now);
+		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+				io.assessResume(file, plan.getFingerprint(), store, now));
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				io.assessResume(file, plan.getFingerprint(), store,
+						now.plusSeconds(30)));
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationOperationalReportResumeAssessor.assess(report,
+						new BulkMigrationJobLease("other", "worker", now.plusSeconds(1)),
+						now));
 	}
 
 	@Test

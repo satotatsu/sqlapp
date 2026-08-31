@@ -694,6 +694,17 @@ store. `BulkMigrationJobLeaseManagerFactory` validates the mutually exclusive
 table/directory settings and creates the corresponding manager; FILE mode does
 not require a JDBC connection. Applications needing a custom store continue to
 construct `BulkMigrationJobLeaseManager` directly.
+The lease-aware `assessResume` overload reads the current lease from either
+store and resolves a stale started report against a caller-supplied current
+time. A matching unexpired lease remains `POSSIBLY_RUNNING`; no lease or an
+expired lease becomes `RESUMABLE`. Incompatibility and unfinished maintenance
+still take precedence. The overload rejects a lease belonging to another plan,
+so a state-file mix-up cannot authorize resume.
+All task checkpoints being complete is not sufficient when the latest event is
+task-level: lifecycle post-processing may still be pending. With execution
+history present, only `JOB_COMPLETED` confirms `COMPLETE`; an expired lease
+after `TASK_COMPLETED` is therefore `RESUMABLE`, allowing lifecycle completion
+without replaying durable chunks.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
