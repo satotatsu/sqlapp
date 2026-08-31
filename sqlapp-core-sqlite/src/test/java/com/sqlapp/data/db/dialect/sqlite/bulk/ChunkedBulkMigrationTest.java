@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -38,6 +39,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
@@ -53,6 +55,44 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 class ChunkedBulkMigrationTest {
+	@Test
+	void retriesOnlyAfterRollingBackTheTransactionalChunk() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE RETRY_CHUNK (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final Table source = table("RETRY_CHUNK");
+			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
+			final var option = ChunkedBulkMigrationOption.builder()
+					.migrationId("retry-chunk").sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(1)
+					.retryOption(BulkMigrationRetryOption.builder().maxRetries(1)
+							.initialBackoffMillis(0).maxBackoffMillis(0).build())
+					.build();
+			final var delegate = new JdbcBulkMigrationCheckpointStore(connection,
+					option.getCheckpointTableName());
+			final var store = new FailFirstSaveTransientStore(delegate, connection);
+			final List<Integer> retries = new ArrayList<>();
+			final ChunkedBulkMigrationListener listener = new ChunkedBulkMigrationListener() {
+				@Override
+				public void onChunkRetry(ChunkedBulkMigrationProgress progress,
+						SQLException cause, int retryNumber, long backoffMillis) {
+					retries.add(retryNumber);
+				}
+			};
+
+			final var result = ChunkedBulkMigrationExecutor.execute(connection, source,
+					option, store, listener);
+
+			assertEquals(1, result.getProcessedRows());
+			assertEquals(List.of(1), retries);
+			try (var rs = statement.executeQuery("SELECT COUNT(*) FROM RETRY_CHUNK")) {
+				rs.next();
+				assertEquals(1, rs.getInt(1));
+			}
+			assertTrue(delegate.load("retry-chunk").orElseThrow().isComplete());
+		}
+	}
+
 	@Test
 	void appliesDuplicateSelectionAcrossChunkBoundaries() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -1186,6 +1226,44 @@ class ChunkedBulkMigrationTest {
 		@Override
 		public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
 			throw new SQLException("simulated database checkpoint failure");
+		}
+
+		@Override
+		public void delete(final String migrationId) throws SQLException {
+			delegate.delete(migrationId);
+		}
+	}
+
+	private static final class FailFirstSaveTransientStore
+			implements TransactionalBulkMigrationCheckpointStore {
+		private final BulkMigrationCheckpointStore delegate;
+		private final java.sql.Connection connection;
+		private boolean failed;
+
+		private FailFirstSaveTransientStore(final BulkMigrationCheckpointStore delegate,
+				final java.sql.Connection connection) {
+			this.delegate = delegate;
+			this.connection = connection;
+		}
+
+		@Override
+		public boolean participatesIn(final java.sql.Connection candidate) {
+			return connection == candidate;
+		}
+
+		@Override
+		public Optional<BulkMigrationCheckpoint> load(final String migrationId)
+				throws SQLException {
+			return delegate.load(migrationId);
+		}
+
+		@Override
+		public void save(final BulkMigrationCheckpoint checkpoint) throws SQLException {
+			if (!failed) {
+				failed = true;
+				throw new SQLTransientException("retry once");
+			}
+			delegate.save(checkpoint);
 		}
 
 		@Override

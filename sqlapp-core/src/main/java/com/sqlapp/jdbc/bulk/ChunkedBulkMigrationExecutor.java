@@ -112,6 +112,10 @@ public final class ChunkedBulkMigrationExecutor {
 		final boolean transactional = checkpointStore instanceof TransactionalBulkMigrationCheckpointStore store
 				&& store.participatesIn(targetConnection);
 		validateCheckpointMode(options.getCheckpointMode(), transactional);
+		if (options.getRetryOption().getMaxRetries() > 0 && !transactional) {
+			throw new IllegalArgumentException("Chunk retries require DATABASE checkpoint mode "
+					+ "with data and checkpoint in the same target transaction");
+		}
 
 		BulkMigrationCheckpoint checkpoint = options.isResume()
 				? checkpointStore.load(options.getMigrationId()).orElse(null) : null;
@@ -175,26 +179,8 @@ public final class ChunkedBulkMigrationExecutor {
 						previouslyProcessed + processed, nextCheckpoint.getProcessedRows());
 				listener.onChunkStarted(progress);
 				try {
-					if (transactional) {
-						targetConnection.setAutoCommit(false);
-						try {
-							if (!writeRows.isEmpty()) {
-								write(targetConnection, chunk, sourceTable, options, true);
-							}
-							checkpointStore.save(nextCheckpoint);
-							targetConnection.commit();
-						} catch (SQLException | RuntimeException e) {
-							rollback(targetConnection, e);
-							throw e;
-						} finally {
-							targetConnection.setAutoCommit(true);
-						}
-					} else {
-						if (!writeRows.isEmpty()) {
-							write(targetConnection, chunk, sourceTable, options, false);
-						}
-						checkpointStore.save(nextCheckpoint);
-					}
+					executeChunkWithRetry(targetConnection, chunk, sourceTable, options,
+							checkpointStore, nextCheckpoint, transactional, listener, progress);
 				} catch (SQLException | RuntimeException e) {
 					try {
 						listener.onChunkFailed(progress, e);
@@ -230,6 +216,70 @@ public final class ChunkedBulkMigrationExecutor {
 					chunks, false);
 		} finally {
 			close(iterator);
+		}
+	}
+
+	private static void executeChunkWithRetry(final Connection connection,
+			final Table chunk, final Table source,
+			final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final BulkMigrationCheckpoint checkpoint, final boolean transactional,
+			final ChunkedBulkMigrationListener listener,
+			final ChunkedBulkMigrationProgress progress) throws SQLException {
+		int retries = 0;
+		while (true) {
+			try {
+				executeChunkAttempt(connection, chunk, source, options, checkpointStore,
+						checkpoint, transactional);
+				return;
+			} catch (SQLException failure) {
+				final BulkMigrationRetryOption retry = options.getRetryOption();
+				if (!retry.shouldRetry(failure, retries)) {
+					throw failure;
+				}
+				retries++;
+				final long backoff = retry.backoffMillis(retries);
+				listener.onChunkRetry(progress, failure, retries, backoff);
+				if (backoff > 0) {
+					try {
+						Thread.sleep(backoff);
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						final SQLException interrupted = new SQLException(
+								"Interrupted during migration retry backoff", e);
+						interrupted.addSuppressed(failure);
+						throw interrupted;
+					}
+				}
+			}
+		}
+	}
+
+	private static void executeChunkAttempt(final Connection connection,
+			final Table chunk, final Table source,
+			final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final BulkMigrationCheckpoint checkpoint, final boolean transactional)
+			throws SQLException {
+		if (transactional) {
+			connection.setAutoCommit(false);
+			try {
+				if (!chunk.getRows().isEmpty()) {
+					write(connection, chunk, source, options, true);
+				}
+				checkpointStore.save(checkpoint);
+				connection.commit();
+			} catch (SQLException | RuntimeException e) {
+				rollback(connection, e);
+				throw e;
+			} finally {
+				connection.setAutoCommit(true);
+			}
+		} else {
+			if (!chunk.getRows().isEmpty()) {
+				write(connection, chunk, source, options, false);
+			}
+			checkpointStore.save(checkpoint);
 		}
 	}
 

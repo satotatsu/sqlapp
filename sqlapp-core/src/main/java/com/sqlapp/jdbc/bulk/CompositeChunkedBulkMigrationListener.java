@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.jdbc.bulk;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 
@@ -39,6 +40,14 @@ public final class CompositeChunkedBulkMigrationListener
 	public void onChunkFailed(final ChunkedBulkMigrationProgress progress,
 			final Throwable cause) {
 		listeners.forEach(listener -> listener.onChunkFailed(progress, cause));
+	}
+
+	@Override
+	public void onChunkRetry(final ChunkedBulkMigrationProgress progress,
+			final SQLException cause, final int retryNumber,
+			final long backoffMillis) {
+		listeners.forEach(listener -> listener.onChunkRetry(progress, cause,
+				retryNumber, backoffMillis));
 	}
 
 	@Override

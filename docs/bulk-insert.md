@@ -563,6 +563,16 @@ registration order. Every listener receives `pauseAfterChunk` even when an
 earlier listener already requested a pause, and the combined result pauses
 when any listener returns true.
 
+`BulkMigrationRetryOption` enables bounded exponential-backoff retries for a
+chunk. A failure is retryable only when it is an `SQLTransientException` or its
+SQLState/vendor error code was explicitly configured. Retry settings are part
+of the job plan fingerprint, and `onChunkRetry` reports the retry number and
+backoff. Automatic retries require DATABASE checkpoint mode with the data and
+checkpoint participating in the same target transaction: the failed attempt
+is rolled back before the same rows are retried. FILE checkpoint mode is
+rejected when retries are enabled because a partially successful INSERT cannot
+be replayed safely in general.
+
 For cooperative shutdown, a chunk listener can return `true` from
 `pauseAfterChunk`. The executor then throws
 `ChunkedBulkMigrationPausedException` only after the chunk-completed event and

@@ -31,6 +31,8 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	private final BulkOption bulkOption = BulkOption.defaults();
 	@Builder.Default
 	private final BulkUpsertOption bulkUpsertOption = BulkUpsertOption.defaults();
+	@Builder.Default
+	private final BulkMigrationRetryOption retryOption = BulkMigrationRetryOption.none();
 
 	void validate() {
 		BulkMigrationCheckpoint.validateMigrationId(migrationId);
@@ -66,5 +68,9 @@ public class ChunkedBulkMigrationOption implements Serializable {
 			throw new IllegalArgumentException("targetFingerprint must not exceed "
 					+ BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH + " characters");
 		}
+		if (retryOption == null) {
+			throw new IllegalArgumentException("retryOption must not be null");
+		}
+		retryOption.validate();
 	}
 }

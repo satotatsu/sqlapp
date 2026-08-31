@@ -88,6 +88,13 @@ public class BulkMigrationJobPlan {
 							upsert.getDuplicateRowSelectorFingerprint(), upsert.getStagingTableName());
 					bulk(digest, upsert.getBulkOption());
 				}
+				final BulkMigrationRetryOption retry = option.getRetryOption();
+				update(digest, retry.getMaxRetries(), retry.getInitialBackoffMillis(),
+						retry.getBackoffMultiplier(), retry.getMaxBackoffMillis(),
+						retry.isRetryTransientExceptions());
+				list(digest, retry.getSqlStates());
+				update(digest, retry.getErrorCodes().size());
+				retry.getErrorCodes().forEach(code -> update(digest, code));
 			}
 			return HexFormat.of().formatHex(digest.digest());
 		} catch (NoSuchAlgorithmException e) {
