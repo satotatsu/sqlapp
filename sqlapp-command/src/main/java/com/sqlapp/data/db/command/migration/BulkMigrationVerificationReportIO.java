@@ -16,6 +16,7 @@ import com.sqlapp.util.JsonConverter;
 
 /** Atomically writes a bounded verification summary. */
 public final class BulkMigrationVerificationReportIO {
+	public static final int DEFAULT_MAX_REPORTED_MISMATCHES = 1_000;
 	public BulkMigrationVerificationReport read(final Path file) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
@@ -49,16 +50,28 @@ public final class BulkMigrationVerificationReportIO {
 
 	public void write(final Path file, final String planFingerprint,
 			final BulkMigrationJobVerificationResult result) {
-		write(file, planFingerprint, BulkMigrationVerificationIsolation.DEFAULT, result);
+		write(file, planFingerprint, BulkMigrationVerificationIsolation.DEFAULT,
+				DEFAULT_MAX_REPORTED_MISMATCHES, result);
 	}
 
 	public void write(final Path file, final String planFingerprint,
 			final BulkMigrationVerificationIsolation isolation,
 			final BulkMigrationJobVerificationResult result) {
+		write(file, planFingerprint, isolation, DEFAULT_MAX_REPORTED_MISMATCHES, result);
+	}
+
+	public void write(final Path file, final String planFingerprint,
+			final BulkMigrationVerificationIsolation isolation,
+			final int maxReportedMismatches,
+			final BulkMigrationJobVerificationResult result) {
 		Objects.requireNonNull(isolation, "isolation");
+		if (maxReportedMismatches <= 0) {
+			throw new IllegalArgumentException("maxReportedMismatches must be greater than zero");
+		}
 		final var tasks = result.getTasks().stream().map(task -> {
 			final var verification = task.getVerificationResult();
-			final var mismatches = verification.getMismatches().stream().map(chunk ->
+			final var allMismatches = verification.getMismatches();
+			final var mismatches = allMismatches.stream().limit(maxReportedMismatches).map(chunk ->
 					new BulkMigrationVerificationReport.Chunk(chunk.getIndex(),
 							chunk.getExpectedRows(), chunk.getActualRows(),
 							chunk.getExpectedHash(), chunk.getActualHash(),
@@ -66,7 +79,7 @@ public final class BulkMigrationVerificationReportIO {
 							chunk.getActualFirstKey(), chunk.getActualLastKey())).toList();
 			return new BulkMigrationVerificationReport.Task(task.getTaskId(), task.getColumns(),
 					verification.isMatch(), verification.getExpectedRows(),
-					verification.getActualRows(), mismatches);
+					verification.getActualRows(), allMismatches.size(), mismatches);
 		}).toList();
 		write(file, new BulkMigrationVerificationReport(
 				BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION, Instant.now(),
@@ -144,11 +157,14 @@ public final class BulkMigrationVerificationReportIO {
 				throw new CommandException("Verification report columns must be non-empty and unique: "
 						+ task.taskId());
 			}
-			if (task.expectedRows() < 0 || task.actualRows() < 0 || task.mismatches() == null) {
+			if (task.expectedRows() < 0 || task.actualRows() < 0
+					|| task.mismatchedChunks() < 0 || task.mismatches() == null) {
 				throw new CommandException("Verification report task values are invalid: "
 						+ task.taskId());
 			}
-			if (task.match() != task.mismatches().isEmpty()) {
+			if (task.match() != (task.mismatchedChunks() == 0)
+					|| task.mismatches().size() > task.mismatchedChunks()
+					|| (!task.match() && task.mismatches().isEmpty())) {
 				throw new CommandException("Verification task match flag disagrees with mismatches: "
 						+ task.taskId());
 			}

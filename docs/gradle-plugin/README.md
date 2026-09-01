@@ -104,6 +104,7 @@ verification:
   enabled: true
   chunkSize: 10000
   failOnMismatch: true
+  maxReportedMismatches: 1000
   isolation: REPEATABLE_READ
   targetFile: reports/verification.json
 tasks:
@@ -166,6 +167,8 @@ and mismatched chunk hashes. The report's top-level `isolation` field records
 the selected JDBC consistency level. Mismatch entries also include source and
 target first/last keyset tokens. Treat this artifact as migration data because
 those tokens may expose business-key values.
+`maxReportedMismatches` defaults to 1000 and limits the mismatch details stored
+per task. Each task still records `mismatchedChunks`, the uncapped total.
 If verification fails, the operational report's final execution event is
 updated to `JOB_FAILED`; this does not roll back chunks already committed by
 the migration.

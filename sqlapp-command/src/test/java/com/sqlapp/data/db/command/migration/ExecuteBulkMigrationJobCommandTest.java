@@ -222,9 +222,27 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals(false, mismatchArtifact.match());
 			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
 			final var mismatchChunk = mismatchArtifact.tasks().get(0).mismatches().get(0);
+			assertEquals(1, mismatchArtifact.tasks().get(0).mismatchedChunks());
 			assertEquals(null, mismatchChunk.expectedFirstKey());
 			assertNotNull(mismatchChunk.actualFirstKey());
 			assertNotNull(mismatchChunk.actualLastKey());
+
+			final var twoMismatches = new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(
+					1, 2, 2, List.of(
+							new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(
+									0, 1, 1, "a", "b"),
+							new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(
+									1, 1, 1, "c", "d")));
+			final var cappedResult = new com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult(
+					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult(
+							"items", List.of("ID"), twoMismatches)));
+			final Path cappedFile = temporaryDirectory.resolve("reports/capped.json");
+			new BulkMigrationVerificationReportIO().write(cappedFile, "plan",
+					BulkMigrationVerificationIsolation.DEFAULT, 1, cappedResult);
+			final var cappedTask = new BulkMigrationVerificationReportIO().read(cappedFile)
+					.tasks().get(0);
+			assertEquals(2, cappedTask.mismatchedChunks());
+			assertEquals(1, cappedTask.mismatches().size());
 
 			configuration.setTasks(List.of());
 			final var report = new BulkMigrationJobConfiguration.Report();
