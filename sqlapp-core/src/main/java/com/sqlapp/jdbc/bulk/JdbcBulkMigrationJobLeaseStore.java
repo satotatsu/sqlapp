@@ -4,6 +4,7 @@ package com.sqlapp.jdbc.bulk;
 import java.sql.Connection;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.SQLException;
+import java.sql.SQLTransactionRollbackException;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -11,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -30,8 +32,8 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 public final class JdbcBulkMigrationJobLeaseStore
 		implements BulkMigrationJobLeaseStore {
 	public static final String DEFAULT_TABLE_NAME = "sqlapp_bulk_job_lease";
-	private static final int SERIALIZATION_RETRY_LIMIT = 3;
-	private static final long SERIALIZATION_RETRY_DELAY_MILLIS = 10L;
+	private static final int SERIALIZATION_RETRY_LIMIT = 8;
+	private static final long SERIALIZATION_RETRY_DELAY_MILLIS = 25L;
 
 	private final Connection connection;
 	private final String rawTableName;
@@ -73,15 +75,22 @@ public final class JdbcBulkMigrationJobLeaseStore
 	public boolean tryAcquire(final BulkMigrationJobLease lease, final Instant now)
 			throws SQLException {
 		validateCandidate(lease, now);
-		return transaction(() -> {
-			final BulkMigrationJobLease current = loadInternal(lease.planFingerprint())
-					.orElse(null);
-			if (current != null && !current.isExpiredAt(now)) {
+		try {
+			return transaction(() -> {
+				final BulkMigrationJobLease current = loadInternal(
+						lease.planFingerprint()).orElse(null);
+				if (current != null && !current.isExpiredAt(now)) {
+					return false;
+				}
+				write(lease, current == null ? SqlType.INSERT : SqlType.UPDATE);
+				return true;
+			}, true);
+		} catch (SQLException e) {
+			if (isInformixLockConflict(e)) {
 				return false;
 			}
-			write(lease, current == null ? SqlType.INSERT : SqlType.UPDATE);
-			return true;
-		}, true);
+			throw e;
+		}
 	}
 
 	@Override
@@ -164,7 +173,10 @@ public final class JdbcBulkMigrationJobLeaseStore
 	private static void serializationRetryDelay(final int attempt,
 			final SQLException failure) throws SQLException {
 		try {
-			Thread.sleep(SERIALIZATION_RETRY_DELAY_MILLIS * (attempt + 1));
+			final long jitter = ThreadLocalRandom.current()
+					.nextLong(SERIALIZATION_RETRY_DELAY_MILLIS);
+			Thread.sleep(SERIALIZATION_RETRY_DELAY_MILLIS * (attempt + 1)
+					+ jitter);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			failure.addSuppressed(e);
@@ -205,9 +217,14 @@ public final class JdbcBulkMigrationJobLeaseStore
 	private boolean isSerializationFailure(final SQLException failure) {
 		for (SQLException current = failure; current != null;
 				current = current.getNextException()) {
-			if ("40001".equals(current.getSQLState())
+			if (current instanceof SQLTransactionRollbackException
+					|| "40001".equals(current.getSQLState())
 					|| current.getErrorCode() == 8177
-					|| isSqliteBusy(current)) {
+					|| isSqliteBusy(current)
+					|| isInformixLockConflict(current)
+					|| isSapHanaSerializationFailure(current)
+					|| isSpannerAbort(current)
+					|| isSybaseDeadlock(current)) {
 				return true;
 			}
 		}
@@ -217,6 +234,60 @@ public final class JdbcBulkMigrationJobLeaseStore
 	private boolean isSqliteBusy(final SQLException failure) {
 		return "SQLite".equalsIgnoreCase(dialect.getProductName())
 				&& failure.getErrorCode() == 5;
+	}
+
+	private boolean isInformixLockConflict(final SQLException failure) {
+		final boolean informix = containsIgnoreCase(dialect.getProductName(),
+				"informix") || containsIgnoreCase(dialect.getSimpleName(), "informix");
+		for (Throwable current = failure; current != null;
+				current = current.getCause()) {
+			if (current instanceof SQLException sqlException && (
+					containsIgnoreCase(sqlException.getMessage(),
+							"ISAM error: key value locked")
+					|| informix && (sqlException.getErrorCode() == -244
+							|| sqlException.getErrorCode() == -144
+							|| sqlException.getErrorCode() == -107))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean containsIgnoreCase(final String value,
+			final String fragment) {
+		return value != null && value.toLowerCase(Locale.ROOT)
+				.contains(fragment.toLowerCase(Locale.ROOT));
+	}
+
+	private boolean isSybaseDeadlock(final SQLException failure) {
+		return "Adaptive Server Enterprise"
+				.equalsIgnoreCase(dialect.getProductName())
+				&& failure.getErrorCode() == 1205;
+	}
+
+	private boolean isSpannerAbort(final SQLException failure) {
+		final boolean spanner = containsIgnoreCase(dialect.getProductName(),
+				"spanner") || containsIgnoreCase(dialect.getSimpleName(), "spanner");
+		if (!spanner) {
+			return false;
+		}
+		for (Throwable current = failure; current != null;
+				current = current.getCause()) {
+			if (containsIgnoreCase(current.getClass().getSimpleName(), "Aborted")
+					|| containsIgnoreCase(current.getMessage(),
+							"aborted due to a concurrent modification")) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isSapHanaSerializationFailure(final SQLException failure) {
+		final boolean hana = containsIgnoreCase(dialect.getProductName(), "hana")
+				|| containsIgnoreCase(dialect.getSimpleName(), "hana");
+		return hana && (failure.getErrorCode() == 138
+				|| containsIgnoreCase(failure.getMessage(),
+						"transaction serialization failure"));
 	}
 
 	private static boolean isUniqueViolation(final SQLException failure) {
