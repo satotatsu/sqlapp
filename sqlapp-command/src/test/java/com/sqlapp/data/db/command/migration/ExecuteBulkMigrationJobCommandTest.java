@@ -170,6 +170,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			verification.setChunkSize(1);
 			verification.setTargetFile("reports/verification.json");
 			configuration.setVerification(verification);
+			// Verification is a common post-processing step and must also run when no
+			// cross-process lease is configured.
+			configuration.setLease(null);
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 
 			final var command = new ExecuteBulkMigrationJobCommand();
@@ -193,6 +196,23 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 							temporaryDirectory.resolve("reports/verification.json"), "wrong"));
 			assertEquals(true, Files.isRegularFile(
 					temporaryDirectory.resolve("reports/status.json")));
+
+			final var fileLease = new BulkMigrationJobConfiguration.Lease();
+			fileLease.setMode(BulkMigrationJobLeaseMode.FILE);
+			fileLease.setOwnerId("file-worker");
+			fileLease.setDirectory("leases");
+			configuration.setLease(fileLease);
+			verification.setTargetFile("reports/verification-file-lease.json");
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			final var fileLeaseCommand = new ExecuteBulkMigrationJobCommand();
+			fileLeaseCommand.setDataSource(target);
+			fileLeaseCommand.setSourceDataSource(source);
+			fileLeaseCommand.setCloseDataSource(false);
+			fileLeaseCommand.setConfigurationFile(configurationFile);
+			fileLeaseCommand.run();
+			assertNotNull(fileLeaseCommand.getVerificationResult());
+			assertEquals(true, Files.isRegularFile(temporaryDirectory
+					.resolve("reports/verification-file-lease.json")));
 		}
 	}
 

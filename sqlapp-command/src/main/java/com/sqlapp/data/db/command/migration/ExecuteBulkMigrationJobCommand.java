@@ -136,23 +136,21 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			if (executionLeaseConfiguration == null) {
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
 						executionListener, chunkListener);
-				return;
-			}
-			if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+			} else if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(null,
 								executionLeaseConfiguration);
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
 						executionListener, chunkListener, manager);
-				return;
-			}
-			try (Connection leaseConnection = getDataSource().getConnection()) {
-				leaseConnection.setAutoCommit(true);
-				final BulkMigrationJobLeaseManager manager =
-						BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
-								executionLeaseConfiguration);
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
-						executionListener, chunkListener, manager);
+			} else {
+				try (Connection leaseConnection = getDataSource().getConnection()) {
+					leaseConnection.setAutoCommit(true);
+					final BulkMigrationJobLeaseManager manager =
+							BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+									executionLeaseConfiguration);
+					result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
+							executionListener, chunkListener, manager);
+				}
 			}
 			if (verificationConfiguration != null) {
 				verificationResult = verify(effectivePlan, targetConnection,
