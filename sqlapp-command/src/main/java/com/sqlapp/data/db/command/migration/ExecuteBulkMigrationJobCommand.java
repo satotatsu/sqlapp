@@ -278,7 +278,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					defaultVerificationColumns(task));
 			final var verification = BulkMigrationVerifier.verify(source.getTable(),
 					source.iterator(null), target.getTable(), target.iterator(null), columns,
-					chunkSize);
+					chunkSize, source::resumeToken, target::resumeToken);
 			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), columns,
 					verification));
 		}

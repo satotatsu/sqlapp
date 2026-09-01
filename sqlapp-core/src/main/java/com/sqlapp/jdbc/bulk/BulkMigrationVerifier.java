@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.jdbc.bulk;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Objects;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.function.SQLFunction;
 
 /** Compares ordered row streams by total count and deterministic chunk hashes. */
 public final class BulkMigrationVerifier {
@@ -34,6 +36,20 @@ public final class BulkMigrationVerifier {
 			final Iterator<Row> expectedRows, final Table actual,
 			final Iterator<Row> actualRows, final List<String> columnNames,
 			final int chunkSize) {
+		try {
+			return verify(expected, expectedRows, actual, actualRows, columnNames, chunkSize,
+					null, null);
+		} catch (SQLException e) {
+			throw new IllegalStateException("Unexpected key encoding failure", e);
+		}
+	}
+
+	/** Compares named columns and records optional source/target key boundaries. */
+	public static BulkMigrationVerificationResult verify(final Table expected,
+			final Iterator<Row> expectedRows, final Table actual,
+			final Iterator<Row> actualRows, final List<String> columnNames,
+			final int chunkSize, final SQLFunction<Row, String> expectedKey,
+			final SQLFunction<Row, String> actualKey) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(actual, "actual");
 		Objects.requireNonNull(expectedRows, "expectedRows");
@@ -42,6 +58,9 @@ public final class BulkMigrationVerifier {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
 		Objects.requireNonNull(columnNames, "columnNames");
+		if ((expectedKey == null) != (actualKey == null)) {
+			throw new IllegalArgumentException("Both key encoders must be supplied together");
+		}
 		if (columnNames.isEmpty()) {
 			throw new IllegalArgumentException("At least one verification column is required");
 		}
@@ -77,16 +96,28 @@ public final class BulkMigrationVerifier {
 				actualCount += right.size();
 				chunks.add(new BulkMigrationVerificationChunk(index++, left.size(), right.size(),
 						BulkMigrationHash.rows(left, expectedColumns),
-						BulkMigrationHash.rows(right, actualColumns, expectedColumns)));
+						BulkMigrationHash.rows(right, actualColumns, expectedColumns),
+						firstKey(left, expectedKey), lastKey(left, expectedKey),
+						firstKey(right, actualKey), lastKey(right, actualKey)));
 			}
 			return new BulkMigrationVerificationResult(chunkSize, expectedCount, actualCount,
 					List.copyOf(chunks));
-		} catch (RuntimeException | Error e) {
+		} catch (SQLException | RuntimeException | Error e) {
 			failure = e;
 			throw e;
 		} finally {
 			BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
 		}
+	}
+
+	private static String firstKey(final List<Row> rows,
+			final SQLFunction<Row, String> key) throws SQLException {
+		return key == null || rows.isEmpty() ? null : key.apply(rows.get(0));
+	}
+
+	private static String lastKey(final List<Row> rows,
+			final SQLFunction<Row, String> key) throws SQLException {
+		return key == null || rows.isEmpty() ? null : key.apply(rows.get(rows.size() - 1));
 	}
 
 	private static List<Row> take(final Iterator<Row> iterator, final int size) {

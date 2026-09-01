@@ -13,9 +13,21 @@ public class BulkMigrationVerificationChunk {
 	int actualRows;
 	String expectedHash;
 	String actualHash;
+	String expectedFirstKey;
+	String expectedLastKey;
+	String actualFirstKey;
+	String actualLastKey;
 
 	public BulkMigrationVerificationChunk(final long index, final int expectedRows,
 			final int actualRows, final String expectedHash, final String actualHash) {
+		this(index, expectedRows, actualRows, expectedHash, actualHash,
+				null, null, null, null);
+	}
+
+	public BulkMigrationVerificationChunk(final long index, final int expectedRows,
+			final int actualRows, final String expectedHash, final String actualHash,
+			final String expectedFirstKey, final String expectedLastKey,
+			final String actualFirstKey, final String actualLastKey) {
 		if (index < 0) {
 			throw new IllegalArgumentException("chunk index must not be negative");
 		}
@@ -27,6 +39,10 @@ public class BulkMigrationVerificationChunk {
 		this.actualRows = actualRows;
 		this.expectedHash = Objects.requireNonNull(expectedHash, "expectedHash");
 		this.actualHash = Objects.requireNonNull(actualHash, "actualHash");
+		this.expectedFirstKey = expectedFirstKey;
+		this.expectedLastKey = expectedLastKey;
+		this.actualFirstKey = actualFirstKey;
+		this.actualLastKey = actualLastKey;
 	}
 
 	public boolean isMatch() {

@@ -764,8 +764,12 @@ configured mismatch failure is raised.
 Each task summary also records the ordered column names used to calculate its
 hashes, so the artifact remains meaningful when `verificationColumns` narrows
 the comparison. The top-level `isolation` field records the JDBC consistency
-level used for the run. This is verification-report format version 2; readers
-reject older artifacts that do not identify their isolation semantics.
+level used for the run. Mismatched chunks produced from JDBC keyset sources
+also include source and target first/last keyset tokens, allowing an operator
+to narrow a follow-up query without rescanning from row zero. This is
+verification-report format version 3; readers reject older artifacts that do
+not identify these semantics. Keyset tokens can contain business-key values,
+so protect the report as migration data rather than as an unrestricted log.
 When an operational report is configured, a verification query, report-write,
 or configured mismatch failure replaces its final execution event with
 `JOB_FAILED`. This describes the command outcome; committed migration chunks

@@ -8,13 +8,14 @@ import java.util.List;
 public record BulkMigrationVerificationReport(int formatVersion, Instant generatedAt,
 		String planFingerprint, String isolation, boolean match, long expectedRows, long actualRows,
 		long mismatchedTasks, List<Task> tasks) {
-	public static final int CURRENT_FORMAT_VERSION = 2;
+	public static final int CURRENT_FORMAT_VERSION = 3;
 
 	public record Task(String taskId, List<String> columns, boolean match,
 			long expectedRows, long actualRows, List<Chunk> mismatches) {
 	}
 
 	public record Chunk(long index, int expectedRows, int actualRows,
-			String expectedHash, String actualHash) {
+			String expectedHash, String actualHash, String expectedFirstKey,
+			String expectedLastKey, String actualFirstKey, String actualLastKey) {
 	}
 }

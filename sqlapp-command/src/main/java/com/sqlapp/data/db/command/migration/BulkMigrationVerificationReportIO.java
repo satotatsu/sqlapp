@@ -61,7 +61,9 @@ public final class BulkMigrationVerificationReportIO {
 			final var mismatches = verification.getMismatches().stream().map(chunk ->
 					new BulkMigrationVerificationReport.Chunk(chunk.getIndex(),
 							chunk.getExpectedRows(), chunk.getActualRows(),
-							chunk.getExpectedHash(), chunk.getActualHash())).toList();
+							chunk.getExpectedHash(), chunk.getActualHash(),
+							chunk.getExpectedFirstKey(), chunk.getExpectedLastKey(),
+							chunk.getActualFirstKey(), chunk.getActualLastKey())).toList();
 			return new BulkMigrationVerificationReport.Task(task.getTaskId(), task.getColumns(),
 					verification.isMatch(), verification.getExpectedRows(),
 					verification.getActualRows(), mismatches);
@@ -157,6 +159,16 @@ public final class BulkMigrationVerificationReportIO {
 					throw new CommandException("Verification report mismatch chunk is invalid: "
 							+ task.taskId());
 				}
+				final boolean hasKeyRange = chunk.expectedFirstKey() != null
+						|| chunk.expectedLastKey() != null || chunk.actualFirstKey() != null
+						|| chunk.actualLastKey() != null;
+				if (hasKeyRange && (!validKeyRange(chunk.expectedRows(),
+						chunk.expectedFirstKey(), chunk.expectedLastKey())
+						|| !validKeyRange(chunk.actualRows(), chunk.actualFirstKey(),
+								chunk.actualLastKey()))) {
+					throw new CommandException("Verification report mismatch key range is invalid: "
+							+ task.taskId());
+				}
 			}
 			try {
 				expectedRows = Math.addExact(expectedRows, task.expectedRows());
@@ -174,5 +186,13 @@ public final class BulkMigrationVerificationReportIO {
 			throw new CommandException("Verification report aggregate values are inconsistent");
 		}
 		return report;
+	}
+
+	private static boolean validKeyRange(final int rows, final String first,
+			final String last) {
+		if (rows == 0) {
+			return first == null && last == null;
+		}
+		return first != null && !first.isBlank() && last != null && !last.isBlank();
 	}
 }
