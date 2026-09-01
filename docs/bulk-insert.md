@@ -744,6 +744,14 @@ An optional top-level `lease` block selects `DATABASE` or `FILE` fencing. Its
 owner, duration, and database table or file directory are resolved before the
 target migration begins; relative file directories use the job-file directory
 as their base. Supplying both YAML and programmatic lease settings is rejected.
+Each task may independently use a DATABASE checkpoint table or a FILE
+`checkpointDirectory`. Relative checkpoint directories are resolved from the
+job YAML location. FILE mode retains at-least-once replay semantics and cannot
+enable transactional chunk retries; CUSTOM stores remain programmatic.
+An optional `report` block attaches the existing operational-report listener
+to the declarative execution. The report file is updated atomically at job and
+task boundaries. Its failure policy is either strict `FAIL_JOB` or best-effort
+`CONTINUE_JOB`.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

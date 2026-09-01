@@ -19,6 +19,7 @@ public class BulkMigrationJobConfiguration {
 	private String schemaFile;
 	private List<Task> tasks = new ArrayList<>();
 	private Lease lease;
+	private Report report;
 
 	@Getter
 	@Setter
@@ -33,6 +34,7 @@ public class BulkMigrationJobConfiguration {
 		private BulkMigrationCheckpointMode checkpointMode =
 				BulkMigrationCheckpointMode.DATABASE;
 		private String checkpointTableName = "SQLAPP_BULK_MIGRATION_CHECKPOINT";
+		private String checkpointDirectory;
 		private String sourceFingerprint;
 		private String targetFingerprint;
 		private List<String> keyColumns = new ArrayList<>();
@@ -85,5 +87,14 @@ public class BulkMigrationJobConfiguration {
 				BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION.toSeconds();
 		private String tableName;
 		private String directory;
+	}
+
+	/** Optional operational report refreshed at job and task boundaries. */
+	@Getter
+	@Setter
+	public static class Report {
+		private String targetFile;
+		private BulkMigrationOperationalReportFailurePolicy failurePolicy =
+				BulkMigrationOperationalReportFailurePolicy.FAIL_JOB;
 	}
 }

@@ -3,6 +3,9 @@ package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -14,7 +17,12 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
+import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -60,7 +68,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				throw new CommandException("Specify lease configuration either in the job file "
 						+ "or as a command property, not both.");
 			}
-			executePlan(resolved.plan(), resolved.leaseConfiguration());
+			executePlan(resolved.plan(), resolved.leaseConfiguration(), listener,
+					resolved.reportConfiguration());
 		});
 	}
 
@@ -70,22 +79,50 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 
 	private void executePlan(final BulkMigrationJobPlan executionPlan,
 			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration) {
+		executePlan(executionPlan, executionLeaseConfiguration, listener);
+	}
+
+	private void executePlan(final BulkMigrationJobPlan executionPlan,
+			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
+			final BulkMigrationJobListener executionListener) {
+		executePlan(executionPlan, executionLeaseConfiguration, executionListener, null);
+	}
+
+	private void executePlan(final BulkMigrationJobPlan executionPlan,
+			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
+			final BulkMigrationJobListener configuredListener,
+			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration
+					reportConfiguration) {
 		executionPlan.validateUnchanged();
 		execute(getDataSource(), targetConnection -> {
 			// The chunk executor owns commit/rollback boundaries, including durable
 			// checkpoint writes. AbstractDataSourceCommand otherwise starts a transaction.
 			targetConnection.setAutoCommit(true);
+			final BulkMigrationJobPlan effectivePlan = reportConfiguration == null
+					? executionPlan : withExplicitDatabaseCheckpointStores(executionPlan,
+							targetConnection);
+			final BulkMigrationJobListener executionListener;
+			if (reportConfiguration == null) {
+				executionListener = configuredListener;
+			} else {
+				final var reportListener = new BulkMigrationOperationalReportJobListener(
+						effectivePlan, reportConfiguration.targetFile(), () -> null, () -> null,
+						reportConfiguration.failurePolicy(), failure -> { });
+				executionListener = configuredListener == BulkMigrationJobListener.NO_OP
+						? reportListener : CompositeBulkMigrationJobListener.of(
+								configuredListener, reportListener);
+			}
 			if (executionLeaseConfiguration == null) {
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, executionPlan,
-						listener, chunkListener);
+				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
+						executionListener, chunkListener);
 				return;
 			}
 			if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(null,
 								executionLeaseConfiguration);
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, executionPlan,
-						listener, chunkListener, manager);
+				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
+						executionListener, chunkListener, manager);
 				return;
 			}
 			try (Connection leaseConnection = getDataSource().getConnection()) {
@@ -93,10 +130,29 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
 								executionLeaseConfiguration);
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, executionPlan,
-						listener, chunkListener, manager);
+				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
+						executionListener, chunkListener, manager);
 			}
 		});
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
+	}
+
+	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(
+			final BulkMigrationJobPlan plan, final Connection targetConnection)
+			throws SQLException {
+		final List<BulkMigrationJobTask> tasks = new ArrayList<>(plan.getTasks().size());
+		for (final BulkMigrationJobTask task : plan.getTasks()) {
+			if (task.getCheckpointStore() != null || task.getOptions().getCheckpointMode()
+					!= BulkMigrationCheckpointMode.DATABASE) {
+				tasks.add(task);
+				continue;
+			}
+			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId())
+					.sourceTable(task.getSourceTable()).keysetSource(task.getKeysetSource())
+					.options(task.getOptions()).chunkListener(task.getChunkListener())
+					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,
+							task.getOptions().getCheckpointTableName())).build());
+		}
+		return BulkMigrationJobPlanner.plan(tasks, plan.getLifecycle());
 	}
 }

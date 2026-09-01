@@ -97,6 +97,9 @@ lease:
   ownerId: migration-worker-1
   durationSeconds: 300
 # tableName defaults to SQLAPP_BULK_MIGRATION_JOB_LEASE
+report:
+  targetFile: reports/migration-status.json
+  failurePolicy: FAIL_JOB
 tasks:
   - id: customers
     table: public.customers
@@ -105,6 +108,8 @@ tasks:
     chunkSize: 10000
     mode: UPSERT
     resume: true
+    checkpointMode: DATABASE
+    checkpointTableName: SQLAPP_BULK_MIGRATION_CHECKPOINT
     sourceFingerprint: source-schema-v1
     targetFingerprint: target-schema-v1
     keyColumns: [customer_id]
@@ -127,6 +132,17 @@ code cannot be represented safely in YAML. The nested `bulk` block is shared by
 INSERT and UPSERT; the nested `retry` block controls retry of a complete,
 transactional chunk and may select transient exceptions, SQLStates, and vendor
 error codes.
+
+For file checkpoints, set `checkpointMode: FILE` and
+`checkpointDirectory: checkpoints`. Relative checkpoint directories are
+resolved from the YAML location. File checkpoints provide at-least-once replay;
+chunk retry is therefore limited to transactional DATABASE checkpoints.
+`CUSTOM` checkpoint stores remain available only to programmatic plans.
+
+The optional top-level `report` block refreshes the operational JSON report at
+job and task boundaries. Its path is relative to the YAML file. `FAIL_JOB`
+preserves strict reporting; `CONTINUE_JOB` records a reporting failure without
+stopping data migration.
 
 For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be

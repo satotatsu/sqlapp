@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.YamlConverter;
 import com.zaxxer.hikari.HikariConfig;
@@ -119,9 +122,35 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 						options.getBulkUpsertOption().getBulkOption());
 				assertEquals(3, options.getRetryOption().getMaxRetries());
 				assertEquals(List.of("40001"), options.getRetryOption().getSqlStates());
+				try (var targetConnection = target.getConnection()) {
+					targetConnection.setAutoCommit(true);
+					final var reportPlan = ExecuteBulkMigrationJobCommand
+							.withExplicitDatabaseCheckpointStores(plan, targetConnection);
+					assertEquals(plan.getFingerprint(), reportPlan.getFingerprint());
+					assertEquals(JdbcBulkMigrationCheckpointStore.class,
+							reportPlan.getTasks().get(0).getCheckpointStore().getClass());
+					final Path reportFile = temporaryDirectory.resolve("reports/non-empty.json");
+					new BulkMigrationOperationalReportJobListener(reportPlan, reportFile)
+							.onJobStarted(reportPlan.getFingerprint(), 1);
+					assertEquals(true, Files.isRegularFile(reportFile));
+				}
+			}
+
+			task.setCheckpointMode(BulkMigrationCheckpointMode.FILE);
+			task.setCheckpointDirectory("checkpoints");
+			task.setRetry(new BulkMigrationJobConfiguration.Retry());
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			try (var connection = source.getConnection()) {
+				final var filePlan = new BulkMigrationJobConfigurationResolver()
+						.resolve(configurationFile, connection);
+				assertEquals(FileBulkMigrationCheckpointStore.class,
+						filePlan.getTasks().get(0).getCheckpointStore().getClass());
 			}
 
 			configuration.setTasks(List.of());
+			final var report = new BulkMigrationJobConfiguration.Report();
+			report.setTargetFile("reports/status.json");
+			configuration.setReport(report);
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 
 			final var command = new ExecuteBulkMigrationJobCommand();
@@ -132,6 +161,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.run();
 
 			assertEquals(0, command.getResult().getTasks().size());
+			assertEquals(true, Files.isRegularFile(
+					temporaryDirectory.resolve("reports/status.json")));
 		}
 	}
 

@@ -30,7 +30,12 @@ import com.sqlapp.util.YamlConverter;
 /** Resolves a portable YAML job definition against a captured Schema model. */
 public class BulkMigrationJobConfigurationResolver {
 	public record Resolution(BulkMigrationJobPlan plan,
-			BulkMigrationJobLeaseConfiguration leaseConfiguration) {
+			BulkMigrationJobLeaseConfiguration leaseConfiguration,
+			OperationalReportConfiguration reportConfiguration) {
+	}
+
+	public record OperationalReportConfiguration(java.nio.file.Path targetFile,
+			BulkMigrationOperationalReportFailurePolicy failurePolicy) {
 	}
 
 	public BulkMigrationJobPlan resolve(final File configurationFile,
@@ -79,11 +84,47 @@ public class BulkMigrationJobConfigurationResolver {
 							? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
 							: new JdbcBulkMigrationKeysetSource(sourceConnection, table,
 									task.getKeysetColumns());
-			tasks.add(BulkMigrationJobTask.builder().taskId(task.getId())
-					.keysetSource(source).options(options).build());
+			final var builder = BulkMigrationJobTask.builder().taskId(task.getId())
+					.keysetSource(source).options(options);
+			if (task.getCheckpointMode()
+					== com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.FILE) {
+				if (task.getCheckpointDirectory() == null
+						|| task.getCheckpointDirectory().isBlank()) {
+					throw new CommandException("checkpointDirectory is required for FILE "
+							+ "checkpoint mode: " + task.getId());
+				}
+				builder.checkpointStore(new FileBulkMigrationCheckpointStore(
+						resolve(configurationFile, task.getCheckpointDirectory()).toPath()));
+			} else if (task.getCheckpointMode()
+					== com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.CUSTOM) {
+				throw new CommandException("CUSTOM checkpoint mode is only available for "
+						+ "programmatic plans: " + task.getId());
+			} else if (task.getCheckpointDirectory() != null
+					&& !task.getCheckpointDirectory().isBlank()) {
+				throw new CommandException("checkpointDirectory requires FILE checkpoint mode: "
+						+ task.getId());
+			}
+			tasks.add(builder.build());
 		}
 		return new Resolution(BulkMigrationJobPlanner.plan(tasks),
-				lease(configurationFile, configuration.getLease()));
+				lease(configurationFile, configuration.getLease()),
+				report(configurationFile, configuration.getReport()));
+	}
+
+	private static OperationalReportConfiguration report(final File configurationFile,
+			final BulkMigrationJobConfiguration.Report value) {
+		if (value == null) {
+			return null;
+		}
+		if (value.getTargetFile() == null || value.getTargetFile().isBlank()) {
+			throw new CommandException("report.targetFile is required in bulk migration configuration.");
+		}
+		if (value.getFailurePolicy() == null) {
+			throw new CommandException("report.failurePolicy must not be null.");
+		}
+		return new OperationalReportConfiguration(
+				resolve(configurationFile, value.getTargetFile()).toPath().toAbsolutePath().normalize(),
+				value.getFailurePolicy());
 	}
 
 	private static BulkMigrationJobLeaseConfiguration lease(final File configurationFile,
