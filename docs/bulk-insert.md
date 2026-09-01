@@ -730,10 +730,14 @@ executes a validated plan against a configured target data source and can
 optionally fence execution with the existing database or file lease
 configuration. Database leases use a dedicated second connection. The Gradle
 plugin registers `executeBulkMigrationJob` as a synchronous, non-cacheable
-task; its plan and optional listeners remain programmatic properties. This
-keeps execution separate from the read-only report task and provides the
-stable execution boundary that a future declarative job-file resolver can
-target.
+task. It accepts either a programmatic plan or a YAML configuration plus a
+separate source data source. Declarative jobs resolve table identities against
+a captured Schema XML, reject ambiguous short names, and create JDBC keyset
+sources only after the source connection has been opened. UPSERT keys, update
+columns, duplicate strategy, checkpoint policy, and reproducibility
+fingerprints are part of that configuration. `CUSTOM` duplicate selectors stay
+programmatic because they contain executable code. Execution remains separate
+from the read-only report task.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

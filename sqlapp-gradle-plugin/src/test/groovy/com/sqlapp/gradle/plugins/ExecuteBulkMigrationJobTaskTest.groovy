@@ -17,6 +17,8 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 				ExecuteBulkMigrationJobTask).get()
 		assertNotNull(task)
 		assertFalse(task.plan.isPresent())
+		assertFalse(task.configurationFile.isPresent())
+		assertNotNull(task.sourceDataSource)
 		assertFalse(task.listener.isPresent())
 		assertFalse(task.chunkListener.isPresent())
 		assertFalse(task.leaseConfiguration.isPresent())

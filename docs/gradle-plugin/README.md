@@ -31,7 +31,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migration` | Apply versioned database migrations |
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
-| Migration | `executeBulkMigrationJob` | Execute a programmatically assembled bulk migration plan |
+| Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
 | Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
@@ -60,13 +60,13 @@ change outside Gradle.
 
 ### `executeBulkMigrationJob`
 
-This task synchronously executes a programmatically assembled
-`BulkMigrationJobPlan` against its configured target `dataSource`. The `plan`
-property is required. `listener`, `chunkListener`, and `leaseConfiguration` are
-optional. Database lease mode obtains a separate connection from the same data
-source so lease transactions never share the connection used for migrated
-rows; file lease mode does not open that additional connection. The task is
-not build-cacheable because it mutates an external database.
+This task synchronously executes either a programmatically assembled
+`BulkMigrationJobPlan` or a YAML `configurationFile` against its target
+`dataSource`. Specify exactly one of `plan` and `configurationFile`. Declarative
+jobs also require `sourceDataSource`; their `schemaFile` is resolved relative
+to the YAML file. Database lease mode obtains a separate target connection so
+lease transactions never share the connection used for migrated rows. The task
+is not build-cacheable because it mutates an external database.
 
 ```groovy
 executeBulkMigrationJob {
@@ -80,10 +80,35 @@ executeBulkMigrationJob {
 }
 ```
 
-The current task deliberately accepts the validated Java plan rather than a
-second YAML representation. A declarative job file can be added later by
-resolving schema identities, UPSERT keys, update columns, duplicate strategy,
-checkpoint policy, and fingerprints into this same execution command.
+The equivalent declarative task uses independent source and target connections:
+
+```groovy
+executeBulkMigrationJob {
+    configurationFile = file('migration/job.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:postgresql://source/app' }
+    dataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
+}
+```
+
+```yaml
+schemaFile: schema.xml
+tasks:
+  - id: customers
+    table: public.customers
+    keysetColumns: [customer_id]
+    migrationId: customers-v1
+    chunkSize: 10000
+    mode: UPSERT
+    resume: true
+    sourceFingerprint: source-schema-v1
+    targetFingerprint: target-schema-v1
+    keyColumns: [customer_id]
+    duplicateKeyStrategy: LAST
+```
+
+Unqualified table names are accepted only when unique in the Schema XML.
+`CUSTOM` duplicate selection remains programmatic because executable selector
+code cannot be represented safely in YAML.
 
 ## Choose a workflow
 
