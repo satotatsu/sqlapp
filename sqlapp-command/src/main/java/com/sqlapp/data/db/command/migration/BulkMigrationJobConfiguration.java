@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 
@@ -17,6 +18,7 @@ import lombok.Setter;
 public class BulkMigrationJobConfiguration {
 	private String schemaFile;
 	private List<Task> tasks = new ArrayList<>();
+	private Lease lease;
 
 	@Getter
 	@Setter
@@ -71,5 +73,17 @@ public class BulkMigrationJobConfiguration {
 		private boolean retryTransientExceptions = true;
 		private List<String> sqlStates = new ArrayList<>();
 		private List<Integer> errorCodes = new ArrayList<>();
+	}
+
+	/** Optional cross-process execution lease. */
+	@Getter
+	@Setter
+	public static class Lease {
+		private BulkMigrationJobLeaseMode mode;
+		private String ownerId;
+		private long durationSeconds =
+				BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION.toSeconds();
+		private String tableName;
+		private String directory;
 	}
 }

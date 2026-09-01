@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,11 +24,21 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 import com.sqlapp.util.YamlConverter;
 
 /** Resolves a portable YAML job definition against a captured Schema model. */
 public class BulkMigrationJobConfigurationResolver {
+	public record Resolution(BulkMigrationJobPlan plan,
+			BulkMigrationJobLeaseConfiguration leaseConfiguration) {
+	}
+
 	public BulkMigrationJobPlan resolve(final File configurationFile,
+			final Connection sourceConnection) {
+		return resolveJob(configurationFile, sourceConnection).plan();
+	}
+
+	public Resolution resolveJob(final File configurationFile,
 			final Connection sourceConnection) {
 		if (configurationFile == null || !configurationFile.isFile()) {
 			throw new CommandException("Bulk migration configuration file is required.");
@@ -71,7 +82,37 @@ public class BulkMigrationJobConfigurationResolver {
 			tasks.add(BulkMigrationJobTask.builder().taskId(task.getId())
 					.keysetSource(source).options(options).build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks);
+		return new Resolution(BulkMigrationJobPlanner.plan(tasks),
+				lease(configurationFile, configuration.getLease()));
+	}
+
+	private static BulkMigrationJobLeaseConfiguration lease(final File configurationFile,
+			final BulkMigrationJobConfiguration.Lease value) {
+		if (value == null) {
+			return null;
+		}
+		if (value.getMode() == null) {
+			throw new CommandException("lease.mode is required in bulk migration configuration.");
+		}
+		final Duration duration;
+		try {
+			duration = Duration.ofSeconds(value.getDurationSeconds());
+		} catch (ArithmeticException e) {
+			throw new CommandException("lease.durationSeconds is out of range.", e);
+		}
+		if (value.getMode() == com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.DATABASE) {
+			final String tableName = value.getTableName() == null
+					|| value.getTableName().isBlank()
+							? JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME
+							: value.getTableName();
+			return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(),
+					duration, tableName, null);
+		}
+		if (value.getDirectory() == null || value.getDirectory().isBlank()) {
+			throw new CommandException("lease.directory is required for FILE lease mode.");
+		}
+		return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(),
+				duration, null, resolve(configurationFile, value.getDirectory()).toPath());
 	}
 
 	private static BulkOption bulk(final BulkMigrationJobConfiguration.Bulk value) {

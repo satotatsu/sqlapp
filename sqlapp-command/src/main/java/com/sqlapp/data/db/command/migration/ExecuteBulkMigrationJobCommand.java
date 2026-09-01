@@ -54,27 +54,36 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			return;
 		}
 		execute(sourceDataSource, sourceConnection -> {
-			final BulkMigrationJobPlan resolved = new BulkMigrationJobConfigurationResolver()
-					.resolve(configurationFile, sourceConnection);
-			executePlan(resolved);
+			final var resolved = new BulkMigrationJobConfigurationResolver()
+					.resolveJob(configurationFile, sourceConnection);
+			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
+				throw new CommandException("Specify lease configuration either in the job file "
+						+ "or as a command property, not both.");
+			}
+			executePlan(resolved.plan(), resolved.leaseConfiguration());
 		});
 	}
 
 	private void executePlan(final BulkMigrationJobPlan executionPlan) {
+		executePlan(executionPlan, leaseConfiguration);
+	}
+
+	private void executePlan(final BulkMigrationJobPlan executionPlan,
+			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration) {
 		executionPlan.validateUnchanged();
 		execute(getDataSource(), targetConnection -> {
 			// The chunk executor owns commit/rollback boundaries, including durable
 			// checkpoint writes. AbstractDataSourceCommand otherwise starts a transaction.
 			targetConnection.setAutoCommit(true);
-			if (leaseConfiguration == null) {
+			if (executionLeaseConfiguration == null) {
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, executionPlan,
 						listener, chunkListener);
 				return;
 			}
-			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+			if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(null,
-								leaseConfiguration);
+								executionLeaseConfiguration);
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, executionPlan,
 						listener, chunkListener, manager);
 				return;
@@ -83,7 +92,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				leaseConnection.setAutoCommit(true);
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
-								leaseConfiguration);
+								executionLeaseConfiguration);
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, executionPlan,
 						listener, chunkListener, manager);
 			}

@@ -92,6 +92,11 @@ executeBulkMigrationJob {
 
 ```yaml
 schemaFile: schema.xml
+lease:
+  mode: DATABASE
+  ownerId: migration-worker-1
+  durationSeconds: 300
+# tableName defaults to SQLAPP_BULK_MIGRATION_JOB_LEASE
 tasks:
   - id: customers
     table: public.customers
@@ -122,6 +127,11 @@ code cannot be represented safely in YAML. The nested `bulk` block is shared by
 INSERT and UPSERT; the nested `retry` block controls retry of a complete,
 transactional chunk and may select transient exceptions, SQLStates, and vendor
 error codes.
+
+For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
+directory is resolved from the job YAML location. Lease configuration may be
+supplied either in YAML or through the task's `leaseConfiguration` property,
+but not both.
 
 ## Choose a workflow
 

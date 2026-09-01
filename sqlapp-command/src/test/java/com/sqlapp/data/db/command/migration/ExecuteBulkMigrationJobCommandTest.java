@@ -20,6 +20,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.YamlConverter;
 import com.zaxxer.hikari.HikariConfig;
@@ -94,13 +95,23 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			retry.setMaxRetries(3);
 			retry.setSqlStates(List.of("40001"));
 			task.setRetry(retry);
+			final var lease = new BulkMigrationJobConfiguration.Lease();
+			lease.setMode(BulkMigrationJobLeaseMode.DATABASE);
+			lease.setOwnerId("yaml-worker");
+			lease.setDurationSeconds(90);
+			configuration.setLease(lease);
 			configuration.setTasks(List.of(task));
 			final File configurationFile = temporaryDirectory.resolve("job.yaml").toFile();
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 			try (var connection = source.getConnection()) {
-				final var plan = new BulkMigrationJobConfigurationResolver()
-						.resolve(configurationFile, connection);
+				final var resolution = new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, connection);
+				final var plan = resolution.plan();
 				assertEquals(List.of("items"), plan.getTaskIds());
+				assertEquals(BulkMigrationJobLeaseMode.DATABASE,
+						resolution.leaseConfiguration().mode());
+				assertEquals("yaml-worker", resolution.leaseConfiguration().ownerId());
+				assertEquals(90, resolution.leaseConfiguration().duration().toSeconds());
 				final var options = plan.getTasks().get(0).getOptions();
 				assertEquals(250, options.getBulkOption().getBatchSize());
 				assertEquals(true, options.getBulkOption().isKeepNulls());

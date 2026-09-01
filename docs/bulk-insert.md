@@ -740,6 +740,10 @@ and bounded chunk retry rules are represented by nested `bulk` and `retry`
 blocks and participate in the plan fingerprint. `CUSTOM` duplicate selectors
 stay programmatic because they contain executable code. Execution remains
 separate from the read-only report task.
+An optional top-level `lease` block selects `DATABASE` or `FILE` fencing. Its
+owner, duration, and database table or file directory are resolved before the
+target migration begins; relative file directories use the job-file directory
+as their base. Supplying both YAML and programmatic lease settings is rejected.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to
