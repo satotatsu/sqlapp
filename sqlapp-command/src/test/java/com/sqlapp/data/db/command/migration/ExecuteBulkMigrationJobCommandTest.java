@@ -156,6 +156,13 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 							targetConnection, 1, Map.of("items", List.of("ID")));
 					assertEquals(true, idOnly.isMatch());
 					assertEquals(List.of("ID"), idOnly.getTasks().get(0).getColumns());
+					final int originalIsolation = targetConnection.getTransactionIsolation();
+					final boolean originalAutoCommit = targetConnection.getAutoCommit();
+					assertEquals(true, ExecuteBulkMigrationJobCommand.verifyWithIsolation(plan,
+							targetConnection, 1, Map.of("items", List.of("ID")),
+							BulkMigrationVerificationIsolation.REPEATABLE_READ).isMatch());
+					assertEquals(originalIsolation, targetConnection.getTransactionIsolation());
+					assertEquals(originalAutoCommit, targetConnection.getAutoCommit());
 					final Path idOnlyReport = temporaryDirectory.resolve("reports/id-only.json");
 					new BulkMigrationVerificationReportIO().write(idOnlyReport,
 							plan.getFingerprint(), idOnly);
@@ -180,6 +187,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			configuration.setReport(mismatchReport);
 			final var mismatchVerification = new BulkMigrationJobConfiguration.Verification();
 			mismatchVerification.setTargetFile("reports/mismatch-verification.json");
+			mismatchVerification.setIsolation(
+					BulkMigrationVerificationIsolation.REPEATABLE_READ);
 			configuration.setVerification(mismatchVerification);
 			configuration.setLease(null);
 			task.setMode(BulkMigrationMode.INSERT);

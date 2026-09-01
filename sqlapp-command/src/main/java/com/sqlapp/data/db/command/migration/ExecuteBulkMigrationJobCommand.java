@@ -71,9 +71,11 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			executePlan(plan);
 			return;
 		}
-		execute(sourceDataSource, sourceConnection -> {
+			execute(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver()
 					.resolveJob(configurationFile, sourceConnection);
+			configureSourceVerificationIsolation(sourceConnection,
+					resolved.verificationConfiguration());
 			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
 				throw new CommandException("Specify lease configuration either in the job file "
 						+ "or as a command property, not both.");
@@ -156,9 +158,10 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 			if (verificationConfiguration != null) {
 				try {
-					verificationResult = verify(effectivePlan, targetConnection,
+					verificationResult = verifyWithIsolation(effectivePlan, targetConnection,
 							verificationConfiguration.chunkSize(),
-							verificationConfiguration.columnsByTask());
+							verificationConfiguration.columnsByTask(),
+							verificationConfiguration.isolation());
 					if (verificationConfiguration.targetFile() != null) {
 						new BulkMigrationVerificationReportIO().write(
 								verificationConfiguration.targetFile(),
@@ -183,6 +186,75 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 		});
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
+	}
+
+	private static void configureSourceVerificationIsolation(final Connection sourceConnection,
+			final BulkMigrationJobConfigurationResolver.VerificationConfiguration configuration)
+			throws SQLException {
+		if (configuration != null && configuration.isolation().getJdbcLevel() != null) {
+			sourceConnection.setTransactionIsolation(
+					configuration.isolation().getJdbcLevel());
+		}
+	}
+
+	static BulkMigrationJobVerificationResult verifyWithIsolation(
+			final BulkMigrationJobPlan plan, final Connection targetConnection,
+			final int chunkSize, final Map<String, List<String>> columnsByTask,
+			final BulkMigrationVerificationIsolation isolation) throws SQLException {
+		if (isolation == null) {
+			throw new IllegalArgumentException("isolation must not be null");
+		}
+		if (isolation.getJdbcLevel() == null) {
+			return verify(plan, targetConnection, chunkSize, columnsByTask);
+		}
+		final boolean autoCommit = targetConnection.getAutoCommit();
+		final int originalIsolation = targetConnection.getTransactionIsolation();
+		Throwable failure = null;
+		try {
+			targetConnection.setTransactionIsolation(isolation.getJdbcLevel());
+			targetConnection.setAutoCommit(false);
+			final var result = verify(plan, targetConnection, chunkSize, columnsByTask);
+			targetConnection.rollback();
+			return result;
+		} catch (SQLException | RuntimeException | Error e) {
+			failure = e;
+			try {
+				targetConnection.rollback();
+			} catch (SQLException rollbackFailure) {
+				e.addSuppressed(rollbackFailure);
+			}
+			throw e;
+		} finally {
+			restoreVerificationConnection(targetConnection, autoCommit, originalIsolation,
+					failure);
+		}
+	}
+
+	private static void restoreVerificationConnection(final Connection connection,
+			final boolean autoCommit, final int isolation, final Throwable failure)
+			throws SQLException {
+		SQLException restoreFailure = null;
+		try {
+			connection.setAutoCommit(autoCommit);
+		} catch (SQLException e) {
+			restoreFailure = e;
+		}
+		try {
+			connection.setTransactionIsolation(isolation);
+		} catch (SQLException e) {
+			if (restoreFailure == null) {
+				restoreFailure = e;
+			} else {
+				restoreFailure.addSuppressed(e);
+			}
+		}
+		if (restoreFailure != null) {
+			if (failure != null) {
+				failure.addSuppressed(restoreFailure);
+			} else {
+				throw restoreFailure;
+			}
+		}
 	}
 
 	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,

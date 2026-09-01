@@ -108,5 +108,7 @@ public class BulkMigrationJobConfiguration {
 		private int chunkSize = 10_000;
 		private boolean failOnMismatch = true;
 		private String targetFile;
+		private BulkMigrationVerificationIsolation isolation =
+				BulkMigrationVerificationIsolation.DEFAULT;
 	}
 }

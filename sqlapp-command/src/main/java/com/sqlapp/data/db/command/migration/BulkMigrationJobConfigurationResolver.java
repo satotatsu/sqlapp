@@ -43,7 +43,8 @@ public class BulkMigrationJobConfigurationResolver {
 	}
 
 	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch,
-			java.nio.file.Path targetFile, Map<String, List<String>> columnsByTask) {
+			java.nio.file.Path targetFile, Map<String, List<String>> columnsByTask,
+			BulkMigrationVerificationIsolation isolation) {
 	}
 
 	public BulkMigrationJobPlan resolve(final File configurationFile,
@@ -157,6 +158,9 @@ public class BulkMigrationJobConfigurationResolver {
 		if (value.getChunkSize() <= 0) {
 			throw new CommandException("verification.chunkSize must be greater than zero.");
 		}
+		if (value.getIsolation() == null) {
+			throw new CommandException("verification.isolation must not be null.");
+		}
 		final java.nio.file.Path targetFile = value.getTargetFile() == null
 				|| value.getTargetFile().isBlank() ? null
 						: resolve(configurationFile, value.getTargetFile()).toPath()
@@ -169,7 +173,7 @@ public class BulkMigrationJobConfigurationResolver {
 			}
 		}
 		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch(),
-				targetFile, Map.copyOf(columns));
+				targetFile, Map.copyOf(columns), value.getIsolation());
 	}
 
 	private static OperationalReportConfiguration report(final File configurationFile,

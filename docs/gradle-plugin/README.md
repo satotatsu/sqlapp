@@ -104,6 +104,7 @@ verification:
   enabled: true
   chunkSize: 10000
   failOnMismatch: true
+  isolation: REPEATABLE_READ
   targetFile: reports/verification.json
 tasks:
   - id: customers
@@ -165,6 +166,11 @@ and mismatched chunk hashes.
 If verification fails, the operational report's final execution event is
 updated to `JOB_FAILED`; this does not roll back chunks already committed by
 the migration.
+`isolation` defaults to `DEFAULT`. `READ_COMMITTED`, `REPEATABLE_READ`, and
+`SERIALIZABLE` select the corresponding JDBC transaction isolation. A stronger
+level stabilizes each database's verification view but is not a distributed
+snapshot across the source and target; quiesce application writes when an
+atomic cross-database comparison is required.
 
 Per-task `verificationColumns` may restrict comparison to columns whose values
 must be identical. When omitted, INSERT verifies writable inserted columns and

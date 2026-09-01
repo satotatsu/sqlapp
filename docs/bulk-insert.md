@@ -768,6 +768,14 @@ When an operational report is configured, a verification query, report-write,
 or configured mismatch failure replaces its final execution event with
 `JOB_FAILED`. This describes the command outcome; committed migration chunks
 remain committed.
+Verification isolation defaults to the connections' current settings. The
+declarative `isolation` option accepts `READ_COMMITTED`, `REPEATABLE_READ`, or
+`SERIALIZABLE`. For the stronger levels, the source transaction is established
+before migration reads begin and the target uses a verification transaction
+after migration; connection state is restored afterward. This
+stabilizes each side independently but cannot create one distributed snapshot
+across two databases. Quiesce writers or use database-native coordinated
+snapshots when that guarantee is required.
 `BulkMigrationVerificationReportIO` reads the artifact back while validating
 its format version, plan fingerprint, unique task IDs, non-negative counts,
 match flags, mismatched chunks, and aggregate totals. Use the fingerprint-aware
