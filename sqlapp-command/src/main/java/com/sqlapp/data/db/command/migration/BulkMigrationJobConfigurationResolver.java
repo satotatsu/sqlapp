@@ -39,7 +39,8 @@ public class BulkMigrationJobConfigurationResolver {
 			BulkMigrationOperationalReportFailurePolicy failurePolicy) {
 	}
 
-	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch) {
+	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch,
+			java.nio.file.Path targetFile) {
 	}
 
 	public BulkMigrationJobPlan resolve(final File configurationFile,
@@ -113,10 +114,10 @@ public class BulkMigrationJobConfigurationResolver {
 		return new Resolution(BulkMigrationJobPlanner.plan(tasks),
 				lease(configurationFile, configuration.getLease()),
 				report(configurationFile, configuration.getReport()),
-				verification(configuration.getVerification()));
+				verification(configurationFile, configuration.getVerification()));
 	}
 
-	private static VerificationConfiguration verification(
+	private static VerificationConfiguration verification(final File configurationFile,
 			final BulkMigrationJobConfiguration.Verification value) {
 		if (value == null || !value.isEnabled()) {
 			return null;
@@ -124,7 +125,12 @@ public class BulkMigrationJobConfigurationResolver {
 		if (value.getChunkSize() <= 0) {
 			throw new CommandException("verification.chunkSize must be greater than zero.");
 		}
-		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch());
+		final java.nio.file.Path targetFile = value.getTargetFile() == null
+				|| value.getTargetFile().isBlank() ? null
+						: resolve(configurationFile, value.getTargetFile()).toPath()
+								.toAbsolutePath().normalize();
+		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch(),
+				targetFile);
 	}
 
 	private static OperationalReportConfiguration report(final File configurationFile,

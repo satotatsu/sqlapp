@@ -757,6 +757,10 @@ source and target after execution. It compares row counts and normalized chunk
 hashes without materializing the full tables. Verification uses the migration's
 unique keyset columns. A mismatch may either fail the command or be returned for
 external policy handling; already committed chunks are not rolled back.
+`verification.targetFile` optionally writes a stable JSON summary atomically.
+The summary includes totals and mismatched chunk hashes rather than every
+matching row or chunk, keeping the artifact bounded. It is written before a
+configured mismatch failure is raised.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

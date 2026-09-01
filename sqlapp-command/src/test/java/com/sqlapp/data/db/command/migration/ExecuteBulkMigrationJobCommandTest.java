@@ -165,6 +165,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			configuration.setReport(report);
 			final var verification = new BulkMigrationJobConfiguration.Verification();
 			verification.setChunkSize(1);
+			verification.setTargetFile("reports/verification.json");
 			configuration.setVerification(verification);
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 
@@ -177,6 +178,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 
 			assertEquals(0, command.getResult().getTasks().size());
 			assertEquals(true, command.getVerificationResult().isMatch());
+			assertEquals(true, Files.isRegularFile(
+					temporaryDirectory.resolve("reports/verification.json")));
 			assertEquals(true, Files.isRegularFile(
 					temporaryDirectory.resolve("reports/status.json")));
 		}

@@ -104,6 +104,7 @@ verification:
   enabled: true
   chunkSize: 10000
   failOnMismatch: true
+  targetFile: reports/verification.json
 tasks:
   - id: customers
     table: public.customers
@@ -153,7 +154,9 @@ unique keyset order after migration, then compares total counts and normalized
 SHA-256 hashes per chunk. `failOnMismatch: true` fails the task after retaining
 the committed migration and its verification result; `false` returns the
 mismatch through `ExecuteBulkMigrationJobCommand.verificationResult` without
-failing execution.
+failing execution. When `targetFile` is set, a bounded JSON summary containing
+counts and only mismatched chunk hashes is atomically replaced before mismatch
+failure is raised, so CI retains the evidence.
 
 For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be

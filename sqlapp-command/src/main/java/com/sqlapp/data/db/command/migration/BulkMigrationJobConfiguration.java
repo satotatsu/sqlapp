@@ -106,5 +106,6 @@ public class BulkMigrationJobConfiguration {
 		private boolean enabled = true;
 		private int chunkSize = 10_000;
 		private boolean failOnMismatch = true;
+		private String targetFile;
 	}
 }

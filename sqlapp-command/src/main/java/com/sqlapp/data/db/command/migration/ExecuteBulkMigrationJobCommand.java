@@ -154,6 +154,11 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			if (verificationConfiguration != null) {
 				verificationResult = verify(effectivePlan, targetConnection,
 						verificationConfiguration.chunkSize());
+				if (verificationConfiguration.targetFile() != null) {
+					new BulkMigrationVerificationReportIO().write(
+							verificationConfiguration.targetFile(), effectivePlan.getFingerprint(),
+							verificationResult);
+				}
 				if (verificationConfiguration.failOnMismatch()
 						&& !verificationResult.isMatch()) {
 					throw new CommandException("Bulk migration verification failed: "
