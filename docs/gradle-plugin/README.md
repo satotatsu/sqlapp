@@ -162,7 +162,8 @@ failure is raised, so CI retains the evidence. The report can be read with
 `BulkMigrationVerificationReportIO.read`; the overload accepting a plan
 fingerprint rejects stale artifacts.
 Each task entry records the ordered comparison columns as well as its counts
-and mismatched chunk hashes.
+and mismatched chunk hashes. The report's top-level `isolation` field records
+the selected JDBC consistency level.
 If verification fails, the operational report's final execution event is
 updated to `JOB_FAILED`; this does not roll back chunks already committed by
 the migration.

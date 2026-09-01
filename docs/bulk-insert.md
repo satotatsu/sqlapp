@@ -763,7 +763,9 @@ matching row or chunk, keeping the artifact bounded. It is written before a
 configured mismatch failure is raised.
 Each task summary also records the ordered column names used to calculate its
 hashes, so the artifact remains meaningful when `verificationColumns` narrows
-the comparison.
+the comparison. The top-level `isolation` field records the JDBC consistency
+level used for the run. This is verification-report format version 2; readers
+reject older artifacts that do not identify their isolation semantics.
 When an operational report is configured, a verification query, report-write,
 or configured mismatch failure replaces its final execution event with
 `JOB_FAILED`. This describes the command outcome; committed migration chunks

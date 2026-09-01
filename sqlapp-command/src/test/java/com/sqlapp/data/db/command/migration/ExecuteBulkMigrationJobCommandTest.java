@@ -166,8 +166,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					final Path idOnlyReport = temporaryDirectory.resolve("reports/id-only.json");
 					new BulkMigrationVerificationReportIO().write(idOnlyReport,
 							plan.getFingerprint(), idOnly);
-					assertEquals(List.of("ID"), new BulkMigrationVerificationReportIO()
-							.read(idOnlyReport, plan.getFingerprint()).tasks().get(0).columns());
+					final var idOnlyArtifact = new BulkMigrationVerificationReportIO()
+							.read(idOnlyReport, plan.getFingerprint());
+					assertEquals(List.of("ID"), idOnlyArtifact.tasks().get(0).columns());
+					assertEquals("DEFAULT", idOnlyArtifact.isolation());
 				}
 			}
 
@@ -215,9 +217,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals("JOB_FAILED", new BulkMigrationOperationalReportIO().read(
 					temporaryDirectory.resolve("reports/mismatch-status.json"))
 						.execution().event());
-			assertEquals(false, new BulkMigrationVerificationReportIO().read(
-					temporaryDirectory.resolve("reports/mismatch-verification.json"))
-						.match());
+			final var mismatchArtifact = new BulkMigrationVerificationReportIO().read(
+					temporaryDirectory.resolve("reports/mismatch-verification.json"));
+			assertEquals(false, mismatchArtifact.match());
+			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
 
 			configuration.setTasks(List.of());
 			final var report = new BulkMigrationJobConfiguration.Report();

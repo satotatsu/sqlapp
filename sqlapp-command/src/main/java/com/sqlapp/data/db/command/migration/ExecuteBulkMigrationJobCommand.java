@@ -165,7 +165,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					if (verificationConfiguration.targetFile() != null) {
 						new BulkMigrationVerificationReportIO().write(
 								verificationConfiguration.targetFile(),
-								effectivePlan.getFingerprint(), verificationResult);
+								effectivePlan.getFingerprint(),
+								verificationConfiguration.isolation(), verificationResult);
 					}
 					if (verificationConfiguration.failOnMismatch()
 							&& !verificationResult.isMatch()) {

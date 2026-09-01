@@ -49,6 +49,13 @@ public final class BulkMigrationVerificationReportIO {
 
 	public void write(final Path file, final String planFingerprint,
 			final BulkMigrationJobVerificationResult result) {
+		write(file, planFingerprint, BulkMigrationVerificationIsolation.DEFAULT, result);
+	}
+
+	public void write(final Path file, final String planFingerprint,
+			final BulkMigrationVerificationIsolation isolation,
+			final BulkMigrationJobVerificationResult result) {
+		Objects.requireNonNull(isolation, "isolation");
 		final var tasks = result.getTasks().stream().map(task -> {
 			final var verification = task.getVerificationResult();
 			final var mismatches = verification.getMismatches().stream().map(chunk ->
@@ -61,7 +68,7 @@ public final class BulkMigrationVerificationReportIO {
 		}).toList();
 		write(file, new BulkMigrationVerificationReport(
 				BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION, Instant.now(),
-				planFingerprint, result.isMatch(), result.getExpectedRows(),
+				planFingerprint, isolation.name(), result.isMatch(), result.getExpectedRows(),
 				result.getActualRows(), result.getMismatchedTasks(), tasks));
 	}
 
@@ -108,6 +115,12 @@ public final class BulkMigrationVerificationReportIO {
 		Objects.requireNonNull(report.generatedAt(), "generatedAt");
 		if (report.planFingerprint() == null || report.planFingerprint().isBlank()) {
 			throw new CommandException("Verification report planFingerprint must not be empty");
+		}
+		try {
+			BulkMigrationVerificationIsolation.valueOf(report.isolation());
+		} catch (NullPointerException | IllegalArgumentException e) {
+			throw new CommandException("Verification report isolation is invalid: "
+					+ report.isolation(), e);
 		}
 		if (report.expectedRows() < 0 || report.actualRows() < 0
 				|| report.mismatchedTasks() < 0) {

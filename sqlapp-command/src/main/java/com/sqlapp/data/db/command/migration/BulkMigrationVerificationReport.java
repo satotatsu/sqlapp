@@ -6,9 +6,9 @@ import java.util.List;
 
 /** Stable JSON summary of post-migration JDBC verification. */
 public record BulkMigrationVerificationReport(int formatVersion, Instant generatedAt,
-		String planFingerprint, boolean match, long expectedRows, long actualRows,
+		String planFingerprint, String isolation, boolean match, long expectedRows, long actualRows,
 		long mismatchedTasks, List<Task> tasks) {
-	public static final int CURRENT_FORMAT_VERSION = 1;
+	public static final int CURRENT_FORMAT_VERSION = 2;
 
 	public record Task(String taskId, List<String> columns, boolean match,
 			long expectedRows, long actualRows, List<Chunk> mismatches) {
