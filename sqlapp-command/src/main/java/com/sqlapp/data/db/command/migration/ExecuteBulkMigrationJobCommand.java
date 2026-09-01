@@ -123,10 +123,12 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					? executionPlan : withExplicitDatabaseCheckpointStores(executionPlan,
 							targetConnection);
 			final BulkMigrationJobListener executionListener;
+			final BulkMigrationOperationalReportJobListener reportListener;
 			if (reportConfiguration == null) {
+				reportListener = null;
 				executionListener = configuredListener;
 			} else {
-				final var reportListener = new BulkMigrationOperationalReportJobListener(
+				reportListener = new BulkMigrationOperationalReportJobListener(
 						effectivePlan, reportConfiguration.targetFile(), () -> null, () -> null,
 						reportConfiguration.failurePolicy(), failure -> { });
 				executionListener = configuredListener == BulkMigrationJobListener.NO_OP
@@ -153,18 +155,30 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				}
 			}
 			if (verificationConfiguration != null) {
-				verificationResult = verify(effectivePlan, targetConnection,
-						verificationConfiguration.chunkSize(),
-						verificationConfiguration.columnsByTask());
-				if (verificationConfiguration.targetFile() != null) {
-					new BulkMigrationVerificationReportIO().write(
-							verificationConfiguration.targetFile(), effectivePlan.getFingerprint(),
-							verificationResult);
-				}
-				if (verificationConfiguration.failOnMismatch()
-						&& !verificationResult.isMatch()) {
-					throw new CommandException("Bulk migration verification failed: "
-							+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
+				try {
+					verificationResult = verify(effectivePlan, targetConnection,
+							verificationConfiguration.chunkSize(),
+							verificationConfiguration.columnsByTask());
+					if (verificationConfiguration.targetFile() != null) {
+						new BulkMigrationVerificationReportIO().write(
+								verificationConfiguration.targetFile(),
+								effectivePlan.getFingerprint(), verificationResult);
+					}
+					if (verificationConfiguration.failOnMismatch()
+							&& !verificationResult.isMatch()) {
+						throw new CommandException("Bulk migration verification failed: "
+								+ verificationResult.getMismatchedTasks()
+								+ " task(s) mismatched.");
+					}
+				} catch (SQLException | RuntimeException | Error failure) {
+					if (reportListener != null) {
+						try {
+							reportListener.onJobFailed(effectivePlan.getFingerprint(), failure);
+						} catch (RuntimeException reportFailure) {
+							failure.addSuppressed(reportFailure);
+						}
+					}
+					throw failure;
 				}
 			}
 		});

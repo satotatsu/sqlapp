@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.io.File;
+import java.sql.SQLException;
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.List;
@@ -22,6 +23,9 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
@@ -170,6 +174,41 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertEquals(FileBulkMigrationCheckpointStore.class,
 						filePlan.getTasks().get(0).getCheckpointStore().getClass());
 			}
+
+			final var mismatchReport = new BulkMigrationJobConfiguration.Report();
+			mismatchReport.setTargetFile("reports/mismatch-status.json");
+			configuration.setReport(mismatchReport);
+			final var mismatchVerification = new BulkMigrationJobConfiguration.Verification();
+			mismatchVerification.setTargetFile("reports/mismatch-verification.json");
+			configuration.setVerification(mismatchVerification);
+			configuration.setLease(null);
+			task.setMode(BulkMigrationMode.INSERT);
+			executeSql(source, "TRUNCATE TABLE PUBLIC.ITEMS");
+			executeSql(target, "TRUNCATE TABLE PUBLIC.ITEMS");
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			final var mismatchCommand = new ExecuteBulkMigrationJobCommand();
+			mismatchCommand.setDataSource(target);
+			mismatchCommand.setSourceDataSource(source);
+			mismatchCommand.setCloseDataSource(false);
+			mismatchCommand.setConfigurationFile(configurationFile);
+			mismatchCommand.setListener(new BulkMigrationJobListener() {
+				@Override
+				public void onJobCompleted(final BulkMigrationJobResult result) {
+					try {
+						executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (3, 'after')");
+					} catch (SQLException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			});
+			assertThrows(RuntimeException.class, mismatchCommand::run);
+			assertEquals(false, mismatchCommand.getVerificationResult().isMatch());
+			assertEquals("JOB_FAILED", new BulkMigrationOperationalReportIO().read(
+					temporaryDirectory.resolve("reports/mismatch-status.json"))
+						.execution().event());
+			assertEquals(false, new BulkMigrationVerificationReportIO().read(
+					temporaryDirectory.resolve("reports/mismatch-verification.json"))
+						.match());
 
 			configuration.setTasks(List.of());
 			final var report = new BulkMigrationJobConfiguration.Report();

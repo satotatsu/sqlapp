@@ -764,6 +764,10 @@ configured mismatch failure is raised.
 Each task summary also records the ordered column names used to calculate its
 hashes, so the artifact remains meaningful when `verificationColumns` narrows
 the comparison.
+When an operational report is configured, a verification query, report-write,
+or configured mismatch failure replaces its final execution event with
+`JOB_FAILED`. This describes the command outcome; committed migration chunks
+remain committed.
 `BulkMigrationVerificationReportIO` reads the artifact back while validating
 its format version, plan fingerprint, unique task IDs, non-negative counts,
 match flags, mismatched chunks, and aggregate totals. Use the fingerprint-aware

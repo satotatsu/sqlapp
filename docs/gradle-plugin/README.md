@@ -162,6 +162,9 @@ failure is raised, so CI retains the evidence. The report can be read with
 fingerprint rejects stale artifacts.
 Each task entry records the ordered comparison columns as well as its counts
 and mismatched chunk hashes.
+If verification fails, the operational report's final execution event is
+updated to `JOB_FAILED`; this does not roll back chunks already committed by
+the migration.
 
 Per-task `verificationColumns` may restrict comparison to columns whose values
 must be identical. When omitted, INSERT verifies writable inserted columns and
