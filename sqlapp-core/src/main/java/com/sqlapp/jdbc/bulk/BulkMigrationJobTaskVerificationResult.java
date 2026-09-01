@@ -2,6 +2,8 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Objects;
 
 import lombok.Value;
 
@@ -13,15 +15,24 @@ public class BulkMigrationJobTaskVerificationResult {
 	BulkMigrationVerificationResult verificationResult;
 
 	public BulkMigrationJobTaskVerificationResult(final String taskId,
-			final BulkMigrationVerificationResult verificationResult) {
-		this(taskId, List.of(), verificationResult);
-	}
-
-	public BulkMigrationJobTaskVerificationResult(final String taskId,
 			final List<String> columns,
 			final BulkMigrationVerificationResult verificationResult) {
+		if (taskId == null || taskId.isBlank()) {
+			throw new IllegalArgumentException("taskId must not be empty");
+		}
+		Objects.requireNonNull(columns, "columns");
+		if (columns.isEmpty() || columns.stream()
+				.anyMatch(name -> name == null || name.isBlank())) {
+			throw new IllegalArgumentException("Verification columns must not be empty: "
+					+ taskId);
+		}
+		if (new HashSet<>(columns).size() != columns.size()) {
+			throw new IllegalArgumentException("Verification columns must be unique: "
+					+ taskId);
+		}
 		this.taskId = taskId;
 		this.columns = List.copyOf(columns);
-		this.verificationResult = verificationResult;
+		this.verificationResult = Objects.requireNonNull(verificationResult,
+				"verificationResult");
 	}
 }

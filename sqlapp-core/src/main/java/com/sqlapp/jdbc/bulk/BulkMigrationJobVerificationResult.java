@@ -2,6 +2,8 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Objects;
 
 import lombok.Value;
 
@@ -9,6 +11,22 @@ import lombok.Value;
 @Value
 public class BulkMigrationJobVerificationResult {
 	List<BulkMigrationJobTaskVerificationResult> tasks;
+
+	public BulkMigrationJobVerificationResult(
+			final List<BulkMigrationJobTaskVerificationResult> tasks) {
+		Objects.requireNonNull(tasks, "tasks");
+		if (tasks.stream().anyMatch(Objects::isNull)) {
+			throw new NullPointerException("tasks must not contain null");
+		}
+		final var taskIds = new HashSet<String>();
+		for (final var task : tasks) {
+			if (!taskIds.add(task.getTaskId())) {
+				throw new IllegalArgumentException("Duplicate verification task ID: "
+						+ task.getTaskId());
+			}
+		}
+		this.tasks = List.copyOf(tasks);
+	}
 
 	public boolean isMatch() {
 		return tasks.stream().map(BulkMigrationJobTaskVerificationResult::getVerificationResult)

@@ -174,6 +174,17 @@ class BulkMigrationJobVerifierTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationVerificationResult(2, 2, 2, List.of(
 						new BulkMigrationVerificationChunk(0, 1, 1, "x", "x"))));
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskVerificationResult("task", List.of(),
+						verification));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskVerificationResult("task", List.of("ID", "ID"),
+						verification));
+		final var task = new BulkMigrationJobTaskVerificationResult("task", List.of("ID"),
+				verification);
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobVerificationResult(List.of(task, task)));
 	}
 
 	@Test
