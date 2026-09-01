@@ -180,6 +180,14 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals(true, command.getVerificationResult().isMatch());
 			assertEquals(true, Files.isRegularFile(
 					temporaryDirectory.resolve("reports/verification.json")));
+			final var verificationReport = new BulkMigrationVerificationReportIO().read(
+					temporaryDirectory.resolve("reports/verification.json"),
+					command.getResult().getPlanFingerprint());
+			assertEquals(true, verificationReport.match());
+			assertEquals(0, verificationReport.mismatchedTasks());
+			assertThrows(CommandException.class, () ->
+					new BulkMigrationVerificationReportIO().read(
+							temporaryDirectory.resolve("reports/verification.json"), "wrong"));
 			assertEquals(true, Files.isRegularFile(
 					temporaryDirectory.resolve("reports/status.json")));
 		}

@@ -761,6 +761,10 @@ external policy handling; already committed chunks are not rolled back.
 The summary includes totals and mismatched chunk hashes rather than every
 matching row or chunk, keeping the artifact bounded. It is written before a
 configured mismatch failure is raised.
+`BulkMigrationVerificationReportIO` reads the artifact back while validating
+its format version, plan fingerprint, unique task IDs, non-negative counts,
+match flags, mismatched chunks, and aggregate totals. Use the fingerprint-aware
+read overload before making an automated deployment decision.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

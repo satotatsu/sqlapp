@@ -156,7 +156,9 @@ the committed migration and its verification result; `false` returns the
 mismatch through `ExecuteBulkMigrationJobCommand.verificationResult` without
 failing execution. When `targetFile` is set, a bounded JSON summary containing
 counts and only mismatched chunk hashes is atomically replaced before mismatch
-failure is raised, so CI retains the evidence.
+failure is raised, so CI retains the evidence. The report can be read with
+`BulkMigrationVerificationReportIO.read`; the overload accepting a plan
+fingerprint rejects stale artifacts.
 
 For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be
