@@ -63,6 +63,14 @@ class SapHanaBulkInsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = createConnection();
+				Connection second = createConnection()) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
 			@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory) throws Exception {
 		try (Connection connection = createConnection();

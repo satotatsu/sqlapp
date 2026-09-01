@@ -36,6 +36,17 @@ class FirebirdBulkInsertTest {
 	@AfterAll static void stop() { ReusableTestcontainers.stop(FIREBIRD); }
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		final String url = "jdbc:firebirdsql://localhost:"
+				+ FIREBIRD.getMappedPort(3050)
+				+ "//firebird/data/test.fdb?encoding=UTF8";
+		try (var first = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
+				var second = DriverManager.getConnection(url, "SYSDBA", PASSWORD)) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
 		final String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
 				+ "//firebird/data/test.fdb?encoding=UTF8";

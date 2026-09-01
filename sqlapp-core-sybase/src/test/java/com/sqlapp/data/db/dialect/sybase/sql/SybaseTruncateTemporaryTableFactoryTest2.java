@@ -49,7 +49,7 @@ public class SybaseTruncateTemporaryTableFactoryTest2 extends AbstractSybaseSqlF
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		final String expected = """
-				TRUNCATE TABLE [#tableB]""";
+				TRUNCATE TABLE #tableB""";
 		assertEquals(expected, commandText.getSqlText());
 	}
 

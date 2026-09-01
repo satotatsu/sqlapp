@@ -36,6 +36,14 @@ class MySqlBulkInsertTest {
 	}
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = MYSQL.createConnection("?allowLoadLocalInfile=true");
+				Connection second = MYSQL.createConnection("?allowLoadLocalInfile=true")) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
 		try (Connection connection = MYSQL.createConnection("?allowLoadLocalInfile=true");
 				var statement = connection.createStatement()) {

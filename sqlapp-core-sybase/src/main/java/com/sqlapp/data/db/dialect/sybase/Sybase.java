@@ -57,6 +57,16 @@ public class Sybase extends Dialect {
 		super(nextVersionDialectSupplier);
 	}
 
+	@Override
+	public String quote(final String target) {
+		// ASE local temporary table identifiers must retain their leading '#'.
+		// Quoting the complete name as [#name] is rejected as ambiguous.
+		if (target != null && target.startsWith("#")) {
+			return target;
+		}
+		return super.quote(target);
+	}
+
 	protected static final Function<ColumnTypeMatcher, ColumnTypeMatcher> numberColumnTypeMatcherConverter = (
 			matcher) -> new SybaseNumberColumnTypeMatcher(matcher);
 

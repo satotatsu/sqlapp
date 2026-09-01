@@ -38,6 +38,17 @@ class InformixBulkInsertTest {
 	@AfterAll static void stop() { ReusableTestcontainers.stop(INFORMIX); }
 
 	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		final String url = "jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088)
+				+ "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var first = DriverManager.getConnection(url, "informix", "in4mix");
+				var second = DriverManager.getConnection(url, "informix", "in4mix")) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
 		final String url = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088)
 				+ "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y";
