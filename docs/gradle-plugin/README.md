@@ -160,6 +160,8 @@ counts and only mismatched chunk hashes is atomically replaced before mismatch
 failure is raised, so CI retains the evidence. The report can be read with
 `BulkMigrationVerificationReportIO.read`; the overload accepting a plan
 fingerprint rejects stale artifacts.
+Each task entry records the ordered comparison columns as well as its counts
+and mismatched chunk hashes.
 
 Per-task `verificationColumns` may restrict comparison to columns whose values
 must be identical. When omitted, INSERT verifies writable inserted columns and

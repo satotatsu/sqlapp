@@ -199,6 +199,9 @@ class BulkMigrationJobVerifierTest {
 		assertEquals(2, result.getActualRows());
 		assertEquals(List.of(1, 1), result.getTasks().stream()
 				.map(task -> task.getVerificationResult().getChunkSize()).toList());
+		assertEquals(List.of(List.of("ID", "TXT"), List.of("ID", "TXT")),
+				result.getTasks().stream()
+						.map(BulkMigrationJobTaskVerificationResult::getColumns).toList());
 	}
 
 	private static Table table(final String name, final String text) {

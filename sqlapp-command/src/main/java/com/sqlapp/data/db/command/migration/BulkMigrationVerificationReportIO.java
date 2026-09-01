@@ -55,7 +55,7 @@ public final class BulkMigrationVerificationReportIO {
 					new BulkMigrationVerificationReport.Chunk(chunk.getIndex(),
 							chunk.getExpectedRows(), chunk.getActualRows(),
 							chunk.getExpectedHash(), chunk.getActualHash())).toList();
-			return new BulkMigrationVerificationReport.Task(task.getTaskId(),
+			return new BulkMigrationVerificationReport.Task(task.getTaskId(), task.getColumns(),
 					verification.isMatch(), verification.getExpectedRows(),
 					verification.getActualRows(), mismatches);
 		}).toList();
@@ -122,6 +122,12 @@ public final class BulkMigrationVerificationReportIO {
 			if (task == null || task.taskId() == null || task.taskId().isBlank()
 					|| !ids.add(task.taskId())) {
 				throw new CommandException("Verification report task IDs must be unique and non-empty");
+			}
+			if (task.columns() == null || task.columns().isEmpty()
+					|| task.columns().stream().anyMatch(name -> name == null || name.isBlank())
+					|| new HashSet<>(task.columns()).size() != task.columns().size()) {
+				throw new CommandException("Verification report columns must be non-empty and unique: "
+						+ task.taskId());
 			}
 			if (task.expectedRows() < 0 || task.actualRows() < 0 || task.mismatches() == null) {
 				throw new CommandException("Verification report task values are invalid: "

@@ -10,8 +10,8 @@ public record BulkMigrationVerificationReport(int formatVersion, Instant generat
 		long mismatchedTasks, List<Task> tasks) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
 
-	public record Task(String taskId, boolean match, long expectedRows, long actualRows,
-			List<Chunk> mismatches) {
+	public record Task(String taskId, List<String> columns, boolean match,
+			long expectedRows, long actualRows, List<Chunk> mismatches) {
 	}
 
 	public record Chunk(long index, int expectedRows, int actualRows,

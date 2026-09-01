@@ -761,6 +761,9 @@ external policy handling; already committed chunks are not rolled back.
 The summary includes totals and mismatched chunk hashes rather than every
 matching row or chunk, keeping the artifact bounded. It is written before a
 configured mismatch failure is raised.
+Each task summary also records the ordered column names used to calculate its
+hashes, so the artifact remains meaningful when `verificationColumns` narrows
+the comparison.
 `BulkMigrationVerificationReportIO` reads the artifact back while validating
 its format version, plan fingerprint, unique task IDs, non-negative counts,
 match flags, mismatched chunks, and aggregate totals. Use the fingerprint-aware

@@ -140,14 +140,23 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 							plan, targetConnection, 1);
 					assertEquals(true, verificationResult.isMatch());
 					assertEquals(2, verificationResult.getExpectedRows());
+					assertEquals(List.of("ID", "NAME"),
+							verificationResult.getTasks().get(0).getColumns());
 					executeSql(targetConnection,
 							"UPDATE PUBLIC.ITEMS SET NAME='changed' WHERE ID=2");
 					final var mismatch = ExecuteBulkMigrationJobCommand.verify(
 							plan, targetConnection, 1);
 					assertEquals(false, mismatch.isMatch());
 					assertEquals(1, mismatch.getMismatchedTasks());
-					assertEquals(true, ExecuteBulkMigrationJobCommand.verify(plan,
-							targetConnection, 1, Map.of("items", List.of("ID"))).isMatch());
+					final var idOnly = ExecuteBulkMigrationJobCommand.verify(plan,
+							targetConnection, 1, Map.of("items", List.of("ID")));
+					assertEquals(true, idOnly.isMatch());
+					assertEquals(List.of("ID"), idOnly.getTasks().get(0).getColumns());
+					final Path idOnlyReport = temporaryDirectory.resolve("reports/id-only.json");
+					new BulkMigrationVerificationReportIO().write(idOnlyReport,
+							plan.getFingerprint(), idOnly);
+					assertEquals(List.of("ID"), new BulkMigrationVerificationReportIO()
+							.read(idOnlyReport, plan.getFingerprint()).tasks().get(0).columns());
 				}
 			}
 

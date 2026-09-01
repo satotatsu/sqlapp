@@ -39,6 +39,8 @@ public final class BulkMigrationJobVerifier {
 		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>(ordered.size());
 		for (final BulkMigrationJobVerificationTask task : ordered) {
 			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(),
+					task.getExpected().getColumns().stream()
+							.map(com.sqlapp.data.schemas.Column::getName).toList(),
 					BulkMigrationVerifier.verify(task.getExpected(), task.getActual(),
 							task.getChunkSize())));
 		}
