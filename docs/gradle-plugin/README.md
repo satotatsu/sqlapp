@@ -104,11 +104,24 @@ tasks:
     targetFingerprint: target-schema-v1
     keyColumns: [customer_id]
     duplicateKeyStrategy: LAST
+    bulk:
+      batchSize: 5000
+      keepNulls: true
+      tableLock: true
+    retry:
+      maxRetries: 3
+      initialBackoffMillis: 1000
+      backoffMultiplier: 2.0
+      maxBackoffMillis: 30000
+      sqlStates: ['40001']
 ```
 
 Unqualified table names are accepted only when unique in the Schema XML.
 `CUSTOM` duplicate selection remains programmatic because executable selector
-code cannot be represented safely in YAML.
+code cannot be represented safely in YAML. The nested `bulk` block is shared by
+INSERT and UPSERT; the nested `retry` block controls retry of a complete,
+transactional chunk and may select transient exceptions, SQLStates, and vendor
+error codes.
 
 ## Choose a workflow
 

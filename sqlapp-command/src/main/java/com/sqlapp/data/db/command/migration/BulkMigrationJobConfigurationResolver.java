@@ -18,6 +18,8 @@ import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
+import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
@@ -44,21 +46,23 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		for (final var task : configuration.getTasks()) {
 			final Table table = findTable(tables, task.getTable());
+			final BulkOption bulk = bulk(task.getBulk());
+			final BulkMigrationRetryOption retry = retry(task.getRetry());
 			final var upsert = BulkUpsertOption.builder()
 					.keyColumns(task.getKeyColumns()).updateColumns(task.getUpdateColumns())
 					.updateWhenMatched(task.isUpdateWhenMatched())
 					.insertWhenNotMatched(task.isInsertWhenNotMatched())
 					.useTransaction(task.isUseTransaction())
 					.duplicateKeyStrategy(task.getDuplicateKeyStrategy())
-					.stagingTableName(task.getStagingTableName()).build();
+					.stagingTableName(task.getStagingTableName()).bulkOption(bulk).build();
 			final var options = ChunkedBulkMigrationOption.builder()
 					.migrationId(value(task.getMigrationId(), task.getId()))
 					.chunkSize(task.getChunkSize()).mode(task.getMode()).resume(task.isResume())
 					.checkpointMode(task.getCheckpointMode())
 					.checkpointTableName(task.getCheckpointTableName())
 					.sourceFingerprint(task.getSourceFingerprint())
-					.targetFingerprint(task.getTargetFingerprint())
-					.bulkUpsertOption(upsert).build();
+					.targetFingerprint(task.getTargetFingerprint()).bulkOption(bulk)
+					.bulkUpsertOption(upsert).retryOption(retry).build();
 			final JdbcBulkMigrationKeysetSource source = task.getKeysetColumns() == null
 					|| task.getKeysetColumns().isEmpty()
 							? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
@@ -68,6 +72,34 @@ public class BulkMigrationJobConfigurationResolver {
 					.keysetSource(source).options(options).build());
 		}
 		return BulkMigrationJobPlanner.plan(tasks);
+	}
+
+	private static BulkOption bulk(final BulkMigrationJobConfiguration.Bulk value) {
+		if (value == null) {
+			return BulkOption.defaults();
+		}
+		return BulkOption.builder().batchSize(value.getBatchSize())
+				.bulkCopyTimeout(value.getBulkCopyTimeout())
+				.checkConstraints(value.isCheckConstraints()).fireTriggers(value.isFireTriggers())
+				.keepIdentity(value.isKeepIdentity()).keepNulls(value.isKeepNulls())
+				.tableLock(value.isTableLock()).useTransaction(value.isUseTransaction())
+				.allowEncryptedValueModifications(value.isAllowEncryptedValueModifications())
+				.build();
+	}
+
+	private static BulkMigrationRetryOption retry(
+			final BulkMigrationJobConfiguration.Retry value) {
+		if (value == null) {
+			return BulkMigrationRetryOption.none();
+		}
+		return BulkMigrationRetryOption.builder().maxRetries(value.getMaxRetries())
+				.initialBackoffMillis(value.getInitialBackoffMillis())
+				.backoffMultiplier(value.getBackoffMultiplier())
+				.maxBackoffMillis(value.getMaxBackoffMillis())
+				.retryTransientExceptions(value.isRetryTransientExceptions())
+				.sqlStates(value.getSqlStates() == null ? List.of() : value.getSqlStates())
+				.errorCodes(value.getErrorCodes() == null ? List.of() : value.getErrorCodes())
+				.build();
 	}
 
 	private static String value(final String value, final String fallback) {

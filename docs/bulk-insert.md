@@ -735,9 +735,11 @@ separate source data source. Declarative jobs resolve table identities against
 a captured Schema XML, reject ambiguous short names, and create JDBC keyset
 sources only after the source connection has been opened. UPSERT keys, update
 columns, duplicate strategy, checkpoint policy, and reproducibility
-fingerprints are part of that configuration. `CUSTOM` duplicate selectors stay
-programmatic because they contain executable code. Execution remains separate
-from the read-only report task.
+fingerprints are part of that configuration. Vendor-neutral bulk-copy controls
+and bounded chunk retry rules are represented by nested `bulk` and `retry`
+blocks and participate in the plan fingerprint. `CUSTOM` duplicate selectors
+stay programmatic because they contain executable code. Execution remains
+separate from the read-only report task.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

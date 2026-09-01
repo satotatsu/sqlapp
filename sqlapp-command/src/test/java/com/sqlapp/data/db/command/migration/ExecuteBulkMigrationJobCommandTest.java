@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -85,6 +86,14 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			task.setId("items");
 			task.setTable("PUBLIC.ITEMS");
 			task.setResume(false);
+			final var bulk = new BulkMigrationJobConfiguration.Bulk();
+			bulk.setBatchSize(250);
+			bulk.setKeepNulls(true);
+			task.setBulk(bulk);
+			final var retry = new BulkMigrationJobConfiguration.Retry();
+			retry.setMaxRetries(3);
+			retry.setSqlStates(List.of("40001"));
+			task.setRetry(retry);
 			configuration.setTasks(List.of(task));
 			final File configurationFile = temporaryDirectory.resolve("job.yaml").toFile();
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
@@ -92,6 +101,13 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				final var plan = new BulkMigrationJobConfigurationResolver()
 						.resolve(configurationFile, connection);
 				assertEquals(List.of("items"), plan.getTaskIds());
+				final var options = plan.getTasks().get(0).getOptions();
+				assertEquals(250, options.getBulkOption().getBatchSize());
+				assertEquals(true, options.getBulkOption().isKeepNulls());
+				assertSame(options.getBulkOption(),
+						options.getBulkUpsertOption().getBulkOption());
+				assertEquals(3, options.getRetryOption().getMaxRetries());
+				assertEquals(List.of("40001"), options.getRetryOption().getSqlStates());
 			}
 
 			configuration.setTasks(List.of());

@@ -41,5 +41,35 @@ public class BulkMigrationJobConfiguration {
 		private BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy =
 				BulkUpsertDuplicateKeyStrategy.ERROR;
 		private String stagingTableName;
+		private Bulk bulk = new Bulk();
+		private Retry retry = new Retry();
+	}
+
+	/** Vendor-neutral bulk copy controls. */
+	@Getter
+	@Setter
+	public static class Bulk {
+		private Integer batchSize;
+		private Integer bulkCopyTimeout;
+		private boolean checkConstraints;
+		private boolean fireTriggers;
+		private boolean keepIdentity;
+		private boolean keepNulls;
+		private boolean tableLock;
+		private boolean useTransaction;
+		private boolean allowEncryptedValueModifications;
+	}
+
+	/** Per-chunk retry policy. */
+	@Getter
+	@Setter
+	public static class Retry {
+		private int maxRetries;
+		private long initialBackoffMillis = 1_000;
+		private double backoffMultiplier = 2d;
+		private long maxBackoffMillis = 30_000;
+		private boolean retryTransientExceptions = true;
+		private List<String> sqlStates = new ArrayList<>();
+		private List<Integer> errorCodes = new ArrayList<>();
 	}
 }
