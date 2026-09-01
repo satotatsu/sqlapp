@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
@@ -38,7 +40,7 @@ public final class BulkMigrationJobAssertions {
 	 * database connections and permits takeover only after expiry.
 	 */
 	public static void assertJdbcLeaseOwnerFencing(final Connection firstConnection,
-			final Connection secondConnection) throws SQLException {
+			final Connection secondConnection) throws Exception {
 		final String suffix = UUID.randomUUID().toString().replace("-", "");
 		final String tableName = "SQLAPP_BJL_" + suffix.substring(0, 12);
 		final String fingerprint = "plan-" + suffix;
@@ -63,6 +65,29 @@ public final class BulkMigrationJobAssertions {
 		assertEquals("owner-second", first.load(fingerprint).orElseThrow().ownerId());
 		second.release(fingerprint, "owner-second");
 		assertTrue(first.load(fingerprint).isEmpty());
+
+		final String concurrentFingerprint = fingerprint + "-concurrent";
+		final Instant concurrentAt = acquiredAt.plusSeconds(10);
+		final var barrier = new CyclicBarrier(2);
+		try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+			final var firstResult = executor.submit(() -> {
+				barrier.await();
+				return first.tryAcquire(new BulkMigrationJobLease(
+						concurrentFingerprint, "owner-first",
+						concurrentAt.plus(duration)), concurrentAt);
+			});
+			final var secondResult = executor.submit(() -> {
+				barrier.await();
+				return second.tryAcquire(new BulkMigrationJobLease(
+						concurrentFingerprint, "owner-second",
+						concurrentAt.plus(duration)), concurrentAt);
+			});
+			assertTrue(firstResult.get() ^ secondResult.get(),
+					"exactly one concurrent lease acquisition must succeed");
+		}
+		final String concurrentOwner = first.load(concurrentFingerprint)
+				.orElseThrow().ownerId();
+		first.release(concurrentFingerprint, concurrentOwner);
 	}
 
 	public static void assertDependencyOrderAndAggregatedStatus(

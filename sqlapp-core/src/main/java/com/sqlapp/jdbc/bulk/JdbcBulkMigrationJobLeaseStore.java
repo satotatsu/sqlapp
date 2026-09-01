@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.sql.Connection;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.EnumMap;
@@ -30,6 +31,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 		implements BulkMigrationJobLeaseStore {
 	public static final String DEFAULT_TABLE_NAME = "sqlapp_bulk_job_lease";
 	private static final int SERIALIZATION_RETRY_LIMIT = 3;
+	private static final long SERIALIZATION_RETRY_DELAY_MILLIS = 10L;
 
 	private final Connection connection;
 	private final String rawTableName;
@@ -79,7 +81,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 			}
 			write(lease, current == null ? SqlType.INSERT : SqlType.UPDATE);
 			return true;
-		});
+		}, true);
 	}
 
 	@Override
@@ -140,15 +142,33 @@ public final class JdbcBulkMigrationJobLeaseStore
 	}
 
 	private <T> T transaction(final SqlCallable<T> callable) throws SQLException {
+		return transaction(callable, false);
+	}
+
+	private <T> T transaction(final SqlCallable<T> callable,
+			final boolean retryUniqueViolation) throws SQLException {
 		for (int attempt = 0;; attempt++) {
 			try {
 				return transactionOnce(callable);
 			} catch (SQLException e) {
 				if (attempt >= SERIALIZATION_RETRY_LIMIT
-						|| !isSerializationFailure(e)) {
+						|| !(isSerializationFailure(e)
+								|| retryUniqueViolation && isUniqueViolation(e))) {
 					throw e;
 				}
+				serializationRetryDelay(attempt, e);
 			}
+		}
+	}
+
+	private static void serializationRetryDelay(final int attempt,
+			final SQLException failure) throws SQLException {
+		try {
+			Thread.sleep(SERIALIZATION_RETRY_DELAY_MILLIS * (attempt + 1));
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			failure.addSuppressed(e);
+			throw failure;
 		}
 	}
 
@@ -182,11 +202,29 @@ public final class JdbcBulkMigrationJobLeaseStore
 		}
 	}
 
-	private static boolean isSerializationFailure(final SQLException failure) {
+	private boolean isSerializationFailure(final SQLException failure) {
 		for (SQLException current = failure; current != null;
 				current = current.getNextException()) {
 			if ("40001".equals(current.getSQLState())
-					|| current.getErrorCode() == 8177) {
+					|| current.getErrorCode() == 8177
+					|| isSqliteBusy(current)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isSqliteBusy(final SQLException failure) {
+		return "SQLite".equalsIgnoreCase(dialect.getProductName())
+				&& failure.getErrorCode() == 5;
+	}
+
+	private static boolean isUniqueViolation(final SQLException failure) {
+		for (SQLException current = failure; current != null;
+				current = current.getNextException()) {
+			if (current instanceof SQLIntegrityConstraintViolationException
+					|| "23505".equals(current.getSQLState())
+					|| "23000".equals(current.getSQLState())) {
 				return true;
 			}
 		}

@@ -25,6 +25,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.spanner.Spanner;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 import com.sqlapp.data.schemas.CascadeRule;
@@ -51,6 +52,14 @@ class SpannerMetadataReaderTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(SPANNER);
+	}
+
+	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = createConnection();
+				Connection second = createConnection()) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
 	}
 
 	@Test
