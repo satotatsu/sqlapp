@@ -725,6 +725,15 @@ and the heartbeat recording that rejection.
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
 matching status programmatically.
+`ExecuteBulkMigrationJobCommand` is the corresponding mutating command. It
+executes a validated plan against a configured target data source and can
+optionally fence execution with the existing database or file lease
+configuration. Database leases use a dedicated second connection. The Gradle
+plugin registers `executeBulkMigrationJob` as a synchronous, non-cacheable
+task; its plan and optional listeners remain programmatic properties. This
+keeps execution separate from the read-only report task and provides the
+stable execution boundary that a future declarative job-file resolver can
+target.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

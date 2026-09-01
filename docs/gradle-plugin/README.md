@@ -31,6 +31,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migration` | Apply versioned database migrations |
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
+| Migration | `executeBulkMigrationJob` | Execute a programmatically assembled bulk migration plan |
 | Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
@@ -56,6 +57,33 @@ the migration, modify checkpoints, or recover maintenance. All complex values
 are programmatic properties rather than a second migration-plan file format,
 and the task is deliberately not build-cacheable because their stores can
 change outside Gradle.
+
+### `executeBulkMigrationJob`
+
+This task synchronously executes a programmatically assembled
+`BulkMigrationJobPlan` against its configured target `dataSource`. The `plan`
+property is required. `listener`, `chunkListener`, and `leaseConfiguration` are
+optional. Database lease mode obtains a separate connection from the same data
+source so lease transactions never share the connection used for migrated
+rows; file lease mode does not open that additional connection. The task is
+not build-cacheable because it mutates an external database.
+
+```groovy
+executeBulkMigrationJob {
+    dataSource {
+        url = 'jdbc:postgresql://localhost/app'
+        username = providers.gradleProperty('dbUser')
+        password = providers.gradleProperty('dbPassword')
+    }
+    plan = assembledBulkMigrationPlan
+    leaseConfiguration = BulkMigrationJobLeaseConfiguration.database('worker-1')
+}
+```
+
+The current task deliberately accepts the validated Java plan rather than a
+second YAML representation. A declarative job file can be added later by
+resolving schema identities, UPSERT keys, update columns, duplicate strategy,
+checkpoint policy, and fingerprints into this same execution command.
 
 ## Choose a workflow
 
