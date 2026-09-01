@@ -17,8 +17,18 @@ public final class BulkMigrationVerifier {
 
 	public static BulkMigrationVerificationResult verify(final Table expected,
 			final Table actual, final int chunkSize) {
+		return verify(expected, expected.getRows().iterator(), actual,
+				actual.getRows().iterator(), chunkSize);
+	}
+
+	/** Compares caller-supplied ordered streams using the two table definitions. */
+	public static BulkMigrationVerificationResult verify(final Table expected,
+			final Iterator<Row> expectedRows, final Table actual,
+			final Iterator<Row> actualRows, final int chunkSize) {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(actual, "actual");
+		Objects.requireNonNull(expectedRows, "expectedRows");
+		Objects.requireNonNull(actualRows, "actualRows");
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
@@ -30,8 +40,6 @@ public final class BulkMigrationVerifier {
 			}
 			return match;
 		}).toList();
-		final Iterator<Row> expectedRows = expected.getRows().iterator();
-		final Iterator<Row> actualRows = actual.getRows().iterator();
 		final List<BulkMigrationVerificationChunk> chunks = new ArrayList<>();
 		long expectedCount = 0;
 		long actualCount = 0;

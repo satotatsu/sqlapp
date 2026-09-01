@@ -100,6 +100,10 @@ lease:
 report:
   targetFile: reports/migration-status.json
   failurePolicy: FAIL_JOB
+verification:
+  enabled: true
+  chunkSize: 10000
+  failOnMismatch: true
 tasks:
   - id: customers
     table: public.customers
@@ -143,6 +147,13 @@ The optional top-level `report` block refreshes the operational JSON report at
 job and task boundaries. Its path is relative to the YAML file. `FAIL_JOB`
 preserves strict reporting; `CONTINUE_JOB` records a reporting failure without
 stopping data migration.
+
+The optional `verification` block re-reads source and target in the configured
+unique keyset order after migration, then compares total counts and normalized
+SHA-256 hashes per chunk. `failOnMismatch: true` fails the task after retaining
+the committed migration and its verification result; `false` returns the
+mismatch through `ExecuteBulkMigrationJobCommand.verificationResult` without
+failing execution.
 
 For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be

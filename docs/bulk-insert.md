@@ -752,6 +752,11 @@ An optional `report` block attaches the existing operational-report listener
 to the declarative execution. The report file is updated atomically at job and
 task boundaries. Its failure policy is either strict `FAIL_JOB` or best-effort
 `CONTINUE_JOB`.
+An optional `verification` block performs a second ordered JDBC pass over the
+source and target after execution. It compares row counts and normalized chunk
+hashes without materializing the full tables. Verification uses the migration's
+unique keyset columns. A mismatch may either fail the command or be returned for
+external policy handling; already committed chunks are not rolled back.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

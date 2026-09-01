@@ -31,11 +31,15 @@ import com.sqlapp.util.YamlConverter;
 public class BulkMigrationJobConfigurationResolver {
 	public record Resolution(BulkMigrationJobPlan plan,
 			BulkMigrationJobLeaseConfiguration leaseConfiguration,
-			OperationalReportConfiguration reportConfiguration) {
+			OperationalReportConfiguration reportConfiguration,
+			VerificationConfiguration verificationConfiguration) {
 	}
 
 	public record OperationalReportConfiguration(java.nio.file.Path targetFile,
 			BulkMigrationOperationalReportFailurePolicy failurePolicy) {
+	}
+
+	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch) {
 	}
 
 	public BulkMigrationJobPlan resolve(final File configurationFile,
@@ -108,7 +112,19 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		return new Resolution(BulkMigrationJobPlanner.plan(tasks),
 				lease(configurationFile, configuration.getLease()),
-				report(configurationFile, configuration.getReport()));
+				report(configurationFile, configuration.getReport()),
+				verification(configuration.getVerification()));
+	}
+
+	private static VerificationConfiguration verification(
+			final BulkMigrationJobConfiguration.Verification value) {
+		if (value == null || !value.isEnabled()) {
+			return null;
+		}
+		if (value.getChunkSize() <= 0) {
+			throw new CommandException("verification.chunkSize must be greater than zero.");
+		}
+		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch());
 	}
 
 	private static OperationalReportConfiguration report(final File configurationFile,

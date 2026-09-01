@@ -20,6 +20,7 @@ public class BulkMigrationJobConfiguration {
 	private List<Task> tasks = new ArrayList<>();
 	private Lease lease;
 	private Report report;
+	private Verification verification;
 
 	@Getter
 	@Setter
@@ -96,5 +97,14 @@ public class BulkMigrationJobConfiguration {
 		private String targetFile;
 		private BulkMigrationOperationalReportFailurePolicy failurePolicy =
 				BulkMigrationOperationalReportFailurePolicy.FAIL_JOB;
+	}
+
+	/** Optional ordered source/target count and chunk-hash verification. */
+	@Getter
+	@Setter
+	public static class Verification {
+		private boolean enabled = true;
+		private int chunkSize = 10_000;
+		private boolean failOnMismatch = true;
 	}
 }

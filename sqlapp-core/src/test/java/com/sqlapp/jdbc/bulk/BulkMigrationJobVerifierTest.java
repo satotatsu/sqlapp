@@ -22,6 +22,32 @@ import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobVerifierTest {
 	@Test
+	void verifiesCallerSuppliedOrderedStreamsWithoutMaterializedTableRows() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
+		final Row expectedOne = expected.newRow();
+		expectedOne.put("ID", 1);
+		final Row expectedTwo = expected.newRow();
+		expectedTwo.put("ID", 2);
+		final Row actualOne = actual.newRow();
+		actualOne.put("ID", 1L);
+		final Row actualTwo = actual.newRow();
+		actualTwo.put("ID", 2L);
+
+		final var result = BulkMigrationVerifier.verify(expected,
+				List.of(expectedOne, expectedTwo).iterator(), actual,
+				List.of(actualOne, actualTwo).iterator(), 1);
+
+		assertTrue(result.isMatch());
+		assertEquals(2, result.getExpectedRows());
+		assertEquals(2, result.getChunks().size());
+		assertTrue(expected.getRows().isEmpty());
+		assertTrue(actual.getRows().isEmpty());
+	}
+
+	@Test
 	void normalizesDriverValueTypesThroughTheExpectedSchema() throws Exception {
 		final Table expected = new Table("EXPECTED");
 		expected.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));

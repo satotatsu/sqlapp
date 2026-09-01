@@ -21,6 +21,10 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 
@@ -39,9 +43,12 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			ChunkedBulkMigrationListener.NO_OP;
 	private BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private BulkMigrationJobResult result;
+	private BulkMigrationJobVerificationResult verificationResult;
 
 	@Override
 	protected void doRun() {
+		result = null;
+		verificationResult = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
@@ -69,7 +76,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 						+ "or as a command property, not both.");
 			}
 			executePlan(resolved.plan(), resolved.leaseConfiguration(), listener,
-					resolved.reportConfiguration());
+					resolved.reportConfiguration(), resolved.verificationConfiguration());
 		});
 	}
 
@@ -93,6 +100,17 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			final BulkMigrationJobListener configuredListener,
 			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration
 					reportConfiguration) {
+		executePlan(executionPlan, executionLeaseConfiguration, configuredListener,
+				reportConfiguration, null);
+	}
+
+	private void executePlan(final BulkMigrationJobPlan executionPlan,
+			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
+			final BulkMigrationJobListener configuredListener,
+			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration
+					reportConfiguration,
+			final BulkMigrationJobConfigurationResolver.VerificationConfiguration
+					verificationConfiguration) {
 		executionPlan.validateUnchanged();
 		execute(getDataSource(), targetConnection -> {
 			// The chunk executor owns commit/rollback boundaries, including durable
@@ -133,8 +151,34 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
 						executionListener, chunkListener, manager);
 			}
+			if (verificationConfiguration != null) {
+				verificationResult = verify(effectivePlan, targetConnection,
+						verificationConfiguration.chunkSize());
+				if (verificationConfiguration.failOnMismatch()
+						&& !verificationResult.isMatch()) {
+					throw new CommandException("Bulk migration verification failed: "
+							+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
+				}
+			}
 		});
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
+	}
+
+	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
+			final Connection targetConnection, final int chunkSize) throws SQLException {
+		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
+		for (final BulkMigrationJobTask task : plan.getTasks()) {
+			if (!(task.getKeysetSource() instanceof JdbcBulkMigrationKeysetSource source)) {
+				throw new CommandException("Declarative verification requires a JDBC keyset source: "
+						+ task.getTaskId());
+			}
+			final var target = new JdbcBulkMigrationKeysetSource(targetConnection,
+					source.getTable(), source.getKeyColumnNames());
+			final var verification = BulkMigrationVerifier.verify(source.getTable(),
+					source.iterator(null), target.getTable(), target.iterator(null), chunkSize);
+			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), verification));
+		}
+		return new BulkMigrationJobVerificationResult(List.copyOf(results));
 	}
 
 	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(

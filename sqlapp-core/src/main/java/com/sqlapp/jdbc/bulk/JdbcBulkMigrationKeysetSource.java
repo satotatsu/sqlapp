@@ -134,6 +134,11 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		return table;
 	}
 
+	/** Ordered unique columns used by this source. */
+	public List<String> getKeyColumnNames() {
+		return keyColumns.stream().map(Column::getName).toList();
+	}
+
 	@Override
 	public String getConfigurationFingerprint() {
 		final String codecFingerprint = codec.getConfigurationFingerprint();

@@ -74,6 +74,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				var target = dataSource("bulk_target")) {
 			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
 			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
+			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
 
 			final Schema schema = new Schema("PUBLIC");
 			final Table table = new Table("ITEMS");
@@ -133,6 +135,16 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					new BulkMigrationOperationalReportJobListener(reportPlan, reportFile)
 							.onJobStarted(reportPlan.getFingerprint(), 1);
 					assertEquals(true, Files.isRegularFile(reportFile));
+					final var verificationResult = ExecuteBulkMigrationJobCommand.verify(
+							plan, targetConnection, 1);
+					assertEquals(true, verificationResult.isMatch());
+					assertEquals(2, verificationResult.getExpectedRows());
+					executeSql(targetConnection,
+							"UPDATE PUBLIC.ITEMS SET NAME='changed' WHERE ID=2");
+					final var mismatch = ExecuteBulkMigrationJobCommand.verify(
+							plan, targetConnection, 1);
+					assertEquals(false, mismatch.isMatch());
+					assertEquals(1, mismatch.getMismatchedTasks());
 				}
 			}
 
@@ -151,6 +163,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final var report = new BulkMigrationJobConfiguration.Report();
 			report.setTargetFile("reports/status.json");
 			configuration.setReport(report);
+			final var verification = new BulkMigrationJobConfiguration.Verification();
+			verification.setChunkSize(1);
+			configuration.setVerification(verification);
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 
 			final var command = new ExecuteBulkMigrationJobCommand();
@@ -161,6 +176,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.run();
 
 			assertEquals(0, command.getResult().getTasks().size());
+			assertEquals(true, command.getVerificationResult().isMatch());
 			assertEquals(true, Files.isRegularFile(
 					temporaryDirectory.resolve("reports/status.json")));
 		}
