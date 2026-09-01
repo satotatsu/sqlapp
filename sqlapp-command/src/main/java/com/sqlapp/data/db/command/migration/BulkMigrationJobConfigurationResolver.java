@@ -6,7 +6,10 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.DbCommonObject;
@@ -40,7 +43,7 @@ public class BulkMigrationJobConfigurationResolver {
 	}
 
 	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch,
-			java.nio.file.Path targetFile) {
+			java.nio.file.Path targetFile, Map<String, List<String>> columnsByTask) {
 	}
 
 	public BulkMigrationJobPlan resolve(final File configurationFile,
@@ -67,6 +70,7 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		for (final var task : configuration.getTasks()) {
 			final Table table = findTable(tables, task.getTable());
+			validateVerificationColumns(configuration.getVerification(), task, table);
 			final BulkOption bulk = bulk(task.getBulk());
 			final BulkMigrationRetryOption retry = retry(task.getRetry());
 			final var upsert = BulkUpsertOption.builder()
@@ -114,11 +118,39 @@ public class BulkMigrationJobConfigurationResolver {
 		return new Resolution(BulkMigrationJobPlanner.plan(tasks),
 				lease(configurationFile, configuration.getLease()),
 				report(configurationFile, configuration.getReport()),
-				verification(configurationFile, configuration.getVerification()));
+				verification(configurationFile, configuration.getVerification(),
+						configuration.getTasks()));
+	}
+
+	private static void validateVerificationColumns(
+			final BulkMigrationJobConfiguration.Verification verification,
+			final BulkMigrationJobConfiguration.Task task, final Table table) {
+		if (verification == null || !verification.isEnabled()
+				|| task.getVerificationColumns() == null
+				|| task.getVerificationColumns().isEmpty()) {
+			return;
+		}
+		final var resolvedNames = new HashSet<String>();
+		for (final String name : task.getVerificationColumns()) {
+			if (name == null || name.isBlank()) {
+				throw new CommandException("verificationColumns must not contain an empty "
+						+ "column name: " + task.getId());
+			}
+			final var column = table.getColumns().get(name);
+			if (column == null) {
+				throw new CommandException("Unknown verification column '" + name
+						+ "' for task: " + task.getId());
+			}
+			if (!resolvedNames.add(column.getName())) {
+				throw new CommandException("Duplicate verification column '" + name
+						+ "' for task: " + task.getId());
+			}
+		}
 	}
 
 	private static VerificationConfiguration verification(final File configurationFile,
-			final BulkMigrationJobConfiguration.Verification value) {
+			final BulkMigrationJobConfiguration.Verification value,
+			final List<BulkMigrationJobConfiguration.Task> tasks) {
 		if (value == null || !value.isEnabled()) {
 			return null;
 		}
@@ -129,8 +161,15 @@ public class BulkMigrationJobConfigurationResolver {
 				|| value.getTargetFile().isBlank() ? null
 						: resolve(configurationFile, value.getTargetFile()).toPath()
 								.toAbsolutePath().normalize();
+		final Map<String, List<String>> columns = new LinkedHashMap<>();
+		for (final var task : tasks) {
+			if (task.getVerificationColumns() != null
+					&& !task.getVerificationColumns().isEmpty()) {
+				columns.put(task.getId(), List.copyOf(task.getVerificationColumns()));
+			}
+		}
 		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch(),
-				targetFile);
+				targetFile, Map.copyOf(columns));
 	}
 
 	private static OperationalReportConfiguration report(final File configurationFile,

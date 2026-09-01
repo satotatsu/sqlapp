@@ -25,6 +25,15 @@ public final class BulkMigrationVerifier {
 	public static BulkMigrationVerificationResult verify(final Table expected,
 			final Iterator<Row> expectedRows, final Table actual,
 			final Iterator<Row> actualRows, final int chunkSize) {
+		return verify(expected, expectedRows, actual, actualRows,
+				expected.getColumns().stream().map(Column::getName).toList(), chunkSize);
+	}
+
+	/** Compares only the named columns, in the supplied canonical order. */
+	public static BulkMigrationVerificationResult verify(final Table expected,
+			final Iterator<Row> expectedRows, final Table actual,
+			final Iterator<Row> actualRows, final List<String> columnNames,
+			final int chunkSize) {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(actual, "actual");
 		Objects.requireNonNull(expectedRows, "expectedRows");
@@ -32,7 +41,22 @@ public final class BulkMigrationVerifier {
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
-		final List<Column> expectedColumns = expected.getColumns();
+		Objects.requireNonNull(columnNames, "columnNames");
+		if (columnNames.isEmpty()) {
+			throw new IllegalArgumentException("At least one verification column is required");
+		}
+		final java.util.Set<String> unique = new java.util.HashSet<>();
+		final List<Column> expectedColumns = columnNames.stream().map(name -> {
+			final Column column = expected.getColumns().get(name);
+			if (column == null) {
+				throw new IllegalArgumentException("Expected table is missing verification column: "
+						+ name);
+			}
+			if (!unique.add(column.getName())) {
+				throw new IllegalArgumentException("Duplicate verification column: " + name);
+			}
+			return column;
+		}).toList();
 		final List<Column> actualColumns = expectedColumns.stream().map(column -> {
 			final Column match = actual.getColumns().get(column.getName());
 			if (match == null) {

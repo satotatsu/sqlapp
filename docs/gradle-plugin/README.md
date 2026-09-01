@@ -118,6 +118,7 @@ tasks:
     sourceFingerprint: source-schema-v1
     targetFingerprint: target-schema-v1
     keyColumns: [customer_id]
+    verificationColumns: [customer_id, customer_name, status]
     duplicateKeyStrategy: LAST
     bulk:
       batchSize: 5000
@@ -159,6 +160,12 @@ counts and only mismatched chunk hashes is atomically replaced before mismatch
 failure is raised, so CI retains the evidence. The report can be read with
 `BulkMigrationVerificationReportIO.read`; the overload accepting a plan
 fingerprint rejects stale artifacts.
+
+Per-task `verificationColumns` may restrict comparison to columns whose values
+must be identical. When omitted, INSERT verifies writable inserted columns and
+UPSERT verifies staging columns. Hidden columns, formula columns, and target-
+generated identity columns not retained by the migration are excluded by
+default.
 
 For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be

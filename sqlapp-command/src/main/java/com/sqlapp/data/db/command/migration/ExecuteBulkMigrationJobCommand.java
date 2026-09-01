@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -25,6 +26,8 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 
@@ -153,7 +156,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 			if (verificationConfiguration != null) {
 				verificationResult = verify(effectivePlan, targetConnection,
-						verificationConfiguration.chunkSize());
+						verificationConfiguration.chunkSize(),
+						verificationConfiguration.columnsByTask());
 				if (verificationConfiguration.targetFile() != null) {
 					new BulkMigrationVerificationReportIO().write(
 							verificationConfiguration.targetFile(), effectivePlan.getFingerprint(),
@@ -171,6 +175,12 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 
 	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
 			final Connection targetConnection, final int chunkSize) throws SQLException {
+		return verify(plan, targetConnection, chunkSize, Map.of());
+	}
+
+	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
+			final Connection targetConnection, final int chunkSize,
+			final Map<String, List<String>> columnsByTask) throws SQLException {
 		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 		for (final BulkMigrationJobTask task : plan.getTasks()) {
 			if (!(task.getKeysetSource() instanceof JdbcBulkMigrationKeysetSource source)) {
@@ -179,11 +189,28 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 			final var target = new JdbcBulkMigrationKeysetSource(targetConnection,
 					source.getTable(), source.getKeyColumnNames());
+			final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(),
+					defaultVerificationColumns(task));
 			final var verification = BulkMigrationVerifier.verify(source.getTable(),
-					source.iterator(null), target.getTable(), target.iterator(null), chunkSize);
+					source.iterator(null), target.getTable(), target.iterator(null), columns,
+					chunkSize);
 			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), verification));
 		}
 		return new BulkMigrationJobVerificationResult(List.copyOf(results));
+	}
+
+	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {
+		if (task.getOptions().getMode() == BulkMigrationMode.UPSERT) {
+			return BulkUpsertPlan.resolve(task.getKeysetSource().getTable(),
+					task.getOptions().getBulkUpsertOption()).getStagingColumns().stream()
+						.map(column -> column.getName()).toList();
+		}
+		final var option = task.getOptions().getBulkOption();
+		return task.getKeysetSource().getTable().getColumns().stream()
+				.filter(column -> !column.isHidden()
+						&& (column.getFormula() == null || column.getFormula().isEmpty())
+						&& (!column.isIdentity() || option.isKeepIdentity()))
+				.map(column -> column.getName()).toList();
 	}
 
 	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(

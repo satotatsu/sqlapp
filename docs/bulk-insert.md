@@ -765,6 +765,11 @@ configured mismatch failure is raised.
 its format version, plan fingerprint, unique task IDs, non-negative counts,
 match flags, mismatched chunks, and aggregate totals. Use the fingerprint-aware
 read overload before making an automated deployment decision.
+Verification does not blindly compare every modeled column. INSERT defaults to
+the writable inserted columns; UPSERT defaults to the resolved staging columns.
+This avoids false mismatches from hidden, formula, or target-generated identity
+values. A task's `verificationColumns` can explicitly narrow the comparison,
+and unknown or duplicate names are rejected.
 
 For a running multi-table job, pass a
 `BulkMigrationOperationalReportJobListener` to

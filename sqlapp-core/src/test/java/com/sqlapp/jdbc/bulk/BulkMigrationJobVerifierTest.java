@@ -48,6 +48,26 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void verifiesOnlyExplicitColumns() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		expected.getColumns().add(new Column("GENERATED_VALUE").setDataType(DataType.INT));
+		final Table actual = expected.clone().setName("ACTUAL");
+		final Row left = expected.newRow();
+		left.put("ID", 1);
+		left.put("GENERATED_VALUE", 10);
+		final Row right = actual.newRow();
+		right.put("ID", 1);
+		right.put("GENERATED_VALUE", 99);
+
+		assertTrue(BulkMigrationVerifier.verify(expected, List.of(left).iterator(), actual,
+				List.of(right).iterator(), List.of("ID"), 10).isMatch());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationVerifier.verify(
+				expected, List.of(left).iterator(), actual, List.of(right).iterator(),
+				List.of("ID", "ID"), 10));
+	}
+
+	@Test
 	void normalizesDriverValueTypesThroughTheExpectedSchema() throws Exception {
 		final Table expected = new Table("EXPECTED");
 		expected.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));

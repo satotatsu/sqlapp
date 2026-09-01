@@ -36,6 +36,7 @@ public class BulkMigrationJobConfiguration {
 				BulkMigrationCheckpointMode.DATABASE;
 		private String checkpointTableName = "SQLAPP_BULK_MIGRATION_CHECKPOINT";
 		private String checkpointDirectory;
+		private List<String> verificationColumns = new ArrayList<>();
 		private String sourceFingerprint;
 		private String targetFingerprint;
 		private List<String> keyColumns = new ArrayList<>();

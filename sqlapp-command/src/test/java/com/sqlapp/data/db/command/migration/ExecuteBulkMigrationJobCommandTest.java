@@ -10,6 +10,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -145,6 +146,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 							plan, targetConnection, 1);
 					assertEquals(false, mismatch.isMatch());
 					assertEquals(1, mismatch.getMismatchedTasks());
+					assertEquals(true, ExecuteBulkMigrationJobCommand.verify(plan,
+							targetConnection, 1, Map.of("items", List.of("ID"))).isMatch());
 				}
 			}
 
@@ -221,6 +224,43 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			try (var connection = source.getConnection()) {
 				assertThrows(CommandException.class,
 						() -> new BulkMigrationJobConfigurationResolver()
+								.resolve(configurationFile, connection));
+			}
+		}
+	}
+
+	@Test
+	void rejectsInvalidVerificationColumnsBeforeExecution() throws Exception {
+		try (var source = dataSource("bulk_invalid_verification")) {
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("verification-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			configuration.setTasks(List.of(task));
+			final File configurationFile = temporaryDirectory.resolve("verification-job.yaml")
+					.toFile();
+
+			try (var connection = source.getConnection()) {
+				task.setVerificationColumns(List.of("MISSING"));
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertThrows(CommandException.class, () ->
+						new BulkMigrationJobConfigurationResolver()
+								.resolve(configurationFile, connection));
+
+				task.setVerificationColumns(List.of("ID", "ID"));
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertThrows(CommandException.class, () ->
+						new BulkMigrationJobConfigurationResolver()
 								.resolve(configurationFile, connection));
 			}
 		}
