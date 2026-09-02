@@ -4,9 +4,11 @@ package com.sqlapp.data.db.dialect.test.mysql;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,6 +25,10 @@ import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 /** Exercises Connector/J LOAD DATA LOCAL INFILE against MySQL 8.4. */
 class MySqlBulkInsertTest {
@@ -161,6 +167,40 @@ class MySqlBulkInsertTest {
 				rs.next();assertEquals("B",rs.getString("code"));assertNull(rs.getString("name"));
 				rs.next();assertEquals("C",rs.getString("code"));assertEquals("",rs.getString("name"));assertArrayEquals(new byte[]{2},rs.getBytes("payload"));
 			}
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection connection = MYSQL.createConnection("?allowLoadLocalInfile=true");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_repair_source_mysql");
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_repair_target_mysql");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_source_mysql "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100)) ENGINE=InnoDB");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_target_mysql "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100)) ENGINE=InnoDB");
+			statement.executeUpdate("INSERT INTO sqlapp_bulk_repair_source_mysql VALUES "
+					+ "(1,'value-1'),(2,'value-2'),(3,'value-3'),(4,'value-4')");
+			statement.executeUpdate("INSERT INTO sqlapp_bulk_repair_target_mysql VALUES "
+					+ "(1,'value-1'),(2,'wrong'),(3,'value-3'),(4,'value-4')");
+			final var expected = new JdbcBulkMigrationKeysetSource(connection,
+					jobTable("sqlapp_bulk_repair_source_mysql", false));
+			final var actual = new JdbcBulkMigrationKeysetSource(connection,
+					jobTable("sqlapp_bulk_repair_target_mysql", false));
+			final var verification = BulkMigrationVerifier.verify(expected, actual,
+					List.of("id", "txt"), 1);
+
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
+					jobTable("sqlapp_bulk_repair_target_mysql", false), verification,
+					BulkMigrationRepairOption.defaults());
+
+			assertEquals(1, repair.getReplayedChunks());
+			assertEquals(1, repair.getReplayedRows());
+			assertTrue(BulkMigrationVerifier.verify(expected,
+					new JdbcBulkMigrationKeysetSource(connection,
+							jobTable("sqlapp_bulk_repair_target_mysql", false)),
+					List.of("id", "txt"), 1).isMatch());
 		}
 	}
 
