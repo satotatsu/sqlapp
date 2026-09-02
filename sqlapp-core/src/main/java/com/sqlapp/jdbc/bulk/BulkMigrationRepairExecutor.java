@@ -126,7 +126,7 @@ public final class BulkMigrationRepairExecutor {
 				}
 				validateExpectedBoundaries(expected, rows, mismatch);
 				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(table, rows));
-				replayedRows += rows.size();
+				replayedRows = addBufferedRows(replayedRows, rows.size(), options);
 				previousIndex = mismatch.getIndex();
 			}
 		} catch (SQLException | RuntimeException | Error e) {
@@ -188,7 +188,7 @@ public final class BulkMigrationRepairExecutor {
 				if (mismatch != null) {
 					if (!rows.isEmpty()) {
 						replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(expected, rows));
-						replayedRows += rows.size();
+						replayedRows = addBufferedRows(replayedRows, rows.size(), options);
 					}
 				}
 				chunkIndex++;
@@ -213,11 +213,30 @@ public final class BulkMigrationRepairExecutor {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
+		if (options.getMaxBufferedRows() < 0) {
+			throw new IllegalArgumentException("maxBufferedRows must not be negative");
+		}
 		verificationColumns(expected, verification.getColumns());
 		if (verification.getMismatches().stream()
 				.anyMatch(chunk -> chunk.getExpectedRows() > 0)) {
 			BulkUpsertPlan.resolve(expected, options.getBulkUpsertOption());
 		}
+	}
+
+	private static long addBufferedRows(final long current, final int added,
+			final BulkMigrationRepairOption options) {
+		final long next;
+		try {
+			next = Math.addExact(current, added);
+		} catch (ArithmeticException e) {
+			throw new IllegalStateException("Buffered repair row count overflow", e);
+		}
+		if (options.getMaxBufferedRows() > 0
+				&& next > options.getMaxBufferedRows()) {
+			throw new IllegalStateException("Repair requires more than maxBufferedRows="
+					+ options.getMaxBufferedRows() + " before target writes");
+		}
+		return next;
 	}
 
 	private static BulkMigrationRepairResult executeReplayChunks(

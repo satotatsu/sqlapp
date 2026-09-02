@@ -385,6 +385,10 @@ before target writes begin.
 
 The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.
+Repair validates and buffers every selected expected chunk before the first
+target write. Set `BulkMigrationRepairOption.maxBufferedRows` to a positive
+limit to fail safely before writing instead of allowing an unexpectedly large
+mismatch set to consume unbounded heap; zero retains the unlimited default.
 The executor validates each selected expected hash before writing it and stops
 if the source changed after verification. When verification used an explicit
 column subset, repair recomputes this guard hash from that same ordered subset;

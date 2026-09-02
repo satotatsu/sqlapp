@@ -301,6 +301,22 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void keysetRepairStopsAtTheConfiguredBufferLimitBeforeWriting() throws Exception {
+		final Table expectedTable = numberedTable("ITEMS", "one", "two");
+		final Table actualTable = numberedTable("ITEMS", "changed-one", "changed-two");
+		final var expected = new RecordingKeysetSource(expectedTable, "expected");
+		final var actual = new RecordingKeysetSource(actualTable, "actual");
+		final var verification = BulkMigrationVerifier.verify(expected, actual,
+				List.of("ID", "TXT"), 1);
+
+		final var failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationRepairExecutor.readKeysetReplay(expected, verification,
+						BulkMigrationRepairOption.builder().maxBufferedRows(1).build()));
+
+		assertTrue(failure.getMessage().contains("maxBufferedRows=1"));
+	}
+
+	@Test
 	void repairJobRequiresExactlyOneExpectedSourcePerTask() {
 		final Table table = table("ITEMS", "value");
 		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
@@ -426,6 +442,24 @@ class BulkMigrationJobVerifierTest {
 		assertEquals("items", failure.getFailedTaskId());
 		assertTrue(failure.getCause().getMessage().contains("Unknown bulk upsert key column"));
 		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
+	void repairJobRejectsANegativeBufferLimitDuringPreflight() {
+		final Table table = table("ITEMS", "expected");
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
+				.expected(table)
+				.verificationResult(new BulkMigrationVerificationResult(1, 0, 0, List.of()))
+				.options(BulkMigrationRepairOption.builder().maxBufferedRows(-1).build())
+				.build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> null);
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(task)));
+
+		assertTrue(failure.getCause().getMessage().contains("must not be negative"));
 	}
 
 	@Test

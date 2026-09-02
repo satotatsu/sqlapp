@@ -16,6 +16,9 @@ public class BulkMigrationRepairOption implements Serializable {
 	private static final long serialVersionUID = 1L;
 	@Builder.Default
 	private final boolean verifyExpectedHashes = true;
+	/** Maximum expected rows retained before writing; zero means unlimited. */
+	@Builder.Default
+	private final long maxBufferedRows = 0;
 	@Builder.Default
 	private final BulkUpsertOption bulkUpsertOption = BulkUpsertOption.builder()
 			.useTransaction(true).build();
