@@ -85,23 +85,33 @@ public final class BulkMigrationRepairExecutor {
 		final List<Table> replayChunks = new ArrayList<>(mismatches.size());
 		final List<Long> withoutExpected = new ArrayList<>();
 		long replayedRows = 0;
-		for (final BulkMigrationVerificationChunk mismatch : mismatches) {
-			if (mismatch.getExpectedRows() == 0) {
-				withoutExpected.add(mismatch.getIndex());
-				continue;
-			}
-			if (mismatch.getExpectedFirstKey() == null
-					|| mismatch.getExpectedLastKey() == null) {
-				throw new IllegalArgumentException("Verification chunk " + mismatch.getIndex()
-						+ " does not contain expected key boundaries");
-			}
-			final String startAfter = mismatch.getIndex() == 0 ? null
-					: verification.getChunks().get((int) mismatch.getIndex() - 1)
-							.getExpectedLastKey();
-			Iterator<Row> iterator = null;
-			Throwable failure = null;
-			try {
-				iterator = Objects.requireNonNull(expected.iterator(startAfter), "iterator");
+		Iterator<Row> iterator = null;
+		long previousIndex = -2;
+		Throwable failure = null;
+		try {
+			for (final BulkMigrationVerificationChunk mismatch : mismatches) {
+				if (mismatch.getExpectedRows() == 0) {
+					final Iterator<Row> completed = iterator;
+					iterator = null;
+					BulkMigrationIteratorSupport.close(null, completed);
+					previousIndex = -2;
+					withoutExpected.add(mismatch.getIndex());
+					continue;
+				}
+				if (mismatch.getExpectedFirstKey() == null
+						|| mismatch.getExpectedLastKey() == null) {
+					throw new IllegalArgumentException("Verification chunk " + mismatch.getIndex()
+							+ " does not contain expected key boundaries");
+				}
+				if (iterator == null || mismatch.getIndex() != previousIndex + 1) {
+					final Iterator<Row> completed = iterator;
+					iterator = null;
+					BulkMigrationIteratorSupport.close(null, completed);
+					final String startAfter = mismatch.getIndex() == 0 ? null
+							: verification.getChunks().get((int) mismatch.getIndex() - 1)
+									.getExpectedLastKey();
+					iterator = Objects.requireNonNull(expected.iterator(startAfter), "iterator");
+				}
 				final List<Row> rows = take(iterator, mismatch.getExpectedRows());
 				if (options.isVerifyExpectedHashes()) {
 					validateExpectedChunk(rows, mismatch, mismatch.getIndex(), columns);
@@ -109,12 +119,13 @@ public final class BulkMigrationRepairExecutor {
 				validateExpectedBoundaries(expected, rows, mismatch);
 				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(table, rows));
 				replayedRows += rows.size();
-			} catch (SQLException | RuntimeException | Error e) {
-				failure = e;
-				throw e;
-			} finally {
-				BulkMigrationIteratorSupport.close(failure, iterator);
+				previousIndex = mismatch.getIndex();
 			}
+		} catch (SQLException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
+			BulkMigrationIteratorSupport.close(failure, iterator);
 		}
 		return new KeysetReplay(List.copyOf(replayChunks), replayedRows,
 				List.copyOf(withoutExpected));

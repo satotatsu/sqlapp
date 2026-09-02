@@ -256,7 +256,8 @@ class BulkMigrationJobVerifierTest {
 	@Test
 	void keysetRepairReadsOnlyMismatchRangesFromTheirPreviousBoundary() throws Exception {
 		final Table expectedTable = numberedTable("ITEMS", "one", "two", "three");
-		final Table actualTable = numberedTable("ITEMS", "one", "changed", "three");
+		final Table actualTable = numberedTable("ITEMS", "one", "changed-two",
+				"changed-three");
 		final var expected = new RecordingKeysetSource(expectedTable, "expected");
 		final var actual = new RecordingKeysetSource(actualTable, "actual");
 		final var verification = BulkMigrationVerifier.verify(expected, actual,
@@ -267,11 +268,33 @@ class BulkMigrationJobVerifierTest {
 				verification, BulkMigrationRepairOption.builder().build());
 
 		assertEquals(List.of("1"), expected.resumeTokens);
-		assertEquals(1, replay.chunks().size());
-		assertEquals(1, replay.rows());
+		assertEquals(2, replay.chunks().size());
+		assertEquals(2, replay.rows());
 		assertEquals(2, ((Number) replay.chunks().get(0).getRows().get(0).get("ID"))
 				.intValue());
+		assertEquals(3, ((Number) replay.chunks().get(1).getRows().get(0).get("ID"))
+				.intValue());
 		assertTrue(replay.withoutExpected().isEmpty());
+	}
+
+	@Test
+	void keysetRepairReopensAfterMatchedRanges() throws Exception {
+		final Table expectedTable = numberedTable("ITEMS", "one", "two", "three", "four");
+		final Table actualTable = numberedTable("ITEMS", "one", "changed-two", "three",
+				"changed-four");
+		final var expected = new RecordingKeysetSource(expectedTable, "expected");
+		final var actual = new RecordingKeysetSource(actualTable, "actual");
+		final var verification = BulkMigrationVerifier.verify(expected, actual,
+				List.of("ID", "TXT"), 1);
+		expected.resumeTokens.clear();
+
+		final var replay = BulkMigrationRepairExecutor.readKeysetReplay(expected,
+				verification, BulkMigrationRepairOption.builder().build());
+
+		assertEquals(List.of("1", "3"), expected.resumeTokens);
+		assertEquals(List.of(2, 4), replay.chunks().stream()
+				.map(chunk -> ((Number) chunk.getRows().get(0).get("ID")).intValue())
+				.toList());
 	}
 
 	@Test
