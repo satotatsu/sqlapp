@@ -37,6 +37,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 /** Exercises COPY staging and ON CONFLICT against PostgreSQL 18. */
 class PostgresBulkUpsertTest {
@@ -323,6 +324,41 @@ class PostgresBulkUpsertTest {
 				}
 			}
 			assertTrue(BulkMigrationVerifier.verify(expected, after, 2).isMatch());
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchByBoundaryAndReverifies() throws Exception {
+		try (Connection connection = POSTGRES.createConnection("");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.bulk_repair_source");
+			statement.execute("DROP TABLE IF EXISTS public.bulk_repair_target");
+			statement.execute("CREATE TABLE public.bulk_repair_source "
+					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_repair_target "
+					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.executeUpdate("INSERT INTO public.bulk_repair_source VALUES "
+					+ "(1,'value-1'),(2,'value-2'),(3,'value-3'),(4,'value-4')");
+			statement.executeUpdate("INSERT INTO public.bulk_repair_target VALUES "
+					+ "(1,'value-1'),(2,'wrong'),(3,'value-3'),(4,'value-4')");
+			final var expected = new JdbcBulkMigrationKeysetSource(connection,
+					repairTable("bulk_repair_source"));
+			final var actual = new JdbcBulkMigrationKeysetSource(connection,
+					repairTable("bulk_repair_target"));
+			final var verification = BulkMigrationVerifier.verify(expected, actual,
+					List.of("id", "txt"), 1);
+
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
+					repairTable("bulk_repair_target"), verification,
+					BulkMigrationRepairOption.defaults());
+
+			assertEquals(1, repair.getReplayedChunks());
+			assertEquals(1, repair.getReplayedRows());
+			final var after = BulkMigrationVerifier.verify(expected,
+					new JdbcBulkMigrationKeysetSource(connection,
+							repairTable("bulk_repair_target")),
+					List.of("id", "txt"), 1);
+			assertTrue(after.isMatch());
 		}
 	}
 

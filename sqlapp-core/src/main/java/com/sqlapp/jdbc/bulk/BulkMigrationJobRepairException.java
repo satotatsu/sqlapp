@@ -13,6 +13,13 @@ public class BulkMigrationJobRepairException extends SQLException {
 	private final String failedTaskId;
 	private final BulkMigrationJobRepairResult completedResult;
 
+	/** Retained source/binary-compatible constructor for SQL failures. */
+	public BulkMigrationJobRepairException(final String failedTaskId,
+			final BulkMigrationJobRepairResult completedResult, final SQLException cause) {
+		this(failedTaskId, completedResult, (Throwable) cause);
+	}
+
+	/** Creates a task failure for SQL or source-consistency errors. */
 	public BulkMigrationJobRepairException(final String failedTaskId,
 			final BulkMigrationJobRepairResult completedResult, final Throwable cause) {
 		super("Migration job repair task failed: " + failedTaskId, cause);

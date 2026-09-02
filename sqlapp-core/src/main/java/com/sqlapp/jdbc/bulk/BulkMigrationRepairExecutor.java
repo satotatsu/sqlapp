@@ -22,9 +22,18 @@ public final class BulkMigrationRepairExecutor {
 	public static BulkMigrationRepairResult execute(final Connection targetConnection,
 			final Table expected, final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
+		return execute(targetConnection, expected, expected, verification, options);
+	}
+
+	/** Repairs materialized expected rows into an explicitly identified target table. */
+	public static BulkMigrationRepairResult execute(final Connection targetConnection,
+			final Table expected, final Table target,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
-		return execute(targetConnection, expected, () -> expected.getRows().iterator(), verification,
-				options);
+		Objects.requireNonNull(target, "target");
+		return execute(targetConnection, expected, target,
+				() -> expected.getRows().iterator(), verification, options);
 	}
 
 	/**
@@ -38,10 +47,19 @@ public final class BulkMigrationRepairExecutor {
 			final BulkMigrationKeysetSource expected,
 			final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
+		return execute(targetConnection, expected, expected.getTable(), verification, options);
+	}
+
+	/** Repairs a keyset source into an explicitly identified target table. */
+	public static BulkMigrationRepairResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource expected, final Table target,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(target, "target");
 		Objects.requireNonNull(verification, "verification");
 		validateKeysetSource(expected, verification);
-		return executeKeyset(targetConnection, expected, verification, options);
+		return executeKeyset(targetConnection, expected, target, verification, options);
 	}
 
 	static void validateKeysetSource(final BulkMigrationKeysetSource expected,
@@ -61,22 +79,22 @@ public final class BulkMigrationRepairExecutor {
 	}
 
 	private static BulkMigrationRepairResult executeKeyset(final Connection targetConnection,
-			final BulkMigrationKeysetSource expected,
+			final BulkMigrationKeysetSource expected, final Table target,
 			final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(options, "options");
-		final Table table = Objects.requireNonNull(expected.getTable(), "expected.table");
-		validateConfiguration(table, verification, options);
+		final Table sourceTable = Objects.requireNonNull(expected.getTable(), "expected.table");
+		validateConfiguration(sourceTable, target, verification, options);
 		final List<BulkMigrationVerificationChunk> mismatches = verification.getMismatches();
 		if (mismatches.isEmpty()) {
 			return new BulkMigrationRepairResult(0, 0, 0, 0, List.of(), List.of());
 		}
-		final KeysetReplay replay = readKeysetReplay(expected, verification, options);
+		final KeysetReplay replay = readKeysetReplay(expected, target, verification, options);
 		final List<Long> extraActual = mismatches.stream()
 				.filter(chunk -> chunk.getActualRows() > chunk.getExpectedRows())
 				.map(BulkMigrationVerificationChunk::getIndex).toList();
-		return executeReplayChunks(targetConnection, table, options,
+		return executeReplayChunks(targetConnection, target, options,
 				mismatches.size(), replay.chunks(), replay.rows(), extraActual,
 				replay.withoutExpected());
 	}
@@ -84,7 +102,14 @@ public final class BulkMigrationRepairExecutor {
 	static KeysetReplay readKeysetReplay(final BulkMigrationKeysetSource expected,
 			final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
+		return readKeysetReplay(expected, expected.getTable(), verification, options);
+	}
+
+	static KeysetReplay readKeysetReplay(final BulkMigrationKeysetSource expected,
+			final Table target, final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(target, "target");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
 		final Table table = Objects.requireNonNull(expected.getTable(), "expected.table");
@@ -125,7 +150,7 @@ public final class BulkMigrationRepairExecutor {
 					validateExpectedChunk(rows, mismatch, mismatch.getIndex(), columns);
 				}
 				validateExpectedBoundaries(expected, rows, mismatch);
-				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(table, rows));
+				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(target, rows));
 				replayedRows = addBufferedRows(replayedRows, rows.size(), options);
 				previousIndex = mismatch.getIndex();
 			}
@@ -140,15 +165,16 @@ public final class BulkMigrationRepairExecutor {
 	}
 
 	private static BulkMigrationRepairResult execute(final Connection targetConnection,
-			final Table expected, final IteratorFactory iteratorFactory,
+			final Table expected, final Table target, final IteratorFactory iteratorFactory,
 			final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(target, "target");
 		Objects.requireNonNull(iteratorFactory, "iteratorFactory");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
-		validateConfiguration(expected, verification, options);
+		validateConfiguration(expected, target, verification, options);
 		if (verification.getChunkSize() <= 0) {
 			throw new IllegalArgumentException(
 					"Verification result chunkSize must be greater than zero");
@@ -187,7 +213,7 @@ public final class BulkMigrationRepairExecutor {
 				final BulkMigrationVerificationChunk mismatch = byIndex.remove(chunkIndex);
 				if (mismatch != null) {
 					if (!rows.isEmpty()) {
-						replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(expected, rows));
+						replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(target, rows));
 						replayedRows = addBufferedRows(replayedRows, rows.size(), options);
 					}
 				}
@@ -197,7 +223,7 @@ public final class BulkMigrationRepairExecutor {
 				validateExpectedEnd(verification, chunkIndex, verificationColumns);
 			}
 			withoutExpected.addAll(byIndex.keySet().stream().sorted().toList());
-			return executeReplayChunks(targetConnection, expected, options, mismatches.size(),
+			return executeReplayChunks(targetConnection, target, options, mismatches.size(),
 					replayChunks, replayedRows, extraActual, withoutExpected);
 		} catch (RuntimeException | Error e) {
 			failure = e;
@@ -210,7 +236,14 @@ public final class BulkMigrationRepairExecutor {
 	static void validateConfiguration(final Table expected,
 			final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) {
+		validateConfiguration(expected, expected, verification, options);
+	}
+
+	static void validateConfiguration(final Table expected, final Table target,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) {
 		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(target, "target");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
 		if (options.getMaxBufferedRows() < 0) {
@@ -219,7 +252,14 @@ public final class BulkMigrationRepairExecutor {
 		verificationColumns(expected, verification.getColumns());
 		if (verification.getMismatches().stream()
 				.anyMatch(chunk -> chunk.getExpectedRows() > 0)) {
-			BulkUpsertPlan.resolve(expected, options.getBulkUpsertOption());
+			final BulkUpsertPlan plan = BulkUpsertPlan.resolve(target,
+					options.getBulkUpsertOption());
+			for (final Column column : plan.getStagingColumns()) {
+				if (expected.getColumns().get(column.getName()) == null) {
+					throw new IllegalArgumentException("Expected source is missing target UPSERT "
+							+ "column: " + column.getName());
+				}
+			}
 		}
 	}
 

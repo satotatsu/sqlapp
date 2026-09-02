@@ -13,6 +13,8 @@ public class BulkMigrationJobRepairTask {
 	String taskId;
 	Table expected;
 	BulkMigrationKeysetSource expectedKeysetSource;
+	/** Optional target identity/schema when it differs from the expected source. */
+	Table target;
 	BulkMigrationVerificationResult verificationResult;
 	@Builder.Default
 	BulkMigrationRepairOption options = BulkMigrationRepairOption.defaults();
@@ -20,5 +22,9 @@ public class BulkMigrationJobRepairTask {
 	Table getExpectedTable() {
 		return expected != null ? expected
 				: expectedKeysetSource == null ? null : expectedKeysetSource.getTable();
+	}
+
+	Table getTargetTable() {
+		return target != null ? target : getExpectedTable();
 	}
 }

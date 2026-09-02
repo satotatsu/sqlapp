@@ -364,11 +364,13 @@ class BulkMigrationJobVerifierTest {
 	@Test
 	void repairJobDispatchesAKeysetBackedTask() throws Exception {
 		final Table table = table("ITEMS", "value");
+		final Table target = table.clone().setName("TARGET_ITEMS");
 		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
 		final var verification = new BulkMigrationVerificationResult(1, 0, 0,
 				List.of("ID", "TXT"), "fingerprint", "actual", List.of());
 		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
-				.expectedKeysetSource(source).verificationResult(verification).build();
+				.expectedKeysetSource(source).target(target)
+				.verificationResult(verification).build();
 		final Connection connection = (Connection) Proxy.newProxyInstance(
 				getClass().getClassLoader(), new Class<?>[] { Connection.class },
 				(proxy, method, args) -> null);
@@ -377,6 +379,7 @@ class BulkMigrationJobVerifierTest {
 
 		assertEquals(1, result.getTasks().size());
 		assertEquals(0, result.getReplayedRows());
+		assertSame(target, task.getTargetTable());
 		assertTrue(task.getOptions().isVerifyExpectedHashes());
 		assertEquals(0, task.getOptions().getMaxBufferedRows());
 	}
@@ -400,6 +403,18 @@ class BulkMigrationJobVerifierTest {
 		assertEquals("items", failure.getFailedTaskId());
 		assertTrue(failure.getCause() instanceof IllegalArgumentException);
 		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
+	}
+
+	@Test
+	void repairJobExceptionRetainsTheSqlExceptionConstructor() {
+		final SQLException cause = new SQLException("write failed");
+		final var completed = new BulkMigrationJobRepairResult(List.of());
+
+		final var failure = new BulkMigrationJobRepairException("items", completed, cause);
+
+		assertSame(cause, failure.getCause());
+		assertSame(completed, failure.getCompletedResult());
+		assertEquals("items", failure.getFailedTaskId());
 	}
 
 	@Test

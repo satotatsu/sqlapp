@@ -34,15 +34,16 @@ public final class BulkMigrationJobRepairExecutor {
 						+ "expectedKeysetSource is required for task " + task.getTaskId());
 			}
 			Objects.requireNonNull(task.getExpectedTable(), "expectedTable");
+			Objects.requireNonNull(task.getTargetTable(), "targetTable");
 			Objects.requireNonNull(task.getVerificationResult(), "verificationResult");
 			Objects.requireNonNull(task.getOptions(), "options");
 		}
 		final List<BulkMigrationJobRepairTask> ordered = TableOrder.CREATE.sort(
-				tasks, BulkMigrationJobRepairTask::getExpectedTable);
+				tasks, BulkMigrationJobRepairTask::getTargetTable);
 		for (final BulkMigrationJobRepairTask task : ordered) {
 			try {
 				BulkMigrationRepairExecutor.validateConfiguration(task.getExpectedTable(),
-						task.getVerificationResult(), task.getOptions());
+						task.getTargetTable(), task.getVerificationResult(), task.getOptions());
 				if (task.getExpectedKeysetSource() != null) {
 					BulkMigrationRepairExecutor.validateKeysetSource(
 							task.getExpectedKeysetSource(), task.getVerificationResult());
@@ -57,10 +58,10 @@ public final class BulkMigrationJobRepairExecutor {
 			try {
 				final BulkMigrationRepairResult result = task.getExpectedKeysetSource() == null
 						? BulkMigrationRepairExecutor.execute(targetConnection, task.getExpected(),
-								task.getVerificationResult(), task.getOptions())
+								task.getTargetTable(), task.getVerificationResult(), task.getOptions())
 						: BulkMigrationRepairExecutor.execute(targetConnection,
-								task.getExpectedKeysetSource(), task.getVerificationResult(),
-								task.getOptions());
+								task.getExpectedKeysetSource(), task.getTargetTable(),
+								task.getVerificationResult(), task.getOptions());
 				results.add(new BulkMigrationJobTaskRepairResult(task.getTaskId(), result));
 			} catch (SQLException | RuntimeException e) {
 				throw new BulkMigrationJobRepairException(task.getTaskId(),
