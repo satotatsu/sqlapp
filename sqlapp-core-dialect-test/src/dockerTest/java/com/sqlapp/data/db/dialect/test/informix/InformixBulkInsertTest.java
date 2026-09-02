@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.sql.DriverManager;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,6 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -99,6 +101,35 @@ class InformixBulkInsertTest {
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_informix", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_informix");
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		final String url = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088)
+				+ "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var sourceConnection = DriverManager.getConnection(url, "informix", "in4mix");
+				var targetConnection = DriverManager.getConnection(url, "informix", "in4mix");
+				var statement = targetConnection.createStatement()) {
+			dropTable(statement, "sqlapp_bulk_repair_source_informix");
+			dropTable(statement, "sqlapp_bulk_repair_target_informix");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_source_informix "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_target_informix "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_informix "
+					+ "SELECT 1, 'one' FROM systables WHERE tabid = 1");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_informix VALUES (2, 'two')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_informix VALUES (3, 'three')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_informix VALUES (4, 'four')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_informix VALUES (1, 'one')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_informix VALUES (2, 'wrong')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_informix VALUES (3, 'three')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_informix VALUES (4, 'four')");
+
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("sqlapp_bulk_repair_source_informix", false),
+					jobTable("sqlapp_bulk_repair_target_informix", false), List.of("id", "txt"));
 		}
 	}
 

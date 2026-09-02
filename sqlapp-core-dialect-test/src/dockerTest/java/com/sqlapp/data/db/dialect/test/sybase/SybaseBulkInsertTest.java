@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.Duration;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -21,6 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
@@ -132,6 +134,32 @@ class SybaseBulkInsertTest {
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection sourceConnection = createConnection();
+				Connection targetConnection = createConnection();
+				var statement = targetConnection.createStatement()) {
+			dropTable(statement, "sqlapp_bulk_repair_source_sybase");
+			dropTable(statement, "sqlapp_bulk_repair_target_sybase");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_source_sybase "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_target_sybase "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (1, 'one')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (2, 'two')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (3, 'three')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (4, 'four')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (1, 'one')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (2, 'wrong')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (3, 'three')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (4, 'four')");
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("sqlapp_bulk_repair_source_sybase", false),
+					jobTable("sqlapp_bulk_repair_target_sybase", false), List.of("id", "txt"),
+					false);
 		}
 	}
 

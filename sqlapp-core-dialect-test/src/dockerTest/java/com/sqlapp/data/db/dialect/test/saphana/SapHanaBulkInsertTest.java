@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,6 +24,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
@@ -126,6 +128,33 @@ class SapHanaBulkInsertTest {
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
 					table, "CODE", "NAME",
 					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection sourceConnection = createConnection();
+				Connection targetConnection = createConnection();
+				var statement = targetConnection.createStatement()) {
+			try { statement.execute("DROP SCHEMA SQLAPP_BULK_REPAIR CASCADE"); }
+			catch (java.sql.SQLException ignored) { }
+			statement.execute("CREATE SCHEMA SQLAPP_BULK_REPAIR");
+			statement.execute("CREATE COLUMN TABLE SQLAPP_BULK_REPAIR.SOURCE_ROWS "
+					+ "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("CREATE COLUMN TABLE SQLAPP_BULK_REPAIR.TARGET_ROWS "
+					+ "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (1, 'one')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (2, 'two')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (3, 'three')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (4, 'four')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (1, 'one')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (2, 'wrong')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (3, 'three')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (4, 'four')");
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("SQLAPP_BULK_REPAIR", "SOURCE_ROWS", false),
+					jobTable("SQLAPP_BULK_REPAIR", "TARGET_ROWS", false), List.of("ID", "TXT"),
+					false);
 		}
 	}
 
@@ -257,7 +286,12 @@ class SapHanaBulkInsertTest {
 	}
 
 	private static Table jobTable(final String name, final boolean child) {
-		final Table table = new Table(name).setSchemaName("SQLAPP_BULK_JOB");
+		return jobTable("SQLAPP_BULK_JOB", name, child);
+	}
+
+	private static Table jobTable(final String schemaName, final String name,
+			final boolean child) {
+		final Table table = new Table(name).setSchemaName(schemaName);
 		final Column id = new Column("ID").setDataType(DataType.INT);
 		table.getColumns().add(id);
 		if (child) {

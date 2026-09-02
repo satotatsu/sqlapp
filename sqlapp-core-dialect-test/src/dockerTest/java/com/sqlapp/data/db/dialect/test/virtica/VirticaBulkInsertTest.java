@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.Duration;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -21,6 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
@@ -112,6 +114,28 @@ class VirticaBulkInsertTest {
 			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica",
 					checkpointDirectory);
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection sourceConnection = createConnection();
+				Connection targetConnection = createConnection();
+				var statement = targetConnection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_repair_source_vertica");
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_repair_target_vertica");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_source_vertica "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute("CREATE TABLE sqlapp_bulk_repair_target_vertica "
+					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_source_vertica VALUES "
+					+ "(1, 'one'), (2, 'two'), (3, 'three'), (4, 'four')");
+			statement.execute("INSERT INTO sqlapp_bulk_repair_target_vertica VALUES "
+					+ "(1, 'one'), (2, 'wrong'), (3, 'three'), (4, 'four')");
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("sqlapp_bulk_repair_source_vertica", false),
+					jobTable("sqlapp_bulk_repair_target_vertica", false), List.of("id", "txt"),
+					false);
 		}
 	}
 

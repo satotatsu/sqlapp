@@ -389,9 +389,12 @@ The iterator is opened only after the fingerprint checks pass and is closed
 before target writes begin.
 
 The explicit-target repair path is covered against PostgreSQL 18, SQL Server
-2022, MySQL 8.4, MariaDB 11.8, and Firebird 5, including JDBC keyset
-verification, boundary-only rereading, vendor bulk UPSERT, and post-repair
-verification.
+2022, MySQL 8.4, MariaDB 11.8, Firebird 5, Oracle 23ai, DB2 12.1.5,
+Informix 14.10, Vertica 25.1, Sybase ASE 16, and SAP HANA Express 2.0,
+including JDBC keyset verification, boundary-only rereading, vendor bulk
+UPSERT, and post-repair verification. Oracle, Vertica, Sybase, and SAP HANA
+tests explicitly opt into non-atomic repair because their staging DDL breaks
+the surrounding transaction.
 
 The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.

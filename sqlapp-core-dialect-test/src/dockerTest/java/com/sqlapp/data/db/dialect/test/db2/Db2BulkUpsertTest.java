@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -99,6 +101,29 @@ class Db2BulkUpsertTest {
 	static void stopContainer() {
 		if (!ReusableTestcontainers.isReuseEnabled()) {
 			DB2.stop();
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection sourceConnection = DB2.createConnection("");
+				Connection targetConnection = DB2.createConnection("");
+				var statement = targetConnection.createStatement()) {
+			ensureUserTemporaryTablespace(statement);
+			dropTable(statement, "SQLAPP_BULK_REPAIR_SOURCE_DB2");
+			dropTable(statement, "SQLAPP_BULK_REPAIR_TARGET_DB2");
+			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_DB2 "
+					+ "(ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_DB2 "
+					+ "(ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_DB2 VALUES "
+					+ "(1, 'one'), (2, 'two'), (3, 'three'), (4, 'four')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_DB2 VALUES "
+					+ "(1, 'one'), (2, 'wrong'), (3, 'three'), (4, 'four')");
+
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("SQLAPP_BULK_REPAIR_SOURCE_DB2", false),
+					jobTable("SQLAPP_BULK_REPAIR_TARGET_DB2", false), List.of("ID", "TXT"));
 		}
 	}
 

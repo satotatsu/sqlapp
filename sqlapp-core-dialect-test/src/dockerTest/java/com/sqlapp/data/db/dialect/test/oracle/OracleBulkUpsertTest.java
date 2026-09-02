@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,6 +20,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -186,6 +188,30 @@ class OracleBulkUpsertTest {
 				.setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_ORACLE", code);
 		return table;
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection sourceConnection = ORACLE.createConnection("");
+				Connection targetConnection = ORACLE.createConnection("");
+				var statement = targetConnection.createStatement()) {
+			dropTable(statement, "SQLAPP_BULK_REPAIR_SOURCE_ORA");
+			dropTable(statement, "SQLAPP_BULK_REPAIR_TARGET_ORA");
+			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_ORA "
+					+ "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_ORA "
+					+ "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
+			for (int id = 1; id <= 4; id++) {
+				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_ORA VALUES ("
+						+ id + ",'value-" + id + "')");
+				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_ORA VALUES ("
+						+ id + ",'" + (id == 2 ? "wrong" : "value-" + id) + "')");
+			}
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("SQLAPP_BULK_REPAIR_SOURCE_ORA", false),
+					jobTable("SQLAPP_BULK_REPAIR_TARGET_ORA", false),
+					List.of("ID", "TXT"), false);
+		}
 	}
 
 	private static Table jobTable(final String name, final boolean child) {

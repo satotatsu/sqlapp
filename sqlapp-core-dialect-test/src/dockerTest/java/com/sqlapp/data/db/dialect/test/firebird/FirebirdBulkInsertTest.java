@@ -4,10 +4,8 @@ package com.sqlapp.data.db.dialect.test.firebird;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
-import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,16 +18,13 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
-import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
-import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
-import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
-import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 class FirebirdBulkInsertTest {
 	private static final String PASSWORD = "masterkey";
@@ -190,23 +185,10 @@ class FirebirdBulkInsertTest {
 				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_FB VALUES ("
 						+ id + ",'" + (id == 2 ? "wrong" : "value-" + id) + "')");
 			}
-			final var expected = new JdbcBulkMigrationKeysetSource(sourceConnection,
-					jobTable("SQLAPP_BULK_REPAIR_SOURCE_FB", false));
-			final var actual = new JdbcBulkMigrationKeysetSource(targetConnection,
-					jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false));
-			final var verification = BulkMigrationVerifier.verify(expected, actual,
-					List.of("ID", "TXT"), 1);
-
-			final var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
-					jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false), verification,
-					BulkMigrationRepairOption.defaults());
-
-			assertEquals(1, repair.getReplayedChunks());
-			assertEquals(1, repair.getReplayedRows());
-			assertTrue(BulkMigrationVerifier.verify(expected,
-					new JdbcBulkMigrationKeysetSource(targetConnection,
-							jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false)),
-					List.of("ID", "TXT"), 1).isMatch());
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
+					targetConnection, jobTable("SQLAPP_BULK_REPAIR_SOURCE_FB", false),
+					jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false),
+					java.util.List.of("ID", "TXT"));
 		}
 	}
 
