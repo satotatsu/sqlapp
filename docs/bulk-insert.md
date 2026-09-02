@@ -352,6 +352,11 @@ may use JDBC row iterator handlers, so verification keeps at most two chunks of
 row data in memory. It retains one compact count/hash summary per chunk for
 repair and diagnostics.
 
+Expected and actual JDBC streams must be usable concurrently. Use separate
+source and target connections; drivers such as Firebird JDBC permit only one
+active streaming result set on a connection and otherwise close the first
+stream when the second is opened.
+
 Verification uses expected-table column order and resolves actual columns by
 name. Both row streams must use the same deterministic ordering. Chunk hashes
 are intended to detect migration differences; they are not authentication or
@@ -384,8 +389,9 @@ The iterator is opened only after the fingerprint checks pass and is closed
 before target writes begin.
 
 The explicit-target repair path is covered against PostgreSQL 18, SQL Server
-2022, MySQL 8.4, and MariaDB 11.8, including JDBC keyset verification,
-boundary-only rereading, vendor bulk UPSERT, and post-repair verification.
+2022, MySQL 8.4, MariaDB 11.8, and Firebird 5, including JDBC keyset
+verification, boundary-only rereading, vendor bulk UPSERT, and post-repair
+verification.
 
 The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.

@@ -4,8 +4,10 @@ package com.sqlapp.data.db.dialect.test.firebird;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -24,6 +26,10 @@ import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 class FirebirdBulkInsertTest {
 	private static final String PASSWORD = "masterkey";
@@ -162,6 +168,45 @@ class FirebirdBulkInsertTest {
 				rs.next();assertEquals("B",rs.getString("CODE"));assertNull(rs.getString("TXT"));
 				rs.next();assertEquals("C",rs.getString("CODE"));assertEquals("",rs.getString("TXT"));assertArrayEquals(new byte[]{2},rs.getBytes("PAYLOAD"));
 			}
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		final String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
+				+ "//firebird/data/test.fdb?encoding=UTF8";
+		try (var sourceConnection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
+				var targetConnection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
+				var statement = targetConnection.createStatement()) {
+			dropTable(statement, "SQLAPP_BULK_REPAIR_SOURCE_FB");
+			dropTable(statement, "SQLAPP_BULK_REPAIR_TARGET_FB");
+			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_FB "
+					+ "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_FB "
+					+ "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
+			for (int id = 1; id <= 4; id++) {
+				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_FB VALUES ("
+						+ id + ",'value-" + id + "')");
+				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_FB VALUES ("
+						+ id + ",'" + (id == 2 ? "wrong" : "value-" + id) + "')");
+			}
+			final var expected = new JdbcBulkMigrationKeysetSource(sourceConnection,
+					jobTable("SQLAPP_BULK_REPAIR_SOURCE_FB", false));
+			final var actual = new JdbcBulkMigrationKeysetSource(targetConnection,
+					jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false));
+			final var verification = BulkMigrationVerifier.verify(expected, actual,
+					List.of("ID", "TXT"), 1);
+
+			final var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
+					jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false), verification,
+					BulkMigrationRepairOption.defaults());
+
+			assertEquals(1, repair.getReplayedChunks());
+			assertEquals(1, repair.getReplayedRows());
+			assertTrue(BulkMigrationVerifier.verify(expected,
+					new JdbcBulkMigrationKeysetSource(targetConnection,
+							jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false)),
+					List.of("ID", "TXT"), 1).isMatch());
 		}
 	}
 
