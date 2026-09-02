@@ -383,6 +383,10 @@ to reopen directly after that gap's last expected key.
 The iterator is opened only after the fingerprint checks pass and is closed
 before target writes begin.
 
+The explicit-target repair path is covered against PostgreSQL 18 and SQL
+Server 2022, including JDBC keyset verification, boundary-only rereading,
+vendor bulk UPSERT, and post-repair verification.
+
 The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.
 Repair validates and buffers every selected expected chunk before the first

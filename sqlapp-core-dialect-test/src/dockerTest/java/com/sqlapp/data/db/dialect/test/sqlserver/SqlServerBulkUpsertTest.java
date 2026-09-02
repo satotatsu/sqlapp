@@ -40,6 +40,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 /** Exercises staging-table bulk upsert against SQL Server 2022. */
 class SqlServerBulkUpsertTest {
@@ -357,6 +358,44 @@ class SqlServerBulkUpsertTest {
 				}
 			}
 			assertTrue(BulkMigrationVerifier.verify(expected, after, 2).isMatch());
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
+				var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_REPAIR_SOURCE') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_REPAIR_SOURCE");
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_REPAIR_TARGET') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_REPAIR_TARGET");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_REPAIR_SOURCE "
+					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_REPAIR_TARGET "
+					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.executeUpdate("INSERT INTO dbo.SQLAPP_BULK_REPAIR_SOURCE VALUES "
+					+ "(1,'value-1'),(2,'value-2'),(3,'value-3'),(4,'value-4')");
+			statement.executeUpdate("INSERT INTO dbo.SQLAPP_BULK_REPAIR_TARGET VALUES "
+					+ "(1,'value-1'),(2,'wrong'),(3,'value-3'),(4,'value-4')");
+			final var expected = new JdbcBulkMigrationKeysetSource(connection,
+					repairTable("SQLAPP_BULK_REPAIR_SOURCE"));
+			final var actual = new JdbcBulkMigrationKeysetSource(connection,
+					repairTable("SQLAPP_BULK_REPAIR_TARGET"));
+			final var verification = BulkMigrationVerifier.verify(expected, actual,
+					List.of("ID", "TXT"), 1);
+
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
+					repairTable("SQLAPP_BULK_REPAIR_TARGET"), verification,
+					BulkMigrationRepairOption.defaults());
+
+			assertEquals(1, repair.getReplayedChunks());
+			assertEquals(1, repair.getReplayedRows());
+			final var after = BulkMigrationVerifier.verify(expected,
+					new JdbcBulkMigrationKeysetSource(connection,
+							repairTable("SQLAPP_BULK_REPAIR_TARGET")),
+					List.of("ID", "TXT"), 1);
+			assertTrue(after.isMatch());
 		}
 	}
 
