@@ -67,6 +67,7 @@ public final class BulkMigrationRepairExecutor {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(options, "options");
 		final Table table = Objects.requireNonNull(expected.getTable(), "expected.table");
+		validateConfiguration(table, verification, options);
 		final List<BulkMigrationVerificationChunk> mismatches = verification.getMismatches();
 		if (mismatches.isEmpty()) {
 			return new BulkMigrationRepairResult(0, 0, 0, 0, List.of(), List.of());
@@ -147,6 +148,7 @@ public final class BulkMigrationRepairExecutor {
 		Objects.requireNonNull(iteratorFactory, "iteratorFactory");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
+		validateConfiguration(expected, verification, options);
 		if (verification.getChunkSize() <= 0) {
 			throw new IllegalArgumentException(
 					"Verification result chunkSize must be greater than zero");
@@ -202,6 +204,19 @@ public final class BulkMigrationRepairExecutor {
 			throw e;
 		} finally {
 			BulkMigrationIteratorSupport.close(failure, iterator);
+		}
+	}
+
+	static void validateConfiguration(final Table expected,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) {
+		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(verification, "verification");
+		Objects.requireNonNull(options, "options");
+		verificationColumns(expected, verification.getColumns());
+		if (verification.getMismatches().stream()
+				.anyMatch(chunk -> chunk.getExpectedRows() > 0)) {
+			BulkUpsertPlan.resolve(expected, options.getBulkUpsertOption());
 		}
 	}
 

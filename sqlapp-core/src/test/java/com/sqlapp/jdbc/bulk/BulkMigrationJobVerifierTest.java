@@ -370,7 +370,10 @@ class BulkMigrationJobVerifierTest {
 				.expected(firstTable)
 				.verificationResult(new BulkMigrationVerificationResult(1, 1, 1,
 						List.of(mismatch)))
-				.options(BulkMigrationRepairOption.builder().build()).build();
+				.options(BulkMigrationRepairOption.builder()
+						.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("ID").build())
+						.build())
+				.build();
 		final Table secondTable = table("SECOND", "expected");
 		final var second = BulkMigrationJobRepairTask.builder().taskId("second")
 				.expectedKeysetSource(keysetSource(secondTable, "changed",
@@ -393,6 +396,36 @@ class BulkMigrationJobVerifierTest {
 		assertEquals("second", failure.getFailedTaskId());
 		assertEquals(0, connectionCalls.get());
 		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
+	}
+
+	@Test
+	void repairJobPreflightsUpsertColumnsBeforeTargetWrites() {
+		final Table table = table("ITEMS", "expected");
+		final var mismatch = new BulkMigrationVerificationChunk(0, 1, 1,
+				"expected", "actual");
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
+				.expected(table)
+				.verificationResult(new BulkMigrationVerificationResult(1, 1, 1,
+						List.of(mismatch)))
+				.options(BulkMigrationRepairOption.builder()
+						.bulkUpsertOption(BulkUpsertOption.builder()
+								.keyColumn("MISSING").build())
+						.build())
+				.build();
+		final var connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(task)));
+
+		assertEquals("items", failure.getFailedTaskId());
+		assertTrue(failure.getCause().getMessage().contains("Unknown bulk upsert key column"));
+		assertEquals(0, connectionCalls.get());
 	}
 
 	@Test

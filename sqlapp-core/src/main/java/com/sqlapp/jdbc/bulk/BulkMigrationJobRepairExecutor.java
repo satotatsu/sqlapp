@@ -40,14 +40,16 @@ public final class BulkMigrationJobRepairExecutor {
 		final List<BulkMigrationJobRepairTask> ordered = TableOrder.CREATE.sort(
 				tasks, BulkMigrationJobRepairTask::getExpectedTable);
 		for (final BulkMigrationJobRepairTask task : ordered) {
-			if (task.getExpectedKeysetSource() != null) {
-				try {
+			try {
+				BulkMigrationRepairExecutor.validateConfiguration(task.getExpectedTable(),
+						task.getVerificationResult(), task.getOptions());
+				if (task.getExpectedKeysetSource() != null) {
 					BulkMigrationRepairExecutor.validateKeysetSource(
 							task.getExpectedKeysetSource(), task.getVerificationResult());
-				} catch (RuntimeException e) {
-					throw new BulkMigrationJobRepairException(task.getTaskId(),
-							new BulkMigrationJobRepairResult(List.of()), e);
 				}
+			} catch (RuntimeException e) {
+				throw new BulkMigrationJobRepairException(task.getTaskId(),
+						new BulkMigrationJobRepairResult(List.of()), e);
 			}
 		}
 		final List<BulkMigrationJobTaskRepairResult> results = new ArrayList<>(ordered.size());

@@ -550,8 +550,9 @@ A repair job task accepts exactly one expected source: `expected` for a
 materialized `Table`, or `expectedKeysetSource` for boundary-based JDBC
 re-reading. Dependency ordering uses the source's Schema `Table` in both cases,
 so keyset-backed tasks retain the same foreign-key ordering behavior.
-All keyset fingerprints are preflighted before the first task writes anything;
-an invalid later task therefore cannot leave earlier tasks partially repaired.
+All verification columns, UPSERT plans, and keyset fingerprints are preflighted
+before the first task writes anything; an invalid later task therefore cannot
+leave earlier tasks partially repaired.
 
 For long-running migration jobs, the `BulkMigrationJobExecutor.execute`
 overload accepting a `BulkMigrationJobListener` reports synchronous task
