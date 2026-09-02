@@ -384,8 +384,8 @@ The iterator is opened only after the fingerprint checks pass and is closed
 before target writes begin.
 
 The explicit-target repair path is covered against PostgreSQL 18, SQL Server
-2022, and MySQL 8.4, including JDBC keyset verification, boundary-only
-rereading, vendor bulk UPSERT, and post-repair verification.
+2022, MySQL 8.4, and MariaDB 11.8, including JDBC keyset verification,
+boundary-only rereading, vendor bulk UPSERT, and post-repair verification.
 
 The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.
