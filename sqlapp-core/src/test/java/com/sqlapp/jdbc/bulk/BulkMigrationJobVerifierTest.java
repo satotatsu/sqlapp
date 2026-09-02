@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.ArrayList;
@@ -295,6 +297,46 @@ class BulkMigrationJobVerifierTest {
 		assertEquals(List.of(2, 4), replay.chunks().stream()
 				.map(chunk -> ((Number) chunk.getRows().get(0).get("ID")).intValue())
 				.toList());
+	}
+
+	@Test
+	void repairJobRequiresExactlyOneExpectedSourcePerTask() {
+		final Table table = table("ITEMS", "value");
+		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		final var options = BulkMigrationRepairOption.builder().build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> null);
+		final var both = BulkMigrationJobRepairTask.builder().taskId("items")
+				.expected(table).expectedKeysetSource(source)
+				.verificationResult(verification).options(options).build();
+		final var neither = BulkMigrationJobRepairTask.builder().taskId("items")
+				.verificationResult(verification).options(options).build();
+
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(both)));
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(neither)));
+	}
+
+	@Test
+	void repairJobDispatchesAKeysetBackedTask() throws Exception {
+		final Table table = table("ITEMS", "value");
+		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0,
+				List.of("ID", "TXT"), "fingerprint", "actual", List.of());
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
+				.expectedKeysetSource(source).verificationResult(verification)
+				.options(BulkMigrationRepairOption.builder().build()).build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> null);
+
+		final var result = BulkMigrationJobRepairExecutor.execute(connection, List.of(task));
+
+		assertEquals(1, result.getTasks().size());
+		assertEquals(0, result.getReplayedRows());
 	}
 
 	@Test

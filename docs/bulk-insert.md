@@ -545,6 +545,11 @@ reconciliation. The repair job is not atomic across tables. A SQL failure is
 reported as `BulkMigrationJobRepairException` with the failed task ID and all
 completed repair results; follow-up verification remains required.
 
+A repair job task accepts exactly one expected source: `expected` for a
+materialized `Table`, or `expectedKeysetSource` for boundary-based JDBC
+re-reading. Dependency ordering uses the source's Schema `Table` in both cases,
+so keyset-backed tasks retain the same foreign-key ordering behavior.
+
 For long-running migration jobs, the `BulkMigrationJobExecutor.execute`
 overload accepting a `BulkMigrationJobListener` reports synchronous task
 start, completion, and SQL failure events with the dependency-order index and
