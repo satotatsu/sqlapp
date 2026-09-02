@@ -541,7 +541,8 @@ stream must still use the same deterministic order within its table.
 result for each task, then delegates mismatched chunks to the existing UPSERT
 repair executor in parent-before-child order. Its aggregate result reports
 replayed chunks and rows, affected rows, and tasks that still require manual
-reconciliation. The repair job is not atomic across tables. A SQL failure is
+reconciliation. The repair job is not atomic across tables. A SQL failure or
+keyset source consistency failure is
 reported as `BulkMigrationJobRepairException` with the failed task ID and all
 completed repair results; follow-up verification remains required.
 

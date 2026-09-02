@@ -340,6 +340,27 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void repairJobReportsKeysetConsistencyFailureWithTaskContext() {
+		final Table table = table("ITEMS", "value");
+		final var source = keysetSource(table, "changed", table.getRows().iterator());
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0,
+				List.of("ID", "TXT"), "verified", "actual", List.of());
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
+				.expectedKeysetSource(source).verificationResult(verification)
+				.options(BulkMigrationRepairOption.builder().build()).build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> null);
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(task)));
+
+		assertEquals("items", failure.getFailedTaskId());
+		assertTrue(failure.getCause() instanceof IllegalArgumentException);
+		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
+	}
+
+	@Test
 	void verificationResultOwnsValidImmutableChunkBoundaries() {
 		final var chunks = new java.util.ArrayList<BulkMigrationVerificationChunk>();
 		final var result = new BulkMigrationVerificationResult(10, 0, 0, chunks);

@@ -49,7 +49,7 @@ public final class BulkMigrationJobRepairExecutor {
 								task.getExpectedKeysetSource(), task.getVerificationResult(),
 								task.getOptions());
 				results.add(new BulkMigrationJobTaskRepairResult(task.getTaskId(), result));
-			} catch (SQLException e) {
+			} catch (SQLException | RuntimeException e) {
 				throw new BulkMigrationJobRepairException(task.getTaskId(),
 						new BulkMigrationJobRepairResult(List.copyOf(results)), e);
 			}
