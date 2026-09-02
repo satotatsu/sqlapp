@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.rowset.serial.SerialBlob;
 
@@ -357,6 +358,40 @@ class BulkMigrationJobVerifierTest {
 
 		assertEquals("items", failure.getFailedTaskId());
 		assertTrue(failure.getCause() instanceof IllegalArgumentException);
+		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
+	}
+
+	@Test
+	void repairJobPreflightsEveryKeysetFingerprintBeforeTargetWrites() {
+		final Table firstTable = table("FIRST", "expected");
+		final var mismatch = new BulkMigrationVerificationChunk(0, 1, 1,
+				"expected", "actual");
+		final var first = BulkMigrationJobRepairTask.builder().taskId("first")
+				.expected(firstTable)
+				.verificationResult(new BulkMigrationVerificationResult(1, 1, 1,
+						List.of(mismatch)))
+				.options(BulkMigrationRepairOption.builder().build()).build();
+		final Table secondTable = table("SECOND", "expected");
+		final var second = BulkMigrationJobRepairTask.builder().taskId("second")
+				.expectedKeysetSource(keysetSource(secondTable, "changed",
+						secondTable.getRows().iterator()))
+				.verificationResult(new BulkMigrationVerificationResult(1, 0, 0,
+						List.of("ID", "TXT"), "verified", "actual", List.of()))
+				.options(BulkMigrationRepairOption.builder().build()).build();
+		final var connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection,
+						List.of(first, second)));
+
+		assertEquals("second", failure.getFailedTaskId());
+		assertEquals(0, connectionCalls.get());
 		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
 	}
 

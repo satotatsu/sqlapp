@@ -40,6 +40,14 @@ public final class BulkMigrationRepairExecutor {
 			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(verification, "verification");
+		validateKeysetSource(expected, verification);
+		return executeKeyset(targetConnection, expected, verification, options);
+	}
+
+	static void validateKeysetSource(final BulkMigrationKeysetSource expected,
+			final BulkMigrationVerificationResult verification) {
+		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(verification, "verification");
 		final String verifiedFingerprint = verification.getExpectedKeysetFingerprint();
 		final String sourceFingerprint = expected.getConfigurationFingerprint();
 		if (verifiedFingerprint == null) {
@@ -50,7 +58,6 @@ public final class BulkMigrationRepairExecutor {
 			throw new IllegalArgumentException("Expected keyset source fingerprint differs "
 					+ "from the source used during verification");
 		}
-		return executeKeyset(targetConnection, expected, verification, options);
 	}
 
 	private static BulkMigrationRepairResult executeKeyset(final Connection targetConnection,
