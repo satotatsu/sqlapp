@@ -50,8 +50,74 @@ public final class BulkMigrationRepairExecutor {
 			throw new IllegalArgumentException("Expected keyset source fingerprint differs "
 					+ "from the source used during verification");
 		}
-		return execute(targetConnection, expected.getTable(), () -> expected.iterator(null),
-				verification, options);
+		return executeKeyset(targetConnection, expected, verification, options);
+	}
+
+	private static BulkMigrationRepairResult executeKeyset(final Connection targetConnection,
+			final BulkMigrationKeysetSource expected,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
+		Objects.requireNonNull(targetConnection, "targetConnection");
+		Objects.requireNonNull(options, "options");
+		final Table table = Objects.requireNonNull(expected.getTable(), "expected.table");
+		final List<BulkMigrationVerificationChunk> mismatches = verification.getMismatches();
+		if (mismatches.isEmpty()) {
+			return new BulkMigrationRepairResult(0, 0, 0, 0, List.of(), List.of());
+		}
+		final KeysetReplay replay = readKeysetReplay(expected, verification, options);
+		final List<Long> extraActual = mismatches.stream()
+				.filter(chunk -> chunk.getActualRows() > chunk.getExpectedRows())
+				.map(BulkMigrationVerificationChunk::getIndex).toList();
+		return executeReplayChunks(targetConnection, table, options,
+				mismatches.size(), replay.chunks(), replay.rows(), extraActual,
+				replay.withoutExpected());
+	}
+
+	static KeysetReplay readKeysetReplay(final BulkMigrationKeysetSource expected,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
+		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(verification, "verification");
+		Objects.requireNonNull(options, "options");
+		final Table table = Objects.requireNonNull(expected.getTable(), "expected.table");
+		final List<BulkMigrationVerificationChunk> mismatches = verification.getMismatches();
+		final List<Column> columns = verificationColumns(table, verification.getColumns());
+		final List<Table> replayChunks = new ArrayList<>(mismatches.size());
+		final List<Long> withoutExpected = new ArrayList<>();
+		long replayedRows = 0;
+		for (final BulkMigrationVerificationChunk mismatch : mismatches) {
+			if (mismatch.getExpectedRows() == 0) {
+				withoutExpected.add(mismatch.getIndex());
+				continue;
+			}
+			if (mismatch.getExpectedFirstKey() == null
+					|| mismatch.getExpectedLastKey() == null) {
+				throw new IllegalArgumentException("Verification chunk " + mismatch.getIndex()
+						+ " does not contain expected key boundaries");
+			}
+			final String startAfter = mismatch.getIndex() == 0 ? null
+					: verification.getChunks().get((int) mismatch.getIndex() - 1)
+							.getExpectedLastKey();
+			Iterator<Row> iterator = null;
+			Throwable failure = null;
+			try {
+				iterator = Objects.requireNonNull(expected.iterator(startAfter), "iterator");
+				final List<Row> rows = take(iterator, mismatch.getExpectedRows());
+				if (options.isVerifyExpectedHashes()) {
+					validateExpectedChunk(rows, mismatch, mismatch.getIndex(), columns);
+				}
+				validateExpectedBoundaries(expected, rows, mismatch);
+				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(table, rows));
+				replayedRows += rows.size();
+			} catch (SQLException | RuntimeException | Error e) {
+				failure = e;
+				throw e;
+			} finally {
+				BulkMigrationIteratorSupport.close(failure, iterator);
+			}
+		}
+		return new KeysetReplay(List.copyOf(replayChunks), replayedRows,
+				List.copyOf(withoutExpected));
 	}
 
 	private static BulkMigrationRepairResult execute(final Connection targetConnection,
@@ -83,7 +149,6 @@ public final class BulkMigrationRepairExecutor {
 				.map(BulkMigrationVerificationChunk::getIndex).toList();
 		final List<Long> withoutExpected = new ArrayList<>();
 		long replayedRows = 0;
-		long affectedRows = 0;
 		long chunkIndex = 0;
 		final List<Table> replayChunks = new ArrayList<>(mismatches.size());
 		final List<Column> verificationColumns = verificationColumns(expected,
@@ -112,43 +177,63 @@ public final class BulkMigrationRepairExecutor {
 				validateExpectedEnd(verification, chunkIndex, verificationColumns);
 			}
 			withoutExpected.addAll(byIndex.keySet().stream().sorted().toList());
-			if (replayChunks.isEmpty()) {
-				return new BulkMigrationRepairResult(mismatches.size(), 0, 0, 0,
-						List.copyOf(extraActual), List.copyOf(withoutExpected));
-			}
-			final BulkUpsertOption configured = options.getBulkUpsertOption() == null
-					? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
-			final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
-					? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
-							ChunkedBulkMigrationExecutor.primaryKeyNames(expected))
-					: configured;
-			final BulkUpsertExecutor executor = BulkUpsertResolver.resolve(targetConnection);
-			if (effective.isUseTransaction()
-					&& !executor.supportsCallerTransactionAtomicity()) {
-				throw new IllegalStateException("The selected bulk upsert provider uses "
-						+ "transaction-breaking staging DDL and cannot atomically repair all chunks; "
-						+ "set bulkUpsertOption.useTransaction=false to allow non-atomic repair");
-			}
-			try (var transaction = BulkUpsertTransaction.begin(targetConnection,
-					effective.isUseTransaction())) {
-				try {
-					for (final Table chunk : replayChunks) {
-						affectedRows += executor.execute(targetConnection, chunk, effective);
-					}
-					transaction.commit();
-				} catch (SQLException | RuntimeException e) {
-					transaction.rollback(e);
-					throw e;
-				}
-			}
-			return new BulkMigrationRepairResult(mismatches.size(), replayChunks.size(),
-					replayedRows, affectedRows, List.copyOf(extraActual),
-					List.copyOf(withoutExpected));
+			return executeReplayChunks(targetConnection, expected, options, mismatches.size(),
+					replayChunks, replayedRows, extraActual, withoutExpected);
 		} catch (RuntimeException | Error e) {
 			failure = e;
 			throw e;
 		} finally {
 			BulkMigrationIteratorSupport.close(failure, iterator);
+		}
+	}
+
+	private static BulkMigrationRepairResult executeReplayChunks(
+			final Connection targetConnection, final Table expected,
+			final BulkMigrationRepairOption options, final int mismatchCount,
+			final List<Table> replayChunks, final long replayedRows,
+			final List<Long> extraActual, final List<Long> withoutExpected)
+			throws SQLException {
+		if (replayChunks.isEmpty()) {
+			return new BulkMigrationRepairResult(mismatchCount, 0, 0, 0,
+					List.copyOf(extraActual), List.copyOf(withoutExpected));
+		}
+		final BulkUpsertOption configured = options.getBulkUpsertOption() == null
+				? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
+		final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
+				? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
+						ChunkedBulkMigrationExecutor.primaryKeyNames(expected))
+				: configured;
+		final BulkUpsertExecutor executor = BulkUpsertResolver.resolve(targetConnection);
+		if (effective.isUseTransaction() && !executor.supportsCallerTransactionAtomicity()) {
+			throw new IllegalStateException("The selected bulk upsert provider uses "
+					+ "transaction-breaking staging DDL and cannot atomically repair all chunks; "
+					+ "set bulkUpsertOption.useTransaction=false to allow non-atomic repair");
+		}
+		long affectedRows = 0;
+		try (var transaction = BulkUpsertTransaction.begin(targetConnection,
+				effective.isUseTransaction())) {
+			try {
+				for (final Table chunk : replayChunks) {
+					affectedRows += executor.execute(targetConnection, chunk, effective);
+				}
+				transaction.commit();
+			} catch (SQLException | RuntimeException e) {
+				transaction.rollback(e);
+				throw e;
+			}
+		}
+		return new BulkMigrationRepairResult(mismatchCount, replayChunks.size(), replayedRows,
+				affectedRows, List.copyOf(extraActual), List.copyOf(withoutExpected));
+	}
+
+	private static void validateExpectedBoundaries(final BulkMigrationKeysetSource source,
+			final List<Row> rows, final BulkMigrationVerificationChunk chunk)
+			throws SQLException {
+		if (rows.isEmpty()
+				|| !chunk.getExpectedFirstKey().equals(source.resumeToken(rows.get(0)))
+				|| !chunk.getExpectedLastKey()
+						.equals(source.resumeToken(rows.get(rows.size() - 1)))) {
+			throw changed(chunk.getIndex());
 		}
 	}
 
@@ -205,6 +290,9 @@ public final class BulkMigrationRepairExecutor {
 	@FunctionalInterface
 	private interface IteratorFactory {
 		Iterator<Row> open() throws SQLException;
+	}
+
+	record KeysetReplay(List<Table> chunks, long rows, List<Long> withoutExpected) {
 	}
 
 }

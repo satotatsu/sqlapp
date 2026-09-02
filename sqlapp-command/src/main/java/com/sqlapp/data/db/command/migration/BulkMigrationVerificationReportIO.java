@@ -78,6 +78,8 @@ public final class BulkMigrationVerificationReportIO {
 							chunk.getExpectedFirstKey(), chunk.getExpectedLastKey(),
 							chunk.getActualFirstKey(), chunk.getActualLastKey())).toList();
 			return new BulkMigrationVerificationReport.Task(task.getTaskId(), task.getColumns(),
+					verification.getExpectedKeysetFingerprint(),
+					verification.getActualKeysetFingerprint(),
 					verification.isMatch(), verification.getExpectedRows(),
 					verification.getActualRows(), allMismatches.size(), mismatches);
 		}).toList();
@@ -155,6 +157,14 @@ public final class BulkMigrationVerificationReportIO {
 					|| task.columns().stream().anyMatch(name -> name == null || name.isBlank())
 					|| new HashSet<>(task.columns()).size() != task.columns().size()) {
 				throw new CommandException("Verification report columns must be non-empty and unique: "
+						+ task.taskId());
+			}
+			if ((task.expectedKeysetFingerprint() == null)
+					!= (task.actualKeysetFingerprint() == null)
+					|| task.expectedKeysetFingerprint() != null
+							&& (task.expectedKeysetFingerprint().isBlank()
+									|| task.actualKeysetFingerprint().isBlank())) {
+				throw new CommandException("Verification report keyset fingerprints are invalid: "
 						+ task.taskId());
 			}
 			if (task.expectedRows() < 0 || task.actualRows() < 0

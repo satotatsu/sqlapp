@@ -221,6 +221,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					temporaryDirectory.resolve("reports/mismatch-verification.json"));
 			assertEquals(false, mismatchArtifact.match());
 			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
+			assertNotNull(mismatchArtifact.tasks().get(0).expectedKeysetFingerprint());
+			assertNotNull(mismatchArtifact.tasks().get(0).actualKeysetFingerprint());
 			final var mismatchChunk = mismatchArtifact.tasks().get(0).mismatches().get(0);
 			assertEquals(1, mismatchArtifact.tasks().get(0).mismatchedChunks());
 			assertEquals(null, mismatchChunk.expectedFirstKey());

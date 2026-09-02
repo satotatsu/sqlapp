@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.sql.rowset.serial.SerialBlob;
@@ -242,6 +243,27 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void keysetRepairReadsOnlyMismatchRangesFromTheirPreviousBoundary() throws Exception {
+		final Table expectedTable = numberedTable("ITEMS", "one", "two", "three");
+		final Table actualTable = numberedTable("ITEMS", "one", "changed", "three");
+		final var expected = new RecordingKeysetSource(expectedTable, "expected");
+		final var actual = new RecordingKeysetSource(actualTable, "actual");
+		final var verification = BulkMigrationVerifier.verify(expected, actual,
+				List.of("ID", "TXT"), 1);
+		expected.resumeTokens.clear();
+
+		final var replay = BulkMigrationRepairExecutor.readKeysetReplay(expected,
+				verification, BulkMigrationRepairOption.builder().build());
+
+		assertEquals(List.of("1"), expected.resumeTokens);
+		assertEquals(1, replay.chunks().size());
+		assertEquals(1, replay.rows());
+		assertEquals(2, ((Number) replay.chunks().get(0).getRows().get(0).get("ID"))
+				.intValue());
+		assertTrue(replay.withoutExpected().isEmpty());
+	}
+
+	@Test
 	void verificationResultOwnsValidImmutableChunkBoundaries() {
 		final var chunks = new java.util.ArrayList<BulkMigrationVerificationChunk>();
 		final var result = new BulkMigrationVerificationResult(10, 0, 0, chunks);
@@ -324,6 +346,21 @@ class BulkMigrationJobVerifierTest {
 		return table;
 	}
 
+	private static Table numberedTable(final String name, final String... texts) {
+		final Table table = new Table(name);
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("TXT"));
+		for (int i = 0; i < texts.length; i++) {
+			final int id = i + 1;
+			final String text = texts[i];
+			table.getRows().add(row -> {
+				row.put("ID", id);
+				row.put("TXT", text);
+			});
+		}
+		return table;
+	}
+
 	private static BulkMigrationKeysetSource keysetSource(final Table table,
 			final String fingerprint, final Iterator<Row> rows) {
 		return new BulkMigrationKeysetSource() {
@@ -370,6 +407,42 @@ class BulkMigrationJobVerifierTest {
 		@Override
 		public void close() {
 			closed = true;
+		}
+	}
+
+	private static final class RecordingKeysetSource implements BulkMigrationKeysetSource {
+		private final Table table;
+		private final String fingerprint;
+		private final List<String> resumeTokens = new ArrayList<>();
+
+		private RecordingKeysetSource(final Table table, final String fingerprint) {
+			this.table = table;
+			this.fingerprint = fingerprint;
+		}
+
+		@Override
+		public Table getTable() {
+			return table;
+		}
+
+		@Override
+		public String getConfigurationFingerprint() {
+			return fingerprint;
+		}
+
+		@Override
+		public Iterator<Row> iterator(final String resumeToken) {
+			resumeTokens.add(resumeToken);
+			final int after = resumeToken == null ? Integer.MIN_VALUE
+					: Integer.parseInt(resumeToken);
+			return table.getRows().stream()
+					.filter(row -> ((Number) row.get("ID")).intValue() > after)
+					.iterator();
+		}
+
+		@Override
+		public String resumeToken(final Row row) {
+			return row.get("ID").toString();
 		}
 	}
 

@@ -8,9 +8,10 @@ import java.util.List;
 public record BulkMigrationVerificationReport(int formatVersion, Instant generatedAt,
 		String planFingerprint, String isolation, boolean match, long expectedRows, long actualRows,
 		long mismatchedTasks, List<Task> tasks) {
-	public static final int CURRENT_FORMAT_VERSION = 4;
+	public static final int CURRENT_FORMAT_VERSION = 5;
 
-	public record Task(String taskId, List<String> columns, boolean match,
+	public record Task(String taskId, List<String> columns,
+			String expectedKeysetFingerprint, String actualKeysetFingerprint, boolean match,
 			long expectedRows, long actualRows, long mismatchedChunks,
 			List<Chunk> mismatches) {
 	}

@@ -374,8 +374,12 @@ var after = BulkMigrationVerifier.verify(expected, rereadTarget, 10_000);
 For JDBC streaming sources, pass the same `BulkMigrationKeysetSource` to the
 keyset-source overload of `execute`. Repair rejects results without a retained
 source fingerprint and rejects sources whose key order, token codec, or fetch
-configuration fingerprint differs from verification. The iterator is opened
-only after these checks pass.
+configuration fingerprint differs from verification. For each mismatched
+chunk, it opens the source strictly after the preceding chunk's expected last
+key instead of scanning from the beginning. The reread row count, hash, first
+key, and last key must still match the verification artifact before UPSERT.
+The iterator is opened only after the fingerprint checks pass and is closed
+before target writes begin.
 
 The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.
