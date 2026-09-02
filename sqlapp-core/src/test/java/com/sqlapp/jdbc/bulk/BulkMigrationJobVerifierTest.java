@@ -317,6 +317,30 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void tableRepairStopsAtTheConfiguredBufferLimitBeforeWriting() {
+		final Table expected = numberedTable("ITEMS", "one", "two");
+		final Table actual = numberedTable("ITEMS", "changed-one", "changed-two");
+		final var verification = BulkMigrationVerifier.verify(expected, actual, 1);
+		final var connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+		final var options = BulkMigrationRepairOption.builder().maxBufferedRows(1)
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("ID").build())
+				.build();
+
+		final var failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationRepairExecutor.execute(connection, expected, verification,
+						options));
+
+		assertTrue(failure.getMessage().contains("maxBufferedRows=1"));
+		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
 	void repairJobRequiresExactlyOneExpectedSourcePerTask() {
 		final Table table = table("ITEMS", "value");
 		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
@@ -344,8 +368,7 @@ class BulkMigrationJobVerifierTest {
 		final var verification = new BulkMigrationVerificationResult(1, 0, 0,
 				List.of("ID", "TXT"), "fingerprint", "actual", List.of());
 		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
-				.expectedKeysetSource(source).verificationResult(verification)
-				.options(BulkMigrationRepairOption.builder().build()).build();
+				.expectedKeysetSource(source).verificationResult(verification).build();
 		final Connection connection = (Connection) Proxy.newProxyInstance(
 				getClass().getClassLoader(), new Class<?>[] { Connection.class },
 				(proxy, method, args) -> null);
@@ -354,6 +377,8 @@ class BulkMigrationJobVerifierTest {
 
 		assertEquals(1, result.getTasks().size());
 		assertEquals(0, result.getReplayedRows());
+		assertTrue(task.getOptions().isVerifyExpectedHashes());
+		assertEquals(0, task.getOptions().getMaxBufferedRows());
 	}
 
 	@Test

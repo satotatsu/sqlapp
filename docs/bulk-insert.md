@@ -367,7 +367,7 @@ without rewriting chunks whose hashes already match.
 ```java
 var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
 var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
-		verification, BulkMigrationRepairOption.builder().build());
+		verification, BulkMigrationRepairOption.defaults());
 var after = BulkMigrationVerifier.verify(expected, rereadTarget, 10_000);
 ```
 
@@ -553,7 +553,8 @@ completed repair results; follow-up verification remains required.
 A repair job task accepts exactly one expected source: `expected` for a
 materialized `Table`, or `expectedKeysetSource` for boundary-based JDBC
 re-reading. Dependency ordering uses the source's Schema `Table` in both cases,
-so keyset-backed tasks retain the same foreign-key ordering behavior.
+so keyset-backed tasks retain the same foreign-key ordering behavior. `options`
+is optional and defaults to `BulkMigrationRepairOption.defaults()`.
 All verification columns, UPSERT plans, and keyset fingerprints are preflighted
 before the first task writes anything; an invalid later task therefore cannot
 leave earlier tasks partially repaired.

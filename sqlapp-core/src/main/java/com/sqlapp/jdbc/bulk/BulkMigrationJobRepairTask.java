@@ -14,7 +14,8 @@ public class BulkMigrationJobRepairTask {
 	Table expected;
 	BulkMigrationKeysetSource expectedKeysetSource;
 	BulkMigrationVerificationResult verificationResult;
-	BulkMigrationRepairOption options;
+	@Builder.Default
+	BulkMigrationRepairOption options = BulkMigrationRepairOption.defaults();
 
 	Table getExpectedTable() {
 		return expected != null ? expected
