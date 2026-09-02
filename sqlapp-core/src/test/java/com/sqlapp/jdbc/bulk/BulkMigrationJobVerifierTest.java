@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 
@@ -60,11 +61,34 @@ class BulkMigrationJobVerifierTest {
 		right.put("ID", 1);
 		right.put("GENERATED_VALUE", 99);
 
-		assertTrue(BulkMigrationVerifier.verify(expected, List.of(left).iterator(), actual,
-				List.of(right).iterator(), List.of("ID"), 10).isMatch());
+		final var result = BulkMigrationVerifier.verify(expected, List.of(left).iterator(), actual,
+				List.of(right).iterator(), List.of("ID"), 10);
+		assertTrue(result.isMatch());
+		assertEquals(List.of("ID"), result.getColumns());
 		assertThrows(IllegalArgumentException.class, () -> BulkMigrationVerifier.verify(
 				expected, List.of(left).iterator(), actual, List.of(right).iterator(),
 				List.of("ID", "ID"), 10));
+	}
+
+	@Test
+	void repairValidationUsesTheSameExplicitVerificationColumns() {
+		final Table expected = table("ITEMS", "source");
+		final Table actual = table("ITEMS", "target");
+		final var result = BulkMigrationVerifier.verify(expected,
+				expected.getRows().iterator(), actual, actual.getRows().iterator(),
+				List.of("ID"), 10);
+		final var chunk = result.getChunks().get(0);
+		final var idColumns = List.of(expected.getColumns().get("ID"));
+
+		BulkMigrationRepairExecutor.validateExpectedChunk(expected.getRows(), chunk, 0,
+				idColumns);
+		expected.getRows().get(0).put("TXT", "changed but not verified");
+		BulkMigrationRepairExecutor.validateExpectedChunk(expected.getRows(), chunk, 0,
+				idColumns);
+		expected.getRows().get(0).put("ID", 2);
+		assertThrows(IllegalStateException.class, () ->
+				BulkMigrationRepairExecutor.validateExpectedChunk(expected.getRows(), chunk,
+						0, idColumns));
 	}
 
 	@Test
@@ -147,6 +171,77 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void keysetVerificationClosesTheFirstStreamWhenTheSecondCannotOpen() {
+		final Table table = table("ITEMS", "value");
+		final var expectedRows = new TrackingIterator(table.getRows().iterator());
+		final BulkMigrationKeysetSource expected = keysetSource(table, "expected", expectedRows);
+		final BulkMigrationKeysetSource actual = new BulkMigrationKeysetSource() {
+			@Override
+			public Table getTable() {
+				return table;
+			}
+
+			@Override
+			public String getConfigurationFingerprint() {
+				return "actual";
+			}
+
+			@Override
+			public Iterator<Row> iterator(final String resumeToken) throws SQLException {
+				throw new SQLException("open failed");
+			}
+
+			@Override
+			public String resumeToken(final Row row) {
+				return row.get("ID").toString();
+			}
+		};
+
+		assertThrows(SQLException.class, () -> BulkMigrationVerifier.verify(expected, actual,
+				List.of("ID"), 10));
+		assertTrue(expectedRows.closed);
+	}
+
+	@Test
+	void keysetVerificationRetainsBothConfigurationFingerprints() throws Exception {
+		final Table expectedTable = table("ITEMS", "value");
+		final Table actualTable = table("ITEMS", "value");
+		final var result = BulkMigrationVerifier.verify(
+				keysetSource(expectedTable, "expected-fingerprint",
+						expectedTable.getRows().iterator()),
+				keysetSource(actualTable, "actual-fingerprint",
+						actualTable.getRows().iterator()),
+				List.of("ID", "TXT"), 10);
+
+		assertTrue(result.isMatch());
+		assertEquals("expected-fingerprint", result.getExpectedKeysetFingerprint());
+		assertEquals("actual-fingerprint", result.getActualKeysetFingerprint());
+	}
+
+	@Test
+	void keysetRepairRejectsAChangedOrMissingSourceFingerprint() {
+		final Table expectedTable = table("ITEMS", "expected");
+		final var chunk = new BulkMigrationVerificationChunk(0, 1, 1,
+				"expected-hash", "actual-hash", "1", "1", "1", "1");
+		final var verification = new BulkMigrationVerificationResult(10, 1, 1,
+				List.of("ID", "TXT"), "verified", "actual", List.of(chunk));
+		final var changedSource = keysetSource(expectedTable, "changed",
+				expectedTable.getRows().iterator());
+
+		final var changed = assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationRepairExecutor.execute(null, changedSource, verification,
+						BulkMigrationRepairOption.builder().build()));
+		assertTrue(changed.getMessage().contains("fingerprint differs"));
+
+		final var withoutFingerprint = new BulkMigrationVerificationResult(10, 1, 1,
+				List.of("ID", "TXT"), List.of(chunk));
+		final var missing = assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationRepairExecutor.execute(null, changedSource, withoutFingerprint,
+						BulkMigrationRepairOption.builder().build()));
+		assertTrue(missing.getMessage().contains("does not contain"));
+	}
+
+	@Test
 	void verificationResultOwnsValidImmutableChunkBoundaries() {
 		final var chunks = new java.util.ArrayList<BulkMigrationVerificationChunk>();
 		final var result = new BulkMigrationVerificationResult(10, 0, 0, chunks);
@@ -157,6 +252,9 @@ class BulkMigrationJobVerifierTest {
 				() -> new BulkMigrationVerificationResult(0, 0, 0, List.of()));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationVerificationResult(1, -1, 0, List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationResult(1, 0, 0, List.of("ID"),
+						"expected", null, List.of()));
 	}
 
 	@Test
@@ -224,6 +322,55 @@ class BulkMigrationJobVerifierTest {
 			row.put("TXT", text);
 		});
 		return table;
+	}
+
+	private static BulkMigrationKeysetSource keysetSource(final Table table,
+			final String fingerprint, final Iterator<Row> rows) {
+		return new BulkMigrationKeysetSource() {
+			@Override
+			public Table getTable() {
+				return table;
+			}
+
+			@Override
+			public String getConfigurationFingerprint() {
+				return fingerprint;
+			}
+
+			@Override
+			public Iterator<Row> iterator(final String resumeToken) {
+				return rows;
+			}
+
+			@Override
+			public String resumeToken(final Row row) {
+				return row.get("ID").toString();
+			}
+		};
+	}
+
+	private static final class TrackingIterator implements Iterator<Row>, AutoCloseable {
+		private final Iterator<Row> delegate;
+		private boolean closed;
+
+		private TrackingIterator(final Iterator<Row> delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return delegate.hasNext();
+		}
+
+		@Override
+		public Row next() {
+			return delegate.next();
+		}
+
+		@Override
+		public void close() {
+			closed = true;
+		}
 	}
 
 	private static final class FailingCloseIterator

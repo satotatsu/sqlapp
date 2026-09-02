@@ -38,11 +38,10 @@ public final class BulkMigrationJobVerifier {
 				tasks, BulkMigrationJobVerificationTask::getExpected);
 		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>(ordered.size());
 		for (final BulkMigrationJobVerificationTask task : ordered) {
+			final var verification = BulkMigrationVerifier.verify(task.getExpected(),
+					task.getActual(), task.getChunkSize());
 			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(),
-					task.getExpected().getColumns().stream()
-							.map(com.sqlapp.data.schemas.Column::getName).toList(),
-					BulkMigrationVerifier.verify(task.getExpected(), task.getActual(),
-							task.getChunkSize())));
+					verification.getColumns(), verification));
 		}
 		return new BulkMigrationJobVerificationResult(List.copyOf(results));
 	}

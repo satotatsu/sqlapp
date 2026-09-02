@@ -34,5 +34,10 @@ public class BulkMigrationJobTaskVerificationResult {
 		this.columns = List.copyOf(columns);
 		this.verificationResult = Objects.requireNonNull(verificationResult,
 				"verificationResult");
+		if (!verificationResult.getColumns().isEmpty()
+				&& !this.columns.equals(verificationResult.getColumns())) {
+			throw new IllegalArgumentException(
+					"Task columns must match verification result columns: " + taskId);
+		}
 	}
 }

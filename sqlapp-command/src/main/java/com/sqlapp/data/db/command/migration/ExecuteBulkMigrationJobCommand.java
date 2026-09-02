@@ -278,11 +278,10 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					source.getTable(), source.getKeyColumnNames());
 			final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(),
 					defaultVerificationColumns(task));
-			final var verification = BulkMigrationVerifier.verify(source.getTable(),
-					source.iterator(null), target.getTable(), target.iterator(null), columns,
-					chunkSize, source::resumeToken, target::resumeToken);
-			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), columns,
-					verification));
+			final var verification = BulkMigrationVerifier.verify(source, target, columns,
+					chunkSize);
+			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(),
+					verification.getColumns(), verification));
 		}
 		return new BulkMigrationJobVerificationResult(List.copyOf(results));
 	}

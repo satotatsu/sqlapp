@@ -348,8 +348,9 @@ bulk INSERT remain eligible for database checkpoints.
 returns total expected and actual counts plus a SHA-256 digest for each chunk.
 `BulkMigrationVerificationResult.getMismatches()` identifies the exact chunk
 indexes that need detailed investigation or replay. Expected and actual tables
-may use JDBC row iterator handlers, so verification remains streaming and keeps
-at most two chunks in memory.
+may use JDBC row iterator handlers, so verification keeps at most two chunks of
+row data in memory. It retains one compact count/hash summary per chunk for
+repair and diagnostics.
 
 Verification uses expected-table column order and resolves actual columns by
 name. Both row streams must use the same deterministic ordering. Chunk hashes
@@ -366,16 +367,23 @@ without rewriting chunks whose hashes already match.
 ```java
 var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
 var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
-		verification, BulkMigrationRepairOption.builder()
-				.chunkSize(10_000)
-				.build());
+		verification, BulkMigrationRepairOption.builder().build());
 var after = BulkMigrationVerifier.verify(expected, rereadTarget, 10_000);
 ```
 
-The repair chunk size must be identical to the verification chunk size. By
+For JDBC streaming sources, pass the same `BulkMigrationKeysetSource` to the
+keyset-source overload of `execute`. Repair rejects results without a retained
+source fingerprint and rejects sources whose key order, token codec, or fetch
+configuration fingerprint differs from verification. The iterator is opened
+only after these checks pass.
+
+The repair chunk size is taken from the verification result. By
 default, each replay asks the selected UPSERT provider to use a transaction.
 The executor validates each selected expected hash before writing it and stops
-if the source changed after verification. Already repaired chunks may remain
+if the source changed after verification. When verification used an explicit
+column subset, repair recomputes this guard hash from that same ordered subset;
+changes in unverified columns do not create a false source-change failure.
+Already repaired chunks may remain
 committed if a later chunk fails; callers that require a wider transaction may
 provide a non-auto-commit connection, subject to the selected provider's
 transaction capabilities.
@@ -767,7 +775,10 @@ the comparison. The top-level `isolation` field records the JDBC consistency
 level used for the run. Mismatched chunks produced from JDBC keyset sources
 also include source and target first/last keyset tokens, allowing an operator
 to narrow a follow-up query without rescanning from row zero. This is
-verification-report format version 4. `maxReportedMismatches` defaults to
+verification-report format version 5. Each JDBC task also records the source
+and target keyset-configuration fingerprints so later repair code can reject
+tokens created by a different key order, codec, or fetch configuration.
+`maxReportedMismatches` defaults to
 1,000 details per task while `mismatchedChunks` retains the uncapped total, so
 an extensively different table cannot make the JSON artifact unbounded.
 Readers reject older artifacts that do

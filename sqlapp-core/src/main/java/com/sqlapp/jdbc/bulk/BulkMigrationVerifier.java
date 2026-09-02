@@ -101,12 +101,45 @@ public final class BulkMigrationVerifier {
 						firstKey(right, actualKey), lastKey(right, actualKey)));
 			}
 			return new BulkMigrationVerificationResult(chunkSize, expectedCount, actualCount,
+					expectedColumns.stream().map(Column::getName).toList(),
 					List.copyOf(chunks));
 		} catch (SQLException | RuntimeException | Error e) {
 			failure = e;
 			throw e;
 		} finally {
 			BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
+		}
+	}
+
+	/** Compares two keyset sources and retains their token configuration fingerprints. */
+	public static BulkMigrationVerificationResult verify(
+			final BulkMigrationKeysetSource expected,
+			final BulkMigrationKeysetSource actual, final List<String> columnNames,
+			final int chunkSize) throws SQLException {
+		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(actual, "actual");
+		Iterator<Row> expectedRows = null;
+		Iterator<Row> actualRows = null;
+		boolean delegated = false;
+		Throwable failure = null;
+		try {
+			expectedRows = expected.iterator(null);
+			actualRows = actual.iterator(null);
+			delegated = true;
+			final var result = verify(expected.getTable(), expectedRows,
+					actual.getTable(), actualRows, columnNames, chunkSize,
+					expected::resumeToken, actual::resumeToken);
+			return new BulkMigrationVerificationResult(result.getChunkSize(),
+					result.getExpectedRows(), result.getActualRows(), result.getColumns(),
+					expected.getConfigurationFingerprint(),
+					actual.getConfigurationFingerprint(), result.getChunks());
+		} catch (SQLException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
+			if (!delegated) {
+				BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
+			}
 		}
 	}
 

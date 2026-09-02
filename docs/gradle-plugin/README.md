@@ -167,6 +167,8 @@ and mismatched chunk hashes. The report's top-level `isolation` field records
 the selected JDBC consistency level. Mismatch entries also include source and
 target first/last keyset tokens. Treat this artifact as migration data because
 those tokens may expose business-key values.
+The task entry also records both keyset-source configuration fingerprints so
+automation can reject tokens created by a different key order or codec.
 `maxReportedMismatches` defaults to 1000 and limits the mismatch details stored
 per task. Each task still records `mismatchedChunks`, the uncapped total.
 If verification fails, the operational report's final execution event is

@@ -3,6 +3,7 @@ package com.sqlapp.jdbc.bulk;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.HashSet;
 
 import lombok.Value;
 
@@ -12,15 +13,45 @@ public class BulkMigrationVerificationResult {
 	int chunkSize;
 	long expectedRows;
 	long actualRows;
+	List<String> columns;
+	String expectedKeysetFingerprint;
+	String actualKeysetFingerprint;
 	List<BulkMigrationVerificationChunk> chunks;
 
 	public BulkMigrationVerificationResult(final int chunkSize, final long expectedRows,
 			final long actualRows, final List<BulkMigrationVerificationChunk> chunks) {
+		this(chunkSize, expectedRows, actualRows, List.of(), chunks);
+	}
+
+	public BulkMigrationVerificationResult(final int chunkSize, final long expectedRows,
+			final long actualRows, final List<String> columns,
+			final List<BulkMigrationVerificationChunk> chunks) {
+		this(chunkSize, expectedRows, actualRows, columns, null, null, chunks);
+	}
+
+	public BulkMigrationVerificationResult(final int chunkSize, final long expectedRows,
+			final long actualRows, final List<String> columns,
+			final String expectedKeysetFingerprint,
+			final String actualKeysetFingerprint,
+			final List<BulkMigrationVerificationChunk> chunks) {
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
 		if (expectedRows < 0 || actualRows < 0) {
 			throw new IllegalArgumentException("row counts must not be negative");
+		}
+		Objects.requireNonNull(columns, "columns");
+		if (columns.stream().anyMatch(name -> name == null || name.isBlank())
+				|| new HashSet<>(columns).size() != columns.size()) {
+			throw new IllegalArgumentException(
+					"Verification columns must be non-empty and unique");
+		}
+		if ((expectedKeysetFingerprint == null) != (actualKeysetFingerprint == null)
+				|| expectedKeysetFingerprint != null
+						&& (expectedKeysetFingerprint.isBlank()
+								|| actualKeysetFingerprint.isBlank())) {
+			throw new IllegalArgumentException(
+					"Keyset fingerprints must be supplied together and must not be empty");
 		}
 		final List<BulkMigrationVerificationChunk> copy = List.copyOf(
 				Objects.requireNonNull(chunks, "chunks"));
@@ -46,6 +77,9 @@ public class BulkMigrationVerificationResult {
 		this.chunkSize = chunkSize;
 		this.expectedRows = expectedRows;
 		this.actualRows = actualRows;
+		this.columns = List.copyOf(columns);
+		this.expectedKeysetFingerprint = expectedKeysetFingerprint;
+		this.actualKeysetFingerprint = actualKeysetFingerprint;
 		this.chunks = copy;
 	}
 

@@ -12,6 +12,7 @@ import java.util.Objects;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Column;
 
 /** Replays only expected rows belonging to mismatched verification chunks. */
 public final class BulkMigrationRepairExecutor {
@@ -21,8 +22,45 @@ public final class BulkMigrationRepairExecutor {
 	public static BulkMigrationRepairResult execute(final Connection targetConnection,
 			final Table expected, final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
+		Objects.requireNonNull(expected, "expected");
+		return execute(targetConnection, expected, () -> expected.getRows().iterator(), verification,
+				options);
+	}
+
+	/**
+	 * Repairs a verification result from a reopenable keyset source.
+	 *
+	 * <p>The source fingerprint must exactly match the source used during
+	 * verification. This prevents durable key boundaries from being interpreted
+	 * with a different key order or token codec.</p>
+	 */
+	public static BulkMigrationRepairResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource expected,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
+		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(verification, "verification");
+		final String verifiedFingerprint = verification.getExpectedKeysetFingerprint();
+		final String sourceFingerprint = expected.getConfigurationFingerprint();
+		if (verifiedFingerprint == null) {
+			throw new IllegalArgumentException("Verification result does not contain an "
+					+ "expected keyset source fingerprint");
+		}
+		if (!verifiedFingerprint.equals(sourceFingerprint)) {
+			throw new IllegalArgumentException("Expected keyset source fingerprint differs "
+					+ "from the source used during verification");
+		}
+		return execute(targetConnection, expected.getTable(), () -> expected.iterator(null),
+				verification, options);
+	}
+
+	private static BulkMigrationRepairResult execute(final Connection targetConnection,
+			final Table expected, final IteratorFactory iteratorFactory,
+			final BulkMigrationVerificationResult verification,
+			final BulkMigrationRepairOption options) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(iteratorFactory, "iteratorFactory");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
 		if (verification.getChunkSize() <= 0) {
@@ -48,15 +86,18 @@ public final class BulkMigrationRepairExecutor {
 		long affectedRows = 0;
 		long chunkIndex = 0;
 		final List<Table> replayChunks = new ArrayList<>(mismatches.size());
-		final Iterator<Row> iterator = expected.getRows().iterator();
+		final List<Column> verificationColumns = verificationColumns(expected,
+				verification.getColumns());
+		Iterator<Row> iterator = null;
 		Throwable failure = null;
 		try {
+			iterator = Objects.requireNonNull(iteratorFactory.open(), "iterator");
 			while (iterator.hasNext()) {
 				final List<Row> rows = take(iterator, verification.getChunkSize());
 				final BulkMigrationVerificationChunk verified = chunkIndex < verification.getChunks().size()
 						? verification.getChunks().get((int) chunkIndex) : null;
 				if (options.isVerifyExpectedHashes()) {
-					validateExpectedChunk(expected, rows, verified, chunkIndex);
+					validateExpectedChunk(rows, verified, chunkIndex, verificationColumns);
 				}
 				final BulkMigrationVerificationChunk mismatch = byIndex.remove(chunkIndex);
 				if (mismatch != null) {
@@ -68,7 +109,7 @@ public final class BulkMigrationRepairExecutor {
 				chunkIndex++;
 			}
 			if (options.isVerifyExpectedHashes()) {
-				validateExpectedEnd(expected, verification, chunkIndex);
+				validateExpectedEnd(verification, chunkIndex, verificationColumns);
 			}
 			withoutExpected.addAll(byIndex.keySet().stream().sorted().toList());
 			if (replayChunks.isEmpty()) {
@@ -111,24 +152,41 @@ public final class BulkMigrationRepairExecutor {
 		}
 	}
 
-	private static void validateExpectedChunk(final Table expected, final List<Row> rows,
-			final BulkMigrationVerificationChunk verified, final long chunkIndex) {
+	static void validateExpectedChunk(final List<Row> rows,
+			final BulkMigrationVerificationChunk verified, final long chunkIndex,
+			final List<Column> columns) {
 		if (verified == null || rows.size() != verified.getExpectedRows()
-				|| !BulkMigrationHash.rows(rows, expected.getColumns())
+				|| !BulkMigrationHash.rows(rows, columns)
 						.equals(verified.getExpectedHash())) {
 			throw changed(chunkIndex);
 		}
 	}
 
-	private static void validateExpectedEnd(final Table expected,
-			final BulkMigrationVerificationResult verification, final long chunkIndex) {
-		final String emptyHash = BulkMigrationHash.rows(List.of(), expected.getColumns());
+	private static void validateExpectedEnd(
+			final BulkMigrationVerificationResult verification, final long chunkIndex,
+			final List<Column> columns) {
+		final String emptyHash = BulkMigrationHash.rows(List.of(), columns);
 		for (long i = chunkIndex; i < verification.getChunks().size(); i++) {
 			final BulkMigrationVerificationChunk chunk = verification.getChunks().get((int) i);
 			if (chunk.getExpectedRows() != 0 || !emptyHash.equals(chunk.getExpectedHash())) {
 				throw changed(i);
 			}
 		}
+	}
+
+	private static List<Column> verificationColumns(final Table expected,
+			final List<String> names) {
+		if (names == null || names.isEmpty()) {
+			return List.copyOf(expected.getColumns());
+		}
+		return names.stream().map(name -> {
+			final Column column = expected.getColumns().get(name);
+			if (column == null) {
+				throw new IllegalArgumentException(
+						"Expected table is missing verification column: " + name);
+			}
+			return column;
+		}).toList();
 	}
 
 	private static IllegalStateException changed(final long chunkIndex) {
@@ -142,6 +200,11 @@ public final class BulkMigrationRepairExecutor {
 			rows.add(iterator.next());
 		}
 		return rows;
+	}
+
+	@FunctionalInterface
+	private interface IteratorFactory {
+		Iterator<Row> open() throws SQLException;
 	}
 
 }
