@@ -188,7 +188,8 @@ public final class BulkMigrationVerificationReportIO {
 				final boolean hasKeyRange = chunk.expectedFirstKey() != null
 						|| chunk.expectedLastKey() != null || chunk.actualFirstKey() != null
 						|| chunk.actualLastKey() != null;
-				if (hasKeyRange && (!validKeyRange(chunk.expectedRows(),
+				if ((task.expectedKeysetFingerprint() != null || hasKeyRange)
+						&& (!validKeyRange(chunk.expectedRows(),
 						chunk.expectedFirstKey(), chunk.expectedLastKey())
 						|| !validKeyRange(chunk.actualRows(), chunk.actualFirstKey(),
 								chunk.actualLastKey()))) {

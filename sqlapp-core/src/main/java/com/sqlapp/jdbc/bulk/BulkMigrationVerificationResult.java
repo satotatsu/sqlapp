@@ -67,6 +67,12 @@ public class BulkMigrationVerificationResult {
 				throw new IllegalArgumentException(
 						"chunk row count exceeds chunkSize at index " + i);
 			}
+			if (expectedKeysetFingerprint != null) {
+				validateKeyBoundaries(chunk.getExpectedRows(), chunk.getExpectedFirstKey(),
+						chunk.getExpectedLastKey(), "expected", i);
+				validateKeyBoundaries(chunk.getActualRows(), chunk.getActualFirstKey(),
+						chunk.getActualLastKey(), "actual", i);
+			}
 			chunkExpectedRows += chunk.getExpectedRows();
 			chunkActualRows += chunk.getActualRows();
 		}
@@ -81,6 +87,15 @@ public class BulkMigrationVerificationResult {
 		this.expectedKeysetFingerprint = expectedKeysetFingerprint;
 		this.actualKeysetFingerprint = actualKeysetFingerprint;
 		this.chunks = copy;
+	}
+
+	private static void validateKeyBoundaries(final int rows, final String first,
+			final String last, final String side, final int chunkIndex) {
+		if (rows == 0 ? first != null || last != null
+				: first == null || first.isBlank() || last == null || last.isBlank()) {
+			throw new IllegalArgumentException(side + " key boundaries do not match row count "
+					+ "at chunk " + chunkIndex);
+		}
 	}
 
 	public boolean isMatch() {

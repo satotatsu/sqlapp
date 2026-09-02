@@ -118,6 +118,9 @@ public final class BulkMigrationVerifier {
 			final int chunkSize) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(actual, "actual");
+		final String expectedFingerprint = requireFingerprint(expected,
+				"expected");
+		final String actualFingerprint = requireFingerprint(actual, "actual");
 		Iterator<Row> expectedRows = null;
 		Iterator<Row> actualRows = null;
 		boolean delegated = false;
@@ -131,8 +134,7 @@ public final class BulkMigrationVerifier {
 					expected::resumeToken, actual::resumeToken);
 			return new BulkMigrationVerificationResult(result.getChunkSize(),
 					result.getExpectedRows(), result.getActualRows(), result.getColumns(),
-					expected.getConfigurationFingerprint(),
-					actual.getConfigurationFingerprint(), result.getChunks());
+					expectedFingerprint, actualFingerprint, result.getChunks());
 		} catch (SQLException | RuntimeException | Error e) {
 			failure = e;
 			throw e;
@@ -141,6 +143,16 @@ public final class BulkMigrationVerifier {
 				BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
 			}
 		}
+	}
+
+	private static String requireFingerprint(final BulkMigrationKeysetSource source,
+			final String side) {
+		final String fingerprint = source.getConfigurationFingerprint();
+		if (fingerprint == null || fingerprint.isBlank()) {
+			throw new IllegalArgumentException(side
+					+ " keyset source configuration fingerprint must not be empty");
+		}
+		return fingerprint;
 	}
 
 	private static String firstKey(final List<Row> rows,

@@ -220,6 +220,17 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void keysetVerificationRejectsAnEmptyFingerprintBeforeOpeningRows() {
+		final var invalid = new RecordingKeysetSource(table("ITEMS", "value"), " ");
+		final var actual = new RecordingKeysetSource(table("ITEMS", "value"), "actual");
+
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationVerifier.verify(
+				invalid, actual, List.of("ID", "TXT"), 10));
+		assertTrue(invalid.resumeTokens.isEmpty());
+		assertTrue(actual.resumeTokens.isEmpty());
+	}
+
+	@Test
 	void keysetRepairRejectsAChangedOrMissingSourceFingerprint() {
 		final Table expectedTable = table("ITEMS", "expected");
 		final var chunk = new BulkMigrationVerificationChunk(0, 1, 1,
@@ -294,6 +305,10 @@ class BulkMigrationJobVerifierTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationVerificationResult(2, 2, 2, List.of(
 						new BulkMigrationVerificationChunk(0, 1, 1, "x", "x"))));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationResult(1, 1, 1, List.of("ID"),
+						"expected", "actual", List.of(
+								new BulkMigrationVerificationChunk(0, 1, 1, "x", "x"))));
 		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobTaskVerificationResult("task", List.of(),
