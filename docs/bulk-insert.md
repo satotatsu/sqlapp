@@ -369,6 +369,40 @@ reported by `BulkMigrationVerificationResult.getMismatches()`. Repair uses
 UPSERT, so changed target values and missing target rows can be corrected
 without rewriting chunks whose hashes already match.
 
+For the common Java workflow, `sqlapp-command` provides the `BulkMigration`
+facade. It owns source/target connection lifetimes and hides job tasks, keyset
+sources, dependency sorting, checkpoint stores, verification tasks, and repair
+planner wiring:
+
+```java
+BulkMigration migration = BulkMigration.builder()
+        .source(sourceDataSource)
+        .target(targetDataSource)
+        .schema(schema)
+        .tables("CUSTOMERS", "ORDERS")
+        .mode(BulkMigrationMode.UPSERT)
+        .build();
+
+BulkMigrationJobResult execution = migration.execute();
+BulkMigrationJobStatus status = migration.inspect();
+BulkMigrationJobVerificationResult verification = migration.verify();
+
+BulkMigration.Repair repair = migration.planRepair(verification);
+BulkMigrationJobRepairPlanReport report = repair.writeJson(repairPlanFile);
+BulkMigrationJobRepairResult repaired =
+        repair.executeApproved(report.planFingerprint());
+```
+
+UPSERT, 10,000-row chunks, all Schema columns for verification, primary-key
+keyset traversal, database checkpoints, and Schema foreign-key order are the
+defaults. Omit `tables` to use every table in the supplied Schema. The facade
+defaults `resume` to false because a Schema fingerprint is not proof that the
+source data is unchanged. Enabling resume requires explicit source and target
+fingerprints, for example `.resume(true).fingerprints(sourceVersion,
+targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
+keyset, and per-table UPSERT configurations remain available through the
+underlying APIs and declarative job configuration.
+
 ```java
 var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
 var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
