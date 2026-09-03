@@ -53,15 +53,21 @@ public final class BulkMigrationRepairPlanner {
 		Objects.requireNonNull(options, "options");
 		BulkMigrationRepairExecutor.validateConfiguration(expected, target, verification,
 				options);
+		final boolean hasReplay = verification.getMismatches().stream()
+				.anyMatch(chunk -> chunk.getExpectedRows() > 0);
 		final BulkUpsertOption configured = options.getBulkUpsertOption() == null
 				? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
 		final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
 				? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
 						ChunkedBulkMigrationExecutor.primaryKeyNames(target))
 				: configured;
-		final BulkUpsertPlan upsertPlan = verification.getMismatches().stream()
-				.anyMatch(chunk -> chunk.getExpectedRows() > 0)
-						? BulkUpsertPlan.resolve(target, effective) : null;
+		final BulkUpsertPlan upsertPlan = hasReplay
+				? BulkUpsertPlan.resolve(target, effective) : null;
+		if (!hasReplay) {
+			return new BulkMigrationRepairPlan(expected, expectedKeysetSource, target,
+					verification, options, null, false, true, "<not-required>",
+					"<not-required>", "<none>");
+		}
 		final BulkUpsertExecutor executor = BulkUpsertResolver.resolve(targetConnection);
 		final boolean transactionBreakingStaging =
 				!executor.supportsCallerTransactionAtomicity();
@@ -82,6 +88,9 @@ public final class BulkMigrationRepairPlanner {
 
 	static void validateExecutionConnection(final Connection connection,
 			final BulkMigrationRepairPlan plan) throws SQLException {
+		if (plan.isNoOp() || plan.getEstimatedReplayRows() == 0) {
+			return;
+		}
 		final var metadata = connection.getMetaData();
 		final String executor = BulkUpsertResolver.resolve(connection).getClass().getName();
 		if (!plan.getDatabaseProductName().equals(metadata.getDatabaseProductName())

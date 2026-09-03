@@ -112,7 +112,7 @@ public final class BulkMigrationRepairPlanReportIO {
 				table.getSchemaName(), table.getName());
 	}
 
-	private static BulkMigrationRepairPlanReport validate(
+	static BulkMigrationRepairPlanReport validate(
 			final BulkMigrationRepairPlanReport report) {
 		if (report == null) {
 			throw new CommandException("Bulk migration repair plan report must not be null");

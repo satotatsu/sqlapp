@@ -429,6 +429,31 @@ source and target are resolved again by the caller, and the current plan must
 still pass its fingerprint, database identity, expected-hash, and key-boundary
 checks before execution.
 
+Multi-table repair has the same review boundary. `BulkMigrationJobRepairPlanner`
+validates every task before writing, sorts target tables into foreign-key create
+order, and returns a `BulkMigrationJobRepairPlan` with one immutable child plan
+per task. Its fingerprint includes the ordered task IDs and child-plan
+fingerprints. An approved fingerprint can therefore authorize exactly one
+reviewed dependency order and set of repairs:
+
+```java
+BulkMigrationJobRepairPlan jobPlan = BulkMigrationJobRepairPlanner.plan(
+        targetConnection, repairTasks);
+new BulkMigrationJobRepairPlanReportIO().write(reportFile, jobPlan);
+
+BulkMigrationJobRepairPlanReport approved =
+        new BulkMigrationJobRepairPlanReportIO().read(
+                reportFile, jobPlan.getFingerprint());
+BulkMigrationJobRepairResult result = BulkMigrationJobRepairExecutor.execute(
+        targetConnection, jobPlan, approved.planFingerprint());
+```
+
+Job execution revalidates all child plans and target database/provider
+identities before the first task writes. The job JSON additionally validates
+unique task IDs, task order, aggregate mismatch and replay counts, atomicity,
+and the aggregate fingerprint. A no-replay task does not require provider
+resolution, which keeps an otherwise empty repair plan usable for reporting.
+
 The explicit-target repair path is covered against PostgreSQL 18, SQL Server
 2022, MySQL 8.4, MariaDB 11.8, Firebird 5, Oracle 23ai, DB2 12.1.5,
 Informix 14.10, Vertica 25.1, Sybase ASE 16, and SAP HANA Express 2.0,

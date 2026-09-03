@@ -33,6 +33,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobPausedException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlan;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobStatusInspector;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
@@ -1187,8 +1189,23 @@ class ChunkedBulkMigrationTest {
 					.verificationResult(BulkMigrationVerifier.verify(expectedChild, actualChild, 1))
 					.options(option).build();
 
+			final BulkMigrationJobRepairPlan plan = BulkMigrationJobRepairPlanner.plan(
+					connection, List.of(childTask, parentTask));
+			assertEquals(List.of("parent", "child"), plan.getTaskIds());
+			assertEquals(2, plan.getMismatchChunks());
+			assertEquals(2, plan.getEstimatedReplayRows());
+			assertTrue(plan.isAtomic());
+			assertTrue(plan.isUnchanged());
+			assertThrows(IllegalArgumentException.class,
+					() -> BulkMigrationJobRepairExecutor.execute(connection, plan, "not-approved"));
+			try (var resultSet = statement.executeQuery(
+					"SELECT TXT FROM REPAIR_JOB_PARENT WHERE ID = 1")) {
+				resultSet.next();
+				assertEquals("old parent", resultSet.getString(1));
+			}
+
 			final var repaired = BulkMigrationJobRepairExecutor.execute(connection,
-					List.of(childTask, parentTask));
+					plan, plan.getFingerprint());
 
 			assertEquals(List.of("parent", "child"), repaired.getTasks().stream()
 					.map(result -> result.getTaskId()).toList());
