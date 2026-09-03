@@ -830,7 +830,11 @@ class ChunkedBulkMigrationTest {
 			assertFalse(plan.isKeysetSource());
 			assertFalse(plan.isNoOp());
 
-			final var result = BulkMigrationRepairExecutor.execute(connection, plan);
+			assertThrows(IllegalArgumentException.class, () ->
+					BulkMigrationRepairExecutor.execute(connection, plan, "not-approved"));
+			assertEquals("wrong", text(statement, "REPAIR_PLAN_TARGET", 2));
+			final var result = BulkMigrationRepairExecutor.execute(connection, plan,
+					plan.getFingerprint());
 			assertEquals(1, result.getReplayedRows());
 			assertEquals("two", text(statement, "REPAIR_PLAN_TARGET", 2));
 		}

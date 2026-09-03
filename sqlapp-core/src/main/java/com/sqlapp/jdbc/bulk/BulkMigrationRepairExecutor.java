@@ -32,6 +32,21 @@ public final class BulkMigrationRepairExecutor {
 				plan.getVerification(), plan.getOptions());
 	}
 
+	/** Executes only when the supplied reviewed fingerprint identifies this plan. */
+	public static BulkMigrationRepairResult execute(final Connection targetConnection,
+			final BulkMigrationRepairPlan plan, final String approvedFingerprint)
+			throws SQLException {
+		Objects.requireNonNull(plan, "plan");
+		if (approvedFingerprint == null || approvedFingerprint.isBlank()) {
+			throw new IllegalArgumentException("approvedFingerprint must not be empty");
+		}
+		if (!approvedFingerprint.equals(plan.getFingerprint())) {
+			throw new IllegalArgumentException(
+					"Approved repair plan fingerprint does not match the current plan");
+		}
+		return execute(targetConnection, plan);
+	}
+
 	public static BulkMigrationRepairResult execute(final Connection targetConnection,
 			final Table expected, final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
