@@ -41,6 +41,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
@@ -787,6 +788,70 @@ class ChunkedBulkMigrationTest {
 			assertEquals(Integer.valueOf(1), first.get("KEY2"));
 			assertEquals("d", resumed.next().get("TXT"));
 			assertFalse(resumed.hasNext());
+		}
+	}
+
+	@Test
+	void plansReviewsAndExecutesRepairWithoutChangingThePlan() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE REPAIR_PLAN_TARGET "
+					+ "(ID INTEGER PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO REPAIR_PLAN_TARGET VALUES "
+					+ "(1, 'one'), (2, 'wrong'), (3, 'three')");
+			final Table expected = table("REPAIR_PLAN_SOURCE");
+			final Table actual = table("REPAIR_PLAN_TARGET");
+			final Table target = table("REPAIR_PLAN_TARGET");
+			for (int id = 1; id <= 3; id++) {
+				final int value = id;
+				expected.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", value == 2 ? "two" : value == 1 ? "one" : "three");
+				});
+				actual.getRows().add(row -> {
+					row.put("ID", value);
+					row.put("TXT", value == 2 ? "wrong" : value == 1 ? "one" : "three");
+				});
+			}
+			final var verification = BulkMigrationVerifier.verify(expected,
+					expected.getRows().iterator(), actual, actual.getRows().iterator(),
+					List.of("ID", "TXT"), 1);
+			final var plan = BulkMigrationRepairPlanner.plan(connection, expected, target,
+					verification, BulkMigrationRepairOption.defaults());
+
+			assertEquals(1, plan.getMismatchChunks().size());
+			assertEquals(1, plan.getEstimatedReplayRows());
+			assertEquals(List.of("ID"), plan.getKeyColumns());
+			assertEquals(List.of("ID", "TXT"), plan.getStagingColumns());
+			assertEquals(List.of("TXT"), plan.getUpdateColumns());
+			assertTrue(plan.isAtomic());
+			assertFalse(plan.isTransactionBreakingStaging());
+			assertTrue(plan.isUnchanged());
+			assertFalse(plan.isKeysetSource());
+			assertFalse(plan.isNoOp());
+
+			final var result = BulkMigrationRepairExecutor.execute(connection, plan);
+			assertEquals(1, result.getReplayedRows());
+			assertEquals("two", text(statement, "REPAIR_PLAN_TARGET", 2));
+		}
+	}
+
+	@Test
+	void rejectsARepairPlanAfterTheTargetSchemaChanges() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+			final Table expected = table("REPAIR_PLAN_CHANGED_SOURCE");
+			final Table actual = table("REPAIR_PLAN_CHANGED_TARGET");
+			final Table target = table("REPAIR_PLAN_CHANGED_TARGET");
+			expected.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "expected"); });
+			actual.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "actual"); });
+			final var verification = BulkMigrationVerifier.verify(expected, actual, 1);
+			final var plan = BulkMigrationRepairPlanner.plan(connection, expected, target,
+					verification, BulkMigrationRepairOption.defaults());
+			target.getColumns().get("TXT").setLength(200);
+
+			assertFalse(plan.isUnchanged());
+			assertThrows(IllegalStateException.class,
+					() -> BulkMigrationRepairExecutor.execute(connection, plan));
 		}
 	}
 

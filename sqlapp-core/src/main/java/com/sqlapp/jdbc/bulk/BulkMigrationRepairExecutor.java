@@ -19,6 +19,19 @@ public final class BulkMigrationRepairExecutor {
 	private BulkMigrationRepairExecutor() {
 	}
 
+	/** Executes a previously reviewed dry-run plan after validating it is unchanged. */
+	public static BulkMigrationRepairResult execute(final Connection targetConnection,
+			final BulkMigrationRepairPlan plan) throws SQLException {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		BulkMigrationRepairPlanner.validateExecutionConnection(targetConnection, plan);
+		if (plan.isKeysetSource()) {
+			return execute(targetConnection, plan.getExpectedKeysetSource(), plan.getTarget(),
+					plan.getVerification(), plan.getOptions());
+		}
+		return execute(targetConnection, plan.getExpected(), plan.getTarget(),
+				plan.getVerification(), plan.getOptions());
+	}
+
 	public static BulkMigrationRepairResult execute(final Connection targetConnection,
 			final Table expected, final BulkMigrationVerificationResult verification,
 			final BulkMigrationRepairOption options) throws SQLException {
