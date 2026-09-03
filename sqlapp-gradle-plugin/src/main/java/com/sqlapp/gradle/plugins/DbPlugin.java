@@ -38,6 +38,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "migrationRepair", MigrationRepairTask.class);
 		registerTask(project, "generateBulkMigrationOperationalReport",
 				GenerateBulkMigrationOperationalReportTask.class);
+		registerTask(project, "generateBulkMigrationJobRepairPlanReport",
+				GenerateBulkMigrationJobRepairPlanReportTask.class);
 		registerTask(project, "executeBulkMigrationJob",
 				ExecuteBulkMigrationJobTask.class);
 		//

@@ -33,6 +33,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
 | Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
+| Migration | `generateBulkMigrationJobRepairPlanReport` | Write a review-only repair plan as JSON |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
 | Normalization | `columnRuleTransform` | Apply YAML-based column type and naming rules |
@@ -57,6 +58,21 @@ the migration, modify checkpoints, or recover maintenance. All complex values
 are programmatic properties rather than a second migration-plan file format,
 and the task is deliberately not build-cacheable because their stores can
 change outside Gradle.
+
+### `generateBulkMigrationJobRepairPlanReport`
+
+This task writes a programmatically assembled `BulkMigrationJobRepairPlan` to
+an approval and audit JSON file. Set `plan` and `targetFile`. It does not replay
+rows, execute UPSERT, or modify the database. The plan must already have been
+created with `BulkMigrationJobRepairPlanner`, which performs database/provider
+preflight and dependency ordering before the task writes the report.
+
+```groovy
+generateBulkMigrationJobRepairPlanReport {
+    plan = assembledRepairPlan
+    targetFile = layout.buildDirectory.file('reports/migration/repair-plan.json')
+}
+```
 
 ### `executeBulkMigrationJob`
 
