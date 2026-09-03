@@ -44,6 +44,11 @@ class BulkMigrationTest {
 
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.inspect().getTasks().get(0).getState());
+		try (var connection = target.getConnection(); var tables = connection.getMetaData()
+				.getTables(connection.getCatalog(), null,
+						"SQLAPP_BULK_MIGRATION_CHECKPOINT", new String[] { "TABLE" })) {
+			assertFalse(tables.next());
+		}
 		final var verification = migration.verify();
 
 		assertFalse(verification.isMatch());

@@ -34,6 +34,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationCheckpointStore;
 
 import lombok.Builder;
 
@@ -94,7 +95,7 @@ public final class BulkMigration {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			return BulkMigrationJobExecutor.executePlan(targetConnection,
-					plan(sourceConnection, targetConnection));
+					plan(sourceConnection, targetConnection, false));
 		}
 	}
 
@@ -102,7 +103,7 @@ public final class BulkMigration {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			return BulkMigrationJobStatusInspector.inspect(
-					plan(sourceConnection, targetConnection));
+					plan(sourceConnection, targetConnection, true));
 		}
 	}
 
@@ -129,14 +130,18 @@ public final class BulkMigration {
 	}
 
 	private BulkMigrationJobPlan plan(final Connection sourceConnection,
-			final Connection targetConnection) throws SQLException {
+			final Connection targetConnection, final boolean readOnly) throws SQLException {
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
 		for (final Table table : tables) {
 			final var options = options(table);
+			final var checkpointStore = readOnly
+					? new ReadOnlyJdbcBulkMigrationCheckpointStore(targetConnection,
+							checkpointTableName)
+					: new JdbcBulkMigrationCheckpointStore(targetConnection,
+							checkpointTableName);
 			tasks.add(BulkMigrationJobTask.builder().taskId(taskId(table))
 					.keysetSource(new JdbcBulkMigrationKeysetSource(sourceConnection, table))
-					.options(options).checkpointStore(new JdbcBulkMigrationCheckpointStore(
-							targetConnection, checkpointTableName)).build());
+					.options(options).checkpointStore(checkpointStore).build());
 		}
 		return BulkMigrationJobPlanner.plan(tasks);
 	}

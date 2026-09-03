@@ -402,6 +402,10 @@ fingerprints, for example `.resume(true).fingerprints(sourceVersion,
 targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
 keyset, and per-table UPSERT configurations remain available through the
 underlying APIs and declarative job configuration.
+`inspect()` uses `ReadOnlyJdbcBulkMigrationCheckpointStore`: it reports
+`NOT_STARTED` when the checkpoint table does not exist and never creates or
+upgrades that table. A malformed or obsolete existing checkpoint table is
+reported as an error instead of being changed during status inspection.
 
 ```java
 var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
