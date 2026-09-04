@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.sql.DataSource;
@@ -53,6 +55,7 @@ public final class BulkMigration {
 	private final String targetFingerprint;
 	private final String checkpointTableName;
 	private final BulkUpsertOption upsertOption;
+	private final Map<String, BulkMigrationTableOption> tableOptions;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -60,7 +63,8 @@ public final class BulkMigration {
 			final BulkMigrationMode mode, final Integer chunkSize,
 			final Boolean resume, final String sourceFingerprint,
 			final String targetFingerprint, final String checkpointTableName,
-			final BulkUpsertOption upsertOption) {
+			final BulkUpsertOption upsertOption,
+			final Map<String, BulkMigrationTableOption> tableOptions) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -73,11 +77,21 @@ public final class BulkMigration {
 				|| checkpointTableName.isBlank() ? "SQLAPP_BULK_MIGRATION_CHECKPOINT"
 						: checkpointTableName;
 		this.upsertOption = upsertOption == null ? BulkUpsertOption.defaults() : upsertOption;
+		this.tableOptions = resolveTableOptions(this.tables, tableOptions);
 		validate();
 	}
 
 	/** Convenience aliases for the common builder inputs. */
 	public static class BulkMigrationBuilder {
+		public BulkMigrationBuilder tableOption(final String tableName,
+				final BulkMigrationTableOption option) {
+			if (this.tableOptions == null) {
+				this.tableOptions = new LinkedHashMap<>();
+			}
+			this.tableOptions.put(tableName, option);
+			return this;
+		}
+
 		public BulkMigrationBuilder tables(final String... names) {
 			this.tableNames = names == null ? null : List.of(names);
 			return this;
@@ -118,10 +132,9 @@ public final class BulkMigration {
 				Connection targetConnection = target.getConnection()) {
 			final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 			for (final Table table : orderedTables()) {
-				final var expected = new JdbcBulkMigrationKeysetSource(sourceConnection, table);
-				final var actual = new JdbcBulkMigrationKeysetSource(targetConnection, table);
-				final List<String> columns = table.getColumns().stream()
-						.map(column -> column.getName()).toList();
+				final var expected = keysetSource(sourceConnection, table);
+				final var actual = keysetSource(targetConnection, table);
+				final List<String> columns = verificationColumns(table);
 				final var verification = BulkMigrationVerifier.verify(expected, actual,
 						columns, chunkSize);
 				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table),
@@ -159,7 +172,7 @@ public final class BulkMigration {
 					: new JdbcBulkMigrationCheckpointStore(targetConnection,
 							checkpointTableName);
 			tasks.add(BulkMigrationJobTask.builder().taskId(taskId(table))
-					.keysetSource(new JdbcBulkMigrationKeysetSource(sourceConnection, table))
+					.keysetSource(keysetSource(sourceConnection, table))
 					.options(options).checkpointStore(checkpointStore).build());
 		}
 		return BulkMigrationJobPlanner.plan(tasks);
@@ -179,21 +192,45 @@ public final class BulkMigration {
 			final Table table = orderedTables().get(i);
 			final var verified = verification.getTasks().get(i);
 			tasks.add(BulkMigrationJobRepairTask.builder().taskId(taskId(table))
-					.expectedKeysetSource(new JdbcBulkMigrationKeysetSource(
-							sourceConnection, table)).target(table)
+					.expectedKeysetSource(keysetSource(sourceConnection, table)).target(table)
 					.verificationResult(verified.getVerificationResult())
 					.options(BulkMigrationRepairOption.builder()
-							.bulkUpsertOption(upsertOption).build()).build());
+							.bulkUpsertOption(upsertOption(table)).build()).build());
 		}
 		return BulkMigrationJobRepairPlanner.plan(targetConnection, tasks);
 	}
 
 	private ChunkedBulkMigrationOption options(final Table table) {
-		return ChunkedBulkMigrationOption.builder().migrationId(taskId(table))
-				.chunkSize(chunkSize).mode(mode).resume(resume)
+		final BulkMigrationTableOption option = tableOption(table);
+		return ChunkedBulkMigrationOption.builder().migrationId(option.getMigrationId() == null
+				|| option.getMigrationId().isBlank() ? taskId(table) : option.getMigrationId())
+				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize())
+				.mode(mode).resume(resume)
 				.checkpointTableName(checkpointTableName)
 				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint)
-				.bulkUpsertOption(upsertOption).build();
+				.bulkUpsertOption(upsertOption(table)).build();
+	}
+
+	private JdbcBulkMigrationKeysetSource keysetSource(final Connection connection,
+			final Table table) {
+		final List<String> columns = tableOption(table).getKeysetColumns();
+		return columns.isEmpty() ? new JdbcBulkMigrationKeysetSource(connection, table)
+				: new JdbcBulkMigrationKeysetSource(connection, table, columns);
+	}
+
+	private List<String> verificationColumns(final Table table) {
+		final List<String> columns = tableOption(table).getVerificationColumns();
+		return columns.isEmpty() ? table.getColumns().stream()
+				.map(column -> column.getName()).toList() : columns;
+	}
+
+	private BulkUpsertOption upsertOption(final Table table) {
+		final BulkUpsertOption value = tableOption(table).getUpsertOption();
+		return value == null ? upsertOption : value;
+	}
+
+	private BulkMigrationTableOption tableOption(final Table table) {
+		return tableOptions.getOrDefault(table.getName(), BulkMigrationTableOption.defaults());
 	}
 
 	private List<Table> orderedTables() {
@@ -231,6 +268,57 @@ public final class BulkMigration {
 			result.add(table);
 		}
 		return List.copyOf(result);
+	}
+
+	private static Map<String, BulkMigrationTableOption> resolveTableOptions(
+			final List<Table> tables, final Map<String, BulkMigrationTableOption> values) {
+		if (values == null || values.isEmpty()) {
+			return Map.of();
+		}
+		final Map<String, BulkMigrationTableOption> result = new LinkedHashMap<>();
+		for (final var entry : values.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null) {
+				throw new IllegalArgumentException("Table options require a table name and value");
+			}
+			final List<Table> matches = tables.stream().filter(table ->
+					table.getName().equalsIgnoreCase(entry.getKey())
+					|| taskId(table).equalsIgnoreCase(entry.getKey())).toList();
+			if (matches.size() != 1) {
+				throw new IllegalArgumentException("Unknown or ambiguous table option: "
+						+ entry.getKey());
+			}
+			final Table table = matches.get(0);
+			if (result.put(table.getName(), validateTableOption(table, entry.getValue())) != null) {
+				throw new IllegalArgumentException("Duplicate table option: " + entry.getKey());
+			}
+		}
+		return Map.copyOf(result);
+	}
+
+	private static BulkMigrationTableOption validateTableOption(final Table table,
+			final BulkMigrationTableOption option) {
+		if (option.getChunkSize() != null && option.getChunkSize() <= 0) {
+			throw new IllegalArgumentException("chunkSize must be greater than zero: "
+					+ table.getName());
+		}
+		validateColumns(table, option.getKeysetColumns(), "keysetColumns");
+		validateColumns(table, option.getVerificationColumns(), "verificationColumns");
+		return option;
+	}
+
+	private static void validateColumns(final Table table, final List<String> values,
+			final String role) {
+		if (values == null) {
+			throw new IllegalArgumentException(role + " must not be null: " + table.getName());
+		}
+		final var names = new HashSet<String>();
+		for (final String value : values) {
+			final var column = value == null ? null : table.getColumns().get(value);
+			if (column == null || !names.add(column.getName())) {
+				throw new IllegalArgumentException("Invalid " + role + " column '" + value
+						+ "': " + table.getName());
+			}
+		}
 	}
 
 	private static String taskId(final Table table) {

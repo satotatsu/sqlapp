@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.migration.BulkMigration;
+import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
@@ -35,7 +36,9 @@ class BulkMigrationFacadeIntegrationTest {
 			statement.execute("INSERT INTO ITEMS VALUES (1, 'old')");
 		}
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
-				.schema(schema()).tables("ITEMS").chunkSize(1).resume(true)
+				.schema(schema()).tables("ITEMS").resume(true)
+				.tableOption("ITEMS", BulkMigrationTableOption.builder()
+						.migrationId("items-copy").chunkSize(1).build())
 				.fingerprints("source-v1", "target-v1").build();
 
 		final var outcome = migration.executeAndVerify();
@@ -44,6 +47,8 @@ class BulkMigrationFacadeIntegrationTest {
 		assertTrue(outcome.isMatch());
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.inspect().getTasks().get(0).getState());
+		assertEquals("items-copy", migration.inspect().getTasks().get(0)
+				.getCheckpoint().getMigrationId());
 		final var resumed = migration.execute();
 		assertEquals(0, resumed.getProcessedRows());
 		assertEquals(1, resumed.getAlreadyCompleteTasks());

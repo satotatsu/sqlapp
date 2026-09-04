@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -74,6 +75,41 @@ class BulkMigrationTest {
 		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
 				.source(dataSource("invalid_source")).target(dataSource("invalid_target"))
 				.schema(schema).resume(true).build());
+	}
+
+	@Test
+	void appliesOnlyTheRequestedAdvancedTableOverrides() throws Exception {
+		final JDBCDataSource source = dataSource("facade_override_source");
+		final JDBCDataSource target = dataSource("facade_override_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+			}
+		}
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'source')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'different')");
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(20));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).tableOption("ITEMS", BulkMigrationTableOption.builder()
+						.verificationColumns(List.of("ID")).chunkSize(1).build()).build();
+
+		final var verification = migration.verify();
+
+		assertEquals(List.of("ID"), verification.getTasks().get(0).getColumns());
+		assertTrue(verification.isMatch());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(source).target(target).schema(schema).tableOption("MISSING",
+						BulkMigrationTableOption.defaults()).build());
 	}
 
 	private static JDBCDataSource dataSource(final String name) {

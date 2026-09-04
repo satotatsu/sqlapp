@@ -406,6 +406,24 @@ Use `execute()` when verification must be scheduled separately;
 migration result and verification result. `executeApproved(Path)` rereads the
 reviewed JSON, checks it against a freshly resolved live plan, and then executes
 the repair, so callers do not need to copy fingerprints manually.
+When only one table needs advanced behavior, keep the common builder unchanged
+and add a `BulkMigrationTableOption` for that table:
+
+```java
+.tableOption("ORDERS", BulkMigrationTableOption.builder()
+        .migrationId("orders-v2")
+        .chunkSize(2_000)
+        .keysetColumns(List.of("TENANT_ID", "ORDER_ID"))
+        .verificationColumns(List.of("TENANT_ID", "ORDER_ID", "STATUS"))
+        .upsertOption(orderUpsertOption)
+        .build())
+```
+
+Unspecified tables retain the facade defaults. Table and column overrides are
+resolved against the Schema model during `build()`; unknown, ambiguous,
+duplicate, null, or empty identifiers fail before a database connection is
+used. Custom keyset columns must still identify a modeled primary key, unique
+constraint, or unique index and are validated by the shared keyset source.
 `inspect()` uses `ReadOnlyJdbcBulkMigrationCheckpointStore`: it reports
 `NOT_STARTED` when the checkpoint table does not exist and never creates or
 upgrades that table. A malformed or obsolete existing checkpoint table is
