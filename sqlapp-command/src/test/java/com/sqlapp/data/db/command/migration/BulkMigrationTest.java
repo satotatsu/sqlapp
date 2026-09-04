@@ -19,6 +19,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 
 class BulkMigrationTest {
@@ -85,6 +86,10 @@ class BulkMigrationTest {
 				.source(dataSource("invalid_custom_source"))
 				.target(dataSource("invalid_custom_target")).schema(schema)
 				.customCheckpointStore(null).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(dataSource("invalid_lease_source"))
+				.target(dataSource("invalid_lease_target")).schema(schema)
+				.fileLease("worker", null));
 
 		final var customStore = new InMemoryBulkMigrationCheckpointStore();
 		final BulkMigration custom = BulkMigration.builder()
@@ -127,6 +132,34 @@ class BulkMigrationTest {
 		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
 				.source(source).target(target).schema(schema).tableOption("MISSING",
 						BulkMigrationTableOption.defaults()).build());
+	}
+
+	@Test
+	void executesWithAnOptionalDatabaseLeaseOnASeparateConnection() throws Exception {
+		final JDBCDataSource source = dataSource("facade_database_lease_source");
+		final JDBCDataSource target = dataSource("facade_database_lease_target");
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(20));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).tables("ITEMS").mode(BulkMigrationMode.INSERT)
+				.databaseLease("database-worker").build();
+
+		assertEquals(0, migration.execute().getProcessedRows());
+		try (var connection = target.getConnection(); var tables = connection.getMetaData()
+				.getTables(connection.getCatalog(), null, "sqlapp_bulk_job_lease",
+						new String[] { "TABLE" })) {
+			assertTrue(tables.next());
+		}
 	}
 
 	private static JDBCDataSource dataSource(final String name) {

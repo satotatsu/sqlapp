@@ -119,6 +119,29 @@ class BulkMigrationFacadeIntegrationTest {
 		}
 	}
 
+	@Test
+	void executesWithAnOptionalFileLease() throws Exception {
+		final DataSource source = sqlite(directory.resolve("lease-source.db"));
+		final DataSource target = sqlite(directory.resolve("lease-target.db"));
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'one')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+		}
+		final Path leases = directory.resolve("leases");
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema()).tables("ITEMS").fileLease("integration-worker", leases)
+				.build();
+
+		assertEquals(1, migration.execute().getProcessedRows());
+		assertTrue(Files.isDirectory(leases));
+		try (var files = Files.list(leases)) {
+			assertTrue(files.anyMatch(path -> path.getFileName().toString().endsWith(".lock")));
+		}
+	}
+
 	private static Schema schema() {
 		final Schema schema = new Schema();
 		final Table table = new Table("ITEMS");

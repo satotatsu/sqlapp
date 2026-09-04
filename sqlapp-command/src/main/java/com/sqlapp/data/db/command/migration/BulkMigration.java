@@ -19,6 +19,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseManager;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
@@ -69,6 +71,7 @@ public final class BulkMigration {
 	private final BulkMigrationCheckpointMode checkpointMode;
 	private final Path checkpointDirectory;
 	private final BulkMigrationCheckpointStore checkpointStore;
+	private final BulkMigrationJobLeaseConfiguration leaseConfiguration;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -83,7 +86,8 @@ public final class BulkMigration {
 			final ChunkedBulkMigrationListener chunkListener,
 			final BulkMigrationCheckpointMode checkpointMode,
 			final Path checkpointDirectory,
-			final BulkMigrationCheckpointStore checkpointStore) {
+			final BulkMigrationCheckpointStore checkpointStore,
+			final BulkMigrationJobLeaseConfiguration leaseConfiguration) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -107,6 +111,7 @@ public final class BulkMigration {
 		this.checkpointDirectory = checkpointDirectory == null ? null
 				: checkpointDirectory.toAbsolutePath().normalize();
 		this.checkpointStore = checkpointStore;
+		this.leaseConfiguration = leaseConfiguration;
 		validate();
 	}
 
@@ -124,6 +129,19 @@ public final class BulkMigration {
 			this.checkpointMode = BulkMigrationCheckpointMode.CUSTOM;
 			this.checkpointStore = store;
 			this.checkpointDirectory = null;
+			return this;
+		}
+
+		/** Prevents concurrent execution using a target-database lease. */
+		public BulkMigrationBuilder databaseLease(final String ownerId) {
+			this.leaseConfiguration = BulkMigrationJobLeaseConfiguration.database(ownerId);
+			return this;
+		}
+
+		/** Prevents concurrent execution using a lease file outside the target database. */
+		public BulkMigrationBuilder fileLease(final String ownerId, final Path directory) {
+			this.leaseConfiguration = BulkMigrationJobLeaseConfiguration.file(ownerId,
+					directory);
 			return this;
 		}
 
@@ -152,9 +170,25 @@ public final class BulkMigration {
 	public BulkMigrationJobResult execute() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			return BulkMigrationJobExecutor.executePlan(targetConnection,
-					plan(sourceConnection, targetConnection, false), jobListener,
-					chunkListener);
+			final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false);
+			if (leaseConfiguration == null) {
+				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, jobListener,
+						chunkListener);
+			}
+			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+				final BulkMigrationJobLeaseManager manager =
+						BulkMigrationJobLeaseManagerFactory.create(null, leaseConfiguration);
+				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, jobListener,
+						chunkListener, manager);
+			}
+			try (Connection leaseConnection = target.getConnection()) {
+				leaseConnection.setAutoCommit(true);
+				final BulkMigrationJobLeaseManager manager =
+						BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+								leaseConfiguration);
+				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, jobListener,
+						chunkListener, manager);
+			}
 		}
 	}
 

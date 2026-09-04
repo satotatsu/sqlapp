@@ -423,6 +423,17 @@ durability mechanism. One table can instead set `checkpointStore` in its
 custom store's `load` implementation must be read-only because `inspect()`
 calls it. File inspection likewise reads an existing checkpoint without
 creating its directory or a target-database table.
+
+Concurrent execution protection is also opt-in. Use
+`.fileLease(workerId, leaseDirectory)` when the workers share a filesystem, or
+`.databaseLease(workerId)` when they share only the target database. The
+five-minute renewable lease default is suitable for the common path; pass a
+`BulkMigrationJobLeaseConfiguration` through the builder when owner, duration,
+table name, or directory needs explicit control. Database leasing uses a
+separate target connection so lease renewal is independent of chunk
+transactions. `inspect()` remains a read-only checkpoint snapshot; operational
+resume assessment, including live/expired lease state, remains available from
+the detailed operational-report API.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the
