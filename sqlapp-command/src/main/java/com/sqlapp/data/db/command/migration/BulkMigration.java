@@ -250,6 +250,11 @@ public final class BulkMigration {
 		return new Execution(execution, verify());
 	}
 
+	/** Executes and verifies, throwing only when the completed verification mismatches. */
+	public Execution executeAndVerifyOrThrow() throws SQLException {
+		return executeAndVerify().requireMatch();
+	}
+
 	public BulkMigrationJobStatus inspect() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
@@ -298,6 +303,15 @@ public final class BulkMigration {
 		}
 	}
 
+	/** Verifies and returns the result, or throws with that result on mismatch. */
+	public BulkMigrationJobVerificationResult verifyOrThrow() throws SQLException {
+		final var result = verify();
+		if (!result.isMatch()) {
+			throw new BulkMigrationVerificationMismatchException(result);
+		}
+		return result;
+	}
+
 	public Repair planRepair(final BulkMigrationJobVerificationResult verification) {
 		return new Repair(this, Objects.requireNonNull(verification, "verification"));
 	}
@@ -312,6 +326,13 @@ public final class BulkMigration {
 
 		public boolean isMatch() {
 			return verification.isMatch();
+		}
+
+		public Execution requireMatch() {
+			if (!isMatch()) {
+				throw new BulkMigrationVerificationMismatchException(verification);
+			}
+			return this;
 		}
 	}
 

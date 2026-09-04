@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -50,7 +51,8 @@ class BulkMigrationTest {
 		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
 		schema.getTables().add(table);
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
-				.schema(schema).tables("ITEMS").chunkSize(1).build();
+				.schema(schema).tables("ITEMS").chunkSize(1)
+				.verificationReport(directory.resolve("verification/mismatch.json")).build();
 
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.inspect().getTasks().get(0).getState());
@@ -63,9 +65,14 @@ class BulkMigrationTest {
 						"SQLAPP_BULK_MIGRATION_CHECKPOINT", new String[] { "TABLE" })) {
 			assertFalse(tables.next());
 		}
-		final var verification = migration.verify();
+		final var mismatch = assertThrows(BulkMigrationVerificationMismatchException.class,
+				migration::verifyOrThrow);
+		final var verification = mismatch.getVerificationResult();
 
 		assertFalse(verification.isMatch());
+		assertTrue(Files.isRegularFile(directory.resolve("verification/mismatch.json")));
+		assertFalse(new BulkMigrationVerificationReportIO()
+				.read(directory.resolve("verification/mismatch.json")).match());
 		assertEquals(0, verification.getExpectedRows());
 		assertEquals(1, verification.getActualRows());
 		final var repair = migration.planRepair(verification);

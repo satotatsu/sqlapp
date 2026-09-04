@@ -65,10 +65,11 @@ class BulkMigrationFacadeIntegrationTest {
 				.fingerprints("source-v1", "target-v1")
 				.verificationReport(verificationReport).build();
 
-		final var outcome = migration.executeAndVerify();
+		final var outcome = migration.executeAndVerifyOrThrow();
 
 		assertEquals(2, outcome.migration().getProcessedRows());
 		assertTrue(outcome.isMatch());
+		assertEquals(outcome, outcome.requireMatch());
 		final var report = new BulkMigrationVerificationReportIO().read(verificationReport);
 		assertTrue(report.match());
 		assertEquals(2, report.expectedRows());

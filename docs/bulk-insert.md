@@ -466,6 +466,12 @@ The facade rolls those transactions back and restores the original connection
 settings. This provides a stable snapshot within each database, but cannot make
 two independent databases expose the same wall-clock snapshot; quiesce writes
 or use database-specific snapshot coordination for that stronger guarantee.
+Use `verifyOrThrow()` or `executeAndVerifyOrThrow()` when a mismatch must fail
+the calling workflow. `BulkMigrationVerificationMismatchException` retains the
+complete verification result, and a configured verification report is written
+before the exception is raised. The non-throwing methods remain useful for
+interactive review; their returned result (and `Execution.requireMatch()`) lets
+the caller choose the policy explicitly.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the
