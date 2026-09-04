@@ -79,6 +79,7 @@ public final class BulkMigration {
 	private final Path verificationReportFile;
 	private final int maxReportedMismatches;
 	private final BulkMigrationVerificationIsolation verificationIsolation;
+	private final Integer verificationChunkSize;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -98,7 +99,8 @@ public final class BulkMigration {
 			final BulkMigrationJobLifecycle lifecycle,
 			final Path operationalReportFile, final Path verificationReportFile,
 			final Integer maxReportedMismatches,
-			final BulkMigrationVerificationIsolation verificationIsolation) {
+			final BulkMigrationVerificationIsolation verificationIsolation,
+			final Integer verificationChunkSize) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -133,6 +135,7 @@ public final class BulkMigration {
 				: maxReportedMismatches;
 		this.verificationIsolation = verificationIsolation == null
 				? BulkMigrationVerificationIsolation.DEFAULT : verificationIsolation;
+		this.verificationChunkSize = verificationChunkSize;
 		validate();
 	}
 
@@ -310,7 +313,7 @@ public final class BulkMigration {
 				final var actual = keysetSource(targetConnection, table);
 				final List<String> columns = verificationColumns(table);
 				final var verification = BulkMigrationVerifier.verify(expected, actual,
-						columns, chunkSize);
+						columns, verificationChunkSize(table));
 				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table),
 						columns, verification));
 			}
@@ -420,6 +423,17 @@ public final class BulkMigration {
 				bulkOption(table), upsertOption(table)) : columns;
 	}
 
+	private int verificationChunkSize(final Table table) {
+		final BulkMigrationTableOption option = tableOption(table);
+		if (option.getVerificationChunkSize() != null) {
+			return option.getVerificationChunkSize();
+		}
+		if (verificationChunkSize != null) {
+			return verificationChunkSize;
+		}
+		return option.getChunkSize() == null ? chunkSize : option.getChunkSize();
+	}
+
 	private BulkUpsertOption upsertOption(final Table table) {
 		final BulkUpsertOption value = tableOption(table).getUpsertOption();
 		return value == null ? upsertOption : value;
@@ -474,6 +488,10 @@ public final class BulkMigration {
 		if (maxReportedMismatches <= 0) {
 			throw new IllegalArgumentException(
 					"maxReportedMismatches must be greater than zero");
+		}
+		if (verificationChunkSize != null && verificationChunkSize <= 0) {
+			throw new IllegalArgumentException(
+					"verificationChunkSize must be greater than zero");
 		}
 		if (resume && (blank(sourceFingerprint) || blank(targetFingerprint))) {
 			throw new IllegalArgumentException(
@@ -546,6 +564,12 @@ public final class BulkMigration {
 		if (option.getChunkSize() != null && option.getChunkSize() <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero: "
 					+ table.getName());
+		}
+		if (option.getVerificationChunkSize() != null
+				&& option.getVerificationChunkSize() <= 0) {
+			throw new IllegalArgumentException(
+					"verificationChunkSize must be greater than zero: "
+							+ table.getName());
 		}
 		validateColumns(table, option.getKeysetColumns(), "keysetColumns");
 		validateColumns(table, option.getVerificationColumns(), "verificationColumns");

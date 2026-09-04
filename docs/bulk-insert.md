@@ -490,6 +490,7 @@ and add a `BulkMigrationTableOption` for that table:
 .tableOption("ORDERS", BulkMigrationTableOption.builder()
         .migrationId("orders-v2")
         .chunkSize(2_000)
+		.verificationChunkSize(1_000)
         .keysetColumns(List.of("TENANT_ID", "ORDER_ID"))
         .verificationColumns(List.of("TENANT_ID", "ORDER_ID", "STATUS"))
         .upsertOption(orderUpsertOption)
@@ -502,6 +503,10 @@ resolved against the Schema model during `build()`; unknown, ambiguous,
 duplicate, null, or empty identifiers fail before a database connection is
 used. Custom keyset columns must still identify a modeled primary key, unique
 constraint, or unique index and are validated by the shared keyset source.
+Verification uses each table's effective migration `chunkSize` by default.
+Set the facade-level `verificationChunkSize` to use one independent size for
+all tables, or a table option's `verificationChunkSize` for a single-table
+override. All configured sizes must be positive.
 Global `bulkOption`, `upsertOption`, and `retryOption` apply to every table;
 `BulkMigrationTableOption` can override each of them for one table. `bulkOption`
 controls INSERT, while the bulk-copy settings nested in `upsertOption` control

@@ -17,6 +17,7 @@ import lombok.Value;
 public class BulkMigrationTableOption {
 	String migrationId;
 	Integer chunkSize;
+	Integer verificationChunkSize;
 	@Builder.Default
 	List<String> keysetColumns = List.of();
 	@Builder.Default

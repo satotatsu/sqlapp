@@ -136,10 +136,10 @@ class BulkMigrationTest {
 			}
 		}
 		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
-			statement.execute("INSERT INTO ITEMS VALUES (1, 'source')");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'source'), (2, 'source two')");
 		}
 		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
-			statement.execute("INSERT INTO ITEMS VALUES (1, 'different')");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'different'), (2, 'also different')");
 		}
 		final Schema schema = new Schema("PUBLIC");
 		final Table table = new Table("ITEMS");
@@ -157,9 +157,17 @@ class BulkMigrationTest {
 
 		assertEquals(List.of("ID"), verification.getTasks().get(0).getColumns());
 		assertTrue(verification.isMatch());
+		assertEquals(1, verification.getTasks().get(0).getVerificationResult()
+				.getChunkSize());
+		assertEquals(2, verification.getTasks().get(0).getVerificationResult()
+				.getChunks().size());
 		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
 				.source(source).target(target).schema(schema).tableOption("MISSING",
 						BulkMigrationTableOption.defaults()).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(source).target(target).schema(schema).tableOption("ITEMS",
+						BulkMigrationTableOption.builder().verificationChunkSize(0).build())
+				.build());
 	}
 
 	@Test
