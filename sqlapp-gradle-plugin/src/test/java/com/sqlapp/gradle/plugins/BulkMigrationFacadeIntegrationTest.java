@@ -2,8 +2,10 @@
 package com.sqlapp.gradle.plugins;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +81,41 @@ class BulkMigrationFacadeIntegrationTest {
 			rows.next();
 			assertEquals(2, rows.getInt(1));
 			assertEquals("two", rows.getString(2));
+		}
+	}
+
+	@Test
+	void resumesFromFileCheckpointsWithoutCreatingATargetCheckpointTable()
+			throws Exception {
+		final DataSource source = sqlite(directory.resolve("file-source.db"));
+		final DataSource target = sqlite(directory.resolve("file-target.db"));
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'one'), (2, 'two')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+		}
+		final Path checkpoints = directory.resolve("checkpoints");
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema()).tables("ITEMS").resume(true).chunkSize(1)
+				.fingerprints("source-v1", "target-v1")
+				.fileCheckpoints(checkpoints).build();
+
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+				migration.inspect().getTasks().get(0).getState());
+		assertFalse(Files.exists(checkpoints));
+		assertEquals(2, migration.execute().getProcessedRows());
+		try (var files = Files.list(checkpoints)) {
+			assertEquals(1, files.count());
+		}
+		assertEquals(BulkMigrationJobTaskState.COMPLETE,
+				migration.inspect().getTasks().get(0).getState());
+		assertEquals(1, migration.execute().getAlreadyCompleteTasks());
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'SQLAPP_BULK_MIGRATION_CHECKPOINT'")) {
+			rows.next();
+			assertEquals(0, rows.getInt(1));
 		}
 	}
 

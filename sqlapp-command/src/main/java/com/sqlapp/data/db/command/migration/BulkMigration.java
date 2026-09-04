@@ -16,6 +16,8 @@ import javax.sql.DataSource;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
@@ -64,6 +66,9 @@ public final class BulkMigration {
 	private final BulkMigrationRetryOption retryOption;
 	private final BulkMigrationJobListener jobListener;
 	private final ChunkedBulkMigrationListener chunkListener;
+	private final BulkMigrationCheckpointMode checkpointMode;
+	private final Path checkpointDirectory;
+	private final BulkMigrationCheckpointStore checkpointStore;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -75,7 +80,10 @@ public final class BulkMigration {
 			final Map<String, BulkMigrationTableOption> tableOptions,
 			final BulkOption bulkOption, final BulkMigrationRetryOption retryOption,
 			final BulkMigrationJobListener jobListener,
-			final ChunkedBulkMigrationListener chunkListener) {
+			final ChunkedBulkMigrationListener chunkListener,
+			final BulkMigrationCheckpointMode checkpointMode,
+			final Path checkpointDirectory,
+			final BulkMigrationCheckpointStore checkpointStore) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -94,11 +102,31 @@ public final class BulkMigration {
 		this.jobListener = jobListener == null ? BulkMigrationJobListener.NO_OP : jobListener;
 		this.chunkListener = chunkListener == null
 				? ChunkedBulkMigrationListener.NO_OP : chunkListener;
+		this.checkpointMode = checkpointMode == null
+				? BulkMigrationCheckpointMode.DATABASE : checkpointMode;
+		this.checkpointDirectory = checkpointDirectory == null ? null
+				: checkpointDirectory.toAbsolutePath().normalize();
+		this.checkpointStore = checkpointStore;
 		validate();
 	}
 
 	/** Convenience aliases for the common builder inputs. */
 	public static class BulkMigrationBuilder {
+		public BulkMigrationBuilder fileCheckpoints(final Path directory) {
+			this.checkpointMode = BulkMigrationCheckpointMode.FILE;
+			this.checkpointDirectory = directory;
+			this.checkpointStore = null;
+			return this;
+		}
+
+		public BulkMigrationBuilder customCheckpointStore(
+				final BulkMigrationCheckpointStore store) {
+			this.checkpointMode = BulkMigrationCheckpointMode.CUSTOM;
+			this.checkpointStore = store;
+			this.checkpointDirectory = null;
+			return this;
+		}
+
 		public BulkMigrationBuilder tableOption(final String tableName,
 				final BulkMigrationTableOption option) {
 			if (this.tableOptions == null) {
@@ -183,11 +211,8 @@ public final class BulkMigration {
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
 		for (final Table table : tables) {
 			final var options = options(table);
-			final var checkpointStore = readOnly
-					? new ReadOnlyJdbcBulkMigrationCheckpointStore(targetConnection,
-							checkpointTableName)
-					: new JdbcBulkMigrationCheckpointStore(targetConnection,
-							checkpointTableName);
+			final BulkMigrationCheckpointStore checkpointStore = checkpointStore(
+					table, targetConnection, readOnly);
 			tasks.add(BulkMigrationJobTask.builder().taskId(taskId(table))
 					.keysetSource(keysetSource(sourceConnection, table))
 					.options(options).checkpointStore(checkpointStore).build());
@@ -222,7 +247,7 @@ public final class BulkMigration {
 		return ChunkedBulkMigrationOption.builder().migrationId(option.getMigrationId() == null
 				|| option.getMigrationId().isBlank() ? taskId(table) : option.getMigrationId())
 				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize())
-				.mode(mode).resume(resume)
+				.mode(mode).resume(resume).checkpointMode(checkpointMode(table))
 				.checkpointTableName(checkpointTableName)
 				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint)
 				.bulkOption(bulkOption(table)).bulkUpsertOption(upsertOption(table))
@@ -257,6 +282,27 @@ public final class BulkMigration {
 		return value == null ? retryOption : value;
 	}
 
+	private BulkMigrationCheckpointMode checkpointMode(final Table table) {
+		return tableOption(table).getCheckpointStore() == null
+				? checkpointMode : BulkMigrationCheckpointMode.CUSTOM;
+	}
+
+	private BulkMigrationCheckpointStore checkpointStore(final Table table,
+			final Connection targetConnection, final boolean readOnly) throws SQLException {
+		final BulkMigrationCheckpointStore perTable = tableOption(table).getCheckpointStore();
+		if (perTable != null) {
+			return perTable;
+		}
+		return switch (checkpointMode) {
+		case DATABASE -> readOnly
+				? new ReadOnlyJdbcBulkMigrationCheckpointStore(targetConnection,
+						checkpointTableName)
+				: new JdbcBulkMigrationCheckpointStore(targetConnection, checkpointTableName);
+		case FILE -> new FileBulkMigrationCheckpointStore(checkpointDirectory);
+		case CUSTOM -> checkpointStore;
+		};
+	}
+
 	private BulkMigrationTableOption tableOption(final Table table) {
 		return tableOptions.getOrDefault(table.getName(), BulkMigrationTableOption.defaults());
 	}
@@ -275,6 +321,21 @@ public final class BulkMigration {
 		if (resume && (blank(sourceFingerprint) || blank(targetFingerprint))) {
 			throw new IllegalArgumentException(
 					"sourceFingerprint and targetFingerprint are required when resume is enabled");
+		}
+		if (checkpointMode == BulkMigrationCheckpointMode.FILE
+				&& checkpointDirectory == null) {
+			throw new IllegalArgumentException(
+					"checkpointDirectory is required for FILE checkpoints");
+		}
+		if (checkpointMode == BulkMigrationCheckpointMode.CUSTOM
+				&& checkpointStore == null) {
+			throw new IllegalArgumentException(
+					"checkpointStore is required for CUSTOM checkpoints");
+		}
+		if (checkpointMode == BulkMigrationCheckpointMode.DATABASE
+				&& (checkpointDirectory != null || checkpointStore != null)) {
+			throw new IllegalArgumentException(
+					"DATABASE checkpoints cannot use a directory or custom store");
 		}
 	}
 

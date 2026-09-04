@@ -401,6 +401,28 @@ fingerprints, for example `.resume(true).fingerprints(sourceVersion,
 targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
 keyset, and per-table UPSERT configurations remain available through the
 underlying APIs and declarative job configuration.
+
+Database checkpoints are the default. A durable file store is one additional
+builder call and is useful when the target database must not contain sqlapp
+control tables:
+
+```java
+BulkMigration migration = BulkMigration.builder()
+        .source(sourceDataSource)
+        .target(targetDataSource)
+        .schema(schema)
+        .resume(true)
+        .fingerprints(sourceVersion, targetVersion)
+        .fileCheckpoints(checkpointDirectory)
+        .build();
+```
+
+Use `.customCheckpointStore(store)` only when an application needs its own
+durability mechanism. One table can instead set `checkpointStore` in its
+`BulkMigrationTableOption`; other tables keep the global/default store. A
+custom store's `load` implementation must be read-only because `inspect()`
+calls it. File inspection likewise reads an existing checkpoint without
+creating its directory or a target-database table.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the

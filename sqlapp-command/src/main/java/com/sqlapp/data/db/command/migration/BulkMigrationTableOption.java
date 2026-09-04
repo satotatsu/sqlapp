@@ -6,6 +6,7 @@ import java.util.List;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 
 import lombok.Builder;
 import lombok.Value;
@@ -23,6 +24,7 @@ public class BulkMigrationTableOption {
 	BulkUpsertOption upsertOption;
 	BulkOption bulkOption;
 	BulkMigrationRetryOption retryOption;
+	BulkMigrationCheckpointStore checkpointStore;
 
 	public static BulkMigrationTableOption defaults() {
 		return builder().build();

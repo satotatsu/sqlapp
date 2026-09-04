@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,6 +19,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 
 class BulkMigrationTest {
 	@TempDir
@@ -75,6 +77,21 @@ class BulkMigrationTest {
 		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
 				.source(dataSource("invalid_source")).target(dataSource("invalid_target"))
 				.schema(schema).resume(true).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(dataSource("invalid_file_source"))
+				.target(dataSource("invalid_file_target")).schema(schema)
+				.fileCheckpoints(null).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(dataSource("invalid_custom_source"))
+				.target(dataSource("invalid_custom_target")).schema(schema)
+				.customCheckpointStore(null).build());
+
+		final var customStore = new InMemoryBulkMigrationCheckpointStore();
+		final BulkMigration custom = BulkMigration.builder()
+				.source(dataSource("custom_source")).target(dataSource("custom_target"))
+				.schema(schema).customCheckpointStore(customStore).build();
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+				assertDoesNotThrow(custom::inspect).getTasks().get(0).getState());
 	}
 
 	@Test
