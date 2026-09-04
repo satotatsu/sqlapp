@@ -442,6 +442,12 @@ part of dry-run validation. The lifecycle is invoked only by `execute()`;
 `inspect()` and `verify()` do not prepare, disable, or restore database objects.
 Use a durable lifecycle from the underlying API when recovery must survive a
 process crash.
+
+Add `.operationalReport(reportFile)` to atomically refresh the existing JSON
+operational report at each job and table boundary. Report output is disabled by
+default and report-write failures fail the migration instead of being silently
+ignored. The detailed command API remains available when reporting failures
+must be observed while allowing the migration to continue.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the

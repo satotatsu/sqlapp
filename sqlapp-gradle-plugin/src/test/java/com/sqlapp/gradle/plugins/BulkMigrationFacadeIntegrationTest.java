@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.migration.BulkMigration;
+import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -131,8 +132,10 @@ class BulkMigrationFacadeIntegrationTest {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
 		}
 		final Path leases = directory.resolve("leases");
+		final Path reportFile = directory.resolve("reports/operation.json");
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
 				.schema(schema()).tables("ITEMS").fileLease("integration-worker", leases)
+				.operationalReport(reportFile)
 				.build();
 
 		assertEquals(1, migration.execute().getProcessedRows());
@@ -140,6 +143,10 @@ class BulkMigrationFacadeIntegrationTest {
 		try (var files = Files.list(leases)) {
 			assertTrue(files.anyMatch(path -> path.getFileName().toString().endsWith(".lock")));
 		}
+		final var report = new BulkMigrationOperationalReportIO().read(reportFile);
+		assertEquals("JOB_COMPLETED", report.execution().event());
+		assertEquals(1, report.processedRows());
+		assertEquals(1, report.completedTasks());
 	}
 
 	private static Schema schema() {

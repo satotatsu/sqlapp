@@ -43,6 +43,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
+import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationCheckpointStore;
@@ -74,6 +75,7 @@ public final class BulkMigration {
 	private final BulkMigrationCheckpointStore checkpointStore;
 	private final BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private final BulkMigrationJobLifecycle lifecycle;
+	private final Path operationalReportFile;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -90,7 +92,8 @@ public final class BulkMigration {
 			final Path checkpointDirectory,
 			final BulkMigrationCheckpointStore checkpointStore,
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
-			final BulkMigrationJobLifecycle lifecycle) {
+			final BulkMigrationJobLifecycle lifecycle,
+			final Path operationalReportFile) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -116,6 +119,8 @@ public final class BulkMigration {
 		this.checkpointStore = checkpointStore;
 		this.leaseConfiguration = leaseConfiguration;
 		this.lifecycle = lifecycle == null ? BulkMigrationJobLifecycle.NO_OP : lifecycle;
+		this.operationalReportFile = operationalReportFile == null ? null
+				: operationalReportFile.toAbsolutePath().normalize();
 		validate();
 	}
 
@@ -149,6 +154,12 @@ public final class BulkMigration {
 			return this;
 		}
 
+		/** Writes an atomic JSON operational report at job and task boundaries. */
+		public BulkMigrationBuilder operationalReport(final Path file) {
+			this.operationalReportFile = Objects.requireNonNull(file, "file");
+			return this;
+		}
+
 		public BulkMigrationBuilder tableOption(final String tableName,
 				final BulkMigrationTableOption option) {
 			if (this.tableOptions == null) {
@@ -175,14 +186,15 @@ public final class BulkMigration {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false);
+			final BulkMigrationJobListener executionListener = executionListener(plan);
 			if (leaseConfiguration == null) {
-				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, jobListener,
+				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener,
 						chunkListener);
 			}
 			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(null, leaseConfiguration);
-				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, jobListener,
+				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener,
 						chunkListener, manager);
 			}
 			try (Connection leaseConnection = target.getConnection()) {
@@ -190,10 +202,20 @@ public final class BulkMigration {
 				final BulkMigrationJobLeaseManager manager =
 						BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
 								leaseConfiguration);
-				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, jobListener,
+				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener,
 						chunkListener, manager);
 			}
 		}
+	}
+
+	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {
+		if (operationalReportFile == null) {
+			return jobListener;
+		}
+		final BulkMigrationJobListener report =
+				new BulkMigrationOperationalReportJobListener(plan, operationalReportFile);
+		return jobListener == BulkMigrationJobListener.NO_OP ? report
+				: CompositeBulkMigrationJobListener.of(jobListener, report);
 	}
 
 	/** Executes the migration and immediately verifies the resulting target. */

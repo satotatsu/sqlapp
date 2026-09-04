@@ -96,6 +96,8 @@ class BulkMigrationTest {
 				.source(dataSource("invalid_lease_source"))
 				.target(dataSource("invalid_lease_target")).schema(schema)
 				.fileLease("worker", null));
+		assertThrows(NullPointerException.class, () -> BulkMigration.builder()
+				.operationalReport(null));
 
 		final var customStore = new InMemoryBulkMigrationCheckpointStore();
 		final BulkMigration custom = BulkMigration.builder()
