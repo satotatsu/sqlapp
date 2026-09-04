@@ -383,14 +383,13 @@ BulkMigration migration = BulkMigration.builder()
         .mode(BulkMigrationMode.UPSERT)
         .build();
 
-BulkMigrationJobResult execution = migration.execute();
+BulkMigration.Execution execution = migration.executeAndVerify();
 BulkMigrationJobStatus status = migration.inspect();
-BulkMigrationJobVerificationResult verification = migration.verify();
+BulkMigrationJobVerificationResult verification = execution.verification();
 
 BulkMigration.Repair repair = migration.planRepair(verification);
 BulkMigrationJobRepairPlanReport report = repair.writeJson(repairPlanFile);
-BulkMigrationJobRepairResult repaired =
-        repair.executeApproved(report.planFingerprint());
+BulkMigrationJobRepairResult repaired = repair.executeApproved(repairPlanFile);
 ```
 
 UPSERT, 10,000-row chunks, all Schema columns for verification, primary-key
@@ -402,6 +401,11 @@ fingerprints, for example `.resume(true).fingerprints(sourceVersion,
 targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
 keyset, and per-table UPSERT configurations remain available through the
 underlying APIs and declarative job configuration.
+Use `execute()` when verification must be scheduled separately;
+`executeAndVerify()` is the ordinary synchronous path and returns both the
+migration result and verification result. `executeApproved(Path)` rereads the
+reviewed JSON, checks it against a freshly resolved live plan, and then executes
+the repair, so callers do not need to copy fingerprints manually.
 `inspect()` uses `ReadOnlyJdbcBulkMigrationCheckpointStore`: it reports
 `NOT_STARTED` when the checkpoint table does not exist and never creates or
 upgrades that table. A malformed or obsolete existing checkpoint table is

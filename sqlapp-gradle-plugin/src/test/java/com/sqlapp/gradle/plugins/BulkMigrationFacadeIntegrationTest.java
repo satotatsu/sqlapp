@@ -38,10 +38,10 @@ class BulkMigrationFacadeIntegrationTest {
 				.schema(schema()).tables("ITEMS").chunkSize(1).resume(true)
 				.fingerprints("source-v1", "target-v1").build();
 
-		final var result = migration.execute();
+		final var outcome = migration.executeAndVerify();
 
-		assertEquals(2, result.getProcessedRows());
-		assertTrue(migration.verify().isMatch());
+		assertEquals(2, outcome.migration().getProcessedRows());
+		assertTrue(outcome.isMatch());
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.inspect().getTasks().get(0).getState());
 		final var resumed = migration.execute();

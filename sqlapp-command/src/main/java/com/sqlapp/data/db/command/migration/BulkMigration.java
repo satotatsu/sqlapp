@@ -99,6 +99,12 @@ public final class BulkMigration {
 		}
 	}
 
+	/** Executes the migration and immediately verifies the resulting target. */
+	public Execution executeAndVerify() throws SQLException {
+		final BulkMigrationJobResult execution = execute();
+		return new Execution(execution, verify());
+	}
+
 	public BulkMigrationJobStatus inspect() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
@@ -127,6 +133,19 @@ public final class BulkMigration {
 
 	public Repair planRepair(final BulkMigrationJobVerificationResult verification) {
 		return new Repair(this, Objects.requireNonNull(verification, "verification"));
+	}
+
+	/** Combined result of the common execute-then-verify workflow. */
+	public record Execution(BulkMigrationJobResult migration,
+			BulkMigrationJobVerificationResult verification) {
+		public Execution {
+			Objects.requireNonNull(migration, "migration");
+			Objects.requireNonNull(verification, "verification");
+		}
+
+		public boolean isMatch() {
+			return verification.isMatch();
+		}
 	}
 
 	private BulkMigrationJobPlan plan(final Connection sourceConnection,
@@ -255,6 +274,21 @@ public final class BulkMigration {
 						verification);
 				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
 						approvedFingerprint);
+			}
+		}
+
+		/** Reads a previously reviewed JSON report and executes that exact plan. */
+		public BulkMigrationJobRepairResult executeApproved(final Path reportFile)
+				throws SQLException {
+			Objects.requireNonNull(reportFile, "reportFile");
+			try (Connection sourceConnection = migration.source.getConnection();
+					Connection targetConnection = migration.target.getConnection()) {
+				final var plan = migration.repairPlan(sourceConnection, targetConnection,
+						verification);
+				final var approved = new BulkMigrationJobRepairPlanReportIO().read(
+						reportFile, plan.getFingerprint());
+				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
+						approved.planFingerprint());
 			}
 		}
 	}
