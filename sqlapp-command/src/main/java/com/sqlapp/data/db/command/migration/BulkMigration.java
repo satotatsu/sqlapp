@@ -78,6 +78,7 @@ public final class BulkMigration {
 	private final Path operationalReportFile;
 	private final Path verificationReportFile;
 	private final int maxReportedMismatches;
+	private final BulkMigrationVerificationIsolation verificationIsolation;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -96,7 +97,8 @@ public final class BulkMigration {
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
 			final BulkMigrationJobLifecycle lifecycle,
 			final Path operationalReportFile, final Path verificationReportFile,
-			final Integer maxReportedMismatches) {
+			final Integer maxReportedMismatches,
+			final BulkMigrationVerificationIsolation verificationIsolation) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -129,6 +131,8 @@ public final class BulkMigration {
 		this.maxReportedMismatches = maxReportedMismatches == null
 				? BulkMigrationVerificationReportIO.DEFAULT_MAX_REPORTED_MISMATCHES
 				: maxReportedMismatches;
+		this.verificationIsolation = verificationIsolation == null
+				? BulkMigrationVerificationIsolation.DEFAULT : verificationIsolation;
 		validate();
 	}
 
@@ -269,7 +273,9 @@ public final class BulkMigration {
 
 	public BulkMigrationJobVerificationResult verify() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
-				Connection targetConnection = target.getConnection()) {
+				Connection targetConnection = target.getConnection();
+				BulkMigrationVerificationScope ignored = BulkMigrationVerificationScope.open(
+						verificationIsolation, sourceConnection, targetConnection)) {
 			final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 			for (final Table table : orderedTables()) {
 				final var expected = keysetSource(sourceConnection, table);
@@ -285,7 +291,7 @@ public final class BulkMigration {
 				final String planFingerprint = plan(sourceConnection, targetConnection, true)
 						.getFingerprint();
 				new BulkMigrationVerificationReportIO().write(verificationReportFile,
-						planFingerprint, BulkMigrationVerificationIsolation.DEFAULT,
+						planFingerprint, verificationIsolation,
 						maxReportedMismatches, verification);
 			}
 			return verification;

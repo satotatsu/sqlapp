@@ -74,6 +74,7 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(2, report.expectedRows());
 		assertEquals(2, report.actualRows());
 		assertEquals(0, report.mismatchedTasks());
+		assertEquals("DEFAULT", report.isolation());
 		assertEquals(List.of("task:ITEMS", "chunk:0", "chunk:1"), events);
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.inspect().getTasks().get(0).getState());

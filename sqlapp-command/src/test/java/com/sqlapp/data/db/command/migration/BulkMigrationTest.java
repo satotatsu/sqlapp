@@ -142,7 +142,9 @@ class BulkMigrationTest {
 		schema.getTables().add(table);
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
 				.schema(schema).tableOption("ITEMS", BulkMigrationTableOption.builder()
-						.verificationColumns(List.of("ID")).chunkSize(1).build()).build();
+						.verificationColumns(List.of("ID")).chunkSize(1).build())
+				.verificationIsolation(BulkMigrationVerificationIsolation.REPEATABLE_READ)
+				.build();
 
 		final var verification = migration.verify();
 
@@ -223,6 +225,28 @@ class BulkMigrationTest {
 		assertTrue(events.isEmpty());
 		migration.execute();
 		assertEquals(List.of("before", "after"), events);
+	}
+
+	@Test
+	void verificationScopeRestoresBothConnections() throws Exception {
+		try (Connection source = dataSource("verification_scope_source").getConnection();
+				Connection target = dataSource("verification_scope_target").getConnection()) {
+			final int sourceIsolation = source.getTransactionIsolation();
+			final int targetIsolation = target.getTransactionIsolation();
+			try (var ignored = BulkMigrationVerificationScope.open(
+					BulkMigrationVerificationIsolation.SERIALIZABLE, source, target)) {
+				assertFalse(source.getAutoCommit());
+				assertFalse(target.getAutoCommit());
+				assertEquals(Connection.TRANSACTION_SERIALIZABLE,
+						source.getTransactionIsolation());
+				assertEquals(Connection.TRANSACTION_SERIALIZABLE,
+						target.getTransactionIsolation());
+			}
+			assertTrue(source.getAutoCommit());
+			assertTrue(target.getAutoCommit());
+			assertEquals(sourceIsolation, source.getTransactionIsolation());
+			assertEquals(targetIsolation, target.getTransactionIsolation());
+		}
 	}
 
 	private static JDBCDataSource dataSource(final String name) {

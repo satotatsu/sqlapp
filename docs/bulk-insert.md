@@ -459,6 +459,13 @@ verification phase of `executeAndVerify()`. The default retains details for at
 most 1,000 mismatched chunks; use `.verificationReport(reportFile, limit)` when
 a different positive bound is required. Merely calling `execute()` does not run
 verification or create this report.
+Verification uses each connection's current behavior by default. Set
+`.verificationIsolation(REPEATABLE_READ)` (or `READ_COMMITTED` / `SERIALIZABLE`)
+to run all verification reads inside transactions on both source and target.
+The facade rolls those transactions back and restores the original connection
+settings. This provides a stable snapshot within each database, but cannot make
+two independent databases expose the same wall-clock snapshot; quiesce writes
+or use database-specific snapshot coordination for that stronger guarantee.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the
