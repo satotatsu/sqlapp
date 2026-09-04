@@ -4,6 +4,8 @@ package com.sqlapp.data.db.command.migration;
 import java.util.List;
 
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
+import com.sqlapp.jdbc.bulk.BulkOption;
 
 import lombok.Builder;
 import lombok.Value;
@@ -19,6 +21,8 @@ public class BulkMigrationTableOption {
 	@Builder.Default
 	List<String> verificationColumns = List.of();
 	BulkUpsertOption upsertOption;
+	BulkOption bulkOption;
+	BulkMigrationRetryOption retryOption;
 
 	public static BulkMigrationTableOption defaults() {
 		return builder().build();

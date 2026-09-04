@@ -416,6 +416,7 @@ and add a `BulkMigrationTableOption` for that table:
         .keysetColumns(List.of("TENANT_ID", "ORDER_ID"))
         .verificationColumns(List.of("TENANT_ID", "ORDER_ID", "STATUS"))
         .upsertOption(orderUpsertOption)
+		.retryOption(orderRetryOption)
         .build())
 ```
 
@@ -424,6 +425,12 @@ resolved against the Schema model during `build()`; unknown, ambiguous,
 duplicate, null, or empty identifiers fail before a database connection is
 used. Custom keyset columns must still identify a modeled primary key, unique
 constraint, or unique index and are validated by the shared keyset source.
+Global `bulkOption`, `upsertOption`, and `retryOption` apply to every table;
+`BulkMigrationTableOption` can override each of them for one table. `bulkOption`
+controls INSERT, while the bulk-copy settings nested in `upsertOption` control
+UPSERT staging. Optional `jobListener` and `chunkListener` builder properties
+expose the existing progress, pause, cancellation, and metrics callbacks without
+changing the default no-listener path.
 `inspect()` uses `ReadOnlyJdbcBulkMigrationCheckpointStore`: it reports
 `NOT_STARTED` when the checkpoint table does not exist and never creates or
 upgrades that table. A malformed or obsolete existing checkpoint table is

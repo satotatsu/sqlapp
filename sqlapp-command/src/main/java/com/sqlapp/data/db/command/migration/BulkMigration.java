@@ -16,6 +16,7 @@ import javax.sql.DataSource;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
@@ -30,10 +31,13 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationCheckpointStore;
@@ -56,6 +60,10 @@ public final class BulkMigration {
 	private final String checkpointTableName;
 	private final BulkUpsertOption upsertOption;
 	private final Map<String, BulkMigrationTableOption> tableOptions;
+	private final BulkOption bulkOption;
+	private final BulkMigrationRetryOption retryOption;
+	private final BulkMigrationJobListener jobListener;
+	private final ChunkedBulkMigrationListener chunkListener;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -64,7 +72,10 @@ public final class BulkMigration {
 			final Boolean resume, final String sourceFingerprint,
 			final String targetFingerprint, final String checkpointTableName,
 			final BulkUpsertOption upsertOption,
-			final Map<String, BulkMigrationTableOption> tableOptions) {
+			final Map<String, BulkMigrationTableOption> tableOptions,
+			final BulkOption bulkOption, final BulkMigrationRetryOption retryOption,
+			final BulkMigrationJobListener jobListener,
+			final ChunkedBulkMigrationListener chunkListener) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -78,6 +89,11 @@ public final class BulkMigration {
 						: checkpointTableName;
 		this.upsertOption = upsertOption == null ? BulkUpsertOption.defaults() : upsertOption;
 		this.tableOptions = resolveTableOptions(this.tables, tableOptions);
+		this.bulkOption = bulkOption == null ? BulkOption.defaults() : bulkOption;
+		this.retryOption = retryOption == null ? BulkMigrationRetryOption.none() : retryOption;
+		this.jobListener = jobListener == null ? BulkMigrationJobListener.NO_OP : jobListener;
+		this.chunkListener = chunkListener == null
+				? ChunkedBulkMigrationListener.NO_OP : chunkListener;
 		validate();
 	}
 
@@ -109,7 +125,8 @@ public final class BulkMigration {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			return BulkMigrationJobExecutor.executePlan(targetConnection,
-					plan(sourceConnection, targetConnection, false));
+					plan(sourceConnection, targetConnection, false), jobListener,
+					chunkListener);
 		}
 	}
 
@@ -208,7 +225,8 @@ public final class BulkMigration {
 				.mode(mode).resume(resume)
 				.checkpointTableName(checkpointTableName)
 				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint)
-				.bulkUpsertOption(upsertOption(table)).build();
+				.bulkOption(bulkOption(table)).bulkUpsertOption(upsertOption(table))
+				.retryOption(retryOption(table)).build();
 	}
 
 	private JdbcBulkMigrationKeysetSource keysetSource(final Connection connection,
@@ -227,6 +245,16 @@ public final class BulkMigration {
 	private BulkUpsertOption upsertOption(final Table table) {
 		final BulkUpsertOption value = tableOption(table).getUpsertOption();
 		return value == null ? upsertOption : value;
+	}
+
+	private BulkOption bulkOption(final Table table) {
+		final BulkOption value = tableOption(table).getBulkOption();
+		return value == null ? bulkOption : value;
+	}
+
+	private BulkMigrationRetryOption retryOption(final Table table) {
+		final BulkMigrationRetryOption value = tableOption(table).getRetryOption();
+		return value == null ? retryOption : value;
 	}
 
 	private BulkMigrationTableOption tableOption(final Table table) {
