@@ -448,6 +448,10 @@ operational report at each job and table boundary. Report output is disabled by
 default and report-write failures fail the migration instead of being silently
 ignored. The detailed command API remains available when reporting failures
 must be observed while allowing the migration to continue.
+Call `migration.inspect(reportFile)` to write and return the same operational
+format before execution. Like `inspect()`, this is read-only: it does not create
+or upgrade a database checkpoint table, create a file-checkpoint directory, or
+invoke the migration lifecycle.
 
 Add `.verificationReport(reportFile)` to save every explicit `verify()` result
 as the existing bounded JSON verification artifact. It also applies to the

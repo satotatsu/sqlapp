@@ -254,6 +254,19 @@ public final class BulkMigration {
 		}
 	}
 
+	/** Writes and returns a read-only operational snapshot without executing the job. */
+	public BulkMigrationOperationalReport inspect(final Path reportFile)
+			throws SQLException {
+		Objects.requireNonNull(reportFile, "reportFile");
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
+					targetConnection, true);
+			return new BulkMigrationOperationalReportJobListener(readOnlyPlan, reportFile)
+					.publish();
+		}
+	}
+
 	public BulkMigrationJobVerificationResult verify() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {

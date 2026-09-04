@@ -54,6 +54,10 @@ class BulkMigrationTest {
 
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.inspect().getTasks().get(0).getState());
+		final Path statusFile = directory.resolve("status/initial.json");
+		final var statusReport = migration.inspect(statusFile);
+		assertEquals("NOT_STARTED", statusReport.tasks().get(0).state());
+		assertEquals(statusReport, new BulkMigrationOperationalReportIO().read(statusFile));
 		try (var connection = target.getConnection(); var tables = connection.getMetaData()
 				.getTables(connection.getCatalog(), null,
 						"SQLAPP_BULK_MIGRATION_CHECKPOINT", new String[] { "TABLE" })) {
@@ -109,8 +113,9 @@ class BulkMigrationTest {
 		final BulkMigration custom = BulkMigration.builder()
 				.source(dataSource("custom_source")).target(dataSource("custom_target"))
 				.schema(schema).customCheckpointStore(customStore).build();
+		assertThrows(NullPointerException.class, () -> custom.inspect(null));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
-				assertDoesNotThrow(custom::inspect).getTasks().get(0).getState());
+				assertDoesNotThrow(() -> custom.inspect()).getTasks().get(0).getState());
 	}
 
 	@Test
