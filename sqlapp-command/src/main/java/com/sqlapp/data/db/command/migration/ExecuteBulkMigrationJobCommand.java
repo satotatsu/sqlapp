@@ -26,8 +26,6 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
-import com.sqlapp.jdbc.bulk.BulkMigrationMode;
-import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 
@@ -248,17 +246,9 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	}
 
 	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {
-		if (task.getOptions().getMode() == BulkMigrationMode.UPSERT) {
-			return BulkUpsertPlan.resolve(task.getKeysetSource().getTable(),
-					task.getOptions().getBulkUpsertOption()).getStagingColumns().stream()
-						.map(column -> column.getName()).toList();
-		}
-		final var option = task.getOptions().getBulkOption();
-		return task.getKeysetSource().getTable().getColumns().stream()
-				.filter(column -> !column.isHidden()
-						&& (column.getFormula() == null || column.getFormula().isEmpty())
-						&& (!column.isIdentity() || option.isKeepIdentity()))
-				.map(column -> column.getName()).toList();
+		return BulkMigrationVerificationColumns.resolve(task.getKeysetSource().getTable(),
+				task.getOptions().getMode(), task.getOptions().getBulkOption(),
+				task.getOptions().getBulkUpsertOption());
 	}
 
 	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(

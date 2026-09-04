@@ -392,7 +392,7 @@ BulkMigrationJobRepairPlanReport report = repair.writeJson(repairPlanFile);
 BulkMigrationJobRepairResult repaired = repair.executeApproved(repairPlanFile);
 ```
 
-UPSERT, 10,000-row chunks, all Schema columns for verification, primary-key
+UPSERT, 10,000-row chunks, migrated columns for verification, primary-key
 keyset traversal, database checkpoints, and Schema foreign-key order are the
 defaults. Omit `tables` to use every table in the supplied Schema. The facade
 defaults `resume` to false because a Schema fingerprint is not proof that the
@@ -508,6 +508,11 @@ controls INSERT, while the bulk-copy settings nested in `upsertOption` control
 UPSERT staging. Optional `jobListener` and `chunkListener` builder properties
 expose the existing progress, pause, cancellation, and metrics callbacks without
 changing the default no-listener path.
+When `verificationColumns` is omitted, verification follows the resolved write
+plan: hidden and generated/formula columns are excluded, and INSERT identity
+columns are included only when `keepIdentity` is enabled. UPSERT uses its
+resolved staging columns. An explicit per-table `verificationColumns` list
+continues to override this default.
 `inspect()` uses `ReadOnlyJdbcBulkMigrationCheckpointStore`: it reports
 `NOT_STARTED` when the checkpoint table does not exist and never creates or
 upgrades that table. A malformed or obsolete existing checkpoint table is

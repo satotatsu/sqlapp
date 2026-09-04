@@ -416,8 +416,8 @@ public final class BulkMigration {
 
 	private List<String> verificationColumns(final Table table) {
 		final List<String> columns = tableOption(table).getVerificationColumns();
-		return columns.isEmpty() ? table.getColumns().stream()
-				.map(column -> column.getName()).toList() : columns;
+		return columns.isEmpty() ? BulkMigrationVerificationColumns.resolve(table, mode,
+				bulkOption(table), upsertOption(table)) : columns;
 	}
 
 	private BulkUpsertOption upsertOption(final Table table) {
