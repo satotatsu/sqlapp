@@ -19,6 +19,7 @@ import com.sqlapp.data.db.command.migration.BulkMigration;
 import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationReportIO;
+import com.sqlapp.data.db.command.migration.BulkMigrationVerificationMismatchException;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
@@ -157,6 +158,36 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals("JOB_COMPLETED", report.execution().event());
 		assertEquals(1, report.processedRows());
 		assertEquals(1, report.completedTasks());
+	}
+
+	@Test
+	void recordsVerificationMismatchAsTheFinalOperationalEvent() throws Exception {
+		final DataSource source = sqlite(directory.resolve("mismatch-source.db"));
+		final DataSource target = sqlite(directory.resolve("mismatch-target.db"));
+		for (final DataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+			}
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("INSERT INTO ITEMS VALUES (9, 'target only')");
+		}
+		final Path operational = directory.resolve("mismatch/operation.json");
+		final Path verification = directory.resolve("mismatch/verification.json");
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema()).tables("ITEMS").operationalReport(operational)
+				.verificationReport(verification).build();
+
+		org.junit.jupiter.api.Assertions.assertThrows(
+				BulkMigrationVerificationMismatchException.class,
+				migration::executeAndVerifyOrThrow);
+		final var operationalReport = new BulkMigrationOperationalReportIO()
+				.read(operational);
+		assertEquals("JOB_FAILED", operationalReport.execution().event());
+		assertEquals(BulkMigrationVerificationMismatchException.class.getName(),
+				operationalReport.execution().failureType());
+		assertFalse(new BulkMigrationVerificationReportIO().read(verification).match());
 	}
 
 	private static Schema schema() {

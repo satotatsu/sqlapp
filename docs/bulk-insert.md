@@ -472,6 +472,12 @@ complete verification result, and a configured verification report is written
 before the exception is raised. The non-throwing methods remain useful for
 interactive review; their returned result (and `Execution.requireMatch()`) lets
 the caller choose the policy explicitly.
+When `executeAndVerifyOrThrow()` is used with an operational report, a
+verification mismatch or verification failure replaces the migration-phase
+`JOB_COMPLETED` event with `JOB_FAILED`. The committed migration rows remain
+committed; the event describes the outcome of the combined execute-and-verify
+workflow. `executeAndVerify()` intentionally keeps `JOB_COMPLETED` and returns
+the mismatch for interactive handling.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the

@@ -252,7 +252,30 @@ public final class BulkMigration {
 
 	/** Executes and verifies, throwing only when the completed verification mismatches. */
 	public Execution executeAndVerifyOrThrow() throws SQLException {
-		return executeAndVerify().requireMatch();
+		final BulkMigrationJobResult execution = execute();
+		try {
+			return new Execution(execution, verify()).requireMatch();
+		} catch (SQLException | RuntimeException | Error failure) {
+			try {
+				publishOperationalFailure(failure);
+			} catch (SQLException | RuntimeException reportFailure) {
+				failure.addSuppressed(reportFailure);
+			}
+			throw failure;
+		}
+	}
+
+	private void publishOperationalFailure(final Throwable failure) throws SQLException {
+		if (operationalReportFile == null) {
+			return;
+		}
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
+					targetConnection, true);
+			new BulkMigrationOperationalReportJobListener(readOnlyPlan,
+					operationalReportFile).onJobFailed(readOnlyPlan.getFingerprint(), failure);
+		}
 	}
 
 	public BulkMigrationJobStatus inspect() throws SQLException {
