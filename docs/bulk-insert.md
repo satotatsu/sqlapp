@@ -448,6 +448,13 @@ operational report at each job and table boundary. Report output is disabled by
 default and report-write failures fail the migration instead of being silently
 ignored. The detailed command API remains available when reporting failures
 must be observed while allowing the migration to continue.
+
+Add `.verificationReport(reportFile)` to save every explicit `verify()` result
+as the existing bounded JSON verification artifact. It also applies to the
+verification phase of `executeAndVerify()`. The default retains details for at
+most 1,000 mismatched chunks; use `.verificationReport(reportFile, limit)` when
+a different positive bound is required. Merely calling `execute()` does not run
+verification or create this report.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the

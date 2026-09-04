@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.db.command.migration.BulkMigration;
 import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
+import com.sqlapp.data.db.command.migration.BulkMigrationVerificationReportIO;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
@@ -36,6 +37,7 @@ class BulkMigrationFacadeIntegrationTest {
 		final DataSource source = sqlite(directory.resolve("source.db"));
 		final DataSource target = sqlite(directory.resolve("target.db"));
 		final List<String> events = new ArrayList<>();
+		final Path verificationReport = directory.resolve("verification/report.json");
 		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
 			statement.execute("INSERT INTO ITEMS VALUES (1, 'one'), (2, 'two')");
@@ -60,12 +62,18 @@ class BulkMigrationFacadeIntegrationTest {
 						events.add("chunk:" + progress.getChunkIndex());
 					}
 				})
-				.fingerprints("source-v1", "target-v1").build();
+				.fingerprints("source-v1", "target-v1")
+				.verificationReport(verificationReport).build();
 
 		final var outcome = migration.executeAndVerify();
 
 		assertEquals(2, outcome.migration().getProcessedRows());
 		assertTrue(outcome.isMatch());
+		final var report = new BulkMigrationVerificationReportIO().read(verificationReport);
+		assertTrue(report.match());
+		assertEquals(2, report.expectedRows());
+		assertEquals(2, report.actualRows());
+		assertEquals(0, report.mismatchedTasks());
 		assertEquals(List.of("task:ITEMS", "chunk:0", "chunk:1"), events);
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.inspect().getTasks().get(0).getState());

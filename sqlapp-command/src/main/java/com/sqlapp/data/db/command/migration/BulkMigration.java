@@ -76,6 +76,8 @@ public final class BulkMigration {
 	private final BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private final BulkMigrationJobLifecycle lifecycle;
 	private final Path operationalReportFile;
+	private final Path verificationReportFile;
+	private final int maxReportedMismatches;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -93,7 +95,8 @@ public final class BulkMigration {
 			final BulkMigrationCheckpointStore checkpointStore,
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
 			final BulkMigrationJobLifecycle lifecycle,
-			final Path operationalReportFile) {
+			final Path operationalReportFile, final Path verificationReportFile,
+			final Integer maxReportedMismatches) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -121,6 +124,11 @@ public final class BulkMigration {
 		this.lifecycle = lifecycle == null ? BulkMigrationJobLifecycle.NO_OP : lifecycle;
 		this.operationalReportFile = operationalReportFile == null ? null
 				: operationalReportFile.toAbsolutePath().normalize();
+		this.verificationReportFile = verificationReportFile == null ? null
+				: verificationReportFile.toAbsolutePath().normalize();
+		this.maxReportedMismatches = maxReportedMismatches == null
+				? BulkMigrationVerificationReportIO.DEFAULT_MAX_REPORTED_MISMATCHES
+				: maxReportedMismatches;
 		validate();
 	}
 
@@ -157,6 +165,20 @@ public final class BulkMigration {
 		/** Writes an atomic JSON operational report at job and task boundaries. */
 		public BulkMigrationBuilder operationalReport(final Path file) {
 			this.operationalReportFile = Objects.requireNonNull(file, "file");
+			return this;
+		}
+
+		/** Writes the result of each explicit verification as bounded JSON. */
+		public BulkMigrationBuilder verificationReport(final Path file) {
+			this.verificationReportFile = Objects.requireNonNull(file, "file");
+			return this;
+		}
+
+		/** Writes verification JSON while limiting retained mismatch details. */
+		public BulkMigrationBuilder verificationReport(final Path file,
+				final int maxMismatches) {
+			this.verificationReportFile = Objects.requireNonNull(file, "file");
+			this.maxReportedMismatches = maxMismatches;
 			return this;
 		}
 
@@ -245,7 +267,15 @@ public final class BulkMigration {
 				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table),
 						columns, verification));
 			}
-			return new BulkMigrationJobVerificationResult(results);
+			final var verification = new BulkMigrationJobVerificationResult(results);
+			if (verificationReportFile != null) {
+				final String planFingerprint = plan(sourceConnection, targetConnection, true)
+						.getFingerprint();
+				new BulkMigrationVerificationReportIO().write(verificationReportFile,
+						planFingerprint, BulkMigrationVerificationIsolation.DEFAULT,
+						maxReportedMismatches, verification);
+			}
+			return verification;
 		}
 	}
 
@@ -377,6 +407,10 @@ public final class BulkMigration {
 		}
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
+		}
+		if (maxReportedMismatches <= 0) {
+			throw new IllegalArgumentException(
+					"maxReportedMismatches must be greater than zero");
 		}
 		if (resume && (blank(sourceFingerprint) || blank(targetFingerprint))) {
 			throw new IllegalArgumentException(

@@ -98,6 +98,12 @@ class BulkMigrationTest {
 				.fileLease("worker", null));
 		assertThrows(NullPointerException.class, () -> BulkMigration.builder()
 				.operationalReport(null));
+		assertThrows(NullPointerException.class, () -> BulkMigration.builder()
+				.verificationReport(null));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(dataSource("invalid_report_source"))
+				.target(dataSource("invalid_report_target")).schema(schema)
+				.verificationReport(directory.resolve("verification.json"), 0).build());
 
 		final var customStore = new InMemoryBulkMigrationCheckpointStore();
 		final BulkMigration custom = BulkMigration.builder()
