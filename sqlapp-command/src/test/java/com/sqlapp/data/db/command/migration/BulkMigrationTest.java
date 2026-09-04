@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -19,6 +22,9 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 
@@ -160,6 +166,50 @@ class BulkMigrationTest {
 						new String[] { "TABLE" })) {
 			assertTrue(tables.next());
 		}
+	}
+
+	@Test
+	void invokesAnOptionalLifecycleOnlyDuringExecution() throws Exception {
+		final JDBCDataSource source = dataSource("facade_lifecycle_source");
+		final JDBCDataSource target = dataSource("facade_lifecycle_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY)");
+			}
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final List<String> events = new ArrayList<>();
+		final BulkMigrationJobLifecycle lifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "test-lifecycle-v1";
+			}
+
+			@Override
+			public void before(final Connection connection,
+					final BulkMigrationJobPlan plan) throws SQLException {
+				events.add("before");
+			}
+
+			@Override
+			public void after(final Connection connection, final BulkMigrationJobPlan plan,
+					final BulkMigrationJobResult result) throws SQLException {
+				events.add("after");
+			}
+		};
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT).lifecycle(lifecycle).build();
+
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+				migration.inspect().getTasks().get(0).getState());
+		assertTrue(events.isEmpty());
+		migration.execute();
+		assertEquals(List.of("before", "after"), events);
 	}
 
 	private static JDBCDataSource dataSource(final String name) {

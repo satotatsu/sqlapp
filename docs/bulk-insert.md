@@ -434,6 +434,14 @@ separate target connection so lease renewal is independent of chunk
 transactions. `inspect()` remains a read-only checkpoint snapshot; operational
 resume assessment, including live/expired lease state, remains available from
 the detailed operational-report API.
+
+Vendor-specific preparation and restoration can be added with
+`.lifecycle(existingLifecycle)`. The facade includes that lifecycle in the
+immutable plan, so its configuration fingerprint and planned operations remain
+part of dry-run validation. The lifecycle is invoked only by `execute()`;
+`inspect()` and `verify()` do not prepare, disable, or restore database objects.
+Use a durable lifecycle from the underlying API when recovery must survive a
+process crash.
 Use `execute()` when verification must be scheduled separately;
 `executeAndVerify()` is the ordinary synchronous path and returns both the
 migration result and verification result. `executeApproved(Path)` rereads the

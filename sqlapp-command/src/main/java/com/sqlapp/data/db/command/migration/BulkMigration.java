@@ -21,6 +21,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
@@ -72,6 +73,7 @@ public final class BulkMigration {
 	private final Path checkpointDirectory;
 	private final BulkMigrationCheckpointStore checkpointStore;
 	private final BulkMigrationJobLeaseConfiguration leaseConfiguration;
+	private final BulkMigrationJobLifecycle lifecycle;
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
@@ -87,7 +89,8 @@ public final class BulkMigration {
 			final BulkMigrationCheckpointMode checkpointMode,
 			final Path checkpointDirectory,
 			final BulkMigrationCheckpointStore checkpointStore,
-			final BulkMigrationJobLeaseConfiguration leaseConfiguration) {
+			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
+			final BulkMigrationJobLifecycle lifecycle) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
@@ -112,6 +115,7 @@ public final class BulkMigration {
 				: checkpointDirectory.toAbsolutePath().normalize();
 		this.checkpointStore = checkpointStore;
 		this.leaseConfiguration = leaseConfiguration;
+		this.lifecycle = lifecycle == null ? BulkMigrationJobLifecycle.NO_OP : lifecycle;
 		validate();
 	}
 
@@ -251,7 +255,7 @@ public final class BulkMigration {
 					.keysetSource(keysetSource(sourceConnection, table))
 					.options(options).checkpointStore(checkpointStore).build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks);
+		return BulkMigrationJobPlanner.plan(tasks, lifecycle);
 	}
 
 	private BulkMigrationJobRepairPlan repairPlan(final Connection sourceConnection,
