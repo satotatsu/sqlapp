@@ -1029,10 +1029,10 @@ or configured mismatch failure replaces its final execution event with
 remain committed.
 Verification isolation defaults to the connections' current settings. The
 declarative `isolation` option accepts `READ_COMMITTED`, `REPEATABLE_READ`, or
-`SERIALIZABLE`. For the stronger levels, the source transaction is established
-before migration reads begin and the target uses a verification transaction
-after migration; connection state is restored afterward. This
-stabilizes each side independently but cannot create one distributed snapshot
+`SERIALIZABLE`. For the stronger levels, verification transactions are opened
+on both source and target after migration, then rolled back and their original
+JDBC settings restored. This stabilizes each side independently but cannot
+create one distributed, same-instant snapshot
 across two databases. Quiesce writers or use database-native coordinated
 snapshots when that guarantee is required.
 `BulkMigrationVerificationReportIO` reads the artifact back while validating
