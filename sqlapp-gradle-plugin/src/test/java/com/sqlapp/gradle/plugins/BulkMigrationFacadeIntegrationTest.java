@@ -71,6 +71,7 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(2, outcome.migration().getProcessedRows());
 		assertTrue(outcome.isMatch());
 		assertEquals(outcome, outcome.requireMatch());
+		assertFalse(migration.verifyAndPlanRepair().isRequired());
 		final var report = new BulkMigrationVerificationReportIO().read(verificationReport);
 		assertTrue(report.match());
 		assertEquals(2, report.expectedRows());

@@ -342,6 +342,11 @@ public final class BulkMigration {
 		return new Repair(this, Objects.requireNonNull(verification, "verification"));
 	}
 
+	/** Runs verification and prepares the existing review-before-repair workflow. */
+	public Repair verifyAndPlanRepair() throws SQLException {
+		return planRepair(verify());
+	}
+
 	/** Combined result of the common execute-then-verify workflow. */
 	public record Execution(BulkMigrationJobResult migration,
 			BulkMigrationJobVerificationResult verification) {
@@ -609,6 +614,14 @@ public final class BulkMigration {
 				final BulkMigrationJobVerificationResult verification) {
 			this.migration = migration;
 			this.verification = verification;
+		}
+
+		public boolean isRequired() {
+			return !verification.isMatch();
+		}
+
+		public BulkMigrationJobVerificationResult getVerificationResult() {
+			return verification;
 		}
 
 		public BulkMigrationJobRepairPlanReport writeJson(final Path file)

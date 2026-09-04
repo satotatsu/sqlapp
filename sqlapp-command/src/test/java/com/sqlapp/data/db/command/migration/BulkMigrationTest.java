@@ -75,7 +75,9 @@ class BulkMigrationTest {
 				.read(directory.resolve("verification/mismatch.json")).match());
 		assertEquals(0, verification.getExpectedRows());
 		assertEquals(1, verification.getActualRows());
-		final var repair = migration.planRepair(verification);
+		final var repair = migration.verifyAndPlanRepair();
+		assertTrue(repair.isRequired());
+		assertFalse(repair.getVerificationResult().isMatch());
 		final var report = repair.writeJson(directory.resolve("repair.json"));
 		assertEquals(0, report.estimatedReplayRows());
 		assertEquals(1, report.mismatchChunks());
