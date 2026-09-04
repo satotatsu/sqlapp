@@ -41,6 +41,16 @@ public API risks, the smallest implementation location and required tests.
 
 ## Architecture
 
+- Design every user-facing feature to be simple for the common case and
+  extensible through optional configuration for advanced requirements.
+- Provide one clear high-level entry point with safe defaults before exposing
+  lower-level planners, stores, listeners, dialect hooks or execution phases.
+- Keep advanced controls available without making them mandatory for ordinary
+  use. Prefer progressive disclosure: common settings first, optional
+  per-table or vendor-specific overrides second, and low-level APIs last.
+- Do not duplicate advanced behavior in a facade. Compose the existing shared
+  model, validators, planners and executors so simple and advanced paths retain
+  the same semantics and safety checks.
 - Treat the sqlapp Schema model as the canonical database representation.
 - Prefer the Schema model and sqlapp-core SQL factories for DDL and DML generation.
   Build SQL strings directly only when the shared generator cannot represent required
@@ -55,6 +65,17 @@ public API risks, the smallest implementation location and required tests.
 
 ## Configuration design
 
+- The minimum valid configuration should express user intent rather than
+  internal execution mechanics. Infer values only when the result is
+  unambiguous and safe.
+- Defaults must be useful and safe. When no honest safe default exists, require
+  the specific value with an actionable error instead of guessing; data
+  fingerprints, destructive behavior and transaction guarantees are examples.
+- Adding an advanced option must not complicate the default path. Group related
+  options and preserve a concise high-level API or configuration example.
+- Results from high-level APIs must retain access to detailed plans, status,
+  verification and failure information so convenience does not hide
+  correctness-relevant facts.
 - Keep user-authored configuration and Schema XML as simple and concise as
   practical.
 - Do not require information that can be resolved unambiguously from the shared
