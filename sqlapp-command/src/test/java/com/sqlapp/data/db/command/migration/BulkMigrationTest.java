@@ -75,13 +75,14 @@ class BulkMigrationTest {
 				.read(directory.resolve("verification/mismatch.json")).match());
 		assertEquals(0, verification.getExpectedRows());
 		assertEquals(1, verification.getActualRows());
-		final var repair = migration.verifyAndPlanRepair();
+		final Path repairFile = directory.resolve("repair.json");
+		final var repair = migration.verifyAndWriteRepairPlan(repairFile);
 		assertTrue(repair.isRequired());
 		assertFalse(repair.getVerificationResult().isMatch());
-		final var report = repair.writeJson(directory.resolve("repair.json"));
+		final var report = new BulkMigrationJobRepairPlanReportIO().read(repairFile);
 		assertEquals(0, report.estimatedReplayRows());
 		assertEquals(1, report.mismatchChunks());
-		final var result = repair.executeApproved(directory.resolve("repair.json"));
+		final var result = repair.executeApproved(repairFile);
 		assertEquals(0, result.getReplayedRows());
 		assertEquals(List.of(0L), result.getTasks().get(0).getRepairResult()
 				.getChunksWithoutExpectedRows());
@@ -123,6 +124,8 @@ class BulkMigrationTest {
 				.source(dataSource("custom_source")).target(dataSource("custom_target"))
 				.schema(schema).customCheckpointStore(customStore).build();
 		assertThrows(NullPointerException.class, () -> custom.inspect(null));
+		assertThrows(NullPointerException.class,
+				() -> custom.verifyAndWriteRepairPlan(null));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				assertDoesNotThrow(() -> custom.inspect()).getTasks().get(0).getState());
 	}

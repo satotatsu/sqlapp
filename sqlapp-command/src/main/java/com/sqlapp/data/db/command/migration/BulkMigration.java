@@ -347,6 +347,17 @@ public final class BulkMigration {
 		return planRepair(verify());
 	}
 
+	/**
+	 * Verifies, writes a reviewable repair plan, and returns its repair handle.
+	 * Execution still requires explicit approval of the written plan.
+	 */
+	public Repair verifyAndWriteRepairPlan(final Path file) throws SQLException {
+		final Path reportFile = Objects.requireNonNull(file, "file");
+		final Repair repair = verifyAndPlanRepair();
+		repair.writeJson(reportFile);
+		return repair;
+	}
+
 	/** Combined result of the common execute-then-verify workflow. */
 	public record Execution(BulkMigrationJobResult migration,
 			BulkMigrationJobVerificationResult verification) {

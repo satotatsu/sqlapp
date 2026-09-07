@@ -388,11 +388,11 @@ BulkMigrationJobStatus status = migration.inspect();
 BulkMigrationJobVerificationResult verification = execution.verification();
 
 // Or use planRepair(verification) when an existing result should be reused.
-BulkMigration.Repair repair = migration.verifyAndPlanRepair();
+Path repairPlanFile = Path.of("build/reports/migration/repair.json");
+BulkMigration.Repair repair = migration.verifyAndWriteRepairPlan(repairPlanFile);
 if (!repair.isRequired()) {
     return;
 }
-BulkMigrationJobRepairPlanReport report = repair.writeJson(repairPlanFile);
 BulkMigrationJobRepairResult repaired = repair.executeApproved(repairPlanFile);
 ```
 
@@ -476,12 +476,13 @@ complete verification result, and a configured verification report is written
 before the exception is raised. The non-throwing methods remain useful for
 interactive review; their returned result (and `Execution.requireMatch()`) lets
 the caller choose the policy explicitly.
-`verifyAndPlanRepair()` is the shortest safe repair entry point. It verifies and
-returns a `Repair` handle whose `isRequired()` reports whether mismatches exist.
-It deliberately does not execute repairs: `writeJson()` and
-`executeApproved(reportFile)` retain the review-and-fingerprint approval gate.
-Use `planRepair(existingVerification)` to avoid repeating verification when the
-caller already has a suitable result.
+`verifyAndWriteRepairPlan(path)` is the shortest safe file-based repair entry
+point. It verifies, writes a reviewable plan, and returns a `Repair` handle whose
+`isRequired()` reports whether mismatches exist. It deliberately does not
+execute repairs: `executeApproved(path)` retains the review-and-fingerprint
+approval gate. Use `verifyAndPlanRepair()` when the plan should only be written
+after checking the result, or `planRepair(existingVerification)` to reuse a
+suitable result.
 When `executeAndVerifyOrThrow()` is used with an operational report, a
 verification mismatch or verification failure replaces the migration-phase
 `JOB_COMPLETED` event with `JOB_FAILED`. The committed migration rows remain
