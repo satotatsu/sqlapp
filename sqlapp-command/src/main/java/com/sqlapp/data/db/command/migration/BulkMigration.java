@@ -291,12 +291,14 @@ public final class BulkMigration {
 		}
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection,
-					false);
-			if (!resetPlan.getFingerprint().equals(approvedPlanFingerprint)) {
+			final BulkMigrationJobPlan reviewedPlan = plan(sourceConnection,
+					targetConnection, true);
+			if (!reviewedPlan.getFingerprint().equals(approvedPlanFingerprint)) {
 				throw new IllegalArgumentException(
 						"Approved plan fingerprint does not match the migration job plan");
 			}
+			final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection,
+					false);
 			if (leaseConfiguration == null) {
 				return BulkMigrationJobCheckpointManager.reset(resetPlan,
 						approvedPlanFingerprint);

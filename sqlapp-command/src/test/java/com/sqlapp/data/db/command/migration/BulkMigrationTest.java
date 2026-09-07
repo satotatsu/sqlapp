@@ -66,6 +66,8 @@ class BulkMigrationTest {
 		final var statusReport = migration.dryRun(statusFile);
 		assertEquals("NOT_STARTED", statusReport.tasks().get(0).state());
 		assertEquals(statusReport, new BulkMigrationOperationalReportIO().read(statusFile));
+		assertThrows(IllegalArgumentException.class,
+				() -> migration.resetCheckpointsWithFingerprint("wrong-fingerprint"));
 		try (var connection = target.getConnection(); var tables = connection.getMetaData()
 				.getTables(connection.getCatalog(), null,
 						"SQLAPP_BULK_MIGRATION_CHECKPOINT", new String[] { "TABLE" })) {

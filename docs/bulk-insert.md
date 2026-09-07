@@ -425,7 +425,8 @@ advanced integration needs the underlying checkpoint status objects.
 
 To deliberately restart a resumable job, write and review `dryRun(reportFile)`,
 then pass that file to `resetCheckpoints(reportFile)`. The report is reread and
-its fingerprint must match the freshly resolved live plan. The method deletes
+its fingerprint must match a freshly resolved read-only live plan before any
+writable checkpoint store is created. The method deletes
 only checkpoints and reuses a configured job lease to exclude concurrent
 execution. It never deletes target rows. In INSERT mode those rows must be
 cleared or reconciled separately before rerunning, otherwise duplicates or

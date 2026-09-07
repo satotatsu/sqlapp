@@ -195,6 +195,14 @@ class BulkMigrationFacadeIntegrationTest {
 				() -> migration.resetCheckpointsWithFingerprint("wrong-fingerprint"));
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.status().getTasks().get(0).getState());
+		final BulkMigration changedPlan = BulkMigration.builder().source(source).target(target)
+				.schema(schema()).tables("ITEMS").resume(true).chunkSize(2)
+				.fingerprints("source-v1", "target-v1")
+				.fileCheckpoints(checkpoints).build();
+		assertThrows(IllegalArgumentException.class,
+				() -> changedPlan.resetCheckpoints(dryRunReport));
+		assertEquals(BulkMigrationJobTaskState.COMPLETE,
+				migration.status().getTasks().get(0).getState());
 		final var reset = migration.resetCheckpoints(dryRunReport);
 		assertEquals(List.of("ITEMS"), reset.getResetTaskIds());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
