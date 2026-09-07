@@ -301,22 +301,38 @@ public final class BulkMigration {
 		final BulkMigrationJobResult execution = execute();
 		try {
 			return new Execution(execution, verify()).requireMatch();
-		} catch (SQLException | RuntimeException | Error failure) {
-			if (repairPlanOnMismatchFile != null
-					&& failure instanceof BulkMigrationVerificationMismatchException mismatch) {
-				try {
-					planRepair(mismatch.getVerificationResult())
-							.writeJson(repairPlanOnMismatchFile);
-				} catch (SQLException | RuntimeException repairPlanFailure) {
-					failure.addSuppressed(repairPlanFailure);
-				}
-			}
-			try {
-				publishOperationalFailure(failure);
-			} catch (SQLException | RuntimeException reportFailure) {
-				failure.addSuppressed(reportFailure);
-			}
+		} catch (BulkMigrationVerificationMismatchException failure) {
+			writeRepairPlanOnMismatch(failure);
+			attachOperationalFailure(failure);
 			throw failure;
+		} catch (SQLException | RuntimeException failure) {
+			final var postExecution = new BulkMigrationPostExecutionException(execution,
+					failure);
+			attachOperationalFailure(postExecution);
+			throw postExecution;
+		} catch (Error failure) {
+			attachOperationalFailure(failure);
+			throw failure;
+		}
+	}
+
+	private void writeRepairPlanOnMismatch(
+			final BulkMigrationVerificationMismatchException failure) {
+		if (repairPlanOnMismatchFile == null) {
+			return;
+		}
+		try {
+			planRepair(failure.getVerificationResult()).writeJson(repairPlanOnMismatchFile);
+		} catch (SQLException | RuntimeException repairPlanFailure) {
+			failure.addSuppressed(repairPlanFailure);
+		}
+	}
+
+	private void attachOperationalFailure(final Throwable failure) {
+		try {
+			publishOperationalFailure(failure);
+		} catch (SQLException | RuntimeException reportFailure) {
+			failure.addSuppressed(reportFailure);
 		}
 	}
 

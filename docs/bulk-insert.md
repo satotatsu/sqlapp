@@ -495,6 +495,10 @@ is present. A configured verification report is written before the exception is
 raised. The non-throwing methods remain useful for
 interactive review; their returned result (and `Execution.requireMatch()`) lets
 the caller choose the policy explicitly.
+If migration commits but verification itself cannot complete, `run()` throws
+`BulkMigrationPostExecutionException`. Its migration result makes the committed
+work explicit, while `getCause()` retains the verification SQL, connection, or
+reporting failure.
 Add `.repairPlanOnMismatch(path)` when `run()` should also write a reviewable
 repair plan before throwing a mismatch. This reuses the exact failed verification
 result and never executes repair; `executeApproved(path)` remains mandatory.

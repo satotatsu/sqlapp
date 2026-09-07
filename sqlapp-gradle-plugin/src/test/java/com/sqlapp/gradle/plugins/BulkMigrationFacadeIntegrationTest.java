@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.db.command.migration.BulkMigration;
 import com.sqlapp.data.db.command.migration.BulkMigrationJobRepairPlanReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
+import com.sqlapp.data.db.command.migration.BulkMigrationPostExecutionException;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationMismatchException;
@@ -51,6 +52,42 @@ class BulkMigrationFacadeIntegrationTest {
 
 		assertEquals(1, result.migration().getProcessedRows());
 		assertTrue(result.isMatch());
+	}
+
+	@Test
+	void retainsCommittedResultWhenPostExecutionVerificationReportingFails()
+			throws Exception {
+		final DataSource source = sqlite(directory.resolve("post-failure-source.db"));
+		final DataSource target = sqlite(directory.resolve("post-failure-target.db"));
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'one')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+		}
+		final Path invalidReport = directory.resolve("post-failure/report-directory");
+		final Path operational = directory.resolve("post-failure/operation.json");
+		Files.createDirectories(invalidReport);
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema()).verificationReport(invalidReport)
+				.operationalReport(operational).build();
+
+		final var failure = org.junit.jupiter.api.Assertions.assertThrows(
+				BulkMigrationPostExecutionException.class, migration::run);
+
+		assertEquals(1, failure.getMigrationResult().getProcessedRows());
+		assertTrue(failure.getCause() instanceof CommandException);
+		final var operationalReport = new BulkMigrationOperationalReportIO()
+				.read(operational);
+		assertEquals("JOB_FAILED", operationalReport.execution().event());
+		assertEquals(BulkMigrationPostExecutionException.class.getName(),
+				operationalReport.execution().failureType());
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+			rows.next();
+			assertEquals(1, rows.getInt(1));
+		}
 	}
 
 	@Test
