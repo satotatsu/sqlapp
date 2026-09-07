@@ -3,6 +3,7 @@ package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
@@ -12,6 +13,40 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
+	@Test
+	void readsWithoutCreatingOrChangingTheLeaseTable() throws Exception {
+		final var dataSource = createDataSource();
+		try (var readerConnection = dataSource.getConnection();
+				var writerConnection = dataSource.getConnection()) {
+			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(
+					readerConnection, "SQLAPP_BML_READ_TEST");
+			assertTrue(reader.load("plan").isEmpty());
+			try (var tables = readerConnection.getMetaData().getTables(
+					readerConnection.getCatalog(), null, "SQLAPP_BML_READ_TEST",
+					new String[] { "TABLE" })) {
+				assertFalse(tables.next());
+			}
+
+			final var writer = new JdbcBulkMigrationJobLeaseStore(writerConnection,
+					"SQLAPP_BML_READ_TEST");
+			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
+			final var lease = new BulkMigrationJobLease("plan", "owner",
+					now.plusSeconds(30));
+			assertTrue(writer.tryAcquire(lease, now));
+			assertEquals(lease, reader.load("plan").orElseThrow());
+			assertThrows(UnsupportedOperationException.class,
+					() -> reader.tryAcquire(lease, now));
+			assertThrows(UnsupportedOperationException.class,
+					() -> reader.renew(lease, now));
+			assertThrows(UnsupportedOperationException.class,
+					() -> reader.release("plan", "owner"));
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
 	@Test
 	void coordinatesOwnersAcrossDedicatedConnections() throws Exception {
 		final var dataSource = createDataSource();

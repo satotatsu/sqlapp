@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -49,6 +50,7 @@ import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationJobLeaseStore;
 
 import lombok.Builder;
 
@@ -421,6 +423,26 @@ public final class BulkMigration {
 				Connection targetConnection = target.getConnection()) {
 			return BulkMigrationJobStatusInspector.inspect(
 					plan(sourceConnection, targetConnection, true));
+		}
+	}
+
+	/** Conservatively assesses whether this job can be resumed right now. */
+	public BulkMigrationResumeReadiness resumeReadiness() throws SQLException {
+		final BulkMigrationOperationalReport report = dryRun();
+		if (leaseConfiguration == null) {
+			return BulkMigrationOperationalReportResumeAssessor.assess(report);
+		}
+		if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+			final var lease = new FileBulkMigrationJobLeaseStore(
+					leaseConfiguration.directory()).load(report.planFingerprint()).orElse(null);
+			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
+					Instant.now());
+		}
+		try (Connection connection = target.getConnection()) {
+			final var lease = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+					leaseConfiguration.tableName()).load(report.planFingerprint()).orElse(null);
+			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
+					Instant.now());
 		}
 	}
 

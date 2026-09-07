@@ -21,6 +21,7 @@ import com.sqlapp.data.db.command.migration.BulkMigration;
 import com.sqlapp.data.db.command.migration.BulkMigrationJobRepairPlanReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationPostExecutionException;
+import com.sqlapp.data.db.command.migration.BulkMigrationResumeReadiness;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationMismatchException;
@@ -187,6 +188,8 @@ class BulkMigrationFacadeIntegrationTest {
 		assertFalse(Files.exists(checkpoints));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.status().getTasks().get(0).getState());
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				migration.resumeReadiness());
 		assertFalse(Files.exists(checkpoints));
 		assertEquals(2, migration.execute().getProcessedRows());
 		try (var files = Files.list(checkpoints)) {
@@ -256,11 +259,15 @@ class BulkMigrationFacadeIntegrationTest {
 				new FileBulkMigrationJobLeaseStore(leases), "competing-worker",
 				Duration.ofMinutes(5));
 		try (var ignored = competingManager.acquire(approvedFingerprint)) {
+			assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+					migration.resumeReadiness());
 			assertThrows(BulkMigrationJobLeaseUnavailableException.class,
 					() -> migration.resetCheckpointsWithFingerprint(approvedFingerprint));
 			assertEquals(BulkMigrationJobTaskState.COMPLETE,
 					migration.status().getTasks().get(0).getState());
 		}
+		assertEquals(BulkMigrationResumeReadiness.COMPLETE,
+				migration.resumeReadiness());
 		assertEquals(List.of("ITEMS"),
 				migration.resetCheckpointsWithFingerprint(approvedFingerprint)
 						.getResetTaskIds());

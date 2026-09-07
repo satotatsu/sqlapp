@@ -219,6 +219,8 @@ class BulkMigrationTest {
 				.schema(schema).tables("ITEMS").mode(BulkMigrationMode.INSERT)
 				.databaseLease("database-worker").build();
 
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				migration.resumeReadiness());
 		assertEquals(0, migration.execute().getProcessedRows());
 		final String approvedFingerprint = migration.dryRun().planFingerprint();
 		assertEquals(List.of("PUBLIC.ITEMS"),

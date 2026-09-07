@@ -422,6 +422,9 @@ by `execute()` but does not expose connection-bound executors, execute lifecycle
 operations, or create checkpoint storage. Use `dryRun(reportFile)` when the
 same snapshot should also be written as JSON. Use `status()` only when an
 advanced integration needs the underlying checkpoint status objects.
+Use `resumeReadiness()` for a conservative one-call operational decision. It
+combines the read-only checkpoint snapshot with a configured file or database
+lease and never creates the database lease table merely to inspect it.
 
 To deliberately restart a resumable job, write and review `dryRun(reportFile)`,
 then pass that file to `resetCheckpoints(reportFile)`. The report is reread and
