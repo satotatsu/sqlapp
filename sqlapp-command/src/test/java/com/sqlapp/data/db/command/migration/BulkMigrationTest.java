@@ -54,6 +54,9 @@ class BulkMigrationTest {
 				.schema(schema).tables("ITEMS").chunkSize(1)
 				.verificationReport(directory.resolve("verification/mismatch.json")).build();
 
+		final BulkMigrationJobPlan plan = migration.plan();
+		assertEquals(List.of("PUBLIC.ITEMS"), plan.getTaskIds());
+		assertTrue(plan.isUnchanged());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.inspect().getTasks().get(0).getState());
 		final Path statusFile = directory.resolve("status/initial.json");

@@ -237,6 +237,17 @@ public final class BulkMigration {
 		}
 	}
 
+	/**
+	 * Resolves and validates the immutable execution plan without executing the
+	 * migration or creating checkpoint storage.
+	 */
+	public BulkMigrationJobPlan plan() throws SQLException {
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			return plan(sourceConnection, targetConnection, true);
+		}
+	}
+
 	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {
 		if (operationalReportFile == null) {
 			return jobListener;

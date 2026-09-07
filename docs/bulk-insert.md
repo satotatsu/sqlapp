@@ -384,6 +384,7 @@ BulkMigration migration = BulkMigration.builder()
         .build();
 
 BulkMigration.Execution execution = migration.executeAndVerify();
+BulkMigrationJobPlan plan = migration.plan();
 BulkMigrationJobStatus status = migration.inspect();
 BulkMigrationJobVerificationResult verification = execution.verification();
 
@@ -405,6 +406,11 @@ fingerprints, for example `.resume(true).fingerprints(sourceVersion,
 targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
 keyset, and per-table UPSERT configurations remain available through the
 underlying APIs and declarative job configuration.
+
+Call `plan()` before execution when an approval screen or dry run needs the
+resolved task order, lifecycle operations, options, and reproducibility
+fingerprint. Planning validates the same immutable job used by `execute()` but
+does not execute lifecycle operations or create checkpoint storage.
 
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp
