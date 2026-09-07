@@ -128,6 +128,8 @@ class BulkMigrationTest {
 				.operationalReport(null));
 		assertThrows(NullPointerException.class, () -> BulkMigration.builder()
 				.verificationReport(null));
+		assertThrows(NullPointerException.class, () -> BulkMigration.builder()
+				.repairPlanOnMismatch(null));
 		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
 				.source(dataSource("invalid_report_source"))
 				.target(dataSource("invalid_report_target")).schema(schema)

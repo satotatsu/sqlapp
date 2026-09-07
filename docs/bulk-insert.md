@@ -495,6 +495,9 @@ is present. A configured verification report is written before the exception is
 raised. The non-throwing methods remain useful for
 interactive review; their returned result (and `Execution.requireMatch()`) lets
 the caller choose the policy explicitly.
+Add `.repairPlanOnMismatch(path)` when `run()` should also write a reviewable
+repair plan before throwing a mismatch. This reuses the exact failed verification
+result and never executes repair; `executeApproved(path)` remains mandatory.
 `verifyAndWriteRepairPlan(path)` is the shortest safe file-based repair entry
 point. It verifies, writes a reviewable plan, and returns a `Repair` handle whose
 `isRequired()` reports whether mismatches exist. It deliberately does not

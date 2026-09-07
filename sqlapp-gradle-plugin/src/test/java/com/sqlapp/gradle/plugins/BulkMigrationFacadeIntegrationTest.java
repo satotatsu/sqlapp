@@ -57,6 +57,7 @@ class BulkMigrationFacadeIntegrationTest {
 		final DataSource target = sqlite(directory.resolve("target.db"));
 		final List<String> events = new ArrayList<>();
 		final Path verificationReport = directory.resolve("verification/report.json");
+		final Path unexpectedRepairPlan = directory.resolve("verification/repair.json");
 		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
 			statement.execute("INSERT INTO ITEMS VALUES (1, 'one'), (2, 'two')");
@@ -82,7 +83,8 @@ class BulkMigrationFacadeIntegrationTest {
 					}
 				})
 				.fingerprints("source-v1", "target-v1")
-				.verificationReport(verificationReport).build();
+				.verificationReport(verificationReport)
+				.repairPlanOnMismatch(unexpectedRepairPlan).build();
 
 		final var outcome = migration.run();
 
@@ -95,6 +97,7 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(2, report.expectedRows());
 		assertEquals(2, report.actualRows());
 		assertEquals(0, report.mismatchedTasks());
+		assertFalse(Files.exists(unexpectedRepairPlan));
 		assertEquals("DEFAULT", report.isolation());
 		assertEquals(List.of("task:ITEMS", "chunk:0", "chunk:1"), events);
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
@@ -201,15 +204,20 @@ class BulkMigrationFacadeIntegrationTest {
 		}
 		final Path operational = directory.resolve("mismatch/operation.json");
 		final Path verification = directory.resolve("mismatch/verification.json");
+		final Path repairPlan = directory.resolve("mismatch/repair.json");
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
 				.schema(schema()).tables("ITEMS").operationalReport(operational)
-				.verificationReport(verification).build();
+				.verificationReport(verification).repairPlanOnMismatch(repairPlan).build();
 
 		final var mismatch = org.junit.jupiter.api.Assertions.assertThrows(
 				BulkMigrationVerificationMismatchException.class,
 				migration::run);
 		assertTrue(mismatch.hasMigrationResult());
 		assertEquals(1, mismatch.getMigrationResult().getProcessedRows());
+		final var repair = new com.sqlapp.data.db.command.migration.BulkMigrationJobRepairPlanReportIO()
+				.read(repairPlan);
+		assertEquals(1, repair.estimatedReplayRows());
+		assertEquals(1, repair.mismatchChunks());
 		final var operationalReport = new BulkMigrationOperationalReportIO()
 				.read(operational);
 		assertEquals("JOB_FAILED", operationalReport.execution().event());

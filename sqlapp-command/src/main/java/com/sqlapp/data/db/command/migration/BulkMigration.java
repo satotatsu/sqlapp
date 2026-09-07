@@ -77,6 +77,7 @@ public final class BulkMigration {
 	private final BulkMigrationJobLifecycle lifecycle;
 	private final Path operationalReportFile;
 	private final Path verificationReportFile;
+	private final Path repairPlanOnMismatchFile;
 	private final int maxReportedMismatches;
 	private final BulkMigrationVerificationIsolation verificationIsolation;
 	private final Integer verificationChunkSize;
@@ -106,6 +107,7 @@ public final class BulkMigration {
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
 			final BulkMigrationJobLifecycle lifecycle,
 			final Path operationalReportFile, final Path verificationReportFile,
+			final Path repairPlanOnMismatchFile,
 			final Integer maxReportedMismatches,
 			final BulkMigrationVerificationIsolation verificationIsolation,
 			final Integer verificationChunkSize) {
@@ -138,6 +140,8 @@ public final class BulkMigration {
 				: operationalReportFile.toAbsolutePath().normalize();
 		this.verificationReportFile = verificationReportFile == null ? null
 				: verificationReportFile.toAbsolutePath().normalize();
+		this.repairPlanOnMismatchFile = repairPlanOnMismatchFile == null ? null
+				: repairPlanOnMismatchFile.toAbsolutePath().normalize();
 		this.maxReportedMismatches = maxReportedMismatches == null
 				? BulkMigrationVerificationReportIO.DEFAULT_MAX_REPORTED_MISMATCHES
 				: maxReportedMismatches;
@@ -194,6 +198,12 @@ public final class BulkMigration {
 				final int maxMismatches) {
 			this.verificationReportFile = Objects.requireNonNull(file, "file");
 			this.maxReportedMismatches = maxMismatches;
+			return this;
+		}
+
+		/** Writes a reviewable repair plan when {@link BulkMigration#run()} mismatches. */
+		public BulkMigrationBuilder repairPlanOnMismatch(final Path file) {
+			this.repairPlanOnMismatchFile = Objects.requireNonNull(file, "file");
 			return this;
 		}
 
@@ -292,6 +302,15 @@ public final class BulkMigration {
 		try {
 			return new Execution(execution, verify()).requireMatch();
 		} catch (SQLException | RuntimeException | Error failure) {
+			if (repairPlanOnMismatchFile != null
+					&& failure instanceof BulkMigrationVerificationMismatchException mismatch) {
+				try {
+					planRepair(mismatch.getVerificationResult())
+							.writeJson(repairPlanOnMismatchFile);
+				} catch (SQLException | RuntimeException repairPlanFailure) {
+					failure.addSuppressed(repairPlanFailure);
+				}
+			}
 			try {
 				publishOperationalFailure(failure);
 			} catch (SQLException | RuntimeException reportFailure) {
