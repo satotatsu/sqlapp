@@ -297,17 +297,15 @@ public final class BulkMigration {
 				throw new IllegalArgumentException(
 						"Approved plan fingerprint does not match the migration job plan");
 			}
-			final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection,
-					false);
 			if (leaseConfiguration == null) {
-				return BulkMigrationJobCheckpointManager.reset(resetPlan,
+				return resetCheckpoints(sourceConnection, targetConnection,
 						approvedPlanFingerprint);
 			}
 			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 				final var manager = BulkMigrationJobLeaseManagerFactory.create(null,
 						leaseConfiguration);
-				try (var ignored = manager.acquire(resetPlan.getFingerprint())) {
-					return BulkMigrationJobCheckpointManager.reset(resetPlan,
+				try (var ignored = manager.acquire(reviewedPlan.getFingerprint())) {
+					return resetCheckpoints(sourceConnection, targetConnection,
 							approvedPlanFingerprint);
 				}
 			}
@@ -315,12 +313,21 @@ public final class BulkMigration {
 				leaseConnection.setAutoCommit(true);
 				final var manager = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
 						leaseConfiguration);
-				try (var ignored = manager.acquire(resetPlan.getFingerprint())) {
-					return BulkMigrationJobCheckpointManager.reset(resetPlan,
+				try (var ignored = manager.acquire(reviewedPlan.getFingerprint())) {
+					return resetCheckpoints(sourceConnection, targetConnection,
 							approvedPlanFingerprint);
 				}
 			}
 		}
+	}
+
+	private BulkMigrationJobCheckpointResetResult resetCheckpoints(
+			final Connection sourceConnection, final Connection targetConnection,
+			final String approvedPlanFingerprint) throws SQLException {
+		final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection,
+				false);
+		return BulkMigrationJobCheckpointManager.reset(resetPlan,
+				approvedPlanFingerprint);
 	}
 
 	/**

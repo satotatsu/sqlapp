@@ -428,7 +428,9 @@ then pass that file to `resetCheckpoints(reportFile)`. The report is reread and
 its fingerprint must match a freshly resolved read-only live plan before any
 writable checkpoint store is created. The method deletes
 only checkpoints and reuses a configured job lease to exclude concurrent
-execution. It never deletes target rows. In INSERT mode those rows must be
+execution. Writable checkpoint-store preparation and deletion both occur inside
+that lease. An active competing lease rejects the reset before checkpoint
+changes. It never deletes target rows. In INSERT mode those rows must be
 cleared or reconciled separately before rerunning, otherwise duplicates or
 constraint failures are possible. `resetCheckpointsWithFingerprint(value)`
 accepts an explicitly approved fingerprint when no report file is used.

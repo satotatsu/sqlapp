@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +24,7 @@ import com.sqlapp.data.db.command.migration.BulkMigrationPostExecutionException;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationMismatchException;
+import com.sqlapp.data.db.command.migration.FileBulkMigrationJobLeaseStore;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
@@ -30,6 +32,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseManager;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseUnavailableException;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
 
@@ -248,6 +252,15 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(1, report.processedRows());
 		assertEquals(1, report.completedTasks());
 		final String approvedFingerprint = migration.dryRun().planFingerprint();
+		final var competingManager = new BulkMigrationJobLeaseManager(
+				new FileBulkMigrationJobLeaseStore(leases), "competing-worker",
+				Duration.ofMinutes(5));
+		try (var ignored = competingManager.acquire(approvedFingerprint)) {
+			assertThrows(BulkMigrationJobLeaseUnavailableException.class,
+					() -> migration.resetCheckpointsWithFingerprint(approvedFingerprint));
+			assertEquals(BulkMigrationJobTaskState.COMPLETE,
+					migration.status().getTasks().get(0).getState());
+		}
 		assertEquals(List.of("ITEMS"),
 				migration.resetCheckpointsWithFingerprint(approvedFingerprint)
 						.getResetTaskIds());
