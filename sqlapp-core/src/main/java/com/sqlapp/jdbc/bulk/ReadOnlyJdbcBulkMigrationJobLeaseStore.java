@@ -2,7 +2,6 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Objects;
@@ -37,9 +36,10 @@ public final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
 			throws SQLException {
 		JdbcBulkMigrationJobLeaseTable.validateFingerprint(planFingerprint);
-		if (!tableExists()) {
+		if (!JdbcBulkMigrationJobLeaseTable.exists(connection, rawTableName)) {
 			return Optional.empty();
 		}
+		JdbcBulkMigrationJobLeaseTable.validateStructure(connection, rawTableName);
 		final BulkMigrationJobLease[] result = new BulkMigrationJobLease[1];
 		new JdbcHandler(selectNode,
 				rs -> result[0] = JdbcBulkMigrationJobLeaseTable.lease(rs,
@@ -61,18 +61,6 @@ public final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 	@Override
 	public void release(final String planFingerprint, final String ownerId) {
 		throw new UnsupportedOperationException("Read-only lease store");
-	}
-
-	private boolean tableExists() throws SQLException {
-		try (ResultSet tables = connection.getMetaData().getTables(connection.getCatalog(),
-				null, "%", new String[] { "TABLE" })) {
-			while (tables.next()) {
-				if (rawTableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
-					return true;
-				}
-			}
-		}
-		return false;
 	}
 
 }

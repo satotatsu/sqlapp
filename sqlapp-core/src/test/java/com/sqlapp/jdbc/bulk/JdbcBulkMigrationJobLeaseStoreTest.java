@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.SQLException;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,24 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
+	@Test
+	void rejectsAnExistingLeaseTableWithMissingColumns() throws Exception {
+		final var dataSource = createDataSource();
+		try (var connection = dataSource.getConnection()) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE SQLAPP_BML_INVALID ("
+						+ "PLAN_FINGERPRINT VARCHAR(256) PRIMARY KEY)");
+			}
+			assertThrows(SQLException.class,
+					() -> new JdbcBulkMigrationJobLeaseStore(connection,
+							"SQLAPP_BML_INVALID"));
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
 	@Test
 	void readsWithoutCreatingOrChangingTheLeaseTable() throws Exception {
 		final var dataSource = createDataSource();

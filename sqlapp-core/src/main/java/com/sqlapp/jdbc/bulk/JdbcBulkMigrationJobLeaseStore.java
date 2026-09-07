@@ -32,7 +32,6 @@ public final class JdbcBulkMigrationJobLeaseStore
 
 	private final Connection connection;
 	private final String rawTableName;
-	private final String tableName;
 	private final Dialect dialect;
 	private final Map<SqlType, SqlNode> sqlNodes = new EnumMap<>(SqlType.class);
 
@@ -49,7 +48,6 @@ public final class JdbcBulkMigrationJobLeaseStore
 		}
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.rawTableName = tableName;
-		this.tableName = dialect.quote(tableName);
 		final Table table = JdbcBulkMigrationJobLeaseTable.table(rawTableName);
 		final var registry = dialect.createSqlFactoryRegistry();
 		for (SqlType type : new SqlType[] { SqlType.SELECT, SqlType.UPDATE,
@@ -314,26 +312,15 @@ public final class JdbcBulkMigrationJobLeaseStore
 	}
 
 	private void ensureTable() throws SQLException {
-		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + column("PLAN_FINGERPRINT") + ", "
-					+ column("OWNER_ID") + ", " + column("EXPIRES_AT") + " FROM "
-					+ tableName + " WHERE 1 = 0").close();
-		} catch (SQLException missing) {
-			try {
-				final Table table = JdbcBulkMigrationJobLeaseTable.table(rawTableName);
-				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
-						.getSqlFactory(table, State.Added);
-				new ConnectionSqlExecutor(connection, false)
-						.execute(factory.createSql(table));
-			} catch (SQLException createFailure) {
-				createFailure.addSuppressed(missing);
-				throw createFailure;
-			}
+		if (JdbcBulkMigrationJobLeaseTable.exists(connection, rawTableName)) {
+			JdbcBulkMigrationJobLeaseTable.validateStructure(connection, rawTableName);
+			return;
 		}
-	}
-
-	private String column(final String name) {
-		return dialect.quote(name);
+		final Table table = JdbcBulkMigrationJobLeaseTable.table(rawTableName);
+		final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+				.getSqlFactory(table, State.Added);
+		new ConnectionSqlExecutor(connection, false).execute(factory.createSql(table));
+		JdbcBulkMigrationJobLeaseTable.validateStructure(connection, rawTableName);
 	}
 
 	private static void validateCandidate(final BulkMigrationJobLease lease,
