@@ -276,6 +276,24 @@ class BulkMigrationFacadeIntegrationTest {
 	}
 
 	@Test
+	void executesWithAnOptionalDatabaseLease() throws Exception {
+		final DataSource source = sqlite(directory.resolve("db-lease-source.db"));
+		final DataSource target = sqlite(directory.resolve("db-lease-target.db"));
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'one')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+		}
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema()).tables("ITEMS").databaseLease("integration-worker").build();
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE, migration.resumeReadiness());
+		assertEquals(1, migration.execute().getProcessedRows());
+		assertEquals(BulkMigrationResumeReadiness.COMPLETE, migration.resumeReadiness());
+	}
+
+	@Test
 	void recordsVerificationMismatchAsTheFinalOperationalEvent() throws Exception {
 		final DataSource source = sqlite(directory.resolve("mismatch-source.db"));
 		final DataSource target = sqlite(directory.resolve("mismatch-target.db"));
