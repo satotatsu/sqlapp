@@ -37,6 +37,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseUnavailableException;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 
 class BulkMigrationFacadeIntegrationTest {
 	@TempDir
@@ -291,6 +292,29 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE, migration.resumeReadiness());
 		assertEquals(1, migration.execute().getProcessedRows());
 		assertEquals(BulkMigrationResumeReadiness.COMPLETE, migration.resumeReadiness());
+		final String fingerprint = migration.dryRun().planFingerprint();
+		try (var connection = target.getConnection()) {
+			final var manager = new BulkMigrationJobLeaseManager(
+					new JdbcBulkMigrationJobLeaseStore(connection), "competing-worker",
+					Duration.ofMinutes(5));
+			try (var lease = manager.acquire(fingerprint)) {
+				assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+						migration.resumeReadiness());
+				assertThrows(BulkMigrationJobLeaseUnavailableException.class,
+						() -> migration.resetCheckpointsWithFingerprint(fingerprint));
+				assertEquals(BulkMigrationJobTaskState.COMPLETE,
+						migration.status().getTasks().get(0).getState());
+			}
+		}
+		assertEquals(BulkMigrationResumeReadiness.COMPLETE, migration.resumeReadiness());
+		assertEquals(List.of("ITEMS"),
+				migration.resetCheckpointsWithFingerprint(fingerprint).getResetTaskIds());
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE, migration.resumeReadiness());
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
 	}
 
 	@Test
