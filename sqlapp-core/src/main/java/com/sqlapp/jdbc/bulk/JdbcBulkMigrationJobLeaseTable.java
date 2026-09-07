@@ -96,12 +96,16 @@ final class JdbcBulkMigrationJobLeaseTable {
 			final String tableName) throws SQLException {
 		final String schema = currentSchema(connection);
 		final Set<String> columns = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		String resolvedTable = tableName;
+		String resolvedSchema = schema;
 		try (ResultSet result = connection.getMetaData().getColumns(
 				connection.getCatalog(), null, "%", "%")) {
 			while (result.next()) {
 				if (tableName.equalsIgnoreCase(result.getString("TABLE_NAME"))
 						&& matchesSchema(schema, result.getString("TABLE_SCHEM"))) {
 					columns.add(result.getString("COLUMN_NAME"));
+					resolvedTable = result.getString("TABLE_NAME");
+					resolvedSchema = result.getString("TABLE_SCHEM");
 				}
 			}
 		}
@@ -111,6 +115,17 @@ final class JdbcBulkMigrationJobLeaseTable {
 			missing.removeAll(columns);
 			throw new SQLException("Migration job lease table " + tableName
 					+ " is missing required columns: " + missing);
+		}
+		final Set<String> primaryKey = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		try (ResultSet keys = connection.getMetaData().getPrimaryKeys(
+				connection.getCatalog(), resolvedSchema, resolvedTable)) {
+			while (keys.next()) {
+				primaryKey.add(keys.getString("COLUMN_NAME"));
+			}
+		}
+		if (primaryKey.size() != 1 || !primaryKey.contains("PLAN_FINGERPRINT")) {
+			throw new SQLException("Migration job lease table " + tableName
+					+ " must have a primary key on PLAN_FINGERPRINT alone");
 		}
 	}
 

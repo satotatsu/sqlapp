@@ -992,6 +992,10 @@ failed. Configure the lease duration above the maximum expected duration of a
 single chunk because renewal occurs at chunk boundaries rather than on a
 background thread.
 `JdbcBulkMigrationJobLeaseStore` is the multi-process default building block.
+An existing JDBC lease table must have `PLAN_FINGERPRINT` as its sole primary-key
+column. Both stores reject missing or composite primary keys, which would allow
+multiple owners to be stored for the same plan. Automatically created tables
+already use this structure.
 Both JDBC lease stores reject malformed persisted owner IDs and expiry timestamps
 with a `SQLException` identifying the plan and relevant columns. Invalid lease
 data is never treated as an absent or expired lease; correct the control data

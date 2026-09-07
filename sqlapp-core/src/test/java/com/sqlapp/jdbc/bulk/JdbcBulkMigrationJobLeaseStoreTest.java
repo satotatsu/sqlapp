@@ -15,6 +15,33 @@ import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
+	void rejectsMissingAndCompositeLeasePrimaryKeys() throws Exception {
+		final var dataSource = createDataSource();
+		try (var connection = dataSource.getConnection()) {
+			for (String suffix : new String[] { "MISSING", "COMPOSITE" }) {
+				final String table = "SQLAPP_BML_PK_" + suffix;
+				try (var statement = connection.createStatement()) {
+					statement.execute("CREATE TABLE " + table
+							+ " (PLAN_FINGERPRINT VARCHAR(256) NOT NULL,"
+							+ " OWNER_ID VARCHAR(256) NOT NULL, EXPIRES_AT VARCHAR(40) NOT NULL"
+							+ ("COMPOSITE".equals(suffix)
+									? ", PRIMARY KEY (PLAN_FINGERPRINT, OWNER_ID)" : "") + ")");
+				}
+				final var failure = assertThrows(SQLException.class,
+						() -> new JdbcBulkMigrationJobLeaseStore(connection, table));
+				assertTrue(failure.getMessage().contains("PLAN_FINGERPRINT alone"));
+				assertThrows(SQLException.class,
+						() -> new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection, table)
+								.load("plan"));
+			}
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
+	@Test
 	void rejectsCorruptLeaseDataInBothStores() throws Exception {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {
