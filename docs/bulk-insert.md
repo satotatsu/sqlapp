@@ -384,7 +384,7 @@ BulkMigration migration = BulkMigration.builder()
         .build();
 
 BulkMigration.Execution execution = migration.executeAndVerify();
-BulkMigrationJobPlan plan = migration.plan();
+BulkMigrationOperationalReport plan = migration.dryRun();
 BulkMigrationJobStatus status = migration.inspect();
 BulkMigrationJobVerificationResult verification = execution.verification();
 
@@ -407,10 +407,12 @@ targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
 keyset, and per-table UPSERT configurations remain available through the
 underlying APIs and declarative job configuration.
 
-Call `plan()` before execution when an approval screen or dry run needs the
-resolved task order, lifecycle operations, options, and reproducibility
-fingerprint. Planning validates the same immutable job used by `execute()` but
-does not execute lifecycle operations or create checkpoint storage.
+Call `dryRun()` before execution when an approval screen needs a detached
+snapshot of the resolved task order, lifecycle operations, core options,
+current status, and reproducibility fingerprint. It validates the same job used
+by `execute()` but does not expose connection-bound executors, execute lifecycle
+operations, or create checkpoint storage. Use `inspect(reportFile)` when the
+same snapshot should also be written as JSON.
 
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp

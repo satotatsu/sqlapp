@@ -237,14 +237,16 @@ public final class BulkMigration {
 		}
 	}
 
-	/**
-	 * Resolves and validates the immutable execution plan without executing the
-	 * migration or creating checkpoint storage.
-	 */
-	public BulkMigrationJobPlan plan() throws SQLException {
+	/** Returns a detached, read-only plan and status snapshot without executing. */
+	public BulkMigrationOperationalReport dryRun() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			return plan(sourceConnection, targetConnection, true);
+			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
+					targetConnection, true);
+			final BulkMigrationJobStatus status = BulkMigrationJobStatusInspector.inspect(
+					readOnlyPlan);
+			return new BulkMigrationOperationalReportBuilder().build(readOnlyPlan, status,
+					null, null);
 		}
 	}
 

@@ -115,8 +115,9 @@ class BulkMigrationFacadeIntegrationTest {
 				.fingerprints("source-v1", "target-v1")
 				.fileCheckpoints(checkpoints).build();
 
-		final var plan = migration.plan();
-		assertEquals(List.of("ITEMS"), plan.getTaskIds());
+		final var plan = migration.dryRun();
+		assertEquals(List.of("ITEMS"),
+				plan.tasks().stream().map(task -> task.taskId()).toList());
 		assertFalse(Files.exists(checkpoints));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.inspect().getTasks().get(0).getState());
