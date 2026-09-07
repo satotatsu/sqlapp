@@ -15,6 +15,34 @@ import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
+	void rejectsCorruptLeaseDataInBothStores() throws Exception {
+		final var dataSource = createDataSource();
+		try (var connection = dataSource.getConnection()) {
+			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
+					"SQLAPP_BML_CORRUPT");
+			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+					"SQLAPP_BML_CORRUPT");
+			try (var statement = connection.prepareStatement(
+					"INSERT INTO SQLAPP_BML_CORRUPT VALUES (?, ?, ?)")) {
+				for (String[] values : new String[][] {
+						{ "bad-time", "owner", "not-an-instant" },
+						{ "bad-owner", " ", "2026-08-31T12:00:00Z" } }) {
+					statement.setString(1, values[0]);
+					statement.setString(2, values[1]);
+					statement.setString(3, values[2]);
+					statement.executeUpdate();
+					assertThrows(SQLException.class, () -> writer.load(values[0]));
+					assertThrows(SQLException.class, () -> reader.load(values[0]));
+				}
+			}
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
+	@Test
 	void ignoresLeaseTablesInOtherSchemas() throws Exception {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {

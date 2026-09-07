@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.DateTimeException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -56,9 +57,20 @@ final class JdbcBulkMigrationJobLeaseTable {
 		for (int i = 1; i <= metadata.getColumnCount(); i++) {
 			columns.put(metadata.getColumnLabel(i).toUpperCase(Locale.ROOT), i);
 		}
-		return new BulkMigrationJobLease(fingerprint,
-				resultSet.getString(columns.get("OWNER_ID")),
-				Instant.parse(resultSet.getString(columns.get("EXPIRES_AT"))));
+		if (!columns.keySet().containsAll(REQUIRED_COLUMNS)) {
+			throw new SQLException("Migration job lease result is missing required columns");
+		}
+		final String owner = resultSet.getString(columns.get("OWNER_ID"));
+		final String expires = resultSet.getString(columns.get("EXPIRES_AT"));
+		try {
+			if (expires == null) {
+				throw new IllegalArgumentException("EXPIRES_AT must not be null");
+			}
+			return new BulkMigrationJobLease(fingerprint, owner, Instant.parse(expires));
+		} catch (IllegalArgumentException | DateTimeException failure) {
+			throw new SQLException("Invalid migration job lease data for plan "
+					+ fingerprint + "; check OWNER_ID and EXPIRES_AT", failure);
+		}
 	}
 
 	static void validateFingerprint(final String fingerprint) {

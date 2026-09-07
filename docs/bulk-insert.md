@@ -992,6 +992,10 @@ failed. Configure the lease duration above the maximum expected duration of a
 single chunk because renewal occurs at chunk boundaries rather than on a
 background thread.
 `JdbcBulkMigrationJobLeaseStore` is the multi-process default building block.
+Both JDBC lease stores reject malformed persisted owner IDs and expiry timestamps
+with a `SQLException` identifying the plan and relevant columns. Invalid lease
+data is never treated as an absent or expired lease; correct the control data
+before attempting resume.
 It creates its control table through the dialect's Schema SQL factory and runs
 each read-modify-write operation at `TRANSACTION_SERIALIZABLE`, without
 handwritten vendor DML. Give it a dedicated auto-commit connection: the store
