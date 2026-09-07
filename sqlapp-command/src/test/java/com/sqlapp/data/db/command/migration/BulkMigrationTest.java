@@ -100,6 +100,12 @@ class BulkMigrationTest {
 		table.getColumns().add(new Column("ID").setNotNull(true));
 		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
 		schema.getTables().add(table);
+		assertThrows(NullPointerException.class,
+				() -> BulkMigration.of(null, dataSource("of_target"), schema));
+		assertThrows(NullPointerException.class,
+				() -> BulkMigration.of(dataSource("of_source"), null, schema));
+		assertThrows(NullPointerException.class, () -> BulkMigration.of(
+				dataSource("of_schema_source"), dataSource("of_schema_target"), null));
 		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
 				.source(dataSource("invalid_source")).target(dataSource("invalid_target"))
 				.schema(schema).resume(true).build());

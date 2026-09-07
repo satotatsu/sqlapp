@@ -375,6 +375,14 @@ sources, dependency sorting, checkpoint stores, verification tasks, and repair
 planner wiring:
 
 ```java
+BulkMigration migration = BulkMigration.of(sourceDataSource, targetDataSource, schema);
+BulkMigration.Execution execution = migration.run();
+```
+
+The default form migrates every table. Switch to the builder only when tables
+or advanced behavior must be selected:
+
+```java
 BulkMigration migration = BulkMigration.builder()
         .source(sourceDataSource)
         .target(targetDataSource)

@@ -81,6 +81,14 @@ public final class BulkMigration {
 	private final BulkMigrationVerificationIsolation verificationIsolation;
 	private final Integer verificationChunkSize;
 
+	/** Creates a migration with the safe defaults for every table in the Schema. */
+	public static BulkMigration of(final DataSource source, final DataSource target,
+			final Schema schema) {
+		return builder().source(Objects.requireNonNull(source, "source"))
+				.target(Objects.requireNonNull(target, "target"))
+				.schema(Objects.requireNonNull(schema, "schema")).build();
+	}
+
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
 			final Schema schema, final List<String> tableNames,

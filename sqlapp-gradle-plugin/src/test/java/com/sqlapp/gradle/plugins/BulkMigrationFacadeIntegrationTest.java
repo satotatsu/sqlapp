@@ -34,6 +34,24 @@ class BulkMigrationFacadeIntegrationTest {
 	Path directory;
 
 	@Test
+	void runsWithOnlySourceTargetAndSchema() throws Exception {
+		final DataSource source = sqlite(directory.resolve("simple-source.db"));
+		final DataSource target = sqlite(directory.resolve("simple-target.db"));
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'one')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
+		}
+
+		final var result = BulkMigration.of(source, target, schema()).run();
+
+		assertEquals(1, result.migration().getProcessedRows());
+		assertTrue(result.isMatch());
+	}
+
+	@Test
 	void executesUpsertAndVerifiesThroughTheFacade() throws Exception {
 		final DataSource source = sqlite(directory.resolve("source.db"));
 		final DataSource target = sqlite(directory.resolve("target.db"));
