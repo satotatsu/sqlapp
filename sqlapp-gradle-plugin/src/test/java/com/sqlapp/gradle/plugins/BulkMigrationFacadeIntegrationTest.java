@@ -176,7 +176,8 @@ class BulkMigrationFacadeIntegrationTest {
 				.fingerprints("source-v1", "target-v1")
 				.fileCheckpoints(checkpoints).build();
 
-		final var plan = migration.dryRun();
+		final Path dryRunReport = directory.resolve("file-dry-run.json");
+		final var plan = migration.dryRun(dryRunReport);
 		assertEquals(List.of("ITEMS"),
 				plan.tasks().stream().map(task -> task.taskId()).toList());
 		assertFalse(Files.exists(checkpoints));
@@ -191,10 +192,10 @@ class BulkMigrationFacadeIntegrationTest {
 				migration.status().getTasks().get(0).getState());
 		assertEquals(1, migration.execute().getAlreadyCompleteTasks());
 		assertThrows(IllegalArgumentException.class,
-				() -> migration.resetCheckpoints("wrong-fingerprint"));
+				() -> migration.resetCheckpointsWithFingerprint("wrong-fingerprint"));
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.status().getTasks().get(0).getState());
-		final var reset = migration.resetCheckpoints(plan.planFingerprint());
+		final var reset = migration.resetCheckpoints(dryRunReport);
 		assertEquals(List.of("ITEMS"), reset.getResetTaskIds());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.status().getTasks().get(0).getState());
@@ -240,7 +241,8 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(1, report.completedTasks());
 		final String approvedFingerprint = migration.dryRun().planFingerprint();
 		assertEquals(List.of("ITEMS"),
-				migration.resetCheckpoints(approvedFingerprint).getResetTaskIds());
+				migration.resetCheckpointsWithFingerprint(approvedFingerprint)
+						.getResetTaskIds());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.status().getTasks().get(0).getState());
 	}

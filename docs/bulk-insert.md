@@ -423,12 +423,14 @@ operations, or create checkpoint storage. Use `dryRun(reportFile)` when the
 same snapshot should also be written as JSON. Use `status()` only when an
 advanced integration needs the underlying checkpoint status objects.
 
-To deliberately restart a resumable job, pass the reviewed dry-run fingerprint
-to `resetCheckpoints(dryRun.planFingerprint())`. The method deletes only
-checkpoints and reuses a configured job lease to exclude concurrent execution.
-It never deletes target rows. In INSERT mode those rows must be cleared or
-reconciled separately before rerunning, otherwise duplicates or constraint
-failures are possible.
+To deliberately restart a resumable job, write and review `dryRun(reportFile)`,
+then pass that file to `resetCheckpoints(reportFile)`. The report is reread and
+its fingerprint must match the freshly resolved live plan. The method deletes
+only checkpoints and reuses a configured job lease to exclude concurrent
+execution. It never deletes target rows. In INSERT mode those rows must be
+cleared or reconciled separately before rerunning, otherwise duplicates or
+constraint failures are possible. `resetCheckpointsWithFingerprint(value)`
+accepts an explicitly approved fingerprint when no report file is used.
 
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp

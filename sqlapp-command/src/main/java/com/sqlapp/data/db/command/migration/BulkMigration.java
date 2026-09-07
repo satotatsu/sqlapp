@@ -283,7 +283,7 @@ public final class BulkMigration {
 	 * Deletes only this job's checkpoints after exact plan-fingerprint approval.
 	 * Migrated target rows are not changed.
 	 */
-	public BulkMigrationJobCheckpointResetResult resetCheckpoints(
+	public BulkMigrationJobCheckpointResetResult resetCheckpointsWithFingerprint(
 			final String approvedPlanFingerprint) throws SQLException {
 		if (approvedPlanFingerprint == null || approvedPlanFingerprint.isBlank()) {
 			throw new IllegalArgumentException(
@@ -319,6 +319,19 @@ public final class BulkMigration {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Reads a reviewed dry-run JSON report and resets the exact current plan's
+	 * checkpoints.
+	 */
+	public BulkMigrationJobCheckpointResetResult resetCheckpoints(
+			final Path approvedDryRunReport) throws SQLException {
+		final Path reportFile = Objects.requireNonNull(approvedDryRunReport,
+				"approvedDryRunReport");
+		final String approvedFingerprint = new BulkMigrationOperationalReportIO()
+				.read(reportFile).planFingerprint();
+		return resetCheckpointsWithFingerprint(approvedFingerprint);
 	}
 
 	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {

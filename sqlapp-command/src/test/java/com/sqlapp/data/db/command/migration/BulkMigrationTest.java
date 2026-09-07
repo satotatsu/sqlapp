@@ -143,9 +143,11 @@ class BulkMigrationTest {
 		assertThrows(NullPointerException.class,
 				() -> custom.verifyAndWriteRepairPlan(null));
 		assertThrows(IllegalArgumentException.class,
-				() -> custom.resetCheckpoints(null));
+				() -> custom.resetCheckpointsWithFingerprint(null));
 		assertThrows(IllegalArgumentException.class,
-				() -> custom.resetCheckpoints(" "));
+				() -> custom.resetCheckpointsWithFingerprint(" "));
+		assertThrows(NullPointerException.class,
+				() -> custom.resetCheckpoints((Path) null));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				assertDoesNotThrow(() -> custom.status()).getTasks().get(0).getState());
 	}
@@ -218,7 +220,8 @@ class BulkMigrationTest {
 		assertEquals(0, migration.execute().getProcessedRows());
 		final String approvedFingerprint = migration.dryRun().planFingerprint();
 		assertEquals(List.of("PUBLIC.ITEMS"),
-				migration.resetCheckpoints(approvedFingerprint).getResetTaskIds());
+				migration.resetCheckpointsWithFingerprint(approvedFingerprint)
+						.getResetTaskIds());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.status().getTasks().get(0).getState());
 		try (var connection = target.getConnection(); var tables = connection.getMetaData()
