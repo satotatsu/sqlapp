@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.migration.BulkMigration;
+import com.sqlapp.data.db.command.migration.BulkMigrationJobRepairPlanReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationTableOption;
 import com.sqlapp.data.db.command.migration.BulkMigrationVerificationReportIO;
@@ -24,6 +25,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
@@ -214,7 +216,7 @@ class BulkMigrationFacadeIntegrationTest {
 				migration::run);
 		assertTrue(mismatch.hasMigrationResult());
 		assertEquals(1, mismatch.getMigrationResult().getProcessedRows());
-		final var repair = new com.sqlapp.data.db.command.migration.BulkMigrationJobRepairPlanReportIO()
+		final var repair = new BulkMigrationJobRepairPlanReportIO()
 				.read(repairPlan);
 		assertEquals(1, repair.estimatedReplayRows());
 		assertEquals(1, repair.mismatchChunks());
@@ -224,6 +226,19 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(BulkMigrationVerificationMismatchException.class.getName(),
 				operationalReport.execution().failureType());
 		assertFalse(new BulkMigrationVerificationReportIO().read(verification).match());
+
+		final Path invalidRepairTarget = directory.resolve("mismatch/repair-directory");
+		Files.createDirectories(invalidRepairTarget);
+		final BulkMigration invalidReportMigration = BulkMigration.builder().source(source)
+				.target(target).schema(schema()).tables("ITEMS")
+				.repairPlanOnMismatch(invalidRepairTarget).build();
+		final var reportFailure = org.junit.jupiter.api.Assertions.assertThrows(
+				BulkMigrationVerificationMismatchException.class,
+				invalidReportMigration::run);
+		assertTrue(reportFailure.hasMigrationResult());
+		assertEquals(1, reportFailure.getMigrationResult().getProcessedRows());
+		assertEquals(1, reportFailure.getSuppressed().length);
+		assertTrue(reportFailure.getSuppressed()[0] instanceof CommandException);
 	}
 
 	private static Schema schema() {
