@@ -66,7 +66,7 @@ class BulkMigrationFacadeIntegrationTest {
 				.fingerprints("source-v1", "target-v1")
 				.verificationReport(verificationReport).build();
 
-		final var outcome = migration.executeAndVerifyOrThrow();
+		final var outcome = migration.run();
 
 		assertEquals(2, outcome.migration().getProcessedRows());
 		assertTrue(outcome.isMatch());
@@ -80,8 +80,8 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals("DEFAULT", report.isolation());
 		assertEquals(List.of("task:ITEMS", "chunk:0", "chunk:1"), events);
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
-				migration.inspect().getTasks().get(0).getState());
-		assertEquals("items-copy", migration.inspect().getTasks().get(0)
+				migration.status().getTasks().get(0).getState());
+		assertEquals("items-copy", migration.status().getTasks().get(0)
 				.getCheckpoint().getMigrationId());
 		final var resumed = migration.execute();
 		assertEquals(0, resumed.getProcessedRows());
@@ -120,14 +120,14 @@ class BulkMigrationFacadeIntegrationTest {
 				plan.tasks().stream().map(task -> task.taskId()).toList());
 		assertFalse(Files.exists(checkpoints));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
-				migration.inspect().getTasks().get(0).getState());
+				migration.status().getTasks().get(0).getState());
 		assertFalse(Files.exists(checkpoints));
 		assertEquals(2, migration.execute().getProcessedRows());
 		try (var files = Files.list(checkpoints)) {
 			assertEquals(1, files.count());
 		}
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
-				migration.inspect().getTasks().get(0).getState());
+				migration.status().getTasks().get(0).getState());
 		assertEquals(1, migration.execute().getAlreadyCompleteTasks());
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'SQLAPP_BULK_MIGRATION_CHECKPOINT'")) {
@@ -186,7 +186,7 @@ class BulkMigrationFacadeIntegrationTest {
 
 		org.junit.jupiter.api.Assertions.assertThrows(
 				BulkMigrationVerificationMismatchException.class,
-				migration::executeAndVerifyOrThrow);
+				migration::run);
 		final var operationalReport = new BulkMigrationOperationalReportIO()
 				.read(operational);
 		assertEquals("JOB_FAILED", operationalReport.execution().event());

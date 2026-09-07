@@ -383,9 +383,9 @@ BulkMigration migration = BulkMigration.builder()
         .mode(BulkMigrationMode.UPSERT)
         .build();
 
-BulkMigration.Execution execution = migration.executeAndVerify();
+BulkMigration.Execution execution = migration.run();
 BulkMigrationOperationalReport plan = migration.dryRun();
-BulkMigrationJobStatus status = migration.inspect();
+BulkMigrationJobStatus status = migration.status();
 BulkMigrationJobVerificationResult verification = execution.verification();
 
 // Or use planRepair(verification) when an existing result should be reused.
@@ -412,8 +412,8 @@ snapshot of the resolved task order, lifecycle operations, core options,
 current status, and reproducibility fingerprint. It validates the same job used
 by `execute()` but does not expose connection-bound executors, execute lifecycle
 operations, or create checkpoint storage. Use `dryRun(reportFile)` when the
-same snapshot should also be written as JSON. The existing `inspect(reportFile)`
-form remains an equivalent compatibility alias.
+same snapshot should also be written as JSON. Use `status()` only when an
+advanced integration needs the underlying checkpoint status objects.
 
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp
@@ -433,8 +433,8 @@ BulkMigration migration = BulkMigration.builder()
 Use `.customCheckpointStore(store)` only when an application needs its own
 durability mechanism. One table can instead set `checkpointStore` in its
 `BulkMigrationTableOption`; other tables keep the global/default store. A
-custom store's `load` implementation must be read-only because `inspect()`
-calls it. File inspection likewise reads an existing checkpoint without
+custom store's `load` implementation must be read-only because `status()` and
+`dryRun()` call it. File inspection likewise reads an existing checkpoint without
 creating its directory or a target-database table.
 
 Concurrent execution protection is also opt-in. Use
@@ -444,7 +444,7 @@ five-minute renewable lease default is suitable for the common path; pass a
 `BulkMigrationJobLeaseConfiguration` through the builder when owner, duration,
 table name, or directory needs explicit control. Database leasing uses a
 separate target connection so lease renewal is independent of chunk
-transactions. `inspect()` remains a read-only checkpoint snapshot; operational
+transactions. `status()` remains a read-only checkpoint snapshot; operational
 resume assessment, including live/expired lease state, remains available from
 the detailed operational-report API.
 
@@ -452,7 +452,7 @@ Vendor-specific preparation and restoration can be added with
 `.lifecycle(existingLifecycle)`. The facade includes that lifecycle in the
 immutable plan, so its configuration fingerprint and planned operations remain
 part of dry-run validation. The lifecycle is invoked only by `execute()`;
-`inspect()` and `verify()` do not prepare, disable, or restore database objects.
+`dryRun()`, `status()`, and `verify()` do not prepare, disable, or restore database objects.
 Use a durable lifecycle from the underlying API when recovery must survive a
 process crash.
 
@@ -462,7 +462,7 @@ default and report-write failures fail the migration instead of being silently
 ignored. The detailed command API remains available when reporting failures
 must be observed while allowing the migration to continue.
 Call `migration.dryRun(reportFile)` to write and return the same operational
-format before execution. Like `inspect()`, this is read-only: it does not create
+format before execution. Like `dryRun()`, this is read-only: it does not create
 or upgrade a database checkpoint table, create a file-checkpoint directory, or
 invoke the migration lifecycle.
 
@@ -479,7 +479,7 @@ The facade rolls those transactions back and restores the original connection
 settings. This provides a stable snapshot within each database, but cannot make
 two independent databases expose the same wall-clock snapshot; quiesce writes
 or use database-specific snapshot coordination for that stronger guarantee.
-Use `verifyOrThrow()` or `executeAndVerifyOrThrow()` when a mismatch must fail
+Use `verifyOrThrow()` or `run()` when a mismatch must fail
 the calling workflow. `BulkMigrationVerificationMismatchException` retains the
 complete verification result, and a configured verification report is written
 before the exception is raised. The non-throwing methods remain useful for
@@ -492,15 +492,16 @@ execute repairs: `executeApproved(path)` retains the review-and-fingerprint
 approval gate. Use `verifyAndPlanRepair()` when the plan should only be written
 after checking the result, or `planRepair(existingVerification)` to reuse a
 suitable result.
-When `executeAndVerifyOrThrow()` is used with an operational report, a
+When `run()` is used with an operational report, a
 verification mismatch or verification failure replaces the migration-phase
 `JOB_COMPLETED` event with `JOB_FAILED`. The committed migration rows remain
 committed; the event describes the outcome of the combined execute-and-verify
 workflow. `executeAndVerify()` intentionally keeps `JOB_COMPLETED` and returns
 the mismatch for interactive handling.
-Use `execute()` when verification must be scheduled separately;
-`executeAndVerify()` is the ordinary synchronous path and returns both the
-migration result and verification result. `executeApproved(Path)` rereads the
+`run()` is the ordinary synchronous path and returns both the migration result
+and verification result. Use `execute()` when verification must be scheduled
+separately, or `executeAndVerify()` when an interactive caller wants to handle a
+mismatch without an exception. `executeApproved(Path)` rereads the
 reviewed JSON, checks it against a freshly resolved live plan, and then executes
 the repair, so callers do not need to copy fingerprints manually.
 When only one table needs advanced behavior, keep the common builder unchanged
@@ -538,7 +539,7 @@ plan: hidden and generated/formula columns are excluded, and INSERT identity
 columns are included only when `keepIdentity` is enabled. UPSERT uses its
 resolved staging columns. An explicit per-table `verificationColumns` list
 continues to override this default.
-`inspect()` uses `ReadOnlyJdbcBulkMigrationCheckpointStore`: it reports
+`status()` and `dryRun()` use `ReadOnlyJdbcBulkMigrationCheckpointStore`: they report
 `NOT_STARTED` when the checkpoint table does not exist and never creates or
 upgrades that table. A malformed or obsolete existing checkpoint table is
 reported as an error instead of being changed during status inspection.

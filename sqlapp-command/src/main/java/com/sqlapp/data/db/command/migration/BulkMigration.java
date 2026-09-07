@@ -275,8 +275,11 @@ public final class BulkMigration {
 		return new Execution(execution, verify());
 	}
 
-	/** Executes and verifies, throwing only when the completed verification mismatches. */
-	public Execution executeAndVerifyOrThrow() throws SQLException {
+	/**
+	 * Runs the usual safe workflow: execute, verify, and fail when verification
+	 * does not match.
+	 */
+	public Execution run() throws SQLException {
 		final BulkMigrationJobResult execution = execute();
 		try {
 			return new Execution(execution, verify()).requireMatch();
@@ -303,18 +306,13 @@ public final class BulkMigration {
 		}
 	}
 
-	public BulkMigrationJobStatus inspect() throws SQLException {
+	/** Returns the detailed checkpoint status for advanced integrations. */
+	public BulkMigrationJobStatus status() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			return BulkMigrationJobStatusInspector.inspect(
 					plan(sourceConnection, targetConnection, true));
 		}
-	}
-
-	/** Writes and returns a read-only operational snapshot without executing the job. */
-	public BulkMigrationOperationalReport inspect(final Path reportFile)
-			throws SQLException {
-		return dryRun(reportFile);
 	}
 
 	public BulkMigrationJobVerificationResult verify() throws SQLException {
