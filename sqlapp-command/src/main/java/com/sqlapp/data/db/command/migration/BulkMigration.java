@@ -250,6 +250,15 @@ public final class BulkMigration {
 		}
 	}
 
+	/** Writes and returns the same detached dry-run snapshot as JSON. */
+	public BulkMigrationOperationalReport dryRun(final Path reportFile)
+			throws SQLException {
+		final Path file = Objects.requireNonNull(reportFile, "reportFile");
+		final BulkMigrationOperationalReport report = dryRun();
+		new BulkMigrationOperationalReportIO().write(file, report);
+		return report;
+	}
+
 	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {
 		if (operationalReportFile == null) {
 			return jobListener;
@@ -305,14 +314,7 @@ public final class BulkMigration {
 	/** Writes and returns a read-only operational snapshot without executing the job. */
 	public BulkMigrationOperationalReport inspect(final Path reportFile)
 			throws SQLException {
-		Objects.requireNonNull(reportFile, "reportFile");
-		try (Connection sourceConnection = source.getConnection();
-				Connection targetConnection = target.getConnection()) {
-			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
-					targetConnection, true);
-			return new BulkMigrationOperationalReportJobListener(readOnlyPlan, reportFile)
-					.publish();
-		}
+		return dryRun(reportFile);
 	}
 
 	public BulkMigrationJobVerificationResult verify() throws SQLException {

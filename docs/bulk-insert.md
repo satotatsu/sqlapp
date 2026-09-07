@@ -411,8 +411,9 @@ Call `dryRun()` before execution when an approval screen needs a detached
 snapshot of the resolved task order, lifecycle operations, core options,
 current status, and reproducibility fingerprint. It validates the same job used
 by `execute()` but does not expose connection-bound executors, execute lifecycle
-operations, or create checkpoint storage. Use `inspect(reportFile)` when the
-same snapshot should also be written as JSON.
+operations, or create checkpoint storage. Use `dryRun(reportFile)` when the
+same snapshot should also be written as JSON. The existing `inspect(reportFile)`
+form remains an equivalent compatibility alias.
 
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp
@@ -460,7 +461,7 @@ operational report at each job and table boundary. Report output is disabled by
 default and report-write failures fail the migration instead of being silently
 ignored. The detailed command API remains available when reporting failures
 must be observed while allowing the migration to continue.
-Call `migration.inspect(reportFile)` to write and return the same operational
+Call `migration.dryRun(reportFile)` to write and return the same operational
 format before execution. Like `inspect()`, this is read-only: it does not create
 or upgrade a database checkpoint table, create a file-checkpoint directory, or
 invoke the migration lifecycle.
