@@ -142,6 +142,10 @@ class BulkMigrationTest {
 		assertThrows(NullPointerException.class, () -> custom.dryRun(null));
 		assertThrows(NullPointerException.class,
 				() -> custom.verifyAndWriteRepairPlan(null));
+		assertThrows(IllegalArgumentException.class,
+				() -> custom.resetCheckpoints(null));
+		assertThrows(IllegalArgumentException.class,
+				() -> custom.resetCheckpoints(" "));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				assertDoesNotThrow(() -> custom.status()).getTasks().get(0).getState());
 	}
@@ -212,6 +216,11 @@ class BulkMigrationTest {
 				.databaseLease("database-worker").build();
 
 		assertEquals(0, migration.execute().getProcessedRows());
+		final String approvedFingerprint = migration.dryRun().planFingerprint();
+		assertEquals(List.of("PUBLIC.ITEMS"),
+				migration.resetCheckpoints(approvedFingerprint).getResetTaskIds());
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+				migration.status().getTasks().get(0).getState());
 		try (var connection = target.getConnection(); var tables = connection.getMetaData()
 				.getTables(connection.getCatalog(), null, "sqlapp_bulk_job_lease",
 						new String[] { "TABLE" })) {

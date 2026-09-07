@@ -3,6 +3,7 @@ package com.sqlapp.gradle.plugins;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -189,6 +190,20 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.status().getTasks().get(0).getState());
 		assertEquals(1, migration.execute().getAlreadyCompleteTasks());
+		assertThrows(IllegalArgumentException.class,
+				() -> migration.resetCheckpoints("wrong-fingerprint"));
+		assertEquals(BulkMigrationJobTaskState.COMPLETE,
+				migration.status().getTasks().get(0).getState());
+		final var reset = migration.resetCheckpoints(plan.planFingerprint());
+		assertEquals(List.of("ITEMS"), reset.getResetTaskIds());
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+				migration.status().getTasks().get(0).getState());
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+			rows.next();
+			assertEquals(2, rows.getInt(1));
+		}
+		assertEquals(2, migration.execute().getProcessedRows());
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'SQLAPP_BULK_MIGRATION_CHECKPOINT'")) {
 			rows.next();
@@ -223,6 +238,11 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals("JOB_COMPLETED", report.execution().event());
 		assertEquals(1, report.processedRows());
 		assertEquals(1, report.completedTasks());
+		final String approvedFingerprint = migration.dryRun().planFingerprint();
+		assertEquals(List.of("ITEMS"),
+				migration.resetCheckpoints(approvedFingerprint).getResetTaskIds());
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
+				migration.status().getTasks().get(0).getState());
 	}
 
 	@Test

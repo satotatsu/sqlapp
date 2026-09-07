@@ -16,6 +16,8 @@ import javax.sql.DataSource;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointResetResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
@@ -275,6 +277,48 @@ public final class BulkMigration {
 		final BulkMigrationOperationalReport report = dryRun();
 		new BulkMigrationOperationalReportIO().write(file, report);
 		return report;
+	}
+
+	/**
+	 * Deletes only this job's checkpoints after exact plan-fingerprint approval.
+	 * Migrated target rows are not changed.
+	 */
+	public BulkMigrationJobCheckpointResetResult resetCheckpoints(
+			final String approvedPlanFingerprint) throws SQLException {
+		if (approvedPlanFingerprint == null || approvedPlanFingerprint.isBlank()) {
+			throw new IllegalArgumentException(
+					"approvedPlanFingerprint must not be empty");
+		}
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection,
+					false);
+			if (!resetPlan.getFingerprint().equals(approvedPlanFingerprint)) {
+				throw new IllegalArgumentException(
+						"Approved plan fingerprint does not match the migration job plan");
+			}
+			if (leaseConfiguration == null) {
+				return BulkMigrationJobCheckpointManager.reset(resetPlan,
+						approvedPlanFingerprint);
+			}
+			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+				final var manager = BulkMigrationJobLeaseManagerFactory.create(null,
+						leaseConfiguration);
+				try (var ignored = manager.acquire(resetPlan.getFingerprint())) {
+					return BulkMigrationJobCheckpointManager.reset(resetPlan,
+							approvedPlanFingerprint);
+				}
+			}
+			try (Connection leaseConnection = target.getConnection()) {
+				leaseConnection.setAutoCommit(true);
+				final var manager = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+						leaseConfiguration);
+				try (var ignored = manager.acquire(resetPlan.getFingerprint())) {
+					return BulkMigrationJobCheckpointManager.reset(resetPlan,
+							approvedPlanFingerprint);
+				}
+			}
+		}
 	}
 
 	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {
