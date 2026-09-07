@@ -15,6 +15,30 @@ import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
+	void rejectsAmbiguousCaseSensitiveTableMatches() throws Exception {
+		final var dataSource = createDataSource();
+		try (var connection = dataSource.getConnection()) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE SQLAPP_BML_AMBIGUOUS (ID INTEGER)");
+				statement.execute("CREATE TABLE \"sqlapp_bml_ambiguous\" (ID INTEGER)");
+			}
+			final var failure = assertThrows(SQLException.class,
+					() -> new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_AMBIGUOUS"));
+			assertTrue(failure.getMessage().contains("Ambiguous"));
+			assertThrows(SQLException.class,
+					() -> new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+							"SQLAPP_BML_AMBIGUOUS").load("plan"));
+			assertThrows(SQLException.class,
+					() -> JdbcBulkMigrationJobLeaseTable.validateStructure(connection,
+							"SQLAPP_BML_AMBIGUOUS"));
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
+	@Test
 	void rejectsMissingAndCompositeLeasePrimaryKeys() throws Exception {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {

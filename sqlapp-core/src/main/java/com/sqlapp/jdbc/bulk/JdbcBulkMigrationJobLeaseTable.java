@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.DateTimeException;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -80,22 +81,25 @@ final class JdbcBulkMigrationJobLeaseTable {
 	static boolean exists(final Connection connection, final String tableName)
 			throws SQLException {
 		final String schema = currentSchema(connection);
+		final Set<TableIdentity> candidates = new HashSet<>();
 		try (ResultSet tables = connection.getMetaData().getTables(
 				connection.getCatalog(), null, "%", new String[] { "TABLE" })) {
 			while (tables.next()) {
 				if (tableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))
 						&& matchesSchema(schema, tables.getString("TABLE_SCHEM"))) {
-					return true;
+					candidates.add(identity(tables));
 				}
 			}
 		}
-		return false;
+		requireUnambiguous(candidates, tableName);
+		return !candidates.isEmpty();
 	}
 
 	static void validateStructure(final Connection connection,
 			final String tableName) throws SQLException {
 		final String schema = currentSchema(connection);
 		final Set<String> columns = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		final Set<TableIdentity> candidates = new HashSet<>();
 		String resolvedTable = tableName;
 		String resolvedSchema = schema;
 		try (ResultSet result = connection.getMetaData().getColumns(
@@ -104,11 +108,13 @@ final class JdbcBulkMigrationJobLeaseTable {
 				if (tableName.equalsIgnoreCase(result.getString("TABLE_NAME"))
 						&& matchesSchema(schema, result.getString("TABLE_SCHEM"))) {
 					columns.add(result.getString("COLUMN_NAME"));
+					candidates.add(identity(result));
 					resolvedTable = result.getString("TABLE_NAME");
 					resolvedSchema = result.getString("TABLE_SCHEM");
 				}
 			}
 		}
+		requireUnambiguous(candidates, tableName);
 		if (!columns.containsAll(REQUIRED_COLUMNS)) {
 			final Set<String> missing = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			missing.addAll(REQUIRED_COLUMNS);
@@ -141,5 +147,21 @@ final class JdbcBulkMigrationJobLeaseTable {
 
 	private static boolean matchesSchema(final String current, final String actual) {
 		return current == null || current.equals(actual);
+	}
+
+	private static TableIdentity identity(final ResultSet rows) throws SQLException {
+		return new TableIdentity(rows.getString("TABLE_CAT"),
+				rows.getString("TABLE_SCHEM"), rows.getString("TABLE_NAME"));
+	}
+
+	private static void requireUnambiguous(final Set<TableIdentity> candidates,
+			final String tableName) throws SQLException {
+		if (candidates.size() > 1) {
+			throw new SQLException("Ambiguous migration job lease table " + tableName
+					+ "; multiple catalog, schema or case-sensitive table matches exist");
+		}
+	}
+
+	private record TableIdentity(String catalog, String schema, String name) {
 	}
 }

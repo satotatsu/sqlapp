@@ -996,6 +996,9 @@ An existing JDBC lease table must have `PLAN_FINGERPRINT` as its sole primary-ke
 column. Both stores reject missing or composite primary keys, which would allow
 multiple owners to be stored for the same plan. Automatically created tables
 already use this structure.
+Lease metadata lookup rejects ambiguous table matches, including names that
+differ only in case. Ensure that the connection's catalog and schema identify
+a single lease table; metadata from multiple tables is never combined.
 Both JDBC lease stores reject malformed persisted owner IDs and expiry timestamps
 with a `SQLException` identifying the plan and relevant columns. Invalid lease
 data is never treated as an absent or expired lease; correct the control data
