@@ -15,6 +15,31 @@ import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
+	void ignoresLeaseTablesInOtherSchemas() throws Exception {
+		final var dataSource = createDataSource();
+		try (var connection = dataSource.getConnection()) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE SCHEMA OTHER_LEASE AUTHORIZATION DBA");
+				statement.execute("CREATE TABLE OTHER_LEASE.SQLAPP_BML_SCOPED ("
+						+ "PLAN_FINGERPRINT VARCHAR(256) PRIMARY KEY)");
+			}
+			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+					"SQLAPP_BML_SCOPED");
+			assertTrue(reader.load("plan").isEmpty());
+			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
+					"SQLAPP_BML_SCOPED");
+			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
+			final var lease = new BulkMigrationJobLease("plan", "owner", now.plusSeconds(30));
+			assertTrue(writer.tryAcquire(lease, now));
+			assertEquals(lease, reader.load("plan").orElseThrow());
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
+	@Test
 	void rejectsAnExistingLeaseTableWithMissingColumns() throws Exception {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {
@@ -25,6 +50,9 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 			assertThrows(SQLException.class,
 					() -> new JdbcBulkMigrationJobLeaseStore(connection,
 							"SQLAPP_BML_INVALID"));
+			assertThrows(SQLException.class,
+					() -> new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+							"SQLAPP_BML_INVALID").load("plan"));
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
 				closeable.close();

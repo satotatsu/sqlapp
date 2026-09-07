@@ -67,10 +67,12 @@ final class JdbcBulkMigrationJobLeaseTable {
 
 	static boolean exists(final Connection connection, final String tableName)
 			throws SQLException {
+		final String schema = currentSchema(connection);
 		try (ResultSet tables = connection.getMetaData().getTables(
 				connection.getCatalog(), null, "%", new String[] { "TABLE" })) {
 			while (tables.next()) {
-				if (tableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
+				if (tableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))
+						&& matchesSchema(schema, tables.getString("TABLE_SCHEM"))) {
 					return true;
 				}
 			}
@@ -80,11 +82,13 @@ final class JdbcBulkMigrationJobLeaseTable {
 
 	static void validateStructure(final Connection connection,
 			final String tableName) throws SQLException {
+		final String schema = currentSchema(connection);
 		final Set<String> columns = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		try (ResultSet result = connection.getMetaData().getColumns(
 				connection.getCatalog(), null, "%", "%")) {
 			while (result.next()) {
-				if (tableName.equalsIgnoreCase(result.getString("TABLE_NAME"))) {
+				if (tableName.equalsIgnoreCase(result.getString("TABLE_NAME"))
+						&& matchesSchema(schema, result.getString("TABLE_SCHEM"))) {
 					columns.add(result.getString("COLUMN_NAME"));
 				}
 			}
@@ -101,5 +105,14 @@ final class JdbcBulkMigrationJobLeaseTable {
 	private static Column varchar(final String name) {
 		return new Column(name).setDataType(DataType.VARCHAR)
 				.setLength(BulkMigrationJobLease.ID_MAX_LENGTH).setNotNull(true);
+	}
+
+	private static String currentSchema(final Connection connection) throws SQLException {
+		return connection.getMetaData().supportsSchemasInTableDefinitions()
+				? connection.getSchema() : null;
+	}
+
+	private static boolean matchesSchema(final String current, final String actual) {
+		return current == null || current.equals(actual);
 	}
 }
