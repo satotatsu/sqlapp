@@ -489,8 +489,10 @@ two independent databases expose the same wall-clock snapshot; quiesce writes
 or use database-specific snapshot coordination for that stronger guarantee.
 Use `verifyOrThrow()` or `run()` when a mismatch must fail
 the calling workflow. `BulkMigrationVerificationMismatchException` retains the
-complete verification result, and a configured verification report is written
-before the exception is raised. The non-throwing methods remain useful for
+complete verification result. A mismatch from `run()` also retains the committed
+migration result; a verification-only mismatch reports that no migration result
+is present. A configured verification report is written before the exception is
+raised. The non-throwing methods remain useful for
 interactive review; their returned result (and `Execution.requireMatch()`) lets
 the caller choose the policy explicitly.
 `verifyAndWriteRepairPlan(path)` is the shortest safe file-based repair entry

@@ -193,6 +193,9 @@ class BulkMigrationFacadeIntegrationTest {
 				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT TEXT)");
 			}
 		}
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("INSERT INTO ITEMS VALUES (1, 'source')");
+		}
 		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
 			statement.execute("INSERT INTO ITEMS VALUES (9, 'target only')");
 		}
@@ -202,9 +205,11 @@ class BulkMigrationFacadeIntegrationTest {
 				.schema(schema()).tables("ITEMS").operationalReport(operational)
 				.verificationReport(verification).build();
 
-		org.junit.jupiter.api.Assertions.assertThrows(
+		final var mismatch = org.junit.jupiter.api.Assertions.assertThrows(
 				BulkMigrationVerificationMismatchException.class,
 				migration::run);
+		assertTrue(mismatch.hasMigrationResult());
+		assertEquals(1, mismatch.getMigrationResult().getProcessedRows());
 		final var operationalReport = new BulkMigrationOperationalReportIO()
 				.read(operational);
 		assertEquals("JOB_FAILED", operationalReport.execution().event());

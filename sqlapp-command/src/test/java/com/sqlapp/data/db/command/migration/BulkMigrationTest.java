@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -74,6 +75,8 @@ class BulkMigrationTest {
 				migration::verifyOrThrow);
 		final var verification = mismatch.getVerificationResult();
 
+		assertFalse(mismatch.hasMigrationResult());
+		assertNull(mismatch.getMigrationResult());
 		assertFalse(verification.isMatch());
 		assertTrue(Files.isRegularFile(directory.resolve("verification/mismatch.json")));
 		assertFalse(new BulkMigrationVerificationReportIO()

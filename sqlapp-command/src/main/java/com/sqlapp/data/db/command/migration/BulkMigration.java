@@ -393,7 +393,7 @@ public final class BulkMigration {
 
 		public Execution requireMatch() {
 			if (!isMatch()) {
-				throw new BulkMigrationVerificationMismatchException(verification);
+				throw new BulkMigrationVerificationMismatchException(migration, verification);
 			}
 			return this;
 		}
