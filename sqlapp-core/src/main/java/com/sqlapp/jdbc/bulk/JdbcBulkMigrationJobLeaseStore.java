@@ -7,24 +7,19 @@ import java.sql.SQLException;
 import java.sql.SQLTransactionRollbackException;
 import java.time.Instant;
 import java.util.EnumMap;
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.ConnectionSqlExecutor;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
@@ -55,7 +50,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.rawTableName = tableName;
 		this.tableName = dialect.quote(tableName);
-		final Table table = leaseTable();
+		final Table table = JdbcBulkMigrationJobLeaseTable.table(rawTableName);
 		final var registry = dialect.createSqlFactoryRegistry();
 		for (SqlType type : new SqlType[] { SqlType.SELECT, SqlType.UPDATE,
 				SqlType.INSERT, SqlType.DELETE }) {
@@ -67,7 +62,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 	@Override
 	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
 			throws SQLException {
-		validateFingerprint(planFingerprint);
+		JdbcBulkMigrationJobLeaseTable.validateFingerprint(planFingerprint);
 		return loadInternal(planFingerprint);
 	}
 
@@ -118,7 +113,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 					.orElse(null);
 			if (current != null && current.ownerId().equals(ownerId)) {
 				new JdbcHandler(sqlNodes.get(SqlType.DELETE)).execute(connection,
-						parameters(planFingerprint));
+						JdbcBulkMigrationJobLeaseTable.parameters(planFingerprint));
 			}
 			return null;
 		});
@@ -128,26 +123,16 @@ public final class JdbcBulkMigrationJobLeaseStore
 			throws SQLException {
 		final BulkMigrationJobLease[] result = new BulkMigrationJobLease[1];
 		new JdbcHandler(sqlNodes.get(SqlType.SELECT),
-				rs -> result[0] = lease(rs, fingerprint))
-				.execute(connection, parameters(fingerprint));
+				rs -> result[0] = JdbcBulkMigrationJobLeaseTable.lease(rs,
+						fingerprint)).execute(connection,
+						JdbcBulkMigrationJobLeaseTable.parameters(fingerprint));
 		return Optional.ofNullable(result[0]);
-	}
-
-	private static BulkMigrationJobLease lease(final ExResultSet resultSet,
-			final String fingerprint) throws SQLException {
-		final Map<String, Integer> columns = new LinkedHashMap<>();
-		final var metadata = resultSet.getMetaData();
-		for (int i = 1; i <= metadata.getColumnCount(); i++) {
-			columns.put(metadata.getColumnLabel(i).toUpperCase(Locale.ROOT), i);
-		}
-		return new BulkMigrationJobLease(fingerprint,
-				resultSet.getString(columns.get("OWNER_ID")),
-				Instant.parse(resultSet.getString(columns.get("EXPIRES_AT"))));
 	}
 
 	private void write(final BulkMigrationJobLease lease, final SqlType type)
 			throws SQLException {
-		new JdbcHandler(sqlNodes.get(type)).execute(connection, parameters(lease));
+		new JdbcHandler(sqlNodes.get(type)).execute(connection,
+				JdbcBulkMigrationJobLeaseTable.parameters(lease));
 	}
 
 	private <T> T transaction(final SqlCallable<T> callable) throws SQLException {
@@ -335,7 +320,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 					+ tableName + " WHERE 1 = 0").close();
 		} catch (SQLException missing) {
 			try {
-				final Table table = leaseTable();
+				final Table table = JdbcBulkMigrationJobLeaseTable.table(rawTableName);
 				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 						.getSqlFactory(table, State.Added);
 				new ConnectionSqlExecutor(connection, false)
@@ -347,41 +332,8 @@ public final class JdbcBulkMigrationJobLeaseStore
 		}
 	}
 
-	private Table leaseTable() {
-		final Table table = new Table(rawTableName);
-		final Column fingerprint = varchar("PLAN_FINGERPRINT");
-		table.getColumns().add(fingerprint);
-		table.getColumns().add(varchar("OWNER_ID"));
-		table.getColumns().add(new Column("EXPIRES_AT").setDataType(DataType.VARCHAR)
-				.setLength(40).setNotNull(true));
-		table.setPrimaryKey((String) null, fingerprint);
-		return table;
-	}
-
-	private static Column varchar(final String name) {
-		return new Column(name).setDataType(DataType.VARCHAR)
-				.setLength(BulkMigrationJobLease.ID_MAX_LENGTH).setNotNull(true);
-	}
-
 	private String column(final String name) {
 		return dialect.quote(name);
-	}
-
-	private static ParametersContext parameters(final String fingerprint) {
-		final ParametersContext parameters = new ParametersContext();
-		parameters.put("PLAN_FINGERPRINT", fingerprint);
-		return parameters;
-	}
-
-	private static ParametersContext parameters(final BulkMigrationJobLease lease) {
-		final ParametersContext parameters = parameters(lease.planFingerprint());
-		parameters.put("OWNER_ID", lease.ownerId());
-		parameters.put("EXPIRES_AT", lease.expiresAt().toString());
-		return parameters;
-	}
-
-	private static void validateFingerprint(final String fingerprint) {
-		new BulkMigrationJobLease(fingerprint, "validation", Instant.MAX);
 	}
 
 	private static void validateCandidate(final BulkMigrationJobLease lease,

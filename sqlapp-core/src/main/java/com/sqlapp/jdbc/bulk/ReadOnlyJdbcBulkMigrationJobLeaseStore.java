@@ -9,16 +9,16 @@ import java.util.Objects;
 import java.util.Optional;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.jdbc.sql.JdbcHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** JDBC lease reader that never creates, updates, or deletes its control table. */
 public final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 		implements BulkMigrationJobLeaseStore {
 	private final Connection connection;
 	private final String rawTableName;
-	private final String tableName;
-	private final String fingerprintColumn;
-	private final String ownerColumn;
-	private final String expiresColumn;
+	private final SqlNode selectNode;
 
 	public ReadOnlyJdbcBulkMigrationJobLeaseStore(final Connection connection,
 			final String tableName) throws SQLException {
@@ -28,32 +28,24 @@ public final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 		}
 		final var dialect = DialectResolver.getInstance().getDialect(connection);
 		this.rawTableName = tableName;
-		this.tableName = dialect.quote(tableName);
-		this.fingerprintColumn = dialect.quote("PLAN_FINGERPRINT");
-		this.ownerColumn = dialect.quote("OWNER_ID");
-		this.expiresColumn = dialect.quote("EXPIRES_AT");
+		this.selectNode = dialect.createSqlFactoryRegistry()
+				.createSqlNodes(JdbcBulkMigrationJobLeaseTable.table(tableName),
+						SqlType.SELECT).get(0);
 	}
 
 	@Override
 	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
 			throws SQLException {
-		new BulkMigrationJobLease(planFingerprint, "validation", Instant.MAX);
+		JdbcBulkMigrationJobLeaseTable.validateFingerprint(planFingerprint);
 		if (!tableExists()) {
 			return Optional.empty();
 		}
-		final String sql = "SELECT " + ownerColumn + ", " + expiresColumn + " FROM "
-				+ tableName + " WHERE " + fingerprintColumn + " = ?";
-		try (var statement = connection.prepareStatement(sql)) {
-			statement.setString(1, planFingerprint);
-			try (var resultSet = statement.executeQuery()) {
-				if (!resultSet.next()) {
-					return Optional.empty();
-				}
-				return Optional.of(new BulkMigrationJobLease(planFingerprint,
-						resultSet.getString("OWNER_ID"),
-						Instant.parse(resultSet.getString("EXPIRES_AT"))));
-			}
-		}
+		final BulkMigrationJobLease[] result = new BulkMigrationJobLease[1];
+		new JdbcHandler(selectNode,
+				rs -> result[0] = JdbcBulkMigrationJobLeaseTable.lease(rs,
+						planFingerprint)).execute(connection,
+					JdbcBulkMigrationJobLeaseTable.parameters(planFingerprint));
+		return Optional.ofNullable(result[0]);
 	}
 
 	@Override
@@ -82,4 +74,5 @@ public final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 		}
 		return false;
 	}
+
 }
