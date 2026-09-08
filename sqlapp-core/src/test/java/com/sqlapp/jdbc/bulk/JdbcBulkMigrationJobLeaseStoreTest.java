@@ -15,6 +15,29 @@ import com.sqlapp.AbstractDbTest;
 
 class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
+	void readsLeaseInSchemaContainingMetadataWildcards() throws Exception {
+		final var dataSource = createDataSource();
+		try (var connection = dataSource.getConnection()) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE SCHEMA \"LEASE_%\" AUTHORIZATION DBA");
+			}
+			connection.setSchema("LEASE_%");
+			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
+					"SQLAPP_BML_WILDCARD");
+			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
+			final var lease = new BulkMigrationJobLease("plan", "owner", now.plusSeconds(30));
+			assertTrue(writer.tryAcquire(lease, now));
+			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+					"SQLAPP_BML_WILDCARD");
+			assertEquals(lease, reader.load("plan").orElseThrow());
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) {
+				closeable.close();
+			}
+		}
+	}
+
+	@Test
 	void rejectsAmbiguousCaseSensitiveTableMatches() throws Exception {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {
