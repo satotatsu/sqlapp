@@ -83,7 +83,7 @@ final class JdbcBulkMigrationJobLeaseTable {
 		final String schema = currentSchema(connection);
 		final Set<TableIdentity> candidates = new HashSet<>();
 		try (ResultSet tables = connection.getMetaData().getTables(
-				connection.getCatalog(), null, "%", new String[] { "TABLE" })) {
+				connection.getCatalog(), schemaPattern(connection, schema), "%", new String[] { "TABLE" })) {
 			while (tables.next()) {
 				if (tableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))
 						&& matchesSchema(schema, tables.getString("TABLE_SCHEM"))) {
@@ -103,7 +103,7 @@ final class JdbcBulkMigrationJobLeaseTable {
 		String resolvedTable = tableName;
 		String resolvedSchema = schema;
 		try (ResultSet result = connection.getMetaData().getColumns(
-				connection.getCatalog(), null, "%", "%")) {
+				connection.getCatalog(), schemaPattern(connection, schema), "%", "%")) {
 			while (result.next()) {
 				if (tableName.equalsIgnoreCase(result.getString("TABLE_NAME"))
 						&& matchesSchema(schema, result.getString("TABLE_SCHEM"))) {
@@ -147,6 +147,19 @@ final class JdbcBulkMigrationJobLeaseTable {
 
 	private static boolean matchesSchema(final String current, final String actual) {
 		return current == null || current.equals(actual);
+	}
+
+	private static String schemaPattern(final Connection connection, final String schema)
+			throws SQLException {
+		if (schema == null) {
+			return null;
+		}
+		final String escape = connection.getMetaData().getSearchStringEscape();
+		if (escape == null || escape.isEmpty()) {
+			return schema.contains("_") || schema.contains("%") ? null : schema;
+		}
+		return schema.replace(escape, escape + escape)
+				.replace("_", escape + "_").replace("%", escape + "%");
 	}
 
 	private static TableIdentity identity(final ResultSet rows) throws SQLException {

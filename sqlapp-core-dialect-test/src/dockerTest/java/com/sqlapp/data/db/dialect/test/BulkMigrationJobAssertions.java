@@ -29,6 +29,7 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
+import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationJobLeaseStore;
 
 /** Shared real-database assertions for dependency-ordered migration jobs. */
 public final class BulkMigrationJobAssertions {
@@ -46,6 +47,9 @@ public final class BulkMigrationJobAssertions {
 		final String fingerprint = "plan-" + suffix;
 		final Instant acquiredAt = Instant.parse("2026-01-01T00:00:00Z");
 		final Duration duration = Duration.ofMinutes(5);
+		final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(secondConnection,
+				tableName);
+		assertTrue(reader.load(fingerprint).isEmpty());
 		final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection,
 				tableName);
 		final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection,
@@ -53,6 +57,7 @@ public final class BulkMigrationJobAssertions {
 		final var firstLease = new BulkMigrationJobLease(fingerprint,
 				"owner-first", acquiredAt.plus(duration));
 		assertTrue(first.tryAcquire(firstLease, acquiredAt));
+		assertEquals(firstLease, reader.load(fingerprint).orElseThrow());
 		assertFalse(second.tryAcquire(new BulkMigrationJobLease(fingerprint,
 				"owner-second", acquiredAt.plus(duration).plusSeconds(1)),
 				acquiredAt.plusSeconds(1)));
@@ -61,10 +66,12 @@ public final class BulkMigrationJobAssertions {
 		final var secondLease = new BulkMigrationJobLease(fingerprint,
 				"owner-second", takeoverAt.plus(duration));
 		assertTrue(second.tryAcquire(secondLease, takeoverAt));
+		assertEquals(secondLease, reader.load(fingerprint).orElseThrow());
 		first.release(fingerprint, "owner-first");
 		assertEquals("owner-second", first.load(fingerprint).orElseThrow().ownerId());
 		second.release(fingerprint, "owner-second");
 		assertTrue(first.load(fingerprint).isEmpty());
+		assertTrue(reader.load(fingerprint).isEmpty());
 
 		final String concurrentFingerprint = fingerprint + "-concurrent";
 		final Instant concurrentAt = acquiredAt.plusSeconds(10);
