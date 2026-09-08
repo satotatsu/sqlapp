@@ -120,7 +120,8 @@ final class JdbcBulkMigrationJobLeaseTable {
 			missing.addAll(REQUIRED_COLUMNS);
 			missing.removeAll(columns);
 			throw new SQLException("Migration job lease table " + tableName
-					+ " is missing required columns: " + missing);
+					+ " is missing required columns: " + missing
+					+ " (catalog=" + connection.getCatalog() + ", schema=" + schema + ")");
 		}
 		final Set<String> primaryKey = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		try (ResultSet keys = connection.getMetaData().getPrimaryKeys(
@@ -141,8 +142,9 @@ final class JdbcBulkMigrationJobLeaseTable {
 	}
 
 	private static String currentSchema(final Connection connection) throws SQLException {
-		return connection.getMetaData().supportsSchemasInTableDefinitions()
+		final String schema = connection.getMetaData().supportsSchemasInTableDefinitions()
 				? connection.getSchema() : null;
+		return schema == null || schema.isEmpty() ? null : schema;
 	}
 
 	private static boolean matchesSchema(final String current, final String actual) {

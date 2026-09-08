@@ -999,6 +999,8 @@ already use this structure.
 Lease metadata lookup rejects ambiguous table matches, including names that
 differ only in case. Ensure that the connection's catalog and schema identify
 a single lease table; metadata from multiple tables is never combined.
+Drivers returning an empty current schema (including Vertica JDBC) are treated
+as not supplying a schema. The lookup still rejects multiple matching tables.
 Both JDBC lease stores reject malformed persisted owner IDs and expiry timestamps
 with a `SQLException` identifying the plan and relevant columns. Invalid lease
 data is never treated as an absent or expired lease; correct the control data
