@@ -4,6 +4,7 @@ package com.sqlapp.jdbc.bulk;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.time.Instant;
 import java.time.DateTimeException;
 import java.util.LinkedHashMap;
@@ -142,9 +143,13 @@ final class JdbcBulkMigrationJobLeaseTable {
 	}
 
 	private static String currentSchema(final Connection connection) throws SQLException {
-		final String schema = connection.getMetaData().supportsSchemasInTableDefinitions()
-				? connection.getSchema() : null;
-		return schema == null || schema.isEmpty() ? null : schema;
+		try {
+			final String schema = connection.getMetaData().supportsSchemasInTableDefinitions()
+					? connection.getSchema() : null;
+			return schema == null || schema.isEmpty() ? null : schema;
+		} catch (SQLFeatureNotSupportedException | AbstractMethodError unsupported) {
+			return null;
+		}
 	}
 
 	private static boolean matchesSchema(final String current, final String actual) {
