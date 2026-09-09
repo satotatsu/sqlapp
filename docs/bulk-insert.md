@@ -479,6 +479,12 @@ part of dry-run validation. The lifecycle is invoked only by `execute()`;
 Use a durable lifecycle from the underlying API when recovery must survive a
 process crash.
 
+For the common file-backed case, `.fileMaintenance(sharedDirectory)` adds that
+durability without requiring callers to assemble a store and wrapper. Execution
+records lifecycle transitions, while `dryRun()` reads the matching state into
+the operational report without changing it. The directory should be durable and
+shared by every worker that can resume or inspect the same migration.
+
 Add `.operationalReport(reportFile)` to atomically refresh the existing JSON
 operational report at each job and table boundary. Report output is disabled by
 default and report-write failures fail the migration instead of being silently

@@ -285,6 +285,36 @@ class BulkMigrationTest {
 	}
 
 	@Test
+	void fileMaintenanceIsSimpleDurableAndVisibleInDryRun(
+			@org.junit.jupiter.api.io.TempDir final java.nio.file.Path directory)
+			throws Exception {
+		final JDBCDataSource source = dataSource("facade_maintenance_source");
+		final JDBCDataSource target = dataSource("facade_maintenance_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY)");
+			}
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.fileMaintenance(directory).build();
+
+		assertEquals(null, migration.dryRun().maintenance());
+		assertEquals(0, migration.execute().getProcessedRows());
+		final var report = migration.dryRun();
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.maintenance().status());
+		assertEquals(BulkMigrationJobTaskState.COMPLETE,
+				migration.status().getTasks().get(0).getState());
+	}
+
+	@Test
 	void verificationScopeRestoresBothConnections() throws Exception {
 		try (Connection source = dataSource("verification_scope_source").getConnection();
 				Connection target = dataSource("verification_scope_target").getConnection()) {

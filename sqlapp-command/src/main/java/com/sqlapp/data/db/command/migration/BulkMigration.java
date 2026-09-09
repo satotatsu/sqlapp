@@ -47,6 +47,7 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.DurableBulkMigrationJobLifecycle;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
@@ -78,6 +79,7 @@ public final class BulkMigration {
 	private final BulkMigrationCheckpointStore checkpointStore;
 	private final BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private final BulkMigrationJobLifecycle lifecycle;
+	private final Path maintenanceDirectory;
 	private final Path operationalReportFile;
 	private final Path verificationReportFile;
 	private final Path repairPlanOnMismatchFile;
@@ -109,6 +111,7 @@ public final class BulkMigration {
 			final BulkMigrationCheckpointStore checkpointStore,
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
 			final BulkMigrationJobLifecycle lifecycle,
+			final Path maintenanceDirectory,
 			final Path operationalReportFile, final Path verificationReportFile,
 			final Path repairPlanOnMismatchFile,
 			final Integer maxReportedMismatches,
@@ -139,6 +142,8 @@ public final class BulkMigration {
 		this.checkpointStore = checkpointStore;
 		this.leaseConfiguration = leaseConfiguration;
 		this.lifecycle = lifecycle == null ? BulkMigrationJobLifecycle.NO_OP : lifecycle;
+		this.maintenanceDirectory = maintenanceDirectory == null ? null
+				: maintenanceDirectory.toAbsolutePath().normalize();
 		this.operationalReportFile = operationalReportFile == null ? null
 				: operationalReportFile.toAbsolutePath().normalize();
 		this.verificationReportFile = verificationReportFile == null ? null
@@ -181,6 +186,12 @@ public final class BulkMigration {
 		public BulkMigrationBuilder fileLease(final String ownerId, final Path directory) {
 			this.leaseConfiguration = BulkMigrationJobLeaseConfiguration.file(ownerId,
 					directory);
+			return this;
+		}
+
+		/** Records lifecycle recovery state in a shared directory. */
+		public BulkMigrationBuilder fileMaintenance(final Path directory) {
+			this.maintenanceDirectory = Objects.requireNonNull(directory, "directory");
 			return this;
 		}
 
@@ -267,7 +278,7 @@ public final class BulkMigration {
 			final BulkMigrationJobStatus status = BulkMigrationJobStatusInspector.inspect(
 					readOnlyPlan);
 			return new BulkMigrationOperationalReportBuilder().build(readOnlyPlan, status,
-					null, null);
+					maintenanceState(readOnlyPlan), null);
 		}
 	}
 
@@ -532,7 +543,21 @@ public final class BulkMigration {
 					.keysetSource(keysetSource(sourceConnection, table))
 					.options(options).checkpointStore(checkpointStore).build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks, lifecycle);
+		return BulkMigrationJobPlanner.plan(tasks, effectiveLifecycle());
+	}
+
+	private BulkMigrationJobLifecycle effectiveLifecycle() {
+		return maintenanceDirectory == null ? lifecycle
+				: new DurableBulkMigrationJobLifecycle(lifecycle,
+						new FileBulkMigrationMaintenanceStateStore(maintenanceDirectory));
+	}
+
+	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState maintenanceState(
+			final BulkMigrationJobPlan plan) throws SQLException {
+		if (plan.getLifecycle() instanceof DurableBulkMigrationJobLifecycle durable) {
+			return durable.inspect(plan).orElse(null);
+		}
+		return null;
 	}
 
 	private BulkMigrationJobRepairPlan repairPlan(final Connection sourceConnection,
