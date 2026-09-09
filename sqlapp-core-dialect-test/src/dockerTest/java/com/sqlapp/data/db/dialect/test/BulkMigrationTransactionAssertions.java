@@ -50,6 +50,9 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(2, result.getCompletedChunks());
 		assertEquals(3, count(connection, countSql));
 		assertEquals(3, checkpointStore.load(migrationId).orElseThrow().getProcessedRows());
+		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection,
+				option.getCheckpointTableName()).load(migrationId).orElseThrow()
+				.getProcessedRows());
 	}
 
 	public static void assertDatabaseCheckpointRejected(final Connection connection,
@@ -96,6 +99,9 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(3, result.getProcessedRows());
 		assertEquals(2, result.getCompletedChunks());
 		assertEquals(3, count(connection, countSql));
+		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection,
+				option.getCheckpointTableName()).load(migrationId).orElseThrow()
+				.getProcessedRows());
 	}
 
 	public static void assertDatabaseCheckpointInsertRejected(final Connection connection,
