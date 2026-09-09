@@ -187,7 +187,18 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	private Table checkpointTable(final boolean includeResumeToken,
 			final boolean includeChunkSize) {
-		final Table table = new Table(rawTableName);
+		return checkpointTable(rawTableName, resumeTokenType, includeResumeToken,
+				includeChunkSize);
+	}
+
+	static Table readTable(final String tableName) {
+		return checkpointTable(tableName, "VARCHAR", true, true);
+	}
+
+	private static Table checkpointTable(final String tableName,
+			final String resumeTokenType, final boolean includeResumeToken,
+			final boolean includeChunkSize) {
+		final Table table = new Table(tableName);
 		final Column migrationId = column("MIGRATION_ID", DataType.VARCHAR, 255, true);
 		table.getColumns().add(migrationId);
 		table.getColumns().add(column("SOURCE_FINGERPRINT", DataType.VARCHAR, 255, false));

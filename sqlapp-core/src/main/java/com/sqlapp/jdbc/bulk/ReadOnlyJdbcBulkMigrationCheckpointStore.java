@@ -15,11 +15,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -43,7 +40,8 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		}
 		this.rawTableName = tableName;
 		this.selectNode = DialectResolver.getInstance().getDialect(connection)
-				.createSqlFactoryRegistry().createSqlNodes(table(tableName), SqlType.SELECT)
+				.createSqlFactoryRegistry().createSqlNodes(
+						JdbcBulkMigrationCheckpointStore.readTable(tableName), SqlType.SELECT)
 				.get(0);
 	}
 
@@ -176,23 +174,6 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		final ParametersContext parameters = new ParametersContext();
 		parameters.put("MIGRATION_ID", migrationId);
 		return parameters;
-	}
-
-	private static Table table(final String tableName) {
-		final Table table = new Table(tableName);
-		final Column migrationId = new Column("MIGRATION_ID")
-				.setDataType(DataType.VARCHAR).setLength(255).setNotNull(true);
-		table.getColumns().add(migrationId);
-		table.getColumns().add(new Column("SOURCE_FINGERPRINT").setDataType(DataType.VARCHAR));
-		table.getColumns().add(new Column("TARGET_FINGERPRINT").setDataType(DataType.VARCHAR));
-		table.getColumns().add(new Column("PROCESSED_ROWS").setDataType(DataType.DECIMAL));
-		table.getColumns().add(new Column("COMPLETED_CHUNKS").setDataType(DataType.DECIMAL));
-		table.getColumns().add(new Column("CHUNK_SIZE").setDataType(DataType.INT));
-		table.getColumns().add(new Column("LAST_CHUNK_HASH").setDataType(DataType.VARCHAR));
-		table.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR));
-		table.getColumns().add(new Column("COMPLETE_FLAG").setDataType(DataType.CHAR));
-		table.setPrimaryKey((String) null, migrationId);
-		return table;
 	}
 
 	private record TableIdentity(String catalog, String schema, String name) {
