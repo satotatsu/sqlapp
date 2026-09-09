@@ -62,6 +62,13 @@ class VirticaBulkInsertTest {
 	}
 
 	@Test
+	void readsJdbcCheckpointWithoutMutatingItsTable() throws Exception {
+		try (Connection connection = createConnection()) {
+			BulkMigrationTransactionAssertions.assertJdbcCheckpointReadOnly(connection);
+		}
+	}
+
+	@Test
 	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
 			@TempDir final Path checkpointDirectory) throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {

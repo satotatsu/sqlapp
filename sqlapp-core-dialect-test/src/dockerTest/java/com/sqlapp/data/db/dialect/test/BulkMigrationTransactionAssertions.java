@@ -11,6 +11,7 @@ import java.nio.file.Path;
 
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
@@ -20,6 +21,20 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 /** Shared real-database assertions for atomic data/checkpoint commits. */
 public final class BulkMigrationTransactionAssertions {
 	private BulkMigrationTransactionAssertions() {
+	}
+
+	public static void assertJdbcCheckpointReadOnly(final Connection connection)
+			throws SQLException {
+		final String tableName = "SQLAPP_BULK_READ_ONLY_CHECKPOINT";
+		final String migrationId = "read-only-" + java.util.UUID.randomUUID();
+		final var checkpoint = BulkMigrationCheckpoint.builder()
+				.migrationId(migrationId).sourceFingerprint("source-v1")
+				.targetFingerprint("target-v1").processedRows(3).completedChunks(2)
+				.chunkSize(2).lastChunkHash("hash-3").resumeToken("token-3")
+				.complete(true).build().validate();
+		new JdbcBulkMigrationCheckpointStore(connection, tableName).save(checkpoint);
+		assertEquals(checkpoint, JdbcBulkMigrationCheckpointStore
+				.readOnly(connection, tableName).load(migrationId).orElseThrow());
 	}
 
 	public static void assertDatabaseCheckpointAtomic(final Connection connection,

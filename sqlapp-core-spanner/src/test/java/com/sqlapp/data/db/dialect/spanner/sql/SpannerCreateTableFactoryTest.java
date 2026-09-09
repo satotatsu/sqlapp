@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.spanner.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +24,22 @@ import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 
 class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
+	@Test
+	void omitsUnsupportedNumericPrecisionAndScale() {
+		final Table table = new Table("CHECKPOINTS");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.BIGINT)
+				.setNotNull(true);
+		table.getColumns().add(id);
+		table.getColumns().add(new Column("PROCESSED_ROWS")
+				.setDataType(DataType.DECIMAL).setLength(19).setScale(0));
+		table.getConstraints().addPrimaryKeyConstraint("PK_CHECKPOINTS", id);
+
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
+		assertTrue(sql.contains("PROCESSED_ROWS NUMERIC"), sql);
+		assertFalse(sql.contains("NUMERIC("), sql);
+	}
 
 	@Test
 	void testPrimaryKeyOutsideColumnList() {

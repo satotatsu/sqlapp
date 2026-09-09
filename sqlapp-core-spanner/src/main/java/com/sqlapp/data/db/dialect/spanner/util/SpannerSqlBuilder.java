@@ -106,6 +106,9 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 	@Override
 	protected SpannerSqlBuilder typeDefinition(final Column column) {
 		if (column.getArrayDimension() == 0) {
+			if (isNumeric(column)) {
+				return _add("NUMERIC");
+			}
 			return super.typeDefinition(column);
 		}
 		if (column.getArrayDimension() != 1) {
@@ -114,7 +117,11 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 							+ column.getName());
 		}
 		_add("ARRAY<");
-		super.typeDefinition(column);
+		if (isNumeric(column)) {
+			_add("NUMERIC");
+		} else {
+			super.typeDefinition(column);
+		}
 		_add(">");
 		final Integer vectorLength = column.getSpecifics().get(
 				VECTOR_LENGTH, Integer.class);
@@ -134,6 +141,11 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 					._add(vectorLength)._add(")");
 		}
 		return this;
+	}
+
+	private static boolean isNumeric(final Column column) {
+		return column.getDataType() == DataType.NUMERIC
+				|| column.getDataType() == DataType.DECIMAL;
 	}
 
 	@Override
