@@ -48,9 +48,9 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationCheckpointStore;
-import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationJobLeaseStore;
 
 import lombok.Builder;
 
@@ -439,7 +439,7 @@ public final class BulkMigration {
 					Instant.now());
 		}
 		try (Connection connection = target.getConnection()) {
-			final var lease = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+			final var lease = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 					leaseConfiguration.tableName()).load(report.planFingerprint()).orElse(null);
 			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
 					Instant.now());

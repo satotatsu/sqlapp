@@ -27,7 +27,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
 			final var lease = new BulkMigrationJobLease("plan", "owner", now.plusSeconds(30));
 			assertTrue(writer.tryAcquire(lease, now));
-			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 					"SQLAPP_BML_WILDCARD");
 			assertEquals(lease, reader.load("plan").orElseThrow());
 		} finally {
@@ -49,7 +49,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 					() -> new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_AMBIGUOUS"));
 			assertTrue(failure.getMessage().contains("Ambiguous"));
 			assertThrows(SQLException.class,
-					() -> new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+					() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 							"SQLAPP_BML_AMBIGUOUS").load("plan"));
 			assertThrows(SQLException.class,
 					() -> JdbcBulkMigrationJobLeaseTable.validateStructure(connection,
@@ -78,7 +78,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 						() -> new JdbcBulkMigrationJobLeaseStore(connection, table));
 				assertTrue(failure.getMessage().contains("PLAN_FINGERPRINT alone"));
 				assertThrows(SQLException.class,
-						() -> new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection, table)
+						() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection, table)
 								.load("plan"));
 			}
 		} finally {
@@ -94,7 +94,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 		try (var connection = dataSource.getConnection()) {
 			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
 					"SQLAPP_BML_CORRUPT");
-			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 					"SQLAPP_BML_CORRUPT");
 			try (var statement = connection.prepareStatement(
 					"INSERT INTO SQLAPP_BML_CORRUPT VALUES (?, ?, ?)")) {
@@ -125,7 +125,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 				statement.execute("CREATE TABLE OTHER_LEASE.SQLAPP_BML_SCOPED ("
 						+ "PLAN_FINGERPRINT VARCHAR(256) PRIMARY KEY)");
 			}
-			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 					"SQLAPP_BML_SCOPED");
 			assertTrue(reader.load("plan").isEmpty());
 			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
@@ -153,7 +153,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 					() -> new JdbcBulkMigrationJobLeaseStore(connection,
 							"SQLAPP_BML_INVALID"));
 			assertThrows(SQLException.class,
-					() -> new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection,
+					() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 							"SQLAPP_BML_INVALID").load("plan"));
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
@@ -167,7 +167,7 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 		final var dataSource = createDataSource();
 		try (var readerConnection = dataSource.getConnection();
 				var writerConnection = dataSource.getConnection()) {
-			final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(
 					readerConnection, "SQLAPP_BML_READ_TEST");
 			assertTrue(reader.load("plan").isEmpty());
 			try (var tables = readerConnection.getMetaData().getTables(

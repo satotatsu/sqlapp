@@ -29,7 +29,6 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
-import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationJobLeaseStore;
 
 /** Shared real-database assertions for dependency-ordered migration jobs. */
 public final class BulkMigrationJobAssertions {
@@ -47,7 +46,7 @@ public final class BulkMigrationJobAssertions {
 		final String fingerprint = "plan-" + suffix;
 		final Instant acquiredAt = Instant.parse("2026-01-01T00:00:00Z");
 		final Duration duration = Duration.ofMinutes(5);
-		final var reader = new ReadOnlyJdbcBulkMigrationJobLeaseStore(secondConnection,
+		final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(secondConnection,
 				tableName);
 		assertTrue(reader.load(fingerprint).isEmpty());
 		final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection,

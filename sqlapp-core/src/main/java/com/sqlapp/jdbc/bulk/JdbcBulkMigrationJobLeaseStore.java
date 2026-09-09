@@ -57,6 +57,12 @@ public final class JdbcBulkMigrationJobLeaseStore
 		ensureTable();
 	}
 
+	/** Returns a reader that does not create or modify the lease table. */
+	public static BulkMigrationJobLeaseStore readOnly(final Connection connection,
+			final String tableName) throws SQLException {
+		return new ReadOnlyJdbcBulkMigrationJobLeaseStore(connection, tableName);
+	}
+
 	@Override
 	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
 			throws SQLException {

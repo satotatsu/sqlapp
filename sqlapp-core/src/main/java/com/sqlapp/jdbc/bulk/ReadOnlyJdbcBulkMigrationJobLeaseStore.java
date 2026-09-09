@@ -13,13 +13,13 @@ import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** JDBC lease reader that never creates, updates, or deletes its control table. */
-public final class ReadOnlyJdbcBulkMigrationJobLeaseStore
+final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 		implements BulkMigrationJobLeaseStore {
 	private final Connection connection;
 	private final String rawTableName;
 	private final SqlNode selectNode;
 
-	public ReadOnlyJdbcBulkMigrationJobLeaseStore(final Connection connection,
+	ReadOnlyJdbcBulkMigrationJobLeaseStore(final Connection connection,
 			final String tableName) throws SQLException {
 		this.connection = Objects.requireNonNull(connection, "connection");
 		if (tableName == null || !tableName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
