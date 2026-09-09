@@ -15,6 +15,20 @@ continues to use Access SQL, data types, identifier quoting, and AutoNumber
 semantics; UCanAccess's internal use of HSQLDB is an implementation detail and
 does not make an HSQLDB dialect appropriate for Access files.
 
+The Access-specific SQL generator supports:
+
+- Access `COUNTER`/AutoNumber column DDL, including inline primary keys
+- `TEXT`, `MEMO`, `OLE`, Boolean, numeric and date/time type generation
+- Access date/time default functions (`DATE()`, `TIME()` and `NOW()`)
+- table, primary-key and index creation without unsupported clauses
+- multi-row prepared INSERTs through UCanAccess `VALUES (...), (...)`
+- truncate semantics through `DELETE FROM`, because Access has no `TRUNCATE`
+- Access cascade-rule capability reporting and mixed-case identifiers
+
+Generated SQL is intended for UCanAccess 5.1.6 and Access `.mdb`/`.accdb`
+files. UCanAccess accepts multi-row `VALUES` even though older native Access
+interfaces do not expose all of the same syntax.
+
 ## Current limitation
 
 UCanAccess 5.1.6 uses Jackcess to access the database file. Some Access index
@@ -24,3 +38,8 @@ unsupported sort order and the affected indexes make that database read-only.
 The sample is therefore used to verify metadata reads, while write and
 AutoNumber generated-key behavior is tested with a newly created Access 2010
 database.
+
+UCanAccess returns only the last generated AutoNumber value after a JDBC batch,
+not one key per row. Consequently `supportsBatchExecuteGeneratedKeys()` remains
+disabled. Multi-row inserts that do not require generated-key propagation use
+one prepared statement for performance.

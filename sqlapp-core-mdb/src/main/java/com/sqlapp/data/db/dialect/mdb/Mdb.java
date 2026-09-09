@@ -213,6 +213,16 @@ public class Mdb extends Dialect {
 	}
 
 	@Override
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
+	@Override
 	public boolean supportsDefaultValueFunction() {
 		return false;
 	}

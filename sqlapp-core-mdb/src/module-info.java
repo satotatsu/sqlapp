@@ -24,6 +24,6 @@ module com.sqlapp.core.mdb{
 	requires io.github.spannm.ucanaccess;
 	requires io.github.spannm.jackcess;
 	exports com.sqlapp.data.db.dialect.mdb;
-//	exports com.sqlapp.data.db.dialect.mdb.metadata;
 	exports com.sqlapp.data.db.dialect.mdb.resolver;
+	exports com.sqlapp.data.db.dialect.mdb.sql to com.sqlapp.core;
 }

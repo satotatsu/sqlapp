@@ -12,8 +12,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 
 class BulkMigrationTest {
@@ -157,6 +161,12 @@ class BulkMigrationTest {
 				() -> custom.resetCheckpointsWithFingerprint(null));
 		assertThrows(IllegalArgumentException.class,
 				() -> custom.resetCheckpointsWithFingerprint(" "));
+		assertThrows(IllegalStateException.class,
+				() -> custom.recoverMaintenanceWithFingerprint("approved"));
+		assertThrows(IllegalArgumentException.class,
+				() -> custom.recoverMaintenanceWithFingerprint(" "));
+		assertThrows(NullPointerException.class,
+				() -> custom.recoverMaintenance(null));
 		assertThrows(NullPointerException.class,
 				() -> custom.resetCheckpoints((Path) null));
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
@@ -374,6 +384,58 @@ class BulkMigrationTest {
 		assertThrows(SQLException.class, failing::execute);
 		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.RESTORED.name(),
 				failing.dryRun().maintenance().status());
+	}
+
+	@Test
+	void recoversOnlyExplicitlyApprovedInterruptedMaintenance() throws Exception {
+		final JDBCDataSource source = dataSource("facade_recovery_source");
+		final JDBCDataSource target = dataSource("facade_recovery_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY)");
+			}
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final AtomicInteger restores = new AtomicInteger();
+		final BulkMigrationJobLifecycle lifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "recoverable-maintenance-v1";
+			}
+
+			@Override
+			public void restore(final Connection connection,
+					final BulkMigrationJobPlan plan, final Throwable failure) {
+				restores.incrementAndGet();
+			}
+		};
+		final Path maintenance = directory.resolve("maintenance");
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT).lifecycle(lifecycle)
+				.fileMaintenance(maintenance).build();
+		final Path reportFile = directory.resolve("approved.json");
+		final String fingerprint = migration.dryRun(reportFile).planFingerprint();
+		new FileBulkMigrationMaintenanceStateStore(maintenance).save(
+				new BulkMigrationMaintenanceState(fingerprint,
+						BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null));
+
+		assertThrows(IllegalArgumentException.class,
+				() -> migration.recoverMaintenanceWithFingerprint("wrong"));
+		assertEquals(0, restores.get());
+		final var recovered = migration.recoverMaintenance(reportFile);
+		assertTrue(recovered.recovered());
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED,
+				recovered.previousState().status());
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED,
+				recovered.currentState().status());
+		assertEquals(1, restores.get());
+		assertFalse(migration.recoverMaintenanceWithFingerprint(fingerprint).recovered());
+		assertEquals(1, restores.get());
 	}
 
 	@Test

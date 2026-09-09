@@ -39,6 +39,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceRecoveryResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
@@ -384,6 +385,55 @@ public final class BulkMigration {
 		final String approvedFingerprint = new BulkMigrationOperationalReportIO()
 				.read(reportFile).planFingerprint();
 		return resetCheckpointsWithFingerprint(approvedFingerprint);
+	}
+
+	/** Restores interrupted maintenance after exact plan-fingerprint approval. */
+	public BulkMigrationMaintenanceRecoveryResult recoverMaintenanceWithFingerprint(
+			final String approvedPlanFingerprint) throws SQLException {
+		if (approvedPlanFingerprint == null || approvedPlanFingerprint.isBlank()) {
+			throw new IllegalArgumentException(
+					"approvedPlanFingerprint must not be empty");
+		}
+		if (maintenanceDirectory == null && maintenanceTableName == null) {
+			throw new IllegalStateException(
+					"File or database maintenance must be configured");
+		}
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			if (maintenanceTableName == null) {
+				return recoverMaintenance(sourceConnection, targetConnection, null,
+						approvedPlanFingerprint);
+			}
+			try (Connection maintenanceConnection = target.getConnection()) {
+				maintenanceConnection.setAutoCommit(true);
+				return recoverMaintenance(sourceConnection, targetConnection,
+						maintenanceConnection, approvedPlanFingerprint);
+			}
+		}
+	}
+
+	/** Restores maintenance approved by a previously reviewed dry-run report. */
+	public BulkMigrationMaintenanceRecoveryResult recoverMaintenance(
+			final Path approvedDryRunReport) throws SQLException {
+		final Path reportFile = Objects.requireNonNull(approvedDryRunReport,
+				"approvedDryRunReport");
+		return recoverMaintenanceWithFingerprint(
+				new BulkMigrationOperationalReportIO().read(reportFile).planFingerprint());
+	}
+
+	private BulkMigrationMaintenanceRecoveryResult recoverMaintenance(
+			final Connection sourceConnection, final Connection targetConnection,
+			final Connection maintenanceConnection,
+			final String approvedPlanFingerprint) throws SQLException {
+		final BulkMigrationJobPlan recoveryPlan = plan(sourceConnection,
+				targetConnection, true, false, maintenanceConnection);
+		if (!(recoveryPlan.getLifecycle()
+				instanceof DurableBulkMigrationJobLifecycle durable)) {
+			throw new IllegalStateException(
+					"Durable maintenance lifecycle was not configured");
+		}
+		return durable.recoverInterrupted(targetConnection, recoveryPlan,
+				approvedPlanFingerprint);
 	}
 
 	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {
