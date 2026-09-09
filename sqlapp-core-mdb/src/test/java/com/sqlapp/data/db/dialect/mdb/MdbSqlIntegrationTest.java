@@ -112,6 +112,84 @@ class MdbSqlIntegrationTest {
 	}
 
 	@Test
+	void generatedSingleRowCrudAndGeneratedKeyExecute() throws Exception {
+		final Path database = tempDirectory.resolve("crud.accdb");
+		final Dialect dialect = DialectHolder.defaultDialect;
+		final Table table = new Table("CRUD TARGET");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.INT)
+				.setIdentity(true);
+		table.getColumns().add(id);
+		table.getColumns().add(new Column("DISPLAY_NAME")
+				.setDataType(DataType.NVARCHAR).setLength(80L)
+				.setNotNull(true));
+		table.getColumns().add(new Column("ACTIVE")
+				.setDataType(DataType.BOOLEAN));
+		table.setPrimaryKey("PK_CRUD_TARGET", id);
+
+		try (Connection connection = DriverManager.getConnection(
+				"jdbc:ucanaccess://" + database.toAbsolutePath()
+						+ ";newDatabaseVersion=V2010")) {
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(table, SqlType.CREATE));
+
+			final Row row = table.newRow();
+			row.put("DISPLAY_NAME", "first");
+			row.put("ACTIVE", true);
+			final SqlParameterCollection insert = parameters(dialect, table,
+					SqlType.INSERT, row);
+			assertTrue(insert.getSql().contains("DISPLAY_NAME"), insert.getSql());
+			assertEquals(2, insert.getParameterSize(), insert.toString());
+			try (PreparedStatement statement = connection.prepareStatement(
+					insert.getSql(), Statement.RETURN_GENERATED_KEYS)) {
+				bind(statement, insert);
+				assertEquals(1, statement.executeUpdate());
+				try (ResultSet keys = statement.getGeneratedKeys()) {
+					assertTrue(keys.next());
+					row.put("ID", keys.getInt(1));
+					assertTrue(((Number) row.get("ID")).intValue() > 0);
+				}
+			}
+
+			row.put("DISPLAY_NAME", "updated");
+			row.put("ACTIVE", false);
+			final SqlParameterCollection update = parameters(dialect, table,
+					SqlType.UPDATE, row);
+			try (PreparedStatement statement = connection
+					.prepareStatement(update.getSql())) {
+				bind(statement, update);
+				assertEquals(1, statement.executeUpdate());
+			}
+
+			final SqlParameterCollection select = parameters(dialect, table,
+					SqlType.SELECT, row);
+			try (PreparedStatement statement = connection
+					.prepareStatement(select.getSql())) {
+				bind(statement, select);
+				try (ResultSet resultSet = statement.executeQuery()) {
+					assertTrue(resultSet.next());
+					assertEquals("updated", resultSet.getString("DISPLAY_NAME"));
+					assertFalse(resultSet.getBoolean("ACTIVE"));
+				}
+			}
+
+			final SqlParameterCollection delete = parameters(dialect, table,
+					SqlType.DELETE, row);
+			try (PreparedStatement statement = connection
+					.prepareStatement(delete.getSql())) {
+				bind(statement, delete);
+				assertEquals(1, statement.executeUpdate());
+			}
+			try (Statement statement = connection.createStatement();
+					ResultSet resultSet = statement.executeQuery(
+							"SELECT COUNT(*) FROM [CRUD TARGET]")) {
+				assertTrue(resultSet.next());
+				assertEquals(0, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
 	void generatedRelationshipsViewsAndIndexDropExecute() throws Exception {
 		final Path database = tempDirectory.resolve("objects.accdb");
 		final Dialect dialect = DialectHolder.defaultDialect;
@@ -288,6 +366,17 @@ class MdbSqlIntegrationTest {
 				statement.execute(operation.getSqlText());
 			}
 		}
+	}
+
+	private SqlParameterCollection parameters(final Dialect dialect,
+			final Table table, final SqlType sqlType, final Row row) {
+		return CommonUtils.first(dialect.createSqlFactoryRegistry()
+				.createSqlNodes(table, sqlType)).eval(row);
+	}
+
+	private void bind(final PreparedStatement statement,
+			final SqlParameterCollection parameters) throws Exception {
+		parameters.setBind(statement);
 	}
 
 	private Table createTable(final Dialect dialect) {

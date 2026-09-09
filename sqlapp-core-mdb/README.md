@@ -23,6 +23,8 @@ The Access-specific SQL generator supports:
 - table, primary-key and index creation without unsupported clauses
 - foreign-key creation with cascade update/delete behavior
 - schema-difference ALTER support for adding columns, constraints and indexes
+- prepared single-row INSERT, UPDATE, SELECT and DELETE generation
+- AutoNumber retrieval through JDBC `Statement.RETURN_GENERATED_KEYS`
 - multi-row prepared INSERTs through UCanAccess `VALUES (...), (...)`
 - truncate semantics through `DELETE FROM`, because Access has no `TRUNCATE`
 - Access cascade-rule capability reporting and mixed-case identifiers
