@@ -6,6 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -143,16 +146,25 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 
 	private static BulkMigrationCheckpoint checkpoint(final ExResultSet resultSet,
 			final String migrationId) throws SQLException {
+		final Map<String, Integer> columns = new LinkedHashMap<>();
+		final var metadata = resultSet.getMetaData();
+		for (int i = 1; i <= metadata.getColumnCount(); i++) {
+			columns.put(metadata.getColumnLabel(i).toUpperCase(Locale.ROOT), i);
+		}
+		if (!columns.keySet().containsAll(REQUIRED_COLUMNS)) {
+			throw new SQLException("Migration checkpoint result is missing required columns");
+		}
 		try {
 			return BulkMigrationCheckpoint.builder().migrationId(migrationId)
-					.sourceFingerprint(resultSet.getString("SOURCE_FINGERPRINT"))
-					.targetFingerprint(resultSet.getString("TARGET_FINGERPRINT"))
-					.processedRows(resultSet.getLong("PROCESSED_ROWS"))
-					.completedChunks(resultSet.getLong("COMPLETED_CHUNKS"))
-					.chunkSize(resultSet.getInt("CHUNK_SIZE"))
-					.lastChunkHash(resultSet.getString("LAST_CHUNK_HASH"))
-					.resumeToken(resultSet.getString("RESUME_TOKEN"))
-					.complete("1".equals(resultSet.getString("COMPLETE_FLAG"))).build()
+					.sourceFingerprint(resultSet.getString(columns.get("SOURCE_FINGERPRINT")))
+					.targetFingerprint(resultSet.getString(columns.get("TARGET_FINGERPRINT")))
+					.processedRows(resultSet.getLong(columns.get("PROCESSED_ROWS")))
+					.completedChunks(resultSet.getLong(columns.get("COMPLETED_CHUNKS")))
+					.chunkSize(resultSet.getInt(columns.get("CHUNK_SIZE")))
+					.lastChunkHash(resultSet.getString(columns.get("LAST_CHUNK_HASH")))
+					.resumeToken(resultSet.getString(columns.get("RESUME_TOKEN")))
+					.complete("1".equals(resultSet.getString(columns.get("COMPLETE_FLAG"))))
+					.build()
 					.validate();
 		} catch (IllegalArgumentException failure) {
 			throw new SQLException("Invalid migration checkpoint data for migration "
