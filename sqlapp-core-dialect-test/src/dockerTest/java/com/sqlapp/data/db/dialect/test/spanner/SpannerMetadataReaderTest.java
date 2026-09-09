@@ -67,6 +67,7 @@ class SpannerMetadataReaderTest {
 	void readsJdbcCheckpointWithoutMutatingItsTable() throws Exception {
 		try (Connection connection = createConnection()) {
 			BulkMigrationTransactionAssertions.assertJdbcCheckpointReadOnly(connection);
+			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
 

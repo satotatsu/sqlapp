@@ -571,10 +571,13 @@ plan: hidden and generated/formula columns are excluded, and INSERT identity
 columns are included only when `keepIdentity` is enabled. UPSERT uses its
 resolved staging columns. An explicit per-table `verificationColumns` list
 continues to override this default.
-`status()` and `dryRun()` use `ReadOnlyJdbcBulkMigrationCheckpointStore`: they report
-`NOT_STARTED` when the checkpoint table does not exist and never creates or
-upgrades that table. A malformed or obsolete existing checkpoint table is
-reported as an error instead of being changed during status inspection.
+`status()` and `dryRun()` use the store returned by
+`JdbcBulkMigrationCheckpointStore.readOnly(connection, tableName)`: they report
+`NOT_STARTED` when the checkpoint table does not exist and never create or
+upgrade that table. An existing table must contain all checkpoint columns and
+use `MIGRATION_ID` as its sole primary-key column. Ambiguous same-name metadata,
+an obsolete table, and inconsistent persisted progress are reported as errors
+instead of being changed or treated as an absent checkpoint during inspection.
 
 ```java
 var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
@@ -770,6 +773,13 @@ connection. The command module supplies
 the filesystem supports it and validates every persisted field. A nonterminal
 state is evidence of an interrupted job, but automatic recovery should run
 only after the same plan fingerprint has been verified.
+
+Monitoring code can use
+`JdbcBulkMigrationMaintenanceStateStore.readOnly(connection, tableName)` to
+inspect JDBC state without creating or changing the control table. A missing
+table produces no state. An ambiguous table name, missing required column,
+primary key other than `PLAN_FINGERPRINT` alone, or malformed persisted state
+is reported as an error rather than being repaired or treated as absent.
 
 `DurableBulkMigrationJobLifecycle.inspect(plan)` is read-only.
 `recoverInterrupted(connection, plan, expectedFingerprint)` requires the exact

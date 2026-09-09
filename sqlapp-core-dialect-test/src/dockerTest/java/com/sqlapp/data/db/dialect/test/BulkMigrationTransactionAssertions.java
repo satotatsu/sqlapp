@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.nio.file.Path;
+import java.time.Instant;
 
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Table;
@@ -17,6 +18,9 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationExecutor;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationMaintenanceStateStore;
 
 /** Shared real-database assertions for atomic data/checkpoint commits. */
 public final class BulkMigrationTransactionAssertions {
@@ -35,6 +39,17 @@ public final class BulkMigrationTransactionAssertions {
 		new JdbcBulkMigrationCheckpointStore(connection, tableName).save(checkpoint);
 		assertEquals(checkpoint, JdbcBulkMigrationCheckpointStore
 				.readOnly(connection, tableName).load(migrationId).orElseThrow());
+	}
+
+	public static void assertJdbcMaintenanceReadOnly(final Connection connection)
+			throws SQLException {
+		final String tableName = "SQLAPP_BULK_READ_ONLY_MAINTENANCE";
+		final String fingerprint = "read-only-" + java.util.UUID.randomUUID();
+		final var state = new BulkMigrationMaintenanceState(fingerprint,
+				BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null);
+		new JdbcBulkMigrationMaintenanceStateStore(connection, tableName).save(state);
+		assertEquals(state, JdbcBulkMigrationMaintenanceStateStore
+				.readOnly(connection, tableName).load(fingerprint).orElseThrow());
 	}
 
 	public static void assertDatabaseCheckpointAtomic(final Connection connection,
