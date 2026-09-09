@@ -10,6 +10,7 @@ import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.View;
 
 /** SQL factory registry for Microsoft Access SQL. */
 public class MdbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
@@ -23,9 +24,17 @@ public class MdbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.CREATE,
 				MdbCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER,
+				MdbAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE,
 				MdbTruncateTableFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				MdbCreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.DROP,
+				MdbDropIndexFactory.class);
+		registerSqlFactory(View.class, SqlType.CREATE,
+				MdbUnsupportedViewFactory.class);
+		registerSqlFactory(View.class, SqlType.DROP,
+				MdbUnsupportedViewFactory.class);
 	}
 }

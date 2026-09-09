@@ -21,6 +21,8 @@ The Access-specific SQL generator supports:
 - `TEXT`, `MEMO`, `OLE`, Boolean, numeric and date/time type generation
 - Access date/time default functions (`DATE()`, `TIME()` and `NOW()`)
 - table, primary-key and index creation without unsupported clauses
+- foreign-key creation with cascade update/delete behavior
+- schema-difference ALTER support for adding columns, constraints and indexes
 - multi-row prepared INSERTs through UCanAccess `VALUES (...), (...)`
 - truncate semantics through `DELETE FROM`, because Access has no `TRUNCATE`
 - Access cascade-rule capability reporting and mixed-case identifiers
@@ -43,3 +45,12 @@ UCanAccess returns only the last generated AutoNumber value after a JDBC batch,
 not one key per row. Consequently `supportsBatchExecuteGeneratedKeys()` remains
 disabled. Multi-row inserts that do not require generated-key propagation use
 one prepared statement for performance.
+
+UCanAccess 5.1.6 cannot persist `CREATE VIEW`, `DROP VIEW`, `DROP INDEX`,
+`DROP COLUMN`, `DROP CONSTRAINT`, table/column renames, or column-definition
+changes through JDBC. The MDB SQL registry rejects these operations with an
+actionable `UnsupportedOperationException` instead of returning SQL that fails
+later. Destructive or modifying schema changes currently require rebuilding the
+Access table outside the JDBC dialect.
+Existing non-parameterized saved SELECT/UNION queries can still be loaded as
+Schema views by `MdbFileLoader`.

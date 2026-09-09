@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -27,8 +28,11 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.View;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.util.CommonUtils;
@@ -105,6 +109,185 @@ class MdbSqlIntegrationTest {
 		assertTrue(loaded.getColumns().get("ID").isIdentity());
 		assertNotNull(loaded.getConstraints().getPrimaryKeyConstraint());
 		assertNotNull(loaded.getIndexes().get("IDX_ORDER_DETAIL_NAME"));
+	}
+
+	@Test
+	void generatedRelationshipsViewsAndIndexDropExecute() throws Exception {
+		final Path database = tempDirectory.resolve("objects.accdb");
+		final Dialect dialect = DialectHolder.defaultDialect;
+		final Table parent = new Table("PARENT TABLE");
+		parent.setDialect(dialect);
+		final Column parentId = new Column("ID").setDataType(DataType.INT)
+				.setNotNull(true);
+		parent.getColumns().add(parentId);
+		parent.setPrimaryKey("PK_PARENT", parentId);
+
+		final Table child = new Table("CHILD TABLE");
+		child.setDialect(dialect);
+		final Column childId = new Column("ID").setDataType(DataType.INT)
+				.setIdentity(true);
+		final Column childParentId = new Column("PARENT_ID")
+				.setDataType(DataType.INT).setNotNull(true);
+		child.getColumns().add(childId);
+		child.getColumns().add(childParentId);
+		child.setPrimaryKey("PK_CHILD", childId);
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
+				childParentId, parentId).setDeleteRule(CascadeRule.Cascade)
+				.setUpdateRule(CascadeRule.Cascade);
+		final Index index = child.getIndexes().add("IDX_CHILD_PARENT",
+				childParentId);
+
+		try (Connection connection = DriverManager.getConnection(
+				"jdbc:ucanaccess://" + database.toAbsolutePath()
+						+ ";newDatabaseVersion=V2010")) {
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(parent, SqlType.CREATE));
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(child, SqlType.CREATE));
+			try (Statement statement = connection.createStatement()) {
+				statement.executeUpdate("INSERT INTO [PARENT TABLE] (ID) VALUES (1)");
+				statement.executeUpdate("INSERT INTO [CHILD TABLE] (PARENT_ID) VALUES (1)");
+			}
+
+			final View view = new View("CHILD VIEW");
+			view.setDialect(dialect);
+			view.setStatement("SELECT ID, PARENT_ID FROM [CHILD TABLE]");
+			final UnsupportedOperationException viewError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(view, SqlType.CREATE));
+			assertTrue(viewError.getMessage().contains("UCanAccess 5.1.6"));
+
+			final UnsupportedOperationException indexError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(index, SqlType.DROP));
+			assertTrue(indexError.getMessage().contains("DROP INDEX"));
+			try (Statement statement = connection.createStatement()) {
+				statement.executeUpdate("DELETE FROM [PARENT TABLE] WHERE ID=1");
+				try (ResultSet resultSet = statement.executeQuery(
+						"SELECT COUNT(*) FROM [CHILD TABLE]")) {
+					assertTrue(resultSet.next());
+					assertEquals(0, resultSet.getInt(1));
+				}
+			}
+		}
+		final var persistedRows = MdbFileLoader
+				.loadTable(database, "CHILD TABLE").getRows().iterator();
+		assertFalse(persistedRows.hasNext());
+	}
+
+	@Test
+	void generatedAlterTableOperationsExecuteAndPersist() throws Exception {
+		final Path database = tempDirectory.resolve("alter.accdb");
+		final Dialect dialect = DialectHolder.defaultDialect;
+		final Table parent = new Table("ALTER PARENT");
+		parent.setDialect(dialect);
+		final Column parentId = new Column("ID").setDataType(DataType.INT)
+				.setNotNull(true);
+		parent.getColumns().add(parentId);
+		parent.setPrimaryKey("PK_ALTER_PARENT", parentId);
+		final Table original = new Table("ALTER TARGET");
+		original.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.INT)
+				.setNotNull(true);
+		original.getColumns().add(id);
+		original.getColumns().add(new Column("OLD_VALUE")
+				.setDataType(DataType.VARCHAR).setLength(20L));
+		original.setPrimaryKey("PK_ALTER_TARGET", id);
+
+		try (Connection connection = DriverManager.getConnection(
+				"jdbc:ucanaccess://" + database.toAbsolutePath()
+						+ ";newDatabaseVersion=V2010")) {
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(parent, SqlType.CREATE));
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(original, SqlType.CREATE));
+
+			final Table added = original.clone();
+			added.getColumns().add(new Column("NEW_VALUE")
+					.setDataType(DataType.VARCHAR).setLength(40L));
+			added.getColumns().add(new Column("PARENT_ID")
+					.setDataType(DataType.INT));
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(original.diff(added)));
+
+			final Table altered = added.clone();
+			altered.getColumns().get("NEW_VALUE").setLength(80L);
+			final UnsupportedOperationException alterError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(added.diff(altered)));
+			assertTrue(alterError.getMessage()
+					.contains("column definition alteration"));
+
+			final Table constrained = added.clone();
+			constrained.getConstraints().addForeignKeyConstraint(
+					"FK_ALTER_PARENT", constrained.getColumns().get("PARENT_ID"),
+					parentId).setDeleteRule(CascadeRule.Cascade);
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(added.diff(constrained)));
+
+			final Table unconstrained = constrained.clone();
+			unconstrained.getConstraints().remove("FK_ALTER_PARENT");
+			final UnsupportedOperationException constraintError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(constrained.diff(unconstrained)));
+			assertTrue(constraintError.getMessage().contains("DROP CONSTRAINT"));
+
+			final Table indexed = constrained.clone();
+			indexed.getIndexes().add("IDX_ALTER_VALUE",
+					indexed.getColumns().get("NEW_VALUE"));
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(constrained.diff(indexed)));
+			final Table unindexed = indexed.clone();
+			unindexed.getIndexes().remove("IDX_ALTER_VALUE");
+			final UnsupportedOperationException indexError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(indexed.diff(unindexed)));
+			assertTrue(indexError.getMessage().contains("DROP INDEX"));
+
+			final Table dropped = indexed.clone();
+			dropped.getColumns().remove("OLD_VALUE");
+			final UnsupportedOperationException dropColumnError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(indexed.diff(dropped)));
+			assertTrue(dropColumnError.getMessage().contains("DROP COLUMN"));
+
+			final Table renamed = indexed.clone();
+			renamed.getColumns().get("NEW_VALUE").setName("RENAMED_VALUE");
+			final UnsupportedOperationException renameError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(indexed.diff(renamed)));
+			assertTrue(renameError.getMessage().contains("UCanAccess 5.1.6"));
+
+			final Table renamedTable = indexed.clone().setName("RENAMED TABLE");
+			final UnsupportedOperationException tableRenameError = assertThrows(
+					UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry()
+							.createSql(indexed.diff(renamedTable)));
+			assertTrue(tableRenameError.getMessage().contains("table rename"));
+		}
+
+		final Table loaded = MdbFileLoader.loadTable(database, "ALTER TARGET");
+		assertNotNull(loaded.getColumns().get("NEW_VALUE"));
+		assertEquals(40L, loaded.getColumns().get("NEW_VALUE").getLength());
+		assertNotNull(loaded.getColumns().get("OLD_VALUE"));
+		assertNotNull(loaded.getIndexes().get("IDX_ALTER_VALUE"));
+		assertNotNull(loaded.getConstraints().get("FK_ALTER_PARENT"));
+	}
+
+	private void execute(final Connection connection,
+			final List<SqlOperation> operations) throws Exception {
+		try (Statement statement = connection.createStatement()) {
+			for (final SqlOperation operation : operations) {
+				statement.execute(operation.getSqlText());
+			}
+		}
 	}
 
 	private Table createTable(final Dialect dialect) {
