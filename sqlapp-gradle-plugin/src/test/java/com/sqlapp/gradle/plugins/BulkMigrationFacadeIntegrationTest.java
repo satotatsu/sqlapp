@@ -290,6 +290,12 @@ class BulkMigrationFacadeIntegrationTest {
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
 				.schema(schema()).tables("ITEMS").databaseLease("integration-worker").build();
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE, migration.resumeReadiness());
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM sqlite_master "
+						+ "WHERE type = 'table' AND name = 'SQLAPP_BULK_JOB_LEASE'")) {
+			assertTrue(rows.next());
+			assertEquals(0, rows.getInt(1));
+		}
 		assertEquals(1, migration.execute().getProcessedRows());
 		assertEquals(BulkMigrationResumeReadiness.COMPLETE, migration.resumeReadiness());
 		final String fingerprint = migration.dryRun().planFingerprint();

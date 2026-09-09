@@ -221,6 +221,11 @@ class BulkMigrationTest {
 
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
 				migration.resumeReadiness());
+		try (var connection = target.getConnection(); var tables = connection.getMetaData()
+				.getTables(connection.getCatalog(), null, "sqlapp_bulk_job_lease",
+						new String[] { "TABLE" })) {
+			assertFalse(tables.next());
+		}
 		assertEquals(0, migration.execute().getProcessedRows());
 		final String approvedFingerprint = migration.dryRun().planFingerprint();
 		assertEquals(List.of("PUBLIC.ITEMS"),
