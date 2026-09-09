@@ -71,6 +71,49 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 		});
 	}
 
+	@Test
+	void readOnlyStoreIgnoresCheckpointTablesInOtherSchemas() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE SCHEMA OTHER_CHECKPOINT AUTHORIZATION DBA");
+			execute(connection, "CREATE TABLE OTHER_CHECKPOINT.SQLAPP_BMC_SCOPED ("
+					+ "MIGRATION_ID VARCHAR(255) PRIMARY KEY)");
+
+			final var store = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					"SQLAPP_BMC_SCOPED");
+			assertTrue(store.load("migration-1").isEmpty());
+		});
+	}
+
+	@Test
+	void readOnlyStoreFindsTableInSchemaContainingMetadataWildcards() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE SCHEMA \"CHECKPOINT_%\" AUTHORIZATION DBA");
+			connection.setSchema("CHECKPOINT_%");
+			final var writable = new JdbcBulkMigrationCheckpointStore(connection,
+					"SQLAPP_BMC_WILDCARD");
+			writable.save(checkpoint(2, false, "token-2"));
+
+			final var reader = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					"SQLAPP_BMC_WILDCARD");
+			assertEquals(2, reader.load("migration-1").orElseThrow()
+					.getProcessedRows());
+		});
+	}
+
+	@Test
+	void readOnlyStoreRejectsAmbiguousCaseSensitiveTableMatches() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE SQLAPP_BMC_AMBIGUOUS (ID INTEGER)");
+			execute(connection, "CREATE TABLE \"sqlapp_bmc_ambiguous\" (ID INTEGER)");
+
+			final var store = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					"SQLAPP_BMC_AMBIGUOUS");
+			final var failure = assertThrows(java.sql.SQLException.class,
+					() -> store.load("migration-1"));
+			assertTrue(failure.getMessage().contains("Ambiguous"));
+		});
+	}
+
 	private static boolean tableExists(final java.sql.Connection connection,
 			final String name) throws java.sql.SQLException {
 		try (var tables = connection.getMetaData().getTables(

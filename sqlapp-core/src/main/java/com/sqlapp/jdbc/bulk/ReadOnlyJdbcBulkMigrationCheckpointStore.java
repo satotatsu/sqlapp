@@ -4,8 +4,11 @@ package com.sqlapp.jdbc.bulk;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
 
@@ -59,15 +62,46 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 	}
 
 	private boolean tableExists() throws SQLException {
+		final String schema = currentSchema();
+		final Set<TableIdentity> candidates = new HashSet<>();
 		try (ResultSet tables = connection.getMetaData().getTables(
-				connection.getCatalog(), null, "%", new String[] { "TABLE" })) {
+				connection.getCatalog(), schemaPattern(schema), "%",
+				new String[] { "TABLE" })) {
 			while (tables.next()) {
-				if (rawTableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
-					return true;
+				if (rawTableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))
+						&& (schema == null || schema.equals(tables.getString("TABLE_SCHEM")))) {
+					candidates.add(new TableIdentity(tables.getString("TABLE_CAT"),
+							tables.getString("TABLE_SCHEM"), tables.getString("TABLE_NAME")));
 				}
 			}
 		}
-		return false;
+		if (candidates.size() > 1) {
+			throw new SQLException("Ambiguous migration checkpoint table " + rawTableName
+					+ "; multiple catalog, schema or case-sensitive table matches exist");
+		}
+		return !candidates.isEmpty();
+	}
+
+	private String currentSchema() throws SQLException {
+		try {
+			final String schema = connection.getMetaData().supportsSchemasInTableDefinitions()
+					? connection.getSchema() : null;
+			return schema == null || schema.isEmpty() ? null : schema;
+		} catch (SQLFeatureNotSupportedException | AbstractMethodError unsupported) {
+			return null;
+		}
+	}
+
+	private String schemaPattern(final String schema) throws SQLException {
+		if (schema == null) {
+			return null;
+		}
+		final String escape = connection.getMetaData().getSearchStringEscape();
+		if (escape == null || escape.isEmpty()) {
+			return schema.contains("_") || schema.contains("%") ? null : schema;
+		}
+		return schema.replace(escape, escape + escape)
+				.replace("_", escape + "_").replace("%", escape + "%");
 	}
 
 	private static BulkMigrationCheckpoint checkpoint(final ResultSet resultSet,
@@ -82,5 +116,8 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 				.resumeToken(resultSet.getString("RESUME_TOKEN"))
 				.complete("1".equals(resultSet.getString("COMPLETE_FLAG"))).build()
 				.validate();
+	}
+
+	private record TableIdentity(String catalog, String schema, String name) {
 	}
 }
