@@ -96,6 +96,7 @@ class MySqlBulkInsertTest {
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_mysql", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_mysql");
+			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
 

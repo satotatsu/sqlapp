@@ -95,6 +95,7 @@ class MariadbBulkInsertTest {
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_mariadb", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
 					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_mariadb");
+			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
 

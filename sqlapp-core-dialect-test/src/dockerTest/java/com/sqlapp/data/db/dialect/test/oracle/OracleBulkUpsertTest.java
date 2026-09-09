@@ -110,6 +110,7 @@ class OracleBulkUpsertTest {
 			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection,
 					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE",
 					checkpointDirectory);
+			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
 

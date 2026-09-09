@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.mssqlserver.MSSQLServerContainer;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -33,6 +34,15 @@ class SqlServerBulkInsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(SQL_SERVER);
+	}
+
+	@Test
+	void readsJdbcMaintenanceStateWithoutMutatingItsTable() throws Exception {
+		try (Connection connection = DriverManager.getConnection(
+				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword())) {
+			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
+		}
 	}
 
 	@Test

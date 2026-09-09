@@ -94,6 +94,7 @@ class Db2BulkUpsertTest {
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_DB2", code);
 			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
 					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_DB2");
+			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
 
