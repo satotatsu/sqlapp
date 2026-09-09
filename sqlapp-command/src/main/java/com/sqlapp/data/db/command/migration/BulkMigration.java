@@ -50,7 +50,6 @@ import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
-import com.sqlapp.jdbc.bulk.ReadOnlyJdbcBulkMigrationCheckpointStore;
 
 import lombok.Builder;
 
@@ -622,7 +621,7 @@ public final class BulkMigration {
 		}
 		return switch (checkpointMode) {
 		case DATABASE -> readOnly
-				? new ReadOnlyJdbcBulkMigrationCheckpointStore(targetConnection,
+				? JdbcBulkMigrationCheckpointStore.readOnly(targetConnection,
 						checkpointTableName)
 				: new JdbcBulkMigrationCheckpointStore(targetConnection, checkpointTableName);
 		case FILE -> new FileBulkMigrationCheckpointStore(checkpointDirectory);

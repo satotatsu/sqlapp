@@ -54,7 +54,7 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 	@Test
 	void readOnlyStoreDoesNotCreateOrModifyTheCheckpointTable() throws Exception {
 		testDb(connection -> {
-			final var missing = new ReadOnlyJdbcBulkMigrationCheckpointStore(connection,
+			final var missing = JdbcBulkMigrationCheckpointStore.readOnly(connection,
 					"SQLAPP_BMC_READ_ONLY");
 			assertTrue(missing.load("migration-1").isEmpty());
 			assertFalse(tableExists(connection, "SQLAPP_BMC_READ_ONLY"));
@@ -64,7 +64,7 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 			final var writable = new JdbcBulkMigrationCheckpointStore(connection,
 					"SQLAPP_BMC_READ_ONLY");
 			writable.save(checkpoint(1, true, "token-1"));
-			final var existing = new ReadOnlyJdbcBulkMigrationCheckpointStore(connection,
+			final var existing = JdbcBulkMigrationCheckpointStore.readOnly(connection,
 					"SQLAPP_BMC_READ_ONLY");
 			assertEquals(1, existing.load("migration-1").orElseThrow()
 					.getProcessedRows());

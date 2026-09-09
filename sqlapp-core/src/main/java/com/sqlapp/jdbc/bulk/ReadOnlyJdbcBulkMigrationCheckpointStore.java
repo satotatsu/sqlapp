@@ -10,13 +10,13 @@ import java.util.Optional;
 import com.sqlapp.data.db.dialect.DialectResolver;
 
 /** JDBC checkpoint reader that never creates, upgrades, updates, or deletes tables. */
-public final class ReadOnlyJdbcBulkMigrationCheckpointStore
+final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		implements BulkMigrationCheckpointStore {
 	private final Connection connection;
 	private final String rawTableName;
 	private final String tableName;
 
-	public ReadOnlyJdbcBulkMigrationCheckpointStore(final Connection connection,
+	ReadOnlyJdbcBulkMigrationCheckpointStore(final Connection connection,
 			final String tableName) throws SQLException {
 		this.connection = Objects.requireNonNull(connection, "connection");
 		if (tableName == null || !tableName.matches("[A-Za-z_][A-Za-z0-9_]*")) {

@@ -33,6 +33,12 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 	private final Dialect dialect;
 	private final Map<SqlType, SqlNode> sqlNodes = new EnumMap<>(SqlType.class);
 
+	/** Returns a reader that does not create or modify the checkpoint table. */
+	public static BulkMigrationCheckpointStore readOnly(final Connection connection,
+			final String tableName) throws SQLException {
+		return new ReadOnlyJdbcBulkMigrationCheckpointStore(connection, tableName);
+	}
+
 	public JdbcBulkMigrationCheckpointStore(final Connection connection,
 			final String tableName) throws SQLException {
 		this.connection = Objects.requireNonNull(connection, "connection");
