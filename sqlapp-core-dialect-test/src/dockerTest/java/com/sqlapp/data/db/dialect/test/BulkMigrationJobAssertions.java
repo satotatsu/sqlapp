@@ -140,6 +140,14 @@ public final class BulkMigrationJobAssertions {
 		assertTrue(status.isCompatible());
 		assertTrue(status.getTasks().stream()
 				.allMatch(task -> task.getState() == BulkMigrationJobTaskState.COMPLETE));
+		if (checkpointMode == BulkMigrationCheckpointMode.DATABASE) {
+			final var reader = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					ChunkedBulkMigrationOption.builder().build().getCheckpointTableName());
+			assertTrue(reader.load(parentOptions.getMigrationId()).orElseThrow()
+					.isComplete());
+			assertTrue(reader.load(childOptions.getMigrationId()).orElseThrow()
+					.isComplete());
+		}
 	}
 
 	private static ChunkedBulkMigrationOption options(final String migrationId,

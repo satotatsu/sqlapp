@@ -114,6 +114,48 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 		});
 	}
 
+	@Test
+	void readOnlyStoreRejectsInvalidTableStructure() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE SQLAPP_BMC_INVALID ("
+					+ "MIGRATION_ID VARCHAR(255) PRIMARY KEY)");
+			final var missingColumns = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					"SQLAPP_BMC_INVALID");
+			assertTrue(assertThrows(java.sql.SQLException.class,
+					() -> missingColumns.load("migration-1")).getMessage()
+					.contains("missing required columns"));
+
+			execute(connection, "CREATE TABLE SQLAPP_BMC_COMPOSITE ("
+					+ "MIGRATION_ID VARCHAR(255) NOT NULL, "
+					+ "SOURCE_FINGERPRINT VARCHAR(255), TARGET_FINGERPRINT VARCHAR(255), "
+					+ "PROCESSED_ROWS DECIMAL(19,0), COMPLETED_CHUNKS DECIMAL(19,0), "
+					+ "CHUNK_SIZE INTEGER, LAST_CHUNK_HASH VARCHAR(64), "
+					+ "RESUME_TOKEN VARCHAR(4000), COMPLETE_FLAG CHAR(1), "
+					+ "PRIMARY KEY (MIGRATION_ID, SOURCE_FINGERPRINT))");
+			final var compositeKey = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					"SQLAPP_BMC_COMPOSITE");
+			assertTrue(assertThrows(java.sql.SQLException.class,
+					() -> compositeKey.load("migration-1")).getMessage()
+					.contains("MIGRATION_ID alone"));
+		});
+	}
+
+	@Test
+	void readOnlyStoreWrapsCorruptCheckpointData() throws Exception {
+		testDb(connection -> {
+			new JdbcBulkMigrationCheckpointStore(connection, "SQLAPP_BMC_CORRUPT");
+			execute(connection, "INSERT INTO SQLAPP_BMC_CORRUPT VALUES ("
+					+ "'migration-1', 'source-v1', 'target-v1', 2, 0, 1, "
+					+ "'hash-2', 'token-2', '0')");
+			final var reader = JdbcBulkMigrationCheckpointStore.readOnly(connection,
+					"SQLAPP_BMC_CORRUPT");
+			final var failure = assertThrows(java.sql.SQLException.class,
+					() -> reader.load("migration-1"));
+			assertTrue(failure.getMessage().contains("Invalid migration checkpoint data"));
+			assertTrue(failure.getCause() instanceof IllegalArgumentException);
+		});
+	}
+
 	private static boolean tableExists(final java.sql.Connection connection,
 			final String name) throws java.sql.SQLException {
 		try (var tables = connection.getMetaData().getTables(

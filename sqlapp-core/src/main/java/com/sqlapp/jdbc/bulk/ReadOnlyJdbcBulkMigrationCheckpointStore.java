@@ -9,15 +9,28 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.JdbcHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** JDBC checkpoint reader that never creates, upgrades, updates, or deletes tables. */
 final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		implements BulkMigrationCheckpointStore {
+	private static final Set<String> REQUIRED_COLUMNS = Set.of("MIGRATION_ID",
+			"SOURCE_FINGERPRINT", "TARGET_FINGERPRINT", "PROCESSED_ROWS",
+			"COMPLETED_CHUNKS", "CHUNK_SIZE", "LAST_CHUNK_HASH", "RESUME_TOKEN",
+			"COMPLETE_FLAG");
 	private final Connection connection;
 	private final String rawTableName;
-	private final String tableName;
+	private final SqlNode selectNode;
 
 	ReadOnlyJdbcBulkMigrationCheckpointStore(final Connection connection,
 			final String tableName) throws SQLException {
@@ -26,29 +39,25 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 			throw new IllegalArgumentException("Invalid checkpoint table name: " + tableName);
 		}
 		this.rawTableName = tableName;
-		this.tableName = DialectResolver.getInstance().getDialect(connection).quote(tableName);
+		this.selectNode = DialectResolver.getInstance().getDialect(connection)
+				.createSqlFactoryRegistry().createSqlNodes(table(tableName), SqlType.SELECT)
+				.get(0);
 	}
 
 	@Override
 	public Optional<BulkMigrationCheckpoint> load(final String migrationId)
 			throws SQLException {
 		BulkMigrationCheckpoint.validateMigrationId(migrationId);
-		if (!tableExists()) {
+		final var identity = resolveTable();
+		if (identity.isEmpty()) {
 			return Optional.empty();
 		}
-		final String sql = "SELECT SOURCE_FINGERPRINT, TARGET_FINGERPRINT, "
-				+ "PROCESSED_ROWS, COMPLETED_CHUNKS, CHUNK_SIZE, LAST_CHUNK_HASH, "
-				+ "RESUME_TOKEN, COMPLETE_FLAG FROM " + tableName
-				+ " WHERE MIGRATION_ID = ?";
-		try (var statement = connection.prepareStatement(sql)) {
-			statement.setString(1, migrationId);
-			try (var resultSet = statement.executeQuery()) {
-				if (!resultSet.next()) {
-					return Optional.empty();
-				}
-				return Optional.of(checkpoint(resultSet, migrationId));
-			}
-		}
+		validateStructure(identity.orElseThrow());
+		final BulkMigrationCheckpoint[] result = new BulkMigrationCheckpoint[1];
+		new JdbcHandler(selectNode,
+				rs -> result[0] = checkpoint(rs, migrationId)).execute(connection,
+					parameters(migrationId));
+		return Optional.ofNullable(result[0]);
 	}
 
 	@Override
@@ -61,7 +70,7 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		throw new UnsupportedOperationException("Read-only checkpoint store");
 	}
 
-	private boolean tableExists() throws SQLException {
+	private Optional<TableIdentity> resolveTable() throws SQLException {
 		final String schema = currentSchema();
 		final Set<TableIdentity> candidates = new HashSet<>();
 		try (ResultSet tables = connection.getMetaData().getTables(
@@ -79,7 +88,35 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 			throw new SQLException("Ambiguous migration checkpoint table " + rawTableName
 					+ "; multiple catalog, schema or case-sensitive table matches exist");
 		}
-		return !candidates.isEmpty();
+		return candidates.stream().findFirst();
+	}
+
+	private void validateStructure(final TableIdentity identity) throws SQLException {
+		final Set<String> columns = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		try (ResultSet result = connection.getMetaData().getColumns(identity.catalog(),
+				identity.schema(), identity.name(), "%")) {
+			while (result.next()) {
+				columns.add(result.getString("COLUMN_NAME"));
+			}
+		}
+		if (!columns.containsAll(REQUIRED_COLUMNS)) {
+			final Set<String> missing = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+			missing.addAll(REQUIRED_COLUMNS);
+			missing.removeAll(columns);
+			throw new SQLException("Migration checkpoint table " + rawTableName
+					+ " is missing required columns: " + missing);
+		}
+		final Set<String> primaryKey = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		try (ResultSet keys = connection.getMetaData().getPrimaryKeys(identity.catalog(),
+				identity.schema(), identity.name())) {
+			while (keys.next()) {
+				primaryKey.add(keys.getString("COLUMN_NAME"));
+			}
+		}
+		if (primaryKey.size() != 1 || !primaryKey.contains("MIGRATION_ID")) {
+			throw new SQLException("Migration checkpoint table " + rawTableName
+					+ " must have a primary key on MIGRATION_ID alone");
+		}
 	}
 
 	private String currentSchema() throws SQLException {
@@ -104,18 +141,46 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 				.replace("_", escape + "_").replace("%", escape + "%");
 	}
 
-	private static BulkMigrationCheckpoint checkpoint(final ResultSet resultSet,
+	private static BulkMigrationCheckpoint checkpoint(final ExResultSet resultSet,
 			final String migrationId) throws SQLException {
-		return BulkMigrationCheckpoint.builder().migrationId(migrationId)
-				.sourceFingerprint(resultSet.getString("SOURCE_FINGERPRINT"))
-				.targetFingerprint(resultSet.getString("TARGET_FINGERPRINT"))
-				.processedRows(resultSet.getLong("PROCESSED_ROWS"))
-				.completedChunks(resultSet.getLong("COMPLETED_CHUNKS"))
-				.chunkSize(resultSet.getInt("CHUNK_SIZE"))
-				.lastChunkHash(resultSet.getString("LAST_CHUNK_HASH"))
-				.resumeToken(resultSet.getString("RESUME_TOKEN"))
-				.complete("1".equals(resultSet.getString("COMPLETE_FLAG"))).build()
-				.validate();
+		try {
+			return BulkMigrationCheckpoint.builder().migrationId(migrationId)
+					.sourceFingerprint(resultSet.getString("SOURCE_FINGERPRINT"))
+					.targetFingerprint(resultSet.getString("TARGET_FINGERPRINT"))
+					.processedRows(resultSet.getLong("PROCESSED_ROWS"))
+					.completedChunks(resultSet.getLong("COMPLETED_CHUNKS"))
+					.chunkSize(resultSet.getInt("CHUNK_SIZE"))
+					.lastChunkHash(resultSet.getString("LAST_CHUNK_HASH"))
+					.resumeToken(resultSet.getString("RESUME_TOKEN"))
+					.complete("1".equals(resultSet.getString("COMPLETE_FLAG"))).build()
+					.validate();
+		} catch (IllegalArgumentException failure) {
+			throw new SQLException("Invalid migration checkpoint data for migration "
+					+ migrationId, failure);
+		}
+	}
+
+	private static ParametersContext parameters(final String migrationId) {
+		final ParametersContext parameters = new ParametersContext();
+		parameters.put("MIGRATION_ID", migrationId);
+		return parameters;
+	}
+
+	private static Table table(final String tableName) {
+		final Table table = new Table(tableName);
+		final Column migrationId = new Column("MIGRATION_ID")
+				.setDataType(DataType.VARCHAR).setLength(255).setNotNull(true);
+		table.getColumns().add(migrationId);
+		table.getColumns().add(new Column("SOURCE_FINGERPRINT").setDataType(DataType.VARCHAR));
+		table.getColumns().add(new Column("TARGET_FINGERPRINT").setDataType(DataType.VARCHAR));
+		table.getColumns().add(new Column("PROCESSED_ROWS").setDataType(DataType.DECIMAL));
+		table.getColumns().add(new Column("COMPLETED_CHUNKS").setDataType(DataType.DECIMAL));
+		table.getColumns().add(new Column("CHUNK_SIZE").setDataType(DataType.INT));
+		table.getColumns().add(new Column("LAST_CHUNK_HASH").setDataType(DataType.VARCHAR));
+		table.getColumns().add(new Column("RESUME_TOKEN").setDataType(DataType.VARCHAR));
+		table.getColumns().add(new Column("COMPLETE_FLAG").setDataType(DataType.CHAR));
+		table.setPrimaryKey((String) null, migrationId);
+		return table;
 	}
 
 	private record TableIdentity(String catalog, String schema, String name) {
