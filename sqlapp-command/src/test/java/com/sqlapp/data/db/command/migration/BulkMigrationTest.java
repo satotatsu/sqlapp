@@ -136,6 +136,15 @@ class BulkMigrationTest {
 				.source(dataSource("invalid_report_source"))
 				.target(dataSource("invalid_report_target")).schema(schema)
 				.verificationReport(directory.resolve("verification.json"), 0).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(dataSource("invalid_maintenance_source"))
+				.target(dataSource("invalid_maintenance_target")).schema(schema)
+				.databaseMaintenance("bad.table").build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigration.builder()
+				.source(dataSource("conflicting_maintenance_source"))
+				.target(dataSource("conflicting_maintenance_target")).schema(schema)
+				.maintenanceDirectory(directory).maintenanceTableName("MAINTENANCE")
+				.build());
 
 		final var customStore = new InMemoryBulkMigrationCheckpointStore();
 		final BulkMigration custom = BulkMigration.builder()
@@ -315,6 +324,59 @@ class BulkMigrationTest {
 	}
 
 	@Test
+	void databaseMaintenanceUsesReadOnlyInspectionAndDedicatedPersistence()
+			throws Exception {
+		final JDBCDataSource source = dataSource("facade_database_maintenance_source");
+		final JDBCDataSource target = dataSource("facade_database_maintenance_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY)");
+			}
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.databaseMaintenance("SQLAPP_FACADE_MAINTENANCE").build();
+
+		assertNull(migration.dryRun().maintenance());
+		try (var connection = target.getConnection()) {
+			assertFalse(tableExists(connection, "SQLAPP_FACADE_MAINTENANCE"));
+		}
+		assertEquals(0, migration.execute().getProcessedRows());
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				migration.dryRun().maintenance().status());
+		try (var connection = target.getConnection()) {
+			assertTrue(tableExists(connection, "SQLAPP_FACADE_MAINTENANCE"));
+		}
+
+		final BulkMigrationJobLifecycle failingLifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "failing-maintenance-v1";
+			}
+
+			@Override
+			public void before(final Connection connection,
+					final BulkMigrationJobPlan plan) throws SQLException {
+				connection.setAutoCommit(false);
+				throw new SQLException("preparation failed");
+			}
+		};
+		final BulkMigration failing = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.lifecycle(failingLifecycle)
+				.databaseMaintenance("SQLAPP_FACADE_MAINTENANCE").build();
+		assertThrows(SQLException.class, failing::execute);
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.RESTORED.name(),
+				failing.dryRun().maintenance().status());
+	}
+
+	@Test
 	void verificationScopeRestoresBothConnections() throws Exception {
 		try (Connection source = dataSource("verification_scope_source").getConnection();
 				Connection target = dataSource("verification_scope_target").getConnection()) {
@@ -341,5 +403,18 @@ class BulkMigrationTest {
 		dataSource.setUrl("jdbc:hsqldb:mem:" + name);
 		dataSource.setUser("SA");
 		return dataSource;
+	}
+
+	private static boolean tableExists(final Connection connection, final String name)
+			throws SQLException {
+		try (var tables = connection.getMetaData().getTables(connection.getCatalog(),
+				null, "%", new String[] { "TABLE" })) {
+			while (tables.next()) {
+				if (name.equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

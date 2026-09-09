@@ -484,6 +484,11 @@ durability without requiring callers to assemble a store and wrapper. Execution
 records lifecycle transitions, while `dryRun()` reads the matching state into
 the operational report without changing it. The directory should be durable and
 shared by every worker that can resume or inspect the same migration.
+Use `.databaseMaintenance()` when workers share only the target database; an
+overload accepts a custom control-table name. Execution writes maintenance state
+through a dedicated autocommit target connection, independently of chunk
+transactions. `dryRun()` uses the non-mutating JDBC reader, so it neither creates
+nor repairs the maintenance table.
 
 Add `.operationalReport(reportFile)` to atomically refresh the existing JSON
 operational report at each job and table boundary. Report output is disabled by

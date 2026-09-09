@@ -50,6 +50,7 @@ import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.DurableBulkMigrationJobLifecycle;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationMaintenanceStateStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 import lombok.Builder;
@@ -80,6 +81,7 @@ public final class BulkMigration {
 	private final BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private final BulkMigrationJobLifecycle lifecycle;
 	private final Path maintenanceDirectory;
+	private final String maintenanceTableName;
 	private final Path operationalReportFile;
 	private final Path verificationReportFile;
 	private final Path repairPlanOnMismatchFile;
@@ -112,6 +114,7 @@ public final class BulkMigration {
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
 			final BulkMigrationJobLifecycle lifecycle,
 			final Path maintenanceDirectory,
+			final String maintenanceTableName,
 			final Path operationalReportFile, final Path verificationReportFile,
 			final Path repairPlanOnMismatchFile,
 			final Integer maxReportedMismatches,
@@ -144,6 +147,7 @@ public final class BulkMigration {
 		this.lifecycle = lifecycle == null ? BulkMigrationJobLifecycle.NO_OP : lifecycle;
 		this.maintenanceDirectory = maintenanceDirectory == null ? null
 				: maintenanceDirectory.toAbsolutePath().normalize();
+		this.maintenanceTableName = maintenanceTableName;
 		this.operationalReportFile = operationalReportFile == null ? null
 				: operationalReportFile.toAbsolutePath().normalize();
 		this.verificationReportFile = verificationReportFile == null ? null
@@ -192,6 +196,20 @@ public final class BulkMigration {
 		/** Records lifecycle recovery state in a shared directory. */
 		public BulkMigrationBuilder fileMaintenance(final Path directory) {
 			this.maintenanceDirectory = Objects.requireNonNull(directory, "directory");
+			this.maintenanceTableName = null;
+			return this;
+		}
+
+		/** Records lifecycle recovery state on a dedicated target connection. */
+		public BulkMigrationBuilder databaseMaintenance() {
+			return databaseMaintenance(
+					JdbcBulkMigrationMaintenanceStateStore.DEFAULT_TABLE_NAME);
+		}
+
+		/** Records lifecycle recovery state in the specified target table. */
+		public BulkMigrationBuilder databaseMaintenance(final String tableName) {
+			this.maintenanceTableName = Objects.requireNonNull(tableName, "tableName");
+			this.maintenanceDirectory = null;
 			return this;
 		}
 
@@ -246,26 +264,39 @@ public final class BulkMigration {
 	public BulkMigrationJobResult execute() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false);
-			final BulkMigrationJobListener executionListener = executionListener(plan);
-			if (leaseConfiguration == null) {
-				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener,
-						chunkListener);
+			if (maintenanceTableName == null) {
+				return execute(sourceConnection, targetConnection, null);
 			}
-			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
-				final BulkMigrationJobLeaseManager manager =
-						BulkMigrationJobLeaseManagerFactory.create(null, leaseConfiguration);
-				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener,
-						chunkListener, manager);
+			try (Connection maintenanceConnection = target.getConnection()) {
+				maintenanceConnection.setAutoCommit(true);
+				return execute(sourceConnection, targetConnection, maintenanceConnection);
 			}
-			try (Connection leaseConnection = target.getConnection()) {
-				leaseConnection.setAutoCommit(true);
-				final BulkMigrationJobLeaseManager manager =
-						BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
-								leaseConfiguration);
-				return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener,
-						chunkListener, manager);
-			}
+		}
+	}
+
+	private BulkMigrationJobResult execute(final Connection sourceConnection,
+			final Connection targetConnection, final Connection maintenanceConnection)
+			throws SQLException {
+		final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false,
+				false, maintenanceConnection);
+		final BulkMigrationJobListener executionListener = executionListener(plan);
+		if (leaseConfiguration == null) {
+			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
+					executionListener, chunkListener);
+		}
+		if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+			final BulkMigrationJobLeaseManager manager =
+					BulkMigrationJobLeaseManagerFactory.create(null, leaseConfiguration);
+			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
+					executionListener, chunkListener, manager);
+		}
+		try (Connection leaseConnection = target.getConnection()) {
+			leaseConnection.setAutoCommit(true);
+			final BulkMigrationJobLeaseManager manager =
+					BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+							leaseConfiguration);
+			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
+					executionListener, chunkListener, manager);
 		}
 	}
 
@@ -534,22 +565,45 @@ public final class BulkMigration {
 
 	private BulkMigrationJobPlan plan(final Connection sourceConnection,
 			final Connection targetConnection, final boolean readOnly) throws SQLException {
+		return plan(sourceConnection, targetConnection, readOnly, true,
+				targetConnection);
+	}
+
+	private BulkMigrationJobPlan plan(final Connection sourceConnection,
+			final Connection targetConnection, final boolean checkpointReadOnly,
+			final boolean maintenanceReadOnly,
+			final Connection maintenanceConnection) throws SQLException {
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
 		for (final Table table : tables) {
 			final var options = options(table);
 			final BulkMigrationCheckpointStore checkpointStore = checkpointStore(
-					table, targetConnection, readOnly);
+					table, targetConnection, checkpointReadOnly);
 			tasks.add(BulkMigrationJobTask.builder().taskId(taskId(table))
 					.keysetSource(keysetSource(sourceConnection, table))
 					.options(options).checkpointStore(checkpointStore).build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks, effectiveLifecycle());
+		return BulkMigrationJobPlanner.plan(tasks,
+				effectiveLifecycle(maintenanceConnection, maintenanceReadOnly));
 	}
 
-	private BulkMigrationJobLifecycle effectiveLifecycle() {
-		return maintenanceDirectory == null ? lifecycle
-				: new DurableBulkMigrationJobLifecycle(lifecycle,
-						new FileBulkMigrationMaintenanceStateStore(maintenanceDirectory));
+	private BulkMigrationJobLifecycle effectiveLifecycle(
+			final Connection maintenanceConnection, final boolean readOnly)
+			throws SQLException {
+		if (maintenanceDirectory != null) {
+			return new DurableBulkMigrationJobLifecycle(lifecycle,
+					new FileBulkMigrationMaintenanceStateStore(maintenanceDirectory));
+		}
+		if (maintenanceTableName != null) {
+			final var store = readOnly
+					? JdbcBulkMigrationMaintenanceStateStore.readOnly(
+							Objects.requireNonNull(maintenanceConnection,
+									"maintenanceConnection"), maintenanceTableName)
+					: new JdbcBulkMigrationMaintenanceStateStore(
+							Objects.requireNonNull(maintenanceConnection,
+									"maintenanceConnection"), maintenanceTableName);
+			return new DurableBulkMigrationJobLifecycle(lifecycle, store);
+		}
+		return lifecycle;
 	}
 
 	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState maintenanceState(
@@ -695,6 +749,15 @@ public final class BulkMigration {
 				&& (checkpointDirectory != null || checkpointStore != null)) {
 			throw new IllegalArgumentException(
 					"DATABASE checkpoints cannot use a directory or custom store");
+		}
+		if (maintenanceDirectory != null && maintenanceTableName != null) {
+			throw new IllegalArgumentException(
+					"File and database maintenance cannot both be configured");
+		}
+		if (maintenanceTableName != null
+				&& !maintenanceTableName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+			throw new IllegalArgumentException(
+					"Invalid maintenance table name: " + maintenanceTableName);
 		}
 	}
 
