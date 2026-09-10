@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.exceptions.CommandException;
@@ -164,6 +165,7 @@ public class LegacyMigrationLoadPlanIO {
 			for (String key : dataSet.getTargetPrimaryKey()) {
 				column(table, key, "Target primary-key column", dataSet.getId());
 			}
+			validateTargetKey(plan, dataSet, table);
 		}
 		for (var dataSet : plan.getDataSets()) {
 			Set<String> staging = dataSet.getFields().stream()
@@ -195,6 +197,40 @@ public class LegacyMigrationLoadPlanIO {
 				}
 			}
 		}
+	}
+
+	private static void validateTargetKey(LegacyMigrationLoadPlan plan,
+			LegacyMigrationLoadPlan.LoadDataSet dataSet, Table table) {
+		if (!dataSet.getTargetPrimaryKey().isEmpty()) {
+			var primaryKey = table.getPrimaryKeyConstraint();
+			List<String> actual = primaryKey == null ? List.of()
+					: primaryKey.getColumns().stream().map(column -> column.getName()).toList();
+			if (!sameNames(dataSet.getTargetPrimaryKey(), actual)) {
+				throw new CommandException("Target primary key disagrees with schema: "
+						+ dataSet.getId());
+			}
+		}
+		if (!"INSERT".equals(plan.getTableOperationMode())) {
+			SqlSignature signature = new SqlSignature(table, List.of());
+			if (!signature.hasPrimaryKey() && !signature.hasUniqueKey()
+					&& !signature.hasNotNullUniqueIndex()) {
+				throw new CommandException("Target table requires a primary key, unique key, or "
+						+ "non-null unique index for " + plan.getTableOperationMode() + ": "
+						+ dataSet.getId());
+			}
+		}
+	}
+
+	private static boolean sameNames(List<String> left, List<String> right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		for (int i = 0; i < left.size(); i++) {
+			if (!equalsName(left.get(i), right.get(i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static void column(Table table, String name, String role, String dataSetId) {

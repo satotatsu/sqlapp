@@ -423,6 +423,7 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private void validateDatabaseObjects() {
+		List<DatabasePreflightFailure> failures = new ArrayList<>();
 		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			Set<String> targetColumns = new LinkedHashSet<>();
 			dataSet.getFields().stream()
@@ -430,7 +431,7 @@ public class JdbcTreeStagingLoader {
 					.filter(field -> !"DROP".equals(field.getAction()))
 					.map(field -> field.getInner().getTargetColumn())
 					.forEach(targetColumns::add);
-			validateReadable(dataSet.getId(), "target",
+			validateReadable(failures, dataSet.getId(), "target",
 					qualifiedId(dataSet.getInner().getTargetSchema(), dataSet.getTargetTable()),
 					targetColumns);
 
@@ -439,13 +440,23 @@ public class JdbcTreeStagingLoader {
 			if (dataSet.getParentDataSetId() == null) {
 				staging.add(LOAD_STATUS_COLUMN);
 			}
-			validateReadable(dataSet.getId(), "staging",
+			validateReadable(failures, dataSet.getId(), "staging",
 					id(dataSet.getInner().getStagingTable()), staging);
+		}
+		if (!failures.isEmpty()) {
+			SQLException cause = failures.getFirst().cause();
+			failures.stream().skip(1).map(DatabasePreflightFailure::cause)
+					.forEach(cause::addSuppressed);
+			String details = failures.stream().map(DatabasePreflightFailure::description)
+					.reduce((left, right) -> left + System.lineSeparator() + " - " + right)
+					.orElseThrow();
+			throw new CommandException("Database preflight failed:" + System.lineSeparator()
+					+ " - " + details, cause);
 		}
 	}
 
-	private void validateReadable(String dataSetId, String role, String table,
-			Set<String> columns) {
+	private void validateReadable(List<DatabasePreflightFailure> failures,
+			String dataSetId, String role, String table, Set<String> columns) {
 		String selected = columns.stream().map(this::id)
 				.reduce((left, right) -> left + ", " + right).orElse("1");
 		String sql = "SELECT " + selected + " FROM " + table + " WHERE 1=0";
@@ -453,8 +464,8 @@ public class JdbcTreeStagingLoader {
 				var resultSet = statement.executeQuery()) {
 			// Opening the result verifies identifiers without reading user data.
 		} catch (SQLException e) {
-			throw new CommandException("Database preflight failed for " + role
-					+ " table of data set " + dataSetId + ": " + table, e);
+			failures.add(new DatabasePreflightFailure(role + " table of data set "
+					+ dataSetId + ": " + table, e));
 		}
 	}
 
@@ -486,6 +497,9 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private record Where(String sql, List<Object> parameters) {
+	}
+
+	private record DatabasePreflightFailure(String description, SQLException cause) {
 	}
 
 }

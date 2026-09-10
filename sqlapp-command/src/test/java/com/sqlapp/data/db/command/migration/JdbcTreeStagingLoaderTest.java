@@ -5,6 +5,7 @@
  */
 package com.sqlapp.data.db.command.migration;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -78,6 +79,53 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testValidateSchemaRejectsTargetPrimaryKeyThatDisagreesWithSchema() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.getDataSets().getFirst().getTargetPrimaryKey().add("COMPANY_ID");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, targetTables()));
+
+		assertTrue(exception.getMessage()
+				.contains("Target primary key disagrees with schema"));
+	}
+
+	@Test
+	void testValidateSchemaRequiresUsableKeyForInsertIgnore() {
+		LegacyMigrationLoadPlan plan = plan();
+		java.util.List<Table> tables = targetTables();
+		tables.getFirst().getConstraints().clear();
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, tables));
+
+		assertTrue(exception.getMessage().contains(
+				"Target table requires a primary key, unique key, or non-null unique index"));
+	}
+
+	@Test
+	void testValidateSchemaAllowsKeylessPlainInsert() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.setTableOperationMode("INSERT");
+		java.util.List<Table> tables = targetTables();
+		tables.forEach(table -> table.getConstraints().clear());
+
+		assertDoesNotThrow(() -> LegacyMigrationLoadPlanIO.validateSchema(plan, tables));
+	}
+
+	@Test
+	void testValidateSchemaAllowsUniqueKeyForInsertIgnore() {
+		LegacyMigrationLoadPlan plan = plan();
+		java.util.List<Table> tables = targetTables();
+		Table company = tables.getFirst();
+		company.getConstraints().clear();
+		company.getConstraints().addUniqueConstraint("UK_COMPANY_ID",
+				company.getColumns().get("COMPANY_ID"));
+
+		assertDoesNotThrow(() -> LegacyMigrationLoadPlanIO.validateSchema(plan, tables));
+	}
+
+	@Test
 	void testLoadHierarchyAndCleanupOrphansOnNextRun() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
@@ -125,20 +173,23 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
-	void testRejectMissingDatabaseStagingColumnBeforeLoading() throws Exception {
+	void testReportAllMissingDatabaseStagingColumnsBeforeLoading() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			LegacyMigrationLoadPlan plan = plan();
+			plan.getDataSets().getFirst().getFields().add(
+					field(2, "MISSING_COMPANY_COLUMN", "COMPANY_ID", true, false, "COPY"));
 			plan.getDataSets().get(1).getFields().add(
-					field(3, "MISSING_COLUMN", "EMP_ID", true, false, "COPY"));
+					field(3, "MISSING_EMPLOYEE_COLUMN", "EMP_ID", true, false, "COPY"));
 
 			CommandException exception = assertThrows(CommandException.class,
 					() -> new JdbcTreeStagingLoader(connection, schema, plan));
 
-			assertTrue(exception.getMessage().contains(
-					"Database preflight failed for staging table of data set employee"));
+			assertTrue(exception.getMessage().contains("staging table of data set company"));
+			assertTrue(exception.getMessage().contains("staging table of data set employee"));
+			assertEquals(1, exception.getCause().getSuppressed().length);
 		}
 	}
 
@@ -219,11 +270,13 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		Table company = new Table("COMPANY_MASTER");
 		company.getColumns().add(new Column("ID"));
 		company.getColumns().add(new Column("COMPANY_ID"));
+		company.setPrimaryKey(company.getColumns().get("ID"));
 		schema.getTables().add(company);
 		Table employee = new Table("EMPLOYEE_LIST");
 		employee.getColumns().add(new Column("ID"));
 		employee.getColumns().add(new Column("PARENT_ID"));
 		employee.getColumns().add(new Column("EMP_ID"));
+		employee.setPrimaryKey(employee.getColumns().get("ID"));
 		schema.getTables().add(employee);
 		return SchemaUtils.toTables(schema);
 	}
