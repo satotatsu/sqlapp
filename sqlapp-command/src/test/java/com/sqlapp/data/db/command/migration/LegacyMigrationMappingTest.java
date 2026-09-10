@@ -145,6 +145,50 @@ class LegacyMigrationMappingTest {
 		assertThrows(CommandException.class, () -> new LegacyMigrationMappingIO().read(file));
 	}
 
+	@Test
+	void testRejectCyclesMultipleParentsAndIncompleteReferences() {
+		LegacyMigrationMapping cyclic = new LegacyMigrationMapping();
+		TableMapping first = table("first", "FIRST");
+		TableMapping second = table("second", "SECOND");
+		first.setParent(new LegacyMigrationMapping.ParentMapping());
+		first.getParent().setMappingId(second.getId());
+		second.setParent(new LegacyMigrationMapping.ParentMapping());
+		second.getParent().setMappingId(first.getId());
+		cyclic.getTables().add(first);
+		cyclic.getTables().add(second);
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationMappingValidator().validate(cyclic));
+
+		LegacyMigrationMapping multipleParents = new LegacyMigrationMapping();
+		TableMapping parent1 = table("parent1", "PARENT1");
+		TableMapping parent2 = table("parent2", "PARENT2");
+		TableMapping child = table("child", "CHILD");
+		multipleParents.getTables().addAll(java.util.List.of(parent1, parent2, child));
+		multipleParents.getRelationships().add(relationship("rel1", parent1, child));
+		multipleParents.getRelationships().add(relationship("rel2", parent2, child));
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationMappingValidator().validate(multipleParents));
+
+		LegacyMigrationMapping incompleteReference = new LegacyMigrationMapping();
+		TableMapping referenced = table("referenced", "REFERENCED");
+		ColumnMapping reference = new ColumnMapping();
+		reference.setAction(ColumnAction.REFERENCE);
+		reference.setTarget("PARENT_ID");
+		referenced.getColumns().add(reference);
+		incompleteReference.getTables().add(referenced);
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationMappingValidator().validate(incompleteReference));
+	}
+
+	private RelationshipMapping relationship(String id, TableMapping parent,
+			TableMapping child) {
+		RelationshipMapping relationship = new RelationshipMapping();
+		relationship.setId(id);
+		relationship.setParentMappingId(parent.getId());
+		relationship.setChildMappingId(child.getId());
+		return relationship;
+	}
+
 	private TableMapping table(String id, String name) {
 		TableMapping table = new TableMapping();
 		table.setId(id);
