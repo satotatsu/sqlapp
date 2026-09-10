@@ -12,12 +12,6 @@ public record BulkMigrationMaintenanceState(String jobId, String planFingerprint
 	public static final int FINGERPRINT_MAX_LENGTH = 255;
 	public static final int FAILURE_MESSAGE_MAX_LENGTH = 1_000;
 
-	public BulkMigrationMaintenanceState(final String planFingerprint,
-			final BulkMigrationMaintenanceStatus status, final Instant updatedAt,
-			final String failureMessage) {
-		this(planFingerprint, planFingerprint, status, updatedAt, failureMessage);
-	}
-
 	public BulkMigrationMaintenanceState {
 		if (jobId == null || jobId.isBlank()) {
 			throw new IllegalArgumentException("jobId must not be empty");

@@ -39,7 +39,6 @@ public class JdbcBulkMigrationMaintenanceStateStore
 
 	private final Connection connection;
 	private final String rawTableName;
-	private final String tableName;
 	private final Dialect dialect;
 	private final Map<SqlType, SqlNode> sqlNodes = new EnumMap<>(SqlType.class);
 
@@ -62,7 +61,6 @@ public class JdbcBulkMigrationMaintenanceStateStore
 		}
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.rawTableName = tableName;
-		this.tableName = dialect.quote(tableName);
 		final var registry = dialect.createSqlFactoryRegistry();
 		final Table table = stateTable();
 		for (final SqlType type : new SqlType[] { SqlType.SELECT, SqlType.UPDATE,
@@ -125,24 +123,20 @@ public class JdbcBulkMigrationMaintenanceStateStore
 	}
 
 	private void ensureTable() throws SQLException {
-		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + column("JOB_ID") + ", "
-					+ column("PLAN_FINGERPRINT") + ", "
-					+ column("STATUS_NAME") + ", " + column("UPDATED_AT") + ", "
-					+ column("FAILURE_MESSAGE") + " FROM " + tableName
-					+ " WHERE 1 = 0").close();
+		final ReadOnlyStore inspector = new ReadOnlyStore(connection, rawTableName);
+		final Optional<ReadOnlyStore.TableIdentity> existing = inspector.resolveTable();
+		if (existing.isPresent()) {
+			inspector.validateStructure(existing.orElseThrow());
 			return;
-		} catch (SQLException missing) {
-			try {
-				final Table table = stateTable();
-				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
-						.getSqlFactory(table, State.Added);
-				new ConnectionSqlExecutor(connection, false).execute(factory.createSql(table));
-			} catch (SQLException createFailure) {
-				createFailure.addSuppressed(missing);
-				throw createFailure;
-			}
 		}
+		final Table table = stateTable();
+		final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+				.getSqlFactory(table, State.Added);
+		new ConnectionSqlExecutor(connection, false).execute(factory.createSql(table));
+		final ReadOnlyStore.TableIdentity created = inspector.resolveTable().orElseThrow(() ->
+				new SQLException("Migration maintenance table was not created: "
+						+ rawTableName));
+		inspector.validateStructure(created);
 	}
 
 	private Table stateTable() {
@@ -169,10 +163,6 @@ public class JdbcBulkMigrationMaintenanceStateStore
 			final boolean notNull) {
 		return new Column(name).setDataType(DataType.VARCHAR).setLength(length)
 				.setNotNull(notNull);
-	}
-
-	private String column(final String name) {
-		return dialect.quote(name);
 	}
 
 	private static ParametersContext parameters(final String jobId) {

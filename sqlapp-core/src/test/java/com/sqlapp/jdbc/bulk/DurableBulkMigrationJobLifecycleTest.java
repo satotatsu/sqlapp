@@ -22,6 +22,19 @@ class DurableBulkMigrationJobLifecycleTest {
 	private static final Instant NOW = Instant.parse("2026-08-31T00:00:00Z");
 
 	@Test
+	void inMemoryMaintenanceStateIsKeyedByStableJobId() throws Exception {
+		final var store = new InMemoryBulkMigrationMaintenanceStateStore();
+		final var state = new BulkMigrationMaintenanceState("job", "plan-v1",
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null);
+		store.save(state);
+
+		assertEquals(state, store.load("job").orElseThrow());
+		assertTrue(store.load("plan-v1").isEmpty());
+		store.delete("job");
+		assertTrue(store.load("job").isEmpty());
+	}
+
+	@Test
 	void classifiesOnlyInterruptedMaintenanceAsRequiringRecovery() {
 		assertTrue(BulkMigrationMaintenanceStatus.PREPARING.requiresRecovery());
 		assertTrue(BulkMigrationMaintenanceStatus.PREPARED.requiresRecovery());

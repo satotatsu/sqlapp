@@ -268,7 +268,8 @@ class BulkMigrationOperationalReportTest {
 		final BulkMigrationJobStatus status = new BulkMigrationJobStatus(
 				plan.getFingerprint(), List.of(new BulkMigrationJobTaskStatus("customers",
 						BulkMigrationJobTaskState.NOT_STARTED, null)));
-		final var wrongMaintenance = new BulkMigrationMaintenanceState("other",
+		final var wrongMaintenance = new BulkMigrationMaintenanceState("other-job",
+				"other",
 				BulkMigrationMaintenanceStatus.PREPARED, Instant.now(), null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, status, wrongMaintenance, null));

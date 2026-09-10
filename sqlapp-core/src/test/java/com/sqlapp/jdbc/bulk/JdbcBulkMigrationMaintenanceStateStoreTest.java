@@ -20,7 +20,7 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 					"SQLAPP_MAINTENANCE_READ_ONLY");
 			assertTrue(reader.load("plan-v1").isEmpty());
 			assertFalse(tableExists(connection, "SQLAPP_MAINTENANCE_READ_ONLY"));
-			final var state = new BulkMigrationMaintenanceState("plan-v1",
+			final var state = new BulkMigrationMaintenanceState("job", "plan-v1",
 					BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null);
 			assertThrows(UnsupportedOperationException.class, () -> reader.save(state));
 			assertThrows(UnsupportedOperationException.class,
@@ -28,7 +28,7 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 
 			new JdbcBulkMigrationMaintenanceStateStore(connection,
 					"SQLAPP_MAINTENANCE_READ_ONLY").save(state);
-			assertEquals(state, reader.load("plan-v1").orElseThrow());
+			assertEquals(state, reader.load("job").orElseThrow());
 		});
 	}
 
@@ -43,12 +43,12 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 
 			execute(connection, "CREATE SCHEMA \"MAINTENANCE_%\" AUTHORIZATION DBA");
 			connection.setSchema("MAINTENANCE_%");
-			final var state = new BulkMigrationMaintenanceState("plan-v1",
+			final var state = new BulkMigrationMaintenanceState("job", "plan-v1",
 					BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null);
 			new JdbcBulkMigrationMaintenanceStateStore(connection,
 					"SQLAPP_MAINTENANCE_WILDCARD").save(state);
 			assertEquals(state, JdbcBulkMigrationMaintenanceStateStore.readOnly(connection,
-					"SQLAPP_MAINTENANCE_WILDCARD").load("plan-v1").orElseThrow());
+					"SQLAPP_MAINTENANCE_WILDCARD").load("job").orElseThrow());
 		});
 	}
 
@@ -103,26 +103,43 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 	}
 
 	@Test
+	void writableStoreRejectsAnExistingTableWithoutAJobIdPrimaryKey()
+			throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE SQLAPP_MAINTENANCE_WRONG_PK ("
+					+ "JOB_ID VARCHAR(255), PLAN_FINGERPRINT VARCHAR(255), "
+					+ "STATUS_NAME VARCHAR(32), UPDATED_AT VARCHAR(40), "
+					+ "FAILURE_MESSAGE VARCHAR(255), PRIMARY KEY (PLAN_FINGERPRINT))");
+
+			final var failure = assertThrows(java.sql.SQLException.class,
+					() -> new JdbcBulkMigrationMaintenanceStateStore(connection,
+							"SQLAPP_MAINTENANCE_WRONG_PK"));
+			assertTrue(failure.getMessage().contains("JOB_ID alone"));
+		});
+	}
+
+	@Test
 	void createsSavesReplacesLoadsAndDeletesStateThroughSqlFactories()
 			throws Exception {
 		testDb(connection -> {
 			final var store = new JdbcBulkMigrationMaintenanceStateStore(connection,
 					"SQLAPP_MAINTENANCE_STATE_TEST");
+			final String jobId = "job";
 			final String fingerprint = "plan-v1";
-			final var prepared = new BulkMigrationMaintenanceState(fingerprint,
+			final var prepared = new BulkMigrationMaintenanceState(jobId, fingerprint,
 					BulkMigrationMaintenanceStatus.PREPARED,
 					Instant.parse("2026-08-31T02:00:00Z"), null);
 			store.save(prepared);
-			assertEquals(prepared, store.load(fingerprint).orElseThrow());
+			assertEquals(prepared, store.load(jobId).orElseThrow());
 
-			final var failed = new BulkMigrationMaintenanceState(fingerprint,
+			final var failed = new BulkMigrationMaintenanceState(jobId, fingerprint,
 					BulkMigrationMaintenanceStatus.RESTORE_FAILED,
 					Instant.parse("2026-08-31T02:01:00Z"), "restore failed");
 			store.save(failed);
-			assertEquals(failed, store.load(fingerprint).orElseThrow());
+			assertEquals(failed, store.load(jobId).orElseThrow());
 
-			store.delete(fingerprint);
-			assertFalse(store.load(fingerprint).isPresent());
+			store.delete(jobId);
+			assertFalse(store.load(jobId).isPresent());
 		});
 	}
 

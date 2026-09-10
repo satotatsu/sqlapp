@@ -12,17 +12,26 @@ public class InMemoryBulkMigrationMaintenanceStateStore
 			new ConcurrentHashMap<>();
 
 	@Override
-	public Optional<BulkMigrationMaintenanceState> load(final String planFingerprint) {
-		return Optional.ofNullable(states.get(planFingerprint));
+	public Optional<BulkMigrationMaintenanceState> load(final String jobId) {
+		validateJobId(jobId);
+		return Optional.ofNullable(states.get(jobId));
 	}
 
 	@Override
 	public void save(final BulkMigrationMaintenanceState state) {
-		states.put(state.planFingerprint(), state);
+		java.util.Objects.requireNonNull(state, "state");
+		states.put(state.jobId(), state);
 	}
 
 	@Override
-	public void delete(final String planFingerprint) {
-		states.remove(planFingerprint);
+	public void delete(final String jobId) {
+		validateJobId(jobId);
+		states.remove(jobId);
+	}
+
+	private static void validateJobId(final String jobId) {
+		if (jobId == null || jobId.isBlank()) {
+			throw new IllegalArgumentException("jobId must not be empty");
+		}
 	}
 }

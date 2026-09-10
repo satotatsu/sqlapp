@@ -45,7 +45,7 @@ public final class BulkMigrationTransactionAssertions {
 			throws SQLException {
 		final String tableName = "SQLAPP_BULK_READ_ONLY_MAINTENANCE";
 		final String fingerprint = "read-only-" + java.util.UUID.randomUUID();
-		final var state = new BulkMigrationMaintenanceState(fingerprint,
+		final var state = new BulkMigrationMaintenanceState(fingerprint, fingerprint,
 				BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null);
 		new JdbcBulkMigrationMaintenanceStateStore(connection, tableName).save(state);
 		assertEquals(state, JdbcBulkMigrationMaintenanceStateStore

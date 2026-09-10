@@ -22,31 +22,33 @@ class FileBulkMigrationMaintenanceStateStoreTest {
 	@Test
 	void savesReplacesLoadsAndDeletesState() throws Exception {
 		final var store = new FileBulkMigrationMaintenanceStateStore(directory);
+		final String jobId = "job-日本語";
 		final String fingerprint = "plan-日本語-v1";
-		final var prepared = new BulkMigrationMaintenanceState(fingerprint,
+		final var prepared = new BulkMigrationMaintenanceState(jobId, fingerprint,
 				BulkMigrationMaintenanceStatus.PREPARED,
 				Instant.parse("2026-08-31T01:02:03Z"), null);
 		store.save(prepared);
-		assertEquals(prepared, store.load(fingerprint).orElseThrow());
+		assertEquals(prepared, store.load(jobId).orElseThrow());
 
-		final var failed = new BulkMigrationMaintenanceState(fingerprint,
+		final var failed = new BulkMigrationMaintenanceState(jobId, fingerprint,
 				BulkMigrationMaintenanceStatus.RESTORE_FAILED,
 				Instant.parse("2026-08-31T01:03:00Z"), "enable constraint failed");
 		store.save(failed);
-		assertEquals(failed, store.load(fingerprint).orElseThrow());
+		assertEquals(failed, store.load(jobId).orElseThrow());
 		try (var files = Files.list(directory)) {
 			assertEquals(1, files.count());
 		}
 
-		store.delete(fingerprint);
-		assertFalse(store.load(fingerprint).isPresent());
+		store.delete(jobId);
+		assertFalse(store.load(jobId).isPresent());
 	}
 
 	@Test
 	void rejectsCorruptState() throws Exception {
 		final var store = new FileBulkMigrationMaintenanceStateStore(directory);
+		final String jobId = "corrupt-job";
 		final String fingerprint = "corrupt-plan";
-		store.save(new BulkMigrationMaintenanceState(fingerprint,
+		store.save(new BulkMigrationMaintenanceState(jobId, fingerprint,
 				BulkMigrationMaintenanceStatus.PREPARING, Instant.now(), null));
 		final java.nio.file.Path file;
 		try (var files = Files.list(directory)) {
@@ -54,6 +56,6 @@ class FileBulkMigrationMaintenanceStateStoreTest {
 		}
 		Files.writeString(file, "planFingerprint=other\nstatus=UNKNOWN\nupdatedAt=bad\n");
 
-		assertThrows(SQLException.class, () -> store.load(fingerprint));
+		assertThrows(SQLException.class, () -> store.load(jobId));
 	}
 }
