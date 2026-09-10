@@ -70,6 +70,22 @@ class LoadLegacyHierarchyCommandTest {
 		assertTrue(exception.getMessage().contains("disagrees with its contract"));
 	}
 
+	@Test
+	void testRejectMissingTargetTableBeforeOpeningAConnection() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "empty-schema.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		File planFile = new File(temporaryDirectory, "missing-target-load-plan.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+		assertTrue(exception.getMessage().contains("Target table was not found in schema"));
+	}
+
 	private void initialize(LegacyMigrationLoadPlan plan, File schemaFile,
 			String schemaFingerprint) throws Exception {
 		plan.setMigrationId("test-migration");

@@ -51,6 +51,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		}
 		validateViewpointsFingerprint(plan);
 		DbCommonObject<?> schema = readSchema(targetSchemaFile);
+		LegacyMigrationLoadPlanIO.validateSchema(plan, SchemaUtils.toTables(schema));
 		execute(getDataSource(), connection -> {
 			long roots = new JdbcTreeStagingLoader(connection, schema, plan).load();
 			info("Legacy hierarchy load completed. roots=", roots);

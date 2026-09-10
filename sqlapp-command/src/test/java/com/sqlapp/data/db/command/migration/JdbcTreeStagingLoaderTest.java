@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -13,15 +14,68 @@ import java.sql.Connection;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.JoinKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadField;
+import com.sqlapp.exceptions.CommandException;
 import com.zaxxer.hikari.HikariDataSource;
 
 class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
+
+	@Test
+	void testValidateSchemaRejectsMissingTargetColumn() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.getDataSets().getFirst().getFields().getFirst()
+				.setTargetColumn("MISSING_COLUMN");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, targetTables()));
+
+		assertTrue(exception.getMessage().contains("Target column was not found"));
+	}
+
+	@Test
+	void testValidateSchemaRejectsMissingBusinessKeyColumn() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.getDataSets().getFirst().getSourceBusinessKey().clear();
+		plan.getDataSets().getFirst().getSourceBusinessKey().add("MISSING_KEY");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, targetTables()));
+
+		assertTrue(exception.getMessage()
+				.contains("Source business-key staging column was not found"));
+	}
+
+	@Test
+	void testValidateSchemaRejectsMissingParentJoinColumn() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.getDataSets().get(1).getParentJoinKeys().getFirst()
+				.setParentStagingColumn("MISSING_PARENT_KEY");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, targetTables()));
+
+		assertTrue(exception.getMessage()
+				.contains("Parent/child staging join column was not found"));
+	}
+
+	@Test
+	void testValidateSchemaRejectsMissingTargetPrimaryKeyColumn() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.getDataSets().getFirst().getTargetPrimaryKey().add("MISSING_PRIMARY_KEY");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, targetTables()));
+
+		assertTrue(exception.getMessage()
+				.contains("Target primary-key column was not found"));
+	}
 
 	@Test
 	void testLoadHierarchyAndCleanupOrphansOnNextRun() throws Exception {
@@ -140,6 +194,20 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		employee.getParentJoinKeys().add(key);
 		plan.getDataSets().add(employee);
 		return plan;
+	}
+
+	private java.util.List<Table> targetTables() {
+		Schema schema = new Schema("PUBLIC");
+		Table company = new Table("COMPANY_MASTER");
+		company.getColumns().add(new Column("ID"));
+		company.getColumns().add(new Column("COMPANY_ID"));
+		schema.getTables().add(company);
+		Table employee = new Table("EMPLOYEE_LIST");
+		employee.getColumns().add(new Column("ID"));
+		employee.getColumns().add(new Column("PARENT_ID"));
+		employee.getColumns().add(new Column("EMP_ID"));
+		schema.getTables().add(employee);
+		return SchemaUtils.toTables(schema);
 	}
 
 	private LoadDataSet dataSet(String id, String target, String staging, String parent, int order) {

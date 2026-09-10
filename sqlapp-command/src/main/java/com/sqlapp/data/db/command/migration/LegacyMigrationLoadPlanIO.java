@@ -9,9 +9,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.YamlConverter;
@@ -94,6 +96,10 @@ public class LegacyMigrationLoadPlanIO {
 			nonBlank(dataSet.getFileName(), "dataSet.fileName");
 			nonBlank(dataSet.getStagingTable(), "dataSet.stagingTable");
 			nonBlank(dataSet.getTargetTable(), "dataSet.targetTable");
+			if (dataSet.getHierarchyDepth() < 0 || dataSet.getLoadOrder() < 0) {
+				throw new CommandException("Load data set hierarchy or load order is invalid: "
+						+ dataSet.getId());
+			}
 			if (byId.putIfAbsent(dataSet.getId(), dataSet) != null) {
 				throw new CommandException("Duplicate load data set id: " + dataSet.getId());
 			}
@@ -132,6 +138,82 @@ public class LegacyMigrationLoadPlanIO {
 			}
 		}
 		return plan;
+	}
+
+	static void validateSchema(LegacyMigrationLoadPlan plan, List<Table> tables) {
+		Objects.requireNonNull(plan, "plan");
+		Objects.requireNonNull(tables, "tables");
+		for (var dataSet : plan.getDataSets()) {
+			List<Table> matches = tables.stream().filter(table ->
+					equalsName(table.getSchemaName(), dataSet.getTargetSchema())
+							&& equalsName(table.getName(), dataSet.getTargetTable())).toList();
+			if (matches.isEmpty()) {
+				throw new CommandException("Target table was not found in schema: "
+						+ qualified(dataSet.getTargetSchema(), dataSet.getTargetTable()));
+			}
+			if (matches.size() > 1) {
+				throw new CommandException("Target table is ambiguous in schema: "
+						+ qualified(dataSet.getTargetSchema(), dataSet.getTargetTable()));
+			}
+			Table table = matches.getFirst();
+			for (var field : dataSet.getFields()) {
+				if (field.getTargetColumn() != null && !"DROP".equals(field.getAction())) {
+					column(table, field.getTargetColumn(), "Target column", dataSet.getId());
+				}
+			}
+			for (String key : dataSet.getTargetPrimaryKey()) {
+				column(table, key, "Target primary-key column", dataSet.getId());
+			}
+		}
+		for (var dataSet : plan.getDataSets()) {
+			Set<String> staging = dataSet.getFields().stream()
+					.filter(LegacyMigrationLoadPlan.LoadField::isExtracted)
+					.map(field -> field.getStagingColumn().toLowerCase(java.util.Locale.ROOT))
+					.collect(java.util.stream.Collectors.toSet());
+			for (String key : dataSet.getSourceBusinessKey()) {
+				if (!staging.contains(key.toLowerCase(java.util.Locale.ROOT))) {
+					throw new CommandException("Source business-key staging column was not found: "
+							+ dataSet.getId() + "." + key);
+				}
+			}
+			if (dataSet.getParentDataSetId() != null) {
+				var parent = plan.getDataSets().stream().filter(item -> item.getId()
+						.equals(dataSet.getParentDataSetId())).findFirst().orElseThrow();
+				Set<String> parentStaging = parent.getFields().stream()
+						.filter(LegacyMigrationLoadPlan.LoadField::isExtracted)
+						.map(field -> field.getStagingColumn()
+								.toLowerCase(java.util.Locale.ROOT))
+						.collect(java.util.stream.Collectors.toSet());
+				for (var key : dataSet.getParentJoinKeys()) {
+					if (!parentStaging.contains(key.getParentStagingColumn()
+							.toLowerCase(java.util.Locale.ROOT))
+							|| !staging.contains(key.getChildStagingColumn()
+									.toLowerCase(java.util.Locale.ROOT))) {
+						throw new CommandException("Parent/child staging join column was not found: "
+								+ dataSet.getId());
+					}
+				}
+			}
+		}
+	}
+
+	private static void column(Table table, String name, String role, String dataSetId) {
+		long matches = table.getColumns().stream()
+				.filter(item -> equalsName(item.getName(), name)).count();
+		if (matches == 0) {
+			throw new CommandException(role + " was not found: " + dataSetId + "." + name);
+		}
+		if (matches > 1) {
+			throw new CommandException(role + " is ambiguous: " + dataSetId + "." + name);
+		}
+	}
+
+	private static boolean equalsName(String left, String right) {
+		return left == null ? right == null : right != null && left.equalsIgnoreCase(right);
+	}
+
+	private static String qualified(String schema, String table) {
+		return schema == null || schema.isBlank() ? table : schema + "." + table;
 	}
 
 	private static void validateFields(LegacyMigrationLoadPlan.LoadDataSet dataSet) {

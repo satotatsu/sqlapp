@@ -305,6 +305,7 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private void initialize() {
+		LegacyMigrationLoadPlanIO.validateSchema(plan.getInner(), tables);
 		if (plan == null || !LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
 			throw new CommandException("Unsupported legacy migration load plan.");
 		}
