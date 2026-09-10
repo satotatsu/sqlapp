@@ -75,10 +75,22 @@ class GeneratePliCsvExtractorCommandTest {
 		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(file));
 	}
 
+	@Test
+	void testRejectIncompleteMappingProvenance() {
+		File contractFile = new File(temporaryDirectory, "company-contract.yaml");
+		LegacyMigrationContract contract = contract();
+		contract.setMappingFingerprint("sha256:missing-file");
+		new LegacyMigrationContractIO().write(contractFile, contract);
+		GeneratePliCsvExtractorCommand command = new GeneratePliCsvExtractorCommand();
+		command.setContractFile(contractFile);
+		command.setOutputDirectory(temporaryDirectory);
+
+		assertThrows(CommandException.class, command::run);
+	}
+
 	private LegacyMigrationContract contract() {
 		LegacyMigrationContract contract = new LegacyMigrationContract();
 		contract.setMigrationId("company-migration");
-		contract.setMappingFingerprint("sha256:sample");
 		contract.getCsv().setEncoding("MS932");
 		contract.getCsv().setNullValue("\\N");
 		DataSet root = dataSet("table-company", "COMPANY_MASTER", "company_master.csv",

@@ -78,9 +78,9 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(csv.contains("encoding: \"MS932\""));
 		assertTrue(csv.contains("position: 2, name: \"EMPLOYEE_LIST_NO\""));
 		String runner = Files.readString(new File(output, "CompanyLoader.java.template").toPath());
-		assertTrue(runner.contains("new LegacyMigrationLoadPlanIO().read(loadPlanFile)"));
-		assertTrue(runner.contains("new JdbcTreeStagingLoader(connection, schema, plan).load()"));
-		assertTrue(runner.contains("connection.rollback()"));
+		assertTrue(runner.contains("new LoadLegacyHierarchyCommand()"));
+		assertTrue(runner.contains("command.setDataSource(dataSource)"));
+		assertTrue(runner.contains("command.setLoadPlanFile(loadPlanFile)"));
 		assertFalse(new File(output, "company-staging.sql.tmp").exists());
 
 		plan.getDataSets().getLast().setParentDataSetId("missing-parent");

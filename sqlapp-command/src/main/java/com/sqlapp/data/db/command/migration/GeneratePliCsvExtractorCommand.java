@@ -43,6 +43,7 @@ public class GeneratePliCsvExtractorCommand extends AbstractCommand {
 			throw new CommandException("PL/I program name must be 1-8 characters: " + programName);
 		}
 		var contract = new LegacyMigrationContractIO().read(contractFile);
+		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
 		var generator = new PliCsvExtractorGenerator();
 		generator.validate(contract);
 		write(new File(outputDirectory, programName + "-extraction-spec.md"),

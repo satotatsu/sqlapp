@@ -5,11 +5,13 @@
  */
 package com.sqlapp.data.db.command.migration;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
@@ -108,6 +110,42 @@ public class LegacyMigrationContractValidator {
 				current = byId.get(current.getParentDataSetId());
 			}
 		}
+	}
+
+	public void validateReferencedMapping(LegacyMigrationContract contract, File contractFile) {
+		validate(contract);
+		boolean hasFile = !blank(contract.getMappingFile());
+		boolean hasFingerprint = !blank(contract.getMappingFingerprint());
+		if (!hasFile && !hasFingerprint) {
+			return;
+		}
+		if (!hasFile || !hasFingerprint) {
+			throw new CommandException(
+					"Migration contract mappingFile and mappingFingerprint must be specified together.");
+		}
+		File mappingFile = resolve(contractFile, contract.getMappingFile());
+		if (!mappingFile.isFile()) {
+			throw new CommandException("Migration mapping in contract does not exist: " + mappingFile);
+		}
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		String actual = validator.fingerprint(mappingFile);
+		if (!contract.getMappingFingerprint().equalsIgnoreCase(actual)) {
+			throw new CommandException("Migration mapping fingerprint does not match the contract: "
+					+ mappingFile);
+		}
+		var mapping = new LegacyMigrationMappingIO().read(mappingFile);
+		if (!Objects.equals(contract.getMigrationId(), mapping.getMigration().getId())) {
+			throw new CommandException("Migration mapping migrationId does not match the contract.");
+		}
+	}
+
+	private File resolve(File owner, String value) {
+		File file = new File(value);
+		if (file.isAbsolute()) {
+			return file;
+		}
+		File parent = owner.getAbsoluteFile().getParentFile();
+		return new File(parent, value);
 	}
 
 	private boolean invalidNames(List<String> values) {

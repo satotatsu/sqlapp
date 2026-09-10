@@ -180,12 +180,9 @@ public class LegacyRdbLoaderGenerator {
 	public String runnerTemplate(LegacyMigrationLoadPlan plan, String className) {
 		StringBuilder builder = new StringBuilder();
 		line(builder, "/* Generated runner template. Supply the application DataSource. */");
-		line(builder, "import java.sql.Connection;");
 		line(builder, "import java.io.File;");
 		line(builder, "import javax.sql.DataSource;");
-		line(builder, "import com.sqlapp.data.schemas.SchemaUtils;");
-		line(builder, "import com.sqlapp.data.db.command.migration.JdbcTreeStagingLoader;");
-		line(builder, "import com.sqlapp.data.db.command.migration.LegacyMigrationLoadPlanIO;");
+		line(builder, "import com.sqlapp.data.db.command.migration.LoadLegacyHierarchyCommand;");
 		line(builder, "");
 		line(builder, "public class " + className + " {");
 		line(builder, "  private final DataSource dataSource;");
@@ -194,18 +191,11 @@ public class LegacyRdbLoaderGenerator {
 		line(builder, "    this.dataSource = dataSource;");
 		line(builder, "    this.loadPlanFile = loadPlanFile;");
 		line(builder, "  }");
-		line(builder, "  public void run() throws Exception {");
-		line(builder, "    var plan = new LegacyMigrationLoadPlanIO().read(loadPlanFile);");
-		line(builder, "    var schema = SchemaUtils.readXml(new File(plan.getSchemaFile()));");
-		line(builder, "    try (Connection connection = dataSource.getConnection()) {");
-		line(builder, "      connection.setAutoCommit(false);");
-		line(builder, "      try {");
-		line(builder, "        new JdbcTreeStagingLoader(connection, schema, plan).load();");
-		line(builder, "      } catch (Exception e) {");
-		line(builder, "        connection.rollback();");
-		line(builder, "        throw e;");
-		line(builder, "      }");
-		line(builder, "    }");
+		line(builder, "  public void run() {");
+		line(builder, "    var command = new LoadLegacyHierarchyCommand();");
+		line(builder, "    command.setDataSource(dataSource);");
+		line(builder, "    command.setLoadPlanFile(loadPlanFile);");
+		line(builder, "    command.run();");
 		line(builder, "  }");
 		line(builder, "}");
 		return builder.toString();

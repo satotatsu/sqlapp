@@ -53,11 +53,26 @@ class LoadLegacyHierarchyCommandTest {
 		assertTrue(exception.getMessage().contains("invalid-schema.xml"));
 	}
 
+	@Test
+	void testRejectLoadPlanThatDisagreesWithItsContract() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		plan.getDataSets().getFirst().setFileName("different.csv");
+		File planFile = new File(temporaryDirectory, "mismatched-load-plan.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+		assertTrue(exception.getMessage().contains("disagrees with its contract"));
+	}
+
 	private void initialize(LegacyMigrationLoadPlan plan, File schemaFile,
-			String schemaFingerprint) {
+			String schemaFingerprint) throws Exception {
 		plan.setMigrationId("test-migration");
-		plan.setContractFile(new File(temporaryDirectory, "contract.yaml").getPath());
-		plan.setContractFingerprint("sha256:contract");
 		plan.setSchemaFile(schemaFile.getPath());
 		plan.setSchemaFingerprint(schemaFingerprint);
 		var dataSet = new LegacyMigrationLoadPlan.LoadDataSet();
@@ -71,8 +86,33 @@ class LoadLegacyHierarchyCommandTest {
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
 		field.setDataType("INT");
+		field.setAction("COPY");
 		field.setExtracted(true);
 		dataSet.getFields().add(field);
 		plan.getDataSets().add(dataSet);
+
+		var contract = new com.sqlapp.data.schemas.migration.LegacyMigrationContract();
+		contract.setMigrationId(plan.getMigrationId());
+		var contractDataSet = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet();
+		contractDataSet.setId(dataSet.getId());
+		contractDataSet.setSourcePath("ROOT");
+		contractDataSet.setFileName(dataSet.getFileName());
+		contractDataSet.setTargetTable(dataSet.getTargetTable());
+		contractDataSet.getSourceBusinessKey().add("ID");
+		var contractField = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
+		contractField.setPosition(1);
+		contractField.setSourcePath("ROOT.ID");
+		contractField.setStagingColumn("ID");
+		contractField.setTargetColumn("ID");
+		contractField.setTargetDataType("INT");
+		contractField.setAction("COPY");
+		contractField.setExtracted(true);
+		contractDataSet.getFields().add(contractField);
+		contract.getDataSets().add(contractDataSet);
+		File contractFile = new File(temporaryDirectory, "contract.yaml");
+		new LegacyMigrationContractIO().write(contractFile, contract);
+		plan.setContractFile(contractFile.getPath());
+		plan.setContractFingerprint(
+				new LegacyMigrationMappingValidator().fingerprint(contractFile));
 	}
 }

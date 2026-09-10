@@ -98,6 +98,7 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		String cursorStrategy = rootCursorStrategy == null ? null
 				: rootCursorStrategy.toUpperCase(Locale.ROOT);
 		var contract = new LegacyMigrationContractIO().read(contractFile);
+		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
 		var generator = new LegacyRdbLoaderGenerator();
 		var plan = generator.plan(contractFile, schemaFile, contract, mode, rootBatchSize,
 				commitEveryRootBatches, deleteCommittedRoots, stagingTablePrefix, cursorStrategy);

@@ -37,7 +37,7 @@ public class LegacyMigrationContractBuilder {
 		new LegacyMigrationMappingValidator().validate(mapping);
 		LegacyMigrationContract contract = new LegacyMigrationContract();
 		contract.setMigrationId(mapping.getMigration().getId());
-		contract.setMappingFile(mappingFile.getPath());
+		contract.setMappingFile(mappingFile.getAbsolutePath());
 		contract.setMappingFingerprint(new LegacyMigrationMappingValidator().fingerprint(mappingFile));
 
 		Map<String, TableMapping> tables = new LinkedHashMap<>();
