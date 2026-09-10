@@ -3,13 +3,10 @@ package com.sqlapp.data.db.command.migration;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -114,34 +111,16 @@ public final class FileBulkMigrationJobLeaseStore
 
 	private void write(final BulkMigrationJobLease lease) throws SQLException {
 		final Path file = stateFile(lease.jobId());
-		Path temporary = null;
 		try {
-			temporary = Files.createTempFile(directory, file.getFileName().toString(),
-					".tmp");
 			final Properties values = new Properties();
 			values.setProperty("jobId", lease.jobId());
 			values.setProperty("planFingerprint", lease.planFingerprint());
 			values.setProperty("ownerId", lease.ownerId());
 			values.setProperty("expiresAt", lease.expiresAt().toString());
-			try (OutputStream output = Files.newOutputStream(temporary)) {
-				values.store(output, "sqlapp bulk migration job lease");
-			}
-			try {
-				Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE,
-						StandardCopyOption.REPLACE_EXISTING);
-			} catch (AtomicMoveNotSupportedException e) {
-				Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
-			}
-			temporary = null;
+			AtomicPropertiesFile.write(directory, file, values,
+					"sqlapp bulk migration job lease");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration job lease: " + file, e);
-		} finally {
-			if (temporary != null) {
-				try {
-					Files.deleteIfExists(temporary);
-				} catch (IOException ignored) {
-				}
-			}
 		}
 	}
 

@@ -3,12 +3,9 @@ package com.sqlapp.data.db.command.migration;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
@@ -62,35 +59,17 @@ public class FileBulkMigrationMaintenanceStateStore
 		java.util.Objects.requireNonNull(state, "state");
 		validateJobId(state.jobId());
 		final Path file = file(state.jobId());
-		Path temporary = null;
 		try {
-			Files.createDirectories(directory);
-			temporary = Files.createTempFile(directory, file.getFileName().toString(), ".tmp");
 			final Properties values = new Properties();
 			values.setProperty("jobId", state.jobId());
 			values.setProperty("planFingerprint", state.planFingerprint());
 			values.setProperty("status", state.status().name());
 			values.setProperty("updatedAt", state.updatedAt().toString());
 			values.setProperty("failureMessage", nullToEmpty(state.failureMessage()));
-			try (OutputStream output = Files.newOutputStream(temporary)) {
-				values.store(output, "sqlapp bulk migration maintenance state");
-			}
-			try {
-				Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE,
-						StandardCopyOption.REPLACE_EXISTING);
-			} catch (AtomicMoveNotSupportedException e) {
-				Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
-			}
-			temporary = null;
+			AtomicPropertiesFile.write(directory, file, values,
+					"sqlapp bulk migration maintenance state");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration maintenance state: " + file, e);
-		} finally {
-			if (temporary != null) {
-				try {
-					Files.deleteIfExists(temporary);
-				} catch (IOException ignored) {
-				}
-			}
 		}
 	}
 
