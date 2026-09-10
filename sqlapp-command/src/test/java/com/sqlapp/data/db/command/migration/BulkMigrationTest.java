@@ -368,7 +368,20 @@ class BulkMigrationTest {
 				migration.dryRun().maintenance().status());
 		try (var connection = target.getConnection()) {
 			assertTrue(tableExists(connection, "SQLAPP_FACADE_MAINTENANCE"));
+			new com.sqlapp.jdbc.bulk.JdbcBulkMigrationMaintenanceStateStore(connection,
+					"SQLAPP_FACADE_MAINTENANCE").save(
+						new BulkMigrationMaintenanceState(
+								migration.dryRun().planFingerprint(),
+								BulkMigrationMaintenanceStatus.PREPARED,
+								Instant.EPOCH, null));
 		}
+		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
+				migration.resumeReadiness());
+		assertTrue(assertThrows(IllegalStateException.class, migration::execute)
+				.getMessage().contains("explicit recovery"));
+		final String approvedFingerprint = migration.dryRun().planFingerprint();
+		assertTrue(migration.recoverMaintenanceWithFingerprint(approvedFingerprint)
+				.recovered());
 
 		final BulkMigrationJobLifecycle failingLifecycle = new BulkMigrationJobLifecycle() {
 			@Override
@@ -436,6 +449,10 @@ class BulkMigrationTest {
 				new BulkMigrationMaintenanceState(fingerprint,
 						BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null));
 
+		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
+				migration.resumeReadiness());
+		assertTrue(assertThrows(IllegalStateException.class, migration::execute)
+				.getMessage().contains("explicit recovery"));
 		assertThrows(IllegalArgumentException.class,
 				() -> migration.recoverMaintenanceWithFingerprint("wrong"));
 		assertEquals(0, restores.get());
@@ -446,6 +463,8 @@ class BulkMigrationTest {
 		assertEquals(BulkMigrationMaintenanceStatus.RESTORED,
 				recovered.currentState().status());
 		assertEquals(1, restores.get());
+		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
+				migration.resumeReadiness());
 		assertFalse(migration.recoverMaintenanceWithFingerprint(fingerprint).recovered());
 		assertEquals(1, restores.get());
 	}
@@ -525,7 +544,7 @@ class BulkMigrationTest {
 		}
 		Files.writeString(stateFile, "status=UNKNOWN\n", java.nio.charset.StandardCharsets.UTF_8);
 
-		final RuntimeException failure = assertThrows(RuntimeException.class,
+		final SQLException failure = assertThrows(SQLException.class,
 				migration::execute);
 		assertTrue(failure.getMessage().contains("maintenance state"));
 		try (var connection = target.getConnection();

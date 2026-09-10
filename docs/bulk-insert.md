@@ -494,6 +494,10 @@ After reviewing the plan, call
 interrupted lifecycle, or `recoverMaintenance(approvedDryRunReport)` to use the
 fingerprint from a saved report. Recovery rejects a changed plan and is
 idempotent once the durable state is `RESTORED` or `COMPLETE`.
+`execute()` performs the same durable-state preflight and refuses to overwrite
+`PREPARING`, `PREPARED`, `POST_PROCESSING`, `RESTORING`, or `RESTORE_FAILED`.
+Use the explicit recovery API first. `RESTORED` and `COMPLETE` are safe terminal
+states and do not block a later execution.
 
 Add `.operationalReport(reportFile)` to atomically refresh the existing JSON
 operational report at each job and table boundary. Report output is disabled by

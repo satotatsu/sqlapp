@@ -6,11 +6,10 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 
 /** Makes a conservative, read-only resume decision from a validated report. */
 public final class BulkMigrationOperationalReportResumeAssessor {
-	private static final Set<String> RECOVERY_STATUSES = Set.of("PREPARING",
-			"PREPARED", "POST_PROCESSING", "RESTORING", "RESTORE_FAILED");
 	private static final Set<String> ACTIVE_EVENTS = Set.of("JOB_STARTED",
 			"TASK_STARTED", "TASK_COMPLETED");
 
@@ -64,8 +63,8 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 				.anyMatch(task -> "INCOMPATIBLE".equals(task.state()))) {
 			return BulkMigrationResumeReadiness.INCOMPATIBLE;
 		}
-		if (report.maintenance() != null && RECOVERY_STATUSES
-				.contains(report.maintenance().status())) {
+		if (report.maintenance() != null && BulkMigrationMaintenanceStatus
+				.valueOf(report.maintenance().status()).requiresRecovery()) {
 			return BulkMigrationResumeReadiness.RECOVERY_REQUIRED;
 		}
 		return null;

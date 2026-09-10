@@ -20,6 +20,17 @@ class DurableBulkMigrationJobLifecycleTest {
 	private static final Instant NOW = Instant.parse("2026-08-31T00:00:00Z");
 
 	@Test
+	void classifiesOnlyInterruptedMaintenanceAsRequiringRecovery() {
+		assertTrue(BulkMigrationMaintenanceStatus.PREPARING.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.PREPARED.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.POST_PROCESSING.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.RESTORING.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.RESTORE_FAILED.requiresRecovery());
+		assertFalse(BulkMigrationMaintenanceStatus.RESTORED.requiresRecovery());
+		assertFalse(BulkMigrationMaintenanceStatus.COMPLETE.requiresRecovery());
+	}
+
+	@Test
 	void recordsSuccessfulLifecycleTransitions() throws Exception {
 		final var store = new RecordingStore();
 		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, store);
