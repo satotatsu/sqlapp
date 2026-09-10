@@ -766,6 +766,16 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * Maximum number of rows for which a generated-key result can be mapped back
+	 * to input rows safely. The data session splits only generated-key batches to
+	 * this size. Dialects whose drivers return only the final key from a JDBC batch
+	 * should return {@code 1}.
+	 */
+	public int getMaxGeneratedKeysBatchSize() {
+		return Integer.MAX_VALUE;
+	}
+
+	/**
 	 * Returns column names to pass to
 	 * {@link Connection#prepareStatement(String, String[])} when generated keys
 	 * must be requested by name.

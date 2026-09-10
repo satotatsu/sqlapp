@@ -623,6 +623,22 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					.findFirst().orElse(null);
 			final boolean generatedIdentityRequired = sqlType == SqlType.INSERT && identityColumn != null
 					&& rows.stream().anyMatch(row -> row.get(identityColumn) == null);
+			final int generatedKeysBatchSize = dialect.getMaxGeneratedKeysBatchSize();
+			if (generatedIdentityRequired && generatedKeysBatchSize < 1) {
+				throw new SQLException("Dialect " + dialect.getProductName()
+						+ " cannot map generated identity values for "
+						+ identityColumn.getTable().getName() + "." + identityColumn.getName() + ".");
+			}
+			if (generatedIdentityRequired && rows.size() > generatedKeysBatchSize) {
+				final int[] result = new int[rows.size()];
+				for (int offset = 0; offset < rows.size(); offset += generatedKeysBatchSize) {
+					final int end = Math.min(offset + generatedKeysBatchSize, rows.size());
+					final int[] chunkResult = handleStatement(tableRelation,
+							rows.subList(offset, end), sqlType);
+					System.arraycopy(chunkResult, 0, result, offset, chunkResult.length);
+				}
+				return result;
+			}
 			if (generatedIdentityRequired && dialect.requiresExplicitIdentityValuesForGeneratedKeys()) {
 				throw new SQLException("Dialect " + dialect.getProductName() + " cannot return all generated identity values for "
 						+ identityColumn.getTable().getName() + "." + identityColumn.getName()

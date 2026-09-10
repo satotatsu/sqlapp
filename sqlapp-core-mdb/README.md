@@ -45,8 +45,12 @@ database.
 
 UCanAccess returns only the last generated AutoNumber value after a JDBC batch,
 not one key per row. Consequently `supportsBatchExecuteGeneratedKeys()` remains
-disabled. Multi-row inserts that do not require generated-key propagation use
-one prepared statement for performance.
+disabled and the dialect reports a generated-key batch limit of one row.
+`JdbcTreeDataSession` splits only a larger AutoNumber batch into single-row
+executions so every generated key can be propagated safely. The prepared
+statement is still reused. Use explicit, non-AutoNumber keys when maximum
+parent/child loading throughput is required; those rows continue to use JDBC
+batching and reuse one prepared statement per SQL signature.
 
 UCanAccess 5.1.6 cannot persist `CREATE VIEW`, `DROP VIEW`, `DROP INDEX`,
 `DROP COLUMN`, `DROP CONSTRAINT`, table/column renames, or column-definition

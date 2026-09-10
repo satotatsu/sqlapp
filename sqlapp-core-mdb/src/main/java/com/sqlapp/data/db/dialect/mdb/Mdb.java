@@ -189,6 +189,11 @@ public class Mdb extends Dialect {
 	}
 
 	@Override
+	public int getMaxGeneratedKeysBatchSize() {
+		return 1;
+	}
+
+	@Override
 	public String getIdentityColumnString() {
 		return "COUNTER";
 	}
