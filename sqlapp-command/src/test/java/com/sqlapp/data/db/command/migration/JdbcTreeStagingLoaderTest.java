@@ -193,6 +193,78 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		}
 	}
 
+	@Test
+	void testRejectNullPendingRootBusinessKeyBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection,
+					"INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID) VALUES (NULL)");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan()));
+
+			assertTrue(exception.getMessage()
+					.contains("pending root contains a null business key: company"));
+		}
+	}
+
+	@Test
+	void testRejectDuplicatePendingRootBusinessKeyBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection,
+					"INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID) VALUES ('C001')");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan()));
+
+			assertTrue(exception.getMessage()
+					.contains("pending root contains a duplicate business key: company"));
+		}
+	}
+
+	@Test
+	void testIgnoreLoadedRootWhenCheckingPendingDuplicateKeys() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID,SQLAPP_LOAD_STATUS)
+					VALUES ('C001','LOADED')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+
+			assertDoesNotThrow(() -> new JdbcTreeStagingLoader(connection, schema, plan()));
+		}
+	}
+
+	@Test
+	void testRejectUnsupportedRootLoadStatusBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID,SQLAPP_LOAD_STATUS)
+					VALUES ('C003','BROKEN')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan()));
+
+			assertTrue(exception.getMessage()
+					.contains("root contains an unsupported load status: company"));
+		}
+	}
+
 	private void createTables(Connection connection) throws Exception {
 		dropTables(connection, "EMPLOYEE_LIST");
 		dropTables(connection, "COMPANY_MASTER");

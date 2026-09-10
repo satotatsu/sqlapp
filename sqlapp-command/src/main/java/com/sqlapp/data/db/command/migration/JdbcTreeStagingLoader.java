@@ -78,6 +78,7 @@ public class JdbcTreeStagingLoader {
 		initialize();
 		initializeStagingTables();
 		validateDatabaseObjects();
+		validatePendingRootKeys();
 	}
 
 	/**
@@ -466,6 +467,51 @@ public class JdbcTreeStagingLoader {
 		} catch (SQLException e) {
 			failures.add(new DatabasePreflightFailure(role + " table of data set "
 					+ dataSetId + ": " + table, e));
+		}
+	}
+
+	private void validatePendingRootKeys() {
+		List<String> failures = new ArrayList<>();
+		for (LoadDataSetWrapper root : roots()) {
+			String table = id(root.getInner().getStagingTable());
+			List<String> keys = root.getSourceBusinessKey();
+			String status = id(LOAD_STATUS_COLUMN);
+			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
+					+ " IS NULL OR " + status + " NOT IN ('PENDING','LOADED')",
+					root.getId(), "load status")) {
+				failures.add("root contains an unsupported load status: " + root.getId());
+			}
+			String selected = keys.stream().map(this::id)
+					.reduce((left, right) -> left + ", " + right).orElseThrow();
+			String nullCondition = keys.stream().map(key -> id(key) + " IS NULL")
+					.reduce((left, right) -> left + " OR " + right).orElseThrow();
+			String pending = status + "='PENDING'";
+			if (hasRow("SELECT " + selected + " FROM " + table + " WHERE "
+					+ pending + " AND (" + nullCondition + ")", root.getId(), "null key")) {
+				failures.add("pending root contains a null business key: " + root.getId());
+			}
+			if (hasRow("SELECT " + selected + ", COUNT(*) FROM " + table + " WHERE "
+					+ pending + " GROUP BY " + selected + " HAVING COUNT(*)>1",
+					root.getId(), "duplicate key")) {
+				failures.add("pending root contains a duplicate business key: " + root.getId());
+			}
+		}
+		if (!failures.isEmpty()) {
+			throw new CommandException("Staging data preflight failed:"
+					+ System.lineSeparator() + " - "
+					+ String.join(System.lineSeparator() + " - ", failures));
+		}
+	}
+
+	private boolean hasRow(String sql, String dataSetId, String check) {
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setMaxRows(1);
+			try (var resultSet = statement.executeQuery()) {
+				return resultSet.next();
+			}
+		} catch (SQLException e) {
+			throw new CommandException("Staging data preflight " + check
+					+ " query failed for data set " + dataSetId, e);
 		}
 	}
 
