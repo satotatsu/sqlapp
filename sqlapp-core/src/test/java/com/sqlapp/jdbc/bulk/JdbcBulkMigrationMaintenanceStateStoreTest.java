@@ -37,7 +37,7 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 		testDb(connection -> {
 			execute(connection, "CREATE SCHEMA OTHER_MAINTENANCE AUTHORIZATION DBA");
 			execute(connection, "CREATE TABLE OTHER_MAINTENANCE.SQLAPP_MAINTENANCE_SCOPED ("
-					+ "PLAN_FINGERPRINT VARCHAR(255) PRIMARY KEY)");
+					+ "JOB_ID VARCHAR(255) PRIMARY KEY)");
 			assertTrue(JdbcBulkMigrationMaintenanceStateStore.readOnly(connection,
 					"SQLAPP_MAINTENANCE_SCOPED").load("plan-v1").isEmpty());
 
@@ -56,7 +56,7 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 	void readOnlyStoreRejectsInvalidStructureAndCorruptData() throws Exception {
 		testDb(connection -> {
 			execute(connection, "CREATE TABLE SQLAPP_MAINTENANCE_INVALID ("
-					+ "PLAN_FINGERPRINT VARCHAR(255) PRIMARY KEY)");
+					+ "JOB_ID VARCHAR(255) PRIMARY KEY)");
 			assertTrue(assertThrows(java.sql.SQLException.class,
 					() -> JdbcBulkMigrationMaintenanceStateStore.readOnly(connection,
 							"SQLAPP_MAINTENANCE_INVALID").load("plan-v1"))
@@ -65,7 +65,7 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 			new JdbcBulkMigrationMaintenanceStateStore(connection,
 					"SQLAPP_MAINTENANCE_CORRUPT");
 			execute(connection, "INSERT INTO SQLAPP_MAINTENANCE_CORRUPT VALUES ("
-					+ "'plan-v1', 'UNKNOWN', 'not-an-instant', NULL)");
+					+ "'plan-v1', 'plan-v1', 'UNKNOWN', 'not-an-instant', NULL)");
 			final var failure = assertThrows(java.sql.SQLException.class,
 					() -> JdbcBulkMigrationMaintenanceStateStore.readOnly(connection,
 							"SQLAPP_MAINTENANCE_CORRUPT").load("plan-v1"));
@@ -79,11 +79,11 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 			throws Exception {
 		testDb(connection -> {
 			execute(connection, "CREATE TABLE SQLAPP_MAINTENANCE_AMBIGUOUS ("
-					+ "PLAN_FINGERPRINT VARCHAR(255) PRIMARY KEY, "
+					+ "JOB_ID VARCHAR(255) PRIMARY KEY, PLAN_FINGERPRINT VARCHAR(255), "
 					+ "STATUS_NAME VARCHAR(32), UPDATED_AT VARCHAR(40), "
 					+ "FAILURE_MESSAGE VARCHAR(255))");
 			execute(connection, "CREATE TABLE \"sqlapp_maintenance_ambiguous\" ("
-					+ "PLAN_FINGERPRINT VARCHAR(255) PRIMARY KEY, "
+					+ "JOB_ID VARCHAR(255) PRIMARY KEY, PLAN_FINGERPRINT VARCHAR(255), "
 					+ "STATUS_NAME VARCHAR(32), UPDATED_AT VARCHAR(40), "
 					+ "FAILURE_MESSAGE VARCHAR(255))");
 			assertTrue(assertThrows(java.sql.SQLException.class,
@@ -92,13 +92,13 @@ class JdbcBulkMigrationMaintenanceStateStoreTest extends AbstractDbTest {
 					.getMessage().contains("Ambiguous"));
 
 			execute(connection, "CREATE TABLE SQLAPP_MAINTENANCE_COMPOSITE ("
-					+ "PLAN_FINGERPRINT VARCHAR(255), STATUS_NAME VARCHAR(32), "
+					+ "JOB_ID VARCHAR(255), PLAN_FINGERPRINT VARCHAR(255), STATUS_NAME VARCHAR(32), "
 					+ "UPDATED_AT VARCHAR(40), FAILURE_MESSAGE VARCHAR(255), "
-					+ "PRIMARY KEY (PLAN_FINGERPRINT, STATUS_NAME))");
+					+ "PRIMARY KEY (JOB_ID, STATUS_NAME))");
 			assertTrue(assertThrows(java.sql.SQLException.class,
 					() -> JdbcBulkMigrationMaintenanceStateStore.readOnly(connection,
 							"SQLAPP_MAINTENANCE_COMPOSITE").load("plan-v1"))
-					.getMessage().contains("PLAN_FINGERPRINT alone"));
+					.getMessage().contains("JOB_ID alone"));
 		});
 	}
 

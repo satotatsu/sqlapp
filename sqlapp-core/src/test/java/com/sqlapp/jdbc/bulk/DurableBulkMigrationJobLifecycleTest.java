@@ -64,7 +64,7 @@ class DurableBulkMigrationJobLifecycleTest {
 		};
 		final var lifecycle = lifecycle(delegate, store);
 		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
-		store.save(new BulkMigrationMaintenanceState(plan.getFingerprint(),
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
 				BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
 
 		final IllegalStateException failure = assertThrows(IllegalStateException.class,
@@ -81,7 +81,7 @@ class DurableBulkMigrationJobLifecycleTest {
 		final var store = new RecordingStore();
 		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, store);
 		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
-		store.save(new BulkMigrationMaintenanceState(plan.getFingerprint(),
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
 				BulkMigrationMaintenanceStatus.RESTORED, NOW, null));
 
 		BulkMigrationJobExecutor.executePlan(connection(), plan);
@@ -110,7 +110,7 @@ class DurableBulkMigrationJobLifecycleTest {
 				final boolean acquired = leases.tryAcquire(lease, now);
 				if (acquired) {
 					maintenanceStore.save(new BulkMigrationMaintenanceState(
-							plan.getFingerprint(), BulkMigrationMaintenanceStatus.PREPARED,
+							plan.getJobId(), plan.getFingerprint(), BulkMigrationMaintenanceStatus.PREPARED,
 							NOW, null));
 				}
 				return acquired;
@@ -214,7 +214,7 @@ class DurableBulkMigrationJobLifecycleTest {
 		};
 		final var lifecycle = lifecycle(delegate, store);
 		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
-		store.save(new BulkMigrationMaintenanceState(plan.getFingerprint(),
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
 				BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
 
 		assertEquals(BulkMigrationMaintenanceStatus.PREPARED,
@@ -258,8 +258,8 @@ class DurableBulkMigrationJobLifecycleTest {
 		private final List<BulkMigrationMaintenanceState> states = new ArrayList<>();
 
 		@Override
-		public java.util.Optional<BulkMigrationMaintenanceState> load(String fingerprint) {
-			return states.stream().filter(state -> state.planFingerprint().equals(fingerprint))
+		public java.util.Optional<BulkMigrationMaintenanceState> load(String jobId) {
+			return states.stream().filter(state -> state.jobId().equals(jobId))
 					.reduce((first, second) -> second);
 		}
 

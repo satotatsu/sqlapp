@@ -321,7 +321,8 @@ class BulkMigrationTest {
 		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
 		schema.getTables().add(table);
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
-				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.schema(schema).jobId("database-maintenance-job")
+				.mode(BulkMigrationMode.INSERT)
 				.fileMaintenance(directory)
 				.operationalReport(directory.resolve("running.json")).build();
 
@@ -356,7 +357,8 @@ class BulkMigrationTest {
 		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
 		schema.getTables().add(table);
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
-				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.schema(schema).jobId("database-maintenance-job")
+				.mode(BulkMigrationMode.INSERT)
 				.databaseMaintenance("SQLAPP_FACADE_MAINTENANCE").build();
 
 		assertNull(migration.dryRun().maintenance());
@@ -368,12 +370,21 @@ class BulkMigrationTest {
 				migration.dryRun().maintenance().status());
 		try (var connection = target.getConnection()) {
 			assertTrue(tableExists(connection, "SQLAPP_FACADE_MAINTENANCE"));
-			new com.sqlapp.jdbc.bulk.JdbcBulkMigrationMaintenanceStateStore(connection,
-					"SQLAPP_FACADE_MAINTENANCE").save(
-						new BulkMigrationMaintenanceState(
+			connection.setAutoCommit(true);
+			try (var result = connection.createStatement().executeQuery(
+					"SELECT JOB_ID FROM SQLAPP_FACADE_MAINTENANCE")) {
+				result.next();
+				assertEquals("database-maintenance-job", result.getString(1));
+			}
+			final var store = new com.sqlapp.jdbc.bulk.JdbcBulkMigrationMaintenanceStateStore(
+					connection, "SQLAPP_FACADE_MAINTENANCE");
+			store.save(new BulkMigrationMaintenanceState(
+								"database-maintenance-job",
 								migration.dryRun().planFingerprint(),
 								BulkMigrationMaintenanceStatus.PREPARED,
 								Instant.EPOCH, null));
+			assertEquals(BulkMigrationMaintenanceStatus.PREPARED,
+					store.load("database-maintenance-job").orElseThrow().status());
 		}
 		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
 				migration.resumeReadiness());
@@ -442,12 +453,13 @@ class BulkMigrationTest {
 		final Path maintenance = directory.resolve("maintenance");
 		final Path executionReport = directory.resolve("rejected-execution.json");
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
-				.schema(schema).mode(BulkMigrationMode.INSERT).lifecycle(lifecycle)
+				.schema(schema).jobId("recovery-job")
+				.mode(BulkMigrationMode.INSERT).lifecycle(lifecycle)
 				.fileMaintenance(maintenance).operationalReport(executionReport).build();
 		final Path reportFile = directory.resolve("approved.json");
 		final String fingerprint = migration.dryRun(reportFile).planFingerprint();
 		new FileBulkMigrationMaintenanceStateStore(maintenance).save(
-				new BulkMigrationMaintenanceState(fingerprint,
+				new BulkMigrationMaintenanceState("recovery-job", fingerprint,
 						BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null));
 
 		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
@@ -536,12 +548,13 @@ class BulkMigrationTest {
 		schema.getTables().add(table);
 		final Path maintenance = directory.resolve("corrupt-maintenance");
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
-				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.schema(schema).jobId("corrupt-maintenance-job")
+				.mode(BulkMigrationMode.INSERT)
 				.fileMaintenance(maintenance)
 				.operationalReport(directory.resolve("corrupt-report.json")).build();
 		final String fingerprint = migration.dryRun().planFingerprint();
 		new FileBulkMigrationMaintenanceStateStore(maintenance).save(
-				new BulkMigrationMaintenanceState(fingerprint,
+				new BulkMigrationMaintenanceState("corrupt-maintenance-job", fingerprint,
 						BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null));
 		final Path stateFile;
 		try (var files = Files.list(maintenance)) {

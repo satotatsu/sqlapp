@@ -43,7 +43,7 @@ public final class DurableBulkMigrationJobLifecycle
 	public Optional<BulkMigrationMaintenanceState> inspect(
 			final BulkMigrationJobPlan plan) throws SQLException {
 		validatePlan(plan);
-		return store.load(plan.getFingerprint());
+		return store.load(plan.getJobId());
 	}
 
 	@Override
@@ -51,7 +51,7 @@ public final class DurableBulkMigrationJobLifecycle
 			throws SQLException {
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
 		final BulkMigrationMaintenanceState state = store
-				.load(plan.getFingerprint()).orElse(null);
+				.load(plan.getJobId()).orElse(null);
 		if (state != null && state.status().requiresRecovery()) {
 			throw new IllegalStateException("Migration maintenance is "
 					+ state.status()
@@ -72,11 +72,15 @@ public final class DurableBulkMigrationJobLifecycle
 					"Expected fingerprint does not match the migration plan");
 		}
 		final Optional<BulkMigrationMaintenanceState> optional =
-				store.load(plan.getFingerprint());
+				store.load(plan.getJobId());
 		if (optional.isEmpty()) {
 			return new BulkMigrationMaintenanceRecoveryResult(null, null, false);
 		}
 		final BulkMigrationMaintenanceState previous = optional.get();
+		if (!plan.getFingerprint().equals(previous.planFingerprint())) {
+			throw new IllegalStateException(
+					"Stored maintenance state belongs to a different plan fingerprint");
+		}
 		if (previous.status() == BulkMigrationMaintenanceStatus.COMPLETE
 				|| previous.status() == BulkMigrationMaintenanceStatus.RESTORED) {
 			return new BulkMigrationMaintenanceRecoveryResult(previous, previous, false);
@@ -84,7 +88,7 @@ public final class DurableBulkMigrationJobLifecycle
 		final IllegalStateException interrupted = new IllegalStateException(
 				"Recovering interrupted migration maintenance from " + previous.status());
 		restore(connection, plan, interrupted);
-		final BulkMigrationMaintenanceState current = store.load(plan.getFingerprint())
+		final BulkMigrationMaintenanceState current = store.load(plan.getJobId())
 				.orElseThrow(() -> new SQLException(
 						"Recovered maintenance state was not persisted"));
 		return new BulkMigrationMaintenanceRecoveryResult(previous, current, true);
@@ -127,7 +131,8 @@ public final class DurableBulkMigrationJobLifecycle
 	private void save(final BulkMigrationJobPlan plan,
 			final BulkMigrationMaintenanceStatus status, final String failureMessage)
 			throws SQLException {
-		store.save(new BulkMigrationMaintenanceState(plan.getFingerprint(), status,
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(),
+				plan.getFingerprint(), status,
 				Instant.now(clock), failureMessage));
 	}
 

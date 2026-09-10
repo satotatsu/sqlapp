@@ -6,10 +6,10 @@ import java.util.Optional;
 
 /** Persistence SPI for migration lifecycle state. */
 public interface BulkMigrationMaintenanceStateStore {
-	Optional<BulkMigrationMaintenanceState> load(String planFingerprint)
+	Optional<BulkMigrationMaintenanceState> load(String jobId)
 			throws SQLException;
 
 	void save(BulkMigrationMaintenanceState state) throws SQLException;
 
-	void delete(String planFingerprint) throws SQLException;
+	void delete(String jobId) throws SQLException;
 }

@@ -5,13 +5,27 @@ import java.time.Instant;
 import java.util.Objects;
 
 /** Persisted lifecycle state used to detect interrupted maintenance. */
-public record BulkMigrationMaintenanceState(String planFingerprint,
+public record BulkMigrationMaintenanceState(String jobId, String planFingerprint,
 		BulkMigrationMaintenanceStatus status, Instant updatedAt,
 		String failureMessage) {
+	public static final int JOB_ID_MAX_LENGTH = 255;
 	public static final int FINGERPRINT_MAX_LENGTH = 255;
 	public static final int FAILURE_MESSAGE_MAX_LENGTH = 1_000;
 
+	public BulkMigrationMaintenanceState(final String planFingerprint,
+			final BulkMigrationMaintenanceStatus status, final Instant updatedAt,
+			final String failureMessage) {
+		this(planFingerprint, planFingerprint, status, updatedAt, failureMessage);
+	}
+
 	public BulkMigrationMaintenanceState {
+		if (jobId == null || jobId.isBlank()) {
+			throw new IllegalArgumentException("jobId must not be empty");
+		}
+		if (jobId.length() > JOB_ID_MAX_LENGTH) {
+			throw new IllegalArgumentException("jobId must not exceed "
+					+ JOB_ID_MAX_LENGTH + " characters");
+		}
 		if (planFingerprint == null || planFingerprint.isBlank()) {
 			throw new IllegalArgumentException("planFingerprint must not be empty");
 		}

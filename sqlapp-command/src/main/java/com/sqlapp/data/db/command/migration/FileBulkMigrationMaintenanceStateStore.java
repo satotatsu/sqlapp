@@ -32,24 +32,25 @@ public class FileBulkMigrationMaintenanceStateStore
 	}
 
 	@Override
-	public Optional<BulkMigrationMaintenanceState> load(final String planFingerprint)
+	public Optional<BulkMigrationMaintenanceState> load(final String jobId)
 			throws SQLException {
-		validateFingerprint(planFingerprint);
-		final Path file = file(planFingerprint);
+		validateJobId(jobId);
+		final Path file = file(jobId);
 		if (!Files.exists(file)) {
 			return Optional.empty();
 		}
 		final Properties values = new Properties();
 		try (InputStream input = Files.newInputStream(file)) {
 			values.load(input);
-			if (!planFingerprint.equals(required(values, "planFingerprint"))) {
+			if (!jobId.equals(required(values, "jobId"))) {
 				throw new IllegalArgumentException(
-						"maintenance planFingerprint does not match its file");
+						"maintenance jobId does not match its file");
 			}
 			final BulkMigrationMaintenanceStatus status = BulkMigrationMaintenanceStatus
 					.valueOf(required(values, "status"));
 			final String failureMessage = emptyToNull(values.getProperty("failureMessage"));
-			return Optional.of(new BulkMigrationMaintenanceState(planFingerprint, status,
+			return Optional.of(new BulkMigrationMaintenanceState(jobId,
+					required(values, "planFingerprint"), status,
 					Instant.parse(required(values, "updatedAt")), failureMessage));
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration maintenance state: " + file, e);
@@ -59,13 +60,14 @@ public class FileBulkMigrationMaintenanceStateStore
 	@Override
 	public void save(final BulkMigrationMaintenanceState state) throws SQLException {
 		java.util.Objects.requireNonNull(state, "state");
-		validateFingerprint(state.planFingerprint());
-		final Path file = file(state.planFingerprint());
+		validateJobId(state.jobId());
+		final Path file = file(state.jobId());
 		Path temporary = null;
 		try {
 			Files.createDirectories(directory);
 			temporary = Files.createTempFile(directory, file.getFileName().toString(), ".tmp");
 			final Properties values = new Properties();
+			values.setProperty("jobId", state.jobId());
 			values.setProperty("planFingerprint", state.planFingerprint());
 			values.setProperty("status", state.status().name());
 			values.setProperty("updatedAt", state.updatedAt().toString());
@@ -93,10 +95,10 @@ public class FileBulkMigrationMaintenanceStateStore
 	}
 
 	@Override
-	public void delete(final String planFingerprint) throws SQLException {
-		validateFingerprint(planFingerprint);
+	public void delete(final String jobId) throws SQLException {
+		validateJobId(jobId);
 		try {
-			Files.deleteIfExists(file(planFingerprint));
+			Files.deleteIfExists(file(jobId));
 		} catch (IOException e) {
 			throw new SQLException("Failed to delete migration maintenance state", e);
 		}
@@ -112,9 +114,9 @@ public class FileBulkMigrationMaintenanceStateStore
 		}
 	}
 
-	private static void validateFingerprint(final String fingerprint) {
-		if (fingerprint == null || fingerprint.isBlank()) {
-			throw new IllegalArgumentException("planFingerprint must not be empty");
+	private static void validateJobId(final String jobId) {
+		if (jobId == null || jobId.isBlank()) {
+			throw new IllegalArgumentException("jobId must not be empty");
 		}
 	}
 

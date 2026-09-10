@@ -34,7 +34,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 public class JdbcBulkMigrationMaintenanceStateStore
 		implements BulkMigrationMaintenanceStateStore {
 	public static final String DEFAULT_TABLE_NAME = "sqlapp_bulk_maintenance";
-	private static final Set<String> REQUIRED_COLUMNS = Set.of("PLAN_FINGERPRINT",
+	private static final Set<String> REQUIRED_COLUMNS = Set.of("JOB_ID", "PLAN_FINGERPRINT",
 			"STATUS_NAME", "UPDATED_AT", "FAILURE_MESSAGE");
 
 	private final Connection connection;
@@ -73,13 +73,13 @@ public class JdbcBulkMigrationMaintenanceStateStore
 	}
 
 	@Override
-	public Optional<BulkMigrationMaintenanceState> load(final String planFingerprint)
+	public Optional<BulkMigrationMaintenanceState> load(final String jobId)
 			throws SQLException {
-		validateFingerprint(planFingerprint);
+		validateJobId(jobId);
 		final BulkMigrationMaintenanceState[] result = new BulkMigrationMaintenanceState[1];
 		new JdbcHandler(sqlNodes.get(SqlType.SELECT),
-				rs -> result[0] = state(rs, planFingerprint))
-				.execute(connection, parameters(planFingerprint));
+				rs -> result[0] = state(rs, jobId))
+				.execute(connection, parameters(jobId));
 		return Optional.ofNullable(result[0]);
 	}
 
@@ -95,14 +95,14 @@ public class JdbcBulkMigrationMaintenanceStateStore
 	}
 
 	@Override
-	public void delete(final String planFingerprint) throws SQLException {
-		validateFingerprint(planFingerprint);
+	public void delete(final String jobId) throws SQLException {
+		validateJobId(jobId);
 		new JdbcHandler(sqlNodes.get(SqlType.DELETE))
-				.execute(connection, parameters(planFingerprint));
+				.execute(connection, parameters(jobId));
 	}
 
 	private static BulkMigrationMaintenanceState state(final ExResultSet resultSet,
-			final String fingerprint) throws SQLException {
+			final String jobId) throws SQLException {
 		final Map<String, Integer> columns = new LinkedHashMap<>();
 		final var metadata = resultSet.getMetaData();
 		for (int i = 1; i <= metadata.getColumnCount(); i++) {
@@ -112,20 +112,22 @@ public class JdbcBulkMigrationMaintenanceStateStore
 			throw new SQLException("Migration maintenance result is missing required columns");
 		}
 		try {
-			return new BulkMigrationMaintenanceState(fingerprint,
+			return new BulkMigrationMaintenanceState(jobId,
+					resultSet.getString(columns.get("PLAN_FINGERPRINT")),
 					BulkMigrationMaintenanceStatus.valueOf(
 							resultSet.getString(columns.get("STATUS_NAME"))),
 					Instant.parse(resultSet.getString(columns.get("UPDATED_AT"))),
 					resultSet.getString(columns.get("FAILURE_MESSAGE")));
 		} catch (RuntimeException failure) {
-			throw new SQLException("Invalid migration maintenance data for plan "
-					+ fingerprint, failure);
+			throw new SQLException("Invalid migration maintenance data for job "
+					+ jobId, failure);
 		}
 	}
 
 	private void ensureTable() throws SQLException {
 		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + column("PLAN_FINGERPRINT") + ", "
+			statement.executeQuery("SELECT " + column("JOB_ID") + ", "
+					+ column("PLAN_FINGERPRINT") + ", "
 					+ column("STATUS_NAME") + ", " + column("UPDATED_AT") + ", "
 					+ column("FAILURE_MESSAGE") + " FROM " + tableName
 					+ " WHERE 1 = 0").close();
@@ -149,14 +151,17 @@ public class JdbcBulkMigrationMaintenanceStateStore
 
 	private static Table stateTable(final String tableName) {
 		final Table table = new Table(tableName);
+		final Column jobId = varchar("JOB_ID",
+				BulkMigrationMaintenanceState.JOB_ID_MAX_LENGTH, true);
 		final Column fingerprint = varchar("PLAN_FINGERPRINT",
 				BulkMigrationMaintenanceState.FINGERPRINT_MAX_LENGTH, true);
+		table.getColumns().add(jobId);
 		table.getColumns().add(fingerprint);
 		table.getColumns().add(varchar("STATUS_NAME", 32, true));
 		table.getColumns().add(varchar("UPDATED_AT", 40, true));
 		table.getColumns().add(varchar("FAILURE_MESSAGE",
 				BulkMigrationMaintenanceState.FAILURE_MESSAGE_MAX_LENGTH, false));
-		table.setPrimaryKey((String) null, fingerprint);
+		table.setPrimaryKey((String) null, jobId);
 		return table;
 	}
 
@@ -170,22 +175,23 @@ public class JdbcBulkMigrationMaintenanceStateStore
 		return dialect.quote(name);
 	}
 
-	private static ParametersContext parameters(final String fingerprint) {
+	private static ParametersContext parameters(final String jobId) {
 		final ParametersContext parameters = new ParametersContext();
-		parameters.put("PLAN_FINGERPRINT", fingerprint);
+		parameters.put("JOB_ID", jobId);
 		return parameters;
 	}
 
 	private static ParametersContext parameters(final BulkMigrationMaintenanceState state) {
-		final ParametersContext parameters = parameters(state.planFingerprint());
+		final ParametersContext parameters = parameters(state.jobId());
+		parameters.put("PLAN_FINGERPRINT", state.planFingerprint());
 		parameters.put("STATUS_NAME", state.status().name());
 		parameters.put("UPDATED_AT", state.updatedAt().toString());
 		parameters.put("FAILURE_MESSAGE", state.failureMessage());
 		return parameters;
 	}
 
-	private static void validateFingerprint(final String fingerprint) {
-		new BulkMigrationMaintenanceState(fingerprint,
+	private static void validateJobId(final String jobId) {
+		new BulkMigrationMaintenanceState(jobId, "validation",
 				BulkMigrationMaintenanceStatus.PREPARING, Instant.EPOCH, null);
 	}
 
@@ -210,8 +216,8 @@ public class JdbcBulkMigrationMaintenanceStateStore
 
 		@Override
 		public Optional<BulkMigrationMaintenanceState> load(
-				final String planFingerprint) throws SQLException {
-			validateFingerprint(planFingerprint);
+				final String jobId) throws SQLException {
+			validateJobId(jobId);
 			final Optional<TableIdentity> identity = resolveTable();
 			if (identity.isEmpty()) {
 				return Optional.empty();
@@ -220,8 +226,8 @@ public class JdbcBulkMigrationMaintenanceStateStore
 			final BulkMigrationMaintenanceState[] result =
 					new BulkMigrationMaintenanceState[1];
 			new JdbcHandler(selectNode,
-					rs -> result[0] = state(rs, planFingerprint)).execute(connection,
-						parameters(planFingerprint));
+					rs -> result[0] = state(rs, jobId)).execute(connection,
+						parameters(jobId));
 			return Optional.ofNullable(result[0]);
 		}
 
@@ -231,7 +237,7 @@ public class JdbcBulkMigrationMaintenanceStateStore
 		}
 
 		@Override
-		public void delete(final String planFingerprint) {
+		public void delete(final String jobId) {
 			throw new UnsupportedOperationException("Read-only maintenance store");
 		}
 
@@ -282,9 +288,9 @@ public class JdbcBulkMigrationMaintenanceStateStore
 					primaryKey.add(keys.getString("COLUMN_NAME"));
 				}
 			}
-			if (primaryKey.size() != 1 || !primaryKey.contains("PLAN_FINGERPRINT")) {
+			if (primaryKey.size() != 1 || !primaryKey.contains("JOB_ID")) {
 				throw new SQLException("Migration maintenance table " + rawTableName
-						+ " must have a primary key on PLAN_FINGERPRINT alone");
+						+ " must have a primary key on JOB_ID alone");
 			}
 		}
 
