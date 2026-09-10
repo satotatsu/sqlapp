@@ -158,6 +158,22 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		return count;
 	}
 
+	/** Creates a non-parameterized saved SELECT or UNION query. */
+	public void createSavedQuery(final String name, final String definition)
+			throws IOException {
+		ensureOpen();
+		MdbSavedQuerySupport.create(database, name, definition);
+		dirty = true;
+	}
+
+	/** Drops a saved query, returning whether it existed. */
+	public boolean dropSavedQuery(final String name) throws IOException {
+		ensureOpen();
+		final boolean dropped = MdbSavedQuerySupport.drop(database, name);
+		dirty |= dropped;
+		return dropped;
+	}
+
 	/**
 	 * Updates existing rows by primary key and inserts all missing rows in one
 	 * bulk call. Rows without a complete primary key are inserts. AutoNumber
@@ -307,6 +323,16 @@ public final class MdbJackcessSupport implements AutoCloseable {
 							.getForeignKeyConstraints()) {
 						addRelationship(output, fk);
 					}
+				}
+				for (final Table view : targetSchema.getViews()) {
+					if (view.getDefinition().isEmpty()) {
+						throw new IllegalArgumentException(
+								"Saved query definition is required: "
+										+ view.getName());
+					}
+					MdbSavedQuerySupport.create(output, view.getName(),
+							String.join(System.lineSeparator(),
+									view.getDefinition()));
 				}
 			}
 		} catch (final IOException | RuntimeException e) {

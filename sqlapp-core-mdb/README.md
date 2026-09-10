@@ -90,6 +90,11 @@ which is slow or unavailable through UCanAccess:
 - `rebuildWithoutIndex` is the safe DROP INDEX path. It recreates a separate
   file without the named secondary index, preserves the source file and rejects
   primary-key removal unless the caller supplies a complete target Schema.
+- `createSavedQuery` and `dropSavedQuery` write Access `MSysObjects` and
+  `MSysQueries` consistently. The initial supported creation grammar is a
+  non-parameterized SELECT over one table with optional WHERE/ORDER BY, or a
+  two-part UNION/UNION ALL. Rebuild restores these supported Schema views and
+  fails without leaving a target file if a definition cannot be represented.
 
 Close all UCanAccess connections to the file before opening the direct writer.
 The class prevents two sqlapp Jackcess writer sessions for the same normalized
@@ -100,9 +105,11 @@ session promptly. Bulk insert minimizes per-row overhead; primary-key update
 and delete still perform one indexed lookup per supplied row because Jackcess
 has no set-based update/delete API.
 
-Jackcess exposes saved queries for reading but no supported public writer API,
-so saved-query CREATE/ALTER/DROP remains unsupported. Access has no MERGE and
-the direct complement does not emulate it. Access file-version restrictions
+Jackcess exposes no public saved-query writer API, so sqlapp's direct writer
+isolates the necessary catalog updates and deliberately accepts only the
+grammar described above. Parameterized queries, joins, GROUP BY/HAVING,
+crosstabs and action queries remain read-only. Access has no MERGE and the
+direct complement does not emulate it. Access file-version restrictions
 also apply to generated types; for example, BIGINT requires a sufficiently new
 ACCDB format. Complex columns, attachments and multi-value fields remain
 outside the flat sqlapp Column model.

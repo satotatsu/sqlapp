@@ -261,4 +261,71 @@ class MdbJackcessSupportTest {
 						tempDirectory.resolve("invalid.accdb"), "対象",
 						"PK_対象"));
 	}
+
+	@Test
+	void createsReadsAndDropsSavedSelectAndUnionQueries() throws Exception {
+		final Path file = tempDirectory.resolve("queries.accdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010,
+				file.toFile())) {
+			new TableBuilder("販売")
+					.addColumn(new ColumnBuilder("ID",
+							io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new ColumnBuilder("金額",
+							io.github.spannm.jackcess.DataType.LONG))
+					.toTable(database);
+		}
+		try (MdbJackcessSupport writer = MdbJackcessSupport.open(file)) {
+			writer.createSavedQuery("高額販売",
+					"SELECT ID, 金額 FROM [販売] WHERE 金額 >= 100 ORDER BY ID DESC");
+			writer.createSavedQuery("販売統合",
+					"SELECT ID FROM [販売] UNION ALL SELECT ID FROM [販売]");
+			assertThrows(IllegalArgumentException.class,
+					() -> writer.createSavedQuery("高額販売",
+							"SELECT * FROM [販売]"));
+		}
+		try (Database database = new DatabaseBuilder().withPath(file)
+				.withReadOnly(true).open()) {
+			final var queries = database.getQueries();
+			assertEquals(2, queries.size());
+			assertTrue(queries.stream().anyMatch(query -> "高額販売"
+					.equals(query.getName()) && query.toSQLString()
+							.contains("WHERE 金額 >= 100")));
+			assertTrue(queries.stream().anyMatch(query -> "販売統合"
+					.equals(query.getName()) && query.toSQLString()
+							.contains("UNION ALL")));
+		}
+		try (MdbJackcessSupport writer = MdbJackcessSupport.open(file)) {
+			assertTrue(writer.dropSavedQuery("高額販売"));
+			assertFalse(writer.dropSavedQuery("存在しない"));
+		}
+		try (Database database = new DatabaseBuilder().withPath(file)
+				.withReadOnly(true).open()) {
+			assertEquals(List.of("販売統合"), database.getQueries().stream()
+					.map(query -> query.getName()).toList());
+		}
+	}
+
+	@Test
+	void rebuildPreservesSupportedSavedQueries() throws Exception {
+		final Path source = tempDirectory.resolve("query-source.accdb");
+		final Path target = tempDirectory.resolve("query-target.accdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010,
+				source.toFile())) {
+			new TableBuilder("明細")
+					.addColumn(new ColumnBuilder("ID",
+							io.github.spannm.jackcess.DataType.LONG))
+					.toTable(database);
+		}
+		try (MdbJackcessSupport writer = MdbJackcessSupport.open(source)) {
+			writer.createSavedQuery("明細一覧", "SELECT * FROM [明細]");
+		}
+		final Schema schema = MdbFileLoader.loadSchema(source);
+		MdbJackcessSupport.rebuild(source, target, schema);
+		try (Database database = new DatabaseBuilder().withPath(target)
+				.withReadOnly(true).open()) {
+			assertEquals("明細一覧", database.getQueries().get(0).getName());
+			assertTrue(database.getQueries().get(0).toSQLString()
+					.contains("SELECT *"));
+		}
+	}
 }
