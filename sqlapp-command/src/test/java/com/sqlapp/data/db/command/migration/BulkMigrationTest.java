@@ -451,6 +451,92 @@ class BulkMigrationTest {
 	}
 
 	@Test
+	void postExecutionFailureReportRetainsDurableMaintenanceState()
+			throws Exception {
+		final JDBCDataSource source = dataSource("facade_report_maintenance_source");
+		final JDBCDataSource target = dataSource("facade_report_maintenance_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY)");
+			}
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final BulkMigrationJobLifecycle lifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "post-verification-mismatch-v1";
+			}
+
+			@Override
+			public void after(final Connection connection,
+					final BulkMigrationJobPlan plan,
+					final BulkMigrationJobResult result) throws SQLException {
+				try (var statement = connection.createStatement()) {
+					statement.execute("INSERT INTO ITEMS VALUES (99)");
+				}
+			}
+		};
+		final Path reportFile = directory.resolve("post-failure.json");
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT).lifecycle(lifecycle)
+				.fileMaintenance(directory.resolve("post-failure-maintenance"))
+				.operationalReport(reportFile).build();
+
+		assertThrows(BulkMigrationVerificationMismatchException.class, migration::run);
+		final var report = new BulkMigrationOperationalReportIO().read(reportFile);
+		assertEquals("JOB_FAILED", report.execution().event());
+		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.maintenance().status());
+	}
+
+	@Test
+	void operationalReportFailsBeforeExecutionWhenMaintenanceStateIsCorrupt()
+			throws Exception {
+		final JDBCDataSource source = dataSource("facade_corrupt_maintenance_source");
+		final JDBCDataSource target = dataSource("facade_corrupt_maintenance_target");
+		for (final JDBCDataSource dataSource : List.of(source, target)) {
+			try (var connection = dataSource.getConnection();
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY)");
+			}
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+		schema.getTables().add(table);
+		final Path maintenance = directory.resolve("corrupt-maintenance");
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
+				.schema(schema).mode(BulkMigrationMode.INSERT)
+				.fileMaintenance(maintenance)
+				.operationalReport(directory.resolve("corrupt-report.json")).build();
+		final String fingerprint = migration.dryRun().planFingerprint();
+		new FileBulkMigrationMaintenanceStateStore(maintenance).save(
+				new BulkMigrationMaintenanceState(fingerprint,
+						BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null));
+		final Path stateFile;
+		try (var files = Files.list(maintenance)) {
+			stateFile = files.findFirst().orElseThrow();
+		}
+		Files.writeString(stateFile, "status=UNKNOWN\n", java.nio.charset.StandardCharsets.UTF_8);
+
+		final RuntimeException failure = assertThrows(RuntimeException.class,
+				migration::execute);
+		assertTrue(failure.getMessage().contains("maintenance state"));
+		try (var connection = target.getConnection();
+				var result = connection.createStatement()
+						.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+			result.next();
+			assertEquals(0, result.getInt(1));
+		}
+	}
+
+	@Test
 	void verificationScopeRestoresBothConnections() throws Exception {
 		try (Connection source = dataSource("verification_scope_source").getConnection();
 				Connection target = dataSource("verification_scope_target").getConnection()) {

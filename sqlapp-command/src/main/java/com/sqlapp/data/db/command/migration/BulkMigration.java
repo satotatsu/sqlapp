@@ -515,7 +515,9 @@ public final class BulkMigration {
 			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
 					targetConnection, true);
 			new BulkMigrationOperationalReportJobListener(readOnlyPlan,
-					operationalReportFile).onJobFailed(readOnlyPlan.getFingerprint(), failure);
+					operationalReportFile,
+					() -> maintenanceStateUnchecked(readOnlyPlan), () -> null)
+					.onJobFailed(readOnlyPlan.getFingerprint(), failure);
 		}
 	}
 

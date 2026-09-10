@@ -500,6 +500,11 @@ operational report at each job and table boundary. Report output is disabled by
 default and report-write failures fail the migration instead of being silently
 ignored. The detailed command API remains available when reporting failures
 must be observed while allowing the migration to continue.
+When file or database maintenance is enabled, every automatic report refresh
+also reads its durable state. Task boundaries therefore expose `PREPARED`, a
+successful job ends with `COMPLETE`, and a failed job reports the resulting
+`RESTORED` or `RESTORE_FAILED` state. A maintenance read failure follows the
+same report failure policy and is never silently rendered as missing state.
 Call `migration.dryRun(reportFile)` to write and return the same operational
 format before execution. Like `dryRun()`, this is read-only: it does not create
 or upgrade a database checkpoint table, create a file-checkpoint directory, or
