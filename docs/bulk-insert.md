@@ -830,6 +830,14 @@ List-valued column settings are encoded element by element, and source style
 row selector or keyset query cannot be serialized generically; callers should
 represent changes to such source logic in `sourceFingerprint`.
 
+The plan also has a stable job ID. By default it is derived from each
+migration ID and fully qualified target table identity, independently of task
+order and execution options. Therefore changing a chunk size or UPSERT option
+changes the exact plan fingerprint without changing the logical job identity.
+Use `.jobId("nightly-customers")` on the facade, or the planner overload taking
+a job ID, when several separately operated jobs intentionally use the same
+table and migration identifiers.
+
 An approved plan can be passed directly to
 `BulkMigrationJobExecutor.executePlan(connection, plan)`. Immediately before any
 database work, the executor recalculates the fingerprint and rejects a plan if

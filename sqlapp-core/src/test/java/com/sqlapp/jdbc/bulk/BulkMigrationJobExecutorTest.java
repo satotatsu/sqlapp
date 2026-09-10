@@ -27,6 +27,34 @@ import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
 	@Test
+	void separatesStableJobIdentityFromTheExactPlanFingerprint() {
+		final Table table = new Table("CUSTOMERS");
+		table.getColumns().add(new Column("ID"));
+		final var first = BulkMigrationJobTask.builder().taskId("customers")
+				.sourceTable(table).options(ChunkedBulkMigrationOption.builder()
+						.migrationId("customer-load").chunkSize(100)
+						.mode(BulkMigrationMode.INSERT).resume(false)
+						.build()).build();
+		final var changed = BulkMigrationJobTask.builder().taskId("customers")
+				.sourceTable(table).options(ChunkedBulkMigrationOption.builder()
+						.migrationId("customer-load").chunkSize(200)
+						.mode(BulkMigrationMode.INSERT).resume(false)
+						.build()).build();
+
+		final var firstPlan = BulkMigrationJobPlanner.plan(List.of(first));
+		final var changedPlan = BulkMigrationJobPlanner.plan(List.of(changed));
+
+		assertEquals(firstPlan.getJobId(), changedPlan.getJobId());
+		assertNotEquals(firstPlan.getFingerprint(), changedPlan.getFingerprint());
+		final var named = BulkMigrationJobPlanner.plan("nightly-customers",
+				List.of(first), BulkMigrationJobLifecycle.NO_OP);
+		assertEquals("nightly-customers", named.getJobId());
+		assertNotEquals(firstPlan.getFingerprint(), named.getFingerprint());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner
+				.plan(" ", List.of(first), BulkMigrationJobLifecycle.NO_OP));
+	}
+
+	@Test
 	void reportsFinalJobLifecycleWithoutRestoringAfterCompletionNotification() throws Exception {
 		final List<String> events = new ArrayList<>();
 		final var listener = new BulkMigrationJobListener() {

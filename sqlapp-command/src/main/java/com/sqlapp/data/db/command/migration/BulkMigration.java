@@ -63,6 +63,7 @@ import lombok.Builder;
 public final class BulkMigration {
 	private final DataSource source;
 	private final DataSource target;
+	private final String jobId;
 	private final List<Table> tables;
 	private final BulkMigrationMode mode;
 	private final int chunkSize;
@@ -101,6 +102,7 @@ public final class BulkMigration {
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target,
 			final Schema schema, final List<String> tableNames,
+			final String jobId,
 			final BulkMigrationMode mode, final Integer chunkSize,
 			final Boolean resume, final String sourceFingerprint,
 			final String targetFingerprint, final String checkpointTableName,
@@ -123,6 +125,7 @@ public final class BulkMigration {
 			final Integer verificationChunkSize) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
+		this.jobId = jobId;
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
 		this.mode = mode == null ? BulkMigrationMode.UPSERT : mode;
 		this.chunkSize = chunkSize == null ? 10_000 : chunkSize;
@@ -645,8 +648,10 @@ public final class BulkMigration {
 					.keysetSource(keysetSource(sourceConnection, table))
 					.options(options).checkpointStore(checkpointStore).build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks,
-				effectiveLifecycle(maintenanceConnection, maintenanceReadOnly));
+		final BulkMigrationJobLifecycle effective =
+				effectiveLifecycle(maintenanceConnection, maintenanceReadOnly);
+		return jobId == null ? BulkMigrationJobPlanner.plan(tasks, effective)
+				: BulkMigrationJobPlanner.plan(jobId, tasks, effective);
 	}
 
 	private BulkMigrationJobLifecycle effectiveLifecycle(

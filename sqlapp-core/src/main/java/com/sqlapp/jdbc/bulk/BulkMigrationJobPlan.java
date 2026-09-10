@@ -18,6 +18,7 @@ public class BulkMigrationJobPlan {
 	private final List<BulkMigrationJobTask> tasks;
 	private final BulkMigrationJobLifecycle lifecycle;
 	private final List<BulkMigrationJobOperation> operations;
+	private final String jobId;
 	private final String fingerprint;
 
 	public BulkMigrationJobPlan(final List<BulkMigrationJobTask> tasks) {
@@ -26,10 +27,16 @@ public class BulkMigrationJobPlan {
 
 	public BulkMigrationJobPlan(final List<BulkMigrationJobTask> tasks,
 			final BulkMigrationJobLifecycle lifecycle) {
+		this(tasks, lifecycle, null);
+	}
+
+	public BulkMigrationJobPlan(final List<BulkMigrationJobTask> tasks,
+			final BulkMigrationJobLifecycle lifecycle, final String jobId) {
 		this.tasks = List.copyOf(tasks);
 		this.lifecycle = java.util.Objects.requireNonNull(lifecycle, "lifecycle");
 		this.operations = List.copyOf(lifecycle.plan(this.tasks));
-		this.fingerprint = fingerprint(this.tasks, lifecycle, operations);
+		this.jobId = jobId == null ? defaultJobId(this.tasks) : validateJobId(jobId);
+		this.fingerprint = fingerprint(this.tasks, lifecycle, operations, this.jobId);
 	}
 
 	public List<String> getTaskIds() {
@@ -38,7 +45,7 @@ public class BulkMigrationJobPlan {
 
 	public boolean isUnchanged() {
 		return fingerprint.equals(fingerprint(tasks, lifecycle,
-				List.copyOf(lifecycle.plan(tasks))));
+				List.copyOf(lifecycle.plan(tasks)), jobId));
 	}
 
 	public void validateUnchanged() {
@@ -49,10 +56,10 @@ public class BulkMigrationJobPlan {
 
 	private static String fingerprint(final List<BulkMigrationJobTask> tasks,
 			final BulkMigrationJobLifecycle lifecycle,
-			final List<BulkMigrationJobOperation> operations) {
+			final List<BulkMigrationJobOperation> operations, final String jobId) {
 		try {
 			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			update(digest, lifecycle.getConfigurationFingerprint(), operations.size());
+			update(digest, jobId, lifecycle.getConfigurationFingerprint(), operations.size());
 			operations.forEach(operation -> update(digest, operation.id(), operation.phase(),
 					operation.description(), operation.transactionBreaking()));
 			for (final BulkMigrationJobTask task : tasks) {
@@ -100,6 +107,38 @@ public class BulkMigrationJobPlan {
 		} catch (NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}
+	}
+
+	private static String defaultJobId(final List<BulkMigrationJobTask> tasks) {
+		try {
+			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			tasks.stream().map(task -> {
+				final Table table = task.getSourceTable() != null ? task.getSourceTable()
+						: task.getKeysetSource().getTable();
+				return List.of(value(task.getOptions().getMigrationId()),
+						value(table.getCatalogName()), value(table.getSchemaName()),
+						value(table.getName()));
+			}).sorted((left, right) -> String.join("\u0000", left)
+					.compareTo(String.join("\u0000", right)))
+					.forEach(values -> update(digest, values.toArray()));
+			return "job-" + HexFormat.of().formatHex(digest.digest());
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private static String value(final String value) {
+		return value == null ? "<null>" : value;
+	}
+
+	private static String validateJobId(final String jobId) {
+		if (jobId.isBlank()) {
+			throw new IllegalArgumentException("jobId must not be empty");
+		}
+		if (jobId.length() > 255) {
+			throw new IllegalArgumentException("jobId must not exceed 255 characters");
+		}
+		return jobId;
 	}
 
 	private static void table(final MessageDigest digest, final Table table) {
