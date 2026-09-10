@@ -322,7 +322,8 @@ class BulkMigrationTest {
 		schema.getTables().add(table);
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
 				.schema(schema).mode(BulkMigrationMode.INSERT)
-				.fileMaintenance(directory).build();
+				.fileMaintenance(directory)
+				.operationalReport(directory.resolve("running.json")).build();
 
 		assertEquals(null, migration.dryRun().maintenance());
 		assertEquals(0, migration.execute().getProcessedRows());
@@ -331,6 +332,11 @@ class BulkMigrationTest {
 				report.maintenance().status());
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.status().getTasks().get(0).getState());
+		final var published = new BulkMigrationOperationalReportIO()
+				.read(directory.resolve("running.json"));
+		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				published.maintenance().status());
+		assertEquals("JOB_COMPLETED", published.execution().event());
 	}
 
 	@Test
@@ -380,10 +386,16 @@ class BulkMigrationTest {
 		final BulkMigration failing = BulkMigration.builder().source(source).target(target)
 				.schema(schema).mode(BulkMigrationMode.INSERT)
 				.lifecycle(failingLifecycle)
-				.databaseMaintenance("SQLAPP_FACADE_MAINTENANCE").build();
+				.databaseMaintenance("SQLAPP_FACADE_MAINTENANCE")
+				.operationalReport(directory.resolve("database-failed.json")).build();
 		assertThrows(SQLException.class, failing::execute);
 		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.RESTORED.name(),
 				failing.dryRun().maintenance().status());
+		final var failedReport = new BulkMigrationOperationalReportIO()
+				.read(directory.resolve("database-failed.json"));
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED.name(),
+				failedReport.maintenance().status());
+		assertEquals("JOB_FAILED", failedReport.execution().event());
 	}
 
 	@Test

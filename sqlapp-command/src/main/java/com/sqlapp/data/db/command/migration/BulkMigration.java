@@ -440,10 +440,21 @@ public final class BulkMigration {
 		if (operationalReportFile == null) {
 			return jobListener;
 		}
-		final BulkMigrationJobListener report =
-				new BulkMigrationOperationalReportJobListener(plan, operationalReportFile);
+		final BulkMigrationJobListener report = new BulkMigrationOperationalReportJobListener(
+				plan, operationalReportFile, () -> maintenanceStateUnchecked(plan),
+				() -> null);
 		return jobListener == BulkMigrationJobListener.NO_OP ? report
 				: CompositeBulkMigrationJobListener.of(jobListener, report);
+	}
+
+	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState
+			maintenanceStateUnchecked(final BulkMigrationJobPlan plan) {
+		try {
+			return maintenanceState(plan);
+		} catch (SQLException e) {
+			throw new com.sqlapp.exceptions.CommandException(
+					"Failed to inspect migration maintenance state for report", e);
+		}
 	}
 
 	/** Executes the migration and immediately verifies the resulting target. */
