@@ -120,11 +120,13 @@ class MdbSqlIntegrationTest {
 		final Column id = new Column("ID").setDataType(DataType.INT)
 				.setIdentity(true);
 		table.getColumns().add(id);
-		table.getColumns().add(new Column("DISPLAY_NAME")
+		table.getColumns().add(new Column("DISPLAY NAME")
 				.setDataType(DataType.NVARCHAR).setLength(80L)
 				.setNotNull(true));
 		table.getColumns().add(new Column("ACTIVE")
 				.setDataType(DataType.BOOLEAN));
+		table.getColumns().add(new Column("UPDATED AT")
+				.setDataType(DataType.DATETIME));
 		table.setPrimaryKey("PK_CRUD_TARGET", id);
 
 		try (Connection connection = DriverManager.getConnection(
@@ -134,12 +136,13 @@ class MdbSqlIntegrationTest {
 					.createSql(table, SqlType.CREATE));
 
 			final Row row = table.newRow();
-			row.put("DISPLAY_NAME", "first");
+			row.put("DISPLAY NAME", "first");
 			row.put("ACTIVE", true);
+			row.put("UPDATED AT", Timestamp.valueOf("2026-09-10 13:14:15"));
 			final SqlParameterCollection insert = parameters(dialect, table,
 					SqlType.INSERT, row);
-			assertTrue(insert.getSql().contains("DISPLAY_NAME"), insert.getSql());
-			assertEquals(2, insert.getParameterSize(), insert.toString());
+			assertTrue(insert.getSql().contains("[DISPLAY NAME]"), insert.getSql());
+			assertEquals(3, insert.getParameterSize(), insert.toString());
 			try (PreparedStatement statement = connection.prepareStatement(
 					insert.getSql(), Statement.RETURN_GENERATED_KEYS)) {
 				bind(statement, insert);
@@ -151,7 +154,7 @@ class MdbSqlIntegrationTest {
 				}
 			}
 
-			row.put("DISPLAY_NAME", "updated");
+			row.put("DISPLAY NAME", "updated");
 			row.put("ACTIVE", false);
 			final SqlParameterCollection update = parameters(dialect, table,
 					SqlType.UPDATE, row);
@@ -168,8 +171,10 @@ class MdbSqlIntegrationTest {
 				bind(statement, select);
 				try (ResultSet resultSet = statement.executeQuery()) {
 					assertTrue(resultSet.next());
-					assertEquals("updated", resultSet.getString("DISPLAY_NAME"));
+					assertEquals("updated", resultSet.getString("DISPLAY NAME"));
 					assertFalse(resultSet.getBoolean("ACTIVE"));
+					assertEquals(Timestamp.valueOf("2026-09-10 13:14:15"),
+							resultSet.getTimestamp("UPDATED AT"));
 				}
 			}
 
@@ -187,6 +192,47 @@ class MdbSqlIntegrationTest {
 				assertEquals(0, resultSet.getInt(1));
 			}
 		}
+	}
+
+	@Test
+	void conditionalInsertExecutesAndMergeIsRejected() throws Exception {
+		final Path database = tempDirectory.resolve("conditional.accdb");
+		final Dialect dialect = DialectHolder.defaultDialect;
+		final Table table = new Table("CONDITIONAL_TARGET");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.INT)
+				.setNotNull(true);
+		table.getColumns().add(id);
+		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR)
+				.setLength(80L));
+		table.setPrimaryKey("PK_CONDITIONAL_TARGET", id);
+		final Row row = table.newRow();
+		row.put("ID", 1);
+		row.put("TXT", "first");
+
+		try (Connection connection = DriverManager.getConnection(
+				"jdbc:ucanaccess://" + database.toAbsolutePath()
+						+ ";newDatabaseVersion=V2010")) {
+			execute(connection, dialect.createSqlFactoryRegistry()
+					.createSql(table, SqlType.CREATE));
+			final SqlParameterCollection insert = parameters(dialect, table,
+					SqlType.INSERT_SELECT_NOT_EXISTS, row);
+			assertTrue(insert.getSql().contains("FROM (VALUES(0))"),
+					insert.getSql());
+			try (PreparedStatement statement = connection
+					.prepareStatement(insert.getSql())) {
+				bind(statement, insert);
+				assertEquals(1, statement.executeUpdate());
+				bind(statement, insert);
+				assertEquals(0, statement.executeUpdate());
+			}
+		}
+
+		final UnsupportedOperationException mergeError = assertThrows(
+				UnsupportedOperationException.class,
+				() -> dialect.createSqlFactoryRegistry()
+						.createSql(table, SqlType.MERGE));
+		assertTrue(mergeError.getMessage().contains("MERGE"));
 	}
 
 	@Test

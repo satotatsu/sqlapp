@@ -28,6 +28,14 @@ public class MdbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 				MdbAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE,
 				MdbTruncateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_NOT_EXISTS,
+				MdbInsertSelectNotExistsFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT, MdbInsertFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT, MdbSelectFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE, MdbUpdateFactory.class);
+		registerSqlFactory(Table.class, SqlType.DELETE, MdbDeleteFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE,
+				MdbUnsupportedMergeFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				MdbCreateIndexFactory.class);
 		registerSqlFactory(Index.class, SqlType.DROP,

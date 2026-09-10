@@ -24,6 +24,10 @@ The Access-specific SQL generator supports:
 - foreign-key creation with cascade update/delete behavior
 - schema-difference ALTER support for adding columns, constraints and indexes
 - prepared single-row INSERT, UPDATE, SELECT and DELETE generation
+- ordinal-based prepared parameter expressions, allowing Access column names
+  containing spaces, Japanese text or punctuation in single-row CRUD
+- conditional `INSERT ... SELECT ... WHERE NOT EXISTS` through a UCanAccess
+  one-row `VALUES` source
 - AutoNumber retrieval through JDBC `Statement.RETURN_GENERATED_KEYS`
 - multi-row prepared INSERTs through UCanAccess `VALUES (...), (...)`
 - truncate semantics through `DELETE FROM`, because Access has no `TRUNCATE`
@@ -60,3 +64,10 @@ later. Destructive or modifying schema changes currently require rebuilding the
 Access table outside the JDBC dialect.
 Existing non-parameterized saved SELECT/UNION queries can still be loaded as
 Schema views by `MdbFileLoader`.
+
+Access SQL has no `MERGE` statement. Direct `SqlType.MERGE` generation is
+therefore rejected explicitly; use conditional INSERT or the data session's
+update-then-insert behavior where its transaction semantics are acceptable.
+UCanAccess 5.1.6 cannot resolve a whitespace-containing target column in
+`INSERT ... SELECT`; this affects the conditional-INSERT factory only. Regular
+prepared INSERT, UPDATE, SELECT and DELETE support such quoted column names.
