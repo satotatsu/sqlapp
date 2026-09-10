@@ -124,6 +124,24 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		}
 	}
 
+	@Test
+	void testRejectMissingDatabaseStagingColumnBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.getDataSets().get(1).getFields().add(
+					field(3, "MISSING_COLUMN", "EMP_ID", true, false, "COPY"));
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan));
+
+			assertTrue(exception.getMessage().contains(
+					"Database preflight failed for staging table of data set employee"));
+		}
+	}
+
 	private void createTables(Connection connection) throws Exception {
 		dropTables(connection, "EMPLOYEE_LIST");
 		dropTables(connection, "COMPANY_MASTER");

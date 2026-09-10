@@ -77,6 +77,7 @@ public class JdbcTreeStagingLoader {
 		this.identifierQuote = quote == null || quote.isBlank() ? "" : quote;
 		initialize();
 		initializeStagingTables();
+		validateDatabaseObjects();
 	}
 
 	/**
@@ -421,6 +422,42 @@ public class JdbcTreeStagingLoader {
 		}
 	}
 
+	private void validateDatabaseObjects() {
+		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
+			Set<String> targetColumns = new LinkedHashSet<>();
+			dataSet.getFields().stream()
+					.filter(field -> field.getInner().getTargetColumn() != null)
+					.filter(field -> !"DROP".equals(field.getAction()))
+					.map(field -> field.getInner().getTargetColumn())
+					.forEach(targetColumns::add);
+			validateReadable(dataSet.getId(), "target",
+					qualifiedId(dataSet.getInner().getTargetSchema(), dataSet.getTargetTable()),
+					targetColumns);
+
+			Set<String> staging = new LinkedHashSet<>(stagingColumns(dataSet));
+			staging.add("SQLAPP_LOADED_AT");
+			if (dataSet.getParentDataSetId() == null) {
+				staging.add(LOAD_STATUS_COLUMN);
+			}
+			validateReadable(dataSet.getId(), "staging",
+					id(dataSet.getInner().getStagingTable()), staging);
+		}
+	}
+
+	private void validateReadable(String dataSetId, String role, String table,
+			Set<String> columns) {
+		String selected = columns.stream().map(this::id)
+				.reduce((left, right) -> left + ", " + right).orElse("1");
+		String sql = "SELECT " + selected + " FROM " + table + " WHERE 1=0";
+		try (PreparedStatement statement = connection.prepareStatement(sql);
+				var resultSet = statement.executeQuery()) {
+			// Opening the result verifies identifiers without reading user data.
+		} catch (SQLException e) {
+			throw new CommandException("Database preflight failed for " + role
+					+ " table of data set " + dataSetId + ": " + table, e);
+		}
+	}
+
 	private boolean equals(String left, String right) {
 		return left == null ? right == null : left.equalsIgnoreCase(right);
 	}
@@ -430,6 +467,11 @@ public class JdbcTreeStagingLoader {
 			return value;
 		}
 		return identifierQuote + value.replace(identifierQuote, identifierQuote + identifierQuote) + identifierQuote;
+	}
+
+	private String qualifiedId(String schema, Table table) {
+		return schema == null || schema.isBlank() ? id(table.getName())
+				: id(schema) + "." + id(table.getName());
 	}
 
 	private void setParameters(PreparedStatement statement, List<Object> parameters) throws SQLException {
