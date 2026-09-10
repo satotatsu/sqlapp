@@ -328,4 +328,47 @@ class MdbJackcessSupportTest {
 					.contains("SELECT *"));
 		}
 	}
+
+	@Test
+	void rebuildRenamesDropsTablesAndSafelyReplacesOriginal() throws Exception {
+		final Path source = tempDirectory.resolve("tables.accdb");
+		final Path rebuilt = tempDirectory.resolve("tables-rebuilt.accdb");
+		final Path backup = tempDirectory.resolve("tables.backup.accdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010,
+				source.toFile())) {
+			final var retained = new TableBuilder("旧テーブル")
+					.addColumn(new ColumnBuilder("ID",
+							io.github.spannm.jackcess.DataType.LONG))
+					.toTable(database);
+			retained.addRow(7);
+			new TableBuilder("削除テーブル")
+					.addColumn(new ColumnBuilder("ID",
+							io.github.spannm.jackcess.DataType.LONG))
+					.toTable(database);
+		}
+		final Schema targetSchema = new Schema("");
+		final Table renamed = new Table("新テーブル");
+		renamed.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		targetSchema.getTables().add(renamed);
+		MdbJackcessSupport.rebuild(source, rebuilt, targetSchema,
+				Map.of("新テーブル", "旧テーブル"), Map.of());
+		MdbJackcessSupport.replaceWithRebuilt(source, rebuilt, backup);
+		assertFalse(java.nio.file.Files.exists(rebuilt));
+		assertTrue(java.nio.file.Files.exists(backup));
+		final Schema current = MdbFileLoader.loadSchema(source);
+		assertNotNull(current.getTables().get("新テーブル"));
+		assertFalse(current.getTables().contains("旧テーブル"));
+		assertFalse(current.getTables().contains("削除テーブル"));
+		final var renamedRows = current.getTables().get("新テーブル")
+				.getRows().iterator();
+		assertTrue(renamedRows.hasNext());
+		assertEquals(7,
+				((Number) renamedRows.next().get("ID")).intValue());
+		final Schema original = MdbFileLoader.loadSchema(backup);
+		assertNotNull(original.getTables().get("旧テーブル"));
+		assertNotNull(original.getTables().get("削除テーブル"));
+		assertThrows(IllegalArgumentException.class,
+				() -> MdbJackcessSupport.replaceWithRebuilt(source, source,
+						tempDirectory.resolve("invalid.backup.accdb")));
+	}
 }

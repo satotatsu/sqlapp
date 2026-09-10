@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -285,6 +286,18 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			final Schema targetSchema,
 			final Map<String, ? extends Map<String, String>> columnMappings)
 			throws IOException {
+		rebuild(sourceFile, targetFile, targetSchema, Map.of(), columnMappings);
+	}
+
+	/**
+	 * Rebuilds an Access database with optional target-to-source table and
+	 * column mappings. A target table absent from the source is created empty.
+	 */
+	public static void rebuild(final Path sourceFile, final Path targetFile,
+			final Schema targetSchema,
+			final Map<String, String> tableMappings,
+			final Map<String, ? extends Map<String, String>> columnMappings)
+			throws IOException {
 		final Path source = normalize(sourceFile);
 		final Path target = normalize(targetFile);
 		if (source.equals(target)) {
@@ -313,7 +326,11 @@ public final class MdbJackcessSupport implements AutoCloseable {
 					createTable(output, model);
 				}
 				for (final Table model : targetSchema.getTables()) {
-					copyRows(input.getTable(model.getName()),
+					final String sourceTableName = tableMappings != null
+							&& tableMappings.containsKey(model.getName())
+									? tableMappings.get(model.getName())
+									: model.getName();
+					copyRows(input.getTable(sourceTableName),
 							output.getTable(model.getName()),
 							columnMappings == null ? null
 									: columnMappings.get(model.getName()));
@@ -350,7 +367,74 @@ public final class MdbJackcessSupport implements AutoCloseable {
 
 	public static void rebuild(final Path sourceFile, final Path targetFile,
 			final Schema targetSchema) throws IOException {
-		rebuild(sourceFile, targetFile, targetSchema, Map.of());
+		rebuild(sourceFile, targetFile, targetSchema, Map.of(), Map.of());
+	}
+
+	/**
+	 * Replaces the source with an already completed rebuilt file, retaining the
+	 * original at the requested backup path. All three paths must be distinct
+	 * and an existing backup is never overwritten.
+	 */
+	public static void replaceWithRebuilt(final Path sourceFile,
+			final Path rebuiltFile, final Path backupFile) throws IOException {
+		final Path source = normalize(sourceFile);
+		final Path rebuilt = normalize(rebuiltFile);
+		final Path backup = normalize(backupFile);
+		if (source.equals(rebuilt) || source.equals(backup)
+				|| rebuilt.equals(backup)) {
+			throw new IllegalArgumentException(
+					"Source, rebuilt and backup paths must be distinct");
+		}
+		if (!Files.isRegularFile(source)) {
+			throw new IllegalArgumentException(
+					"Access source file not found: " + source);
+		}
+		if (!Files.isRegularFile(rebuilt)) {
+			throw new IllegalArgumentException(
+					"Rebuilt Access file not found: " + rebuilt);
+		}
+		if (Files.exists(backup)) {
+			throw new IllegalArgumentException(
+					"Backup file already exists: " + backup);
+		}
+		try (Database validation = new DatabaseBuilder().withPath(rebuilt)
+				.withReadOnly(true).open()) {
+			validation.getTableNames();
+		}
+		if (!OPEN_FILES.add(source)) {
+			throw new IllegalStateException(
+					"An MDB Jackcess writer is open for a replacement file");
+		}
+		if (!OPEN_FILES.add(rebuilt)) {
+			OPEN_FILES.remove(source);
+			throw new IllegalStateException(
+					"An MDB Jackcess writer is open for a replacement file");
+		}
+		try {
+			move(source, backup);
+			try {
+				move(rebuilt, source);
+			} catch (final IOException replaceError) {
+				try {
+					move(backup, source);
+				} catch (final IOException rollbackError) {
+					replaceError.addSuppressed(rollbackError);
+				}
+				throw replaceError;
+			}
+		} finally {
+			OPEN_FILES.remove(rebuilt);
+			OPEN_FILES.remove(source);
+		}
+	}
+
+	private static void move(final Path source, final Path target)
+			throws IOException {
+		try {
+			Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
+		} catch (final java.nio.file.AtomicMoveNotSupportedException e) {
+			Files.move(source, target);
+		}
 	}
 
 	/**

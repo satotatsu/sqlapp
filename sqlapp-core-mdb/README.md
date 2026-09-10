@@ -87,6 +87,12 @@ which is slow or unavailable through UCanAccess:
   A per-table target-to-source column-name map supports column renames. Dropped
   columns are omitted and changed definitions are created from the target
   model. The source is never overwritten and an existing target is rejected.
+- The rebuild overload accepting a target-to-source table map supports table
+  renames. Tables omitted from the target Schema are dropped from the rebuilt
+  file, while target tables without a source are created empty.
+- `replaceWithRebuilt` switches a verified rebuilt file into the source path,
+  first moving the original to a caller-selected backup. It never overwrites a
+  backup and restores the original if the second move fails.
 - `rebuildWithoutIndex` is the safe DROP INDEX path. It recreates a separate
   file without the named secondary index, preserves the source file and rejects
   primary-key removal unless the caller supplies a complete target Schema.
