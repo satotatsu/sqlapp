@@ -67,6 +67,14 @@ class GeneratePliCsvExtractorCommandTest {
 		assertThrows(CommandException.class, command::run);
 	}
 
+	@Test
+	void testRejectInvalidContractDuringRead() throws Exception {
+		File file = new File(temporaryDirectory, "invalid-contract.yaml");
+		Files.writeString(file.toPath(), "format: wrong\nversion: 1\n");
+
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(file));
+	}
+
 	private LegacyMigrationContract contract() {
 		LegacyMigrationContract contract = new LegacyMigrationContract();
 		contract.setMigrationId("company-migration");

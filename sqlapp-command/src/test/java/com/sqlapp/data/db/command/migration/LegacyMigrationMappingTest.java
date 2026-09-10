@@ -137,6 +137,14 @@ class LegacyMigrationMappingTest {
 		assertTrue(!new File(temporaryDirectory, "atomic.yaml.tmp").exists());
 	}
 
+	@Test
+	void testRejectInvalidMappingDuringRead() throws Exception {
+		File file = new File(temporaryDirectory, "invalid-mapping.yaml");
+		Files.writeString(file.toPath(), "format: wrong\nversion: 1\n");
+
+		assertThrows(CommandException.class, () -> new LegacyMigrationMappingIO().read(file));
+	}
+
 	private TableMapping table(String id, String name) {
 		TableMapping table = new TableMapping();
 		table.setId(id);

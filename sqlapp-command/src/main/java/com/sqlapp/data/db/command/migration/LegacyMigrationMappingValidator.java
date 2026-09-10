@@ -31,9 +31,14 @@ public class LegacyMigrationMappingValidator {
 		if (mapping.getVersion() != LegacyMigrationMapping.CURRENT_VERSION) {
 			throw new CommandException("Unsupported legacy migration mapping version: " + mapping.getVersion());
 		}
+		if (mapping.getMigration() == null || mapping.getSource() == null
+				|| mapping.getTarget() == null || mapping.getTables() == null
+				|| mapping.getRelationships() == null) {
+			throw new CommandException("Legacy migration mapping structure is incomplete.");
+		}
 		Set<String> ids = new HashSet<>();
 		for (TableMapping table : mapping.getTables()) {
-			if (table.getId() == null || table.getId().isBlank()) {
+			if (table == null || table.getId() == null || table.getId().isBlank()) {
 				throw new CommandException("Every table mapping requires an id.");
 			}
 			if (!ids.add(table.getId())) {
@@ -51,9 +56,13 @@ public class LegacyMigrationMappingValidator {
 		}
 		Set<String> relationshipIds = new HashSet<>();
 		for (RelationshipMapping relationship : mapping.getRelationships()) {
+			if (relationship == null) {
+				throw new CommandException("Legacy migration mapping contains a null relationship.");
+			}
 			if (relationship.getId() == null || relationship.getId().isBlank()
 					|| !relationshipIds.add(relationship.getId())) {
-				throw new CommandException("Relationship ids must be non-empty and unique: " + relationship.getId());
+				throw new CommandException("Relationship ids must be non-empty and unique: "
+						+ relationship.getId());
 			}
 			if (!ids.contains(relationship.getParentMappingId()) || !ids.contains(relationship.getChildMappingId())) {
 				throw new CommandException("Relationship refers to an unknown table mapping: " + relationship.getId());

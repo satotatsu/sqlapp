@@ -29,14 +29,24 @@ public class LegacyMigrationContractValidator {
 		if (contract.getVersion() != LegacyMigrationContract.CURRENT_VERSION) {
 			throw new CommandException("Unsupported legacy migration contract version: " + contract.getVersion());
 		}
-		if (contract.getDataSets().isEmpty()) {
+		if (blank(contract.getMigrationId())) {
+			throw new CommandException("The legacy migration contract requires migrationId.");
+		}
+		if (contract.getCsv() == null || blank(contract.getCsv().getEncoding())
+				|| blank(contract.getCsv().getDelimiter()) || contract.getCsv().getQuote() == null
+				|| blank(contract.getCsv().getRecordSeparator())) {
+			throw new CommandException("The legacy migration contract CSV format is invalid.");
+		}
+		if (contract.getDataSets() == null || contract.getDataSets().isEmpty()) {
 			throw new CommandException("The legacy migration contract contains no data sets.");
 		}
 		Set<String> ids = new HashSet<>();
 		Set<String> files = new HashSet<>();
 		Map<String, DataSet> byId = new HashMap<>();
 		for (DataSet dataSet : contract.getDataSets()) {
-			if (blank(dataSet.getId()) || blank(dataSet.getSourcePath()) || blank(dataSet.getFileName())) {
+			if (dataSet == null || blank(dataSet.getId()) || blank(dataSet.getSourcePath())
+					|| blank(dataSet.getFileName()) || blank(dataSet.getTargetTable())
+					|| dataSet.getFields() == null) {
 				throw new CommandException("Data set id, sourcePath and fileName are required.");
 			}
 			if (!ids.add(dataSet.getId())) {
@@ -46,13 +56,24 @@ public class LegacyMigrationContractValidator {
 			if (!files.add(dataSet.getFileName().toLowerCase(Locale.ROOT))) {
 				throw new CommandException("Duplicate CSV file name: " + dataSet.getFileName());
 			}
+			if (dataSet.getHierarchyDepth() < 0 || dataSet.getLoadOrder() < 0
+					|| invalidNames(dataSet.getSourceBusinessKey())
+					|| invalidNames(dataSet.getTargetPrimaryKey())) {
+				throw new CommandException("Data set hierarchy, load order or keys are invalid: "
+						+ dataSet.getId());
+			}
+			if (dataSet.getFields().stream().anyMatch(field -> field == null)) {
+				throw new CommandException("Data set contains a null field: " + dataSet.getId());
+			}
 			int expectedPosition = 1;
-			List<Field> extractedFields = dataSet.getFields().stream().filter(Field::isExtracted).toList();
+			List<Field> extractedFields = dataSet.getFields().stream()
+					.filter(field -> field != null && field.isExtracted()).toList();
 			if (extractedFields.isEmpty()) {
 				throw new CommandException("Data set contains no extracted fields: " + dataSet.getId());
 			}
 			for (Field field : extractedFields) {
-				if ((blank(field.getSourcePath()) && field.getIndexedSources().isEmpty()
+				if ((blank(field.getSourcePath()) && (field.getIndexedSources() == null
+						|| field.getIndexedSources().isEmpty())
 						&& !field.isOccurrenceIndex())
 						|| blank(field.getStagingColumn())) {
 					throw new CommandException("Extracted field requires sourcePath and stagingColumn: "
@@ -68,6 +89,16 @@ public class LegacyMigrationContractValidator {
 			if (dataSet.getParentDataSetId() != null && !ids.contains(dataSet.getParentDataSetId())) {
 				throw new CommandException("Unknown parent data set: " + dataSet.getParentDataSetId());
 			}
+			if (dataSet.getParentDataSetId() != null) {
+				DataSet parent = byId.get(dataSet.getParentDataSetId());
+				if (dataSet.getHierarchyDepth() <= parent.getHierarchyDepth()
+						|| dataSet.getLoadOrder() <= parent.getLoadOrder()
+						|| dataSet.getAncestorKeys() == null
+						|| dataSet.getAncestorKeys().isEmpty()) {
+					throw new CommandException("Child data set hierarchy is inconsistent: "
+							+ dataSet.getId());
+				}
+			}
 			Set<String> visited = new HashSet<>();
 			DataSet current = dataSet;
 			while (current != null && current.getParentDataSetId() != null) {
@@ -77,6 +108,11 @@ public class LegacyMigrationContractValidator {
 				current = byId.get(current.getParentDataSetId());
 			}
 		}
+	}
+
+	private boolean invalidNames(List<String> values) {
+		return values == null || values.stream().anyMatch(this::blank)
+				|| new HashSet<>(values).size() != values.size();
 	}
 
 	private boolean blank(String value) {

@@ -82,6 +82,10 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(runner.contains("new JdbcTreeStagingLoader(connection, schema, plan).load()"));
 		assertTrue(runner.contains("connection.rollback()"));
 		assertFalse(new File(output, "company-staging.sql.tmp").exists());
+
+		plan.getDataSets().getLast().setParentDataSetId("missing-parent");
+		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().write(
+				new File(output, "invalid-plan.yaml"), plan));
 	}
 
 	@Test
@@ -96,6 +100,16 @@ class GenerateLegacyRdbLoaderCommandTest {
 		command.setOutputDirectory(temporaryDirectory);
 		command.setCommitEveryRootBatches(0);
 		assertThrows(CommandException.class, command::run);
+	}
+
+	@Test
+	void testRejectInvalidLoadPlanBeforeExecution() throws Exception {
+		File file = new File(temporaryDirectory, "invalid-load-plan.yaml");
+		Files.writeString(file.toPath(), "format: wrong\nversion: 1\n");
+
+		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().read(file));
+		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO()
+				.read(new File(temporaryDirectory, "missing.yaml")));
 	}
 
 	@Test
