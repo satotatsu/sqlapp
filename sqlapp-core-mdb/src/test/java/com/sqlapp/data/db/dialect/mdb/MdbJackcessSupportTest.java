@@ -226,4 +226,39 @@ class MdbJackcessSupportTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> MdbJackcessSupport.rebuild(source, source, schema));
 	}
+
+	@Test
+	void rebuildsWithoutSecondaryIndexAndKeepsSource() throws Exception {
+		final Path source = tempDirectory.resolve("indexed.accdb");
+		final Path target = tempDirectory.resolve("without-index.accdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010,
+				source.toFile())) {
+			final io.github.spannm.jackcess.Table table = new TableBuilder("対象")
+					.addColumn(new ColumnBuilder("ID",
+							io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new ColumnBuilder("検索値",
+							io.github.spannm.jackcess.DataType.TEXT))
+					.addIndex(new IndexBuilder("PK_対象").withColumns("ID")
+							.withPrimaryKey())
+					.addIndex(new IndexBuilder("IDX_検索値")
+							.withColumns("検索値"))
+					.toTable(database);
+			table.addRow(1, "保持データ");
+		}
+
+		MdbJackcessSupport.rebuildWithoutIndex(source, target, "対象",
+				"IDX_検索値");
+		assertNotNull(MdbFileLoader.loadTable(source, "対象").getIndexes()
+				.get("IDX_検索値"));
+		final Table rebuilt = MdbFileLoader.loadTable(target, "対象");
+		assertFalse(rebuilt.getIndexes().contains("IDX_検索値"));
+		assertNotNull(rebuilt.getPrimaryKeyConstraint());
+		final var rows = rebuilt.getRows().iterator();
+		assertTrue(rows.hasNext());
+		assertEquals("保持データ", rows.next().get("検索値"));
+		assertThrows(IllegalArgumentException.class,
+				() -> MdbJackcessSupport.rebuildWithoutIndex(source,
+						tempDirectory.resolve("invalid.accdb"), "対象",
+						"PK_対象"));
+	}
 }

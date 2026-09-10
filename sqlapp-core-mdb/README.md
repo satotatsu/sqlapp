@@ -87,6 +87,9 @@ which is slow or unavailable through UCanAccess:
   A per-table target-to-source column-name map supports column renames. Dropped
   columns are omitted and changed definitions are created from the target
   model. The source is never overwritten and an existing target is rejected.
+- `rebuildWithoutIndex` is the safe DROP INDEX path. It recreates a separate
+  file without the named secondary index, preserves the source file and rejects
+  primary-key removal unless the caller supplies a complete target Schema.
 
 Close all UCanAccess connections to the file before opening the direct writer.
 The class prevents two sqlapp Jackcess writer sessions for the same normalized

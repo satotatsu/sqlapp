@@ -327,6 +327,35 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		rebuild(sourceFile, targetFile, targetSchema, Map.of());
 	}
 
+	/**
+	 * Rebuilds a database into a new file while removing one secondary index.
+	 * Primary keys must be changed through an explicitly supplied target Schema.
+	 */
+	public static void rebuildWithoutIndex(final Path sourceFile,
+			final Path targetFile, final String tableName,
+			final String indexName) throws IOException {
+		final Schema schema = MdbFileLoader.loadSchema(sourceFile);
+		final Table table = schema.getTables().get(tableName);
+		if (table == null) {
+			throw new IllegalArgumentException(
+					"Access table not found: " + tableName);
+		}
+		if (table.getIndexes().get(indexName) == null) {
+			if (table.getPrimaryKeyConstraint() != null
+					&& indexName.equalsIgnoreCase(
+							table.getPrimaryKeyConstraint().getName())) {
+				throw new IllegalArgumentException(
+						"Primary key cannot be removed by rebuildWithoutIndex; "
+								+ "supply an explicit target Schema instead: "
+								+ indexName);
+			}
+			throw new IllegalArgumentException(
+					"Access index not found: " + tableName + "." + indexName);
+		}
+		table.getIndexes().remove(indexName);
+		rebuild(sourceFile, targetFile, schema);
+	}
+
 	private static void createTable(final Database database, final Table model)
 			throws IOException {
 		final TableBuilder builder = new TableBuilder(model.getName());
