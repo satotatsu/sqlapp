@@ -40,7 +40,7 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	public record Execution(String event, String taskId, Instant occurredAt,
 			Long processedRows, String failureType, String failureMessage) {
 		private static final Set<String> EVENTS = Set.of("JOB_STARTED", "JOB_COMPLETED",
-				"JOB_FAILED", "JOB_PAUSED", "TASK_STARTED", "TASK_COMPLETED",
+				"JOB_REJECTED", "JOB_FAILED", "JOB_PAUSED", "TASK_STARTED", "TASK_COMPLETED",
 				"TASK_FAILED", "TASK_PAUSED");
 		public static final int FAILURE_MESSAGE_MAX_LENGTH = 1_000;
 
@@ -60,14 +60,15 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			if (processedRows != null && processedRows < 0) {
 				throw new IllegalArgumentException("execution processedRows must not be negative");
 			}
-			final boolean failed = "TASK_FAILED".equals(event) || "JOB_FAILED".equals(event);
+			final boolean failed = "TASK_FAILED".equals(event)
+					|| "JOB_FAILED".equals(event) || "JOB_REJECTED".equals(event);
 			if (failed != (failureType != null)) {
 				throw new IllegalArgumentException(
-						"failureType is required only for TASK_FAILED");
+						"failureType is required only for failed execution events");
 			}
 			if (!failed && failureMessage != null) {
 				throw new IllegalArgumentException(
-						"failureMessage is valid only for TASK_FAILED");
+						"failureMessage is valid only for failed execution events");
 			}
 			if (failureMessage != null
 					&& failureMessage.length() > FAILURE_MESSAGE_MAX_LENGTH) {

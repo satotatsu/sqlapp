@@ -21,6 +21,7 @@ class CompositeBulkMigrationJobListenerTest {
 		final var jobResult = new BulkMigrationJobResult("fingerprint", List.of());
 
 		composite.onJobStarted("fingerprint", 1);
+		composite.onJobRejected("fingerprint", new IllegalStateException("rejected"));
 		composite.onTaskStarted("task", 0, 1);
 		composite.onTaskCompleted("task", chunkResult, 0, 1);
 		composite.onTaskFailed("task", new SQLException("failed"), 0, 1);
@@ -30,6 +31,7 @@ class CompositeBulkMigrationJobListenerTest {
 		composite.onJobPaused("fingerprint", "task", progress);
 
 		assertEquals(List.of("job-start-first", "job-start-second",
+				"job-reject-first", "job-reject-second",
 				"task-start-first", "task-start-second",
 				"task-complete-first", "task-complete-second",
 				"task-fail-first", "task-fail-second",
@@ -46,6 +48,9 @@ class CompositeBulkMigrationJobListenerTest {
 		return new BulkMigrationJobListener() {
 			@Override public void onJobStarted(String fingerprint, int count) {
 				events.add("job-start-" + name);
+			}
+			@Override public void onJobRejected(String fingerprint, Throwable cause) {
+				events.add("job-reject-" + name);
 			}
 			@Override public void onJobCompleted(BulkMigrationJobResult result) {
 				events.add("job-complete-" + name);

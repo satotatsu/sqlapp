@@ -46,6 +46,19 @@ public final class DurableBulkMigrationJobLifecycle
 		return store.load(plan.getFingerprint());
 	}
 
+	@Override
+	public void validateBeforeExecution(final BulkMigrationJobPlan plan)
+			throws SQLException {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		final BulkMigrationMaintenanceState state = store
+				.load(plan.getFingerprint()).orElse(null);
+		if (state != null && state.status().requiresRecovery()) {
+			throw new IllegalStateException("Migration maintenance is "
+					+ state.status()
+					+ "; explicit recovery is required before execution");
+		}
+	}
+
 	/**
 	 * Explicitly restores a nonterminal lifecycle after verifying the approved
 	 * plan fingerprint.

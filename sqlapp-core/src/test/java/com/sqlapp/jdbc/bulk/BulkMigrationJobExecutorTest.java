@@ -64,6 +64,45 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void reportsPreflightRejectionWithoutStartingOrRestoringTheJob() {
+		final List<String> events = new ArrayList<>();
+		final var lifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public void validateBeforeExecution(BulkMigrationJobPlan plan) {
+				throw new IllegalStateException("recovery required");
+			}
+
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) {
+				events.add("before");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) {
+				events.add("restore");
+			}
+		};
+		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onJobStarted(String fingerprint, int taskCount) {
+				events.add("started");
+			}
+
+			@Override
+			public void onJobRejected(String fingerprint, Throwable cause) {
+				events.add("rejected:" + cause.getMessage());
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), plan, listener));
+
+		assertEquals(List.of("rejected:recovery required"), events);
+	}
+
+	@Test
 	void leaseIsHeldBeforeNotificationAndReleasedAfterExecution() throws Exception {
 		final var store = new InMemoryBulkMigrationJobLeaseStore();
 		final var manager = new BulkMigrationJobLeaseManager(store, "owner-1",

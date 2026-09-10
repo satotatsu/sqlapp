@@ -31,6 +31,11 @@ public final class CompositeBulkMigrationJobListener implements BulkMigrationJob
 	}
 
 	@Override
+	public void onJobRejected(final String planFingerprint, final Throwable cause) {
+		listeners.forEach(listener -> listener.onJobRejected(planFingerprint, cause));
+	}
+
+	@Override
 	public void onJobCompleted(final BulkMigrationJobResult result) {
 		listeners.forEach(listener -> listener.onJobCompleted(result));
 	}

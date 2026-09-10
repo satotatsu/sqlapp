@@ -440,9 +440,10 @@ class BulkMigrationTest {
 			}
 		};
 		final Path maintenance = directory.resolve("maintenance");
+		final Path executionReport = directory.resolve("rejected-execution.json");
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target)
 				.schema(schema).mode(BulkMigrationMode.INSERT).lifecycle(lifecycle)
-				.fileMaintenance(maintenance).build();
+				.fileMaintenance(maintenance).operationalReport(executionReport).build();
 		final Path reportFile = directory.resolve("approved.json");
 		final String fingerprint = migration.dryRun(reportFile).planFingerprint();
 		new FileBulkMigrationMaintenanceStateStore(maintenance).save(
@@ -453,6 +454,10 @@ class BulkMigrationTest {
 				migration.resumeReadiness());
 		assertTrue(assertThrows(IllegalStateException.class, migration::execute)
 				.getMessage().contains("explicit recovery"));
+		final var rejected = new BulkMigrationOperationalReportIO().read(executionReport);
+		assertEquals("JOB_REJECTED", rejected.execution().event());
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED.name(),
+				rejected.maintenance().status());
 		assertThrows(IllegalArgumentException.class,
 				() -> migration.recoverMaintenanceWithFingerprint("wrong"));
 		assertEquals(0, restores.get());

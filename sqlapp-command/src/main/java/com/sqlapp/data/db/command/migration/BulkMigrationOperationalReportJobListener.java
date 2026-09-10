@@ -103,6 +103,11 @@ public final class BulkMigrationOperationalReportJobListener
 	}
 
 	@Override
+	public void onJobRejected(final String planFingerprint, final Throwable cause) {
+		publishBoundary(execution("JOB_REJECTED", null, null, cause));
+	}
+
+	@Override
 	public void onJobCompleted(final BulkMigrationJobResult result) {
 		publishBoundary(execution("JOB_COMPLETED", null,
 				result == null ? null : result.getProcessedRows(), null));

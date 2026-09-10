@@ -42,6 +42,41 @@ class CompositeBulkMigrationJobLifecycleTest {
 				() -> BulkMigrationJobPlanner.plan(List.of(), lifecycle));
 	}
 
+	@Test
+	void validatesEveryComponentBeforeStartingAnyComponent() {
+		final List<String> events = new ArrayList<>();
+		final var first = new BulkMigrationJobLifecycle() {
+			@Override
+			public void validateBeforeExecution(BulkMigrationJobPlan plan) {
+				events.add("validate-first");
+			}
+
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) {
+				events.add("before-first");
+			}
+		};
+		final var second = new BulkMigrationJobLifecycle() {
+			@Override
+			public void validateBeforeExecution(BulkMigrationJobPlan plan) {
+				events.add("validate-second");
+				throw new IllegalStateException("not ready");
+			}
+
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) {
+				events.add("before-second");
+			}
+		};
+		final var lifecycle = CompositeBulkMigrationJobLifecycle.of(first, second);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobExecutor.executePlan(nullConnection(), plan));
+
+		assertEquals(List.of("validate-first", "validate-second"), events);
+	}
+
 	private static BulkMigrationJobLifecycle component(final String id,
 			final List<String> events, final boolean failRestore) {
 		return new BulkMigrationJobLifecycle() {
@@ -76,5 +111,12 @@ class CompositeBulkMigrationJobLifecycleTest {
 				}
 			}
 		};
+	}
+
+	private static Connection nullConnection() {
+		return (Connection) java.lang.reflect.Proxy.newProxyInstance(
+				CompositeBulkMigrationJobLifecycleTest.class.getClassLoader(),
+				new Class<?>[] { Connection.class },
+				(proxy, method, args) -> { throw new UnsupportedOperationException(); });
 	}
 }

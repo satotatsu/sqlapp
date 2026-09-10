@@ -494,10 +494,15 @@ After reviewing the plan, call
 interrupted lifecycle, or `recoverMaintenance(approvedDryRunReport)` to use the
 fingerprint from a saved report. Recovery rejects a changed plan and is
 idempotent once the durable state is `RESTORED` or `COMPLETE`.
-`execute()` performs the same durable-state preflight and refuses to overwrite
+Execution performs the same durable-state preflight after acquiring any job
+lease and refuses to overwrite
 `PREPARING`, `PREPARED`, `POST_PROCESSING`, `RESTORING`, or `RESTORE_FAILED`.
 Use the explicit recovery API first. `RESTORED` and `COMPLETE` are safe terminal
-states and do not block a later execution.
+states and do not block a later execution. The same guard applies when the
+low-level job executor is used directly. A rejected preflight publishes
+`JOB_REJECTED` without publishing `JOB_STARTED` or invoking restoration, so an
+operational report distinguishes a safe refusal from a failure after execution
+began.
 
 Add `.operationalReport(reportFile)` to atomically refresh the existing JSON
 operational report at each job and table boundary. Report output is disabled by
@@ -1179,8 +1184,8 @@ publication clears that value. In strict mode, failures raised while reporting
 an existing task failure or pause are retained by the executor as suppressed
 listener failures.
 
-The report's `execution` object distinguishes job-level `JOB_STARTED`,
-`JOB_COMPLETED`, `JOB_FAILED`, and `JOB_PAUSED` as well as the corresponding
+The report's `execution` object distinguishes job-level `JOB_REJECTED`,
+`JOB_STARTED`, `JOB_COMPLETED`, `JOB_FAILED`, and `JOB_PAUSED` as well as the corresponding
 task events, even when their durable checkpoint state is otherwise identical.
 It contains the applicable task ID, event time, known processed-row count, and
 bounded failure details. Event task IDs are validated against the plan before

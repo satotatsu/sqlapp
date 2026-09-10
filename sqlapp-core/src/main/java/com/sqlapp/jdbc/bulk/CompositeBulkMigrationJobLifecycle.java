@@ -60,6 +60,14 @@ public final class CompositeBulkMigrationJobLifecycle
 	}
 
 	@Override
+	public void validateBeforeExecution(final BulkMigrationJobPlan plan)
+			throws SQLException {
+		for (final BulkMigrationJobLifecycle component : components) {
+			component.validateBeforeExecution(plan);
+		}
+	}
+
+	@Override
 	public void before(final Connection connection, final BulkMigrationJobPlan plan)
 			throws SQLException {
 		for (final BulkMigrationJobLifecycle component : components) {

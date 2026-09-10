@@ -280,7 +280,6 @@ public final class BulkMigration {
 			throws SQLException {
 		final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false,
 				false, maintenanceConnection);
-		ensureMaintenanceReady(plan);
 		final BulkMigrationJobListener executionListener = executionListener(plan);
 		if (leaseConfiguration == null) {
 			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
@@ -299,17 +298,6 @@ public final class BulkMigration {
 							leaseConfiguration);
 			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
 					executionListener, chunkListener, manager);
-		}
-	}
-
-	private static void ensureMaintenanceReady(final BulkMigrationJobPlan plan)
-			throws SQLException {
-		if (plan.getLifecycle() instanceof DurableBulkMigrationJobLifecycle durable) {
-			final var state = durable.inspect(plan).orElse(null);
-			if (state != null && state.status().requiresRecovery()) {
-				throw new IllegalStateException("Migration maintenance is "
-						+ state.status() + "; explicit recovery is required before execution");
-			}
 		}
 	}
 

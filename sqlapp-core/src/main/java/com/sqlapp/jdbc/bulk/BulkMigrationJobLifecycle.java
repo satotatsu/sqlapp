@@ -17,6 +17,11 @@ public interface BulkMigrationJobLifecycle {
 		return List.of();
 	}
 
+	/** Validates execution state after an optional job lease has been acquired. */
+	default void validateBeforeExecution(BulkMigrationJobPlan plan)
+			throws SQLException {
+	}
+
 	default void before(Connection connection, BulkMigrationJobPlan plan)
 			throws SQLException {
 	}

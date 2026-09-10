@@ -11,6 +11,9 @@ public interface BulkMigrationJobListener {
 	default void onJobStarted(final String planFingerprint, final int taskCount) {
 	}
 
+	default void onJobRejected(final String planFingerprint, final Throwable cause) {
+	}
+
 	default void onJobCompleted(final BulkMigrationJobResult result) {
 	}
 

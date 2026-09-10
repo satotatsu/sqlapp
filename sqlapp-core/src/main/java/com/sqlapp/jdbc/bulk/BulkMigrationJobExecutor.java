@@ -55,6 +55,16 @@ public final class BulkMigrationJobExecutor {
 		Objects.requireNonNull(commonChunkListener, "commonChunkListener");
 		plan.validateUnchanged();
 		final BulkMigrationJobLifecycle lifecycle = plan.getLifecycle();
+		try {
+			lifecycle.validateBeforeExecution(plan);
+		} catch (SQLException | RuntimeException | Error rejection) {
+			try {
+				listener.onJobRejected(plan.getFingerprint(), rejection);
+			} catch (RuntimeException listenerFailure) {
+				rejection.addSuppressed(listenerFailure);
+			}
+			throw rejection;
+		}
 		listener.onJobStarted(plan.getFingerprint(), plan.getTasks().size());
 		final BulkMigrationJobResult result;
 		try {

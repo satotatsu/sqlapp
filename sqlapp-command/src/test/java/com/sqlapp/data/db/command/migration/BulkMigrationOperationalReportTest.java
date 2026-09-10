@@ -396,6 +396,29 @@ class BulkMigrationOperationalReportTest {
 
 	@Test
 	@SuppressWarnings("unchecked")
+	void jobListenerRecordsARejectedPreflightSeparatelyFromExecutionFailure()
+			throws Exception {
+		final BulkMigrationJobPlan plan = plan(
+				new InMemoryBulkMigrationCheckpointStore());
+		final Path target = directory.resolve("rejected.json");
+		final var listener = new BulkMigrationOperationalReportJobListener(plan, target);
+
+		listener.onJobRejected(plan.getFingerprint(),
+				new IllegalStateException("explicit recovery is required"));
+
+		final Map<String, Object> json = new JsonConverter().fromJsonString(
+				target.toFile(), Map.class);
+		final Map<String, Object> execution =
+				(Map<String, Object>) json.get("execution");
+		assertEquals("JOB_REJECTED", execution.get("event"));
+		assertEquals(IllegalStateException.class.getName(),
+				execution.get("failureType"));
+		assertEquals("explicit recovery is required",
+				execution.get("failureMessage"));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
 	void jobListenerCanContinueAfterObservableReportFailure() {
 		final var delegate = new InMemoryBulkMigrationCheckpointStore();
 		final var failing = new AtomicBoolean(true);
