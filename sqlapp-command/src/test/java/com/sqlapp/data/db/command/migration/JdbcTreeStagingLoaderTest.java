@@ -265,6 +265,27 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		}
 	}
 
+	@Test
+	void testRejectNullChildJoinKeyBeforeOrphanCleanup() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					INSERT INTO TMP_EMPLOYEE_LIST(LEGACY_COMPANY_ID,EMP_ID)
+					VALUES (NULL,'E004')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan()));
+
+			assertTrue(exception.getMessage()
+					.contains("child staging row contains a null join key: employee"));
+			assertEquals(4, count(connection, "TMP_EMPLOYEE_LIST"));
+		}
+	}
+
 	private void createTables(Connection connection) throws Exception {
 		dropTables(connection, "EMPLOYEE_LIST");
 		dropTables(connection, "COMPANY_MASTER");

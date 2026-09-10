@@ -79,6 +79,7 @@ public class JdbcTreeStagingLoader {
 		initializeStagingTables();
 		validateDatabaseObjects();
 		validatePendingRootKeys();
+		validateJoinKeyValues();
 	}
 
 	/**
@@ -513,6 +514,46 @@ public class JdbcTreeStagingLoader {
 			throw new CommandException("Staging data preflight " + check
 					+ " query failed for data set " + dataSetId, e);
 		}
+	}
+
+	private void validateJoinKeyValues() {
+		List<String> failures = new ArrayList<>();
+		for (LoadDataSetWrapper child : plan.getDataSets()) {
+			if (child.getParentDataSetId() == null) {
+				continue;
+			}
+			LoadDataSetWrapper parent = dataSets.get(child.getParentDataSetId());
+			Set<String> childKeys = child.getParentJoinKeys().stream()
+					.map(key -> key.getInner().getChildStagingColumn())
+					.collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+			Set<String> parentKeys = child.getParentJoinKeys().stream()
+					.map(key -> key.getInner().getParentStagingColumn())
+					.collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+			if (containsNull(id(child.getInner().getStagingTable()), childKeys,
+					child.getId(), "child join key")) {
+				failures.add("child staging row contains a null join key: " + child.getId());
+			}
+			if (containsNull(id(parent.getInner().getStagingTable()), parentKeys,
+					child.getId(), "parent join key")) {
+				failures.add("parent staging row contains a null join key for child: "
+						+ child.getId());
+			}
+		}
+		if (!failures.isEmpty()) {
+			throw new CommandException("Staging relationship preflight failed:"
+					+ System.lineSeparator() + " - "
+					+ String.join(System.lineSeparator() + " - ", failures));
+		}
+	}
+
+	private boolean containsNull(String table, Set<String> columns,
+			String dataSetId, String check) {
+		String selected = columns.stream().map(this::id)
+				.reduce((left, right) -> left + ", " + right).orElseThrow();
+		String condition = columns.stream().map(column -> id(column) + " IS NULL")
+				.reduce((left, right) -> left + " OR " + right).orElseThrow();
+		return hasRow("SELECT " + selected + " FROM " + table + " WHERE "
+				+ condition, dataSetId, check);
 	}
 
 	private boolean equals(String left, String right) {
