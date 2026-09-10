@@ -142,15 +142,15 @@ class BulkMigrationJobExecutorTest {
 			@Override
 			public void onJobStarted(String planFingerprint, int taskCount) {
 				assertThrows(BulkMigrationJobLeaseUnavailableException.class,
-						() -> competitor.acquire(planFingerprint));
+						() -> competitor.acquire(plan.getJobId(), planFingerprint));
 			}
 		};
 
 		BulkMigrationJobExecutor.executePlan(connection(), plan, listener,
 				ChunkedBulkMigrationListener.NO_OP, manager);
 
-		assertTrue(store.load(plan.getFingerprint()).isEmpty());
-		try (var lease = competitor.acquire(plan.getFingerprint())) {
+		assertTrue(store.load(plan.getJobId()).isEmpty());
+		try (var lease = competitor.acquire(plan.getJobId(), plan.getFingerprint())) {
 			assertEquals("owner-2", lease.getLease().ownerId());
 		}
 	}
@@ -210,7 +210,7 @@ class BulkMigrationJobExecutorTest {
 				() -> BulkMigrationJobExecutor.executePlan(connection(), plan, listener,
 						ChunkedBulkMigrationListener.NO_OP, manager));
 		assertFalse(completed.get());
-		assertTrue(delegateStore.load(plan.getFingerprint()).isEmpty());
+		assertTrue(delegateStore.load(plan.getJobId()).isEmpty());
 	}
 
 	@Test

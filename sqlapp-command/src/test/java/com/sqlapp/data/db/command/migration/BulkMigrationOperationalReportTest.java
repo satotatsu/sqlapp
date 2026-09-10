@@ -236,16 +236,23 @@ class BulkMigrationOperationalReportTest {
 
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
 				io.assessResume(file, plan.getFingerprint(), store, now));
-		store.tryAcquire(new BulkMigrationJobLease(plan.getFingerprint(), "worker",
+		store.tryAcquire(new BulkMigrationJobLease(plan.getJobId(),
+				plan.getFingerprint(), "worker",
 				now.plusSeconds(30)), now);
 		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 				io.assessResume(file, plan.getFingerprint(), store, now));
+		final var changedPlanLease = new BulkMigrationJobLease(plan.getJobId(),
+				"changed-plan", "worker", now.plusSeconds(30));
+		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
+				BulkMigrationOperationalReportResumeAssessor.assess(report,
+						changedPlanLease, now));
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
 				io.assessResume(file, plan.getFingerprint(), store,
 						now.plusSeconds(30)));
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkMigrationOperationalReportResumeAssessor.assess(report,
-						new BulkMigrationJobLease("other", "worker", now.plusSeconds(1)),
+						new BulkMigrationJobLease("other-job", "other", "worker",
+								now.plusSeconds(1)),
 						now));
 	}
 

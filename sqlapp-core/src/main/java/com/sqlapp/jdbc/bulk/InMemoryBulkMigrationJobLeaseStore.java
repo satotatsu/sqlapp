@@ -15,9 +15,9 @@ public final class InMemoryBulkMigrationJobLeaseStore
 			new ConcurrentHashMap<>();
 
 	@Override
-	public Optional<BulkMigrationJobLease> load(final String planFingerprint) {
-		requireId(planFingerprint, "planFingerprint");
-		return Optional.ofNullable(leases.get(planFingerprint));
+	public Optional<BulkMigrationJobLease> load(final String jobId) {
+		requireId(jobId, "jobId");
+		return Optional.ofNullable(leases.get(jobId));
 	}
 
 	@Override
@@ -28,7 +28,7 @@ public final class InMemoryBulkMigrationJobLeaseStore
 			throw new IllegalArgumentException("acquired lease must expire after now");
 		}
 		final AtomicBoolean acquired = new AtomicBoolean();
-		leases.compute(lease.planFingerprint(), (key, current) -> {
+		leases.compute(lease.jobId(), (key, current) -> {
 			if (current == null || current.isExpiredAt(now)) {
 				acquired.set(true);
 				return lease;
@@ -46,8 +46,10 @@ public final class InMemoryBulkMigrationJobLeaseStore
 			throw new IllegalArgumentException("renewed lease must expire after now");
 		}
 		final AtomicBoolean renewed = new AtomicBoolean();
-		leases.computeIfPresent(lease.planFingerprint(), (key, current) -> {
-			if (current.ownerId().equals(lease.ownerId()) && !current.isExpiredAt(now)) {
+		leases.computeIfPresent(lease.jobId(), (key, current) -> {
+			if (current.ownerId().equals(lease.ownerId())
+					&& current.planFingerprint().equals(lease.planFingerprint())
+					&& !current.isExpiredAt(now)) {
 				renewed.set(true);
 				return lease;
 			}
@@ -57,10 +59,10 @@ public final class InMemoryBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public void release(final String planFingerprint, final String ownerId) {
-		requireId(planFingerprint, "planFingerprint");
+	public void release(final String jobId, final String ownerId) {
+		requireId(jobId, "jobId");
 		requireId(ownerId, "ownerId");
-		leases.computeIfPresent(planFingerprint, (key, current) ->
+		leases.computeIfPresent(jobId, (key, current) ->
 				current.ownerId().equals(ownerId) ? null : current);
 	}
 

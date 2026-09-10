@@ -22,38 +22,40 @@ import com.sqlapp.jdbc.ExResultSet;
 
 /** Shared Schema model and row mapping for the JDBC job-lease table. */
 final class JdbcBulkMigrationJobLeaseTable {
-	private static final Set<String> REQUIRED_COLUMNS = Set.of("PLAN_FINGERPRINT",
-			"OWNER_ID", "EXPIRES_AT");
+	private static final Set<String> REQUIRED_COLUMNS = Set.of("JOB_ID",
+			"PLAN_FINGERPRINT", "OWNER_ID", "EXPIRES_AT");
 
 	private JdbcBulkMigrationJobLeaseTable() {
 	}
 
 	static Table table(final String tableName) {
 		final Table table = new Table(tableName);
-		final Column fingerprint = varchar("PLAN_FINGERPRINT");
-		table.getColumns().add(fingerprint);
+		final Column jobId = varchar("JOB_ID");
+		table.getColumns().add(jobId);
+		table.getColumns().add(varchar("PLAN_FINGERPRINT"));
 		table.getColumns().add(varchar("OWNER_ID"));
 		table.getColumns().add(new Column("EXPIRES_AT").setDataType(DataType.VARCHAR)
 				.setLength(40).setNotNull(true));
-		table.setPrimaryKey((String) null, fingerprint);
+		table.setPrimaryKey((String) null, jobId);
 		return table;
 	}
 
-	static ParametersContext parameters(final String fingerprint) {
+	static ParametersContext parameters(final String jobId) {
 		final ParametersContext parameters = new ParametersContext();
-		parameters.put("PLAN_FINGERPRINT", fingerprint);
+		parameters.put("JOB_ID", jobId);
 		return parameters;
 	}
 
 	static ParametersContext parameters(final BulkMigrationJobLease lease) {
-		final ParametersContext parameters = parameters(lease.planFingerprint());
+		final ParametersContext parameters = parameters(lease.jobId());
+		parameters.put("PLAN_FINGERPRINT", lease.planFingerprint());
 		parameters.put("OWNER_ID", lease.ownerId());
 		parameters.put("EXPIRES_AT", lease.expiresAt().toString());
 		return parameters;
 	}
 
 	static BulkMigrationJobLease lease(final ExResultSet resultSet,
-			final String fingerprint) throws SQLException {
+			final String jobId) throws SQLException {
 		final Map<String, Integer> columns = new LinkedHashMap<>();
 		final var metadata = resultSet.getMetaData();
 		for (int i = 1; i <= metadata.getColumnCount(); i++) {
@@ -63,20 +65,22 @@ final class JdbcBulkMigrationJobLeaseTable {
 			throw new SQLException("Migration job lease result is missing required columns");
 		}
 		final String owner = resultSet.getString(columns.get("OWNER_ID"));
+		final String fingerprint = resultSet.getString(columns.get("PLAN_FINGERPRINT"));
 		final String expires = resultSet.getString(columns.get("EXPIRES_AT"));
 		try {
 			if (expires == null) {
 				throw new IllegalArgumentException("EXPIRES_AT must not be null");
 			}
-			return new BulkMigrationJobLease(fingerprint, owner, Instant.parse(expires));
+			return new BulkMigrationJobLease(jobId, fingerprint, owner,
+					Instant.parse(expires));
 		} catch (IllegalArgumentException | DateTimeException failure) {
-			throw new SQLException("Invalid migration job lease data for plan "
-					+ fingerprint + "; check OWNER_ID and EXPIRES_AT", failure);
+			throw new SQLException("Invalid migration job lease data for job "
+					+ jobId + "; check PLAN_FINGERPRINT, OWNER_ID and EXPIRES_AT", failure);
 		}
 	}
 
-	static void validateFingerprint(final String fingerprint) {
-		new BulkMigrationJobLease(fingerprint, "validation", Instant.MAX);
+	static void validateJobId(final String jobId) {
+		new BulkMigrationJobLease(jobId, "validation", "validation", Instant.MAX);
 	}
 
 	static boolean exists(final Connection connection, final String tableName)
@@ -131,9 +135,9 @@ final class JdbcBulkMigrationJobLeaseTable {
 				primaryKey.add(keys.getString("COLUMN_NAME"));
 			}
 		}
-		if (primaryKey.size() != 1 || !primaryKey.contains("PLAN_FINGERPRINT")) {
+		if (primaryKey.size() != 1 || !primaryKey.contains("JOB_ID")) {
 			throw new SQLException("Migration job lease table " + tableName
-					+ " must have a primary key on PLAN_FINGERPRINT alone");
+					+ " must have a primary key on JOB_ID alone");
 		}
 	}
 

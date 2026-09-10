@@ -100,7 +100,8 @@ public final class BulkMigrationJobExecutor {
 			final BulkMigrationJobLeaseManager leaseManager) throws SQLException {
 		Objects.requireNonNull(leaseManager, "leaseManager");
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
-		try (var lease = leaseManager.acquire(plan.getFingerprint())) {
+		try (var lease = leaseManager.acquire(plan.getJobId(),
+				plan.getFingerprint())) {
 			try (var heartbeat = lease.startHeartbeat()) {
 				final BulkMigrationJobListener leaseListener =
 						new BulkMigrationJobLeaseJobListener(heartbeat, listener);

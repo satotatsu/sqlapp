@@ -255,11 +255,13 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals("JOB_COMPLETED", report.execution().event());
 		assertEquals(1, report.processedRows());
 		assertEquals(1, report.completedTasks());
-		final String approvedFingerprint = migration.dryRun().planFingerprint();
+		final var approvedReport = migration.dryRun();
+		final String approvedFingerprint = approvedReport.planFingerprint();
 		final var competingManager = new BulkMigrationJobLeaseManager(
 				new FileBulkMigrationJobLeaseStore(leases), "competing-worker",
 				Duration.ofMinutes(5));
-		try (var ignored = competingManager.acquire(approvedFingerprint)) {
+		try (var ignored = competingManager.acquire(approvedReport.jobId(),
+				approvedFingerprint)) {
 			assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 					migration.resumeReadiness());
 			assertThrows(BulkMigrationJobLeaseUnavailableException.class,
@@ -298,12 +300,13 @@ class BulkMigrationFacadeIntegrationTest {
 		}
 		assertEquals(1, migration.execute().getProcessedRows());
 		assertEquals(BulkMigrationResumeReadiness.COMPLETE, migration.resumeReadiness());
-		final String fingerprint = migration.dryRun().planFingerprint();
+		final var report = migration.dryRun();
+		final String fingerprint = report.planFingerprint();
 		try (var connection = target.getConnection()) {
 			final var manager = new BulkMigrationJobLeaseManager(
 					new JdbcBulkMigrationJobLeaseStore(connection), "competing-worker",
 					Duration.ofMinutes(5));
-			try (var lease = manager.acquire(fingerprint)) {
+			try (var lease = manager.acquire(report.jobId(), fingerprint)) {
 				assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 						migration.resumeReadiness());
 				assertThrows(BulkMigrationJobLeaseUnavailableException.class,

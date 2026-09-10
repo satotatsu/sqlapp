@@ -25,32 +25,32 @@ class BulkMigrationJobLeaseManagerTest {
 	@Test
 	void storeOwnerFencesAcquireRenewAndRelease() throws Exception {
 		final var store = new InMemoryBulkMigrationJobLeaseStore();
-		final var first = new BulkMigrationJobLease("plan", "owner-1",
+		final var first = new BulkMigrationJobLease("job", "plan", "owner-1",
 				NOW.plusSeconds(30));
-		final var second = new BulkMigrationJobLease("plan", "owner-2",
+		final var second = new BulkMigrationJobLease("job", "plan", "owner-2",
 				NOW.plusSeconds(40));
 		assertTrue(store.tryAcquire(first, NOW));
 		assertFalse(store.tryAcquire(second, NOW));
 		assertFalse(store.renew(second, NOW));
 
-		store.release("plan", "owner-2");
-		assertEquals("owner-1", store.load("plan").orElseThrow().ownerId());
-		assertTrue(store.renew(new BulkMigrationJobLease("plan", "owner-1",
+		store.release("job", "owner-2");
+		assertEquals("owner-1", store.load("job").orElseThrow().ownerId());
+		assertTrue(store.renew(new BulkMigrationJobLease("job", "plan", "owner-1",
 				NOW.plusSeconds(60)), NOW));
-		store.release("plan", "owner-1");
-		assertTrue(store.load("plan").isEmpty());
+		store.release("job", "owner-1");
+		assertTrue(store.load("job").isEmpty());
 	}
 
 	@Test
 	void expiredLeaseCanBeTakenButCannotBeRenewedByOldOwner() throws Exception {
 		final var store = new InMemoryBulkMigrationJobLeaseStore();
-		assertTrue(store.tryAcquire(new BulkMigrationJobLease("plan", "old", NOW),
+		assertTrue(store.tryAcquire(new BulkMigrationJobLease("job", "plan", "old", NOW),
 				NOW.minusSeconds(1)));
-		assertTrue(store.tryAcquire(new BulkMigrationJobLease("plan", "new",
+		assertTrue(store.tryAcquire(new BulkMigrationJobLease("job", "plan", "new",
 				NOW.plusSeconds(30)), NOW));
-		assertFalse(store.renew(new BulkMigrationJobLease("plan", "old",
+		assertFalse(store.renew(new BulkMigrationJobLease("job", "plan", "old",
 				NOW.plusSeconds(60)), NOW));
-		assertEquals("new", store.load("plan").orElseThrow().ownerId());
+		assertEquals("new", store.load("job").orElseThrow().ownerId());
 	}
 
 	@Test
@@ -61,14 +61,14 @@ class BulkMigrationJobLeaseManagerTest {
 				Duration.ofSeconds(30), clock);
 		final var second = new BulkMigrationJobLeaseManager(store, "owner-2",
 				Duration.ofSeconds(30), clock);
-		final var handle = first.acquire("plan");
+		final var handle = first.acquire("job", "plan");
 		assertEquals(NOW.plusSeconds(30), handle.getLease().expiresAt());
 		assertThrows(BulkMigrationJobLeaseUnavailableException.class,
-				() -> second.acquire("plan"));
+				() -> second.acquire("job", "changed-plan"));
 		handle.renew();
 		handle.close();
 		handle.close();
-		assertTrue(store.load("plan").isEmpty());
+		assertTrue(store.load("job").isEmpty());
 		assertThrows(IllegalStateException.class, handle::renew);
 	}
 
@@ -100,7 +100,7 @@ class BulkMigrationJobLeaseManagerTest {
 		};
 		final var manager = new BulkMigrationJobLeaseManager(store, "owner",
 				Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
-		try (var handle = manager.acquire("plan")) {
+		try (var handle = manager.acquire("job", "plan")) {
 			final var listener = new BulkMigrationJobLeaseChunkListener(handle);
 			final var progress = new ChunkedBulkMigrationProgress("migration", 0, 10,
 					0, 10);
@@ -138,7 +138,7 @@ class BulkMigrationJobLeaseManagerTest {
 		};
 		final var manager = new BulkMigrationJobLeaseManager(store, "owner",
 				Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
-		try (var handle = manager.acquire("plan");
+		try (var handle = manager.acquire("job", "plan");
 				var heartbeat = handle.startHeartbeat(Duration.ofMillis(1))) {
 			assertTrue(renewal.await(1, TimeUnit.SECONDS));
 			assertThrows(BulkMigrationJobLeaseLostException.class, heartbeat::check);
@@ -170,7 +170,7 @@ class BulkMigrationJobLeaseManagerTest {
 		final var manager = new BulkMigrationJobLeaseManager(
 				new InMemoryBulkMigrationJobLeaseStore(), "owner", Duration.ofSeconds(3),
 				Clock.fixed(NOW, ZoneOffset.UTC));
-		try (var handle = manager.acquire("plan")) {
+		try (var handle = manager.acquire("job", "plan")) {
 			assertThrows(IllegalArgumentException.class,
 					() -> handle.startHeartbeat(Duration.ofSeconds(3)));
 			assertThrows(IllegalArgumentException.class,

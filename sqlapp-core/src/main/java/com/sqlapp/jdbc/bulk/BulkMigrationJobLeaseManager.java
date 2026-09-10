@@ -39,18 +39,21 @@ public final class BulkMigrationJobLeaseManager {
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
-	public LeaseHandle acquire(final String planFingerprint) throws SQLException {
+	/** Acquires the logical job while recording the exact executing plan. */
+	public LeaseHandle acquire(final String jobId, final String planFingerprint)
+			throws SQLException {
 		final Instant now = Instant.now(clock);
-		final BulkMigrationJobLease lease = lease(planFingerprint, now);
+		final BulkMigrationJobLease lease = lease(jobId, planFingerprint, now);
 		if (!store.tryAcquire(lease, now)) {
-			throw new BulkMigrationJobLeaseUnavailableException(planFingerprint);
+			throw new BulkMigrationJobLeaseUnavailableException(jobId);
 		}
 		return new LeaseHandle(lease);
 	}
 
-	private BulkMigrationJobLease lease(final String planFingerprint,
-			final Instant now) {
-		return new BulkMigrationJobLease(planFingerprint, ownerId, now.plus(duration));
+	private BulkMigrationJobLease lease(final String jobId,
+			final String planFingerprint, final Instant now) {
+		return new BulkMigrationJobLease(jobId, planFingerprint, ownerId,
+				now.plus(duration));
 	}
 
 	public final class LeaseHandle implements AutoCloseable {
@@ -70,10 +73,11 @@ public final class BulkMigrationJobLeaseManager {
 				throw new IllegalStateException("Migration job lease is already closed");
 			}
 			final Instant now = Instant.now(clock);
-			final BulkMigrationJobLease renewed = lease(lease.planFingerprint(), now);
+			final BulkMigrationJobLease renewed = lease(lease.jobId(),
+					lease.planFingerprint(), now);
 			if (!store.renew(renewed, now)) {
 				throw new BulkMigrationJobLeaseUnavailableException(
-						lease.planFingerprint());
+						lease.jobId());
 			}
 			lease = renewed;
 		}
@@ -100,7 +104,7 @@ public final class BulkMigrationJobLeaseManager {
 		@Override
 		public synchronized void close() throws SQLException {
 			if (!closed) {
-				store.release(lease.planFingerprint(), lease.ownerId());
+				store.release(lease.jobId(), lease.ownerId());
 				closed = true;
 			}
 		}

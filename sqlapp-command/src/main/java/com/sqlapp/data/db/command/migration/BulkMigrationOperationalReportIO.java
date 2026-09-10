@@ -76,7 +76,7 @@ public final class BulkMigrationOperationalReportIO {
 		final BulkMigrationOperationalReport report = read(file,
 				expectedPlanFingerprint);
 		return BulkMigrationOperationalReportResumeAssessor.assess(report,
-				leaseStore.load(expectedPlanFingerprint).orElse(null), now);
+				leaseStore.load(report.jobId()).orElse(null), now);
 	}
 
 	public void write(final Path file, final BulkMigrationOperationalReport report) {

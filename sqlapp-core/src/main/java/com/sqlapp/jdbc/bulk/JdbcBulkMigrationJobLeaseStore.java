@@ -64,10 +64,10 @@ public final class JdbcBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
+	public Optional<BulkMigrationJobLease> load(final String jobId)
 			throws SQLException {
-		JdbcBulkMigrationJobLeaseTable.validateFingerprint(planFingerprint);
-		return loadInternal(planFingerprint);
+		JdbcBulkMigrationJobLeaseTable.validateJobId(jobId);
+		return loadInternal(jobId);
 	}
 
 	@Override
@@ -77,7 +77,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 		try {
 			return transaction(() -> {
 				final BulkMigrationJobLease current = loadInternal(
-						lease.planFingerprint()).orElse(null);
+						lease.jobId()).orElse(null);
 				if (current != null && !current.isExpiredAt(now)) {
 					return false;
 				}
@@ -97,10 +97,11 @@ public final class JdbcBulkMigrationJobLeaseStore
 			throws SQLException {
 		validateCandidate(lease, now);
 		return transaction(() -> {
-			final BulkMigrationJobLease current = loadInternal(lease.planFingerprint())
+			final BulkMigrationJobLease current = loadInternal(lease.jobId())
 					.orElse(null);
 			if (current == null || current.isExpiredAt(now)
-					|| !current.ownerId().equals(lease.ownerId())) {
+					|| !current.ownerId().equals(lease.ownerId())
+					|| !current.planFingerprint().equals(lease.planFingerprint())) {
 				return false;
 			}
 			write(lease, SqlType.UPDATE);
@@ -109,27 +110,27 @@ public final class JdbcBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public void release(final String planFingerprint, final String ownerId)
+	public void release(final String jobId, final String ownerId)
 			throws SQLException {
-		new BulkMigrationJobLease(planFingerprint, ownerId, Instant.MAX);
+		new BulkMigrationJobLease(jobId, "validation", ownerId, Instant.MAX);
 		transaction(() -> {
-			final BulkMigrationJobLease current = loadInternal(planFingerprint)
+			final BulkMigrationJobLease current = loadInternal(jobId)
 					.orElse(null);
 			if (current != null && current.ownerId().equals(ownerId)) {
 				new JdbcHandler(sqlNodes.get(SqlType.DELETE)).execute(connection,
-						JdbcBulkMigrationJobLeaseTable.parameters(planFingerprint));
+						JdbcBulkMigrationJobLeaseTable.parameters(jobId));
 			}
 			return null;
 		});
 	}
 
-	private Optional<BulkMigrationJobLease> loadInternal(final String fingerprint)
+	private Optional<BulkMigrationJobLease> loadInternal(final String jobId)
 			throws SQLException {
 		final BulkMigrationJobLease[] result = new BulkMigrationJobLease[1];
 		new JdbcHandler(sqlNodes.get(SqlType.SELECT),
 				rs -> result[0] = JdbcBulkMigrationJobLeaseTable.lease(rs,
-						fingerprint)).execute(connection,
-						JdbcBulkMigrationJobLeaseTable.parameters(fingerprint));
+						jobId)).execute(connection,
+						JdbcBulkMigrationJobLeaseTable.parameters(jobId));
 		return Optional.ofNullable(result[0]);
 	}
 

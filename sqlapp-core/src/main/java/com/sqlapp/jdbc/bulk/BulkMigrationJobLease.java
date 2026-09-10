@@ -6,15 +6,17 @@ import java.time.Instant;
 /**
  * Owner-fenced, expiring right to execute one migration plan.
  *
+ * @param jobId stable identifier of the logical migration job
  * @param planFingerprint fingerprint identifying the exact migration plan
  * @param ownerId unique identifier of the process or worker holding the lease
  * @param expiresAt instant at which another owner may acquire the lease
  */
-public record BulkMigrationJobLease(String planFingerprint, String ownerId,
-		Instant expiresAt) {
+public record BulkMigrationJobLease(String jobId, String planFingerprint,
+		String ownerId, Instant expiresAt) {
 	public static final int ID_MAX_LENGTH = 256;
 
 	public BulkMigrationJobLease {
+		requireId(jobId, "jobId");
 		requireId(planFingerprint, "planFingerprint");
 		requireId(ownerId, "ownerId");
 		if (expiresAt == null) {

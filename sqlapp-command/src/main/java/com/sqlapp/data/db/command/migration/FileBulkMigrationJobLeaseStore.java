@@ -39,18 +39,18 @@ public final class FileBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
+	public Optional<BulkMigrationJobLease> load(final String jobId)
 			throws SQLException {
-		validateFingerprint(planFingerprint);
-		return loadFile(planFingerprint);
+		validateJobId(jobId);
+		return loadFile(jobId);
 	}
 
 	@Override
 	public boolean tryAcquire(final BulkMigrationJobLease lease, final Instant now)
 			throws SQLException {
 		validateCandidate(lease, now);
-		return locked(lease.planFingerprint(), () -> {
-			final BulkMigrationJobLease current = loadFile(lease.planFingerprint())
+		return locked(lease.jobId(), () -> {
+			final BulkMigrationJobLease current = loadFile(lease.jobId())
 					.orElse(null);
 			if (current != null && !current.isExpiredAt(now)) {
 				return false;
@@ -64,11 +64,12 @@ public final class FileBulkMigrationJobLeaseStore
 	public boolean renew(final BulkMigrationJobLease lease, final Instant now)
 			throws SQLException {
 		validateCandidate(lease, now);
-		return locked(lease.planFingerprint(), () -> {
-			final BulkMigrationJobLease current = loadFile(lease.planFingerprint())
+		return locked(lease.jobId(), () -> {
+			final BulkMigrationJobLease current = loadFile(lease.jobId())
 					.orElse(null);
 			if (current == null || current.isExpiredAt(now)
-					|| !current.ownerId().equals(lease.ownerId())) {
+					|| !current.ownerId().equals(lease.ownerId())
+					|| !current.planFingerprint().equals(lease.planFingerprint())) {
 				return false;
 			}
 			write(lease);
@@ -77,32 +78,33 @@ public final class FileBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public void release(final String planFingerprint, final String ownerId)
+	public void release(final String jobId, final String ownerId)
 			throws SQLException {
-		new BulkMigrationJobLease(planFingerprint, ownerId, Instant.MAX);
-		locked(planFingerprint, () -> {
-			final BulkMigrationJobLease current = loadFile(planFingerprint).orElse(null);
+		new BulkMigrationJobLease(jobId, "validation", ownerId, Instant.MAX);
+		locked(jobId, () -> {
+			final BulkMigrationJobLease current = loadFile(jobId).orElse(null);
 			if (current != null && current.ownerId().equals(ownerId)) {
-				Files.deleteIfExists(stateFile(planFingerprint));
+				Files.deleteIfExists(stateFile(jobId));
 			}
 			return null;
 		});
 	}
 
-	private Optional<BulkMigrationJobLease> loadFile(final String fingerprint)
+	private Optional<BulkMigrationJobLease> loadFile(final String jobId)
 			throws SQLException {
-		final Path file = stateFile(fingerprint);
+		final Path file = stateFile(jobId);
 		if (!Files.exists(file)) {
 			return Optional.empty();
 		}
 		final Properties values = new Properties();
 		try (InputStream input = Files.newInputStream(file)) {
 			values.load(input);
-			if (!fingerprint.equals(required(values, "planFingerprint"))) {
+			if (!jobId.equals(required(values, "jobId"))) {
 				throw new IllegalArgumentException(
-						"lease planFingerprint does not match its file");
+						"lease jobId does not match its file");
 			}
-			return Optional.of(new BulkMigrationJobLease(fingerprint,
+			return Optional.of(new BulkMigrationJobLease(jobId,
+					required(values, "planFingerprint"),
 					required(values, "ownerId"),
 					Instant.parse(required(values, "expiresAt"))));
 		} catch (IOException | IllegalArgumentException e) {
@@ -111,12 +113,13 @@ public final class FileBulkMigrationJobLeaseStore
 	}
 
 	private void write(final BulkMigrationJobLease lease) throws SQLException {
-		final Path file = stateFile(lease.planFingerprint());
+		final Path file = stateFile(lease.jobId());
 		Path temporary = null;
 		try {
 			temporary = Files.createTempFile(directory, file.getFileName().toString(),
 					".tmp");
 			final Properties values = new Properties();
+			values.setProperty("jobId", lease.jobId());
 			values.setProperty("planFingerprint", lease.planFingerprint());
 			values.setProperty("ownerId", lease.ownerId());
 			values.setProperty("expiresAt", lease.expiresAt().toString());
@@ -142,9 +145,9 @@ public final class FileBulkMigrationJobLeaseStore
 		}
 	}
 
-	private <T> T locked(final String fingerprint, final IoCallable<T> callable)
+	private <T> T locked(final String jobId, final IoCallable<T> callable)
 			throws SQLException {
-		final Path lockFile = lockFile(fingerprint);
+		final Path lockFile = lockFile(jobId);
 		final ReentrantLock jvmLock = JVM_LOCKS.computeIfAbsent(lockFile,
 				key -> new ReentrantLock());
 		jvmLock.lock();
@@ -156,18 +159,18 @@ public final class FileBulkMigrationJobLeaseStore
 				return callable.call();
 			}
 		} catch (IOException e) {
-			throw new SQLException("Failed to lock migration job lease: " + fingerprint, e);
+			throw new SQLException("Failed to lock migration job lease: " + jobId, e);
 		} finally {
 			jvmLock.unlock();
 		}
 	}
 
-	private Path stateFile(final String fingerprint) {
-		return directory.resolve(hash(fingerprint) + ".lease");
+	private Path stateFile(final String jobId) {
+		return directory.resolve(hash(jobId) + ".lease");
 	}
 
-	private Path lockFile(final String fingerprint) {
-		return directory.resolve(hash(fingerprint) + ".lease.lock");
+	private Path lockFile(final String jobId) {
+		return directory.resolve(hash(jobId) + ".lease.lock");
 	}
 
 	private static String hash(final String value) {
@@ -179,8 +182,8 @@ public final class FileBulkMigrationJobLeaseStore
 		}
 	}
 
-	private static void validateFingerprint(final String fingerprint) {
-		new BulkMigrationJobLease(fingerprint, "validation", Instant.MAX);
+	private static void validateJobId(final String jobId) {
+		new BulkMigrationJobLease(jobId, "validation", "validation", Instant.MAX);
 	}
 
 	private static void validateCandidate(final BulkMigrationJobLease lease,

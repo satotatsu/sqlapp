@@ -37,10 +37,9 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 			final BulkMigrationJobLease currentLease, final Instant now) {
 		Objects.requireNonNull(report, "report");
 		Objects.requireNonNull(now, "now");
-		if (currentLease != null && !report.planFingerprint()
-				.equals(currentLease.planFingerprint())) {
+		if (currentLease != null && !report.jobId().equals(currentLease.jobId())) {
 			throw new IllegalArgumentException(
-					"Lease fingerprint does not match the operational report");
+					"Lease jobId does not match the operational report");
 		}
 		final BulkMigrationResumeReadiness terminal = terminal(report);
 		if (terminal != null) {

@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public final class BulkMigrationJobLeaseUnavailableException extends SQLException {
 	private static final long serialVersionUID = 1L;
 
-	public BulkMigrationJobLeaseUnavailableException(final String planFingerprint) {
-		super("A migration job lease is already active for plan: " + planFingerprint);
+	public BulkMigrationJobLeaseUnavailableException(final String jobId) {
+		super("A migration job lease is already active for job: " + jobId);
 	}
 }

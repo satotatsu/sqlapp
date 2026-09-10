@@ -17,7 +17,7 @@ public record BulkMigrationJobLeaseConfiguration(BulkMigrationJobLeaseMode mode,
 		if (mode == null) {
 			throw new IllegalArgumentException("mode must not be null");
 		}
-		new BulkMigrationJobLease("validation", ownerId,
+		new BulkMigrationJobLease("validation", "validation", ownerId,
 				java.time.Instant.MAX);
 		if (duration == null || duration.isZero() || duration.isNegative()) {
 			throw new IllegalArgumentException("duration must be positive");

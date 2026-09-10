@@ -44,34 +44,37 @@ public final class BulkMigrationJobAssertions {
 		final String suffix = UUID.randomUUID().toString().replace("-", "");
 		final String tableName = "SQLAPP_BJL_" + suffix.substring(0, 12);
 		final String fingerprint = "plan-" + suffix;
+		final String jobId = "job-" + suffix;
 		final Instant acquiredAt = Instant.parse("2026-01-01T00:00:00Z");
 		final Duration duration = Duration.ofMinutes(5);
 		final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(secondConnection,
 				tableName);
-		assertTrue(reader.load(fingerprint).isEmpty());
+		assertTrue(reader.load(jobId).isEmpty());
 		final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection,
 				tableName);
 		final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection,
 				tableName);
-		final var firstLease = new BulkMigrationJobLease(fingerprint,
+		final var firstLease = new BulkMigrationJobLease(jobId, fingerprint,
 				"owner-first", acquiredAt.plus(duration));
 		assertTrue(first.tryAcquire(firstLease, acquiredAt));
-		assertEquals(firstLease, reader.load(fingerprint).orElseThrow());
-		assertFalse(second.tryAcquire(new BulkMigrationJobLease(fingerprint,
+		assertEquals(firstLease, reader.load(jobId).orElseThrow());
+		assertFalse(second.tryAcquire(new BulkMigrationJobLease(jobId,
+				fingerprint + "-changed",
 				"owner-second", acquiredAt.plus(duration).plusSeconds(1)),
 				acquiredAt.plusSeconds(1)));
 
 		final Instant takeoverAt = acquiredAt.plus(duration).plusSeconds(1);
-		final var secondLease = new BulkMigrationJobLease(fingerprint,
+		final var secondLease = new BulkMigrationJobLease(jobId, fingerprint,
 				"owner-second", takeoverAt.plus(duration));
 		assertTrue(second.tryAcquire(secondLease, takeoverAt));
-		assertEquals(secondLease, reader.load(fingerprint).orElseThrow());
-		first.release(fingerprint, "owner-first");
-		assertEquals("owner-second", first.load(fingerprint).orElseThrow().ownerId());
-		second.release(fingerprint, "owner-second");
-		assertTrue(first.load(fingerprint).isEmpty());
-		assertTrue(reader.load(fingerprint).isEmpty());
+		assertEquals(secondLease, reader.load(jobId).orElseThrow());
+		first.release(jobId, "owner-first");
+		assertEquals("owner-second", first.load(jobId).orElseThrow().ownerId());
+		second.release(jobId, "owner-second");
+		assertTrue(first.load(jobId).isEmpty());
+		assertTrue(reader.load(jobId).isEmpty());
 
+		final String concurrentJobId = jobId + "-concurrent";
 		final String concurrentFingerprint = fingerprint + "-concurrent";
 		final Instant concurrentAt = acquiredAt.plusSeconds(10);
 		final var barrier = new CyclicBarrier(2);
@@ -79,21 +82,21 @@ public final class BulkMigrationJobAssertions {
 			final var firstResult = executor.submit(() -> {
 				barrier.await();
 				return first.tryAcquire(new BulkMigrationJobLease(
-						concurrentFingerprint, "owner-first",
+						concurrentJobId, concurrentFingerprint, "owner-first",
 						concurrentAt.plus(duration)), concurrentAt);
 			});
 			final var secondResult = executor.submit(() -> {
 				barrier.await();
 				return second.tryAcquire(new BulkMigrationJobLease(
-						concurrentFingerprint, "owner-second",
+						concurrentJobId, concurrentFingerprint, "owner-second",
 						concurrentAt.plus(duration)), concurrentAt);
 			});
 			assertTrue(firstResult.get() ^ secondResult.get(),
 					"exactly one concurrent lease acquisition must succeed");
 		}
-		final String concurrentOwner = first.load(concurrentFingerprint)
+		final String concurrentOwner = first.load(concurrentJobId)
 				.orElseThrow().ownerId();
-		first.release(concurrentFingerprint, concurrentOwner);
+		first.release(concurrentJobId, concurrentOwner);
 	}
 
 	public static void assertDependencyOrderAndAggregatedStatus(

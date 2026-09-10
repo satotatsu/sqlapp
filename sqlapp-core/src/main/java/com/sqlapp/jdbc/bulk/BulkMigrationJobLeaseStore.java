@@ -5,9 +5,12 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Optional;
 
-/** Atomic persistence contract for migration job execution leases. */
+/**
+ * Atomic persistence contract keyed by a stable migration job ID. The stored
+ * plan fingerprint identifies the exact configuration currently holding it.
+ */
 public interface BulkMigrationJobLeaseStore {
-	Optional<BulkMigrationJobLease> load(String planFingerprint) throws SQLException;
+	Optional<BulkMigrationJobLease> load(String jobId) throws SQLException;
 
 	/** Acquires an absent or expired lease atomically. */
 	boolean tryAcquire(BulkMigrationJobLease lease, Instant now) throws SQLException;
@@ -15,6 +18,6 @@ public interface BulkMigrationJobLeaseStore {
 	/** Renews only the same owner's unexpired lease atomically. */
 	boolean renew(BulkMigrationJobLease lease, Instant now) throws SQLException;
 
-	/** Releases only when both plan and owner still match. */
-	void release(String planFingerprint, String ownerId) throws SQLException;
+	/** Releases only when both job and owner still match. */
+	void release(String jobId, String ownerId) throws SQLException;
 }

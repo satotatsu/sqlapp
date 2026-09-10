@@ -33,9 +33,9 @@ final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public Optional<BulkMigrationJobLease> load(final String planFingerprint)
+	public Optional<BulkMigrationJobLease> load(final String jobId)
 			throws SQLException {
-		JdbcBulkMigrationJobLeaseTable.validateFingerprint(planFingerprint);
+		JdbcBulkMigrationJobLeaseTable.validateJobId(jobId);
 		if (!JdbcBulkMigrationJobLeaseTable.exists(connection, rawTableName)) {
 			return Optional.empty();
 		}
@@ -43,8 +43,8 @@ final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 		final BulkMigrationJobLease[] result = new BulkMigrationJobLease[1];
 		new JdbcHandler(selectNode,
 				rs -> result[0] = JdbcBulkMigrationJobLeaseTable.lease(rs,
-						planFingerprint)).execute(connection,
-					JdbcBulkMigrationJobLeaseTable.parameters(planFingerprint));
+						jobId)).execute(connection,
+					JdbcBulkMigrationJobLeaseTable.parameters(jobId));
 		return Optional.ofNullable(result[0]);
 	}
 
@@ -59,7 +59,7 @@ final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 	}
 
 	@Override
-	public void release(final String planFingerprint, final String ownerId) {
+	public void release(final String jobId, final String ownerId) {
 		throw new UnsupportedOperationException("Read-only lease store");
 	}
 

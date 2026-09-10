@@ -351,7 +351,8 @@ public final class BulkMigration {
 			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 				final var manager = BulkMigrationJobLeaseManagerFactory.create(null,
 						leaseConfiguration);
-				try (var ignored = manager.acquire(reviewedPlan.getFingerprint())) {
+				try (var ignored = manager.acquire(reviewedPlan.getJobId(),
+						reviewedPlan.getFingerprint())) {
 					return resetCheckpoints(sourceConnection, targetConnection,
 							approvedPlanFingerprint);
 				}
@@ -360,7 +361,8 @@ public final class BulkMigration {
 				leaseConnection.setAutoCommit(true);
 				final var manager = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
 						leaseConfiguration);
-				try (var ignored = manager.acquire(reviewedPlan.getFingerprint())) {
+				try (var ignored = manager.acquire(reviewedPlan.getJobId(),
+						reviewedPlan.getFingerprint())) {
 					return resetCheckpoints(sourceConnection, targetConnection,
 							approvedPlanFingerprint);
 				}
@@ -541,13 +543,13 @@ public final class BulkMigration {
 		}
 		if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
 			final var lease = new FileBulkMigrationJobLeaseStore(
-					leaseConfiguration.directory()).load(report.planFingerprint()).orElse(null);
+					leaseConfiguration.directory()).load(report.jobId()).orElse(null);
 			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
 					Instant.now());
 		}
 		try (Connection connection = target.getConnection()) {
 			final var lease = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-					leaseConfiguration.tableName()).load(report.planFingerprint()).orElse(null);
+					leaseConfiguration.tableName()).load(report.jobId()).orElse(null);
 			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
 					Instant.now());
 		}

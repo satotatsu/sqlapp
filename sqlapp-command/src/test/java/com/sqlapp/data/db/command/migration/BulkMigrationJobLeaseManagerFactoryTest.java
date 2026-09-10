@@ -38,11 +38,11 @@ class BulkMigrationJobLeaseManagerFactoryTest {
 				BulkMigrationJobLeaseConfiguration.file("worker-1", directory));
 		final var second = BulkMigrationJobLeaseManagerFactory.create(null,
 				BulkMigrationJobLeaseConfiguration.file("worker-2", directory));
-		try (var ignored = first.acquire("plan")) {
+		try (var ignored = first.acquire("job", "plan")) {
 			assertThrows(BulkMigrationJobLeaseUnavailableException.class,
-					() -> second.acquire("plan"));
+					() -> second.acquire("job", "changed-plan"));
 		}
-		try (var lease = second.acquire("plan")) {
+		try (var lease = second.acquire("job", "plan")) {
 			assertEquals("worker-2", lease.getLease().ownerId());
 		}
 	}

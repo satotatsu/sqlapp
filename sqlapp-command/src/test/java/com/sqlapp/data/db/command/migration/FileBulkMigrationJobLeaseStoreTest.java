@@ -24,20 +24,20 @@ class FileBulkMigrationJobLeaseStoreTest {
 		final var first = new FileBulkMigrationJobLeaseStore(directory);
 		final var second = new FileBulkMigrationJobLeaseStore(directory);
 		final Instant now = Instant.parse("2026-08-31T12:00:00Z");
-		final var owner1 = new BulkMigrationJobLease("plan", "owner-1",
+		final var owner1 = new BulkMigrationJobLease("job", "plan", "owner-1",
 				now.plusSeconds(30));
-		final var owner2 = new BulkMigrationJobLease("plan", "owner-2",
+		final var owner2 = new BulkMigrationJobLease("job", "changed-plan", "owner-2",
 				now.plusSeconds(60));
 
 		assertTrue(first.tryAcquire(owner1, now));
 		assertFalse(second.tryAcquire(owner2, now));
 		assertFalse(second.renew(owner2, now));
-		assertEquals(owner1, second.load("plan").orElseThrow());
+		assertEquals(owner1, second.load("job").orElseThrow());
 		assertTrue(second.tryAcquire(owner2, now.plusSeconds(30)));
-		first.release("plan", "owner-1");
-		assertEquals(owner2, first.load("plan").orElseThrow());
-		second.release("plan", "owner-2");
-		assertTrue(first.load("plan").isEmpty());
+		first.release("job", "owner-1");
+		assertEquals(owner2, first.load("job").orElseThrow());
+		second.release("job", "owner-2");
+		assertTrue(first.load("job").isEmpty());
 	}
 
 	@Test
@@ -51,13 +51,13 @@ class FileBulkMigrationJobLeaseStoreTest {
 			final var firstResult = executor.submit(() -> {
 				ready.countDown();
 				start.await();
-				return first.tryAcquire(new BulkMigrationJobLease("plan", "owner-1",
+				return first.tryAcquire(new BulkMigrationJobLease("job", "plan", "owner-1",
 						now.plusSeconds(30)), now);
 			});
 			final var secondResult = executor.submit(() -> {
 				ready.countDown();
 				start.await();
-				return second.tryAcquire(new BulkMigrationJobLease("plan", "owner-2",
+				return second.tryAcquire(new BulkMigrationJobLease("job", "plan-2", "owner-2",
 						now.plusSeconds(30)), now);
 			});
 			ready.await();

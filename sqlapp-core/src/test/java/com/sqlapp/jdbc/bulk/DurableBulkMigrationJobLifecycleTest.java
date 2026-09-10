@@ -170,7 +170,7 @@ class DurableBulkMigrationJobLifecycleTest {
 
 		assertEquals(List.of(BulkMigrationMaintenanceStatus.PREPARED),
 				maintenanceStore.statuses());
-		assertTrue(leases.load(plan.getFingerprint()).isEmpty());
+		assertTrue(leases.load(plan.getJobId()).isEmpty());
 	}
 
 	@Test
