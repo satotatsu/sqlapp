@@ -7,11 +7,11 @@ import java.util.Set;
 
 /** Stable, read-only operational snapshot for a bulk migration job. */
 public record BulkMigrationOperationalReport(int formatVersion, Instant generatedAt,
-		String planFingerprint, boolean compatible, long processedRows,
+		String jobId, String planFingerprint, boolean compatible, long processedRows,
 		long completedTasks, int totalTasks, List<Task> tasks,
 		List<Operation> operations, Maintenance maintenance, Progress progress,
 		List<Progress> progressByMigration, Execution execution) {
-	public static final int CURRENT_FORMAT_VERSION = 1;
+	public static final int CURRENT_FORMAT_VERSION = 2;
 
 	public record Task(String taskId, String migrationId, String catalogName,
 			String schemaName, String tableName, String mode, int chunkSize,
@@ -28,7 +28,7 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			boolean transactionBreaking) {
 	}
 
-	public record Maintenance(String status, Instant updatedAt,
+	public record Maintenance(String planFingerprint, String status, Instant updatedAt,
 			String failureMessage) {
 	}
 

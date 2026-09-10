@@ -118,10 +118,11 @@ public final class BulkMigrationOperationalReportIO {
 			throw new CommandException("Unsupported bulk migration report formatVersion: "
 					+ report.formatVersion());
 		}
-		if (report.generatedAt() == null || report.planFingerprint() == null
+		if (report.generatedAt() == null || report.jobId() == null
+				|| report.jobId().isBlank() || report.planFingerprint() == null
 				|| report.planFingerprint().isBlank()) {
 			throw new CommandException(
-					"Bulk migration report requires generatedAt and planFingerprint");
+					"Bulk migration report requires generatedAt, jobId and planFingerprint");
 		}
 		if (report.processedRows() < 0 || report.completedTasks() < 0
 				|| report.totalTasks() < 0 || report.completedTasks() > report.totalTasks()) {
@@ -169,10 +170,16 @@ public final class BulkMigrationOperationalReportIO {
 			throw new CommandException(
 					"Bulk migration report current progress migrationId mismatch");
 		}
-		if (report.maintenance() != null
-				&& !knownMaintenanceStatus(report.maintenance().status())) {
-			throw new CommandException(
-					"Bulk migration report contains an unknown maintenance status");
+		if (report.maintenance() != null) {
+			if (report.maintenance().planFingerprint() == null
+					|| report.maintenance().planFingerprint().isBlank()) {
+				throw new CommandException(
+						"Bulk migration report maintenance requires planFingerprint");
+			}
+			if (!knownMaintenanceStatus(report.maintenance().status())) {
+				throw new CommandException(
+						"Bulk migration report contains an unknown maintenance status");
+			}
 		}
 		return report;
 	}

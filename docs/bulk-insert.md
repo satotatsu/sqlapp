@@ -836,7 +836,16 @@ order and execution options. Therefore changing a chunk size or UPSERT option
 changes the exact plan fingerprint without changing the logical job identity.
 Use `.jobId("nightly-customers")` on the facade, or the planner overload taking
 a job ID, when several separately operated jobs intentionally use the same
-table and migration identifiers.
+table and migration identifiers. Durable maintenance stores use the job ID as
+their key and retain the exact plan fingerprint as state data. Consequently a
+changed configuration cannot hide unfinished maintenance; the new plan reports
+`RECOVERY_REQUIRED`, while recovery remains forbidden until the saved plan is
+reconstructed and explicitly approved.
+
+Operational report format version 2 includes the stable `jobId`. Its
+`maintenance` object also includes the fingerprint of the plan that wrote the
+state, which may intentionally differ from the report's current plan
+fingerprint when configuration changed after an interruption.
 
 An approved plan can be passed directly to
 `BulkMigrationJobExecutor.executePlan(connection, plan)`. Immediately before any

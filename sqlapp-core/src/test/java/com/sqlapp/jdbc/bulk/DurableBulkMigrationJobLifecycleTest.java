@@ -3,6 +3,7 @@ package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -88,6 +89,37 @@ class DurableBulkMigrationJobLifecycleTest {
 
 		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE,
 				store.states.get(store.states.size() - 1).status());
+	}
+
+	@Test
+	void detectsInterruptedMaintenanceAfterThePlanConfigurationChanges()
+			throws Exception {
+		final var store = new RecordingStore();
+		final var originalLifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, store);
+		final var original = BulkMigrationJobPlanner.plan("shared-job", List.of(),
+				originalLifecycle);
+		store.save(new BulkMigrationMaintenanceState(original.getJobId(),
+				original.getFingerprint(), BulkMigrationMaintenanceStatus.PREPARED,
+				NOW, null));
+		final BulkMigrationJobLifecycle changedDelegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "changed";
+			}
+		};
+		final var changedLifecycle = lifecycle(changedDelegate, store);
+		final var changed = BulkMigrationJobPlanner.plan("shared-job", List.of(),
+				changedLifecycle);
+
+		assertNotEquals(original.getFingerprint(), changed.getFingerprint());
+		assertEquals(original.getFingerprint(),
+				changedLifecycle.inspect(changed).orElseThrow().planFingerprint());
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), changed));
+		assertThrows(IllegalStateException.class, () -> changedLifecycle
+				.recoverInterrupted(connection(), changed, changed.getFingerprint()));
+		assertEquals(List.of(BulkMigrationMaintenanceStatus.PREPARED),
+				store.statuses());
 	}
 
 	@Test

@@ -51,10 +51,9 @@ public final class BulkMigrationOperationalReportBuilder {
 		if (!plan.getFingerprint().equals(status.getPlanFingerprint())) {
 			throw new IllegalArgumentException("Status fingerprint does not match the migration plan");
 		}
-		if (maintenance != null
-				&& !plan.getFingerprint().equals(maintenance.planFingerprint())) {
+		if (maintenance != null && !plan.getJobId().equals(maintenance.jobId())) {
 			throw new IllegalArgumentException(
-					"Maintenance fingerprint does not match the migration plan");
+					"Maintenance jobId does not match the migration plan");
 		}
 		if (!plan.getTaskIds().equals(status.getTasks().stream()
 				.map(task -> task.getTaskId()).toList())) {
@@ -118,7 +117,7 @@ public final class BulkMigrationOperationalReportBuilder {
 				? java.util.List.of(progress(progress)) : allProgress;
 		return new BulkMigrationOperationalReport(
 				BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION, Instant.now(clock),
-				plan.getFingerprint(), status.isCompatible(), status.getProcessedRows(),
+				plan.getJobId(), plan.getFingerprint(), status.isCompatible(), status.getProcessedRows(),
 				status.getCompletedTasks(), tasks.size(), tasks, operations,
 				maintenance(maintenance), progress(progress), effectiveProgress, execution);
 	}
@@ -138,7 +137,8 @@ public final class BulkMigrationOperationalReportBuilder {
 	private static BulkMigrationOperationalReport.Maintenance maintenance(
 			final BulkMigrationMaintenanceState state) {
 		return state == null ? null : new BulkMigrationOperationalReport.Maintenance(
-				state.status().name(), state.updatedAt(), state.failureMessage());
+				state.planFingerprint(), state.status().name(), state.updatedAt(),
+				state.failureMessage());
 	}
 
 	private static BulkMigrationOperationalReport.Progress progress(

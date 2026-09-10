@@ -63,7 +63,7 @@ class BulkMigrationOperationalReportTest {
 				plan.getFingerprint(), List.of(new BulkMigrationJobTaskStatus("customers",
 						BulkMigrationJobTaskState.IN_PROGRESS, checkpoint)));
 		final BulkMigrationMaintenanceState maintenance = new BulkMigrationMaintenanceState(
-				plan.getFingerprint(), BulkMigrationMaintenanceStatus.PREPARED,
+				plan.getJobId(), plan.getFingerprint(), BulkMigrationMaintenanceStatus.PREPARED,
 				generatedAt.minusSeconds(1), null);
 		final BulkMigrationProgressSnapshot progress = new BulkMigrationProgressSnapshot(
 				"顧客移行", 25, 100L, Duration.ofSeconds(5), 5.0, 0.25,
@@ -76,7 +76,8 @@ class BulkMigrationOperationalReportTest {
 
 		final Map<String, Object> json = new JsonConverter().fromJsonString(
 				output.toFile(), Map.class);
-		assertEquals(1, ((Number) json.get("formatVersion")).intValue());
+		assertEquals(2, ((Number) json.get("formatVersion")).intValue());
+		assertEquals(plan.getJobId(), json.get("jobId"));
 		assertEquals(plan.getFingerprint(), json.get("planFingerprint"));
 		assertEquals(25, ((Number) json.get("processedRows")).longValue());
 		assertTrue((Boolean) json.get("compatible"));
@@ -121,7 +122,7 @@ class BulkMigrationOperationalReportTest {
 						BulkMigrationJobTaskState.NOT_STARTED, null)));
 		final var report = new BulkMigrationOperationalReportBuilder().build(
 				plan, status, null, null);
-		final var unsupported = copyWith(report, 2, report.totalTasks());
+		final var unsupported = copyWith(report, 3, report.totalTasks());
 		final Path unsupportedFile = directory.resolve("unsupported.json");
 		io.write(unsupportedFile, unsupported);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
@@ -180,7 +181,7 @@ class BulkMigrationOperationalReportTest {
 				BulkMigrationOperationalReportResumeAssessor.assess(started));
 
 		final var prepared = builder.build(plan, notStarted,
-				new BulkMigrationMaintenanceState(plan.getFingerprint(),
+				new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
 						BulkMigrationMaintenanceStatus.PREPARED, report.generatedAt(), null),
 				null);
 		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
@@ -258,11 +259,22 @@ class BulkMigrationOperationalReportTest {
 				() -> builder.build(plan, wrongStatus, null, null));
 
 		final BulkMigrationJobStatus status = new BulkMigrationJobStatus(
-				plan.getFingerprint(), List.of());
+				plan.getFingerprint(), List.of(new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
 		final var wrongMaintenance = new BulkMigrationMaintenanceState("other",
 				BulkMigrationMaintenanceStatus.PREPARED, Instant.now(), null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, status, wrongMaintenance, null));
+
+		final var previousPlanMaintenance = new BulkMigrationMaintenanceState(
+				plan.getJobId(), "previous-plan",
+				BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null);
+		final var recoveryReport = builder.build(plan, status,
+				previousPlanMaintenance, null);
+		assertEquals("previous-plan",
+				recoveryReport.maintenance().planFingerprint());
+		assertEquals(BulkMigrationResumeReadiness.RECOVERY_REQUIRED,
+				BulkMigrationOperationalReportResumeAssessor.assess(recoveryReport));
 	}
 
 	@Test
@@ -479,7 +491,7 @@ class BulkMigrationOperationalReportTest {
 			final BulkMigrationOperationalReport source, final int formatVersion,
 			final int totalTasks) {
 		return new BulkMigrationOperationalReport(formatVersion, source.generatedAt(),
-				source.planFingerprint(), source.compatible(), source.processedRows(),
+				source.jobId(), source.planFingerprint(), source.compatible(), source.processedRows(),
 				source.completedTasks(), totalTasks, source.tasks(), source.operations(),
 				source.maintenance(), source.progress(), source.progressByMigration(),
 				source.execution());
@@ -490,7 +502,7 @@ class BulkMigrationOperationalReportTest {
 			final List<BulkMigrationOperationalReport.Task> tasks,
 			final List<BulkMigrationOperationalReport.Progress> progressByMigration) {
 		return new BulkMigrationOperationalReport(source.formatVersion(),
-				source.generatedAt(), source.planFingerprint(), source.compatible(),
+				source.generatedAt(), source.jobId(), source.planFingerprint(), source.compatible(),
 				source.processedRows(), source.completedTasks(), tasks.size(), tasks,
 				source.operations(), source.maintenance(), source.progress(),
 				progressByMigration, source.execution());
@@ -500,7 +512,7 @@ class BulkMigrationOperationalReportTest {
 			final BulkMigrationOperationalReport source,
 			final BulkMigrationOperationalReport.Execution execution) {
 		return new BulkMigrationOperationalReport(source.formatVersion(),
-				source.generatedAt(), source.planFingerprint(), source.compatible(),
+				source.generatedAt(), source.jobId(), source.planFingerprint(), source.compatible(),
 				source.processedRows(), source.completedTasks(), source.totalTasks(),
 				source.tasks(), source.operations(), source.maintenance(), source.progress(),
 				source.progressByMigration(), execution);
