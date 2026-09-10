@@ -37,19 +37,20 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 		final Properties values = new Properties();
 		try (InputStream input = Files.newInputStream(file)) {
 			values.load(input);
-			if (!migrationId.equals(values.getProperty("migrationId"))) {
-				throw new SQLException("Checkpoint migrationId does not match its file: " + file);
+			if (!migrationId.equals(required(values, "migrationId"))) {
+				throw new IllegalArgumentException(
+						"checkpoint migrationId does not match its file");
 			}
 			return Optional.of(BulkMigrationCheckpoint.builder()
 					.migrationId(migrationId)
 					.sourceFingerprint(emptyToNull(values.getProperty("sourceFingerprint")))
 					.targetFingerprint(emptyToNull(values.getProperty("targetFingerprint")))
-					.processedRows(Long.parseLong(values.getProperty("processedRows")))
-					.completedChunks(Long.parseLong(values.getProperty("completedChunks")))
-					.chunkSize(Integer.parseInt(values.getProperty("chunkSize")))
+					.processedRows(longValue(values, "processedRows"))
+					.completedChunks(longValue(values, "completedChunks"))
+					.chunkSize(intValue(values, "chunkSize"))
 					.lastChunkHash(emptyToNull(values.getProperty("lastChunkHash")))
 					.resumeToken(emptyToNull(values.getProperty("resumeToken")))
-					.complete(Boolean.parseBoolean(values.getProperty("complete"))).build()
+					.complete(booleanValue(values, "complete")).build()
 					.validate());
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration checkpoint: " + file, e);
@@ -123,5 +124,35 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 
 	private static String emptyToNull(final String value) {
 		return value == null || value.isEmpty() ? null : value;
+	}
+
+	private static String required(final Properties values, final String name) {
+		final String value = values.getProperty(name);
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException(
+					"Missing checkpoint property: " + name);
+		}
+		return value;
+	}
+
+	private static long longValue(final Properties values, final String name) {
+		return Long.parseLong(required(values, name));
+	}
+
+	private static int intValue(final Properties values, final String name) {
+		return Integer.parseInt(required(values, name));
+	}
+
+	private static boolean booleanValue(final Properties values,
+			final String name) {
+		final String value = required(values, name);
+		if ("true".equalsIgnoreCase(value)) {
+			return true;
+		}
+		if ("false".equalsIgnoreCase(value)) {
+			return false;
+		}
+		throw new IllegalArgumentException(
+				"Invalid boolean checkpoint property " + name + ": " + value);
 	}
 }

@@ -141,6 +141,29 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 	}
 
 	@Test
+	void writableStoreRejectsInvalidBaseColumnsAndPrimaryKey() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE SQLAPP_BMC_WRITE_MISSING ("
+					+ "MIGRATION_ID VARCHAR(255) PRIMARY KEY)");
+			final var missing = assertThrows(java.sql.SQLException.class,
+					() -> new JdbcBulkMigrationCheckpointStore(connection,
+							"SQLAPP_BMC_WRITE_MISSING"));
+			assertTrue(missing.getMessage().contains("missing required columns"));
+
+			execute(connection, "CREATE TABLE SQLAPP_BMC_WRITE_WRONG_PK ("
+					+ "MIGRATION_ID VARCHAR(255) NOT NULL, "
+					+ "SOURCE_FINGERPRINT VARCHAR(255), TARGET_FINGERPRINT VARCHAR(255), "
+					+ "PROCESSED_ROWS DECIMAL(19,0), COMPLETED_CHUNKS DECIMAL(19,0), "
+					+ "LAST_CHUNK_HASH VARCHAR(64), COMPLETE_FLAG CHAR(1), "
+					+ "PRIMARY KEY (MIGRATION_ID, SOURCE_FINGERPRINT))");
+			final var wrongKey = assertThrows(java.sql.SQLException.class,
+					() -> new JdbcBulkMigrationCheckpointStore(connection,
+							"SQLAPP_BMC_WRITE_WRONG_PK"));
+			assertTrue(wrongKey.getMessage().contains("MIGRATION_ID alone"));
+		});
+	}
+
+	@Test
 	void readOnlyStoreWrapsCorruptCheckpointData() throws Exception {
 		testDb(connection -> {
 			new JdbcBulkMigrationCheckpointStore(connection, "SQLAPP_BMC_CORRUPT");

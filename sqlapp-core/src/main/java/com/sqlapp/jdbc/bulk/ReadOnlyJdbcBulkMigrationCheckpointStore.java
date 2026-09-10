@@ -24,7 +24,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 /** JDBC checkpoint reader that never creates, upgrades, updates, or deletes tables. */
 final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		implements BulkMigrationCheckpointStore {
-	private static final Set<String> REQUIRED_COLUMNS = Set.of("MIGRATION_ID",
+	static final Set<String> REQUIRED_COLUMNS = Set.of("MIGRATION_ID",
 			"SOURCE_FINGERPRINT", "TARGET_FINGERPRINT", "PROCESSED_ROWS",
 			"COMPLETED_CHUNKS", "CHUNK_SIZE", "LAST_CHUNK_HASH", "RESUME_TOKEN",
 			"COMPLETE_FLAG");
@@ -71,7 +71,7 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		throw new UnsupportedOperationException("Read-only checkpoint store");
 	}
 
-	private Optional<TableIdentity> resolveTable() throws SQLException {
+	Optional<TableIdentity> resolveTable() throws SQLException {
 		final String schema = currentSchema();
 		final Set<TableIdentity> candidates = new HashSet<>();
 		try (ResultSet tables = connection.getMetaData().getTables(
@@ -92,7 +92,27 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		return candidates.stream().findFirst();
 	}
 
-	private void validateStructure(final TableIdentity identity) throws SQLException {
+	void validateStructure(final TableIdentity identity) throws SQLException {
+		validateStructure(identity, Set.of());
+	}
+
+	void validateStructure(final TableIdentity identity,
+			final Set<String> permittedMissingColumns) throws SQLException {
+		final Set<String> columns = columns(identity);
+		final Set<String> required = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		required.addAll(REQUIRED_COLUMNS);
+		required.removeAll(permittedMissingColumns);
+		if (!columns.containsAll(required)) {
+			final Set<String> missing = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+			missing.addAll(required);
+			missing.removeAll(columns);
+			throw new SQLException("Migration checkpoint table " + rawTableName
+					+ " is missing required columns: " + missing);
+		}
+		validatePrimaryKey(identity);
+	}
+
+	Set<String> columns(final TableIdentity identity) throws SQLException {
 		final Set<String> columns = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		try (ResultSet result = connection.getMetaData().getColumns(identity.catalog(),
 				identity.schema(), identity.name(), "%")) {
@@ -100,13 +120,11 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 				columns.add(result.getString("COLUMN_NAME"));
 			}
 		}
-		if (!columns.containsAll(REQUIRED_COLUMNS)) {
-			final Set<String> missing = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-			missing.addAll(REQUIRED_COLUMNS);
-			missing.removeAll(columns);
-			throw new SQLException("Migration checkpoint table " + rawTableName
-					+ " is missing required columns: " + missing);
-		}
+		return columns;
+	}
+
+	private void validatePrimaryKey(final TableIdentity identity)
+			throws SQLException {
 		final Set<String> primaryKey = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		try (ResultSet keys = connection.getMetaData().getPrimaryKeys(identity.catalog(),
 				identity.schema(), identity.name())) {
@@ -176,6 +194,6 @@ final class ReadOnlyJdbcBulkMigrationCheckpointStore
 		return parameters;
 	}
 
-	private record TableIdentity(String catalog, String schema, String name) {
+	static record TableIdentity(String catalog, String schema, String name) {
 	}
 }

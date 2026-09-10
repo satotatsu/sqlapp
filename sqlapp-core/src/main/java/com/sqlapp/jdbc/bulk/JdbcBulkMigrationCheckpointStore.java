@@ -27,7 +27,6 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 /** Checkpoint store backed by a control table in the target database. */
 public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrationCheckpointStore {
 	private final Connection connection;
-	private final String tableName;
 	private final String rawTableName;
 	private final String resumeTokenType;
 	private final Dialect dialect;
@@ -47,7 +46,6 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		}
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.rawTableName = tableName;
-		this.tableName = dialect.quote(tableName);
 		this.resumeTokenType = connection.getMetaData().getDatabaseProductName()
 				.toLowerCase(java.util.Locale.ROOT).contains("informix")
 						? "LVARCHAR(4000)" : "VARCHAR(4000)";
@@ -135,44 +133,37 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	private void ensureTable() throws SQLException {
 		String generatedDdl = null;
-		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + columnName("MIGRATION_ID") + " FROM "
-					+ tableName + " WHERE 1 = 0").close();
-		} catch (SQLException missing) {
+		final var inspector = new ReadOnlyJdbcBulkMigrationCheckpointStore(connection,
+				rawTableName);
+		var identity = inspector.resolveTable().orElse(null);
+		if (identity == null) {
+			final Table table = checkpointTable();
+			final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+					.getSqlFactory(table, State.Added);
+			final var operations = factory.createSql(table);
+			generatedDdl = operations.stream().map(op -> op.getSqlText())
+					.collect(java.util.stream.Collectors.joining("; "));
 			try {
-				final Table table = checkpointTable();
-				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
-						.getSqlFactory(table, State.Added);
-				final var operations = factory.createSql(table);
-				generatedDdl = operations.stream().map(op -> op.getSqlText())
-						.collect(java.util.stream.Collectors.joining("; "));
-				try {
-					new ConnectionSqlExecutor(connection, false).execute(operations);
-				} catch (SQLException e) {
-					e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
-					throw e;
-				}
-			} catch (SQLException createFailure) {
-				createFailure.addSuppressed(missing);
-				throw createFailure;
+				new ConnectionSqlExecutor(connection, false).execute(operations);
+			} catch (SQLException e) {
+				e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
+				throw e;
 			}
+			identity = inspector.resolveTable().orElseThrow(() -> new SQLException(
+					"Migration checkpoint table was not created: " + rawTableName));
+		} else {
+			inspector.validateStructure(identity,
+					java.util.Set.of("RESUME_TOKEN", "CHUNK_SIZE"));
 		}
 		try {
-			ensureResumeTokenColumn();
-			ensureChunkSizeColumn();
-		} catch (SQLException e) {
-			if (generatedDdl != null) {
-				e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
+			var columns = inspector.columns(identity);
+			if (!columns.contains("RESUME_TOKEN")) {
+				addResumeTokenColumn();
 			}
-			throw e;
-		}
-		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + columnName("SOURCE_FINGERPRINT") + ", "
-					+ columnName("TARGET_FINGERPRINT") + ", " + columnName("PROCESSED_ROWS") + ", "
-					+ columnName("COMPLETED_CHUNKS") + ", " + columnName("CHUNK_SIZE") + ", "
-					+ columnName("LAST_CHUNK_HASH") + ", "
-					+ columnName("COMPLETE_FLAG") + " FROM "
-					+ tableName + " WHERE 1 = 0").close();
+			if (!columns.contains("CHUNK_SIZE")) {
+				addChunkSizeColumn();
+			}
+			inspector.validateStructure(identity);
 		} catch (SQLException e) {
 			if (generatedDdl != null) {
 				e.addSuppressed(new SQLException("Generated checkpoint DDL: " + generatedDdl));
@@ -226,49 +217,23 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 		return new Column(name).setDataType(type).setLength(length).setNotNull(notNull);
 	}
 
-	private void ensureResumeTokenColumn() throws SQLException {
-		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + columnName("RESUME_TOKEN") + " FROM "
-					+ tableName + " WHERE 1 = 0").close();
-			return;
-		} catch (SQLException missing) {
-			try {
-				final Table original = checkpointTable(false, false);
-				final Table target = checkpointTable(true, false);
-				final var difference = original.diff(target);
-				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
-						.getSqlFactory(target, SqlType.ALTER);
-				final var operations = factory.createDiffSql(difference);
-				new ConnectionSqlExecutor(connection, false).execute(operations);
-			} catch (SQLException alterFailure) {
-				alterFailure.addSuppressed(missing);
-				throw alterFailure;
-			}
-		}
+	private void addResumeTokenColumn() throws SQLException {
+		final Table original = checkpointTable(false, false);
+		final Table target = checkpointTable(true, false);
+		final var difference = original.diff(target);
+		final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+				.getSqlFactory(target, SqlType.ALTER);
+		new ConnectionSqlExecutor(connection, false)
+				.execute(factory.createDiffSql(difference));
 	}
 
-	private void ensureChunkSizeColumn() throws SQLException {
-		try (var statement = connection.createStatement()) {
-			statement.executeQuery("SELECT " + columnName("CHUNK_SIZE") + " FROM "
-					+ tableName + " WHERE 1 = 0").close();
-			return;
-		} catch (SQLException missing) {
-			try {
-				final Table original = checkpointTable(true, false);
-				final Table target = checkpointTable(true, true);
-				final var difference = original.diff(target);
-				final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
-						.getSqlFactory(target, SqlType.ALTER);
-				new ConnectionSqlExecutor(connection, false)
-						.execute(factory.createDiffSql(difference));
-			} catch (SQLException alterFailure) {
-				alterFailure.addSuppressed(missing);
-				throw alterFailure;
-			}
-		}
-	}
-
-	private String columnName(final String name) {
-		return dialect.quote(name);
+	private void addChunkSizeColumn() throws SQLException {
+		final Table original = checkpointTable(true, false);
+		final Table target = checkpointTable(true, true);
+		final var difference = original.diff(target);
+		final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+				.getSqlFactory(target, SqlType.ALTER);
+		new ConnectionSqlExecutor(connection, false)
+				.execute(factory.createDiffSql(difference));
 	}
 }

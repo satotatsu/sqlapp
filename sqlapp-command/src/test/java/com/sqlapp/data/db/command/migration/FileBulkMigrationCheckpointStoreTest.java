@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -39,5 +40,33 @@ class FileBulkMigrationCheckpointStoreTest {
 		try (var files = Files.list(directory)) {
 			assertTrue(files.findAny().isEmpty());
 		}
+	}
+
+	@Test
+	void rejectsMissingInvalidAndMismatchedProperties() throws Exception {
+		final var store = new FileBulkMigrationCheckpointStore(directory);
+		final var checkpoint = BulkMigrationCheckpoint.builder()
+				.migrationId("migration-1").processedRows(0).completedChunks(0)
+				.chunkSize(10).complete(false).build();
+		store.save(checkpoint);
+		final java.nio.file.Path file;
+		try (var files = Files.list(directory)) {
+			file = files.findFirst().orElseThrow();
+		}
+
+		Files.writeString(file, "migrationId=migration-1\nprocessedRows=0\n"
+				+ "completedChunks=0\nchunkSize=10\n");
+		assertThrows(java.sql.SQLException.class,
+				() -> store.load("migration-1"));
+
+		Files.writeString(file, "migrationId=migration-1\nprocessedRows=0\n"
+				+ "completedChunks=0\nchunkSize=10\ncomplete=unknown\n");
+		assertThrows(java.sql.SQLException.class,
+				() -> store.load("migration-1"));
+
+		Files.writeString(file, "migrationId=other\nprocessedRows=0\n"
+				+ "completedChunks=0\nchunkSize=10\ncomplete=false\n");
+		assertThrows(java.sql.SQLException.class,
+				() -> store.load("migration-1"));
 	}
 }
