@@ -7,8 +7,6 @@ package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.exceptions.CommandException;
@@ -26,20 +24,11 @@ public class LegacyMigrationLoadPlanIO {
 	}
 
 	public void write(File file, LegacyMigrationLoadPlan plan) {
-		File directory = file.getAbsoluteFile().getParentFile();
-		if (directory != null && !directory.exists() && !directory.mkdirs()) {
-			throw new CommandException("Failed to create RDB load plan directory: " + directory);
-		}
-		File temporary = new File(directory, file.getName() + ".tmp");
-		converter.writeJsonValue(temporary, plan);
 		try {
-			Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		} catch (IOException e) {
+			AtomicMigrationFile.write(file.toPath(),
+					temporary -> converter.writeJsonValue(temporary.toFile(), plan));
+		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to replace RDB load plan: " + file, e);
-		} finally {
-			if (temporary.exists()) {
-				temporary.delete();
-			}
 		}
 	}
 }

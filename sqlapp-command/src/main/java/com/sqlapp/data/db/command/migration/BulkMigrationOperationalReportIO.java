@@ -2,10 +2,8 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.IOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.HashSet;
@@ -83,28 +81,11 @@ public final class BulkMigrationOperationalReportIO {
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(report, "report");
 		final Path absolute = file.toAbsolutePath();
-		final Path directory = absolute.getParent();
-		Path temporary = null;
 		try {
-			Files.createDirectories(directory);
-			temporary = Files.createTempFile(directory, absolute.getFileName().toString(), ".tmp");
-			converter.writeJsonValue(temporary.toFile(), report);
-			try {
-				Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE,
-						StandardCopyOption.REPLACE_EXISTING);
-			} catch (AtomicMoveNotSupportedException e) {
-				Files.move(temporary, absolute, StandardCopyOption.REPLACE_EXISTING);
-			}
+			AtomicMigrationFile.write(absolute,
+					temporary -> converter.writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write bulk migration report: " + absolute, e);
-		} finally {
-			if (temporary != null) {
-				try {
-					Files.deleteIfExists(temporary);
-				} catch (IOException ignored) {
-					// Preserve the original report-writing failure.
-				}
-			}
 		}
 	}
 

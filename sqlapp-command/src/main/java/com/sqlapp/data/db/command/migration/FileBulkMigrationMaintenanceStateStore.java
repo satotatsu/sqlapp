@@ -66,7 +66,7 @@ public class FileBulkMigrationMaintenanceStateStore
 			values.setProperty("status", state.status().name());
 			values.setProperty("updatedAt", state.updatedAt().toString());
 			values.setProperty("failureMessage", nullToEmpty(state.failureMessage()));
-			AtomicPropertiesFile.write(directory, file, values,
+			AtomicMigrationFile.writeProperties(file, values,
 					"sqlapp bulk migration maintenance state");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration maintenance state: " + file, e);

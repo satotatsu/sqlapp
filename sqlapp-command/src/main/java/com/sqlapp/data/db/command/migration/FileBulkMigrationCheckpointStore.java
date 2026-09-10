@@ -69,7 +69,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 			values.setProperty("lastChunkHash", nullToEmpty(checkpoint.getLastChunkHash()));
 			values.setProperty("resumeToken", nullToEmpty(checkpoint.getResumeToken()));
 			values.setProperty("complete", Boolean.toString(checkpoint.isComplete()));
-			AtomicPropertiesFile.write(directory, file, values,
+			AtomicMigrationFile.writeProperties(file, values,
 					"sqlapp bulk migration checkpoint");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration checkpoint: " + file, e);

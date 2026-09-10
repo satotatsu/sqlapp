@@ -117,7 +117,7 @@ public final class FileBulkMigrationJobLeaseStore
 			values.setProperty("planFingerprint", lease.planFingerprint());
 			values.setProperty("ownerId", lease.ownerId());
 			values.setProperty("expiresAt", lease.expiresAt().toString());
-			AtomicPropertiesFile.write(directory, file, values,
+			AtomicMigrationFile.writeProperties(file, values,
 					"sqlapp bulk migration job lease");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration job lease: " + file, e);

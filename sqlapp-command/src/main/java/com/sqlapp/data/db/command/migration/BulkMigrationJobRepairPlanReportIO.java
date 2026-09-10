@@ -4,10 +4,8 @@ package com.sqlapp.data.db.command.migration;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -39,31 +37,14 @@ public final class BulkMigrationJobRepairPlanReportIO {
 	public void write(final Path file, final BulkMigrationJobRepairPlanReport report) {
 		validate(report);
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
-		final Path directory = absolute.getParent();
-		Path temporary = null;
 		try {
-			Files.createDirectories(directory);
-			temporary = Files.createTempFile(directory, absolute.getFileName().toString(), ".tmp");
 			final JsonConverter converter = new JsonConverter();
 			converter.setIndentOutput(true);
-			converter.writeJsonValue(temporary.toFile(), report);
-			try {
-				Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE,
-						StandardCopyOption.REPLACE_EXISTING);
-			} catch (AtomicMoveNotSupportedException e) {
-				Files.move(temporary, absolute, StandardCopyOption.REPLACE_EXISTING);
-			}
+			AtomicMigrationFile.write(absolute,
+					temporary -> converter.writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write bulk migration job repair plan report: "
 					+ absolute, e);
-		} finally {
-			if (temporary != null) {
-				try {
-					Files.deleteIfExists(temporary);
-				} catch (IOException e) {
-					// Preserve the primary failure.
-				}
-			}
 		}
 	}
 

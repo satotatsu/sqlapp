@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -210,20 +209,11 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 	}
 
 	private void write(File file, String value) {
-		File directory = file.getAbsoluteFile().getParentFile();
-		if (directory != null && !directory.exists() && !directory.mkdirs()) {
-			throw new CommandException("Failed to create RDB loader output directory: " + directory);
-		}
-		File temporary = new File(directory, file.getName() + ".tmp");
 		try {
-			Files.writeString(temporary.toPath(), value, StandardCharsets.UTF_8);
-			Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		} catch (IOException e) {
+			AtomicMigrationFile.write(file.toPath(), temporary ->
+					Files.writeString(temporary, value, StandardCharsets.UTF_8));
+		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write RDB loader artifact: " + file, e);
-		} finally {
-			if (temporary.exists()) {
-				temporary.delete();
-			}
 		}
 	}
 }
