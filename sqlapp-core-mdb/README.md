@@ -75,6 +75,11 @@ which is slow or unavailable through UCanAccess:
 - `updateRowsByPrimaryKey` and `deleteRowsByPrimaryKey` use the Access primary
   key index. They deliberately reject tables without a primary key instead of
   falling back to a full scan.
+- Direct writers disable Jackcess auto-sync, process update/delete requests in
+  primary-key order, and flush once when explicitly requested or closed.
+- `upsertRowsByPrimaryKey` updates rows found through the primary-key index and
+  sends all missing rows through one bulk insert; its result reports both
+  counts and generated AutoNumber values are written back to inserted maps.
 - `addColumn`, `addIndex` and `addRelationship` modify Access schema objects
   directly.
 - `rebuild(source, target, schema)` creates a separate Access file, recreates

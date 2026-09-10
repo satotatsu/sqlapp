@@ -92,6 +92,41 @@ class MdbJackcessSupportTest {
 	}
 
 	@Test
+	void upsertUpdatesByKeyAndBulkInsertsMissingRows() throws Exception {
+		final Path file = tempDirectory.resolve("upsert.accdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010,
+				file.toFile())) {
+			final io.github.spannm.jackcess.Table table = new TableBuilder("対象")
+					.addColumn(new ColumnBuilder("ID",
+							io.github.spannm.jackcess.DataType.LONG)
+							.withAutoNumber(true))
+					.addColumn(new ColumnBuilder("値",
+							io.github.spannm.jackcess.DataType.TEXT))
+					.addIndex(new IndexBuilder("PK_対象").withColumns("ID")
+							.withPrimaryKey())
+					.toTable(database);
+			table.addRow(io.github.spannm.jackcess.Column.AUTO_NUMBER, "旧値");
+		}
+		final Map<String, Object> generated = new LinkedHashMap<>();
+		generated.put("値", "自動採番");
+		try (MdbJackcessSupport writer = MdbJackcessSupport.open(file)) {
+			final var result = writer.upsertRowsByPrimaryKey("対象", List.of(
+					new LinkedHashMap<>(Map.of("ID", 1, "値", "更新値")),
+					new LinkedHashMap<>(Map.of("ID", 100, "値", "明示キー")),
+					generated));
+			assertEquals(1, result.updated());
+			assertEquals(2, result.inserted());
+			assertEquals(3, result.total());
+			assertNotNull(generated.get("ID"));
+		}
+		int count = 0;
+		for (final var ignored : MdbFileLoader.loadTable(file, "対象").getRows()) {
+			count++;
+		}
+		assertEquals(3, count);
+	}
+
+	@Test
 	void addsColumnIndexAndRelationship() throws Exception {
 		final Path file = tempDirectory.resolve("schema.accdb");
 		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010,

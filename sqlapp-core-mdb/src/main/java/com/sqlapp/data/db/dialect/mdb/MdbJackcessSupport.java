@@ -6,9 +6,12 @@
 package com.sqlapp.data.db.dialect.mdb;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,14 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	private final Path file;
 	private final Database database;
 	private boolean closed;
+	private boolean dirty;
+
+	/** Result of a primary-key upsert operation. */
+	public record UpsertResult(int updated, int inserted) {
+		public int total() {
+			return updated + inserted;
+		}
+	}
 
 	private MdbJackcessSupport(final Path file, final Database database) {
 		this.file = file;
@@ -66,6 +77,7 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		try {
 			return new MdbJackcessSupport(normalized,
 					new DatabaseBuilder().withPath(normalized).withReadOnly(false)
+							.withAutoSync(false)
 							.open());
 		} catch (final IOException | RuntimeException e) {
 			OPEN_FILES.remove(normalized);
@@ -96,6 +108,7 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			values.add(value);
 		}
 		final List<? extends Object[]> inserted = table.addRows(values);
+		dirty = true;
 		final List<Map<String, Object>> result = new ArrayList<>(rows.size());
 		for (int i = 0; i < inserted.size(); i++) {
 			@SuppressWarnings("unchecked")
@@ -118,12 +131,13 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		final io.github.spannm.jackcess.Table table = requireTable(tableName);
 		final IndexCursor cursor = primaryKeyCursor(table);
 		int count = 0;
-		for (final Map<String, Object> row : rows) {
+		for (final Map<String, Object> row : sortedByPrimaryKey(table, rows)) {
 			if (cursor.findFirstRowByEntry(primaryKeyValues(table, row))) {
 				cursor.updateCurrentRowFromMap(new LinkedHashMap<>(row));
 				count++;
 			}
 		}
+		dirty |= count > 0;
 		return count;
 	}
 
@@ -134,25 +148,58 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		final io.github.spannm.jackcess.Table table = requireTable(tableName);
 		final IndexCursor cursor = primaryKeyCursor(table);
 		int count = 0;
-		for (final Map<String, Object> key : keys) {
+		for (final Map<String, Object> key : sortedByPrimaryKey(table, keys)) {
 			if (cursor.findFirstRowByEntry(primaryKeyValues(table, key))) {
 				cursor.deleteCurrentRow();
 				count++;
 			}
 		}
+		dirty |= count > 0;
 		return count;
+	}
+
+	/**
+	 * Updates existing rows by primary key and inserts all missing rows in one
+	 * bulk call. Rows without a complete primary key are inserts. AutoNumber
+	 * values for inserted rows are written back to their maps.
+	 */
+	public UpsertResult upsertRowsByPrimaryKey(final String tableName,
+			final List<? extends Map<String, Object>> rows) throws IOException {
+		ensureOpen();
+		final io.github.spannm.jackcess.Table table = requireTable(tableName);
+		final IndexCursor cursor = primaryKeyCursor(table);
+		final List<Map<String, Object>> inserts = new ArrayList<>();
+		int updated = 0;
+		for (final Map<String, Object> row : sortedByPrimaryKey(table, rows)) {
+			final Object[] key = optionalPrimaryKeyValues(table, row);
+			if (key != null && cursor.findFirstRowByEntry(key)) {
+				cursor.updateCurrentRowFromMap(new LinkedHashMap<>(row));
+				updated++;
+			} else {
+				inserts.add(row);
+			}
+		}
+		if (updated > 0) {
+			dirty = true;
+		}
+		if (!inserts.isEmpty()) {
+			insertRows(tableName, inserts);
+		}
+		return new UpsertResult(updated, inserts.size());
 	}
 
 	/** Adds a column directly to an existing Access table. */
 	public void addColumn(final String tableName, final Column column)
 			throws IOException {
 		toColumnBuilder(column).addToTable(requireTable(tableName));
+		dirty = true;
 	}
 
 	/** Adds an index directly to an existing Access table. */
 	public void addIndex(final String tableName, final Index index)
 			throws IOException {
 		toIndexBuilder(index).addToTable(requireTable(tableName));
+		dirty = true;
 	}
 
 	/** Adds an Access relationship represented by a Schema foreign key. */
@@ -174,21 +221,41 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			builder.withCascadeDeletes();
 		}
 		builder.toRelationship(database);
+		dirty = true;
 	}
 
 	public void flush() throws IOException {
 		ensureOpen();
 		database.flush();
+		dirty = false;
 	}
 
 	@Override
 	public void close() throws IOException {
 		if (!closed) {
 			closed = true;
+			IOException failure = null;
 			try {
-				database.close();
+				if (dirty) {
+					database.flush();
+				}
+			} catch (final IOException e) {
+				failure = e;
 			} finally {
-				OPEN_FILES.remove(file);
+				try {
+					database.close();
+				} catch (final IOException e) {
+					if (failure == null) {
+						failure = e;
+					} else {
+						failure.addSuppressed(e);
+					}
+				} finally {
+					OPEN_FILES.remove(file);
+				}
+			}
+			if (failure != null) {
+				throw failure;
 			}
 		}
 	}
@@ -425,6 +492,74 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			final Map<String, Object> row) {
 		return table.getPrimaryKeyIndex().getColumns().stream()
 				.map(column -> required(row, column.getName())).toArray();
+	}
+
+	private static Object[] optionalPrimaryKeyValues(
+			final io.github.spannm.jackcess.Table table,
+			final Map<String, Object> row) {
+		final Object[] values = new Object[table.getPrimaryKeyIndex().getColumns()
+				.size()];
+		for (int i = 0; i < values.length; i++) {
+			final String name = table.getPrimaryKeyIndex().getColumns().get(i)
+					.getName();
+			if (!containsKey(row, name) || get(row, name) == null) {
+				return null;
+			}
+			values[i] = get(row, name);
+		}
+		return values;
+	}
+
+	private static List<Map<String, Object>> sortedByPrimaryKey(
+			final io.github.spannm.jackcess.Table table,
+			final List<? extends Map<String, Object>> rows) {
+		final List<Map<String, Object>> sorted = new ArrayList<>(rows);
+		sorted.sort((left, right) -> compareKeys(
+				optionalPrimaryKeyValues(table, left),
+				optionalPrimaryKeyValues(table, right)));
+		return sorted;
+	}
+
+	private static int compareKeys(final Object[] left, final Object[] right) {
+		if (left == null) {
+			return right == null ? 0 : 1;
+		}
+		if (right == null) {
+			return -1;
+		}
+		for (int i = 0; i < left.length; i++) {
+			final int compared = compareValues(left[i], right[i]);
+			if (compared != 0) {
+				return compared;
+			}
+		}
+		return 0;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private static int compareValues(final Object left, final Object right) {
+		if (left == right) {
+			return 0;
+		}
+		if (left == null) {
+			return -1;
+		}
+		if (right == null) {
+			return 1;
+		}
+		if (left instanceof Number leftNumber
+				&& right instanceof Number rightNumber) {
+			return new BigDecimal(leftNumber.toString())
+					.compareTo(new BigDecimal(rightNumber.toString()));
+		}
+		if (left instanceof byte[] leftBytes && right instanceof byte[] rightBytes) {
+			return Arrays.compareUnsigned(leftBytes, rightBytes);
+		}
+		if (left.getClass().isInstance(right) && left instanceof Comparable value) {
+			return value.compareTo(right);
+		}
+		return Comparator.comparing(Object::toString,
+				String.CASE_INSENSITIVE_ORDER).compare(left, right);
 	}
 
 	private io.github.spannm.jackcess.Table requireTable(final String name)
