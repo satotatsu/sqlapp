@@ -65,6 +65,40 @@ Access table outside the JDBC dialect.
 Existing non-parameterized saved SELECT/UNION queries can still be loaded as
 Schema views by `MdbFileLoader`.
 
+## Direct Jackcess complement
+
+`MdbJackcessSupport.open(path)` provides a direct file-writing path for work
+which is slow or unavailable through UCanAccess:
+
+- `insertRows` sends all supplied rows to Jackcess in one bulk call and writes
+  every generated AutoNumber value back into the corresponding input map.
+- `updateRowsByPrimaryKey` and `deleteRowsByPrimaryKey` use the Access primary
+  key index. They deliberately reject tables without a primary key instead of
+  falling back to a full scan.
+- `addColumn`, `addIndex` and `addRelationship` modify Access schema objects
+  directly.
+- `rebuild(source, target, schema)` creates a separate Access file, recreates
+  tables and relationships from the sqlapp Schema model, and bulk-copies data.
+  A per-table target-to-source column-name map supports column renames. Dropped
+  columns are omitted and changed definitions are created from the target
+  model. The source is never overwritten and an existing target is rejected.
+
+Close all UCanAccess connections to the file before opening the direct writer.
+The class prevents two sqlapp Jackcess writer sessions for the same normalized
+path within one JVM, but it cannot detect arbitrary UCanAccess or Microsoft
+Access processes. Jackcess writes are direct file operations, not JDBC
+transactions, so callers should keep a backup for schema work and close the
+session promptly. Bulk insert minimizes per-row overhead; primary-key update
+and delete still perform one indexed lookup per supplied row because Jackcess
+has no set-based update/delete API.
+
+Jackcess exposes saved queries for reading but no supported public writer API,
+so saved-query CREATE/ALTER/DROP remains unsupported. Access has no MERGE and
+the direct complement does not emulate it. Access file-version restrictions
+also apply to generated types; for example, BIGINT requires a sufficiently new
+ACCDB format. Complex columns, attachments and multi-value fields remain
+outside the flat sqlapp Column model.
+
 Access SQL has no `MERGE` statement. Direct `SqlType.MERGE` generation is
 therefore rejected explicitly; use conditional INSERT or the data session's
 update-then-insert behavior where its transaction semantics are acceptable.
