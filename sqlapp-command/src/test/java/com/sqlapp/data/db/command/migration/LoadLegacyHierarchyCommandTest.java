@@ -71,6 +71,42 @@ class LoadLegacyHierarchyCommandTest {
 	}
 
 	@Test
+	void testRejectLoadPlanThatOmitsContractDataSet() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		File contractFile = new File(temporaryDirectory, "contract.yaml");
+		var contract = new LegacyMigrationContractIO().read(contractFile);
+		var omitted = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet();
+		omitted.setId("omitted");
+		omitted.setSourcePath("OMITTED");
+		omitted.setFileName("omitted.csv");
+		omitted.setTargetTable("OMITTED");
+		var field = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
+		field.setPosition(1);
+		field.setSourcePath("OMITTED.ID");
+		field.setStagingColumn("ID");
+		field.setTargetColumn("ID");
+		field.setExtracted(true);
+		omitted.getFields().add(field);
+		contract.getDataSets().add(omitted);
+		new LegacyMigrationContractIO().write(contractFile, contract);
+		plan.setContractFingerprint(
+				new LegacyMigrationMappingValidator().fingerprint(contractFile));
+		File planFile = new File(temporaryDirectory, "omitted-load-plan.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+
+		assertTrue(exception.getMessage().contains("missing=[omitted]"));
+		assertTrue(exception.getMessage().contains("unexpected=[]"));
+	}
+
+	@Test
 	void testRejectMissingTargetTableBeforeOpeningAConnection() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "empty-schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");

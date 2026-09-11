@@ -7,6 +7,7 @@ package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -76,6 +77,17 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		}
 		Map<String, LegacyMigrationContract.DataSet> contractDataSets = new LinkedHashMap<>();
 		contract.getDataSets().forEach(dataSet -> contractDataSets.put(dataSet.getId(), dataSet));
+		var contractIds = new LinkedHashSet<>(contractDataSets.keySet());
+		var planIds = new LinkedHashSet<String>();
+		plan.getDataSets().forEach(dataSet -> planIds.add(dataSet.getId()));
+		if (!contractIds.equals(planIds)) {
+			var missing = new LinkedHashSet<>(contractIds);
+			missing.removeAll(planIds);
+			var unexpected = new LinkedHashSet<>(planIds);
+			unexpected.removeAll(contractIds);
+			throw new CommandException("Load plan data sets disagree with its contract: missing="
+					+ missing + ", unexpected=" + unexpected);
+		}
 		for (LegacyMigrationLoadPlan.LoadDataSet dataSet : plan.getDataSets()) {
 			LegacyMigrationContract.DataSet source = contractDataSets.get(dataSet.getId());
 			if (source == null) {
