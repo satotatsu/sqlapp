@@ -185,6 +185,26 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testCommitOrphanCleanupWhenThereAreNoPendingRoots() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource()) {
+			try (Connection connection = dataSource.getConnection()) {
+				createTables(connection);
+				executeSql(connection, "DELETE FROM TMP_COMPANY_MASTER");
+				connection.commit();
+				Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+				connection.setAutoCommit(false);
+
+				assertEquals(0,
+						new JdbcTreeStagingLoader(connection, schema, plan()).load());
+			}
+
+			try (Connection verification = dataSource.getConnection()) {
+				assertEquals(0, count(verification, "TMP_EMPLOYEE_LIST"));
+			}
+		}
+	}
+
+	@Test
 	void testMarkRootsLoadedWhenStagingDeletionDisabled() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {

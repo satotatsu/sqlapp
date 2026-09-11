@@ -95,10 +95,13 @@ public class JdbcTreeStagingLoader {
 		if (connection.getAutoCommit()) {
 			throw new CommandException("JdbcTreeStagingLoader requires autoCommit=false.");
 		}
-		cleanupOrphanedStagingRows();
+		long cleaned = cleanupOrphanedStagingRows();
 		long count = 0;
 		for (LoadDataSetWrapper root : roots()) {
 			count += loadRoot(root);
+		}
+		if (cleaned > 0 || count > 0) {
+			connection.commit();
 		}
 		return count;
 	}
@@ -194,20 +197,22 @@ public class JdbcTreeStagingLoader {
 				+ id("SQLAPP_LOADED_AT") + "=CURRENT_TIMESTAMP" + where.sql();
 	}
 
-	private void cleanupOrphanedStagingRows() throws SQLException {
+	private long cleanupOrphanedStagingRows() throws SQLException {
 		if (!plan.isDeleteCommittedRoots()) {
-			return;
+			return 0;
 		}
+		long count = 0;
 		// Parent-first order makes descendants of a newly deleted orphan eligible
 		// when their level is processed.
 		for (LoadDataSetWrapper child : plan.getDataSets().stream()
 				.filter(dataSet -> dataSet.getParentDataSetId() != null)
 				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)).toList()) {
-			deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
+			count += deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
 		}
+		return count;
 	}
 
-	private void deleteOrphans(LoadDataSetWrapper child, LoadDataSetWrapper parent) throws SQLException {
+	private int deleteOrphans(LoadDataSetWrapper child, LoadDataSetWrapper parent) throws SQLException {
 		String childTable = id(child.getInner().getStagingTable());
 		String parentTable = id(parent.getInner().getStagingTable());
 		String join = child.getParentJoinKeys().stream()
@@ -217,7 +222,7 @@ public class JdbcTreeStagingLoader {
 		String sql = "DELETE FROM " + childTable + " WHERE NOT EXISTS (SELECT 1 FROM " + parentTable + " WHERE " + join
 				+ ")";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.executeUpdate();
+			return statement.executeUpdate();
 		}
 	}
 
