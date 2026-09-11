@@ -60,6 +60,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertEquals(200, plan.getCommitEveryRootBatches());
 		assertEquals("ROOT_BATCH", plan.getTransaction().getCommitUnit());
 		assertEquals("DIALECT", plan.getRootCursorStrategy());
+		assertEquals(new File("..", contractFile.getName()).getPath(), plan.getContractFile());
+		assertEquals(new File("..", schemaFile.getName()).getPath(), plan.getSchemaFile());
 		assertTrue(plan.getTransaction().isTargetAndStagingDeleteAtomic());
 		assertEquals("STG_COMPANY_MASTER", plan.getDataSets().getFirst().getStagingTable());
 		assertEquals("PARENT_ID",
@@ -146,6 +148,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 				plan.getResolvedDataSetIds());
 		assertEquals(2, plan.getDataSets().size());
 		assertFalse(plan.getViewpointsFingerprint().isBlank());
+		assertEquals(new File("..", viewpointsFile.getName()).getPath(),
+				plan.getViewpointsFile());
 	}
 
 	private LegacyMigrationContract contract() {

@@ -106,9 +106,11 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 			applyViewpoint(plan);
 		}
 		String baseName = baseName(contractFile.getName());
+		File loadPlanFile = new File(outputDirectory, baseName + "-load-plan.yaml");
+		relativizeReferences(plan, loadPlanFile);
 		String ddl = generator.stagingDdl(plan, resolveDialect());
 		String importConfiguration = generator.importConfiguration(plan, contract);
-		new LegacyMigrationLoadPlanIO().write(new File(outputDirectory, baseName + "-load-plan.yaml"), plan);
+		new LegacyMigrationLoadPlanIO().write(loadPlanFile, plan);
 		write(new File(outputDirectory, baseName + "-staging.sql"), ddl);
 		write(new File(outputDirectory, baseName + "-csv-import.yaml"), importConfiguration);
 		if (generateRunnerTemplate) {
@@ -116,6 +118,24 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 					generator.runnerTemplate(plan, runnerClassName));
 		}
 		info("Legacy RDB loader artifacts: ", outputDirectory.getAbsolutePath());
+	}
+
+	private void relativizeReferences(LegacyMigrationLoadPlan plan, File loadPlanFile) {
+		plan.setContractFile(relativeReference(loadPlanFile, contractFile));
+		plan.setSchemaFile(relativeReference(loadPlanFile, schemaFile));
+		if (viewpointsFile != null) {
+			plan.setViewpointsFile(relativeReference(loadPlanFile, viewpointsFile));
+		}
+	}
+
+	private String relativeReference(File loadPlanFile, File referencedFile) {
+		var parent = loadPlanFile.getAbsoluteFile().toPath().normalize().getParent();
+		var referenced = referencedFile.getAbsoluteFile().toPath().normalize();
+		try {
+			return parent.relativize(referenced).toString();
+		} catch (IllegalArgumentException e) {
+			return referenced.toString();
+		}
 	}
 
 	private void applyViewpoint(LegacyMigrationLoadPlan plan) {
