@@ -520,11 +520,65 @@ public class JdbcTreeStagingLoader {
 				failures.add("pending root contains a duplicate business key: " + root.getId());
 			}
 		}
+		for (LoadDataSetWrapper child : plan.getDataSets()) {
+			if (child.getParentDataSetId() == null || child.getSourceBusinessKey().isEmpty()) {
+				continue;
+			}
+			String table = id(child.getInner().getStagingTable());
+			Set<String> keys = new LinkedHashSet<>();
+			child.getParentJoinKeys().stream()
+					.map(key -> key.getInner().getChildStagingColumn()).forEach(keys::add);
+			keys.addAll(child.getSourceBusinessKey());
+			String selected = keys.stream().map(this::id)
+					.reduce((left, right) -> left + ", " + right).orElseThrow();
+			String nullCondition = keys.stream().map(key -> id(key) + " IS NULL")
+					.reduce((left, right) -> left + " OR " + right).orElseThrow();
+			String pendingHierarchy = pendingHierarchyCondition(child, table);
+			if (hasRow("SELECT " + selected + " FROM " + table + " WHERE "
+					+ pendingHierarchy + " AND (" + nullCondition + ")",
+					child.getId(), "null child business key")) {
+				failures.add("pending child contains a null business key: " + child.getId());
+			}
+			if (hasRow("SELECT " + selected + ", COUNT(*) FROM " + table + " WHERE "
+					+ pendingHierarchy + " GROUP BY " + selected + " HAVING COUNT(*)>1",
+					child.getId(), "duplicate child business key")) {
+				failures.add("pending child contains a duplicate business key: " + child.getId());
+			}
+		}
 		if (!failures.isEmpty()) {
 			throw new CommandException("Staging data preflight failed:"
 					+ System.lineSeparator() + " - "
 					+ String.join(System.lineSeparator() + " - ", failures));
 		}
+	}
+
+	private String pendingHierarchyCondition(LoadDataSetWrapper child, String childTable) {
+		StringBuilder sql = new StringBuilder("EXISTS (SELECT 1 FROM ");
+		LoadDataSetWrapper current = child;
+		LoadDataSetWrapper parent = dataSets.get(current.getParentDataSetId());
+		int level = 0;
+		String parentAlias = "sqlapp_parent_" + level;
+		sql.append(id(parent.getInner().getStagingTable())).append(' ').append(parentAlias);
+		List<String> conditions = new ArrayList<>();
+		for (JoinKeyWrapper key : current.getParentJoinKeys()) {
+			conditions.add(childTable + "." + id(key.getInner().getChildStagingColumn())
+					+ "=" + parentAlias + "." + id(key.getInner().getParentStagingColumn()));
+		}
+		while (parent.getParentDataSetId() != null) {
+			current = parent;
+			parent = dataSets.get(current.getParentDataSetId());
+			String childAlias = parentAlias;
+			parentAlias = "sqlapp_parent_" + (++level);
+			String joinedParentAlias = parentAlias;
+			sql.append(" JOIN ").append(id(parent.getInner().getStagingTable())).append(' ')
+					.append(joinedParentAlias).append(" ON ");
+			sql.append(current.getParentJoinKeys().stream()
+					.map(key -> childAlias + "." + id(key.getInner().getChildStagingColumn())
+							+ "=" + joinedParentAlias + "." + id(key.getInner().getParentStagingColumn()))
+					.reduce((left, right) -> left + " AND " + right).orElseThrow());
+		}
+		conditions.add(parentAlias + "." + id(LOAD_STATUS_COLUMN) + "='PENDING'");
+		return sql.append(" WHERE ").append(String.join(" AND ", conditions)).append(')').toString();
 	}
 
 	private boolean hasRow(String sql, String dataSetId, String check) {

@@ -626,6 +626,68 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testRejectDuplicatePendingChildBusinessKeyBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					INSERT INTO TMP_EMPLOYEE_LIST(LEGACY_COMPANY_ID,EMP_ID)
+					VALUES ('C001','E001')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.getDataSets().get(1).getSourceBusinessKey().add("EMP_ID");
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan));
+
+			assertTrue(exception.getMessage()
+					.contains("pending child contains a duplicate business key: employee"));
+			assertEquals(0, count(connection, "COMPANY_MASTER"));
+		}
+	}
+
+	@Test
+	void testRejectNullPendingChildBusinessKeyBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					INSERT INTO TMP_EMPLOYEE_LIST(LEGACY_COMPANY_ID,EMP_ID)
+					VALUES ('C001',NULL)
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.getDataSets().get(1).getSourceBusinessKey().add("EMP_ID");
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan));
+
+			assertTrue(exception.getMessage()
+					.contains("pending child contains a null business key: employee"));
+			assertEquals(0, count(connection, "COMPANY_MASTER"));
+		}
+	}
+
+	@Test
+	void testIgnoreRetainedChildrenOfLoadedRootsInBusinessKeyPreflight() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.setDeleteCommittedRoots(false);
+			plan.getDataSets().get(1).getSourceBusinessKey().add("EMP_ID");
+			connection.setAutoCommit(false);
+
+			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertDoesNotThrow(() -> new JdbcTreeStagingLoader(connection, schema, plan));
+		}
+	}
+
+	@Test
 	void testDialectQuotesReservedAndMixedCaseIdentifiers() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
