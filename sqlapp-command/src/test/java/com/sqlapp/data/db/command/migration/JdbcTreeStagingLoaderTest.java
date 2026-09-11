@@ -625,6 +625,49 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		}
 	}
 
+	@Test
+	void testDialectQuotesReservedAndMixedCaseIdentifiers() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			executeSql(connection, "DROP TABLE \"Order\" IF EXISTS");
+			executeSql(connection, "DROP TABLE \"Select\" IF EXISTS");
+			executeSql(connection, """
+					CREATE TABLE "Order"
+					(
+					  "Id" VARCHAR(4) PRIMARY KEY
+					, "Value" VARCHAR(20)
+					)
+					""");
+			executeSql(connection, """
+					CREATE TABLE "Select"
+					(
+					  "Key" VARCHAR(4)
+					, "Value" VARCHAR(20)
+					, SQLAPP_LOAD_STATUS VARCHAR(16) DEFAULT 'PENDING' NOT NULL
+					, SQLAPP_LOADED_AT TIMESTAMP
+					)
+					""");
+			executeSql(connection, """
+					INSERT INTO "Select"("Key","Value") VALUES ('K001','quoted')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan retainedPlan = quotedPlan();
+			retainedPlan.setDeleteCommittedRoots(false);
+			connection.setAutoCommit(false);
+
+			assertEquals(1,
+					new JdbcTreeStagingLoader(connection, schema, retainedPlan).load());
+			assertEquals(1, count(connection, "\"Order\" WHERE \"Id\"='K001' AND \"Value\"='quoted'"));
+			assertEquals(1, count(connection,
+					"\"Select\" WHERE SQLAPP_LOAD_STATUS='LOADED' AND SQLAPP_LOADED_AT IS NOT NULL"));
+
+			assertEquals(0,
+					new JdbcTreeStagingLoader(connection, schema, quotedPlan()).load());
+			assertEquals(0, count(connection, "\"Select\""));
+		}
+	}
+
 	private void createTables(Connection connection) throws Exception {
 		dropTables(connection, "EMPLOYEE_LIST");
 		dropTables(connection, "COMPANY_MASTER");
@@ -694,6 +737,17 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		key.setTargetForeignKeyColumn("PARENT_ID");
 		employee.getParentJoinKeys().add(key);
 		plan.getDataSets().add(employee);
+		return plan;
+	}
+
+	private LegacyMigrationLoadPlan quotedPlan() {
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		plan.setTableOperationMode("INSERT_IGNORE");
+		LoadDataSet root = dataSet("quoted", "Order", "Select", null, 0);
+		root.getSourceBusinessKey().add("Key");
+		root.getFields().add(field(1, "Key", "Id", true, false, "COPY"));
+		root.getFields().add(field(2, "Value", "Value", true, false, "COPY"));
+		plan.getDataSets().add(root);
 		return plan;
 	}
 

@@ -57,8 +57,6 @@ public class JdbcTreeStagingLoader {
 
 	private final Map<String, Table> stagingTables = new LinkedHashMap<>();
 
-	private final String identifierQuote;
-
 	private final Dialect dialect;
 
 	public JdbcTreeStagingLoader(Connection connection, DbCommonObject<?> schema, LegacyMigrationLoadPlan plan)
@@ -73,8 +71,6 @@ public class JdbcTreeStagingLoader {
 		this.plan = new LegacyMigrationLoadPlanWrapper(plan);
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tables.forEach(table -> table.setDialect(dialect));
-		String quote = connection.getMetaData().getIdentifierQuoteString();
-		this.identifierQuote = quote == null || quote.isBlank() ? "" : quote;
 		initialize();
 		initializeStagingTables();
 		validateDatabaseObjects();
@@ -588,15 +584,12 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private String id(String value) {
-		if (identifierQuote.isEmpty()) {
-			return value;
-		}
-		return identifierQuote + value.replace(identifierQuote, identifierQuote + identifierQuote) + identifierQuote;
+		return dialect.quote(value);
 	}
 
 	private String qualifiedId(String schema, Table table) {
-		return schema == null || schema.isBlank() ? id(table.getName())
-				: id(schema) + "." + id(table.getName());
+		return schema == null || schema.isBlank() ? dialect.getObjectFullName(table.getName())
+				: dialect.getObjectFullName(schema, table.getName());
 	}
 
 	private void setParameters(PreparedStatement statement, List<Object> parameters) throws SQLException {
