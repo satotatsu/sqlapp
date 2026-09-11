@@ -205,7 +205,6 @@ public class JdbcTreeStagingLoader {
 				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)).toList()) {
 			deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
 		}
-		connection.commit();
 	}
 
 	private void deleteOrphans(LoadDataSetWrapper child, LoadDataSetWrapper parent) throws SQLException {

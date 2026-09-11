@@ -154,6 +154,37 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testRollbackRestoresOrphansWhenTargetLoadFails() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, "DELETE FROM TMP_EMPLOYEE_LIST");
+			executeSql(connection, "DELETE FROM TMP_COMPANY_MASTER");
+			executeSql(connection, """
+					ALTER TABLE COMPANY_MASTER ADD CONSTRAINT CK_COMPANY_ID
+					CHECK (COMPANY_ID <> 'FAIL')
+					""");
+			executeSql(connection, """
+					INSERT INTO TMP_EMPLOYEE_LIST(LEGACY_COMPANY_ID,EMP_ID)
+					VALUES ('ORPH','E001')
+					""");
+			executeSql(connection,
+					"INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID) VALUES ('FAIL')");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+			JdbcTreeStagingLoader loader = new JdbcTreeStagingLoader(connection, schema, plan());
+
+			assertThrows(java.sql.SQLException.class, loader::load);
+			connection.rollback();
+
+			assertEquals(1, count(connection, "TMP_EMPLOYEE_LIST"));
+			assertEquals(1, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(0, count(connection, "COMPANY_MASTER"));
+		}
+	}
+
+	@Test
 	void testMarkRootsLoadedWhenStagingDeletionDisabled() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
