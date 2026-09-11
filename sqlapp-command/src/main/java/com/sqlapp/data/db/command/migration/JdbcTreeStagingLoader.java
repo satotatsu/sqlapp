@@ -201,13 +201,25 @@ public class JdbcTreeStagingLoader {
 		if (!plan.isDeleteCommittedRoots()) {
 			return 0;
 		}
-		long count = 0;
+		long count = deleteCompletedRoots();
 		// Parent-first order makes descendants of a newly deleted orphan eligible
 		// when their level is processed.
 		for (LoadDataSetWrapper child : plan.getDataSets().stream()
 				.filter(dataSet -> dataSet.getParentDataSetId() != null)
 				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)).toList()) {
 			count += deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
+		}
+		return count;
+	}
+
+	private long deleteCompletedRoots() throws SQLException {
+		long count = 0;
+		for (LoadDataSetWrapper root : roots()) {
+			String sql = "DELETE FROM " + id(root.getInner().getStagingTable())
+					+ " WHERE " + id(LOAD_STATUS_COLUMN) + "='LOADED'";
+			try (PreparedStatement statement = connection.prepareStatement(sql)) {
+				count += statement.executeUpdate();
+			}
 		}
 		return count;
 	}

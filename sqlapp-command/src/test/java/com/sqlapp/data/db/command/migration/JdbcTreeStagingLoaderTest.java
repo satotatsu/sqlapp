@@ -411,6 +411,77 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testSwitchToDeletionCleansLoadedRootsAndTheirDescendants() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource()) {
+			Schema schema;
+			try (Connection connection = dataSource.getConnection()) {
+				createTables(connection);
+				schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+				LegacyMigrationLoadPlan retainedPlan = plan();
+				retainedPlan.setDeleteCommittedRoots(false);
+				connection.setAutoCommit(false);
+
+				assertEquals(2,
+						new JdbcTreeStagingLoader(connection, schema, retainedPlan).load());
+				assertEquals(2, count(connection,
+						"TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED'"));
+				assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
+			}
+
+			try (Connection connection = dataSource.getConnection()) {
+				connection.setAutoCommit(false);
+
+				assertEquals(0,
+						new JdbcTreeStagingLoader(connection, schema, plan()).load());
+			}
+
+			try (Connection verification = dataSource.getConnection()) {
+				assertEquals(0, count(verification, "TMP_COMPANY_MASTER"));
+				assertEquals(0, count(verification, "TMP_EMPLOYEE_LIST"));
+				assertEquals(2, count(verification, "COMPANY_MASTER"));
+				assertEquals(3, count(verification, "EMPLOYEE_LIST"));
+			}
+		}
+	}
+
+	@Test
+	void testRollbackRestoresLoadedRootsWhenDeletionSwitchLoadFails() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan retainedPlan = plan();
+			retainedPlan.setDeleteCommittedRoots(false);
+			connection.setAutoCommit(false);
+
+			assertEquals(2,
+					new JdbcTreeStagingLoader(connection, schema, retainedPlan).load());
+			executeSql(connection, """
+					ALTER TABLE COMPANY_MASTER ADD CONSTRAINT CK_COMPANY_ID
+					CHECK (COMPANY_ID <> 'FAIL')
+					""");
+			executeSql(connection,
+					"INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID) VALUES ('FAIL')");
+			connection.commit();
+			Schema switchedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> new JdbcTreeStagingLoader(connection, switchedSchema, plan()).load());
+			connection.rollback();
+
+			assertEquals(3, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(2, count(connection,
+					"TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED' AND SQLAPP_LOADED_AT IS NOT NULL"));
+			assertEquals(1, count(connection,
+					"TMP_COMPANY_MASTER WHERE LEGACY_COMPANY_ID='FAIL' AND SQLAPP_LOAD_STATUS='PENDING'"));
+			assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
+		}
+	}
+
+	@Test
 	void testReportAllMissingDatabaseStagingColumnsBeforeLoading() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
