@@ -481,10 +481,21 @@ public class JdbcTreeStagingLoader {
 			String table = id(root.getInner().getStagingTable());
 			List<String> keys = root.getSourceBusinessKey();
 			String status = id(LOAD_STATUS_COLUMN);
+			String loadedAt = id("SQLAPP_LOADED_AT");
 			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
 					+ " IS NULL OR " + status + " NOT IN ('PENDING','LOADED')",
 					root.getId(), "load status")) {
 				failures.add("root contains an unsupported load status: " + root.getId());
+			}
+			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
+					+ "='LOADED' AND " + loadedAt + " IS NULL",
+					root.getId(), "loaded timestamp")) {
+				failures.add("loaded root has no loaded timestamp: " + root.getId());
+			}
+			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
+					+ "='PENDING' AND " + loadedAt + " IS NOT NULL",
+					root.getId(), "pending timestamp")) {
+				failures.add("pending root has a loaded timestamp: " + root.getId());
 			}
 			String selected = keys.stream().map(this::id)
 					.reduce((left, right) -> left + ", " + right).orElseThrow();

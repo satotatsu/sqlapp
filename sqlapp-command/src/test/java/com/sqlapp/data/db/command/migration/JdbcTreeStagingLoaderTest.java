@@ -301,6 +301,47 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testFailureRollsBackAllRootsInCurrentCommitWindow() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					ALTER TABLE EMPLOYEE_LIST ADD CONSTRAINT CK_EMPLOYEE_ID
+					CHECK (EMP_ID <> 'E003')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.setRootBatchSize(1);
+			plan.setCommitEveryRootBatches(2);
+			connection.setAutoCommit(false);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan).load());
+			connection.rollback();
+
+			assertEquals(0, count(connection, "COMPANY_MASTER"));
+			assertEquals(0, count(connection, "EMPLOYEE_LIST"));
+			assertEquals(2, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(2, count(connection,
+					"TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='PENDING'"));
+			assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
+
+			executeSql(connection,
+					"ALTER TABLE EMPLOYEE_LIST DROP CONSTRAINT CK_EMPLOYEE_ID");
+			connection.commit();
+			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+
+			assertEquals(2,
+					new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
+			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
+		}
+	}
+
+	@Test
 	void testMarkRootsLoadedWhenStagingDeletionDisabled() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
@@ -316,6 +357,56 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 					"TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED'"));
 			assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
 			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan).load());
+		}
+	}
+
+	@Test
+	void testResumeUsesRootStatusWhenStagingDeletionDisabled() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, "DELETE FROM TMP_EMPLOYEE_LIST");
+			executeSql(connection, "DELETE FROM TMP_COMPANY_MASTER");
+			executeSql(connection, """
+					ALTER TABLE COMPANY_MASTER ADD CONSTRAINT CK_COMPANY_ID
+					CHECK (COMPANY_ID <> 'FAIL')
+					""");
+			executeSql(connection, """
+					INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID)
+					VALUES ('C001'),('FAIL')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.setDeleteCommittedRoots(false);
+			plan.setRootBatchSize(1);
+			plan.setCommitEveryRootBatches(1);
+			plan.setRootCursorStrategy("REOPEN");
+			connection.setAutoCommit(false);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan).load());
+			connection.rollback();
+
+			assertEquals(1, count(connection, "COMPANY_MASTER"));
+			assertEquals(1, count(connection,
+					"TMP_COMPANY_MASTER WHERE LEGACY_COMPANY_ID='C001' AND SQLAPP_LOAD_STATUS='LOADED' AND SQLAPP_LOADED_AT IS NOT NULL"));
+			assertEquals(1, count(connection,
+					"TMP_COMPANY_MASTER WHERE LEGACY_COMPANY_ID='FAIL' AND SQLAPP_LOAD_STATUS='PENDING' AND SQLAPP_LOADED_AT IS NULL"));
+
+			executeSql(connection,
+					"ALTER TABLE COMPANY_MASTER DROP CONSTRAINT CK_COMPANY_ID");
+			executeSql(connection,
+					"UPDATE TMP_COMPANY_MASTER SET LEGACY_COMPANY_ID='C002' WHERE LEGACY_COMPANY_ID='FAIL'");
+			connection.commit();
+			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+
+			assertEquals(1,
+					new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(2, count(connection,
+					"TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED' AND SQLAPP_LOADED_AT IS NOT NULL"));
 		}
 	}
 
@@ -382,8 +473,9 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 				Connection connection = dataSource.getConnection()) {
 			createTables(connection);
 			executeSql(connection, """
-					INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID,SQLAPP_LOAD_STATUS)
-					VALUES ('C001','LOADED')
+					INSERT INTO TMP_COMPANY_MASTER(
+						LEGACY_COMPANY_ID,SQLAPP_LOAD_STATUS,SQLAPP_LOADED_AT)
+					VALUES ('C001','LOADED',CURRENT_TIMESTAMP)
 					""");
 			connection.commit();
 			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
@@ -409,6 +501,35 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 
 			assertTrue(exception.getMessage()
 					.contains("root contains an unsupported load status: company"));
+		}
+	}
+
+	@Test
+	void testRejectInconsistentRootLoadStatusTimestampsBeforeLoading() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					UPDATE TMP_COMPANY_MASTER
+					SET SQLAPP_LOAD_STATUS='LOADED'
+					WHERE LEGACY_COMPANY_ID='C001'
+					""");
+			executeSql(connection, """
+					UPDATE TMP_COMPANY_MASTER
+					SET SQLAPP_LOADED_AT=CURRENT_TIMESTAMP
+					WHERE LEGACY_COMPANY_ID='C002'
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+
+			CommandException exception = assertThrows(CommandException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan()));
+
+			assertTrue(exception.getMessage()
+					.contains("loaded root has no loaded timestamp: company"));
+			assertTrue(exception.getMessage()
+					.contains("pending root has a loaded timestamp: company"));
+			assertEquals(0, count(connection, "COMPANY_MASTER"));
 		}
 	}
 
