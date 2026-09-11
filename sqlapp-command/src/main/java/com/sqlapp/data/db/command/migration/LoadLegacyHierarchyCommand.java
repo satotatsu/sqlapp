@@ -111,6 +111,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 			throw new CommandException("Load plan data set disagrees with its contract: "
 					+ target.getId());
 		}
+		validateJoinKeys(source, target);
 		List<LegacyMigrationContract.Field> fields = source.getFields().stream()
 				.filter(field -> field.isExtracted() || field.isGenerated()).toList();
 		if (fields.size() != target.getFields().size()) {
@@ -134,6 +135,27 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 							!= planField.isTargetGenerated()
 					|| !Objects.equals(contractField.getAction(), planField.getAction())) {
 				throw new CommandException("Load plan field disagrees with its contract: "
+						+ target.getId() + "[" + i + "]");
+			}
+		}
+	}
+
+	private void validateJoinKeys(LegacyMigrationContract.DataSet source,
+			LegacyMigrationLoadPlan.LoadDataSet target) {
+		var expected = source.getAncestorKeys().isEmpty() ? List
+				.<LegacyMigrationContract.KeyColumn>of()
+				: source.getAncestorKeys().getFirst().getColumns();
+		if (expected.size() != target.getParentJoinKeys().size()) {
+			throw new CommandException("Load plan parent join keys disagree with its contract: "
+					+ target.getId());
+		}
+		for (int i = 0; i < expected.size(); i++) {
+			var contractKey = expected.get(i);
+			var planKey = target.getParentJoinKeys().get(i);
+			if (!Objects.equals(contractKey.getAncestorColumn(), planKey.getParentStagingColumn())
+					|| !Objects.equals(contractKey.getSourceColumn(), planKey.getChildStagingColumn())
+					|| !Objects.equals(contractKey.getTargetColumn(), planKey.getTargetForeignKeyColumn())) {
+				throw new CommandException("Load plan parent join key disagrees with its contract: "
 						+ target.getId() + "[" + i + "]");
 			}
 		}

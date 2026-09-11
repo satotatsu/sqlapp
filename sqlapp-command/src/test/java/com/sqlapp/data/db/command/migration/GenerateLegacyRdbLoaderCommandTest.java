@@ -115,6 +115,32 @@ class GenerateLegacyRdbLoaderCommandTest {
 	}
 
 	@Test
+	void testRejectLoadPlanJoinThatDisagreesWithContract() throws Exception {
+		File contractFile = new File(temporaryDirectory, "company-contract.yaml");
+		new LegacyMigrationContractIO().write(contractFile, contract());
+		File schemaFile = new File(temporaryDirectory, "company.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"COMPANY\"/>");
+		File output = new File(temporaryDirectory, "loader");
+		GenerateLegacyRdbLoaderCommand generator = new GenerateLegacyRdbLoaderCommand();
+		generator.setContractFile(contractFile);
+		generator.setSchemaFile(schemaFile);
+		generator.setOutputDirectory(output);
+		generator.run();
+		File planFile = new File(output, "company-load-plan.yaml");
+		var plan = new LegacyMigrationLoadPlanIO().read(planFile);
+		plan.getDataSets().getLast().getParentJoinKeys().getFirst()
+				.setTargetForeignKeyColumn("ID");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand loader = new LoadLegacyHierarchyCommand();
+		loader.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, loader::run);
+
+		assertTrue(exception.getMessage()
+				.contains("parent join key disagrees with its contract: table-employee[0]"));
+	}
+
+	@Test
 	void testViewpointGroupSelectionIncludesAncestorAndIsRecorded() throws Exception {
 		File contractFile = new File(temporaryDirectory, "company-contract.yaml");
 		new LegacyMigrationContractIO().write(contractFile, contract());
