@@ -205,6 +205,102 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testResumeFromFailedRootAfterEarlierRootWasCommitted() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, "DELETE FROM TMP_EMPLOYEE_LIST");
+			executeSql(connection, "DELETE FROM TMP_COMPANY_MASTER");
+			executeSql(connection, """
+					ALTER TABLE COMPANY_MASTER ADD CONSTRAINT CK_COMPANY_ID
+					CHECK (COMPANY_ID <> 'FAIL')
+					""");
+			executeSql(connection, """
+					INSERT INTO TMP_COMPANY_MASTER(LEGACY_COMPANY_ID)
+					VALUES ('C001'),('FAIL')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.setRootBatchSize(1);
+			plan.setCommitEveryRootBatches(1);
+			connection.setAutoCommit(false);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan).load());
+			connection.rollback();
+
+			assertEquals(1, count(connection, "COMPANY_MASTER"));
+			assertEquals(1, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(1, count(connection,
+					"TMP_COMPANY_MASTER WHERE LEGACY_COMPANY_ID='FAIL' AND SQLAPP_LOAD_STATUS='PENDING'"));
+
+			executeSql(connection,
+					"ALTER TABLE COMPANY_MASTER DROP CONSTRAINT CK_COMPANY_ID");
+			executeSql(connection,
+					"UPDATE TMP_COMPANY_MASTER SET LEGACY_COMPANY_ID='C002' WHERE LEGACY_COMPANY_ID='FAIL'");
+			connection.commit();
+			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+
+			assertEquals(1,
+					new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
+		}
+	}
+
+	@Test
+	void testResumeFromChildFailureRollsBackOnlyCurrentRoot() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, """
+					ALTER TABLE EMPLOYEE_LIST ADD CONSTRAINT CK_EMPLOYEE_ID
+					CHECK (EMP_ID <> 'E003')
+					""");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			plan.setRootBatchSize(1);
+			plan.setCommitEveryRootBatches(1);
+			connection.setAutoCommit(false);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan).load());
+			connection.rollback();
+
+			assertEquals(1, count(connection, "COMPANY_MASTER"));
+			assertEquals(2, count(connection, "EMPLOYEE_LIST"));
+			assertEquals(1, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
+			assertEquals(2, count(connection,
+					"TMP_EMPLOYEE_LIST WHERE LEGACY_COMPANY_ID='C001'"));
+			assertEquals(1, count(connection,
+					"TMP_COMPANY_MASTER WHERE LEGACY_COMPANY_ID='C002' AND SQLAPP_LOAD_STATUS='PENDING'"));
+			assertEquals(1, count(connection,
+					"TMP_EMPLOYEE_LIST WHERE LEGACY_COMPANY_ID='C002' AND EMP_ID='E003'"));
+
+			executeSql(connection,
+					"ALTER TABLE EMPLOYEE_LIST DROP CONSTRAINT CK_EMPLOYEE_ID");
+			connection.commit();
+			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+
+			assertEquals(1,
+					new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
+			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(1, count(connection, "TMP_EMPLOYEE_LIST"));
+
+			assertEquals(0,
+					new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(0, count(connection, "TMP_EMPLOYEE_LIST"));
+		}
+	}
+
+	@Test
 	void testMarkRootsLoadedWhenStagingDeletionDisabled() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
