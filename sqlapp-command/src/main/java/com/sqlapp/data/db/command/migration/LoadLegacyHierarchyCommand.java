@@ -40,7 +40,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		}
 		var plan = new LegacyMigrationLoadPlanIO().read(loadPlanFile);
 		validateContract(plan);
-		File targetSchemaFile = schemaFile == null ? new File(plan.getSchemaFile()) : schemaFile;
+		File targetSchemaFile = schemaFile == null ? resolveReferencedFile(plan.getSchemaFile()) : schemaFile;
 		if (!targetSchemaFile.isFile()) {
 			throw new CommandException("Target schema XML file does not exist: " + targetSchemaFile);
 		}
@@ -153,7 +153,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		if (plan.getViewpointsFile() == null || plan.getViewpointsFingerprint() == null) {
 			return;
 		}
-		File file = new File(plan.getViewpointsFile());
+		File file = resolveReferencedFile(plan.getViewpointsFile());
 		if (!file.isFile()) {
 			throw new CommandException("Schema viewpoints file in load plan does not exist: " + file);
 		}

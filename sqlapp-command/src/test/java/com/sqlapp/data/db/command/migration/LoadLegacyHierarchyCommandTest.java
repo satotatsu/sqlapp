@@ -122,6 +122,31 @@ class LoadLegacyHierarchyCommandTest {
 		assertTrue(exception.getMessage().contains("Target table was not found in schema"));
 	}
 
+	@Test
+	void testResolvePlanReferencesRelativeToLoadPlan() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "relative-schema.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		File contractFile = new File(temporaryDirectory, "contract.yaml");
+		File viewpointsFile = new File(temporaryDirectory, "viewpoints.yaml");
+		Files.writeString(viewpointsFile.toPath(), "viewpoints: []");
+		plan.setSchemaFile(schemaFile.getName());
+		plan.setContractFile(contractFile.getName());
+		plan.setViewpointsFile(viewpointsFile.getName());
+		plan.setViewpointsFingerprint(
+				new LegacyMigrationMappingValidator().fingerprint(viewpointsFile));
+		File planFile = new File(temporaryDirectory, "relative-load-plan.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+
+		assertTrue(exception.getMessage().contains("Target table was not found in schema"));
+	}
+
 	private void initialize(LegacyMigrationLoadPlan plan, File schemaFile,
 			String schemaFingerprint) throws Exception {
 		plan.setMigrationId("test-migration");
