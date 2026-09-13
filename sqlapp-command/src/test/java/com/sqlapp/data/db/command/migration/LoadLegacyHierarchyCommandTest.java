@@ -94,6 +94,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setSourcePath("OMITTED.ID");
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
+		field.setAction("COPY");
 		field.setExtracted(true);
 		omitted.getFields().add(field);
 		contract.getDataSets().add(omitted);
@@ -227,6 +228,50 @@ class LoadLegacyHierarchyCommandTest {
 						new File(temporaryDirectory, "reserved-staging-column.yaml"), plan));
 
 		assertTrue(exception.getMessage().contains("uses a reserved staging column"));
+	}
+
+	@Test
+	void testRejectDuplicateCsvFiles() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		addOmittedPlanDataSet(plan);
+		plan.getDataSets().getLast().setFileName("ROOT.CSV");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> new LegacyMigrationLoadPlanIO().write(
+						new File(temporaryDirectory, "duplicate-csv.yaml"), plan));
+
+		assertTrue(exception.getMessage().contains("Duplicate load CSV file name"));
+	}
+
+	@Test
+	void testRejectUnsupportedAndInertLoadFields() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		var field = plan.getDataSets().getFirst().getFields().getFirst();
+		field.setAction("UNKNOWN");
+		assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validate(plan));
+
+		field.setAction("COPY");
+		field.setExtracted(false);
+		field.setCsvPosition(0);
+		CommandException inert = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validate(plan));
+		assertTrue(inert.getMessage().contains("must be extracted or target-generated"));
+
+		field.setExtracted(true);
+		field.setCsvPosition(1);
+		field.setTargetGenerated(true);
+		CommandException conflicting = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validate(plan));
+		assertTrue(conflicting.getMessage().contains(
+				"cannot be both extracted and target-generated"));
 	}
 
 	@Test

@@ -67,6 +67,15 @@ public class LegacyMigrationContractValidator {
 			if (dataSet.getFields().stream().anyMatch(field -> field == null)) {
 				throw new CommandException("Data set contains a null field: " + dataSet.getId());
 			}
+			for (Field field : dataSet.getFields()) {
+				try {
+					com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction
+							.valueOf(field.getAction());
+				} catch (IllegalArgumentException | NullPointerException e) {
+					throw new CommandException("Unsupported field action in data set: "
+							+ dataSet.getId() + "." + field.getAction());
+				}
+			}
 			int expectedPosition = 1;
 			List<Field> extractedFields = dataSet.getFields().stream()
 					.filter(field -> field != null && field.isExtracted()).toList();

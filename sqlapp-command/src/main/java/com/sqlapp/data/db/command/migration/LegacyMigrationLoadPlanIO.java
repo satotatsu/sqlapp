@@ -23,6 +23,8 @@ import com.sqlapp.util.YamlConverter;
  * Reads and writes legacy RDB load plans.
  */
 public class LegacyMigrationLoadPlanIO {
+	private static final Set<String> FIELD_ACTIONS = Set.of("COPY", "RENAME", "CAST",
+			"GENERATE", "CONSTANT", "DERIVE", "SPLIT", "COMBINE", "DROP", "REFERENCE");
 
 	private final YamlConverter converter = new YamlConverter();
 
@@ -90,6 +92,7 @@ public class LegacyMigrationLoadPlanIO {
 		}
 		final var byId = new HashMap<String, LegacyMigrationLoadPlan.LoadDataSet>();
 		final var stagingTables = new HashSet<String>();
+		final var csvFiles = new HashSet<String>();
 		for (var dataSet : plan.getDataSets()) {
 			if (dataSet == null) {
 				throw new CommandException("Legacy RDB load plan contains a null data set.");
@@ -98,6 +101,10 @@ public class LegacyMigrationLoadPlanIO {
 			nonBlank(dataSet.getFileName(), "dataSet.fileName");
 			nonBlank(dataSet.getStagingTable(), "dataSet.stagingTable");
 			nonBlank(dataSet.getTargetTable(), "dataSet.targetTable");
+			if (!csvFiles.add(dataSet.getFileName().toLowerCase(java.util.Locale.ROOT))) {
+				throw new CommandException("Duplicate load CSV file name: "
+						+ dataSet.getFileName());
+			}
 			if (!stagingTables.add(dataSet.getStagingTable()
 					.toLowerCase(java.util.Locale.ROOT))) {
 				throw new CommandException("Duplicate staging table: "
@@ -309,6 +316,23 @@ public class LegacyMigrationLoadPlanIO {
 				throw new CommandException("Load data set contains an invalid field: "
 						+ dataSet.getId());
 			}
+			if (!FIELD_ACTIONS.contains(field.getAction())) {
+				throw new CommandException("Load data set field action is unsupported: "
+						+ dataSet.getId() + "." + field.getAction());
+			}
+			if (!field.isExtracted() && !field.isTargetGenerated()) {
+				throw new CommandException("Load data set field must be extracted or target-generated: "
+						+ dataSet.getId());
+			}
+			if (field.isExtracted() && field.isTargetGenerated()) {
+				throw new CommandException("Load data set field cannot be both extracted and target-generated: "
+						+ dataSet.getId() + "." + field.getStagingColumn());
+			}
+			if (field.isTargetGenerated() && !Set.of("GENERATE", "CONSTANT")
+					.contains(field.getAction())) {
+				throw new CommandException("Target-generated load field has an incompatible action: "
+						+ dataSet.getId() + "." + field.getAction());
+			}
 			if (field.isExtracted()) {
 				extractedFields++;
 				if (field.getCsvPosition() <= 0 || blank(field.getStagingColumn())
@@ -342,12 +366,18 @@ public class LegacyMigrationLoadPlanIO {
 	}
 
 	private static void validateJoinKeys(LegacyMigrationLoadPlan.LoadDataSet dataSet) {
+		final var parentColumns = new HashSet<String>();
 		final var childColumns = new HashSet<String>();
+		final var targetColumns = new HashSet<String>();
 		for (var key : dataSet.getParentJoinKeys()) {
 			if (key == null || blank(key.getParentStagingColumn())
 					|| blank(key.getChildStagingColumn())
 					|| blank(key.getTargetForeignKeyColumn())
+					|| !parentColumns.add(key.getParentStagingColumn()
+							.toLowerCase(java.util.Locale.ROOT))
 					|| !childColumns.add(key.getChildStagingColumn()
+							.toLowerCase(java.util.Locale.ROOT))
+					|| !targetColumns.add(key.getTargetForeignKeyColumn()
 							.toLowerCase(java.util.Locale.ROOT))) {
 				throw new CommandException("Child data set join keys are invalid: "
 						+ dataSet.getId());
