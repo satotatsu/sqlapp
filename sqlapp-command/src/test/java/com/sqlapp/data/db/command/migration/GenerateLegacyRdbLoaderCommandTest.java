@@ -153,7 +153,6 @@ class GenerateLegacyRdbLoaderCommandTest {
 		SchemaViewpoints viewpoints = new SchemaViewpoints();
 		SchemaViewpoint viewpoint = new SchemaViewpoint();
 		viewpoint.setId("company-load");
-		viewpoint.getTables().add("COMPANY.COMPANY_MASTER");
 		viewpoint.getTables().add("COMPANY.EMPLOYEE_LIST");
 		viewpoints.getViewpoints().add(viewpoint);
 		new SchemaViewpointsIO().write(viewpointsFile, viewpoints);
