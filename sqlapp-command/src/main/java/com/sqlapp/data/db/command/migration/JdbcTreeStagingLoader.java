@@ -336,7 +336,10 @@ public class JdbcTreeStagingLoader {
 			}
 			// Target
 			Table table = tables.stream()
-					.filter(item -> equals(item.getSchemaName(), dataSet.getInner().getTargetSchema())
+					.filter(item -> (dataSet.getTargetCatalog() == null
+							|| dataSet.getTargetCatalog().isBlank()
+							|| equals(item.getCatalogName(), dataSet.getTargetCatalog()))
+							&& equals(item.getSchemaName(), dataSet.getInner().getTargetSchema())
 							&& equals(item.getName(), dataSet.getInner().getTargetTable()))
 					.findFirst().orElseThrow(() -> new CommandException("Target table was not found: "
 							+ dataSet.getInner().getTargetSchema() + "." + dataSet.getTargetTable()));

@@ -118,6 +118,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 	private void validateDataSet(LegacyMigrationContract.DataSet source,
 			LegacyMigrationLoadPlan.LoadDataSet target) {
 		if (!Objects.equals(source.getFileName(), target.getFileName())
+				|| !Objects.equals(source.getTargetCatalog(), target.getTargetCatalog())
 				|| !Objects.equals(source.getTargetSchema(), target.getTargetSchema())
 				|| !Objects.equals(source.getTargetTable(), target.getTargetTable())
 				|| !Objects.equals(source.getParentDataSetId(), target.getParentDataSetId())
@@ -229,7 +230,8 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		var selectedIds = new LinkedHashSet<String>();
 		for (Table table : resolution.tables()) {
 			List<LegacyMigrationLoadPlan.LoadDataSet> matches = plan.getDataSets().stream()
-					.filter(dataSet -> equalsName(dataSet.getTargetSchema(), table.getSchemaName())
+					.filter(dataSet -> matchesQualifier(dataSet.getTargetCatalog(), table.getCatalogName())
+							&& equalsName(dataSet.getTargetSchema(), table.getSchemaName())
 							&& equalsName(dataSet.getTargetTable(), table.getName()))
 					.toList();
 			if (matches.isEmpty()) {
@@ -270,6 +272,10 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 
 	private boolean equalsName(String left, String right) {
 		return left != null && right != null && left.equalsIgnoreCase(right);
+	}
+
+	private boolean matchesQualifier(String expected, String actual) {
+		return !hasText(expected) || equalsName(expected, actual);
 	}
 
 	private DbCommonObject<?> readSchema(File file) {

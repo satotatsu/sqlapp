@@ -129,6 +129,10 @@ public class LegacyMigrationLoadPlanWrapper {
 			return this.inner.getParentDataSetId();
 		}
 
+		public String getTargetCatalog() {
+			return this.inner.getTargetCatalog();
+		}
+
 		public int getHierarchyDepth() {
 			return this.inner.getHierarchyDepth();
 		}

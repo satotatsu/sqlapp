@@ -66,7 +66,8 @@ public class LegacyRdbLoaderGenerator {
 			LoadDataSet target = new LoadDataSet();
 			target.setId(source.getId());
 			target.setFileName(source.getFileName());
-			target.setStagingTable(stagingTablePrefix + source.getTargetTable());
+			target.setStagingTable(stagingTableName(source, stagingTablePrefix));
+			target.setTargetCatalog(source.getTargetCatalog());
 			target.setTargetSchema(source.getTargetSchema());
 			target.setTargetTable(source.getTargetTable());
 			target.setParentDataSetId(source.getParentDataSetId());
@@ -103,6 +104,16 @@ public class LegacyRdbLoaderGenerator {
 			plan.getDataSets().add(target);
 		}
 		return plan;
+	}
+
+	private String stagingTableName(DataSet source, String stagingTablePrefix) {
+		if (stagingTablePrefix != null) {
+			return stagingTablePrefix + source.getTargetTable();
+		}
+		if (source.getStagingTable() != null && !source.getStagingTable().isBlank()) {
+			return source.getStagingTable();
+		}
+		return "TMP_" + source.getTargetTable();
 	}
 
 	public String stagingDdl(LegacyMigrationLoadPlan plan, Dialect dialect) {

@@ -117,12 +117,40 @@ class GenerateLegacyRdbLoaderCommandTest {
 		command.setContractFile(contractFile);
 		command.setSchemaFile(schemaFile);
 		command.setOutputDirectory(output);
+		command.setStagingTablePrefix("TMP_");
 
 		CommandException exception = assertThrows(CommandException.class, command::run);
 
 		assertTrue(exception.getMessage().contains("Duplicate staging table"));
 		assertFalse(new File(output, "collision-load-plan.yaml").exists());
 		assertFalse(new File(output, "collision-staging.sql").exists());
+	}
+
+	@Test
+	void testUsesContractStagingNamesAndCarriesTargetCatalogByDefault() throws Exception {
+		var contract = contract();
+		contract.getDataSets().getFirst().setStagingTable("LOAD_COMPANY");
+		contract.getDataSets().getLast().setStagingTable("LOAD_EMPLOYEE");
+		contract.getDataSets().forEach(dataSet -> dataSet.setTargetCatalog("APPLICATION"));
+		File contractFile = new File(temporaryDirectory, "catalog-contract.yaml");
+		new LegacyMigrationContractIO().write(contractFile, contract);
+		File schemaFile = new File(temporaryDirectory, "company.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"COMPANY\"/>");
+		File output = new File(temporaryDirectory, "catalog-loader");
+		GenerateLegacyRdbLoaderCommand command = new GenerateLegacyRdbLoaderCommand();
+		command.setContractFile(contractFile);
+		command.setSchemaFile(schemaFile);
+		command.setOutputDirectory(output);
+
+		command.run();
+
+		var plan = new LegacyMigrationLoadPlanIO().read(
+				new File(output, "catalog-load-plan.yaml"));
+		assertEquals("LOAD_COMPANY", plan.getDataSets().getFirst().getStagingTable());
+		assertEquals("LOAD_EMPLOYEE", plan.getDataSets().getLast().getStagingTable());
+		assertEquals("APPLICATION", plan.getDataSets().getFirst().getTargetCatalog());
+		String ddl = Files.readString(new File(output, "catalog-staging.sql").toPath());
+		assertTrue(ddl.contains("CREATE TABLE LOAD_COMPANY"));
 	}
 
 	@Test

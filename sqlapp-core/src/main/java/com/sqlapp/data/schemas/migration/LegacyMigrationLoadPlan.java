@@ -83,6 +83,7 @@ public class LegacyMigrationLoadPlan {
 		private String id;
 		private String fileName;
 		private String stagingTable;
+		private String targetCatalog;
 		private String targetSchema;
 		private String targetTable;
 		private String parentDataSetId;

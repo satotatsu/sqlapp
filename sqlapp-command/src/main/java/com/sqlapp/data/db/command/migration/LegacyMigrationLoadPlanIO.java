@@ -197,15 +197,18 @@ public class LegacyMigrationLoadPlanIO {
 		Objects.requireNonNull(tables, "tables");
 		for (var dataSet : plan.getDataSets()) {
 			List<Table> matches = tables.stream().filter(table ->
-					equalsName(table.getSchemaName(), dataSet.getTargetSchema())
+					matchesQualifier(dataSet.getTargetCatalog(), table.getCatalogName())
+							&& equalsName(table.getSchemaName(), dataSet.getTargetSchema())
 							&& equalsName(table.getName(), dataSet.getTargetTable())).toList();
 			if (matches.isEmpty()) {
 				throw new CommandException("Target table was not found in schema: "
-						+ qualified(dataSet.getTargetSchema(), dataSet.getTargetTable()));
+						+ qualified(dataSet.getTargetCatalog(), dataSet.getTargetSchema(),
+								dataSet.getTargetTable()));
 			}
 			if (matches.size() > 1) {
 				throw new CommandException("Target table is ambiguous in schema: "
-						+ qualified(dataSet.getTargetSchema(), dataSet.getTargetTable()));
+						+ qualified(dataSet.getTargetCatalog(), dataSet.getTargetSchema(),
+								dataSet.getTargetTable()));
 			}
 			Table table = matches.getFirst();
 			for (var field : dataSet.getFields()) {
@@ -299,8 +302,20 @@ public class LegacyMigrationLoadPlanIO {
 		return left == null ? right == null : right != null && left.equalsIgnoreCase(right);
 	}
 
-	private static String qualified(String schema, String table) {
-		return schema == null || schema.isBlank() ? table : schema + "." + table;
+	private static boolean matchesQualifier(String expected, String actual) {
+		return blank(expected) || equalsName(expected, actual);
+	}
+
+	private static String qualified(String catalog, String schema, String table) {
+		var names = new java.util.ArrayList<String>();
+		if (catalog != null && !catalog.isBlank()) {
+			names.add(catalog);
+		}
+		if (schema != null && !schema.isBlank()) {
+			names.add(schema);
+		}
+		names.add(table);
+		return String.join(".", names);
 	}
 
 	private static void validateFields(LegacyMigrationLoadPlan.LoadDataSet dataSet) {

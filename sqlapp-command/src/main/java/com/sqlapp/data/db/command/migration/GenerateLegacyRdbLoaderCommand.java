@@ -56,7 +56,7 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private boolean deleteCommittedRoots = true;
 
-	private String stagingTablePrefix = "TMP_";
+	private String stagingTablePrefix;
 
 	private String rootCursorStrategy = "DIALECT";
 
@@ -90,9 +90,6 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		if (generateRunnerTemplate
 				&& (runnerClassName == null || !runnerClassName.matches("[A-Za-z_$][A-Za-z0-9_$]*"))) {
 			throw new CommandException("Invalid Java runner class name: " + runnerClassName);
-		}
-		if (stagingTablePrefix == null) {
-			throw new CommandException("stagingTablePrefix is required.");
 		}
 		String mode = tableOperationMode == null ? null : tableOperationMode.toUpperCase(Locale.ROOT);
 		String cursorStrategy = rootCursorStrategy == null ? null
@@ -146,7 +143,8 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		Set<String> selectedIds = new LinkedHashSet<>();
 		for (Table table : resolution.tables()) {
 			List<LoadDataSet> matches = plan.getDataSets().stream()
-					.filter(dataSet -> equalsName(dataSet.getTargetSchema(), table.getSchemaName())
+					.filter(dataSet -> matchesQualifier(dataSet.getTargetCatalog(), table.getCatalogName())
+							&& equalsName(dataSet.getTargetSchema(), table.getSchemaName())
 							&& equalsName(dataSet.getTargetTable(), table.getName()))
 					.toList();
 			if (matches.isEmpty()) {
@@ -205,6 +203,10 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private boolean equalsName(String left, String right) {
 		return left != null && right != null && left.equalsIgnoreCase(right);
+	}
+
+	private boolean matchesQualifier(String expected, String actual) {
+		return expected == null || expected.isBlank() || equalsName(expected, actual);
 	}
 
 	private Dialect resolveDialect() {

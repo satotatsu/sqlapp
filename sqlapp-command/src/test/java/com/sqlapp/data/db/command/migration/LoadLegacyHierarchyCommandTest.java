@@ -7,6 +7,7 @@ package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoint;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
 import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
@@ -275,6 +277,27 @@ class LoadLegacyHierarchyCommandTest {
 	}
 
 	@Test
+	void testResolveTargetTableByCatalogSchemaAndName() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		plan.setTableOperationMode("INSERT");
+		plan.getDataSets().getFirst().setTargetCatalog("CATALOG_A");
+		Table expected = table("CATALOG_A");
+		Table other = table("CATALOG_B");
+
+		assertDoesNotThrow(() -> LegacyMigrationLoadPlanIO.validateSchema(plan,
+				java.util.List.of(other, expected)));
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan,
+						java.util.List.of(other)));
+		assertTrue(exception.getMessage().contains("CATALOG_A.PUBLIC.ROOT"));
+	}
+
+	@Test
 	void testRejectMissingTargetTableBeforeOpeningAConnection() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "empty-schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
@@ -425,5 +448,13 @@ class LoadLegacyHierarchyCommandTest {
 		Schema schema = new Schema("PUBLIC");
 		schema.getTables().add(new Table("ROOT"));
 		schema.writeXml(schemaFile);
+	}
+
+	private Table table(String catalog) {
+		Table table = new Table("ROOT");
+		table.setCatalogName(catalog);
+		table.setSchemaName("PUBLIC");
+		table.getColumns().add(new Column("ID"));
+		return table;
 	}
 }

@@ -29,7 +29,6 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		getRootBatchSize().convention(500);
 		getCommitEveryRootBatches().convention(500L);
 		getDeleteCommittedRoots().convention(true);
-		getStagingTablePrefix().convention("TMP_");
 		getRootCursorStrategy().convention("DIALECT");
 		getDatabaseProductMajorVersion().convention(0);
 		getDatabaseProductMinorVersion().convention(0);
@@ -66,6 +65,7 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 	public abstract Property<Boolean> getDeleteCommittedRoots();
 
 	@Input
+	@org.gradle.api.tasks.Optional
 	public abstract Property<String> getStagingTablePrefix();
 
 	@Input
@@ -108,7 +108,9 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		command.setRootBatchSize(getRootBatchSize().get());
 		command.setCommitEveryRootBatches(getCommitEveryRootBatches().get());
 		command.setDeleteCommittedRoots(getDeleteCommittedRoots().get());
-		command.setStagingTablePrefix(getStagingTablePrefix().get());
+		if (getStagingTablePrefix().isPresent()) {
+			command.setStagingTablePrefix(getStagingTablePrefix().get());
+		}
 		command.setRootCursorStrategy(getRootCursorStrategy().get());
 		if (getDatabaseProductName().isPresent()) {
 			command.setDatabaseProductName(getDatabaseProductName().get());
