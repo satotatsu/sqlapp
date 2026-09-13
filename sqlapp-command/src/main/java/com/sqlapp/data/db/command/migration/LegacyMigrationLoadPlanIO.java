@@ -89,6 +89,7 @@ public class LegacyMigrationLoadPlanIO {
 			throw new CommandException("Legacy RDB load plan contains no data sets.");
 		}
 		final var byId = new HashMap<String, LegacyMigrationLoadPlan.LoadDataSet>();
+		final var stagingTables = new HashSet<String>();
 		for (var dataSet : plan.getDataSets()) {
 			if (dataSet == null) {
 				throw new CommandException("Legacy RDB load plan contains a null data set.");
@@ -97,6 +98,11 @@ public class LegacyMigrationLoadPlanIO {
 			nonBlank(dataSet.getFileName(), "dataSet.fileName");
 			nonBlank(dataSet.getStagingTable(), "dataSet.stagingTable");
 			nonBlank(dataSet.getTargetTable(), "dataSet.targetTable");
+			if (!stagingTables.add(dataSet.getStagingTable()
+					.toLowerCase(java.util.Locale.ROOT))) {
+				throw new CommandException("Duplicate staging table: "
+						+ dataSet.getStagingTable());
+			}
 			if (dataSet.getHierarchyDepth() < 0 || dataSet.getLoadOrder() < 0) {
 				throw new CommandException("Load data set hierarchy or load order is invalid: "
 						+ dataSet.getId());
@@ -106,6 +112,7 @@ public class LegacyMigrationLoadPlanIO {
 			}
 			validateFields(dataSet);
 		}
+		validateViewpointMetadata(plan);
 		for (var dataSet : plan.getDataSets()) {
 			if (dataSet.getParentDataSetId() == null) {
 				if (dataSet.getSourceBusinessKey() == null
@@ -139,6 +146,43 @@ public class LegacyMigrationLoadPlanIO {
 			}
 		}
 		return plan;
+	}
+
+	private static void validateViewpointMetadata(LegacyMigrationLoadPlan plan) {
+		boolean selected = !blank(plan.getViewpointId());
+		boolean hasMetadata = !blank(plan.getViewpointsFile())
+				|| !blank(plan.getViewpointsFingerprint())
+				|| hasValues(plan.getResolvedTableIds())
+				|| hasValues(plan.getResolvedDataSetIds());
+		if (!selected) {
+			if (hasMetadata) {
+				throw new CommandException(
+						"Legacy RDB load plan has viewpoint metadata but no viewpointId.");
+			}
+			return;
+		}
+		nonBlank(plan.getViewpointsFile(), "viewpointsFile");
+		nonBlank(plan.getViewpointsFingerprint(), "viewpointsFingerprint");
+		validateResolvedIds(plan.getResolvedTableIds(), "resolvedTableIds");
+		validateResolvedIds(plan.getResolvedDataSetIds(), "resolvedDataSetIds");
+		List<String> dataSetIds = plan.getDataSets().stream()
+				.map(LegacyMigrationLoadPlan.LoadDataSet::getId).toList();
+		if (!dataSetIds.equals(plan.getResolvedDataSetIds())) {
+			throw new CommandException(
+					"Legacy RDB load plan resolvedDataSetIds must match dataSets in order.");
+		}
+	}
+
+	private static void validateResolvedIds(List<String> values, String role) {
+		if (values == null || values.isEmpty() || values.stream().anyMatch(LegacyMigrationLoadPlanIO::blank)
+				|| new HashSet<>(values).size() != values.size()) {
+			throw new CommandException("Legacy RDB load plan " + role
+					+ " must contain unique non-empty values.");
+		}
+	}
+
+	private static boolean hasValues(List<?> values) {
+		return values != null && !values.isEmpty();
 	}
 
 	static void validateSchema(LegacyMigrationLoadPlan plan, List<Table> tables) {
@@ -273,6 +317,10 @@ public class LegacyMigrationLoadPlanIO {
 					throw new CommandException("Extracted load fields require unique positions and columns: "
 							+ dataSet.getId());
 				}
+				if (isReservedStagingColumn(field.getStagingColumn())) {
+					throw new CommandException("Extracted load field uses a reserved staging column: "
+							+ dataSet.getId() + "." + field.getStagingColumn());
+				}
 			} else if (field.getCsvPosition() != 0) {
 				throw new CommandException("Generated load field csvPosition must be zero: "
 						+ dataSet.getId());
@@ -286,6 +334,11 @@ public class LegacyMigrationLoadPlanIO {
 		}
 		validateNames(dataSet.getSourceBusinessKey(), "sourceBusinessKey", dataSet.getId());
 		validateNames(dataSet.getTargetPrimaryKey(), "targetPrimaryKey", dataSet.getId());
+	}
+
+	private static boolean isReservedStagingColumn(String name) {
+		return "SQLAPP_LOAD_STATUS".equalsIgnoreCase(name)
+				|| "SQLAPP_LOADED_AT".equalsIgnoreCase(name);
 	}
 
 	private static void validateJoinKeys(LegacyMigrationLoadPlan.LoadDataSet dataSet) {

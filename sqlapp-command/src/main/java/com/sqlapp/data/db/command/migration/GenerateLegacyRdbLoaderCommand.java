@@ -108,6 +108,7 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		String baseName = baseName(contractFile.getName());
 		File loadPlanFile = new File(outputDirectory, baseName + "-load-plan.yaml");
 		relativizeReferences(plan, loadPlanFile);
+		LegacyMigrationLoadPlanIO.validate(plan);
 		String ddl = generator.stagingDdl(plan, resolveDialect());
 		String importConfiguration = generator.importConfiguration(plan, contract);
 		new LegacyMigrationLoadPlanIO().write(loadPlanFile, plan);

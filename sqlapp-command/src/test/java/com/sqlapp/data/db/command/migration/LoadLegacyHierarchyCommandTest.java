@@ -143,14 +143,12 @@ class LoadLegacyHierarchyCommandTest {
 		configureViewpoint(plan);
 		plan.getResolvedDataSetIds().add("different");
 		File planFile = new File(temporaryDirectory, "tampered-viewpoint-load-plan.yaml");
-		new LegacyMigrationLoadPlanIO().write(planFile, plan);
-		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
-		command.setLoadPlanFile(planFile);
 
-		CommandException exception = assertThrows(CommandException.class, command::run);
+		CommandException exception = assertThrows(CommandException.class,
+				() -> new LegacyMigrationLoadPlanIO().write(planFile, plan));
 
 		assertTrue(exception.getMessage().contains(
-				"Viewpoint resolvedDataSetIds disagree with load plan data sets"));
+				"resolvedDataSetIds must match dataSets in order"));
 	}
 
 	@Test
@@ -175,6 +173,63 @@ class LoadLegacyHierarchyCommandTest {
 	}
 
 	@Test
+	void testRejectContractDataSetOutsideViewpointSelection() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		addOmittedContractDataSet(plan);
+		addOmittedPlanDataSet(plan);
+		configureViewpoint(plan);
+		plan.getResolvedDataSetIds().add("root");
+		plan.getResolvedDataSetIds().add("omitted");
+		File planFile = new File(temporaryDirectory, "expanded-viewpoint-load-plan.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+
+		assertTrue(exception.getMessage().contains(
+				"Viewpoint data set selection disagrees with current schema selection"));
+	}
+
+	@Test
+	void testRejectDuplicateStagingTables() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		addOmittedPlanDataSet(plan);
+		plan.getDataSets().getLast().setStagingTable("stg_root");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> new LegacyMigrationLoadPlanIO().write(
+						new File(temporaryDirectory, "duplicate-staging.yaml"), plan));
+
+		assertTrue(exception.getMessage().contains("Duplicate staging table: stg_root"));
+	}
+
+	@Test
+	void testRejectReservedStagingColumns() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		plan.getDataSets().getFirst().getFields().getFirst()
+				.setStagingColumn("sqlapp_loaded_at");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> new LegacyMigrationLoadPlanIO().write(
+						new File(temporaryDirectory, "reserved-staging-column.yaml"), plan));
+
+		assertTrue(exception.getMessage().contains("uses a reserved staging column"));
+	}
+
+	@Test
 	void testRejectMissingTargetTableBeforeOpeningAConnection() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "empty-schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
@@ -193,18 +248,17 @@ class LoadLegacyHierarchyCommandTest {
 	@Test
 	void testResolvePlanReferencesRelativeToLoadPlan() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "relative-schema.xml");
-		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
 		initialize(plan, schemaFile,
 				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		File contractFile = new File(temporaryDirectory, "contract.yaml");
-		File viewpointsFile = new File(temporaryDirectory, "viewpoints.yaml");
-		Files.writeString(viewpointsFile.toPath(), "viewpoints: []");
+		configureViewpoint(plan);
+		plan.getResolvedDataSetIds().add("root");
+		File viewpointsFile = new File(plan.getViewpointsFile());
 		plan.setSchemaFile(schemaFile.getName());
 		plan.setContractFile(contractFile.getName());
 		plan.setViewpointsFile(viewpointsFile.getName());
-		plan.setViewpointsFingerprint(
-				new LegacyMigrationMappingValidator().fingerprint(viewpointsFile));
 		File planFile = new File(temporaryDirectory, "relative-load-plan.yaml");
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
 		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
@@ -212,7 +266,7 @@ class LoadLegacyHierarchyCommandTest {
 
 		CommandException exception = assertThrows(CommandException.class, command::run);
 
-		assertTrue(exception.getMessage().contains("Target table was not found in schema"));
+		assertTrue(exception.getMessage().contains("Target column was not found"));
 	}
 
 	private void initialize(LegacyMigrationLoadPlan plan, File schemaFile,
@@ -270,18 +324,41 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.setId("omitted");
 		omitted.setSourcePath("OMITTED");
 		omitted.setFileName("omitted.csv");
+		omitted.setTargetSchema("PUBLIC");
 		omitted.setTargetTable("OMITTED");
+		omitted.getSourceBusinessKey().add("ID");
 		var field = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
 		field.setPosition(1);
 		field.setSourcePath("OMITTED.ID");
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
+		field.setTargetDataType("INT");
+		field.setAction("COPY");
 		field.setExtracted(true);
 		omitted.getFields().add(field);
 		contract.getDataSets().add(omitted);
 		new LegacyMigrationContractIO().write(contractFile, contract);
 		plan.setContractFingerprint(
 				new LegacyMigrationMappingValidator().fingerprint(contractFile));
+	}
+
+	private void addOmittedPlanDataSet(LegacyMigrationLoadPlan plan) {
+		var dataSet = new LegacyMigrationLoadPlan.LoadDataSet();
+		dataSet.setId("omitted");
+		dataSet.setFileName("omitted.csv");
+		dataSet.setStagingTable("STG_OMITTED");
+		dataSet.setTargetSchema("PUBLIC");
+		dataSet.setTargetTable("OMITTED");
+		dataSet.getSourceBusinessKey().add("ID");
+		var field = new LegacyMigrationLoadPlan.LoadField();
+		field.setCsvPosition(1);
+		field.setStagingColumn("ID");
+		field.setTargetColumn("ID");
+		field.setDataType("INT");
+		field.setAction("COPY");
+		field.setExtracted(true);
+		dataSet.getFields().add(field);
+		plan.getDataSets().add(dataSet);
 	}
 
 	private void configureViewpoint(LegacyMigrationLoadPlan plan) throws Exception {

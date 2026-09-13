@@ -95,13 +95,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 			throw new CommandException("Load plan data sets disagree with its contract: unexpected="
 					+ unexpected);
 		}
-		if (hasText(plan.getViewpointId())) {
-			validateViewpointSelection(plan, orderedPlanIds);
-		} else if (hasValues(plan.getResolvedDataSetIds())
-				|| hasValues(plan.getResolvedTableIds())) {
-			throw new CommandException(
-					"Load plan has resolved viewpoint IDs but no viewpointId.");
-		} else if (!contractIds.equals(planIds)) {
+		if (!hasText(plan.getViewpointId()) && !contractIds.equals(planIds)) {
 			var missing = new LinkedHashSet<>(contractIds);
 			missing.removeAll(planIds);
 			throw new CommandException("Load plan data sets disagree with its contract: missing="
@@ -117,28 +111,8 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		}
 	}
 
-	private void validateViewpointSelection(LegacyMigrationLoadPlan plan,
-			List<String> orderedPlanIds) {
-		if (!hasText(plan.getViewpointsFile()) || !hasText(plan.getViewpointsFingerprint())) {
-			throw new CommandException(
-					"Viewpoint load plan requires viewpointsFile and viewpointsFingerprint.");
-		}
-		if (plan.getResolvedTableIds() == null || plan.getResolvedTableIds().isEmpty()) {
-			throw new CommandException(
-					"Viewpoint load plan requires at least one resolvedTableId.");
-		}
-		if (!Objects.equals(plan.getResolvedDataSetIds(), orderedPlanIds)) {
-			throw new CommandException("Viewpoint resolvedDataSetIds disagree with load plan data sets: "
-					+ plan.getViewpointId());
-		}
-	}
-
 	private boolean hasText(String value) {
 		return value != null && !value.isBlank();
-	}
-
-	private boolean hasValues(List<?> values) {
-		return values != null && !values.isEmpty();
 	}
 
 	private void validateDataSet(LegacyMigrationContract.DataSet source,

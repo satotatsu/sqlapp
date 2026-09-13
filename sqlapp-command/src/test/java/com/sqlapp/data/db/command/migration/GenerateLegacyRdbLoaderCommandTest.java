@@ -105,6 +105,27 @@ class GenerateLegacyRdbLoaderCommandTest {
 	}
 
 	@Test
+	void testRejectStagingTableCollisionBeforeWritingArtifacts() throws Exception {
+		var contract = contract();
+		contract.getDataSets().getLast().setTargetTable("COMPANY_MASTER");
+		File contractFile = new File(temporaryDirectory, "collision-contract.yaml");
+		new LegacyMigrationContractIO().write(contractFile, contract);
+		File schemaFile = new File(temporaryDirectory, "company.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"COMPANY\"/>");
+		File output = new File(temporaryDirectory, "collision-loader");
+		GenerateLegacyRdbLoaderCommand command = new GenerateLegacyRdbLoaderCommand();
+		command.setContractFile(contractFile);
+		command.setSchemaFile(schemaFile);
+		command.setOutputDirectory(output);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+
+		assertTrue(exception.getMessage().contains("Duplicate staging table"));
+		assertFalse(new File(output, "collision-load-plan.yaml").exists());
+		assertFalse(new File(output, "collision-staging.sql").exists());
+	}
+
+	@Test
 	void testRejectInvalidLoadPlanBeforeExecution() throws Exception {
 		File file = new File(temporaryDirectory, "invalid-load-plan.yaml");
 		Files.writeString(file.toPath(), "format: wrong\nversion: 1\n");
