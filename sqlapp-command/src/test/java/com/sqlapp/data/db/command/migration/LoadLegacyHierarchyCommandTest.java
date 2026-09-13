@@ -15,6 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpoint;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.exceptions.CommandException;
 
 class LoadLegacyHierarchyCommandTest {
@@ -109,7 +114,7 @@ class LoadLegacyHierarchyCommandTest {
 	@Test
 	void testAllowViewpointToSelectContractSubset() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
-		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
 		initialize(plan, schemaFile,
 				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
@@ -123,13 +128,14 @@ class LoadLegacyHierarchyCommandTest {
 
 		CommandException exception = assertThrows(CommandException.class, command::run);
 
-		assertTrue(exception.getMessage().contains("Target table was not found in schema"));
+		assertTrue(exception.getMessage().contains("Target column was not found"),
+				exception::getMessage);
 	}
 
 	@Test
 	void testRejectViewpointResolvedDataSetsThatDisagreeWithPlan() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
-		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
 		initialize(plan, schemaFile,
 				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
@@ -145,6 +151,27 @@ class LoadLegacyHierarchyCommandTest {
 
 		assertTrue(exception.getMessage().contains(
 				"Viewpoint resolvedDataSetIds disagree with load plan data sets"));
+	}
+
+	@Test
+	void testRejectViewpointResolvedTablesThatDisagreeWithSchemaSelection() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		configureViewpoint(plan);
+		plan.getResolvedDataSetIds().add("root");
+		plan.getResolvedTableIds().set(0, "PUBLIC.DIFFERENT");
+		File planFile = new File(temporaryDirectory, "tampered-viewpoint-tables.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+
+		assertTrue(exception.getMessage().contains(
+				"Viewpoint resolvedTableIds disagree with current schema selection"));
 	}
 
 	@Test
@@ -197,6 +224,7 @@ class LoadLegacyHierarchyCommandTest {
 		dataSet.setId("root");
 		dataSet.setFileName("root.csv");
 		dataSet.setStagingTable("STG_ROOT");
+		dataSet.setTargetSchema("PUBLIC");
 		dataSet.setTargetTable("ROOT");
 		dataSet.getSourceBusinessKey().add("ID");
 		var field = new LegacyMigrationLoadPlan.LoadField();
@@ -215,6 +243,7 @@ class LoadLegacyHierarchyCommandTest {
 		contractDataSet.setId(dataSet.getId());
 		contractDataSet.setSourcePath("ROOT");
 		contractDataSet.setFileName(dataSet.getFileName());
+		contractDataSet.setTargetSchema(dataSet.getTargetSchema());
 		contractDataSet.setTargetTable(dataSet.getTargetTable());
 		contractDataSet.getSourceBusinessKey().add("ID");
 		var contractField = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
@@ -257,11 +286,22 @@ class LoadLegacyHierarchyCommandTest {
 
 	private void configureViewpoint(LegacyMigrationLoadPlan plan) throws Exception {
 		File viewpointsFile = new File(temporaryDirectory, "viewpoints.yaml");
-		Files.writeString(viewpointsFile.toPath(), "viewpoints: []");
+		SchemaViewpoints viewpoints = new SchemaViewpoints();
+		SchemaViewpoint viewpoint = new SchemaViewpoint();
+		viewpoint.setId("root-only");
+		viewpoint.getTables().add("PUBLIC.ROOT");
+		viewpoints.getViewpoints().add(viewpoint);
+		new SchemaViewpointsIO().write(viewpointsFile, viewpoints);
 		plan.setViewpointId("root-only");
 		plan.setViewpointsFile(viewpointsFile.getPath());
 		plan.setViewpointsFingerprint(
 				new LegacyMigrationMappingValidator().fingerprint(viewpointsFile));
 		plan.getResolvedTableIds().add("PUBLIC.ROOT");
+	}
+
+	private void writeRootSchema(File schemaFile) throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		schema.getTables().add(new Table("ROOT"));
+		schema.writeXml(schemaFile);
 	}
 }

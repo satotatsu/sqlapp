@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -13,10 +14,16 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointCommandSupport;
+import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaCollection;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpointResolver;
 import com.sqlapp.exceptions.CommandException;
 
 import lombok.Getter;
@@ -52,6 +59,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		}
 		validateViewpointsFingerprint(plan);
 		DbCommonObject<?> schema = readSchema(targetSchemaFile);
+		validateViewpointResolution(plan, schema);
 		LegacyMigrationLoadPlanIO.validateSchema(plan, SchemaUtils.toTables(schema));
 		execute(getDataSource(), connection -> {
 			long roots = new JdbcTreeStagingLoader(connection, schema, plan).load();
@@ -224,6 +232,70 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		if (!plan.getViewpointsFingerprint().equals(fingerprint)) {
 			throw new CommandException("Schema viewpoints fingerprint does not match the load plan: " + file);
 		}
+	}
+
+	private void validateViewpointResolution(LegacyMigrationLoadPlan plan,
+			DbCommonObject<?> schema) {
+		if (!hasText(plan.getViewpointId())) {
+			return;
+		}
+		File viewpointsFile = resolveReferencedFile(plan.getViewpointsFile());
+		var resolution = new SchemaViewpointCommandSupport().resolve(toCatalog(schema),
+				viewpointsFile, plan.getViewpointId());
+		var resolver = new SchemaViewpointResolver();
+		List<String> resolvedTableIds = resolution.tables().stream()
+				.map(resolver::qualifiedName).toList();
+		if (!Objects.equals(plan.getResolvedTableIds(), resolvedTableIds)) {
+			throw new CommandException(
+					"Viewpoint resolvedTableIds disagree with current schema selection: "
+							+ plan.getViewpointId());
+		}
+		Map<String, LegacyMigrationLoadPlan.LoadDataSet> byId = new LinkedHashMap<>();
+		plan.getDataSets().forEach(dataSet -> byId.put(dataSet.getId(), dataSet));
+		var selectedIds = new LinkedHashSet<String>();
+		for (Table table : resolution.tables()) {
+			List<LegacyMigrationLoadPlan.LoadDataSet> matches = plan.getDataSets().stream()
+					.filter(dataSet -> equalsName(dataSet.getTargetSchema(), table.getSchemaName())
+							&& equalsName(dataSet.getTargetTable(), table.getName()))
+					.toList();
+			if (matches.isEmpty()) {
+				throw new CommandException("Viewpoint table has no selected migration data set: "
+						+ resolver.qualifiedName(table));
+			}
+			matches.forEach(dataSet -> selectedIds.add(dataSet.getId()));
+		}
+		for (String id : new ArrayList<>(selectedIds)) {
+			var current = byId.get(id);
+			while (current != null && current.getParentDataSetId() != null) {
+				current = byId.get(current.getParentDataSetId());
+				if (current != null) {
+					selectedIds.add(current.getId());
+				}
+			}
+		}
+		var planIds = new LinkedHashSet<>(plan.getResolvedDataSetIds());
+		if (!selectedIds.equals(planIds)) {
+			throw new CommandException(
+					"Viewpoint data set selection disagrees with current schema selection: "
+							+ plan.getViewpointId());
+		}
+	}
+
+	private Catalog toCatalog(DbCommonObject<?> object) {
+		if (object instanceof Catalog catalog) {
+			return catalog;
+		}
+		if (object instanceof Schema schema) {
+			return schema.toCatalog();
+		}
+		if (object instanceof SchemaCollection schemas) {
+			return schemas.toCatalog();
+		}
+		throw new CommandException("Target schema XML cannot be resolved as a catalog.");
+	}
+
+	private boolean equalsName(String left, String right) {
+		return left != null && right != null && left.equalsIgnoreCase(right);
 	}
 
 	private DbCommonObject<?> readSchema(File file) {
