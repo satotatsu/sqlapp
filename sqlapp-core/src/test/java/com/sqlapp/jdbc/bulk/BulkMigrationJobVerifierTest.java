@@ -378,6 +378,7 @@ class BulkMigrationJobVerifierTest {
 		final var result = BulkMigrationJobRepairExecutor.execute(connection, List.of(task));
 
 		assertEquals(1, result.getTasks().size());
+		assertTrue(result.getPlanFingerprint() != null && !result.getPlanFingerprint().isBlank());
 		assertEquals(0, result.getReplayedRows());
 		assertSame(target, task.getTargetTable());
 		assertTrue(task.getOptions().isVerifyExpectedHashes());
@@ -415,6 +416,25 @@ class BulkMigrationJobVerifierTest {
 		assertSame(cause, failure.getCause());
 		assertSame(completed, failure.getCompletedResult());
 		assertEquals("items", failure.getFailedTaskId());
+	}
+
+	@Test
+	void repairResultsArePlanBoundImmutableAndStructurallyValidated() {
+		final var repair = new BulkMigrationRepairResult(1, 1, 1, 1,
+				List.of(), List.of());
+		final var task = new BulkMigrationJobTaskRepairResult("task", repair);
+		final var result = new BulkMigrationJobRepairResult("plan-v1", List.of(task));
+
+		assertEquals("plan-v1", result.getPlanFingerprint());
+		assertThrows(UnsupportedOperationException.class, () -> result.getTasks().clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationRepairResult(0, 1, 0, 0, List.of(), List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationRepairResult(1, 0, 0, 0, List.of(1L, 1L), List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskRepairResult(" ", repair));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult("plan-v1", List.of(task, task)));
 	}
 
 	@Test

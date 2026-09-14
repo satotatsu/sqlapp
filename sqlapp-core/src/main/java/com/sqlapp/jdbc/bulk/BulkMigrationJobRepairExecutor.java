@@ -32,10 +32,12 @@ public final class BulkMigrationJobRepairExecutor {
 				results.add(new BulkMigrationJobTaskRepairResult(task.taskId(), result));
 			} catch (SQLException | RuntimeException e) {
 				throw new BulkMigrationJobRepairException(task.taskId(),
-						new BulkMigrationJobRepairResult(List.copyOf(results)), e);
+						new BulkMigrationJobRepairResult(plan.getFingerprint(),
+								List.copyOf(results)), e);
 			}
 		}
-		return new BulkMigrationJobRepairResult(List.copyOf(results));
+		return new BulkMigrationJobRepairResult(plan.getFingerprint(),
+				List.copyOf(results));
 	}
 
 	public static BulkMigrationJobRepairResult execute(final Connection targetConnection,
@@ -57,7 +59,7 @@ public final class BulkMigrationJobRepairExecutor {
 			plan.validateUnchanged();
 		} catch (RuntimeException e) {
 			throw new BulkMigrationJobRepairException("<plan>",
-					new BulkMigrationJobRepairResult(List.of()), e);
+					new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()), e);
 		}
 		for (final BulkMigrationJobRepairPlan.Task task : plan.getTasks()) {
 			try {
@@ -65,7 +67,7 @@ public final class BulkMigrationJobRepairExecutor {
 						task.repairPlan());
 			} catch (SQLException | RuntimeException e) {
 				throw new BulkMigrationJobRepairException(task.taskId(),
-						new BulkMigrationJobRepairResult(List.of()), e);
+						new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()), e);
 			}
 		}
 	}

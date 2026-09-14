@@ -30,6 +30,23 @@ import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
 	@Test
+	void migrationResultsRejectInvalidAggregateAndTaskState() {
+		final var migration = new ChunkedBulkMigrationResult(0, 1, 1, false);
+		final var task = new BulkMigrationJobTaskResult("task", migration);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> new ChunkedBulkMigrationResult(-1, 0, 0, false));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskResult(" ", migration));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobTaskResult("task", null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobResult(" ", List.of(task)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobResult("plan", List.of(task, task)));
+	}
+
+	@Test
 	void separatesStableJobIdentityFromTheExactPlanFingerprint() {
 		final Table table = new Table("CUSTOMERS");
 		table.getColumns().add(new Column("ID"));

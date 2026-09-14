@@ -97,6 +97,7 @@ class BulkMigrationTest {
 		assertEquals(0, report.estimatedReplayRows());
 		assertEquals(1, report.mismatchChunks());
 		final var result = repair.executeApproved(repairFile);
+		assertEquals(report.planFingerprint(), result.getPlanFingerprint());
 		assertEquals(0, result.getReplayedRows());
 		assertEquals(List.of(0L), result.getTasks().get(0).getRepairResult()
 				.getChunksWithoutExpectedRows());
