@@ -31,7 +31,8 @@ public class LegacyMigrationLoadPlanWrapper {
 
 	public LegacyMigrationLoadPlanWrapper(LegacyMigrationLoadPlan inner) {
 		this.inner = inner;
-		this.dataSets = inner.getDataSets().stream().map(o -> new LoadDataSetWrapper(o)).toList();
+		this.dataSets = inner.getDataSets() == null ? List.of()
+				: inner.getDataSets().stream().map(o -> new LoadDataSetWrapper(o)).toList();
 	}
 
 	public String getFormat() {
@@ -96,6 +97,10 @@ public class LegacyMigrationLoadPlanWrapper {
 
 	public boolean isDeleteCommittedRoots() {
 		return this.inner.isDeleteCommittedRoots();
+	}
+
+	public String getStagingTablePrefix() {
+		return this.inner.getStagingTablePrefix();
 	}
 
 	public String getRootCursorStrategy() {

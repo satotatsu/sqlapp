@@ -95,6 +95,7 @@ class GeneratePliCsvExtractorCommandTest {
 		contract.getCsv().setNullValue("\\N");
 		DataSet root = dataSet("table-company", "COMPANY_MASTER", "company_master.csv",
 				"COMPANY_MASTER", null, 0);
+		root.getSourceBusinessKey().add("COMPANY_ID");
 		root.getFields().add(field(1, "COMPANY_MASTER.COMPANY_ID", "COMPANY_ID", false));
 		contract.getDataSets().add(root);
 		DataSet employee = dataSet("table-employee", "EMPLOYEE_LIST", "employee_list.csv",

@@ -135,9 +135,15 @@ public class LegacyMigrationContractValidator {
 					throw new CommandException("Child data set hierarchy is inconsistent: "
 							+ dataSet.getId());
 				}
-			} else if (dataSet.getHierarchyDepth() != 0) {
-				throw new CommandException("Root data set hierarchy depth must be zero: "
-						+ dataSet.getId());
+			} else {
+				if (dataSet.getHierarchyDepth() != 0) {
+					throw new CommandException("Root data set hierarchy depth must be zero: "
+							+ dataSet.getId());
+				}
+				if (dataSet.getSourceBusinessKey().isEmpty()) {
+					throw new CommandException("Root data set requires sourceBusinessKey for restart: "
+							+ dataSet.getId());
+				}
 			}
 			Set<String> visited = new HashSet<>();
 			DataSet current = dataSet;

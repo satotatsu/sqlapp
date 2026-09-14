@@ -111,6 +111,7 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.setFileName("omitted.csv");
 		omitted.setTargetTable("OMITTED");
 		omitted.setLoadOrder(1);
+		omitted.getSourceBusinessKey().add("ID");
 		var field = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
 		field.setPosition(1);
 		field.setSourcePath("OMITTED.ID");

@@ -327,7 +327,6 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private void initialize() {
-		LegacyMigrationLoadPlanIO.validateSchema(plan.getInner(), tables);
 		if (!LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
 			throw new CommandException("Unsupported legacy migration load plan.");
 		}
@@ -337,6 +336,10 @@ public class JdbcTreeStagingLoader {
 		if (plan.getRootBatchSize() <= 0 || plan.getCommitEveryRootBatches() <= 0) {
 			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");
 		}
+		if (plan.getDataSets().isEmpty()) {
+			throw new CommandException("The legacy migration load plan contains no data sets.");
+		}
+		LegacyMigrationLoadPlanIO.validateSchema(plan.getInner(), tables);
 		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			if (dataSets.put(dataSet.getId(), dataSet) != null) {
 				throw new CommandException("Duplicate load data set id: " + dataSet.getId());

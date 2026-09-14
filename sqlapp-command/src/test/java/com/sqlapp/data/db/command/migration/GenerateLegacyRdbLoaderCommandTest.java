@@ -168,6 +168,12 @@ class GenerateLegacyRdbLoaderCommandTest {
 
 	@Test
 	void testRejectKeysThatReferenceUnknownFields() {
+		var missingRootBusinessKey = contract();
+		missingRootBusinessKey.getDataSets().getFirst().getSourceBusinessKey().clear();
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(missingRootBusinessKey))
+				.getMessage().contains("requires sourceBusinessKey for restart"));
+
 		var invalidBusinessKey = contract();
 		invalidBusinessKey.getDataSets().getFirst().getSourceBusinessKey()
 				.set(0, "UNKNOWN_SOURCE");
