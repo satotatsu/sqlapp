@@ -22,7 +22,10 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
@@ -293,6 +296,35 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void ordersTasksWhenTheForeignKeyUsesAnEquivalentParentInstance() {
+		final Table parent = table("PARENT");
+		final Table equivalentParent = table("parent");
+		final Table child = table("CHILD");
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
+				child.getColumns().get("ID"), equivalentParent.getColumns().get("ID"));
+
+		final var ordered = BulkMigrationJobExecutor.order(List.of(
+				tableTask("child", "equivalent-child", child),
+				tableTask("parent", "equivalent-parent", parent)));
+
+		assertEquals(List.of("parent", "child"), ordered.stream()
+				.map(BulkMigrationJobTask::getTaskId).toList());
+	}
+
+	@Test
+	void ignoresAnUnresolvedForeignKeyWhenOrderingTasks() {
+		final Table table = table("STANDALONE");
+		final ForeignKeyConstraint foreignKey = new ForeignKeyConstraint("FK_EXTERNAL");
+		foreignKey.getColumns().add(table.getColumns().get("ID"));
+		foreignKey.setRelatedTableName("MISSING_PARENT");
+		foreignKey.getRelatedColumns().add("ID");
+		table.getConstraints().add(foreignKey);
+		final var task = tableTask("standalone", "unresolved-foreign-key", table);
+
+		assertEquals(List.of(task), BulkMigrationJobExecutor.order(List.of(task)));
+	}
+
+	@Test
 	void publicPlannerReturnsAnImmutableValidatedDryRunOrder() {
 		final Table parent = table("PARENT");
 		final Table child = table("CHILD");
@@ -425,6 +457,25 @@ class BulkMigrationJobExecutorTest {
 						.duplicateRowSelector(selector).build()).build();
 		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(List.of(
 				tableTask("missing", table, missingFingerprint))));
+	}
+
+	@Test
+	void fingerprintDistinguishesForeignKeyParentCatalogs() {
+		final Table firstParent = tableIn("CATALOG1", "PUBLIC", "PARENT");
+		final Table secondParent = tableIn("CATALOG2", "PUBLIC", "PARENT");
+		final Table firstChild = table("CHILD");
+		firstChild.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
+				firstChild.getColumns().get("ID"), firstParent.getColumns().get("ID"));
+		final Table secondChild = table("CHILD");
+		secondChild.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
+				secondChild.getColumns().get("ID"), secondParent.getColumns().get("ID"));
+
+		final String firstFingerprint = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("child", "catalog-parent", firstChild))).getFingerprint();
+		final String secondFingerprint = BulkMigrationJobPlanner.plan(List.of(
+				tableTask("child", "catalog-parent", secondChild))).getFingerprint();
+
+		assertNotEquals(firstFingerprint, secondFingerprint);
 	}
 
 	@Test
@@ -562,9 +613,30 @@ class BulkMigrationJobExecutorTest {
 		assertEquals(List.of(task), BulkMigrationJobExecutor.order(List.of(task)));
 	}
 
+	@Test
+	void allowsSelfReferenceThroughAnEquivalentTableInstance() {
+		final Table table = table("TREE");
+		final Table equivalentTable = table("tree");
+		table.getConstraints().addForeignKeyConstraint("FK_TREE_PARENT",
+				table.getColumns().get("ID"), equivalentTable.getColumns().get("ID"));
+		final var task = tableTask("tree", "equivalent-self-reference", table);
+
+		assertEquals(List.of(task), BulkMigrationJobExecutor.order(List.of(task)));
+	}
+
 	private static BulkMigrationJobTask tableTask(final String taskId,
 			final String migrationId, final Table table) {
 		return tableTask(taskId, table, options(migrationId));
+	}
+
+	private static Table tableIn(final String catalogName, final String schemaName,
+			final String tableName) {
+		final Catalog catalog = new Catalog(catalogName);
+		final Schema schema = new Schema(schemaName);
+		catalog.getSchemas().add(schema);
+		final Table table = table(tableName);
+		schema.getTables().add(table);
+		return table;
 	}
 
 	private static BulkMigrationJobTask tableTask(final String taskId,

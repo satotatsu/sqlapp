@@ -158,7 +158,10 @@ public class BulkMigrationJobPlan {
 		final var foreignKeys = table.getConstraints().getForeignKeyConstraints();
 		update(digest, foreignKeys.size());
 		foreignKeys.forEach(foreignKey -> {
-			update(digest, foreignKey.getName(), foreignKey.getRelatedTableSchemaName(),
+			final Table relatedTable = foreignKey.getRelatedTable();
+			update(digest, foreignKey.getName(),
+					relatedTable == null ? null : relatedTable.getCatalogName(),
+					foreignKey.getRelatedTableSchemaName(),
 					foreignKey.getRelatedTableName(), foreignKey.getColumns().size(),
 					foreignKey.getRelatedColumns().size());
 			foreignKey.getColumns().forEach(column -> update(digest, column.getName()));

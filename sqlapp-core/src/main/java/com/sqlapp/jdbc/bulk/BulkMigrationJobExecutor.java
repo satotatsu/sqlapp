@@ -5,8 +5,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +16,7 @@ import java.util.Set;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
+import com.sqlapp.data.schemas.SchemaUtils;
 
 /** Executes table migrations in validated dependency order. */
 public final class BulkMigrationJobExecutor {
@@ -211,23 +212,21 @@ public final class BulkMigrationJobExecutor {
 	}
 
 	private static void validateAcyclic(final List<BulkMigrationJobTask> tasks) {
-		final Map<Table, List<BulkMigrationJobTask>> tasksByTable = new HashMap<>();
-		final Map<BulkMigrationJobTask, Integer> indegree = new HashMap<>();
-		final Map<BulkMigrationJobTask, Set<BulkMigrationJobTask>> graph = new HashMap<>();
+		final Map<BulkMigrationJobTask, Integer> indegree = new LinkedHashMap<>();
+		final Map<BulkMigrationJobTask, Set<BulkMigrationJobTask>> graph = new LinkedHashMap<>();
 		for (final BulkMigrationJobTask task : tasks) {
-			tasksByTable.computeIfAbsent(sourceTable(task), key -> new ArrayList<>()).add(task);
 			indegree.put(task, 0);
 			graph.put(task, new LinkedHashSet<>());
 		}
 		for (final BulkMigrationJobTask child : tasks) {
 			final Table childTable = sourceTable(child);
 			childTable.getConstraints().getForeignKeyConstraints(
-					fk -> !fk.getRelatedTable().equals(childTable)).forEach(fk -> {
-				final List<BulkMigrationJobTask> parents = tasksByTable.get(fk.getRelatedTable());
-				if (parents == null) {
-					return;
-				}
-				for (final BulkMigrationJobTask parent : parents) {
+					fk -> fk.getRelatedTable() != null
+							&& !SchemaUtils.isSameTable(fk.getRelatedTable(), childTable)).forEach(fk -> {
+				for (final BulkMigrationJobTask parent : tasks) {
+					if (!SchemaUtils.isSameTable(sourceTable(parent), fk.getRelatedTable())) {
+						continue;
+					}
 					if (graph.get(parent).add(child)) {
 						indegree.put(child, indegree.get(child) + 1);
 					}
