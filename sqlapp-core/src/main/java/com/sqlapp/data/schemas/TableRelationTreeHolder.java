@@ -24,13 +24,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.db.sql.SqlSignature;
@@ -107,16 +110,19 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		// 対象テーブル内にある親を設定
 		for (Table table : tables) {
 			final TableRelation tableRelation = getTableRelation(table);
-			List<ForeignKeyConstraint> fks = table.getConstraints()
+			List<ForeignKeyConstraint> candidates = table.getConstraints()
 					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != null
 							&& !SchemaUtils.isSameTable(fk.getRelatedTable(), table)
-							&& foreignKeyPredicate.test(fk));
-			for (ForeignKeyConstraint fk : fks) {
-				Table relatedTable = fk.getRelatedTable();
-				if (getTableRelation(relatedTable) != null) {
-					tableRelation.setForeignKeyConstraint(fk);
-					break;
-				}
+							&& foreignKeyPredicate.test(fk)).stream()
+					.filter(fk -> getTableRelation(fk.getRelatedTable()) != null).toList();
+			if (candidates.size() > 1) {
+				throw new IllegalArgumentException("Multiple parent foreign keys remain for table "
+						+ qualifiedName(table) + ": "
+						+ candidates.stream().map(ForeignKeyConstraint::getName).sorted().toList()
+						+ "; select one with foreignKeyPredicate.");
+			}
+			if (!candidates.isEmpty()) {
+				tableRelation.setForeignKeyConstraint(candidates.getFirst());
 			}
 		}
 		// 対象テーブル内にある子を設定
@@ -143,6 +149,26 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 					+ "check for a cyclic relationship.");
 		}
 		this.rootTableRelation = rootList.getFirst();
+		validateReachability();
+	}
+
+	private void validateReachability() {
+		Set<TableRelation> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+		ArrayDeque<TableRelation> pending = new ArrayDeque<>();
+		pending.add(rootTableRelation);
+		while (!pending.isEmpty()) {
+			TableRelation current = pending.removeFirst();
+			if (visited.add(current)) {
+				pending.addAll(current.getChildren());
+			}
+		}
+		if (visited.size() != qualifiedTableMap.values().size()) {
+			List<String> unreachable = qualifiedTableMap.values().stream()
+					.filter(relation -> !visited.contains(relation))
+					.map(relation -> qualifiedName(relation.getTable())).sorted().toList();
+			throw new IllegalArgumentException("Table relation tree contains tables unreachable from root; "
+					+ "check for a cyclic relationship: " + unreachable);
+		}
 	}
 
 	private String qualifiedName(Table table) {

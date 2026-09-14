@@ -22,6 +22,7 @@ package com.sqlapp.data.schemas;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -62,6 +63,22 @@ class TableRelationTreeHolderTest {
 				foreignKey -> foreignKey.getTable() != child || foreignKey == selected);
 
 		assertEquals("tabB", holder.getTableRelation(child).getParent().getName());
+	}
+
+	@Test
+	void rejectsMultipleParentForeignKeysWithoutASelection() {
+		List<Table> tables = getTables();
+		Table child = tables.get(2);
+		Table alternativeParent = tables.getFirst();
+		child.getConstraints().addForeignKeyConstraint("fk_alternative", child.getColumns().get("ID"),
+				alternativeParent.getColumns().get("ID"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(tables));
+
+		assertTrue(exception.getMessage().contains("Multiple parent foreign keys remain for table tabC"));
+		assertTrue(exception.getMessage().contains("fk_alternative"));
+		assertTrue(exception.getMessage().contains("fk_tabC"));
 	}
 
 	@Test
@@ -184,6 +201,34 @@ class TableRelationTreeHolderTest {
 
 		assertEquals("Table relation tree contains no root table; check for a cyclic relationship.",
 				exception.getMessage());
+	}
+
+	@Test
+	void rejectsACycleDisconnectedFromTheSingleRoot() {
+		Table root = table("ROOT", "ID", null);
+		Table first = table("FIRST", "ID", "SECOND_ID");
+		Table second = table("SECOND", "ID", "FIRST_ID");
+		first.getConstraints().addForeignKeyConstraint("fk_second",
+				first.getColumns().get("SECOND_ID"), second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("fk_first",
+				second.getColumns().get("FIRST_ID"), first.getColumns().get("ID"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(root, first, second));
+
+		assertTrue(exception.getMessage().contains("tables unreachable from root"));
+		assertTrue(exception.getMessage().contains("FIRST"));
+		assertTrue(exception.getMessage().contains("SECOND"));
+	}
+
+	private Table table(String name, String primaryKey, String foreignKey) {
+		Table table = new Table(name);
+		table.getColumns().add(new Column(primaryKey).setDataType(DataType.INT));
+		if (foreignKey != null) {
+			table.getColumns().add(new Column(foreignKey).setDataType(DataType.INT));
+		}
+		table.setPrimaryKey(table.getColumns().get(primaryKey));
+		return table;
 	}
 
 	private List<Table> getTables() {

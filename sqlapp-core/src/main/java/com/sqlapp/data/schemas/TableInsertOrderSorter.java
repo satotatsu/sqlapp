@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +41,10 @@ public final class TableInsertOrderSorter {
 
 	private static class TableComparator<T> implements Comparator<T> {
 		private final Function<T, Table> func;
+		private final Collection<T> tables;
 
-		TableComparator(Function<T, Table> func) {
+		TableComparator(Collection<T> tables, Function<T, Table> func) {
+			this.tables = tables;
 			this.func = func;
 		}
 
@@ -50,18 +52,26 @@ public final class TableInsertOrderSorter {
 		public int compare(T o1, T o2) {
 			Table table1 = func.apply(o1);
 			Table table2 = func.apply(o2);
-			if (table1.getConstraints().getForeignKeyConstraints().isEmpty()) {
-				if (table2.getConstraints().getForeignKeyConstraints().isEmpty()) {
+			if (!hasDependency(table1)) {
+				if (!hasDependency(table2)) {
 					return CommonUtils.compare(table1.getName().toUpperCase(), table2.getName().toUpperCase());
 				}
 			}
 			return 0;
 		}
+
+		private boolean hasDependency(Table table) {
+			return table.getConstraints().getForeignKeyConstraints().stream()
+					.map(ForeignKeyConstraint::getRelatedTable)
+					.filter(parent -> parent != null && !SchemaUtils.isSameTable(parent, table))
+					.anyMatch(parent -> tables.stream()
+							.anyMatch(item -> SchemaUtils.isSameTable(func.apply(item), parent)));
+		}
 	}
 
 	public static <T> List<T> sort(Collection<T> tables, Function<T, Table> func) {
 		List<T> sorted = sortInternal(tables, func);
-		Collections.sort(sorted, new TableComparator<T>(func));
+		Collections.sort(sorted, new TableComparator<T>(tables, func));
 		return sorted;
 	}
 
@@ -72,13 +82,11 @@ public final class TableInsertOrderSorter {
 	}
 
 	private static <T> List<T> sortInternal(Collection<T> tables, Function<T, Table> func) {
-		Map<T, Integer> indegree = new HashMap<>();
-		Map<T, Set<T>> graph = new HashMap<>();
-		Map<Table, List<T>> nodesByTable = new HashMap<>();
+		Map<T, Integer> indegree = new LinkedHashMap<>();
+		Map<T, Set<T>> graph = new LinkedHashMap<>();
 		for (T table : tables) {
 			indegree.put(table, 0);
 			graph.put(table, new LinkedHashSet<>());
-			nodesByTable.computeIfAbsent(func.apply(table), k -> new ArrayList<>()).add(table);
 		}
 		//
 		// FK
@@ -87,17 +95,14 @@ public final class TableInsertOrderSorter {
 		for (T child : tables) {
 			Table table = func.apply(child);
 			List<ForeignKeyConstraint> fks = table.getConstraints()
-					.getForeignKeyConstraints(fk -> !fk.getRelatedTable().equals(table));
+					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != null
+							&& !SchemaUtils.isSameTable(fk.getRelatedTable(), table));
 			for (ForeignKeyConstraint fk : fks) {
 				Table parent = fk.getRelatedTable();
-				if (parent == null) {
-					continue;
-				}
-				List<T> parents = nodesByTable.get(parent);
-				if (parents == null) {
-					continue;
-				}
-				for (T parentNode : parents) {
+				for (T parentNode : tables) {
+					if (!SchemaUtils.isSameTable(func.apply(parentNode), parent)) {
+						continue;
+					}
 					if (graph.get(parentNode).add(child)) {
 						indegree.put(child, indegree.get(child) + 1);
 					}
