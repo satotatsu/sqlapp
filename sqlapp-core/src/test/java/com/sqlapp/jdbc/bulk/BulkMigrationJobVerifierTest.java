@@ -420,12 +420,15 @@ class BulkMigrationJobVerifierTest {
 
 	@Test
 	void repairResultsArePlanBoundImmutableAndStructurallyValidated() {
+		final var manualChunks = new ArrayList<>(List.of(2L));
 		final var repair = new BulkMigrationRepairResult(1, 1, 1, 1,
-				List.of(), List.of());
+				manualChunks, List.of());
 		final var task = new BulkMigrationJobTaskRepairResult("task", repair);
 		final var result = new BulkMigrationJobRepairResult("plan-v1", List.of(task));
+		manualChunks.clear();
 
 		assertEquals("plan-v1", result.getPlanFingerprint());
+		assertEquals(List.of(2L), repair.getChunksWithExtraActualRows());
 		assertThrows(UnsupportedOperationException.class, () -> result.getTasks().clear());
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationRepairResult(0, 1, 0, 0, List.of(), List.of()));
@@ -435,6 +438,16 @@ class BulkMigrationJobVerifierTest {
 				() -> new BulkMigrationJobTaskRepairResult(" ", repair));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobRepairResult("plan-v1", List.of(task, task)));
+
+		final var max = new BulkMigrationJobTaskRepairResult("max",
+				new BulkMigrationRepairResult(1, 1, Long.MAX_VALUE, Long.MAX_VALUE,
+						List.of(), List.of()));
+		final var one = new BulkMigrationJobTaskRepairResult("one",
+				new BulkMigrationRepairResult(1, 1, 1, 1, List.of(), List.of()));
+		final var overflow = new BulkMigrationJobRepairResult("plan-v1",
+				List.of(max, one));
+		assertThrows(ArithmeticException.class, overflow::getReplayedRows);
+		assertThrows(ArithmeticException.class, overflow::getAffectedRows);
 	}
 
 	@Test

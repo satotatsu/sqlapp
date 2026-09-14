@@ -37,23 +37,27 @@ public class BulkMigrationJobRepairResult {
 	}
 
 	public long getMismatchChunks() {
-		return tasks.stream().map(BulkMigrationJobTaskRepairResult::getRepairResult)
-				.mapToLong(BulkMigrationRepairResult::getMismatchChunks).sum();
+		return sum(BulkMigrationRepairResult::getMismatchChunks);
 	}
 
 	public long getReplayedChunks() {
-		return tasks.stream().map(BulkMigrationJobTaskRepairResult::getRepairResult)
-				.mapToLong(BulkMigrationRepairResult::getReplayedChunks).sum();
+		return sum(BulkMigrationRepairResult::getReplayedChunks);
 	}
 
 	public long getReplayedRows() {
-		return tasks.stream().map(BulkMigrationJobTaskRepairResult::getRepairResult)
-				.mapToLong(BulkMigrationRepairResult::getReplayedRows).sum();
+		return sum(BulkMigrationRepairResult::getReplayedRows);
 	}
 
 	public long getAffectedRows() {
-		return tasks.stream().map(BulkMigrationJobTaskRepairResult::getRepairResult)
-				.mapToLong(BulkMigrationRepairResult::getAffectedRows).sum();
+		return sum(BulkMigrationRepairResult::getAffectedRows);
+	}
+
+	private long sum(final java.util.function.ToLongFunction<BulkMigrationRepairResult> value) {
+		long total = 0;
+		for (final BulkMigrationJobTaskRepairResult task : tasks) {
+			total = Math.addExact(total, value.applyAsLong(task.getRepairResult()));
+		}
+		return total;
 	}
 
 	public long getTasksRequiringManualReconciliation() {

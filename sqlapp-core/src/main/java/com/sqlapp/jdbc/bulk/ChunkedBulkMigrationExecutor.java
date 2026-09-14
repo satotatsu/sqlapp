@@ -168,15 +168,19 @@ public final class ChunkedBulkMigrationExecutor {
 				if (keysetSource != null && Objects.equals(checkpoint.getResumeToken(), nextToken)) {
 					throw new IllegalStateException("A keyset source did not advance its resume token");
 				}
+				final long nextProcessed = addProgress(previouslyProcessed, processed,
+						rows.size());
+				final long nextChunks = addProgress(chunks, 1);
 				final BulkMigrationCheckpoint nextCheckpoint = checkpoint.toBuilder()
-						.processedRows(previouslyProcessed + processed + rows.size())
-						.completedChunks(chunks + 1)
+						.processedRows(nextProcessed)
+						.completedChunks(nextChunks)
 						.lastChunkHash(BulkMigrationHash.rows(rows,
 								sourceTable.getColumns()))
 						.resumeToken(nextToken).complete(false).build();
 				final ChunkedBulkMigrationProgress progress = new ChunkedBulkMigrationProgress(
 						options.getMigrationId(), chunks, rows.size(),
-						previouslyProcessed + processed, nextCheckpoint.getProcessedRows());
+						addProgress(previouslyProcessed, processed),
+						nextCheckpoint.getProcessedRows());
 				listener.onChunkStarted(progress);
 				try {
 					executeChunkWithRetry(targetConnection, chunk, sourceTable, options,
@@ -189,8 +193,8 @@ public final class ChunkedBulkMigrationExecutor {
 					}
 					throw e;
 				}
-				processed += rows.size();
-				chunks++;
+				processed = addProgress(processed, rows.size());
+				chunks = nextChunks;
 				checkpoint = nextCheckpoint;
 				listener.onChunkCompleted(progress);
 				if (listener.pauseAfterChunk(progress)) {
@@ -208,6 +212,18 @@ public final class ChunkedBulkMigrationExecutor {
 					chunks, false);
 		} finally {
 			close(iterator);
+		}
+	}
+
+	private static long addProgress(final long... values) {
+		long result = 0;
+		try {
+			for (final long value : values) {
+				result = Math.addExact(result, value);
+			}
+			return result;
+		} catch (ArithmeticException e) {
+			throw new IllegalStateException("Migration progress exceeds the supported range", e);
 		}
 	}
 

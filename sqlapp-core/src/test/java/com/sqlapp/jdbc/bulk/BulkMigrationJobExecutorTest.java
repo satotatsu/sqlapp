@@ -44,6 +44,13 @@ class BulkMigrationJobExecutorTest {
 				() -> new BulkMigrationJobResult(" ", List.of(task)));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobResult("plan", List.of(task, task)));
+		final var max = new BulkMigrationJobTaskResult("max",
+				new ChunkedBulkMigrationResult(1, Long.MAX_VALUE, 0, false));
+		final var one = new BulkMigrationJobTaskResult("one",
+				new ChunkedBulkMigrationResult(1, 1, 0, false));
+		assertThrows(ArithmeticException.class,
+				() -> new BulkMigrationJobResult("plan", List.of(max, one))
+						.getProcessedRows());
 	}
 
 	@Test

@@ -41,8 +41,11 @@ public class BulkMigrationJobResult {
 	}
 
 	public long getProcessedRows() {
-		return tasks.stream().map(BulkMigrationJobTaskResult::getMigrationResult)
-				.mapToLong(ChunkedBulkMigrationResult::getProcessedRows).sum();
+		long rows = 0;
+		for (final BulkMigrationJobTaskResult task : tasks) {
+			rows = Math.addExact(rows, task.getMigrationResult().getProcessedRows());
+		}
+		return rows;
 	}
 
 	public long getAlreadyCompleteTasks() {

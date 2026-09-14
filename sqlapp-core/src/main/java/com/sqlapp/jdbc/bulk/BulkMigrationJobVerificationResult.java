@@ -49,12 +49,18 @@ public class BulkMigrationJobVerificationResult {
 	}
 
 	public long getExpectedRows() {
-		return tasks.stream().map(BulkMigrationJobTaskVerificationResult::getVerificationResult)
-				.mapToLong(BulkMigrationVerificationResult::getExpectedRows).sum();
+		return sum(BulkMigrationVerificationResult::getExpectedRows);
 	}
 
 	public long getActualRows() {
-		return tasks.stream().map(BulkMigrationJobTaskVerificationResult::getVerificationResult)
-				.mapToLong(BulkMigrationVerificationResult::getActualRows).sum();
+		return sum(BulkMigrationVerificationResult::getActualRows);
+	}
+
+	private long sum(final java.util.function.ToLongFunction<BulkMigrationVerificationResult> value) {
+		long total = 0;
+		for (final BulkMigrationJobTaskVerificationResult task : tasks) {
+			total = Math.addExact(total, value.applyAsLong(task.getVerificationResult()));
+		}
+		return total;
 	}
 }

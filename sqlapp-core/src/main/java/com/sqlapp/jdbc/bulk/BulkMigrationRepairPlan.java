@@ -48,8 +48,11 @@ public final class BulkMigrationRepairPlan {
 		this.verification = Objects.requireNonNull(verification, "verification");
 		this.options = Objects.requireNonNull(options, "options");
 		this.mismatchChunks = List.copyOf(verification.getMismatches());
-		this.estimatedReplayRows = mismatchChunks.stream()
-				.mapToLong(BulkMigrationVerificationChunk::getExpectedRows).sum();
+		long replayRows = 0;
+		for (final BulkMigrationVerificationChunk chunk : mismatchChunks) {
+			replayRows = Math.addExact(replayRows, chunk.getExpectedRows());
+		}
+		this.estimatedReplayRows = replayRows;
 		this.keyColumns = names(upsertPlan == null ? List.of() : upsertPlan.getKeyColumns());
 		this.stagingColumns = names(upsertPlan == null ? List.of() : upsertPlan.getStagingColumns());
 		this.updateColumns = names(upsertPlan == null ? List.of() : upsertPlan.getUpdateColumns());

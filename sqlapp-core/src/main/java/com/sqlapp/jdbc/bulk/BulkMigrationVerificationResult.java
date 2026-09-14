@@ -73,8 +73,12 @@ public class BulkMigrationVerificationResult {
 				validateKeyBoundaries(chunk.getActualRows(), chunk.getActualFirstKey(),
 						chunk.getActualLastKey(), "actual", i);
 			}
-			chunkExpectedRows += chunk.getExpectedRows();
-			chunkActualRows += chunk.getActualRows();
+			try {
+				chunkExpectedRows = Math.addExact(chunkExpectedRows, chunk.getExpectedRows());
+				chunkActualRows = Math.addExact(chunkActualRows, chunk.getActualRows());
+			} catch (ArithmeticException e) {
+				throw new IllegalArgumentException("verification chunk row count overflow", e);
+			}
 		}
 		if (chunkExpectedRows != expectedRows || chunkActualRows != actualRows) {
 			throw new IllegalArgumentException(

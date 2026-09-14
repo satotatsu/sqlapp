@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,54 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobStatusInspectorTest {
+	@Test
+	void checkpointResetResultsAreImmutableAndStructurallyValidated() {
+		final var ids = new ArrayList<>(List.of("first", "second"));
+		final var result = new BulkMigrationJobCheckpointResetResult("plan", ids);
+		ids.clear();
+
+		assertEquals(List.of("first", "second"), result.getResetTaskIds());
+		assertThrows(UnsupportedOperationException.class,
+				() -> result.getResetTaskIds().clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult(" ", List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult("plan",
+						List.of("task", "task")));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult("plan", List.of(" ")));
+	}
+
+	@Test
+	void jobStatusesAreImmutableValidatedAndOverflowSafe() {
+		final var maxCheckpoint = BulkMigrationCheckpoint.builder()
+				.migrationId("max").processedRows(Long.MAX_VALUE).build();
+		final var oneCheckpoint = BulkMigrationCheckpoint.builder()
+				.migrationId("one").processedRows(1).build();
+		final var max = new BulkMigrationJobTaskStatus("max",
+				BulkMigrationJobTaskState.IN_PROGRESS, maxCheckpoint);
+		final var one = new BulkMigrationJobTaskStatus("one",
+				BulkMigrationJobTaskState.IN_PROGRESS, oneCheckpoint);
+		final var tasks = new ArrayList<>(List.of(max));
+		final var status = new BulkMigrationJobStatus("plan", tasks);
+		tasks.clear();
+
+		assertEquals(List.of(max), status.getTasks());
+		assertThrows(UnsupportedOperationException.class, () -> status.getTasks().clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus(" ",
+						BulkMigrationJobTaskState.NOT_STARTED, null));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobTaskStatus("task", null, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobStatus(" ", List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobStatus("plan", List.of(max, max)));
+		assertThrows(ArithmeticException.class,
+				() -> new BulkMigrationJobStatus("plan", List.of(max, one))
+						.getProcessedRows());
+	}
+
 	@Test
 	void reportsNotStartedProgressCompleteAndIncompatible() throws Exception {
 		final var notStartedStore = new InMemoryBulkMigrationCheckpointStore();
