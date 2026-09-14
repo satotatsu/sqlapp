@@ -80,6 +80,23 @@ class TableRelationTreeHolderTest {
 		assertNull(relation.getParent());
 	}
 
+	@Test
+	void ignoresAnUnresolvedForeignKeyOutsideTheTree() {
+		Table table = new Table("tabA");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		table.setPrimaryKey(table.getColumns().get("ID"));
+		ForeignKeyConstraint foreignKey = new ForeignKeyConstraint("fk_external");
+		foreignKey.getColumns().add(table.getColumns().get("PARENT_ID"));
+		foreignKey.setRelatedTableName("missing_parent");
+		foreignKey.getRelatedColumns().add("ID");
+		table.getConstraints().add(foreignKey);
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(table);
+
+		assertNull(holder.getTableRelation(table).getParent());
+	}
+
 	private List<Table> getTables() {
 		List<Table> list = CommonUtils.list();
 		Table table = new Table("tabA");

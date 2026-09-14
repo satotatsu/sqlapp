@@ -92,7 +92,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		for (Table table : tables) {
 			final TableRelation tableRelation = tableMap.get(table.getSchemaName(), table.getName());
 			List<ForeignKeyConstraint> fks = table.getConstraints()
-					.getForeignKeyConstraints(fk -> !SchemaUtils.isSameTable(fk.getRelatedTable(), table)
+					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != null
+							&& !SchemaUtils.isSameTable(fk.getRelatedTable(), table)
 							&& foreignKeyPredicate.test(fk));
 			for (ForeignKeyConstraint fk : fks) {
 				if (tableMap.containsKey(fk.getRelatedTable().getSchemaName(), fk.getRelatedTable().getName())) {
