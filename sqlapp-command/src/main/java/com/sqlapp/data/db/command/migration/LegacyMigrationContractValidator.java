@@ -75,6 +75,7 @@ public class LegacyMigrationContractValidator {
 					throw new CommandException("Unsupported field action in data set: "
 							+ dataSet.getId() + "." + field.getAction());
 				}
+				validateFieldSemantics(dataSet, field, i);
 				if (field.getPosition() != i + 1) {
 					throw new CommandException("Field positions must match contract order in data set: "
 							+ dataSet.getId());
@@ -136,6 +137,59 @@ public class LegacyMigrationContractValidator {
 				current = byId.get(current.getParentDataSetId());
 			}
 			validateAncestorKeys(dataSet, byId);
+			validateReferencedColumns(dataSet, byId);
+		}
+	}
+
+	private void validateReferencedColumns(DataSet dataSet, Map<String, DataSet> byId) {
+		Set<String> extracted = dataSet.getFields().stream().filter(Field::isExtracted)
+				.map(Field::getStagingColumn).map(this::normalize)
+				.collect(java.util.stream.Collectors.toSet());
+		for (String key : dataSet.getSourceBusinessKey()) {
+			if (!extracted.contains(normalize(key))) {
+				throw new CommandException("Source business key does not reference an extracted column: "
+						+ dataSet.getId() + "." + key);
+			}
+		}
+		if (dataSet.getParentDataSetId() == null) {
+			return;
+		}
+		for (var ancestorKey : dataSet.getAncestorKeys()) {
+			DataSet ancestor = byId.get(ancestorKey.getAncestorDataSetId());
+			Set<String> ancestorExtracted = ancestor.getFields().stream()
+					.filter(Field::isExtracted).map(Field::getStagingColumn)
+					.map(this::normalize).collect(java.util.stream.Collectors.toSet());
+			for (var column : ancestorKey.getColumns()) {
+				if (!ancestorExtracted.contains(normalize(column.getAncestorColumn()))
+						|| !extracted.contains(normalize(column.getSourceColumn()))) {
+					throw new CommandException("Ancestor key references an unknown field: "
+							+ dataSet.getId() + "." + ancestorKey.getAncestorDataSetId());
+				}
+			}
+		}
+	}
+
+	private void validateFieldSemantics(DataSet dataSet, Field field, int fieldIndex) {
+		boolean generatedAction = Set.of("GENERATE", "CONSTANT").contains(field.getAction());
+		if (generatedAction != field.isGenerated()) {
+			throw new CommandException("Field action and generated flag disagree: "
+					+ dataSet.getId() + "[" + fieldIndex + "]");
+		}
+		if (field.isExtracted() && field.isGenerated() && !field.isOccurrenceIndex()) {
+			throw new CommandException("Only an occurrence-index field may be both extracted and generated: "
+					+ dataSet.getId() + "[" + fieldIndex + "]");
+		}
+		if (field.isOccurrenceIndex() && (!field.isExtracted() || !field.isGenerated())) {
+			throw new CommandException("Occurrence-index field must be extracted and generated: "
+					+ dataSet.getId() + "[" + fieldIndex + "]");
+		}
+		if (!"DROP".equals(field.getAction()) && blank(field.getTargetColumn())) {
+			throw new CommandException("Non-drop field requires targetColumn: "
+					+ dataSet.getId() + "[" + fieldIndex + "]");
+		}
+		if ("DROP".equals(field.getAction()) && (!field.isExtracted() || field.isGenerated())) {
+			throw new CommandException("Drop field must only be extracted: "
+					+ dataSet.getId() + "[" + fieldIndex + "]");
 		}
 	}
 

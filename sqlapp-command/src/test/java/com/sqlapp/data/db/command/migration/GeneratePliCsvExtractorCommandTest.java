@@ -102,8 +102,10 @@ class GeneratePliCsvExtractorCommandTest {
 		employee.setMaximumOccurrences(50);
 		employee.setOccurrenceColumn("EMPLOYEE_LIST_NO");
 		employee.getFields().add(field(1,
-				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID", false));
+				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.COMPANY_ID", "COMPANY_ID", false));
 		employee.getFields().add(field(2,
+				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID", false));
+		employee.getFields().add(field(3,
 				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index", "EMPLOYEE_LIST_NO", true));
 		AncestorKey ancestor = new AncestorKey();
 		ancestor.setAncestorDataSetId(root.getId());

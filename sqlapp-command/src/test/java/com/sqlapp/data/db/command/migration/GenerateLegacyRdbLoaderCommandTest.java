@@ -79,7 +79,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertFalse(ddl.contains(" ID INT"));
 		String csv = Files.readString(new File(output, "company-csv-import.yaml").toPath());
 		assertTrue(csv.contains("encoding: \"MS932\""));
-		assertTrue(csv.contains("position: 2, name: \"EMPLOYEE_LIST_NO\""));
+		assertTrue(csv.contains("position: 3, name: \"EMPLOYEE_LIST_NO\""));
 		String runner = Files.readString(new File(output, "CompanyLoader.java.template").toPath());
 		assertTrue(runner.contains("new LoadLegacyHierarchyCommand()"));
 		assertTrue(runner.contains("command.setDataSource(dataSource)"));
@@ -147,6 +147,39 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validate(invalidOccurrence))
 				.getMessage().contains("occurrence configuration is invalid"));
+	}
+
+	@Test
+	void testRejectContradictoryFieldSemantics() {
+		var generatedFlagMismatch = contract();
+		generatedFlagMismatch.getDataSets().getFirst().getFields().getFirst()
+				.setGenerated(true);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(generatedFlagMismatch))
+				.getMessage().contains("action and generated flag disagree"));
+
+		var missingTarget = contract();
+		missingTarget.getDataSets().getFirst().getFields().getFirst().setTargetColumn(null);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(missingTarget))
+				.getMessage().contains("requires targetColumn"));
+	}
+
+	@Test
+	void testRejectKeysThatReferenceUnknownFields() {
+		var invalidBusinessKey = contract();
+		invalidBusinessKey.getDataSets().getFirst().getSourceBusinessKey()
+				.set(0, "UNKNOWN_SOURCE");
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(invalidBusinessKey))
+				.getMessage().contains("business key does not reference"));
+
+		var invalidAncestorKey = contract();
+		invalidAncestorKey.getDataSets().getLast().getAncestorKeys().getFirst()
+				.getColumns().getFirst().setSourceColumn("UNKNOWN_CHILD_COLUMN");
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(invalidAncestorKey))
+				.getMessage().contains("Ancestor key references an unknown field"));
 	}
 
 	@Test
@@ -291,9 +324,11 @@ class GenerateLegacyRdbLoaderCommandTest {
 		employee.getFields().add(field(1, "COMPANY_MASTER.EMPLOYEE_LIST.COMPANY_ID",
 				"COMPANY_ID", null, "VARCHAR", 4L, false, false));
 		employee.getFields().getLast().setAction("DROP");
-		employee.getFields().add(field(2, "COMPANY_MASTER.EMPLOYEE_LIST.$index",
+		employee.getFields().add(field(2, "COMPANY_MASTER.EMPLOYEE_LIST.EMP_ID",
+				"EMP_ID", "EMP_ID", "VARCHAR", 6L, false, false));
+		employee.getFields().add(field(3, "COMPANY_MASTER.EMPLOYEE_LIST.$index",
 				"EMPLOYEE_LIST_NO", "EMPLOYEE_LIST_NO", "INT", null, true, false));
-		employee.getFields().add(field(3, null, "ID", "ID", "INT", null, false, true));
+		employee.getFields().add(field(4, null, "ID", "ID", "INT", null, false, true));
 		AncestorKey ancestor = new AncestorKey();
 		ancestor.setAncestorDataSetId(company.getId());
 		ancestor.setAncestorTable("COMPANY_MASTER");
