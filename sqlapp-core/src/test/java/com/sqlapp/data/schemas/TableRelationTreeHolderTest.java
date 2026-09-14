@@ -21,6 +21,7 @@ package com.sqlapp.data.schemas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.exceptions.MultipleRootTablesException;
 import com.sqlapp.util.CommonUtils;
 
 class TableRelationTreeHolderTest {
@@ -95,6 +97,43 @@ class TableRelationTreeHolderTest {
 		TableRelationTreeHolder holder = new TableRelationTreeHolder(table);
 
 		assertNull(holder.getTableRelation(table).getParent());
+	}
+
+	@Test
+	void keepsSameSchemaAndTableNamesDistinctAcrossCatalogs() {
+		Catalog firstCatalog = new Catalog("CATALOG1");
+		Schema firstSchema = new Schema("PUBLIC");
+		firstCatalog.getSchemas().add(firstSchema);
+		Table first = new Table("MEMBER");
+		firstSchema.getTables().add(first);
+
+		Catalog secondCatalog = new Catalog("CATALOG2");
+		Schema secondSchema = new Schema("PUBLIC");
+		secondCatalog.getSchemas().add(secondSchema);
+		Table second = new Table("MEMBER");
+		secondSchema.getTables().add(second);
+
+		assertThrows(MultipleRootTablesException.class,
+				() -> new TableRelationTreeHolder(first, second));
+	}
+
+	@Test
+	void resolvesAParentRepresentedByAnEquivalentTableInstance() {
+		Table parent = new Table("PARENT");
+		parent.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		parent.setPrimaryKey(parent.getColumns().get("ID"));
+		Table equivalentParent = new Table("parent");
+		equivalentParent.getColumns().add(new Column("id").setDataType(DataType.INT));
+		Table child = new Table("CHILD");
+		child.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		child.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		child.setPrimaryKey(child.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("fk_parent",
+				child.getColumns().get("PARENT_ID"), equivalentParent.getColumns().get("id"));
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(parent, child);
+
+		assertEquals(parent, holder.getTableRelation(child).getParentTableRelation().getTable());
 	}
 
 	private List<Table> getTables() {
