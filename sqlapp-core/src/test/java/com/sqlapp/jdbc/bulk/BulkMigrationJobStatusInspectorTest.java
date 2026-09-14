@@ -31,6 +31,13 @@ class BulkMigrationJobStatusInspectorTest {
 						List.of("task", "task")));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobCheckpointResetResult("plan", List.of(" ")));
+		final var cause = new java.sql.SQLException("delete failed");
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetException(" ", result, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobCheckpointResetException("task", null, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobCheckpointResetException("task", result, null));
 	}
 
 	@Test

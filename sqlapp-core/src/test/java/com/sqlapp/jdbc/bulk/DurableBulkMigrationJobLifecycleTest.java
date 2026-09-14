@@ -19,6 +19,33 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DurableBulkMigrationJobLifecycleTest {
+	@Test
+	void recoveryResultsRejectAmbiguousOrForeignStateTransitions() {
+		final var prepared = new BulkMigrationMaintenanceState("job", "plan",
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null);
+		final var restored = new BulkMigrationMaintenanceState("job", "plan",
+				BulkMigrationMaintenanceStatus.RESTORED, NOW, null);
+		final var complete = new BulkMigrationMaintenanceState("job", "plan",
+				BulkMigrationMaintenanceStatus.COMPLETE, NOW, null);
+		final var foreign = new BulkMigrationMaintenanceState("other", "plan",
+				BulkMigrationMaintenanceStatus.RESTORED, NOW, null);
+
+		assertFalse(new BulkMigrationMaintenanceRecoveryResult(null, null, false)
+				.recovered());
+		assertTrue(new BulkMigrationMaintenanceRecoveryResult(prepared, restored, true)
+				.recovered());
+		assertFalse(new BulkMigrationMaintenanceRecoveryResult(complete, complete, false)
+				.recovered());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult(prepared, null, false));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult(prepared, foreign, true));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult(complete, restored, true));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult(prepared, prepared, false));
+	}
+
 	private static final Instant NOW = Instant.parse("2026-08-31T00:00:00Z");
 
 	@Test

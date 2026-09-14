@@ -92,13 +92,14 @@ public final class BulkMigrationVerifier {
 			while (expectedRows.hasNext() || actualRows.hasNext()) {
 				final List<Row> left = take(expectedRows, chunkSize);
 				final List<Row> right = take(actualRows, chunkSize);
-				expectedCount += left.size();
-				actualCount += right.size();
-				chunks.add(new BulkMigrationVerificationChunk(index++, left.size(), right.size(),
+				expectedCount = addCount(expectedCount, left.size());
+				actualCount = addCount(actualCount, right.size());
+				chunks.add(new BulkMigrationVerificationChunk(index, left.size(), right.size(),
 						BulkMigrationHash.rows(left, expectedColumns),
 						BulkMigrationHash.rows(right, actualColumns, expectedColumns),
 						firstKey(left, expectedKey), lastKey(left, expectedKey),
 						firstKey(right, actualKey), lastKey(right, actualKey)));
+				index = addCount(index, 1);
 			}
 			return new BulkMigrationVerificationResult(chunkSize, expectedCount, actualCount,
 					expectedColumns.stream().map(Column::getName).toList(),
@@ -108,6 +109,14 @@ public final class BulkMigrationVerifier {
 			throw e;
 		} finally {
 			BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
+		}
+	}
+
+	private static long addCount(final long count, final long value) {
+		try {
+			return Math.addExact(count, value);
+		} catch (ArithmeticException e) {
+			throw new IllegalStateException("Verification count exceeds the supported range", e);
 		}
 	}
 

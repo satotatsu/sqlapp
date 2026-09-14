@@ -52,12 +52,12 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 				statement.addBatch();
 				pending++;
 				if (pending == batchSize) {
-					affected += count(statement.executeBatch());
+					affected = addCount(affected, count(statement.executeBatch()));
 					pending = 0;
 				}
 			}
 			if (pending > 0) {
-				affected += count(statement.executeBatch());
+				affected = addCount(affected, count(statement.executeBatch()));
 			}
 			return affected;
 		} catch (SQLException | RuntimeException e) {
@@ -129,9 +129,21 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 			if (value == Statement.EXECUTE_FAILED) {
 				throw new SQLException("A JDBC bulk batch entry failed");
 			}
-			affected += value == Statement.SUCCESS_NO_INFO ? 1 : value;
+			if (value < 0 && value != Statement.SUCCESS_NO_INFO) {
+				throw new SQLException("JDBC bulk returned an invalid update count: " + value);
+			}
+			affected = addCount(affected,
+					value == Statement.SUCCESS_NO_INFO ? 1 : value);
 		}
 		return affected;
+	}
+
+	private static long addCount(final long current, final long added) throws SQLException {
+		try {
+			return Math.addExact(current, added);
+		} catch (ArithmeticException e) {
+			throw new SQLException("JDBC bulk affected row count exceeds the supported range", e);
+		}
 	}
 
 	protected void validateOptions(final BulkOption options) {

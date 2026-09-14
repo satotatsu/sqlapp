@@ -416,6 +416,13 @@ class BulkMigrationJobVerifierTest {
 		assertSame(cause, failure.getCause());
 		assertSame(completed, failure.getCompletedResult());
 		assertEquals("items", failure.getFailedTaskId());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairException(" ", completed, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobRepairException("items", null, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobRepairException("items", completed,
+						(Throwable) null));
 	}
 
 	@Test

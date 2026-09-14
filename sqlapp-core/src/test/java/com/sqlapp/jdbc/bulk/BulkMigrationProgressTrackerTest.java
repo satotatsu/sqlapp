@@ -57,6 +57,21 @@ class BulkMigrationProgressTrackerTest {
 				() -> tracker.onChunkCompleted(progress(0, 10)));
 	}
 
+	@Test
+	void rejectsStructurallyInvalidChunkProgress() {
+		assertThrows(IllegalArgumentException.class,
+				() -> new ChunkedBulkMigrationProgress(" ", 0, 1, 0, 1));
+		assertThrows(IllegalArgumentException.class,
+				() -> new ChunkedBulkMigrationProgress("migration", -1, 1, 0, 1));
+		assertThrows(IllegalArgumentException.class,
+				() -> new ChunkedBulkMigrationProgress("migration", 0, 0, 0, 0));
+		assertThrows(IllegalArgumentException.class,
+				() -> new ChunkedBulkMigrationProgress("migration", 0, 2, 0, 1));
+		assertThrows(IllegalArgumentException.class,
+				() -> new ChunkedBulkMigrationProgress("migration", 0, 1,
+						Long.MAX_VALUE, Long.MAX_VALUE));
+	}
+
 	private static ChunkedBulkMigrationProgress progress(final long before,
 			final long after) {
 		return new ChunkedBulkMigrationProgress("migration", 0,

@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.sql.SQLException;
+import java.util.Objects;
 
 import lombok.Getter;
 
@@ -16,7 +17,15 @@ public class BulkMigrationJobException extends SQLException {
 	public BulkMigrationJobException(final String failedTaskId,
 			final BulkMigrationJobResult completedResult, final SQLException cause) {
 		super("Migration job task failed: " + failedTaskId, cause);
-		this.failedTaskId = failedTaskId;
-		this.completedResult = completedResult;
+		this.failedTaskId = taskId(failedTaskId);
+		this.completedResult = Objects.requireNonNull(completedResult, "completedResult");
+		Objects.requireNonNull(cause, "cause");
+	}
+
+	private static String taskId(final String taskId) {
+		if (taskId == null || taskId.isBlank()) {
+			throw new IllegalArgumentException("failedTaskId must not be empty");
+		}
+		return taskId;
 	}
 }

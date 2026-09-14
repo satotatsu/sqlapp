@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.sql.SQLException;
+import java.util.Objects;
 
 import lombok.Getter;
 
@@ -17,7 +18,11 @@ public class BulkMigrationJobCheckpointResetException extends SQLException {
 			final BulkMigrationJobCheckpointResetResult completedResult,
 			final SQLException cause) {
 		super("Migration job checkpoint reset failed: " + failedTaskId, cause);
+		if (failedTaskId == null || failedTaskId.isBlank()) {
+			throw new IllegalArgumentException("failedTaskId must not be empty");
+		}
 		this.failedTaskId = failedTaskId;
-		this.completedResult = completedResult;
+		this.completedResult = Objects.requireNonNull(completedResult, "completedResult");
+		Objects.requireNonNull(cause, "cause");
 	}
 }

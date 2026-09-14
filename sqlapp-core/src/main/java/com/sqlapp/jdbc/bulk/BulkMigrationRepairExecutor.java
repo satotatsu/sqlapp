@@ -334,7 +334,8 @@ public final class BulkMigrationRepairExecutor {
 				effective.isUseTransaction())) {
 			try {
 				for (final Table chunk : replayChunks) {
-					affectedRows += executor.execute(targetConnection, chunk, effective);
+					affectedRows = addRows(affectedRows,
+							executor.execute(targetConnection, chunk, effective));
 				}
 				transaction.commit();
 			} catch (SQLException | RuntimeException e) {
@@ -344,6 +345,17 @@ public final class BulkMigrationRepairExecutor {
 		}
 		return new BulkMigrationRepairResult(mismatchCount, replayChunks.size(), replayedRows,
 				affectedRows, List.copyOf(extraActual), List.copyOf(withoutExpected));
+	}
+
+	private static long addRows(final long current, final long added) {
+		if (added < 0) {
+			throw new IllegalStateException("Bulk UPSERT returned a negative affected row count");
+		}
+		try {
+			return Math.addExact(current, added);
+		} catch (ArithmeticException e) {
+			throw new IllegalStateException("Repair row count exceeds the supported range", e);
+		}
 	}
 
 	private static void validateExpectedBoundaries(final BulkMigrationKeysetSource source,

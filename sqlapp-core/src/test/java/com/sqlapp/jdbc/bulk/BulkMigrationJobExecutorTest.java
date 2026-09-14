@@ -54,6 +54,27 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void jobFailureAndPauseRequireCompleteContext() {
+		final var completed = new BulkMigrationJobResult("plan", List.of());
+		final var cause = new SQLException("failed");
+		final var progress = new ChunkedBulkMigrationProgress("migration", 0, 1, 0, 1);
+		final var paused = new ChunkedBulkMigrationPausedException(progress);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobException(" ", completed, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobException("task", null, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobException("task", completed, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobPausedException(" ", completed, paused));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobPausedException("task", null, paused));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobPausedException("task", completed, null));
+	}
+
+	@Test
 	void separatesStableJobIdentityFromTheExactPlanFingerprint() {
 		final Table table = new Table("CUSTOMERS");
 		table.getColumns().add(new Column("ID"));
