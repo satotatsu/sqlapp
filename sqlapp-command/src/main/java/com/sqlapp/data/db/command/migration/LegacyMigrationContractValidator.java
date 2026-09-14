@@ -8,6 +8,7 @@ package com.sqlapp.data.db.command.migration;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -114,6 +115,13 @@ public class LegacyMigrationContractValidator {
 			}
 			validateOccurrence(dataSet);
 		}
+		List<String> orderedIds = contract.getDataSets().stream()
+				.sorted(Comparator.comparingInt(DataSet::getLoadOrder)
+						.thenComparing(DataSet::getId))
+				.map(DataSet::getId).toList();
+		if (!orderedIds.equals(contract.getDataSets().stream().map(DataSet::getId).toList())) {
+			throw new CommandException("Data sets must be ordered by loadOrder and id.");
+		}
 		for (DataSet dataSet : contract.getDataSets()) {
 			if (dataSet.getParentDataSetId() != null && !ids.contains(dataSet.getParentDataSetId())) {
 				throw new CommandException("Unknown parent data set: " + dataSet.getParentDataSetId());
@@ -127,6 +135,9 @@ public class LegacyMigrationContractValidator {
 					throw new CommandException("Child data set hierarchy is inconsistent: "
 							+ dataSet.getId());
 				}
+			} else if (dataSet.getHierarchyDepth() != 0) {
+				throw new CommandException("Root data set hierarchy depth must be zero: "
+						+ dataSet.getId());
 			}
 			Set<String> visited = new HashSet<>();
 			DataSet current = dataSet;

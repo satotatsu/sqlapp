@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -180,6 +181,21 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validate(invalidAncestorKey))
 				.getMessage().contains("Ancestor key references an unknown field"));
+	}
+
+	@Test
+	void testRejectNonCanonicalDataSetOrderAndInvalidDepth() {
+		var wrongOrder = contract();
+		Collections.swap(wrongOrder.getDataSets(), 0, 1);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(wrongOrder))
+				.getMessage().contains("ordered by loadOrder and id"));
+
+		var invalidDepth = contract();
+		invalidDepth.getDataSets().getLast().setHierarchyDepth(0);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(invalidDepth))
+				.getMessage().contains("hierarchy is inconsistent"));
 	}
 
 	@Test

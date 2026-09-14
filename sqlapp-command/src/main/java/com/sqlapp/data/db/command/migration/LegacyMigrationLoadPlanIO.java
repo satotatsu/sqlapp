@@ -141,6 +141,9 @@ public class LegacyMigrationLoadPlanIO {
 							+ dataSet.getId());
 				}
 				validateJoinKeys(dataSet);
+			} else if (dataSet.getHierarchyDepth() != 0) {
+				throw new CommandException("Root load data set hierarchy depth must be zero: "
+						+ dataSet.getId());
 			}
 			final var visited = new HashSet<String>();
 			var current = dataSet;

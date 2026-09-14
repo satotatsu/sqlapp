@@ -109,6 +109,7 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.setSourcePath("OMITTED");
 		omitted.setFileName("omitted.csv");
 		omitted.setTargetTable("OMITTED");
+		omitted.setLoadOrder(1);
 		var field = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
 		field.setPosition(1);
 		field.setSourcePath("OMITTED.ID");
@@ -414,6 +415,7 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.setStagingTable("STG_OMITTED");
 		omitted.setTargetSchema("PUBLIC");
 		omitted.setTargetTable("OMITTED");
+		omitted.setLoadOrder(1);
 		omitted.getSourceBusinessKey().add("ID");
 		var field = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field();
 		field.setPosition(1);
@@ -437,6 +439,7 @@ class LoadLegacyHierarchyCommandTest {
 		dataSet.setStagingTable("STG_OMITTED");
 		dataSet.setTargetSchema("PUBLIC");
 		dataSet.setTargetTable("OMITTED");
+		dataSet.setLoadOrder(1);
 		dataSet.getSourceBusinessKey().add("ID");
 		var field = new LegacyMigrationLoadPlan.LoadField();
 		field.setCsvPosition(1);
