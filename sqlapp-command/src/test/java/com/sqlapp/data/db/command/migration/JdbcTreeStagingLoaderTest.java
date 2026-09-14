@@ -167,6 +167,80 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testLoadMultipleIndependentRootHierarchies() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, "CREATE TABLE SECOND_ROOT (CODE VARCHAR(4) PRIMARY KEY)");
+			executeSql(connection, """
+					CREATE TABLE TMP_SECOND_ROOT
+					(
+					  LEGACY_CODE VARCHAR(4)
+					, SQLAPP_LOAD_STATUS VARCHAR(16) DEFAULT 'PENDING' NOT NULL
+					, SQLAPP_LOADED_AT TIMESTAMP
+					)
+					""");
+			executeSql(connection, "INSERT INTO TMP_SECOND_ROOT(LEGACY_CODE) VALUES ('S001')");
+			connection.commit();
+
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			LoadDataSet second = dataSet("second", "SECOND_ROOT", "TMP_SECOND_ROOT", null, 10);
+			second.setHierarchyDepth(0);
+			second.getSourceBusinessKey().add("LEGACY_CODE");
+			second.getFields().add(field(1, "LEGACY_CODE", "CODE", true, false, "COPY"));
+			plan.getDataSets().add(second);
+			connection.setAutoCommit(false);
+
+			assertEquals(3, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
+			assertEquals(1, count(connection, "SECOND_ROOT WHERE CODE='S001'"));
+			assertEquals(0, count(connection, "TMP_SECOND_ROOT"));
+		}
+	}
+
+	@Test
+	void testLaterRootFailureKeepsEarlierIndependentHierarchyCommitted() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, "CREATE TABLE SECOND_ROOT (CODE VARCHAR(4) PRIMARY KEY, "
+					+ "CONSTRAINT CK_SECOND_ROOT CHECK (CODE <> 'FAIL'))");
+			executeSql(connection, """
+					CREATE TABLE TMP_SECOND_ROOT
+					(
+					  LEGACY_CODE VARCHAR(4)
+					, SQLAPP_LOAD_STATUS VARCHAR(16) DEFAULT 'PENDING' NOT NULL
+					, SQLAPP_LOADED_AT TIMESTAMP
+					)
+					""");
+			executeSql(connection, "INSERT INTO TMP_SECOND_ROOT(LEGACY_CODE) VALUES ('FAIL')");
+			connection.commit();
+
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			LegacyMigrationLoadPlan plan = plan();
+			LoadDataSet second = dataSet("second", "SECOND_ROOT", "TMP_SECOND_ROOT", null, 10);
+			second.setHierarchyDepth(0);
+			second.getSourceBusinessKey().add("LEGACY_CODE");
+			second.getFields().add(field(1, "LEGACY_CODE", "CODE", true, false, "COPY"));
+			plan.getDataSets().add(second);
+			connection.setAutoCommit(false);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> new JdbcTreeStagingLoader(connection, schema, plan).load());
+			connection.rollback();
+
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
+			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
+			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
+			assertEquals(0, count(connection, "SECOND_ROOT"));
+			assertEquals(1, count(connection,
+					"TMP_SECOND_ROOT WHERE LEGACY_CODE='FAIL' AND SQLAPP_LOAD_STATUS='PENDING'"));
+		}
+	}
+
+	@Test
 	void testRollbackRestoresOrphansWhenTargetLoadFails() throws Exception {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {

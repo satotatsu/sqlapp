@@ -107,7 +107,7 @@ public class JdbcTreeStagingLoader {
 	private long loadRoot(LoadDataSetWrapper root) throws SQLException {
 		long loaded = 0;
 		JdbcTreeDataSession reader = createReader(root);
-		JdbcTreeDataSession writer = createWriter();
+		JdbcTreeDataSession writer = createWriter(root);
 		try (JdbcTreeDataCopySession copySession = createCopySession(root, reader, writer)) {
 			while (copySession.next(stagingTables.get(root.getId()))) {
 				copyHierarchy(copySession, root);
@@ -129,7 +129,8 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private JdbcTreeDataSession createReader(LoadDataSetWrapper root) throws SQLException {
-		JdbcTreeDataSession reader = new JdbcTreeDataSession(connection, new ArrayList<>(stagingTables.values()));
+		JdbcTreeDataSession reader = new JdbcTreeDataSession(connection, hierarchy(root).stream()
+				.map(dataSet -> stagingTables.get(dataSet.getId())).toList());
 		reader.setRootBatchSize(plan.getRootBatchSize());
 		reader.setFetchSize(plan.getRootBatchSize());
 		reader.setTableOperationMode(TableOperationMode.NONE);
@@ -157,13 +158,15 @@ public class JdbcTreeStagingLoader {
 		}
 	}
 
-	private JdbcTreeDataSession createWriter() {
-		Set<ForeignKeyConstraint> selectedForeignKeys = plan.getDataSets().stream()
+	private JdbcTreeDataSession createWriter(LoadDataSetWrapper root) {
+		List<LoadDataSetWrapper> hierarchy = hierarchy(root);
+		Set<ForeignKeyConstraint> selectedForeignKeys = hierarchy.stream()
 				.map(LoadDataSetWrapper::getTargetForeignKeyConstraint)
 				.filter(java.util.Objects::nonNull)
 				.collect(java.util.stream.Collectors.toSet());
 		JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
-				new ArrayList<>(targetTables.values()), selectedForeignKeys::contains);
+				hierarchy.stream().map(dataSet -> targetTables.get(dataSet.getId())).toList(),
+				selectedForeignKeys::contains);
 		session.setTableOperationMode(TableOperationMode.valueOf(plan.getTableOperationMode()));
 		return session;
 	}
@@ -328,6 +331,17 @@ public class JdbcTreeStagingLoader {
 		return plan.getDataSets().stream().filter(dataSet -> parentId.equals(dataSet.getParentDataSetId()))
 				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
 						.thenComparing(LoadDataSetWrapper::getId)).toList();
+	}
+
+	private List<LoadDataSetWrapper> hierarchy(LoadDataSetWrapper root) {
+		List<LoadDataSetWrapper> result = new ArrayList<>();
+		addHierarchy(result, root);
+		return result;
+	}
+
+	private void addHierarchy(List<LoadDataSetWrapper> result, LoadDataSetWrapper dataSet) {
+		result.add(dataSet);
+		children(dataSet.getId()).forEach(child -> addHierarchy(result, child));
 	}
 
 	private void initialize() {
