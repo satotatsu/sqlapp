@@ -118,7 +118,56 @@ public class LegacyMigrationContractValidator {
 				}
 				current = byId.get(current.getParentDataSetId());
 			}
+			validateAncestorKeys(dataSet, byId);
 		}
+	}
+
+	private void validateAncestorKeys(DataSet dataSet, Map<String, DataSet> byId) {
+		if (dataSet.getParentDataSetId() == null) {
+			if (dataSet.getAncestorKeys() != null && !dataSet.getAncestorKeys().isEmpty()) {
+				throw new CommandException("Root data set must not define ancestor keys: "
+						+ dataSet.getId());
+			}
+			return;
+		}
+		if (dataSet.getAncestorKeys() == null) {
+			throw new CommandException("Child data set ancestor keys are invalid: "
+					+ dataSet.getId());
+		}
+		DataSet expectedAncestor = byId.get(dataSet.getParentDataSetId());
+		for (int i = 0; i < dataSet.getAncestorKeys().size(); i++) {
+			var key = dataSet.getAncestorKeys().get(i);
+			if (key == null || expectedAncestor == null || key.getDepth() != i + 1
+					|| !Objects.equals(key.getAncestorDataSetId(), expectedAncestor.getId())
+					|| !Objects.equals(key.getAncestorTable(), expectedAncestor.getTargetTable())
+					|| key.getColumns() == null || key.getColumns().isEmpty()) {
+				throw new CommandException("Child data set ancestor chain is invalid: "
+						+ dataSet.getId());
+			}
+			Set<String> ancestorColumns = new HashSet<>();
+			Set<String> sourceColumns = new HashSet<>();
+			Set<String> targetColumns = new HashSet<>();
+			for (var column : key.getColumns()) {
+				if (column == null || blank(column.getAncestorColumn())
+						|| blank(column.getSourceColumn()) || blank(column.getTargetColumn())
+						|| !ancestorColumns.add(normalize(column.getAncestorColumn()))
+						|| !sourceColumns.add(normalize(column.getSourceColumn()))
+						|| !targetColumns.add(normalize(column.getTargetColumn()))) {
+					throw new CommandException("Child data set ancestor key columns are invalid: "
+							+ dataSet.getId() + "[" + i + "]");
+				}
+			}
+			expectedAncestor = expectedAncestor.getParentDataSetId() == null ? null
+					: byId.get(expectedAncestor.getParentDataSetId());
+		}
+		if (expectedAncestor != null) {
+			throw new CommandException("Child data set ancestor chain is incomplete: "
+					+ dataSet.getId());
+		}
+	}
+
+	private String normalize(String value) {
+		return value.toLowerCase(Locale.ROOT);
 	}
 
 	public void validateReferencedMapping(LegacyMigrationContract contract, File contractFile) {

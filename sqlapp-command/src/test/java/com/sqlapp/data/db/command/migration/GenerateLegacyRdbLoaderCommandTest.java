@@ -106,6 +106,18 @@ class GenerateLegacyRdbLoaderCommandTest {
 	}
 
 	@Test
+	void testRejectAncestorChainThatDoesNotStartWithParent() {
+		var contract = contract();
+		contract.getDataSets().getLast().getAncestorKeys().getFirst()
+				.setAncestorDataSetId("different-parent");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(contract));
+
+		assertTrue(exception.getMessage().contains("ancestor chain is invalid"));
+	}
+
+	@Test
 	void testRejectStagingTableCollisionBeforeWritingArtifacts() throws Exception {
 		var contract = contract();
 		contract.getDataSets().getLast().setTargetTable("COMPANY_MASTER");
@@ -251,6 +263,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		AncestorKey ancestor = new AncestorKey();
 		ancestor.setAncestorDataSetId(company.getId());
 		ancestor.setAncestorTable("COMPANY_MASTER");
+		ancestor.setDepth(1);
 		ancestor.getColumns().add(new KeyColumn("COMPANY_ID", "COMPANY_ID", "PARENT_ID"));
 		employee.getAncestorKeys().add(ancestor);
 		contract.getDataSets().add(employee);
