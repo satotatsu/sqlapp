@@ -134,7 +134,8 @@ public final class BulkMigrationRepairPlan {
 		for (final Column column : table.getColumns()) {
 			update(digest, column.getName(), column.getDataType(), column.getDataTypeName(),
 					column.getLength(), column.getScale(), column.isNotNull(),
-					column.isIdentity(), column.isHidden(), column.getFormula());
+					column.isIdentity(), column.isHidden(), column.getFormula(),
+					column.getDefaultValue());
 		}
 		if (table.getPrimaryKeyConstraint() == null) {
 			update(digest, (Object) null);
@@ -143,6 +144,17 @@ public final class BulkMigrationRepairPlan {
 			table.getPrimaryKeyConstraint().getColumns()
 					.forEach(column -> update(digest, column.getName()));
 		}
+		final var foreignKeys = table.getConstraints().getForeignKeyConstraints();
+		update(digest, foreignKeys.size());
+		foreignKeys.forEach(foreignKey -> {
+			final Table relatedTable = foreignKey.getRelatedTable();
+			update(digest, foreignKey.getName(),
+					relatedTable == null ? null : relatedTable.getCatalogName(),
+					foreignKey.getRelatedTableSchemaName(), foreignKey.getRelatedTableName(),
+					foreignKey.getColumns().size(), foreignKey.getRelatedColumns().size());
+			foreignKey.getColumns().forEach(column -> update(digest, column.getName()));
+			foreignKey.getRelatedColumns().forEach(column -> update(digest, column.getName()));
+		});
 	}
 
 	private static void list(final MessageDigest digest, final List<String> values) {

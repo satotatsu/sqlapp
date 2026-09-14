@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
@@ -207,24 +208,27 @@ public final class BulkMigrationJobExecutor {
 						+ task.getOptions().getMigrationId());
 			}
 		}
-		validateAcyclic(tasks);
+		validateAcyclic(tasks, BulkMigrationJobExecutor::sourceTable,
+				BulkMigrationJobTask::getTaskId, "Migration job");
 		return TableOrder.CREATE.sort(tasks, BulkMigrationJobExecutor::sourceTable);
 	}
 
-	private static void validateAcyclic(final List<BulkMigrationJobTask> tasks) {
-		final Map<BulkMigrationJobTask, Integer> indegree = new LinkedHashMap<>();
-		final Map<BulkMigrationJobTask, Set<BulkMigrationJobTask>> graph = new LinkedHashMap<>();
-		for (final BulkMigrationJobTask task : tasks) {
+	static <T> void validateAcyclic(final List<T> tasks,
+			final Function<T, Table> tableProvider, final Function<T, String> idProvider,
+			final String subject) {
+		final Map<T, Integer> indegree = new LinkedHashMap<>();
+		final Map<T, Set<T>> graph = new LinkedHashMap<>();
+		for (final T task : tasks) {
 			indegree.put(task, 0);
 			graph.put(task, new LinkedHashSet<>());
 		}
-		for (final BulkMigrationJobTask child : tasks) {
-			final Table childTable = sourceTable(child);
+		for (final T child : tasks) {
+			final Table childTable = tableProvider.apply(child);
 			childTable.getConstraints().getForeignKeyConstraints(
 					fk -> fk.getRelatedTable() != null
 							&& !SchemaUtils.isSameTable(fk.getRelatedTable(), childTable)).forEach(fk -> {
-				for (final BulkMigrationJobTask parent : tasks) {
-					if (!SchemaUtils.isSameTable(sourceTable(parent), fk.getRelatedTable())) {
+				for (final T parent : tasks) {
+					if (!SchemaUtils.isSameTable(tableProvider.apply(parent), fk.getRelatedTable())) {
 						continue;
 					}
 					if (graph.get(parent).add(child)) {
@@ -233,7 +237,7 @@ public final class BulkMigrationJobExecutor {
 				}
 			});
 		}
-		final Queue<BulkMigrationJobTask> ready = new ArrayDeque<>();
+		final Queue<T> ready = new ArrayDeque<>();
 		indegree.forEach((task, count) -> {
 			if (count == 0) {
 				ready.add(task);
@@ -241,9 +245,9 @@ public final class BulkMigrationJobExecutor {
 		});
 		int visited = 0;
 		while (!ready.isEmpty()) {
-			final BulkMigrationJobTask parent = ready.remove();
+			final T parent = ready.remove();
 			visited++;
-			for (final BulkMigrationJobTask child : graph.get(parent)) {
+			for (final T child : graph.get(parent)) {
 				final int count = indegree.get(child) - 1;
 				indegree.put(child, count);
 				if (count == 0) {
@@ -253,8 +257,8 @@ public final class BulkMigrationJobExecutor {
 		}
 		if (visited != tasks.size()) {
 			final List<String> blocked = tasks.stream().filter(task -> indegree.get(task) > 0)
-					.map(BulkMigrationJobTask::getTaskId).toList();
-			throw new IllegalArgumentException("Migration job contains cyclic or cycle-dependent tasks: "
+					.map(idProvider).toList();
+			throw new IllegalArgumentException(subject + " contains cyclic or cycle-dependent tasks: "
 					+ blocked);
 		}
 	}

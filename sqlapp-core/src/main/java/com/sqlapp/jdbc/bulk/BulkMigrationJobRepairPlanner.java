@@ -23,6 +23,9 @@ public final class BulkMigrationJobRepairPlanner {
 		for (final BulkMigrationJobRepairTask task : tasks) {
 			validateTask(task, ids);
 		}
+		BulkMigrationJobExecutor.validateAcyclic(tasks,
+				BulkMigrationJobRepairTask::getTargetTable,
+				BulkMigrationJobRepairTask::getTaskId, "Migration repair job");
 		final List<BulkMigrationJobRepairTask> ordered = TableOrder.CREATE.sort(tasks,
 				BulkMigrationJobRepairTask::getTargetTable);
 		for (final BulkMigrationJobRepairTask task : ordered) {

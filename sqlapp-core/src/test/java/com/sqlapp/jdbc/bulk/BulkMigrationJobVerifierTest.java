@@ -485,6 +485,60 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void repairPlanDetectsForeignKeyAndDefaultValueMutation() throws Exception {
+		final Table expected = table("ITEMS", "expected");
+		final Table target = table("TARGET_ITEMS", "actual");
+		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(
+				1, 0, 0, List.of());
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> null);
+
+		final BulkMigrationRepairPlan defaultPlan = BulkMigrationRepairPlanner.plan(
+				connection, expected, target, verification, BulkMigrationRepairOption.defaults());
+		target.getColumns().get("TXT").setDefaultValue("changed");
+		assertFalse(defaultPlan.isUnchanged());
+
+		target.getColumns().get("TXT").setDefaultValue(null);
+		final BulkMigrationRepairPlan dependencyPlan = BulkMigrationRepairPlanner.plan(
+				connection, expected, target, verification, BulkMigrationRepairOption.defaults());
+		final Table parent = table("PARENT", "parent");
+		target.getConstraints().addForeignKeyConstraint("FK_TARGET_PARENT",
+				target.getColumns().get("ID"), parent.getColumns().get("ID"));
+		assertFalse(dependencyPlan.isUnchanged());
+	}
+
+	@Test
+	void repairJobRejectsCyclicTargetDependenciesBeforeDatabaseAccess() {
+		final Table firstTable = table("FIRST", "first");
+		final Table secondTable = table("SECOND", "second");
+		firstTable.getConstraints().addForeignKeyConstraint("FK_FIRST_SECOND",
+				firstTable.getColumns().get("ID"), secondTable.getColumns().get("ID"));
+		secondTable.getConstraints().addForeignKeyConstraint("FK_SECOND_FIRST",
+				secondTable.getColumns().get("ID"), firstTable.getColumns().get("ID"));
+		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(
+				1, 0, 0, List.of());
+		final var first = BulkMigrationJobRepairTask.builder().taskId("first")
+				.expected(firstTable).verificationResult(verification).build();
+		final var second = BulkMigrationJobRepairTask.builder().taskId("second")
+				.expected(secondTable).verificationResult(verification).build();
+		final AtomicInteger connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+
+		final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairPlanner.plan(connection, List.of(first, second)));
+
+		assertEquals("Migration repair job contains cyclic or cycle-dependent tasks: [first, second]",
+				failure.getMessage());
+		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
 	void repairJobRejectsANegativeBufferLimitDuringPreflight() {
 		final Table table = table("ITEMS", "expected");
 		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
