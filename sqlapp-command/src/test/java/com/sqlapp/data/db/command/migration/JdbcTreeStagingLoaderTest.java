@@ -67,6 +67,18 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void testValidateSchemaRejectsTargetForeignKeyThatDisagreesWithSchema() {
+		LegacyMigrationLoadPlan plan = plan();
+		plan.getDataSets().get(1).setTargetForeignKey(java.util.List.of("EMP_ID"));
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, targetTables()));
+
+		assertTrue(exception.getMessage().contains(
+				"Target parent foreign key does not uniquely match schema"));
+	}
+
+	@Test
 	void testValidateSchemaRejectsMissingTargetPrimaryKeyColumn() {
 		LegacyMigrationLoadPlan plan = plan();
 		plan.getDataSets().getFirst().getTargetPrimaryKey().add("MISSING_PRIMARY_KEY");
@@ -108,7 +120,8 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		LegacyMigrationLoadPlan plan = plan();
 		plan.setTableOperationMode("INSERT");
 		java.util.List<Table> tables = targetTables();
-		tables.forEach(table -> table.getConstraints().clear());
+		tables.forEach(table -> table.getConstraints().removeIf(constraint ->
+				!(constraint instanceof com.sqlapp.data.schemas.ForeignKeyConstraint)));
 
 		assertDoesNotThrow(() -> LegacyMigrationLoadPlanIO.validateSchema(plan, tables));
 	}
@@ -796,8 +809,8 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		JoinKey key = new JoinKey();
 		key.setParentStagingColumn("LEGACY_COMPANY_ID");
 		key.setChildStagingColumn("LEGACY_COMPANY_ID");
-		key.setTargetForeignKeyColumn("PARENT_ID");
 		employee.getParentJoinKeys().add(key);
+		employee.getTargetForeignKey().add("PARENT_ID");
 		plan.getDataSets().add(employee);
 		return plan;
 	}
@@ -826,6 +839,8 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		employee.getColumns().add(new Column("EMP_ID"));
 		employee.setPrimaryKey(employee.getColumns().get("ID"));
 		schema.getTables().add(employee);
+		employee.getConstraints().addForeignKeyConstraint("FK_EMPLOYEE_COMPANY",
+				employee.getColumns().get("PARENT_ID"), company.getColumns().get("ID"));
 		return SchemaUtils.toTables(schema);
 	}
 

@@ -93,6 +93,7 @@ public class LegacyMigrationLoadPlan {
 		private int loadOrder;
 		private List<String> sourceBusinessKey = new ArrayList<>();
 		private List<String> targetPrimaryKey = new ArrayList<>();
+		private List<String> targetForeignKey = new ArrayList<>();
 		private List<LoadField> fields = new ArrayList<>();
 		private List<JoinKey> parentJoinKeys = new ArrayList<>();
 	}
@@ -116,6 +117,5 @@ public class LegacyMigrationLoadPlan {
 	public static class JoinKey {
 		private String parentStagingColumn;
 		private String childStagingColumn;
-		private String targetForeignKeyColumn;
 	}
 }

@@ -125,6 +125,11 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 				"LegacyMigrationLoader.java.template").exists());
 		var plan = new LegacyMigrationLoadPlanIO()
 				.read(new File(loaderDirectory, "company-load-plan.yaml"));
+		var employeePlan = plan.getDataSets().stream()
+				.filter(dataSet -> "EMPLOYEE_LIST".equals(dataSet.getTargetTable()))
+				.findFirst().orElseThrow();
+		assertEquals(2, employeePlan.getParentJoinKeys().size());
+		assertEquals(java.util.List.of("PARENT_ID"), employeePlan.getTargetForeignKey());
 
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {

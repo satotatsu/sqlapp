@@ -127,7 +127,10 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 				|| source.getHierarchyDepth() != target.getHierarchyDepth()
 				|| source.getLoadOrder() != target.getLoadOrder()
 				|| !Objects.equals(source.getSourceBusinessKey(), target.getSourceBusinessKey())
-				|| !Objects.equals(source.getTargetPrimaryKey(), target.getTargetPrimaryKey())) {
+				|| !Objects.equals(source.getTargetPrimaryKey(), target.getTargetPrimaryKey())
+				|| !Objects.equals(source.getAncestorKeys().isEmpty() ? List.of()
+						: source.getAncestorKeys().getFirst().getTargetForeignKey(),
+						target.getTargetForeignKey())) {
 			throw new CommandException("Load plan data set disagrees with its contract: "
 					+ target.getId());
 		}
@@ -184,8 +187,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 			var contractKey = expected.get(i);
 			var planKey = target.getParentJoinKeys().get(i);
 			if (!Objects.equals(contractKey.getAncestorColumn(), planKey.getParentStagingColumn())
-					|| !Objects.equals(contractKey.getSourceColumn(), planKey.getChildStagingColumn())
-					|| !Objects.equals(contractKey.getTargetColumn(), planKey.getTargetForeignKeyColumn())) {
+					|| !Objects.equals(contractKey.getSourceColumn(), planKey.getChildStagingColumn())) {
 				throw new CommandException("Load plan parent join key disagrees with its contract: "
 						+ target.getId() + "[" + i + "]");
 			}

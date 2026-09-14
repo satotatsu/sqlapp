@@ -66,8 +66,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertEquals(new File("..", schemaFile.getName()).getPath(), plan.getSchemaFile());
 		assertTrue(plan.getTransaction().isTargetAndStagingDeleteAtomic());
 		assertEquals("STG_COMPANY_MASTER", plan.getDataSets().getFirst().getStagingTable());
-		assertEquals("PARENT_ID",
-				plan.getDataSets().getLast().getParentJoinKeys().getFirst().getTargetForeignKeyColumn());
+		assertEquals(java.util.List.of("PARENT_ID"),
+				plan.getDataSets().getLast().getTargetForeignKey());
 		assertTrue(plan.getDataSets().getLast().getFields().stream()
 				.anyMatch(field -> field.isTargetGenerated() && "ID".equals(field.getTargetColumn())));
 
@@ -174,6 +174,13 @@ class GenerateLegacyRdbLoaderCommandTest {
 				() -> new LegacyMigrationContractValidator().validate(missingRootBusinessKey))
 				.getMessage().contains("requires sourceBusinessKey for restart"));
 
+		var duplicateKeyWithDifferentCase = contract();
+		duplicateKeyWithDifferentCase.getDataSets().getFirst().getSourceBusinessKey()
+				.add("company_id");
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(duplicateKeyWithDifferentCase))
+				.getMessage().contains("keys are invalid"));
+
 		var invalidBusinessKey = contract();
 		invalidBusinessKey.getDataSets().getFirst().getSourceBusinessKey()
 				.set(0, "UNKNOWN_SOURCE");
@@ -278,8 +285,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		generator.run();
 		File planFile = new File(output, "company-load-plan.yaml");
 		var plan = new LegacyMigrationLoadPlanIO().read(planFile);
-		plan.getDataSets().getLast().getParentJoinKeys().getFirst()
-				.setTargetForeignKeyColumn("ID");
+		plan.getDataSets().getLast().setTargetForeignKey(java.util.List.of("ID"));
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
 		LoadLegacyHierarchyCommand loader = new LoadLegacyHierarchyCommand();
 		loader.setLoadPlanFile(planFile);
@@ -287,7 +293,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		CommandException exception = assertThrows(CommandException.class, loader::run);
 
 		assertTrue(exception.getMessage()
-				.contains("parent join key disagrees with its contract: table-employee[0]"));
+				.contains("data set disagrees with its contract: table-employee"));
 	}
 
 	@Test
@@ -355,7 +361,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 		ancestor.setAncestorDataSetId(company.getId());
 		ancestor.setAncestorTable("COMPANY_MASTER");
 		ancestor.setDepth(1);
-		ancestor.getColumns().add(new KeyColumn("COMPANY_ID", "COMPANY_ID", "PARENT_ID"));
+		ancestor.getTargetForeignKey().add("PARENT_ID");
+		ancestor.getColumns().add(new KeyColumn("COMPANY_ID", "COMPANY_ID"));
 		employee.getAncestorKeys().add(ancestor);
 		contract.getDataSets().add(employee);
 		return contract;

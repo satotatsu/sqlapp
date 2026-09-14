@@ -112,7 +112,8 @@ class GeneratePliCsvExtractorCommandTest {
 		ancestor.setAncestorDataSetId(root.getId());
 		ancestor.setAncestorTable("COMPANY_MASTER");
 		ancestor.setDepth(1);
-		ancestor.getColumns().add(new KeyColumn("COMPANY_ID", "COMPANY_ID", "PARENT_ID"));
+		ancestor.getTargetForeignKey().add("PARENT_ID");
+		ancestor.getColumns().add(new KeyColumn("COMPANY_ID", "COMPANY_ID"));
 		employee.getAncestorKeys().add(ancestor);
 		contract.getDataSets().add(employee);
 		return contract;

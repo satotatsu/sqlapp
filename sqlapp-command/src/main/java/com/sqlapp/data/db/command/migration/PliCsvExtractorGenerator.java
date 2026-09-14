@@ -137,8 +137,8 @@ public class PliCsvExtractorGenerator {
 			for (var key : dataSet.getAncestorKeys()) {
 				line(builder, "- `" + key.getAncestorDataSetId() + "`: "
 						+ key.getColumns().stream().map(column -> "`" + column.getAncestorColumn()
-								+ "` → `" + column.getSourceColumn() + "` → `"
-								+ column.getTargetColumn() + "`").toList());
+								+ "` → `" + column.getSourceColumn() + "`").toList()
+						+ " => target " + key.getTargetForeignKey());
 			}
 		}
 	}

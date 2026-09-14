@@ -288,6 +288,29 @@ class LoadLegacyHierarchyCommandTest {
 	}
 
 	@Test
+	void testRejectDuplicateLoadKeysWithDifferentCase() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		plan.getDataSets().getFirst().getSourceBusinessKey().add("id");
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validate(plan));
+
+		assertTrue(exception.getMessage().contains("sourceBusinessKey is invalid"));
+
+		LegacyMigrationLoadPlan rootForeignKey = new LegacyMigrationLoadPlan();
+		initialize(rootForeignKey, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		rootForeignKey.getDataSets().getFirst().getTargetForeignKey().add("ID");
+		assertTrue(assertThrows(CommandException.class,
+				() -> LegacyMigrationLoadPlanIO.validateExecution(rootForeignKey))
+				.getMessage().contains("must not define targetForeignKey"));
+	}
+
+	@Test
 	void testRejectUnsupportedAndInertLoadFields() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);

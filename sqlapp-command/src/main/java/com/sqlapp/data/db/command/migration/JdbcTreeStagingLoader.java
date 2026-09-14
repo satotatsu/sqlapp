@@ -66,12 +66,10 @@ public class JdbcTreeStagingLoader {
 
 	public JdbcTreeStagingLoader(Connection connection, List<Table> tables, LegacyMigrationLoadPlan plan)
 			throws SQLException {
-		if (plan == null) {
-			throw new CommandException("Legacy migration load plan is required.");
-		}
 		this.connection = connection;
 		this.tables = tables;
-		this.plan = new LegacyMigrationLoadPlanWrapper(plan);
+		this.plan = new LegacyMigrationLoadPlanWrapper(
+				LegacyMigrationLoadPlanIO.validateExecution(plan));
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tables.forEach(table -> table.setDialect(dialect));
 		initialize();
@@ -327,18 +325,6 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private void initialize() {
-		if (!LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
-			throw new CommandException("Unsupported legacy migration load plan.");
-		}
-		if (plan.getVersion() != LegacyMigrationLoadPlan.CURRENT_VERSION) {
-			throw new CommandException("Unsupported legacy migration load plan version: " + plan.getVersion());
-		}
-		if (plan.getRootBatchSize() <= 0 || plan.getCommitEveryRootBatches() <= 0) {
-			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");
-		}
-		if (plan.getDataSets().isEmpty()) {
-			throw new CommandException("The legacy migration load plan contains no data sets.");
-		}
 		LegacyMigrationLoadPlanIO.validateSchema(plan.getInner(), tables);
 		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			if (dataSets.put(dataSet.getId(), dataSet) != null) {
@@ -407,12 +393,6 @@ public class JdbcTreeStagingLoader {
 				}
 				current = dataSets.get(current.getParentDataSetId());
 			}
-		}
-		TableOperationMode.valueOf(plan.getTableOperationMode());
-		try {
-			HoldCursorStrategy.valueOf(plan.getRootCursorStrategy());
-		} catch (IllegalArgumentException e) {
-			throw new CommandException("Unsupported rootCursorStrategy: " + plan.getRootCursorStrategy(), e);
 		}
 	}
 

@@ -94,11 +94,12 @@ public class LegacyRdbLoaderGenerator {
 				target.getFields().add(loadField);
 			}
 			if (!source.getAncestorKeys().isEmpty()) {
-				source.getAncestorKeys().getFirst().getColumns().forEach(column -> {
+				var ancestor = source.getAncestorKeys().getFirst();
+				target.setTargetForeignKey(new ArrayList<>(ancestor.getTargetForeignKey()));
+				ancestor.getColumns().forEach(column -> {
 					JoinKey key = new JoinKey();
 					key.setParentStagingColumn(column.getAncestorColumn());
 					key.setChildStagingColumn(column.getSourceColumn());
-					key.setTargetForeignKeyColumn(column.getTargetColumn());
 					target.getParentJoinKeys().add(key);
 				});
 			}

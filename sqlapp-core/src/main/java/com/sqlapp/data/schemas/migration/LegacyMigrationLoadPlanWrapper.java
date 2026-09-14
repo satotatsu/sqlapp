@@ -154,6 +154,10 @@ public class LegacyMigrationLoadPlanWrapper {
 			return this.inner.getTargetPrimaryKey();
 		}
 
+		public List<String> getTargetForeignKey() {
+			return this.inner.getTargetForeignKey();
+		}
+
 		public LoadDataSetWrapper(final LoadDataSet inner) {
 			this.inner = inner;
 			fields = inner.getFields().stream().map(o -> new LoadFieldWrapper(o)).toList();
@@ -216,6 +220,5 @@ public class LegacyMigrationLoadPlanWrapper {
 
 		private Column parentStagingColumn;
 		private Column childStagingColumn;
-		private Column targetForeignKeyColumn;
 	}
 }

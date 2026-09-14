@@ -308,19 +308,19 @@ public class LegacyMigrationContractValidator {
 			if (key == null || expectedAncestor == null || key.getDepth() != i + 1
 					|| !Objects.equals(key.getAncestorDataSetId(), expectedAncestor.getId())
 					|| !Objects.equals(key.getAncestorTable(), expectedAncestor.getTargetTable())
+					|| invalidNames(key.getTargetForeignKey())
+					|| key.getTargetForeignKey().isEmpty()
 					|| key.getColumns() == null || key.getColumns().isEmpty()) {
 				throw new CommandException("Child data set ancestor chain is invalid: "
 						+ dataSet.getId());
 			}
 			Set<String> ancestorColumns = new HashSet<>();
 			Set<String> sourceColumns = new HashSet<>();
-			Set<String> targetColumns = new HashSet<>();
 			for (var column : key.getColumns()) {
 				if (column == null || blank(column.getAncestorColumn())
-						|| blank(column.getSourceColumn()) || blank(column.getTargetColumn())
+						|| blank(column.getSourceColumn())
 						|| !ancestorColumns.add(normalize(column.getAncestorColumn()))
-						|| !sourceColumns.add(normalize(column.getSourceColumn()))
-						|| !targetColumns.add(normalize(column.getTargetColumn()))) {
+						|| !sourceColumns.add(normalize(column.getSourceColumn()))) {
 					throw new CommandException("Child data set ancestor key columns are invalid: "
 							+ dataSet.getId() + "[" + i + "]");
 				}
@@ -376,7 +376,7 @@ public class LegacyMigrationContractValidator {
 
 	private boolean invalidNames(List<String> values) {
 		return values == null || values.stream().anyMatch(this::blank)
-				|| new HashSet<>(values).size() != values.size();
+				|| values.stream().map(this::normalize).distinct().count() != values.size();
 	}
 
 	private boolean blank(String value) {

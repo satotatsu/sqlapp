@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.exceptions.CommandException;
@@ -56,6 +57,18 @@ public class LegacyMigrationLoadPlanIO {
 	}
 
 	static LegacyMigrationLoadPlan validate(LegacyMigrationLoadPlan plan) {
+		validateExecution(plan);
+		nonBlank(plan.getMigrationId(), "migrationId");
+		nonBlank(plan.getContractFile(), "contractFile");
+		nonBlank(plan.getContractFingerprint(), "contractFingerprint");
+		nonBlank(plan.getSchemaFile(), "schemaFile");
+		nonBlank(plan.getSchemaFingerprint(), "schemaFingerprint");
+		validateArtifactDataSets(plan);
+		validateViewpointMetadata(plan);
+		return plan;
+	}
+
+	static LegacyMigrationLoadPlan validateExecution(LegacyMigrationLoadPlan plan) {
 		if (plan == null || !LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
 			throw new CommandException("Unsupported legacy RDB load plan format.");
 		}
@@ -63,11 +76,6 @@ public class LegacyMigrationLoadPlanIO {
 			throw new CommandException("Unsupported legacy RDB load plan version: "
 					+ plan.getVersion());
 		}
-		nonBlank(plan.getMigrationId(), "migrationId");
-		nonBlank(plan.getContractFile(), "contractFile");
-		nonBlank(plan.getContractFingerprint(), "contractFingerprint");
-		nonBlank(plan.getSchemaFile(), "schemaFile");
-		nonBlank(plan.getSchemaFingerprint(), "schemaFingerprint");
 		if (!Set.of("INSERT", "INSERT_IGNORE", "MERGE", "REPLACE")
 				.contains(plan.getTableOperationMode())) {
 			throw new CommandException("Unsupported table operation mode: "
@@ -93,19 +101,13 @@ public class LegacyMigrationLoadPlanIO {
 		}
 		final var byId = new HashMap<String, LegacyMigrationLoadPlan.LoadDataSet>();
 		final var stagingTables = new HashSet<String>();
-		final var csvFiles = new HashSet<String>();
 		for (var dataSet : plan.getDataSets()) {
 			if (dataSet == null) {
 				throw new CommandException("Legacy RDB load plan contains a null data set.");
 			}
 			nonBlank(dataSet.getId(), "dataSet.id");
-			nonBlank(dataSet.getFileName(), "dataSet.fileName");
 			nonBlank(dataSet.getStagingTable(), "dataSet.stagingTable");
 			nonBlank(dataSet.getTargetTable(), "dataSet.targetTable");
-			if (!csvFiles.add(dataSet.getFileName().toLowerCase(java.util.Locale.ROOT))) {
-				throw new CommandException("Duplicate load CSV file name: "
-						+ dataSet.getFileName());
-			}
 			if (!stagingTables.add(dataSet.getStagingTable()
 					.toLowerCase(java.util.Locale.ROOT))) {
 				throw new CommandException("Duplicate staging table: "
@@ -128,7 +130,6 @@ public class LegacyMigrationLoadPlanIO {
 				.map(LegacyMigrationLoadPlan.LoadDataSet::getId).toList())) {
 			throw new CommandException("Load data sets must be ordered by loadOrder and id.");
 		}
-		validateViewpointMetadata(plan);
 		for (var dataSet : plan.getDataSets()) {
 			if (dataSet.getParentDataSetId() == null) {
 				if (dataSet.getSourceBusinessKey() == null
@@ -136,9 +137,16 @@ public class LegacyMigrationLoadPlanIO {
 					throw new CommandException("Root data set requires sourceBusinessKey: "
 							+ dataSet.getId());
 				}
+				if (dataSet.getTargetForeignKey() == null
+						|| !dataSet.getTargetForeignKey().isEmpty()) {
+					throw new CommandException("Root data set must not define targetForeignKey: "
+							+ dataSet.getId());
+				}
 			} else if (!byId.containsKey(dataSet.getParentDataSetId())
 					|| dataSet.getParentJoinKeys() == null
-					|| dataSet.getParentJoinKeys().isEmpty()) {
+					|| dataSet.getParentJoinKeys().isEmpty()
+					|| dataSet.getTargetForeignKey() == null
+					|| dataSet.getTargetForeignKey().isEmpty()) {
 				throw new CommandException("Child data set parent or join keys are invalid: "
 						+ dataSet.getId());
 			}
@@ -165,6 +173,17 @@ public class LegacyMigrationLoadPlanIO {
 			}
 		}
 		return plan;
+	}
+
+	private static void validateArtifactDataSets(LegacyMigrationLoadPlan plan) {
+		final var csvFiles = new HashSet<String>();
+		for (var dataSet : plan.getDataSets()) {
+			nonBlank(dataSet.getFileName(), "dataSet.fileName");
+			if (!csvFiles.add(dataSet.getFileName().toLowerCase(java.util.Locale.ROOT))) {
+				throw new CommandException("Duplicate load CSV file name: "
+						+ dataSet.getFileName());
+			}
+		}
 	}
 
 	private static void validateViewpointMetadata(LegacyMigrationLoadPlan plan) {
@@ -207,6 +226,7 @@ public class LegacyMigrationLoadPlanIO {
 	static void validateSchema(LegacyMigrationLoadPlan plan, List<Table> tables) {
 		Objects.requireNonNull(plan, "plan");
 		Objects.requireNonNull(tables, "tables");
+		var targetTables = new HashMap<String, Table>();
 		for (var dataSet : plan.getDataSets()) {
 			List<Table> matches = tables.stream().filter(table ->
 					matchesQualifier(dataSet.getTargetCatalog(), table.getCatalogName())
@@ -223,6 +243,7 @@ public class LegacyMigrationLoadPlanIO {
 								dataSet.getTargetTable()));
 			}
 			Table table = matches.getFirst();
+			targetTables.put(dataSet.getId(), table);
 			for (var field : dataSet.getFields()) {
 				if (field.getTargetColumn() != null && !"DROP".equals(field.getAction())) {
 					column(table, field.getTargetColumn(), "Target column", dataSet.getId());
@@ -247,6 +268,28 @@ public class LegacyMigrationLoadPlanIO {
 			if (dataSet.getParentDataSetId() != null) {
 				var parent = plan.getDataSets().stream().filter(item -> item.getId()
 						.equals(dataSet.getParentDataSetId())).findFirst().orElseThrow();
+				Table childTarget = targetTables.get(dataSet.getId());
+				Table parentTarget = targetTables.get(parent.getId());
+				List<String> targetForeignKey = dataSet.getTargetForeignKey();
+				for (String key : targetForeignKey) {
+					column(childTarget, key, "Target foreign-key column", dataSet.getId());
+				}
+				long matchingForeignKeys = childTarget.getConstraints().getForeignKeyConstraints()
+						.stream().filter(foreignKey -> foreignKey.getRelatedTable() == parentTarget
+								|| foreignKey.getRelatedTable() != null
+										&& equalsName(foreignKey.getRelatedTable().getCatalogName(),
+												parentTarget.getCatalogName())
+										&& equalsName(foreignKey.getRelatedTable().getSchemaName(),
+												parentTarget.getSchemaName())
+										&& equalsName(foreignKey.getRelatedTable().getName(),
+												parentTarget.getName()))
+						.filter(foreignKey -> sameNames(targetForeignKey,
+								foreignKey.getColumns().stream().map(Column::getName).toList()))
+						.count();
+				if (matchingForeignKeys != 1) {
+					throw new CommandException("Target parent foreign key does not uniquely match schema: "
+							+ dataSet.getId());
+				}
 				Set<String> parentStaging = parent.getFields().stream()
 						.filter(LegacyMigrationLoadPlan.LoadField::isExtracted)
 						.map(field -> field.getStagingColumn()
@@ -385,6 +428,7 @@ public class LegacyMigrationLoadPlanIO {
 		}
 		validateNames(dataSet.getSourceBusinessKey(), "sourceBusinessKey", dataSet.getId());
 		validateNames(dataSet.getTargetPrimaryKey(), "targetPrimaryKey", dataSet.getId());
+		validateNames(dataSet.getTargetForeignKey(), "targetForeignKey", dataSet.getId());
 	}
 
 	private static boolean isReservedStagingColumn(String name) {
@@ -395,16 +439,12 @@ public class LegacyMigrationLoadPlanIO {
 	private static void validateJoinKeys(LegacyMigrationLoadPlan.LoadDataSet dataSet) {
 		final var parentColumns = new HashSet<String>();
 		final var childColumns = new HashSet<String>();
-		final var targetColumns = new HashSet<String>();
 		for (var key : dataSet.getParentJoinKeys()) {
 			if (key == null || blank(key.getParentStagingColumn())
 					|| blank(key.getChildStagingColumn())
-					|| blank(key.getTargetForeignKeyColumn())
 					|| !parentColumns.add(key.getParentStagingColumn()
 							.toLowerCase(java.util.Locale.ROOT))
 					|| !childColumns.add(key.getChildStagingColumn()
-							.toLowerCase(java.util.Locale.ROOT))
-					|| !targetColumns.add(key.getTargetForeignKeyColumn()
 							.toLowerCase(java.util.Locale.ROOT))) {
 				throw new CommandException("Child data set join keys are invalid: "
 						+ dataSet.getId());
@@ -415,7 +455,8 @@ public class LegacyMigrationLoadPlanIO {
 	private static void validateNames(java.util.List<String> values, String role,
 			String dataSetId) {
 		if (values == null || values.stream().anyMatch(LegacyMigrationLoadPlanIO::blank)
-				|| new HashSet<>(values).size() != values.size()) {
+				|| values.stream().map(value -> value.toLowerCase(java.util.Locale.ROOT))
+						.distinct().count() != values.size()) {
 			throw new CommandException("Load data set " + role + " is invalid: " + dataSetId);
 		}
 	}

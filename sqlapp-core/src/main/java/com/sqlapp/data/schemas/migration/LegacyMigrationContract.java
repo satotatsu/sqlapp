@@ -104,6 +104,7 @@ public class LegacyMigrationContract {
 		private String ancestorDataSetId;
 		private String ancestorTable;
 		private int depth;
+		private List<String> targetForeignKey = new ArrayList<>();
 		private List<KeyColumn> columns = new ArrayList<>();
 	}
 
@@ -112,15 +113,13 @@ public class LegacyMigrationContract {
 	public static class KeyColumn {
 		private String ancestorColumn;
 		private String sourceColumn;
-		private String targetColumn;
 
 		public KeyColumn() {
 		}
 
-		public KeyColumn(String ancestorColumn, String sourceColumn, String targetColumn) {
+		public KeyColumn(String ancestorColumn, String sourceColumn) {
 			this.ancestorColumn = ancestorColumn;
 			this.sourceColumn = sourceColumn;
-			this.targetColumn = targetColumn;
 		}
 	}
 }

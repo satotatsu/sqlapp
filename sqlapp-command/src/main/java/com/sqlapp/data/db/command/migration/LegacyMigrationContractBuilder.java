@@ -156,11 +156,13 @@ public class LegacyMigrationContractBuilder {
 			key.setAncestorDataSetId(ancestor.getId());
 			key.setAncestorTable(ancestor.getTarget().getTable());
 			key.setDepth(ancestorDepth++);
+			key.setTargetForeignKey(relationship.getTargetKeys().stream()
+					.map(LegacyMigrationMapping.ColumnPair::getChildColumn).toList());
 			relationship.getSourceKeys().forEach(pair -> {
 				String targetColumn = relationship.getTargetKeys().stream()
 						.filter(target -> equals(target.getParentColumn(), pair.getParentColumn()))
 						.map(target -> target.getChildColumn()).findFirst().orElse(pair.getChildColumn());
-				key.getColumns().add(new KeyColumn(pair.getParentColumn(), pair.getChildColumn(), targetColumn));
+				key.getColumns().add(new KeyColumn(pair.getParentColumn(), pair.getChildColumn()));
 				addExtractedAncestorField(dataSet, table, ancestor, pair, targetColumn);
 			});
 			dataSet.getAncestorKeys().add(key);
