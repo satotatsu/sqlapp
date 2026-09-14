@@ -89,8 +89,17 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 	public TableRelationTreeHolder(Collection<Table> tables,
 			Predicate<ForeignKeyConstraint> foreignKeyPredicate) {
+		Objects.requireNonNull(tables, "tables");
 		Objects.requireNonNull(foreignKeyPredicate, "foreignKeyPredicate");
+		if (tables.isEmpty()) {
+			throw new IllegalArgumentException("Table relation tree requires at least one table.");
+		}
 		for (Table table : tables) {
+			Objects.requireNonNull(table, "table");
+			if (getTableRelation(table) != null) {
+				throw new IllegalArgumentException("Duplicate table identity in relation tree: "
+						+ qualifiedName(table));
+			}
 			final TableRelation tableRelation = new TableRelation(table);
 			tableMap.put(table.getSchemaName(), table.getName(), tableRelation);
 			qualifiedTableMap.put(table.getCatalogName(), table.getSchemaName(), table.getName(), tableRelation);
@@ -129,7 +138,16 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			Table[] tableArray = rootList.stream().map(tr -> tr.getTable()).toArray(i -> new Table[i]);
 			throw new MultipleRootTablesException(tableArray);
 		}
+		if (rootList.isEmpty()) {
+			throw new IllegalArgumentException("Table relation tree contains no root table; "
+					+ "check for a cyclic relationship.");
+		}
 		this.rootTableRelation = rootList.getFirst();
+	}
+
+	private String qualifiedName(Table table) {
+		return java.util.stream.Stream.of(table.getCatalogName(), table.getSchemaName(), table.getName())
+				.filter(Objects::nonNull).collect(java.util.stream.Collectors.joining("."));
 	}
 
 	public TableRelation getTableRelation(Table table) {

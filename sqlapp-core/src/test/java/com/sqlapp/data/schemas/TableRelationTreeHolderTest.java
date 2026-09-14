@@ -136,6 +136,56 @@ class TableRelationTreeHolderTest {
 		assertEquals(parent, holder.getTableRelation(child).getParentTableRelation().getTable());
 	}
 
+	@Test
+	void rejectsDuplicateQualifiedIdentityIgnoringCase() {
+		Catalog catalog = new Catalog("CATALOG");
+		Schema schema = new Schema("PUBLIC");
+		catalog.getSchemas().add(schema);
+		Table first = new Table("MEMBER");
+		schema.getTables().add(first);
+		Catalog equivalentCatalog = new Catalog("catalog");
+		Schema equivalentSchema = new Schema("public");
+		equivalentCatalog.getSchemas().add(equivalentSchema);
+		Table second = new Table("member");
+		equivalentSchema.getTables().add(second);
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(first, second));
+
+		assertEquals("Duplicate table identity in relation tree: catalog.public.member",
+				exception.getMessage());
+	}
+
+	@Test
+	void rejectsAnEmptyTreeWithAnActionableMessage() {
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(List.of()));
+
+		assertEquals("Table relation tree requires at least one table.", exception.getMessage());
+	}
+
+	@Test
+	void rejectsACyclicTreeWithAnActionableMessage() {
+		Table first = new Table("FIRST");
+		first.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		first.getColumns().add(new Column("SECOND_ID").setDataType(DataType.INT));
+		first.setPrimaryKey(first.getColumns().get("ID"));
+		Table second = new Table("SECOND");
+		second.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		second.getColumns().add(new Column("FIRST_ID").setDataType(DataType.INT));
+		second.setPrimaryKey(second.getColumns().get("ID"));
+		first.getConstraints().addForeignKeyConstraint("fk_second",
+				first.getColumns().get("SECOND_ID"), second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("fk_first",
+				second.getColumns().get("FIRST_ID"), first.getColumns().get("ID"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(first, second));
+
+		assertEquals("Table relation tree contains no root table; check for a cyclic relationship.",
+				exception.getMessage());
+	}
+
 	private List<Table> getTables() {
 		List<Table> list = CommonUtils.list();
 		Table table = new Table("tabA");
