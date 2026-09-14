@@ -111,7 +111,7 @@ class BulkMigrationOperationalReportTest {
 	}
 
 	@Test
-	void reportReaderRejectsMissingUnsupportedAndInconsistentReports() {
+	void reportIoRejectsMissingUnsupportedAndInconsistentReports() {
 		final var io = new BulkMigrationOperationalReportIO();
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.read(directory.resolve("missing.json")));
@@ -124,19 +124,17 @@ class BulkMigrationOperationalReportTest {
 				plan, status, null, null);
 		final var unsupported = copyWith(report, 3, report.totalTasks());
 		final Path unsupportedFile = directory.resolve("unsupported.json");
-		io.write(unsupportedFile, unsupported);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
-				() -> io.read(unsupportedFile));
+				() -> io.write(unsupportedFile, unsupported));
 
 		final var inconsistent = copyWith(report, report.formatVersion(), 2);
 		final Path inconsistentFile = directory.resolve("inconsistent.json");
-		io.write(inconsistentFile, inconsistent);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
-				() -> io.read(inconsistentFile));
+				() -> io.write(inconsistentFile, inconsistent));
 	}
 
 	@Test
-	void reportReaderRejectsDuplicateAndForeignNestedIdentities() {
+	void reportIoRejectsDuplicateAndForeignNestedIdentities() {
 		final var io = new BulkMigrationOperationalReportIO();
 		final BulkMigrationJobPlan plan = plan();
 		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
@@ -148,18 +146,61 @@ class BulkMigrationOperationalReportTest {
 		final var duplicateTasks = copyWithContent(report,
 				List.of(report.tasks().get(0), report.tasks().get(0)), List.of());
 		final Path duplicateFile = directory.resolve("duplicate-tasks.json");
-		io.write(duplicateFile, duplicateTasks);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
-				() -> io.read(duplicateFile));
+				() -> io.write(duplicateFile, duplicateTasks));
 
 		final var foreignProgress = new BulkMigrationOperationalReport.Progress(
 				"other", 0, null, 0, 0, null, null);
 		final var foreignProgressReport = copyWithContent(report, report.tasks(),
 				List.of(foreignProgress));
 		final Path foreignProgressFile = directory.resolve("foreign-progress.json");
-		io.write(foreignProgressFile, foreignProgressReport);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
-				() -> io.read(foreignProgressFile));
+				() -> io.write(foreignProgressFile, foreignProgressReport));
+	}
+
+	@Test
+	void reportWriterRejectsCorruptNestedStateAndAggregates() {
+		final var io = new BulkMigrationOperationalReportIO();
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final var report = new BulkMigrationOperationalReportBuilder().build(
+				plan, status, null, null);
+		final var task = report.tasks().get(0);
+
+		final var invalidConfiguration = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
+				task.tableName(), "UNKNOWN", 0, task.checkpointMode(), task.state(), null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("invalid-task.json"),
+						copyWithContent(report, List.of(invalidConfiguration), List.of())));
+
+		final var invalidCheckpoint = new BulkMigrationOperationalReport.Checkpoint(
+				task.migrationId(), "source", "target", 1, 0, task.chunkSize(), false,
+				"hash", null);
+		final var checkpointTask = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
+				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
+				BulkMigrationJobTaskState.IN_PROGRESS.name(), invalidCheckpoint);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("invalid-checkpoint.json"),
+						copyWithContent(report, List.of(checkpointTask), List.of())));
+
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("invalid-aggregate.json"),
+						copyWithProcessedRows(report, 1)));
+		final var invalidProgress = new BulkMigrationOperationalReport.Progress(
+				task.migrationId(), 1, 0L, -1, Double.NaN, 2d, -1L);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("invalid-progress.json"),
+						copyWithContent(report, report.tasks(), List.of(invalidProgress))));
+		final var foreignMaintenance = new BulkMigrationOperationalReport.Maintenance(
+				"other-plan", BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.generatedAt(), null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("foreign-maintenance.json"),
+						copyWithMaintenance(report, foreignMaintenance)));
 	}
 
 	@Test
@@ -514,6 +555,25 @@ class BulkMigrationOperationalReportTest {
 				source.processedRows(), source.completedTasks(), tasks.size(), tasks,
 				source.operations(), source.maintenance(), source.progress(),
 				progressByMigration, source.execution());
+	}
+
+	private static BulkMigrationOperationalReport copyWithProcessedRows(
+			final BulkMigrationOperationalReport source, final long processedRows) {
+		return new BulkMigrationOperationalReport(source.formatVersion(),
+				source.generatedAt(), source.jobId(), source.planFingerprint(), source.compatible(),
+				processedRows, source.completedTasks(), source.totalTasks(), source.tasks(),
+				source.operations(), source.maintenance(), source.progress(),
+				source.progressByMigration(), source.execution());
+	}
+
+	private static BulkMigrationOperationalReport copyWithMaintenance(
+			final BulkMigrationOperationalReport source,
+			final BulkMigrationOperationalReport.Maintenance maintenance) {
+		return new BulkMigrationOperationalReport(source.formatVersion(),
+				source.generatedAt(), source.jobId(), source.planFingerprint(), source.compatible(),
+				source.processedRows(), source.completedTasks(), source.totalTasks(),
+				source.tasks(), source.operations(), maintenance, source.progress(),
+				source.progressByMigration(), source.execution());
 	}
 
 	private static BulkMigrationOperationalReport copyWithExecution(

@@ -5,15 +5,21 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobOperationPhase;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationProgressSnapshot;
 import com.sqlapp.util.JsonConverter;
 
 /** Atomically writes bulk migration operational reports as UTF-8 JSON. */
@@ -79,7 +85,7 @@ public final class BulkMigrationOperationalReportIO {
 
 	public void write(final Path file, final BulkMigrationOperationalReport report) {
 		Objects.requireNonNull(file, "file");
-		Objects.requireNonNull(report, "report");
+		validate(Objects.requireNonNull(report, "report"));
 		final Path absolute = file.toAbsolutePath();
 		try {
 			AtomicMigrationFile.write(absolute,
@@ -122,19 +128,58 @@ public final class BulkMigrationOperationalReportIO {
 		}
 		final Set<String> taskIds = new HashSet<>();
 		final Set<String> migrationIds = new HashSet<>();
+		long processedRows = 0;
+		long completedTasks = 0;
+		boolean compatible = true;
 		for (BulkMigrationOperationalReport.Task task : report.tasks()) {
-			if (!knownTaskState(task.state())) {
+			final BulkMigrationJobTaskState state = taskState(task.state());
+			if (state == null) {
 				throw new CommandException(
 						"Bulk migration report contains an unknown task state");
+			}
+			if (task.tableName() == null || task.tableName().isBlank()
+					|| task.chunkSize() <= 0 || !known(BulkMigrationMode.class, task.mode())
+					|| !known(BulkMigrationCheckpointMode.class, task.checkpointMode())) {
+				throw new CommandException(
+						"Bulk migration report contains invalid task configuration");
 			}
 			if (!taskIds.add(task.taskId()) || !migrationIds.add(task.migrationId())) {
 				throw new CommandException(
 						"Bulk migration report contains duplicate task identities");
 			}
-			if (task.checkpoint() != null && !task.migrationId()
-					.equals(task.checkpoint().migrationId())) {
+			if (task.checkpoint() != null) {
+				if (!task.migrationId().equals(task.checkpoint().migrationId())) {
+					throw new CommandException(
+							"Bulk migration report checkpoint migrationId mismatch");
+				}
+				validateCheckpoint(task.checkpoint());
+				try {
+					processedRows = Math.addExact(processedRows,
+							task.checkpoint().processedRows());
+				} catch (ArithmeticException e) {
+					throw new CommandException(
+							"Bulk migration report processed row count overflow", e);
+				}
+			}
+			if (state == BulkMigrationJobTaskState.COMPLETE) {
+				completedTasks++;
+			}
+			compatible &= state != BulkMigrationJobTaskState.INCOMPATIBLE;
+		}
+		if (processedRows != report.processedRows()
+				|| completedTasks != report.completedTasks()
+				|| compatible != report.compatible()) {
+			throw new CommandException(
+					"Bulk migration report aggregate values are inconsistent");
+		}
+		final Set<String> operationIds = new HashSet<>();
+		for (final BulkMigrationOperationalReport.Operation operation : report.operations()) {
+			if (operation == null || operation.id() == null || operation.id().isBlank()
+					|| !operationIds.add(operation.id())
+					|| operation.description() == null || operation.description().isBlank()
+					|| !known(BulkMigrationJobOperationPhase.class, operation.phase())) {
 				throw new CommandException(
-						"Bulk migration report checkpoint migrationId mismatch");
+						"Bulk migration report contains an invalid operation");
 			}
 		}
 		final Set<String> progressMigrationIds = new HashSet<>();
@@ -145,11 +190,15 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException(
 						"Bulk migration report contains invalid progress identities");
 			}
+			validateProgress(progress);
 		}
 		if (report.progress() != null
 				&& !migrationIds.contains(report.progress().migrationId())) {
 			throw new CommandException(
 					"Bulk migration report current progress migrationId mismatch");
+		}
+		if (report.progress() != null) {
+			validateProgress(report.progress());
 		}
 		if (report.maintenance() != null) {
 			if (report.maintenance().planFingerprint() == null
@@ -161,16 +210,65 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException(
 						"Bulk migration report contains an unknown maintenance status");
 			}
+			if (!report.planFingerprint().equals(
+					report.maintenance().planFingerprint())
+					|| report.maintenance().updatedAt() == null) {
+				throw new CommandException(
+						"Bulk migration report maintenance does not match the report plan");
+			}
+		}
+		if (report.execution() != null && report.execution().taskId() != null
+				&& !taskIds.contains(report.execution().taskId())) {
+			throw new CommandException(
+					"Bulk migration report execution taskId does not belong to the report");
 		}
 		return report;
 	}
 
-	private static boolean knownTaskState(final String state) {
+	private static void validateCheckpoint(
+			final BulkMigrationOperationalReport.Checkpoint checkpoint) {
 		try {
-			BulkMigrationJobTaskState.valueOf(state);
+			BulkMigrationCheckpoint.builder().migrationId(checkpoint.migrationId())
+					.sourceFingerprint(checkpoint.sourceFingerprint())
+					.targetFingerprint(checkpoint.targetFingerprint())
+					.processedRows(checkpoint.processedRows())
+					.completedChunks(checkpoint.completedChunks())
+					.chunkSize(checkpoint.chunkSize()).complete(checkpoint.complete())
+					.lastChunkHash(checkpoint.lastChunkHash())
+					.resumeToken(checkpoint.resumeToken()).build().validate();
+		} catch (IllegalArgumentException | NullPointerException e) {
+			throw new CommandException("Bulk migration report checkpoint is invalid", e);
+		}
+	}
+
+	private static void validateProgress(
+			final BulkMigrationOperationalReport.Progress progress) {
+		try {
+			new BulkMigrationProgressSnapshot(progress.migrationId(), progress.processedRows(),
+					progress.totalRows(), Duration.ofMillis(progress.elapsedMillis()),
+					progress.rowsPerSecond(), progress.completionRatio(),
+					progress.estimatedRemainingMillis() == null ? null
+							: Duration.ofMillis(progress.estimatedRemainingMillis()));
+		} catch (IllegalArgumentException | NullPointerException | ArithmeticException e) {
+			throw new CommandException("Bulk migration report progress is invalid", e);
+		}
+	}
+
+	private static <E extends Enum<E>> boolean known(final Class<E> type,
+			final String value) {
+		try {
+			Enum.valueOf(type, value);
 			return true;
 		} catch (IllegalArgumentException | NullPointerException e) {
 			return false;
+		}
+	}
+
+	private static BulkMigrationJobTaskState taskState(final String state) {
+		try {
+			return BulkMigrationJobTaskState.valueOf(state);
+		} catch (IllegalArgumentException | NullPointerException e) {
+			return null;
 		}
 	}
 
