@@ -392,7 +392,8 @@ public class JdbcTreeStagingLoader {
 				LoadDataSetWrapper parent = dataSets.get(dataSet.getParentDataSetId());
 				List<ForeignKeyConstraint> targetForeignKeys = dataSet.getTargetTable()
 						.getConstraints().getForeignKeyConstraints().stream()
-						.filter(foreignKey -> foreignKey.getRelatedTable() == parent.getTargetTable())
+						.filter(foreignKey -> sameTable(foreignKey.getRelatedTable(),
+								parent.getTargetTable()))
 						.filter(foreignKey -> sameNames(dataSet.getTargetForeignKey(),
 								foreignKey.getColumns().stream().map(Column::getName).toList()))
 						.toList();
@@ -667,6 +668,13 @@ public class JdbcTreeStagingLoader {
 
 	private boolean equals(String left, String right) {
 		return left == null ? right == null : left.equalsIgnoreCase(right);
+	}
+
+	private boolean sameTable(Table left, Table right) {
+		return left == right || left != null && right != null
+				&& equals(left.getCatalogName(), right.getCatalogName())
+				&& equals(left.getSchemaName(), right.getSchemaName())
+				&& equals(left.getName(), right.getName());
 	}
 
 	private boolean sameNames(List<String> left, List<String> right) {
