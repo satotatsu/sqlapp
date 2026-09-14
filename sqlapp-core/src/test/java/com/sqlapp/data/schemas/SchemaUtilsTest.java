@@ -20,6 +20,7 @@
 package com.sqlapp.data.schemas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
@@ -37,6 +38,26 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
 public class SchemaUtilsTest {
+
+	@Test
+	public void testIsSameTable() {
+		Catalog firstCatalog = new Catalog("CATALOG");
+		Schema firstSchema = new Schema("PUBLIC");
+		firstCatalog.getSchemas().add(firstSchema);
+		Table first = new Table("MEMBER");
+		firstSchema.getTables().add(first);
+
+		Catalog secondCatalog = new Catalog("catalog");
+		Schema secondSchema = new Schema("public");
+		secondCatalog.getSchemas().add(secondSchema);
+		Table second = new Table("member");
+		secondSchema.getTables().add(second);
+
+		assertTrue(SchemaUtils.isSameTable(first, second));
+		assertFalse(SchemaUtils.isSameTable(first, new Table("OTHER")));
+		assertFalse(SchemaUtils.isSameTable(first, null));
+		assertFalse(SchemaUtils.isSameTable(null, null));
+	}
 
 	protected void testDb() throws XMLStreamException, IOException {
 		final InputStream stream = FileUtils.getInputStream(this.getClass(), "catalog.xml");

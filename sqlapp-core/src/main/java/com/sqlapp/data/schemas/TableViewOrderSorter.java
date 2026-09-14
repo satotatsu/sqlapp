@@ -60,7 +60,7 @@ public final class TableViewOrderSorter {
 				continue;
 			}
 			for (ForeignKeyConstraint fk : tab.getConstraints().getForeignKeyConstraints()) {
-				if (fk.getRelatedTable() == table) {
+				if (SchemaUtils.isSameTable(fk.getRelatedTable(), table)) {
 					return true;
 				}
 			}

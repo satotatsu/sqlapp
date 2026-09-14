@@ -62,6 +62,24 @@ class TableRelationTreeHolderTest {
 		assertEquals("tabB", holder.getTableRelation(child).getParent().getName());
 	}
 
+	@Test
+	void ignoresSelfReferenceToAnEquivalentTableInstance() {
+		Table table = new Table("tabA");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		table.setPrimaryKey(table.getColumns().get("ID"));
+		Table equivalent = new Table("TABA");
+		equivalent.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getConstraints().addForeignKeyConstraint("fk_self",
+				table.getColumns().get("PARENT_ID"), equivalent.getColumns().get("ID"));
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(table);
+
+		TableRelation relation = holder.getTableRelation(table);
+		assertEquals(table, relation.getTable());
+		assertNull(relation.getParent());
+	}
+
 	private List<Table> getTables() {
 		List<Table> list = CommonUtils.list();
 		Table table = new Table("tabA");

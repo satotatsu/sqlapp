@@ -16,6 +16,7 @@ import java.util.Set;
 
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.exceptions.CommandException;
@@ -275,14 +276,8 @@ public class LegacyMigrationLoadPlanIO {
 					column(childTarget, key, "Target foreign-key column", dataSet.getId());
 				}
 				long matchingForeignKeys = childTarget.getConstraints().getForeignKeyConstraints()
-						.stream().filter(foreignKey -> foreignKey.getRelatedTable() == parentTarget
-								|| foreignKey.getRelatedTable() != null
-										&& equalsName(foreignKey.getRelatedTable().getCatalogName(),
-												parentTarget.getCatalogName())
-										&& equalsName(foreignKey.getRelatedTable().getSchemaName(),
-												parentTarget.getSchemaName())
-										&& equalsName(foreignKey.getRelatedTable().getName(),
-												parentTarget.getName()))
+						.stream().filter(foreignKey -> SchemaUtils.isSameTable(
+								foreignKey.getRelatedTable(), parentTarget))
 						.filter(foreignKey -> sameNames(targetForeignKey,
 								foreignKey.getColumns().stream().map(Column::getName).toList()))
 						.count();

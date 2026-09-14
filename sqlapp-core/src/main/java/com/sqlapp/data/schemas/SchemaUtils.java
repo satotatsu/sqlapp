@@ -87,6 +87,21 @@ public class SchemaUtils {
 	}
 
 	/**
+	 * Returns whether two table objects identify the same catalog, schema and
+	 * table, ignoring identifier case.
+	 *
+	 * @param left  first table
+	 * @param right second table
+	 * @return {@code true} when both tables identify the same table
+	 */
+	public static boolean isSameTable(final Table left, final Table right) {
+		return left != null && right != null
+				&& CommonUtils.eqIgnoreCase(left.getCatalogName(), right.getCatalogName())
+				&& CommonUtils.eqIgnoreCase(left.getSchemaName(), right.getSchemaName())
+				&& CommonUtils.eqIgnoreCase(left.getName(), right.getName());
+	}
+
+	/**
 	 * 指定したファイルのXMLの内容を自動判定してDBオブジェクトを返します。内容の読み込みは行いません。
 	 * 
 	 * @param path
