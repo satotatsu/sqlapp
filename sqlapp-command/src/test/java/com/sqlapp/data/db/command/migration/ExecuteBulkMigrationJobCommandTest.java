@@ -143,6 +143,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					final var verificationResult = ExecuteBulkMigrationJobCommand.verify(
 							plan, targetConnection, 1);
 					assertEquals(true, verificationResult.isMatch());
+					assertEquals(plan.getFingerprint(), verificationResult.getPlanFingerprint());
 					assertEquals(2, verificationResult.getExpectedRows());
 					assertEquals(List.of("ID", "NAME"),
 							verificationResult.getTasks().get(0).getColumns());
@@ -166,6 +167,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					final Path idOnlyReport = temporaryDirectory.resolve("reports/id-only.json");
 					new BulkMigrationVerificationReportIO().write(idOnlyReport,
 							plan.getFingerprint(), idOnly);
+					assertThrows(IllegalArgumentException.class,
+							() -> new BulkMigrationVerificationReportIO().write(idOnlyReport,
+									"different-plan", idOnly));
 					final var idOnlyArtifact = new BulkMigrationVerificationReportIO()
 							.read(idOnlyReport, plan.getFingerprint());
 					assertEquals(List.of("ID"), idOnlyArtifact.tasks().get(0).columns());

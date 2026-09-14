@@ -10,10 +10,19 @@ import lombok.Value;
 /** Aggregated verification results for a multi-table migration job. */
 @Value
 public class BulkMigrationJobVerificationResult {
+	String planFingerprint;
 	List<BulkMigrationJobTaskVerificationResult> tasks;
 
 	public BulkMigrationJobVerificationResult(
 			final List<BulkMigrationJobTaskVerificationResult> tasks) {
+		this(null, tasks);
+	}
+
+	public BulkMigrationJobVerificationResult(final String planFingerprint,
+			final List<BulkMigrationJobTaskVerificationResult> tasks) {
+		if (planFingerprint != null && planFingerprint.isBlank()) {
+			throw new IllegalArgumentException("planFingerprint must not be empty");
+		}
 		Objects.requireNonNull(tasks, "tasks");
 		if (tasks.stream().anyMatch(Objects::isNull)) {
 			throw new NullPointerException("tasks must not contain null");
@@ -25,6 +34,7 @@ public class BulkMigrationJobVerificationResult {
 						+ task.getTaskId());
 			}
 		}
+		this.planFingerprint = planFingerprint;
 		this.tasks = List.copyOf(tasks);
 	}
 

@@ -242,7 +242,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(),
 					verification.getColumns(), verification));
 		}
-		return new BulkMigrationJobVerificationResult(List.copyOf(results));
+		return new BulkMigrationJobVerificationResult(plan.getFingerprint(),
+				List.copyOf(results));
 	}
 
 	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {

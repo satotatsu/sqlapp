@@ -560,6 +560,8 @@ public final class BulkMigration {
 				Connection targetConnection = target.getConnection();
 				BulkMigrationVerificationScope ignored = BulkMigrationVerificationScope.open(
 						verificationIsolation, sourceConnection, targetConnection)) {
+			final BulkMigrationJobPlan verificationPlan = plan(sourceConnection,
+					targetConnection, true);
 			final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 			for (final Table table : orderedTables()) {
 				final var expected = keysetSource(sourceConnection, table);
@@ -570,12 +572,11 @@ public final class BulkMigration {
 				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table),
 						columns, verification));
 			}
-			final var verification = new BulkMigrationJobVerificationResult(results);
+			final var verification = new BulkMigrationJobVerificationResult(
+					verificationPlan.getFingerprint(), results);
 			if (verificationReportFile != null) {
-				final String planFingerprint = plan(sourceConnection, targetConnection, true)
-						.getFingerprint();
 				new BulkMigrationVerificationReportIO().write(verificationReportFile,
-						planFingerprint, verificationIsolation,
+						verificationPlan.getFingerprint(), verificationIsolation,
 						maxReportedMismatches, verification);
 			}
 			return verification;
@@ -687,6 +688,15 @@ public final class BulkMigration {
 	private BulkMigrationJobRepairPlan repairPlan(final Connection sourceConnection,
 			final Connection targetConnection,
 			final BulkMigrationJobVerificationResult verification) throws SQLException {
+		final BulkMigrationJobPlan currentPlan = plan(sourceConnection, targetConnection, true);
+		if (verification.getPlanFingerprint() == null) {
+			throw new IllegalArgumentException(
+					"Verification result does not identify its migration plan");
+		}
+		if (!verification.getPlanFingerprint().equals(currentPlan.getFingerprint())) {
+			throw new IllegalArgumentException(
+					"Verification result migration plan differs from the current plan");
+		}
 		if (!verification.getTasks().stream().map(
 				BulkMigrationJobTaskVerificationResult::getTaskId).toList()
 				.equals(orderedTables().stream().map(BulkMigration::taskId).toList())) {

@@ -63,6 +63,12 @@ public final class BulkMigrationVerificationReportIO {
 			final int maxReportedMismatches,
 			final BulkMigrationJobVerificationResult result) {
 		Objects.requireNonNull(isolation, "isolation");
+		Objects.requireNonNull(result, "result");
+		if (result.getPlanFingerprint() != null
+				&& !result.getPlanFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Verification result plan fingerprint does not match the report plan");
+		}
 		if (maxReportedMismatches <= 0) {
 			throw new IllegalArgumentException("maxReportedMismatches must be greater than zero");
 		}

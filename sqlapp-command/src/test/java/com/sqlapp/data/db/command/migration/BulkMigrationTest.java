@@ -203,6 +203,7 @@ class BulkMigrationTest {
 
 		final var verification = migration.verify();
 
+		assertEquals(migration.dryRun().planFingerprint(), verification.getPlanFingerprint());
 		assertEquals(List.of("ID"), verification.getTasks().get(0).getColumns());
 		assertTrue(verification.isMatch());
 		assertEquals(1, verification.getTasks().get(0).getVerificationResult()
@@ -216,6 +217,11 @@ class BulkMigrationTest {
 				.source(source).target(target).schema(schema).tableOption("ITEMS",
 						BulkMigrationTableOption.builder().verificationChunkSize(0).build())
 				.build());
+		table.getColumns().add(new Column("CHANGED_AFTER_VERIFICATION"));
+		final var repair = migration.planRepair(verification);
+		final IllegalArgumentException changedPlan = assertThrows(IllegalArgumentException.class,
+				() -> repair.writeJson(directory.resolve("changed-verification-plan.json")));
+		assertTrue(changedPlan.getMessage().contains("differs from the current plan"));
 	}
 
 	@Test

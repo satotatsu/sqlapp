@@ -602,6 +602,10 @@ class BulkMigrationJobVerifierTest {
 				verification);
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobVerificationResult(List.of(task, task)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobVerificationResult(" ", List.of(task)));
+		assertEquals("plan-v1", new BulkMigrationJobVerificationResult(
+				"plan-v1", List.of(task)).getPlanFingerprint());
 	}
 
 	@Test
