@@ -6,6 +6,8 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,11 +36,7 @@ public class LegacyMigrationContractValidator {
 		if (blank(contract.getMigrationId())) {
 			throw new CommandException("The legacy migration contract requires migrationId.");
 		}
-		if (contract.getCsv() == null || blank(contract.getCsv().getEncoding())
-				|| blank(contract.getCsv().getDelimiter()) || contract.getCsv().getQuote() == null
-				|| blank(contract.getCsv().getRecordSeparator())) {
-			throw new CommandException("The legacy migration contract CSV format is invalid.");
-		}
+		validateCsv(contract);
 		if (contract.getDataSets() == null || contract.getDataSets().isEmpty()) {
 			throw new CommandException("The legacy migration contract contains no data sets.");
 		}
@@ -67,7 +65,9 @@ public class LegacyMigrationContractValidator {
 			if (dataSet.getFields().stream().anyMatch(field -> field == null)) {
 				throw new CommandException("Data set contains a null field: " + dataSet.getId());
 			}
-			for (Field field : dataSet.getFields()) {
+			Set<String> stagingColumns = new HashSet<>();
+			for (int i = 0; i < dataSet.getFields().size(); i++) {
+				Field field = dataSet.getFields().get(i);
 				try {
 					com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction
 							.valueOf(field.getAction());
@@ -75,8 +75,28 @@ public class LegacyMigrationContractValidator {
 					throw new CommandException("Unsupported field action in data set: "
 							+ dataSet.getId() + "." + field.getAction());
 				}
+				if (field.getPosition() != i + 1) {
+					throw new CommandException("Field positions must match contract order in data set: "
+							+ dataSet.getId());
+				}
+				if (!field.isExtracted() && !field.isGenerated()) {
+					throw new CommandException("Field must be extracted or generated in data set: "
+							+ dataSet.getId() + "[" + i + "]");
+				}
+				if (field.isExtracted()) {
+					if (blank(field.getStagingColumn())) {
+						throw new CommandException("Extracted field requires sourcePath and stagingColumn: "
+								+ dataSet.getId());
+					}
+					String stagingColumn = normalize(field.getStagingColumn());
+					if (!stagingColumns.add(stagingColumn)
+							|| isReservedStagingColumn(field.getStagingColumn())) {
+						throw new CommandException("Extracted staging columns must be unique and non-reserved: "
+								+ dataSet.getId() + "." + field.getStagingColumn());
+					}
+				}
+				validateIndexedSources(dataSet, field, i);
 			}
-			int expectedPosition = 1;
 			List<Field> extractedFields = dataSet.getFields().stream()
 					.filter(field -> field != null && field.isExtracted()).toList();
 			if (extractedFields.isEmpty()) {
@@ -90,11 +110,8 @@ public class LegacyMigrationContractValidator {
 					throw new CommandException("Extracted field requires sourcePath and stagingColumn: "
 							+ dataSet.getId());
 				}
-				if (field.getPosition() < expectedPosition) {
-					throw new CommandException("Invalid field order in data set: " + dataSet.getId());
-				}
-				expectedPosition = field.getPosition() + 1;
 			}
+			validateOccurrence(dataSet);
 		}
 		for (DataSet dataSet : contract.getDataSets()) {
 			if (dataSet.getParentDataSetId() != null && !ids.contains(dataSet.getParentDataSetId())) {
@@ -120,6 +137,86 @@ public class LegacyMigrationContractValidator {
 			}
 			validateAncestorKeys(dataSet, byId);
 		}
+	}
+
+	private void validateCsv(LegacyMigrationContract contract) {
+		var csv = contract.getCsv();
+		if (csv == null || blank(csv.getEncoding()) || csv.getDelimiter() == null
+				|| csv.getQuote() == null || csv.getNullValue() == null
+				|| blank(csv.getRecordSeparator())
+				|| csv.getDelimiter().codePointCount(0, csv.getDelimiter().length()) != 1
+				|| csv.getQuote().codePointCount(0, csv.getQuote().length()) != 1
+				|| csv.getDelimiter().equals(csv.getQuote())
+				|| !Set.of("CRLF", "LF").contains(csv.getRecordSeparator())) {
+			throw new CommandException("The legacy migration contract CSV format is invalid.");
+		}
+		try {
+			if (!Charset.isSupported(csv.getEncoding())) {
+				throw new CommandException("Unsupported CSV encoding: " + csv.getEncoding());
+			}
+		} catch (IllegalCharsetNameException e) {
+			throw new CommandException("Unsupported CSV encoding: " + csv.getEncoding(), e);
+		}
+	}
+
+	private void validateOccurrence(DataSet dataSet) {
+		boolean hasIndexedSources = dataSet.getFields().stream()
+				.anyMatch(field -> field.getIndexedSources() != null
+						&& !field.getIndexedSources().isEmpty());
+		List<Field> occurrenceFields = dataSet.getFields().stream()
+				.filter(Field::isOccurrenceIndex).toList();
+		boolean configured = dataSet.getMaximumOccurrences() != null
+				|| !blank(dataSet.getOccurrenceColumn())
+				|| !blank(dataSet.getOccurrenceSourceMode()) || hasIndexedSources
+				|| !occurrenceFields.isEmpty();
+		if (!configured) {
+			return;
+		}
+		if (dataSet.getMaximumOccurrences() == null || dataSet.getMaximumOccurrences() <= 0
+				|| blank(dataSet.getOccurrenceColumn()) || occurrenceFields.size() != 1
+				|| dataSet.getOccurrenceSourceMode() != null
+						&& !"NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode())) {
+			throw new CommandException("Data set occurrence configuration is invalid: "
+					+ dataSet.getId());
+		}
+		Field occurrence = occurrenceFields.getFirst();
+		if (!occurrence.isExtracted() || !occurrence.isGenerated()
+				|| !equalsName(dataSet.getOccurrenceColumn(), occurrence.getStagingColumn())) {
+			throw new CommandException("Data set occurrence field is invalid: "
+					+ dataSet.getId());
+		}
+		if ("NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode())
+				!= hasIndexedSources) {
+			throw new CommandException("Data set occurrence source mode is inconsistent: "
+					+ dataSet.getId());
+		}
+	}
+
+	private boolean equalsName(String left, String right) {
+		return left != null && right != null && left.equalsIgnoreCase(right);
+	}
+
+	private void validateIndexedSources(DataSet dataSet, Field field, int fieldIndex) {
+		if (field.getIndexedSources() == null || field.getIndexedSources().isEmpty()) {
+			return;
+		}
+		if (!field.isExtracted()) {
+			throw new CommandException("Indexed sources require an extracted field: "
+					+ dataSet.getId() + "[" + fieldIndex + "]");
+		}
+		Set<Integer> indexes = new HashSet<>();
+		for (var source : field.getIndexedSources()) {
+			if (source == null || source.getIndex() <= 0 || !indexes.add(source.getIndex())
+					|| blank(source.getSourceColumn()) || blank(source.getSourcePath())) {
+				throw new CommandException("Indexed sources are invalid: "
+						+ dataSet.getId() + "[" + fieldIndex + "]");
+			}
+		}
+	}
+
+	private boolean isReservedStagingColumn(String name) {
+		return "SQLAPP_LOAD_STATUS".equalsIgnoreCase(name)
+				|| "SQLAPP_LOADED_AT".equalsIgnoreCase(name);
 	}
 
 	private void validateAncestorKeys(DataSet dataSet, Map<String, DataSet> byId) {

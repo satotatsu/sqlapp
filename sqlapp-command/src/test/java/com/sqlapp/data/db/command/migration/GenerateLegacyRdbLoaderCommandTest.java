@@ -118,6 +118,38 @@ class GenerateLegacyRdbLoaderCommandTest {
 	}
 
 	@Test
+	void testRejectFieldPositionAndStagingColumnAmbiguity() {
+		var invalidPosition = contract();
+		invalidPosition.getDataSets().getFirst().getFields().getFirst().setPosition(2);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(invalidPosition))
+				.getMessage().contains("Field positions must match"));
+
+		var duplicateStaging = contract();
+		var duplicate = field(2, "COMPANY_MASTER.OTHER", "COMPANY_ID", "OTHER",
+				"VARCHAR", 4L, false, false);
+		duplicateStaging.getDataSets().getFirst().getFields().add(duplicate);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(duplicateStaging))
+				.getMessage().contains("staging columns must be unique"));
+	}
+
+	@Test
+	void testRejectInvalidCsvAndOccurrenceConfiguration() {
+		var invalidCsv = contract();
+		invalidCsv.getCsv().setDelimiter("||");
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(invalidCsv))
+				.getMessage().contains("CSV format is invalid"));
+
+		var invalidOccurrence = contract();
+		invalidOccurrence.getDataSets().getLast().setMaximumOccurrences(0);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(invalidOccurrence))
+				.getMessage().contains("occurrence configuration is invalid"));
+	}
+
+	@Test
 	void testRejectStagingTableCollisionBeforeWritingArtifacts() throws Exception {
 		var contract = contract();
 		contract.getDataSets().getLast().setTargetTable("COMPANY_MASTER");
@@ -252,6 +284,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 		contract.getDataSets().add(company);
 		DataSet employee = dataSet("table-employee", "EMPLOYEE_LIST", "employee_list.csv",
 				"COMPANY_MASTER.EMPLOYEE_LIST", company.getId(), 1);
+		employee.setMaximumOccurrences(50);
+		employee.setOccurrenceColumn("EMPLOYEE_LIST_NO");
 		employee.getSourceBusinessKey().add("COMPANY_ID");
 		employee.getSourceBusinessKey().add("EMP_ID");
 		employee.getFields().add(field(1, "COMPANY_MASTER.EMPLOYEE_LIST.COMPANY_ID",
@@ -259,7 +293,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		employee.getFields().getLast().setAction("DROP");
 		employee.getFields().add(field(2, "COMPANY_MASTER.EMPLOYEE_LIST.$index",
 				"EMPLOYEE_LIST_NO", "EMPLOYEE_LIST_NO", "INT", null, true, false));
-		employee.getFields().add(field(0, null, "ID", "ID", "INT", null, false, true));
+		employee.getFields().add(field(3, null, "ID", "ID", "INT", null, false, true));
 		AncestorKey ancestor = new AncestorKey();
 		ancestor.setAncestorDataSetId(company.getId());
 		ancestor.setAncestorTable("COMPANY_MASTER");
