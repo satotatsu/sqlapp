@@ -58,6 +58,7 @@ public class LegacyRdbLoaderGenerator {
 		plan.setSchemaFile(schemaFile.getAbsolutePath());
 		plan.setSchemaFingerprint(new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		plan.setTableOperationMode(operationMode);
+		plan.setStagingTablePrefix(stagingTablePrefix);
 		plan.setRootBatchSize(rootBatchSize);
 		plan.setCommitEveryRootBatches(commitEveryRootBatches);
 		plan.setDeleteCommittedRoots(deleteCommittedRoots);

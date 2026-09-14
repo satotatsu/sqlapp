@@ -49,6 +49,8 @@ public class LegacyMigrationLoadPlan {
 
 	private String tableOperationMode = "INSERT_IGNORE";
 
+	private String stagingTablePrefix;
+
 	/**
 	 * Maximum root rows sent in one JDBC batch.
 	 */

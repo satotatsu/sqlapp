@@ -78,6 +78,24 @@ class LoadLegacyHierarchyCommandTest {
 	}
 
 	@Test
+	void testRejectTamperedStagingTable() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		plan.getDataSets().getFirst().setStagingTable("UNRELATED_STAGE");
+		File planFile = new File(temporaryDirectory, "tampered-staging-load-plan.yaml");
+		new LegacyMigrationLoadPlanIO().write(planFile, plan);
+		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
+		command.setLoadPlanFile(planFile);
+
+		CommandException exception = assertThrows(CommandException.class, command::run);
+
+		assertTrue(exception.getMessage().contains("disagrees with its contract"));
+	}
+
+	@Test
 	void testRejectLoadPlanThatOmitsContractDataSet() throws Exception {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
@@ -365,6 +383,7 @@ class LoadLegacyHierarchyCommandTest {
 		contractDataSet.setId(dataSet.getId());
 		contractDataSet.setSourcePath("ROOT");
 		contractDataSet.setFileName(dataSet.getFileName());
+		contractDataSet.setStagingTable(dataSet.getStagingTable());
 		contractDataSet.setTargetSchema(dataSet.getTargetSchema());
 		contractDataSet.setTargetTable(dataSet.getTargetTable());
 		contractDataSet.getSourceBusinessKey().add("ID");
@@ -392,6 +411,7 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.setId("omitted");
 		omitted.setSourcePath("OMITTED");
 		omitted.setFileName("omitted.csv");
+		omitted.setStagingTable("STG_OMITTED");
 		omitted.setTargetSchema("PUBLIC");
 		omitted.setTargetTable("OMITTED");
 		omitted.getSourceBusinessKey().add("ID");

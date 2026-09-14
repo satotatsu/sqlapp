@@ -56,6 +56,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(planFile.isFile());
 		var plan = new LegacyMigrationLoadPlanIO().read(planFile);
 		assertEquals("MERGE", plan.getTableOperationMode());
+		assertEquals("STG_", plan.getStagingTablePrefix());
 		assertEquals(100, plan.getRootBatchSize());
 		assertEquals(200, plan.getCommitEveryRootBatches());
 		assertEquals("ROOT_BATCH", plan.getTransaction().getCommitUnit());
@@ -147,6 +148,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		var plan = new LegacyMigrationLoadPlanIO().read(
 				new File(output, "catalog-load-plan.yaml"));
 		assertEquals("LOAD_COMPANY", plan.getDataSets().getFirst().getStagingTable());
+		assertEquals(null, plan.getStagingTablePrefix());
 		assertEquals("LOAD_EMPLOYEE", plan.getDataSets().getLast().getStagingTable());
 		assertEquals("APPLICATION", plan.getDataSets().getFirst().getTargetCatalog());
 		String ddl = Files.readString(new File(output, "catalog-staging.sql").toPath());

@@ -107,7 +107,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 				throw new CommandException("Load plan data set is absent from its contract: "
 						+ dataSet.getId());
 			}
-			validateDataSet(source, dataSet);
+			validateDataSet(source, dataSet, plan.getStagingTablePrefix());
 		}
 	}
 
@@ -116,8 +116,10 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 	}
 
 	private void validateDataSet(LegacyMigrationContract.DataSet source,
-			LegacyMigrationLoadPlan.LoadDataSet target) {
+			LegacyMigrationLoadPlan.LoadDataSet target, String stagingTablePrefix) {
 		if (!Objects.equals(source.getFileName(), target.getFileName())
+				|| !Objects.equals(expectedStagingTable(source, stagingTablePrefix),
+						target.getStagingTable())
 				|| !Objects.equals(source.getTargetCatalog(), target.getTargetCatalog())
 				|| !Objects.equals(source.getTargetSchema(), target.getTargetSchema())
 				|| !Objects.equals(source.getTargetTable(), target.getTargetTable())
@@ -156,6 +158,17 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 						+ target.getId() + "[" + i + "]");
 			}
 		}
+	}
+
+	private String expectedStagingTable(LegacyMigrationContract.DataSet source,
+			String stagingTablePrefix) {
+		if (stagingTablePrefix != null) {
+			return stagingTablePrefix + source.getTargetTable();
+		}
+		if (hasText(source.getStagingTable())) {
+			return source.getStagingTable();
+		}
+		return "TMP_" + source.getTargetTable();
 	}
 
 	private void validateJoinKeys(LegacyMigrationContract.DataSet source,
