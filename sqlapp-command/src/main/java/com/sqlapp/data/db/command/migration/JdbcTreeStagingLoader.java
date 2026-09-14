@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
@@ -157,7 +158,12 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private JdbcTreeDataSession createWriter() {
-		JdbcTreeDataSession session = new JdbcTreeDataSession(connection, new ArrayList<>(targetTables.values()));
+		Set<ForeignKeyConstraint> selectedForeignKeys = plan.getDataSets().stream()
+				.map(LoadDataSetWrapper::getTargetForeignKeyConstraint)
+				.filter(java.util.Objects::nonNull)
+				.collect(java.util.stream.Collectors.toSet());
+		JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
+				new ArrayList<>(targetTables.values()), selectedForeignKeys::contains);
 		session.setTableOperationMode(TableOperationMode.valueOf(plan.getTableOperationMode()));
 		return session;
 	}
@@ -370,6 +376,17 @@ public class JdbcTreeStagingLoader {
 					throw new CommandException("Parent join keys are required: " + dataSet.getId());
 				}
 				LoadDataSetWrapper parent = dataSets.get(dataSet.getParentDataSetId());
+				List<ForeignKeyConstraint> targetForeignKeys = dataSet.getTargetTable()
+						.getConstraints().getForeignKeyConstraints().stream()
+						.filter(foreignKey -> foreignKey.getRelatedTable() == parent.getTargetTable())
+						.filter(foreignKey -> sameNames(dataSet.getTargetForeignKey(),
+								foreignKey.getColumns().stream().map(Column::getName).toList()))
+						.toList();
+				if (targetForeignKeys.size() != 1) {
+					throw new CommandException("Target parent foreign key does not uniquely match schema: "
+							+ dataSet.getId());
+				}
+				dataSet.setTargetForeignKeyConstraint(targetForeignKeys.getFirst());
 				Set<String> parentColumns = stagingColumns(parent).stream().map(name -> name.toLowerCase(Locale.ROOT))
 						.collect(java.util.stream.Collectors.toSet());
 				for (JoinKeyWrapper key : dataSet.getParentJoinKeys()) {
@@ -636,6 +653,18 @@ public class JdbcTreeStagingLoader {
 
 	private boolean equals(String left, String right) {
 		return left == null ? right == null : left.equalsIgnoreCase(right);
+	}
+
+	private boolean sameNames(List<String> left, List<String> right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		for (int i = 0; i < left.size(); i++) {
+			if (!equals(left.get(i), right.get(i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private String id(String value) {

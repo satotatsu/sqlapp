@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -44,6 +45,7 @@ import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowOperation;
@@ -137,8 +139,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	public JdbcTreeDataSession(Connection connection, List<Table> tables) {
+		this(connection, tables, foreignKey -> true);
+	}
+
+	public JdbcTreeDataSession(Connection connection, List<Table> tables,
+			Predicate<ForeignKeyConstraint> foreignKeyPredicate) {
 		this.connection = connection;
-		this.tableRelationTreeHolder = new TableRelationTreeHolder(tables);
+		this.tableRelationTreeHolder = new TableRelationTreeHolder(tables, foreignKeyPredicate);
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 	}

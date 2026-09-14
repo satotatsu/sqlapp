@@ -78,6 +78,12 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 	}
 
 	public TableRelationTreeHolder(Collection<Table> tables) {
+		this(tables, foreignKey -> true);
+	}
+
+	public TableRelationTreeHolder(Collection<Table> tables,
+			Predicate<ForeignKeyConstraint> foreignKeyPredicate) {
+		Objects.requireNonNull(foreignKeyPredicate, "foreignKeyPredicate");
 		for (Table table : tables) {
 			final TableRelation tableRelation = new TableRelation(table);
 			tableMap.put(table.getSchemaName(), table.getName(), tableRelation);
@@ -86,7 +92,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		for (Table table : tables) {
 			final TableRelation tableRelation = tableMap.get(table.getSchemaName(), table.getName());
 			List<ForeignKeyConstraint> fks = table.getConstraints()
-					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != table);
+					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != table
+							&& foreignKeyPredicate.test(fk));
 			for (ForeignKeyConstraint fk : fks) {
 				if (tableMap.containsKey(fk.getRelatedTable().getSchemaName(), fk.getRelatedTable().getName())) {
 					tableRelation.setForeignKeyConstraint(fk);

@@ -8,6 +8,7 @@ package com.sqlapp.data.schemas.migration;
 import java.util.List;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.JoinKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
@@ -166,6 +167,7 @@ public class LegacyMigrationLoadPlanWrapper {
 
 		private Table stagingTable;
 		private Table targetTable;
+		private ForeignKeyConstraint targetForeignKeyConstraint;
 	}
 
 	@Getter

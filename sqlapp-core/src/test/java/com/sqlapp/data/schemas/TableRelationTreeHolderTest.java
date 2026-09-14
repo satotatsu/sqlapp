@@ -47,6 +47,21 @@ class TableRelationTreeHolderTest {
 		}
 	}
 
+	@Test
+	void selectsTheRequestedForeignKeyWhenAChildHasMultipleParents() {
+		List<Table> tables = getTables();
+		Table child = tables.get(2);
+		ForeignKeyConstraint selected = child.getConstraints().getForeignKeyConstraints().getFirst();
+		Table alternativeParent = tables.getFirst();
+		child.getConstraints().addForeignKeyConstraint("fk_alternative", child.getColumns().get("ID"),
+				alternativeParent.getColumns().get("ID"));
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(tables,
+				foreignKey -> foreignKey.getTable() != child || foreignKey == selected);
+
+		assertEquals("tabB", holder.getTableRelation(child).getParent().getName());
+	}
+
 	private List<Table> getTables() {
 		List<Table> list = CommonUtils.list();
 		Table table = new Table("tabA");
