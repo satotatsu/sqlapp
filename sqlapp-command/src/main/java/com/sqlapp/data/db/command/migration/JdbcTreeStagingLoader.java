@@ -66,6 +66,9 @@ public class JdbcTreeStagingLoader {
 
 	public JdbcTreeStagingLoader(Connection connection, List<Table> tables, LegacyMigrationLoadPlan plan)
 			throws SQLException {
+		if (plan == null) {
+			throw new CommandException("Legacy migration load plan is required.");
+		}
 		this.connection = connection;
 		this.tables = tables;
 		this.plan = new LegacyMigrationLoadPlanWrapper(plan);
@@ -202,7 +205,9 @@ public class JdbcTreeStagingLoader {
 		// when their level is processed.
 		for (LoadDataSetWrapper child : plan.getDataSets().stream()
 				.filter(dataSet -> dataSet.getParentDataSetId() != null)
-				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)).toList()) {
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)
+						.thenComparingInt(LoadDataSetWrapper::getLoadOrder)
+						.thenComparing(LoadDataSetWrapper::getId)).toList()) {
 			count += deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
 		}
 		return count;
@@ -311,17 +316,19 @@ public class JdbcTreeStagingLoader {
 
 	private List<LoadDataSetWrapper> roots() {
 		return plan.getDataSets().stream().filter(dataSet -> dataSet.getParentDataSetId() == null)
-				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)).toList();
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
+						.thenComparing(LoadDataSetWrapper::getId)).toList();
 	}
 
 	private List<LoadDataSetWrapper> children(String parentId) {
 		return plan.getDataSets().stream().filter(dataSet -> parentId.equals(dataSet.getParentDataSetId()))
-				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)).toList();
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
+						.thenComparing(LoadDataSetWrapper::getId)).toList();
 	}
 
 	private void initialize() {
 		LegacyMigrationLoadPlanIO.validateSchema(plan.getInner(), tables);
-		if (plan == null || !LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
+		if (!LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
 			throw new CommandException("Unsupported legacy migration load plan.");
 		}
 		if (plan.getVersion() != LegacyMigrationLoadPlan.CURRENT_VERSION) {
@@ -459,6 +466,14 @@ public class JdbcTreeStagingLoader {
 			}
 			validateReadable(failures, dataSet.getId(), "staging",
 					id(dataSet.getInner().getStagingTable()), staging);
+		}
+		List<String> orderedIds = plan.getDataSets().stream()
+				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
+						.thenComparing(LoadDataSetWrapper::getId))
+				.map(LoadDataSetWrapper::getId).toList();
+		if (!orderedIds.equals(plan.getDataSets().stream()
+				.map(LoadDataSetWrapper::getId).toList())) {
+			throw new CommandException("Load data sets must be ordered by loadOrder and id.");
 		}
 		if (!failures.isEmpty()) {
 			SQLException cause = failures.getFirst().cause();

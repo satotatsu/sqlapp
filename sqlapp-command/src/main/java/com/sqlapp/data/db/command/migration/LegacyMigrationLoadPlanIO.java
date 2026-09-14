@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -118,6 +119,14 @@ public class LegacyMigrationLoadPlanIO {
 				throw new CommandException("Duplicate load data set id: " + dataSet.getId());
 			}
 			validateFields(dataSet);
+		}
+		List<String> orderedIds = plan.getDataSets().stream()
+				.sorted(Comparator.comparingInt(LegacyMigrationLoadPlan.LoadDataSet::getLoadOrder)
+						.thenComparing(LegacyMigrationLoadPlan.LoadDataSet::getId))
+				.map(LegacyMigrationLoadPlan.LoadDataSet::getId).toList();
+		if (!orderedIds.equals(plan.getDataSets().stream()
+				.map(LegacyMigrationLoadPlan.LoadDataSet::getId).toList())) {
+			throw new CommandException("Load data sets must be ordered by loadOrder and id.");
 		}
 		validateViewpointMetadata(plan);
 		for (var dataSet : plan.getDataSets()) {

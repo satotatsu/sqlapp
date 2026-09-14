@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -232,6 +233,23 @@ class LoadLegacyHierarchyCommandTest {
 						new File(temporaryDirectory, "duplicate-staging.yaml"), plan));
 
 		assertTrue(exception.getMessage().contains("Duplicate staging table: stg_root"));
+	}
+
+	@Test
+	void testRejectNonCanonicalLoadPlanOrder() throws Exception {
+		File schemaFile = new File(temporaryDirectory, "schema.xml");
+		writeRootSchema(schemaFile);
+		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
+		initialize(plan, schemaFile,
+				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		addOmittedPlanDataSet(plan);
+		Collections.swap(plan.getDataSets(), 0, 1);
+
+		CommandException exception = assertThrows(CommandException.class,
+				() -> new LegacyMigrationLoadPlanIO().write(
+						new File(temporaryDirectory, "unordered-load-plan.yaml"), plan));
+
+		assertTrue(exception.getMessage().contains("ordered by loadOrder and id"));
 	}
 
 	@Test
