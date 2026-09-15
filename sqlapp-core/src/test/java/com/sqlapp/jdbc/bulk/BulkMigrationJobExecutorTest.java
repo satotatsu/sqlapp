@@ -55,20 +55,33 @@ class BulkMigrationJobExecutorTest {
 
 	@Test
 	void completedMigrationResultValidatesAgainstItsPlan() {
-		final var planTask = tableTask("task", "task-copy", table("ITEMS"));
-		final var plan = BulkMigrationJobPlanner.plan(List.of(planTask));
+		final var firstPlanTask = tableTask("first", "first-copy", table("FIRST"));
+		final var secondPlanTask = tableTask("second", "second-copy", table("SECOND"));
+		final var plan = BulkMigrationJobPlanner.plan(List.of(firstPlanTask, secondPlanTask));
 		final var taskResult = new BulkMigrationJobTaskResult("task",
 				new ChunkedBulkMigrationResult(0, 1, 1, false));
+		final var firstResult = new BulkMigrationJobTaskResult("first",
+				new ChunkedBulkMigrationResult(0, 1, 1, false));
+		final var secondResult = new BulkMigrationJobTaskResult("second",
+				new ChunkedBulkMigrationResult(0, 1, 1, false));
 		final var result = new BulkMigrationJobResult(plan.getFingerprint(),
-				List.of(taskResult));
+				List.of(firstResult, secondResult));
 
 		assertEquals(result, result.validateAgainst(plan));
+		assertEquals(List.of(firstResult), new BulkMigrationJobResult(plan.getFingerprint(),
+				List.of(firstResult)).validateCompletedPrefixAgainst(plan, "second").getTasks());
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobResult("other", List.of(taskResult))
 						.validateAgainst(plan));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobResult(plan.getFingerprint(), List.of())
 						.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobResult(plan.getFingerprint(), List.of(secondResult))
+						.validateCompletedPrefixAgainst(plan, "second"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobResult(plan.getFingerprint(), List.of(firstResult))
+						.validateCompletedPrefixAgainst(plan, "missing"));
 	}
 
 	@Test

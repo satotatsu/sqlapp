@@ -62,6 +62,29 @@ public class BulkMigrationJobResult {
 		return this;
 	}
 
+	public BulkMigrationJobResult validateCompletedPrefixAgainst(
+			final BulkMigrationJobPlan plan, final String stoppedTaskId) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Migration result plan differs from the current plan");
+		}
+		if (stoppedTaskId == null || stoppedTaskId.isBlank()) {
+			throw new IllegalArgumentException("stoppedTaskId must not be empty");
+		}
+		final int stoppedIndex = plan.getTaskIds().indexOf(stoppedTaskId);
+		if (stoppedIndex < 0) {
+			throw new IllegalArgumentException(
+					"Stopped task does not belong to the migration plan: " + stoppedTaskId);
+		}
+		if (!tasks.stream().map(BulkMigrationJobTaskResult::getTaskId).toList()
+				.equals(plan.getTaskIds().subList(0, stoppedIndex))) {
+			throw new IllegalArgumentException(
+					"Completed tasks must be the plan prefix before the stopped task");
+		}
+		return this;
+	}
+
 	public long getAlreadyCompleteTasks() {
 		return tasks.stream().map(BulkMigrationJobTaskResult::getMigrationResult)
 				.filter(ChunkedBulkMigrationResult::isAlreadyComplete).count();
