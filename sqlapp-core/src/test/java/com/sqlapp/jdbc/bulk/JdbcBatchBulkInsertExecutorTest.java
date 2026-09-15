@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -13,6 +14,18 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
+	@Test
+	void validatesPortableBulkSizesBeforeExecution() {
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkOption.builder().batchSize(0).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkOption.builder().batchSize(-1).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkOption.builder().bulkCopyTimeout(-1).build());
+		assertEquals(0, BulkOption.builder().bulkCopyTimeout(0).build()
+				.getBulkCopyTimeout());
+	}
+
 	@Test
 	void insertsExplicitValuesUsingDialectInsertFactory() throws Exception {
 		testDb(connection -> {

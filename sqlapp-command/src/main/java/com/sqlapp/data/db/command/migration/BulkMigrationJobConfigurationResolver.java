@@ -22,6 +22,7 @@ import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
@@ -95,9 +96,7 @@ public class BulkMigrationJobConfigurationResolver {
 		final File schemaFile = resolve(configurationFile, configuration.getSchemaFile());
 		final List<Table> tables = readTables(schemaFile);
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
-		if (configuration.getTasks() == null) {
-			throw new CommandException("tasks must not be null in bulk migration configuration.");
-		}
+		validateTasks(configuration.getTasks());
 		for (final var task : configuration.getTasks()) {
 			final Table table = findTable(tables, task.getTable());
 			validateVerificationColumns(configuration.getVerification(), task, table);
@@ -150,6 +149,50 @@ public class BulkMigrationJobConfigurationResolver {
 				report(configurationFile, configuration.getReport()),
 				verification(configurationFile, configuration.getVerification(),
 						configuration.getTasks()));
+	}
+
+	private static void validateTasks(
+			final List<BulkMigrationJobConfiguration.Task> tasks) {
+		if (tasks == null) {
+			throw new CommandException(
+					"tasks must not be null in bulk migration configuration.");
+		}
+		final var taskIds = new HashSet<String>();
+		final var migrationIds = new HashSet<String>();
+		for (int index = 0; index < tasks.size(); index++) {
+			final var task = tasks.get(index);
+			if (task == null) {
+				throw new CommandException("tasks[" + index + "] must not be null.");
+			}
+			if (task.getId() == null || task.getId().isBlank()) {
+				throw new CommandException("tasks[" + index + "].id is required.");
+			}
+			if (!taskIds.add(task.getId())) {
+				throw new CommandException("Duplicate migration task ID: " + task.getId());
+			}
+			if (task.getMode() == null) {
+				throw new CommandException("Task mode is required: " + task.getId());
+			}
+			if (task.getCheckpointMode() == null) {
+				throw new CommandException(
+						"Task checkpointMode is required: " + task.getId());
+			}
+			if (task.getDuplicateKeyStrategy() == null) {
+				throw new CommandException(
+						"Task duplicateKeyStrategy is required: " + task.getId());
+			}
+			final String migrationId = value(task.getMigrationId(), task.getId());
+			try {
+				BulkMigrationCheckpoint.validateMigrationId(migrationId);
+			} catch (IllegalArgumentException e) {
+				throw new CommandException("Invalid migrationId for task " + task.getId()
+						+ ": " + e.getMessage(), e);
+			}
+			if (!migrationIds.add(migrationId)) {
+				throw new CommandException(
+						"Duplicate checkpoint migrationId: " + migrationId);
+			}
+		}
 	}
 
 	private static void validateVerificationColumns(

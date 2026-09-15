@@ -382,6 +382,61 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void rejectsInvalidDeclarativeTaskStructureBeforePlanning() throws Exception {
+		try (var source = dataSource("bulk_invalid_task_structure")) {
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("task-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final File configurationFile = temporaryDirectory.resolve("invalid-task.yaml")
+					.toFile();
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+
+			final List<BulkMigrationJobConfiguration.Task> nullTask = new ArrayList<>();
+			nullTask.add(null);
+			configuration.setTasks(nullTask);
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			final var first = new BulkMigrationJobConfiguration.Task();
+			first.setTable("ITEMS");
+			first.setResume(false);
+			configuration.setTasks(List.of(first));
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			first.setId("items");
+			final var second = new BulkMigrationJobConfiguration.Task();
+			second.setId("items");
+			second.setTable("ITEMS");
+			second.setResume(false);
+			configuration.setTasks(List.of(first, second));
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			second.setId("items-copy");
+			first.setMigrationId("same-checkpoint");
+			second.setMigrationId("same-checkpoint");
+			configuration.setTasks(List.of(first, second));
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			configuration.setTasks(null);
+			assertInvalidConfiguration(source, configurationFile, configuration);
+		}
+	}
+
+	private static void assertInvalidConfiguration(final HikariDataSource source,
+			final File configurationFile,
+			final BulkMigrationJobConfiguration configuration) throws Exception {
+		new YamlConverter().writeJsonValue(configurationFile, configuration);
+		try (var connection = source.getConnection()) {
+			assertThrows(CommandException.class,
+					() -> new BulkMigrationJobConfigurationResolver()
+							.resolve(configurationFile, connection));
+		}
+	}
+
+	@Test
 	void rejectsInvalidVerificationColumnsBeforeExecution() throws Exception {
 		try (var source = dataSource("bulk_invalid_verification")) {
 			final Schema schema = new Schema("PUBLIC");
