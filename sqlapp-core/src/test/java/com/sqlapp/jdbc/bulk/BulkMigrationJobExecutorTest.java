@@ -466,10 +466,10 @@ class BulkMigrationJobExecutorTest {
 
 		assertNotEquals(BulkMigrationJobPlanner.plan(List.of(first)).getFingerprint(),
 				BulkMigrationJobPlanner.plan(List.of(reordered)).getFingerprint());
-		final var missing = BulkMigrationJobTask.builder().taskId("missing-config")
-				.keysetSource(keyset(table, " ")).options(options("missing-config")).build();
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobPlanner.plan(List.of(missing)));
+				() -> BulkMigrationJobPlanner.plan(List.of(BulkMigrationJobTask.builder()
+						.taskId("missing-config").keysetSource(keyset(table, " "))
+						.options(options("missing-config")).build())));
 	}
 
 	@Test
@@ -539,51 +539,40 @@ class BulkMigrationJobExecutorTest {
 	@Test
 	void requiresExactlyOneSourceKind() {
 		final Table table = table("TARGET");
-		final var missing = BulkMigrationJobTask.builder().taskId("missing")
-				.options(options("missing-source")).build();
-		final var both = BulkMigrationJobTask.builder().taskId("both")
-				.sourceTable(table).keysetSource(keyset(table))
-				.options(options("both-sources")).build();
-
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobExecutor.order(List.of(missing)));
+				() -> BulkMigrationJobTask.builder().taskId("missing")
+						.options(options("missing-source")).build());
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobExecutor.order(List.of(both)));
+				() -> BulkMigrationJobTask.builder().taskId("both")
+						.sourceTable(table).keysetSource(keyset(table))
+						.options(options("both-sources")).build());
+		assertThrows(NullPointerException.class,
+				() -> BulkMigrationJobTask.builder().taskId("missing-options")
+						.sourceTable(table).build());
 	}
 
 	@Test
 	void requiresNonBlankTaskAndMigrationIds() {
-		final var missingTaskId = tableTask(" ", "migration", table("A"));
-		final var missingMigrationId = tableTask("task", " ", table("B"));
-
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobExecutor.order(List.of(missingTaskId)));
+				() -> tableTask(" ", "migration", table("A")));
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobExecutor.order(List.of(missingMigrationId)));
+				() -> ChunkedBulkMigrationOption.builder().migrationId(" ").build());
 	}
 
 	@Test
 	void validatesAllStructuralMigrationOptionsWhilePlanning() {
-		final Table table = table("INVALID_OPTIONS");
-		final var invalidChunk = ChunkedBulkMigrationOption.builder()
-				.migrationId("invalid-chunk").chunkSize(0).build();
-		final var missingMode = ChunkedBulkMigrationOption.builder()
-				.migrationId("missing-mode").mode(null).build();
-		final var missingCheckpointMode = ChunkedBulkMigrationOption.builder()
-				.migrationId("missing-checkpoint-mode").checkpointMode(null).build();
-		final var missingCheckpointTable = ChunkedBulkMigrationOption.builder()
+		assertThrows(IllegalArgumentException.class, () -> ChunkedBulkMigrationOption.builder()
+				.migrationId("invalid-chunk").chunkSize(0).build());
+		assertThrows(IllegalArgumentException.class, () -> ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-mode").mode(null).build());
+		assertThrows(IllegalArgumentException.class, () -> ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-checkpoint-mode").checkpointMode(null).build());
+		assertThrows(IllegalArgumentException.class, () -> ChunkedBulkMigrationOption.builder()
 				.migrationId("missing-checkpoint-table")
 				.checkpointMode(BulkMigrationCheckpointMode.DATABASE)
-				.checkpointTableName(" ").build();
-
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
-				List.of(tableTask("chunk", table, invalidChunk))));
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
-				List.of(tableTask("mode", table, missingMode))));
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
-				List.of(tableTask("checkpoint-mode", table, missingCheckpointMode))));
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
-				List.of(tableTask("checkpoint-table", table, missingCheckpointTable))));
+				.checkpointTableName(" ").build());
+		assertThrows(NullPointerException.class, () -> ChunkedBulkMigrationOption.builder()
+				.migrationId("missing-retry").retryOption(null).build());
 	}
 
 	@Test

@@ -3,15 +3,12 @@ package com.sqlapp.jdbc.bulk;
 
 import java.io.Serializable;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 /** Options for a resumable chunk migration. */
 @Getter
 @Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChunkedBulkMigrationOption implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private final String migrationId;
@@ -34,7 +31,40 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	@Builder.Default
 	private final BulkMigrationRetryOption retryOption = BulkMigrationRetryOption.none();
 
+	private ChunkedBulkMigrationOption(final String migrationId, final int chunkSize,
+			final BulkMigrationMode mode, final boolean resume,
+			final BulkMigrationCheckpointMode checkpointMode,
+			final String checkpointTableName, final String sourceFingerprint,
+			final String targetFingerprint, final BulkOption bulkOption,
+			final BulkUpsertOption bulkUpsertOption,
+			final BulkMigrationRetryOption retryOption) {
+		this.migrationId = migrationId;
+		this.chunkSize = chunkSize;
+		this.mode = mode;
+		this.resume = resume;
+		this.checkpointMode = checkpointMode;
+		this.checkpointTableName = checkpointTableName;
+		this.sourceFingerprint = sourceFingerprint;
+		this.targetFingerprint = targetFingerprint;
+		this.bulkOption = bulkOption;
+		this.bulkUpsertOption = bulkUpsertOption;
+		this.retryOption = retryOption;
+		validateStructure();
+	}
+
 	void validate() {
+		validateStructure();
+		if (resume && (sourceFingerprint == null || sourceFingerprint.isBlank())) {
+			throw new IllegalArgumentException(
+					"sourceFingerprint must not be empty when resume is enabled");
+		}
+		if (resume && (targetFingerprint == null || targetFingerprint.isBlank())) {
+			throw new IllegalArgumentException(
+					"targetFingerprint must not be empty when resume is enabled");
+		}
+	}
+
+	private void validateStructure() {
 		BulkMigrationCheckpoint.validateMigrationId(migrationId);
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
@@ -50,14 +80,6 @@ public class ChunkedBulkMigrationOption implements Serializable {
 			throw new IllegalArgumentException(
 					"checkpointTableName must not be empty for DATABASE checkpoints");
 		}
-		if (resume && (sourceFingerprint == null || sourceFingerprint.isBlank())) {
-			throw new IllegalArgumentException(
-					"sourceFingerprint must not be empty when resume is enabled");
-		}
-		if (resume && (targetFingerprint == null || targetFingerprint.isBlank())) {
-			throw new IllegalArgumentException(
-					"targetFingerprint must not be empty when resume is enabled");
-		}
 		if (sourceFingerprint != null
 				&& sourceFingerprint.length() > BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH) {
 			throw new IllegalArgumentException("sourceFingerprint must not exceed "
@@ -68,9 +90,9 @@ public class ChunkedBulkMigrationOption implements Serializable {
 			throw new IllegalArgumentException("targetFingerprint must not exceed "
 					+ BulkMigrationCheckpoint.FINGERPRINT_MAX_LENGTH + " characters");
 		}
-		if (retryOption == null) {
-			throw new IllegalArgumentException("retryOption must not be null");
-		}
+		java.util.Objects.requireNonNull(bulkOption, "bulkOption");
+		java.util.Objects.requireNonNull(bulkUpsertOption, "bulkUpsertOption");
+		java.util.Objects.requireNonNull(retryOption, "retryOption");
 		retryOption.validate();
 	}
 }
