@@ -21,6 +21,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
 import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -42,6 +43,19 @@ class OracleBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(ORACLE);
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad(@TempDir final Path checkpointDirectory) throws Exception {
+		try (Connection connection = ORACLE.createConnection(""); var statement = connection.createStatement()) {
+			dropTable(statement, "SQLAPP_BULK_LOAD_ORACLE");
+			statement.execute("CREATE TABLE SQLAPP_BULK_LOAD_ORACLE (CODE VARCHAR2(20) PRIMARY KEY, "
+					+ "CONTENT CLOB, PAYLOAD BLOB)");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table(null, "SQLAPP_BULK_LOAD_ORACLE", "CODE", "CONTENT", "PAYLOAD"),
+					"CODE", "CONTENT", "PAYLOAD", "SELECT COUNT(*) FROM SQLAPP_BULK_LOAD_ORACLE",
+					"SELECT CONTENT, PAYLOAD FROM SQLAPP_BULK_LOAD_ORACLE WHERE CODE = ?", checkpointDirectory);
+		}
 	}
 
 	@Test

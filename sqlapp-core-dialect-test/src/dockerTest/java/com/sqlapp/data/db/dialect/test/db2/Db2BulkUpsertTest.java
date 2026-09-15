@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
@@ -31,6 +32,21 @@ class Db2BulkUpsertTest {
 	@BeforeAll
 	static void startContainer() {
 		DB2.start();
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad() throws Exception {
+		try (Connection connection = DB2.createConnection(""); var statement = connection.createStatement()) {
+			ensureUserTemporaryTablespace(statement);
+			dropTable(statement, "SQLAPP_BULK_LOAD_DB2");
+			statement.execute("CREATE TABLE SQLAPP_BULK_LOAD_DB2 (CODE VARCHAR(20) NOT NULL PRIMARY KEY, "
+					+ "CONTENT VARCHAR(700), PAYLOAD VARCHAR(128) FOR BIT DATA)");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table(null, "SQLAPP_BULK_LOAD_DB2", "CODE", "CONTENT", "PAYLOAD",
+							DataType.VARCHAR, DataType.VARBINARY),
+					"CODE", "CONTENT", "PAYLOAD", "SELECT COUNT(*) FROM SQLAPP_BULK_LOAD_DB2",
+					"SELECT CONTENT, PAYLOAD FROM SQLAPP_BULK_LOAD_DB2 WHERE CODE = ?");
+		}
 	}
 
 	@Test

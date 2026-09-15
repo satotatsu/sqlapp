@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
@@ -56,6 +57,22 @@ class SqlServerBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(SQL_SERVER);
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad() throws Exception {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
+			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_LOAD_SQLSERVER') IS NOT NULL "
+					+ "DROP TABLE dbo.SQLAPP_BULK_LOAD_SQLSERVER");
+			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_LOAD_SQLSERVER (CODE NVARCHAR(20) PRIMARY KEY, "
+					+ "CONTENT NVARCHAR(MAX), PAYLOAD VARBINARY(MAX))");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table("dbo", "SQLAPP_BULK_LOAD_SQLSERVER", "CODE", "CONTENT", "PAYLOAD",
+							DataType.LONGNVARCHAR, DataType.LONGVARBINARY),
+					"CODE", "CONTENT", "PAYLOAD", "SELECT COUNT(*) FROM dbo.SQLAPP_BULK_LOAD_SQLSERVER",
+					"SELECT CONTENT, PAYLOAD FROM dbo.SQLAPP_BULK_LOAD_SQLSERVER WHERE CODE = ?");
+		}
 	}
 
 	@Test

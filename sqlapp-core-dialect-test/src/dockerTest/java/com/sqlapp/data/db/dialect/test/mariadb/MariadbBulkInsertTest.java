@@ -18,6 +18,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
@@ -39,6 +40,20 @@ class MariadbBulkInsertTest {
 	@BeforeAll
 	static void startContainer() {
 		ReusableTestcontainers.start(MARIADB);
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad() throws Exception {
+		try (Connection connection = MARIADB.createConnection("?allowLocalInfile=true");
+				var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_load_mariadb");
+			statement.execute("CREATE TABLE sqlapp_bulk_load_mariadb (code VARCHAR(20) PRIMARY KEY, "
+					+ "content LONGTEXT, payload LONGBLOB) ENGINE=InnoDB");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table(null, "sqlapp_bulk_load_mariadb", "code", "content", "payload"),
+					"code", "content", "payload", "SELECT COUNT(*) FROM sqlapp_bulk_load_mariadb",
+					"SELECT content, payload FROM sqlapp_bulk_load_mariadb WHERE code = ?");
+		}
 	}
 
 	@Test

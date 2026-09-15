@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
@@ -58,6 +59,24 @@ class SapHanaBulkInsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(HANA);
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad(
+			@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory) throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP TABLE SQLAPP_BULK_LOAD_HANA");
+			} catch (java.sql.SQLException ignored) {
+				// The isolated test database can start without the table.
+			}
+			statement.execute("CREATE TABLE SQLAPP_BULK_LOAD_HANA (CODE NVARCHAR(20) PRIMARY KEY, "
+					+ "CONTENT NCLOB, PAYLOAD BLOB)");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table(null, "SQLAPP_BULK_LOAD_HANA", "CODE", "CONTENT", "PAYLOAD"),
+					"CODE", "CONTENT", "PAYLOAD", "SELECT COUNT(*) FROM SQLAPP_BULK_LOAD_HANA",
+					"SELECT CONTENT, PAYLOAD FROM SQLAPP_BULK_LOAD_HANA WHERE CODE = ?", checkpointDirectory);
+		}
 	}
 
 	@Test

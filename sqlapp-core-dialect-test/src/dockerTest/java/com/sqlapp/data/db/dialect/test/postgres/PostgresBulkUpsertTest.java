@@ -22,6 +22,7 @@ import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
@@ -53,6 +54,19 @@ class PostgresBulkUpsertTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(POSTGRES);
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad() throws Exception {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE IF EXISTS public.bulk_load_postgres");
+			statement.execute("CREATE TABLE public.bulk_load_postgres (code VARCHAR(20) PRIMARY KEY, "
+					+ "content TEXT, payload BYTEA)");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table("public", "bulk_load_postgres", "code", "content", "payload"),
+					"code", "content", "payload", "SELECT COUNT(*) FROM public.bulk_load_postgres",
+					"SELECT content, payload FROM public.bulk_load_postgres WHERE code = ?");
+		}
 	}
 
 	@Test
