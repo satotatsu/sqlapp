@@ -92,7 +92,7 @@ public final class BulkMigrationJobAssertions {
 	public static void assertDependencyOrderAndAggregatedStatus(final Connection connection, final Table parent,
 			final Table child) throws SQLException {
 		final var store = new JdbcBulkMigrationCheckpointStore(connection,
-				ChunkedBulkMigrationOption.builder().build().getCheckpointTableName());
+				options("checkpoint-table-name", BulkMigrationCheckpointMode.DATABASE).getCheckpointTableName());
 		assertDependencyOrderAndAggregatedStatus(connection, parent, child, store,
 				BulkMigrationCheckpointMode.DATABASE);
 	}
@@ -130,7 +130,7 @@ public final class BulkMigrationJobAssertions {
 		assertTrue(status.getTasks().stream().allMatch(task -> task.getState() == BulkMigrationJobTaskState.COMPLETE));
 		if (checkpointMode == BulkMigrationCheckpointMode.DATABASE) {
 			final var reader = JdbcBulkMigrationCheckpointStore.readOnly(connection,
-					ChunkedBulkMigrationOption.builder().build().getCheckpointTableName());
+					options("checkpoint-table-name", BulkMigrationCheckpointMode.DATABASE).getCheckpointTableName());
 			assertTrue(reader.load(parentOptions.getMigrationId()).orElseThrow().isComplete());
 			assertTrue(reader.load(childOptions.getMigrationId()).orElseThrow().isComplete());
 		}
