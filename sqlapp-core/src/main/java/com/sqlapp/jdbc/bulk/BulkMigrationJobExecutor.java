@@ -59,6 +59,7 @@ public final class BulkMigrationJobExecutor {
 		final BulkMigrationJobLifecycle lifecycle = plan.getLifecycle();
 		try {
 			lifecycle.validateBeforeExecution(plan);
+			plan.validateUnchanged();
 		} catch (SQLException | RuntimeException | Error rejection) {
 			try {
 				listener.onJobRejected(plan.getFingerprint(), rejection);
@@ -70,7 +71,9 @@ public final class BulkMigrationJobExecutor {
 		listener.onJobStarted(plan.getFingerprint(), plan.getTasks().size());
 		final BulkMigrationJobResult result;
 		try {
+			plan.validateUnchanged();
 			lifecycle.before(targetConnection, plan);
+			plan.validateUnchanged();
 			result = executeTasks(targetConnection, plan, listener, commonChunkListener);
 			lifecycle.after(targetConnection, plan, result);
 			result.validateAgainst(plan);
@@ -126,7 +129,9 @@ public final class BulkMigrationJobExecutor {
 		final List<BulkMigrationJobTaskResult> results = new ArrayList<>(ordered.size());
 		for (int taskIndex = 0; taskIndex < ordered.size(); taskIndex++) {
 			final BulkMigrationJobTask task = ordered.get(taskIndex);
+			plan.validateUnchanged();
 			listener.onTaskStarted(task.getTaskId(), taskIndex, ordered.size());
+			plan.validateUnchanged();
 			try {
 				final ChunkedBulkMigrationResult result;
 				final ChunkedBulkMigrationListener taskListener = task.getChunkListener() == null

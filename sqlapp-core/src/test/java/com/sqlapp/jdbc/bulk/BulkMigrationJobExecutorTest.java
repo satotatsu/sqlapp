@@ -270,6 +270,80 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void revalidatesThePlanAcrossPreflightAndStartCallbacks() {
+		final var preflightVersion = new AtomicInteger(1);
+		final var rejected = new java.util.concurrent.atomic.AtomicBoolean();
+		final BulkMigrationJobLifecycle preflightMutation = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "preflight-" + preflightVersion.get();
+			}
+
+			@Override
+			public void validateBeforeExecution(BulkMigrationJobPlan plan) {
+				preflightVersion.incrementAndGet();
+			}
+		};
+		final var preflightPlan = BulkMigrationJobPlanner.plan(List.of(),
+				preflightMutation);
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobExecutor
+				.executePlan(connection(), preflightPlan, new BulkMigrationJobListener() {
+					@Override
+					public void onJobRejected(String fingerprint, Throwable cause) {
+						rejected.set(true);
+					}
+				}));
+		assertTrue(rejected.get());
+
+		final var startVersion = new AtomicInteger(1);
+		final var restored = new java.util.concurrent.atomic.AtomicBoolean();
+		final BulkMigrationJobLifecycle startMutation = mutableLifecycle(startVersion,
+				restored, false);
+		final var startPlan = BulkMigrationJobPlanner.plan(List.of(), startMutation);
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobExecutor
+				.executePlan(connection(), startPlan, new BulkMigrationJobListener() {
+					@Override
+					public void onJobStarted(String fingerprint, int taskCount) {
+						startVersion.incrementAndGet();
+					}
+				}));
+		assertTrue(restored.get());
+
+		final var beforeVersion = new AtomicInteger(1);
+		final var beforeRestored = new java.util.concurrent.atomic.AtomicBoolean();
+		final var beforePlan = BulkMigrationJobPlanner.plan(List.of(),
+				mutableLifecycle(beforeVersion, beforeRestored, true));
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), beforePlan));
+		assertTrue(beforeRestored.get());
+	}
+
+	private static BulkMigrationJobLifecycle mutableLifecycle(
+			final AtomicInteger version,
+			final java.util.concurrent.atomic.AtomicBoolean restored,
+			final boolean mutateBefore) {
+		return new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "start-" + version.get();
+			}
+
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) {
+				if (mutateBefore) {
+					version.incrementAndGet();
+				}
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) {
+				restored.set(true);
+			}
+		};
+	}
+
+	@Test
 	void leaseIsHeldBeforeNotificationAndReleasedAfterExecution() throws Exception {
 		final var store = new InMemoryBulkMigrationJobLeaseStore();
 		final var manager = new BulkMigrationJobLeaseManager(store, "owner-1",
