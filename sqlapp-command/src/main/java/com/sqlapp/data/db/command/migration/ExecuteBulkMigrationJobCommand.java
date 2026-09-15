@@ -268,6 +268,6 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,
 							task.getOptions().getCheckpointTableName())).build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks, plan.getLifecycle());
+		return BulkMigrationJobPlanner.plan(plan.getJobId(), tasks, plan.getLifecycle());
 	}
 }

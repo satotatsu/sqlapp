@@ -94,6 +94,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			schema.writeXml(schemaFile);
 
 			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setJobId("nightly-items");
 			configuration.setSchemaFile("schema.xml");
 			final var task = new BulkMigrationJobConfiguration.Task();
 			task.setId("items");
@@ -119,6 +120,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				final var resolution = new BulkMigrationJobConfigurationResolver()
 						.resolveJob(configurationFile, connection);
 				final var plan = resolution.plan();
+				assertEquals("nightly-items", plan.getJobId());
 				assertEquals(List.of("items"), plan.getTaskIds());
 				assertEquals(BulkMigrationJobLeaseMode.DATABASE,
 						resolution.leaseConfiguration().mode());
@@ -135,6 +137,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					targetConnection.setAutoCommit(true);
 					final var reportPlan = ExecuteBulkMigrationJobCommand
 							.withExplicitDatabaseCheckpointStores(plan, targetConnection);
+					assertEquals("nightly-items", reportPlan.getJobId());
 					assertEquals(plan.getFingerprint(), reportPlan.getFingerprint());
 					assertEquals(JdbcBulkMigrationCheckpointStore.class,
 							reportPlan.getTasks().get(0).getCheckpointStore().getClass());
@@ -421,6 +424,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertInvalidConfiguration(source, configurationFile, configuration);
 
 			configuration.setTasks(null);
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			configuration.setTasks(List.of());
+			configuration.setJobId(" ");
 			assertInvalidConfiguration(source, configurationFile, configuration);
 		}
 	}

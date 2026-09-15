@@ -144,7 +144,15 @@ public class BulkMigrationJobConfigurationResolver {
 			}
 			tasks.add(builder.build());
 		}
-		return new Resolution(BulkMigrationJobPlanner.plan(tasks),
+		final BulkMigrationJobPlan plan;
+		try {
+			plan = configuration.getJobId() == null
+					? BulkMigrationJobPlanner.plan(tasks)
+					: BulkMigrationJobPlanner.plan(configuration.getJobId(), tasks);
+		} catch (IllegalArgumentException e) {
+			throw new CommandException("Invalid bulk migration jobId: " + e.getMessage(), e);
+		}
+		return new Resolution(plan,
 				lease(configurationFile, configuration.getLease()),
 				report(configurationFile, configuration.getReport()),
 				verification(configurationFile, configuration.getVerification(),

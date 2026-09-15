@@ -107,6 +107,7 @@ executeBulkMigrationJob {
 ```
 
 ```yaml
+jobId: nightly-customer-migration
 schemaFile: schema.xml
 lease:
   mode: DATABASE
@@ -149,6 +150,11 @@ tasks:
       maxBackoffMillis: 30000
       sqlStates: ['40001']
 ```
+
+`jobId` is optional, but a stable explicit value is recommended for recurring
+jobs. It keeps leases, maintenance recovery, and operational reports associated
+with the same logical job when task options change. When omitted, the plan derives
+an ID from its initial contents.
 
 Unqualified table names are accepted only when unique in the Schema XML.
 `CUSTOM` duplicate selection remains programmatic because executable selector

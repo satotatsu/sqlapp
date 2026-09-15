@@ -16,6 +16,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BulkMigrationJobConfiguration {
+	private String jobId;
 	private String schemaFile;
 	private List<Task> tasks = new ArrayList<>();
 	private Lease lease;

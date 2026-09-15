@@ -380,10 +380,14 @@ class BulkMigrationJobExecutorTest {
 
 		final var plan = BulkMigrationJobPlanner.plan(List.of(childTask, parentTask));
 		final var directPlan = new BulkMigrationJobPlan(List.of(childTask, parentTask));
+		final var namedPlan = BulkMigrationJobPlanner.plan("nightly-copy",
+				List.of(childTask, parentTask));
 
 		assertEquals(List.of("parent", "child"), plan.getTaskIds());
 		assertEquals(plan.getTaskIds(), directPlan.getTaskIds());
 		assertEquals(plan.getFingerprint(), directPlan.getFingerprint());
+		assertEquals("nightly-copy", namedPlan.getJobId());
+		assertEquals(plan.getTaskIds(), namedPlan.getTaskIds());
 		assertThrows(UnsupportedOperationException.class,
 				() -> plan.getTasks().add(parentTask));
 		assertEquals(plan.getFingerprint(), BulkMigrationJobPlanner
