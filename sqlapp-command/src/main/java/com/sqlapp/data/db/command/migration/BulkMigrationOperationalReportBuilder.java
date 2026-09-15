@@ -80,10 +80,12 @@ public final class BulkMigrationOperationalReportBuilder {
 				.map(BulkMigrationOperationalReportBuilder::progress).toList();
 		final var effectiveProgress = allProgress.isEmpty() && progress != null ? java.util.List.of(progress(progress))
 				: allProgress;
-		return new BulkMigrationOperationalReport(BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION,
+		final var report = new BulkMigrationOperationalReport(BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION,
 				Instant.now(clock), plan.getJobId(), plan.getFingerprint(), status.isCompatible(),
 				status.getProcessedRows(), status.getCompletedTasks(), tasks.size(), tasks, operations,
 				maintenance(maintenance), progress(progress), effectiveProgress, execution);
+		status.validateAgainst(plan);
+		return report;
 	}
 
 	private static BulkMigrationOperationalReport.Checkpoint checkpoint(final BulkMigrationCheckpoint checkpoint) {

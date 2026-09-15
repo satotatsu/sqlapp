@@ -346,6 +346,33 @@ class BulkMigrationOperationalReportTest {
 	}
 
 	@Test
+	void rejectsPlanMutationWhileBuildingTheReportSnapshot() {
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers",
+						BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final var progress = new BulkMigrationProgressSnapshot("顧客移行", 0, null,
+				Duration.ZERO, 0, null, null);
+		final Map<String, BulkMigrationProgressSnapshot> mutating =
+				new java.util.LinkedHashMap<>() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void forEach(java.util.function.BiConsumer<? super String,
+					? super BulkMigrationProgressSnapshot> action) {
+				plan.getTasks().get(0).getSourceTable().getColumns().get("ID")
+						.setDefaultValue("changed");
+				super.forEach(action);
+			}
+		};
+		mutating.put("顧客移行", progress);
+
+		assertThrows(IllegalStateException.class, () ->
+				new BulkMigrationOperationalReportBuilder().build(plan, status, null,
+						null, mutating, null));
+	}
+
+	@Test
 	void rejectsForeignTasksCheckpointsAndProgress() {
 		final BulkMigrationJobPlan plan = plan();
 		final var builder = new BulkMigrationOperationalReportBuilder();
