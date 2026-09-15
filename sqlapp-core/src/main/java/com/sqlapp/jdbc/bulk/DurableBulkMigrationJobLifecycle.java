@@ -30,7 +30,8 @@ public final class DurableBulkMigrationJobLifecycle
 
 	@Override
 	public String getConfigurationFingerprint() {
-		return "durable-v1:" + delegate.getConfigurationFingerprint();
+		return "durable-v1:"
+				+ BulkMigrationJobLifecycle.requireConfigurationFingerprint(delegate);
 	}
 
 	@Override

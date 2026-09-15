@@ -43,6 +43,30 @@ class CompositeBulkMigrationJobLifecycleTest {
 	}
 
 	@Test
+	void rejectsMissingConfigurationFingerprintsThroughWrappers() {
+		final BulkMigrationJobLifecycle missing = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return null;
+			}
+		};
+		final BulkMigrationJobLifecycle blank = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return " ";
+			}
+		};
+
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobPlanner.plan(List.of(), missing));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(), CompositeBulkMigrationJobLifecycle.of(blank)));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
+				List.of(), new DurableBulkMigrationJobLifecycle(missing,
+						new InMemoryBulkMigrationMaintenanceStateStore())));
+	}
+
+	@Test
 	void validatesEveryComponentBeforeStartingAnyComponent() {
 		final List<String> events = new ArrayList<>();
 		final var first = new BulkMigrationJobLifecycle() {

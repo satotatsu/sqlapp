@@ -4,6 +4,7 @@ package com.sqlapp.jdbc.bulk;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
 
 /** Vendor-extensible preparation and restoration around a migration job. */
 public interface BulkMigrationJobLifecycle {
@@ -11,6 +12,17 @@ public interface BulkMigrationJobLifecycle {
 
 	default String getConfigurationFingerprint() {
 		return "none";
+	}
+
+	static String requireConfigurationFingerprint(
+			final BulkMigrationJobLifecycle lifecycle) {
+		final String fingerprint = Objects.requireNonNull(lifecycle, "lifecycle")
+				.getConfigurationFingerprint();
+		if (fingerprint == null || fingerprint.isBlank()) {
+			throw new IllegalArgumentException(
+					"Lifecycle configuration fingerprint must not be empty");
+		}
+		return fingerprint;
 	}
 
 	default List<BulkMigrationJobOperation> plan(List<BulkMigrationJobTask> tasks) {

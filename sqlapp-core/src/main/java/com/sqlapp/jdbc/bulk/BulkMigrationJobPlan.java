@@ -59,7 +59,9 @@ public class BulkMigrationJobPlan {
 			final List<BulkMigrationJobOperation> operations, final String jobId) {
 		try {
 			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-			update(digest, jobId, lifecycle.getConfigurationFingerprint(), operations.size());
+			update(digest, jobId,
+					BulkMigrationJobLifecycle.requireConfigurationFingerprint(lifecycle),
+					operations.size());
 			operations.forEach(operation -> update(digest, operation.id(), operation.phase(),
 					operation.description(), operation.transactionBreaking()));
 			for (final BulkMigrationJobTask task : tasks) {

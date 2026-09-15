@@ -33,8 +33,7 @@ public final class CompositeBulkMigrationJobLifecycle
 	@Override
 	public String getConfigurationFingerprint() {
 		return components.stream()
-				.map(BulkMigrationJobLifecycle::getConfigurationFingerprint)
-				.map(value -> value == null ? "<null>" : value)
+				.map(BulkMigrationJobLifecycle::requireConfigurationFingerprint)
 				.map(value -> value.length() + ":" + value)
 				.reduce("composite-v1", (left, right) -> left + right);
 	}
