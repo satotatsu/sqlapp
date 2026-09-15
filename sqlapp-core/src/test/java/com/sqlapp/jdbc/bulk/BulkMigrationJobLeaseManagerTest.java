@@ -73,6 +73,43 @@ class BulkMigrationJobLeaseManagerTest {
 	}
 
 	@Test
+	void planBasedAcquisitionBindsTheHandleToTheExactPlan() throws Exception {
+		final var store = new InMemoryBulkMigrationJobLeaseStore();
+		final var manager = new BulkMigrationJobLeaseManager(store, "owner",
+				Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
+		final var plan = BulkMigrationJobPlanner.plan("shared-job", java.util.List.of());
+		final var changed = BulkMigrationJobPlanner.plan("shared-job", java.util.List.of(),
+				new BulkMigrationJobLifecycle() {
+					@Override
+					public String getConfigurationFingerprint() {
+						return "changed";
+					}
+				});
+
+		try (var handle = manager.acquire(plan)) {
+			assertEquals(handle, handle.validateAgainst(plan));
+			assertEquals(handle.getLease(), handle.getLease().validateAgainst(plan));
+			assertThrows(IllegalArgumentException.class,
+					() -> handle.validateAgainst(changed));
+		}
+		assertTrue(store.load(plan.getJobId()).isEmpty());
+	}
+
+	@Test
+	void closedHandleCannotBePresentedAsAValidPlanLease() throws Exception {
+		final var manager = new BulkMigrationJobLeaseManager(
+				new InMemoryBulkMigrationJobLeaseStore(), "owner",
+				Duration.ofSeconds(30), Clock.fixed(NOW, ZoneOffset.UTC));
+		final var plan = BulkMigrationJobPlanner.plan(java.util.List.of());
+		final var handle = manager.acquire(plan);
+
+		handle.close();
+
+		assertThrows(IllegalStateException.class,
+				() -> handle.validateAgainst(plan));
+	}
+
+	@Test
 	void chunkListenerRenewsBeforeAndAfterEachChunk() throws Exception {
 		final var delegate = new InMemoryBulkMigrationJobLeaseStore();
 		final var renewals = new AtomicInteger();

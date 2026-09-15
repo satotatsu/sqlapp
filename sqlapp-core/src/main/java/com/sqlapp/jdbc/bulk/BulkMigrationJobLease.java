@@ -2,6 +2,7 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * Owner-fenced, expiring right to execute one migration plan.
@@ -29,6 +30,16 @@ public record BulkMigrationJobLease(String jobId, String planFingerprint,
 			throw new IllegalArgumentException("instant must not be null");
 		}
 		return !expiresAt.isAfter(instant);
+	}
+
+	public BulkMigrationJobLease validateAgainst(final BulkMigrationJobPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getJobId().equals(jobId)
+				|| !plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Migration job lease does not match the migration plan");
+		}
+		return this;
 	}
 
 	private static void requireId(final String value, final String name) {

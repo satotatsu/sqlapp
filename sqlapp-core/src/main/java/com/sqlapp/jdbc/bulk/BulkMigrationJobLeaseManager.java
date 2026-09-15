@@ -40,6 +40,23 @@ public final class BulkMigrationJobLeaseManager {
 	}
 
 	/** Acquires the logical job while recording the exact executing plan. */
+	public LeaseHandle acquire(final BulkMigrationJobPlan plan) throws SQLException {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		final LeaseHandle handle = acquire(plan.getJobId(), plan.getFingerprint());
+		try {
+			handle.getLease().validateAgainst(plan);
+			return handle;
+		} catch (RuntimeException | Error failure) {
+			try {
+				handle.close();
+			} catch (SQLException releaseFailure) {
+				failure.addSuppressed(releaseFailure);
+			}
+			throw failure;
+		}
+	}
+
+	/** Acquires explicit identifiers for low-level coordination. */
 	public LeaseHandle acquire(final String jobId, final String planFingerprint)
 			throws SQLException {
 		final Instant now = Instant.now(clock);
@@ -80,6 +97,15 @@ public final class BulkMigrationJobLeaseManager {
 						lease.jobId());
 			}
 			lease = renewed;
+		}
+
+		public synchronized LeaseHandle validateAgainst(
+				final BulkMigrationJobPlan plan) {
+			if (closed) {
+				throw new IllegalStateException("Migration job lease is already closed");
+			}
+			lease.validateAgainst(plan);
+			return this;
 		}
 
 		public BulkMigrationJobLeaseHeartbeat startHeartbeat() {
