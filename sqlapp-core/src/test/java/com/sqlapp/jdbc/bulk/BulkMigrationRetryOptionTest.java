@@ -3,6 +3,7 @@ package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.SQLException;
@@ -11,6 +12,18 @@ import java.sql.SQLTransientException;
 import org.junit.jupiter.api.Test;
 
 class BulkMigrationRetryOptionTest {
+	@Test
+	void rejectsInvalidRetryPolicyWhileBuildingIt() {
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationRetryOption.builder().maxRetries(-1).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationRetryOption.builder()
+				.initialBackoffMillis(2).maxBackoffMillis(1).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationRetryOption.builder()
+				.backoffMultiplier(Double.NaN).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationRetryOption.builder().sqlState(" ").build());
+	}
+
 	@Test
 	void selectsOnlyConfiguredRetryableFailuresAndHonorsTheLimit() {
 		final var retry = BulkMigrationRetryOption.builder().maxRetries(2)

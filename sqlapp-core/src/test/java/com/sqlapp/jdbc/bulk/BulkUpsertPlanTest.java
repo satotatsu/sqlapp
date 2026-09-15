@@ -4,6 +4,8 @@ package com.sqlapp.jdbc.bulk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
@@ -11,6 +13,18 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 class BulkUpsertPlanTest {
+	@Test
+	void validatesContextFreeOptionsWhileBuildingThem() {
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertOption.builder()
+				.updateWhenMatched(false).insertWhenNotMatched(false).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertOption.builder().keyColumns(List.of("id", "id")).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertOption.builder().updateColumn(" ").build());
+		assertThrows(NullPointerException.class,
+				() -> BulkUpsertOption.builder().bulkOption(null).build());
+	}
+
 	@Test
 	void rejectsDuplicateSourceKeysByDefault() {
 		final Table table = tableWithDuplicateKeys();

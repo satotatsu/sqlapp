@@ -494,14 +494,9 @@ class BulkMigrationJobExecutorTest {
 				BulkMigrationJobPlanner.plan(List.of(
 						tableTask("task", table, changed))).getFingerprint());
 
-		final var missingFingerprint = ChunkedBulkMigrationOption.builder()
-				.migrationId("missing-selector-fingerprint")
-				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.bulkUpsertOption(BulkUpsertOption.builder()
-						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
-						.duplicateRowSelector(selector).build()).build();
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(List.of(
-				tableTask("missing", table, missingFingerprint))));
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertOption.builder()
+				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+				.duplicateRowSelector(selector).build());
 	}
 
 	@Test
@@ -618,16 +613,11 @@ class BulkMigrationJobExecutorTest {
 				.migrationId("unknown-key")
 				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("MISSING").build())
 				.build();
-		final var noActions = ChunkedBulkMigrationOption.builder()
-				.migrationId("no-actions")
-				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("ID")
-						.updateWhenMatched(false).insertWhenNotMatched(false).build())
-				.build();
-
 		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
 				List.of(tableTask("unknown-key", table, unknownKey))));
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobPlanner.plan(
-				List.of(tableTask("no-actions", table, noActions))));
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertOption.builder()
+				.keyColumn("ID").updateWhenMatched(false).insertWhenNotMatched(false)
+				.build());
 	}
 
 	@Test

@@ -29,6 +29,20 @@ public class BulkMigrationRetryOption implements Serializable {
 	@lombok.Singular("errorCode")
 	List<Integer> errorCodes;
 
+	private BulkMigrationRetryOption(final int maxRetries,
+			final long initialBackoffMillis, final double backoffMultiplier,
+			final long maxBackoffMillis, final boolean retryTransientExceptions,
+			final List<String> sqlStates, final List<Integer> errorCodes) {
+		this.maxRetries = maxRetries;
+		this.initialBackoffMillis = initialBackoffMillis;
+		this.backoffMultiplier = backoffMultiplier;
+		this.maxBackoffMillis = maxBackoffMillis;
+		this.retryTransientExceptions = retryTransientExceptions;
+		this.sqlStates = List.copyOf(sqlStates);
+		this.errorCodes = List.copyOf(errorCodes);
+		validate();
+	}
+
 	public static BulkMigrationRetryOption none() {
 		return builder().build();
 	}

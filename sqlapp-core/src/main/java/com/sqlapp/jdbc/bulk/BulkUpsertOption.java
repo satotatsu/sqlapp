@@ -2,10 +2,9 @@
 package com.sqlapp.jdbc.bulk;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.List;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -14,7 +13,6 @@ import lombok.ToString;
 
 /** Options shared by staging-table bulk upsert implementations. */
 @Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
 @EqualsAndHashCode
 @Getter
@@ -48,6 +46,39 @@ public class BulkUpsertOption implements Serializable {
 	private final String stagingTableName;
 	@Builder.Default
 	private final BulkOption bulkOption = BulkOption.defaults();
+
+	private BulkUpsertOption(final List<String> keyColumns,
+			final List<String> updateColumns, final boolean updateWhenMatched,
+			final boolean insertWhenNotMatched, final boolean useTransaction,
+			final BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy,
+			final BulkUpsertDuplicateRowSelector duplicateRowSelector,
+			final String duplicateRowSelectorFingerprint,
+			final String stagingTableName, final BulkOption bulkOption) {
+		this.keyColumns = columns(keyColumns, "keyColumns");
+		this.updateColumns = columns(updateColumns, "updateColumns");
+		this.updateWhenMatched = updateWhenMatched;
+		this.insertWhenNotMatched = insertWhenNotMatched;
+		this.useTransaction = useTransaction;
+		this.duplicateKeyStrategy = duplicateKeyStrategy;
+		this.duplicateRowSelector = duplicateRowSelector;
+		this.duplicateRowSelectorFingerprint = duplicateRowSelectorFingerprint;
+		this.stagingTableName = stagingTableName;
+		this.bulkOption = java.util.Objects.requireNonNull(bulkOption, "bulkOption");
+		if (!updateWhenMatched && !insertWhenNotMatched) {
+			throw new IllegalArgumentException("At least one upsert action must be enabled");
+		}
+		validateDuplicateKeyStrategy();
+	}
+
+	private static List<String> columns(final List<String> values, final String role) {
+		final List<String> columns = List.copyOf(values);
+		if (columns.stream().anyMatch(value -> value.isBlank())
+				|| new HashSet<>(columns).size() != columns.size()) {
+			throw new IllegalArgumentException(
+					role + " must contain unique non-empty column names");
+		}
+		return columns;
+	}
 
 	void validateDuplicateKeyStrategy() {
 		if (duplicateKeyStrategy == null) {
