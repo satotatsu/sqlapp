@@ -67,6 +67,29 @@ public class BulkMigrationJobRepairResult {
 		return this;
 	}
 
+	public BulkMigrationJobRepairResult validateCompletedPrefixAgainst(
+			final BulkMigrationJobRepairPlan plan, final String failedTaskId) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Repair result plan differs from the current repair plan");
+		}
+		if (failedTaskId == null || failedTaskId.isBlank()) {
+			throw new IllegalArgumentException("failedTaskId must not be empty");
+		}
+		final int failedIndex = plan.getTaskIds().indexOf(failedTaskId);
+		if (failedIndex < 0) {
+			throw new IllegalArgumentException(
+					"Failed task does not belong to the repair plan: " + failedTaskId);
+		}
+		if (!tasks.stream().map(BulkMigrationJobTaskRepairResult::getTaskId).toList()
+				.equals(plan.getTaskIds().subList(0, failedIndex))) {
+			throw new IllegalArgumentException(
+					"Completed repair tasks must be the plan prefix before the failed task");
+		}
+		return this;
+	}
+
 	private long sum(final java.util.function.ToLongFunction<BulkMigrationRepairResult> value) {
 		long total = 0;
 		for (final BulkMigrationJobTaskRepairResult task : tasks) {

@@ -452,6 +452,14 @@ class BulkMigrationJobVerifierTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of())
 						.validateAgainst(plan));
+		final var partial = new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of());
+		assertSame(partial, partial.validateCompletedPrefixAgainst(plan, "task"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of(task))
+						.validateCompletedPrefixAgainst(plan, "task"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of())
+						.validateCompletedPrefixAgainst(plan, "missing"));
 
 		final var max = new BulkMigrationJobTaskRepairResult("max",
 				new BulkMigrationRepairResult(1, 1, Long.MAX_VALUE, Long.MAX_VALUE,
