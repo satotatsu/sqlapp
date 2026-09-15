@@ -92,37 +92,25 @@ public final class BulkMigration {
 	private final Integer verificationChunkSize;
 
 	/** Creates a migration with the safe defaults for every table in the Schema. */
-	public static BulkMigration of(final DataSource source, final DataSource target,
-			final Schema schema) {
+	public static BulkMigration of(final DataSource source, final DataSource target, final Schema schema) {
 		return builder().source(Objects.requireNonNull(source, "source"))
-				.target(Objects.requireNonNull(target, "target"))
-				.schema(Objects.requireNonNull(schema, "schema")).build();
+				.target(Objects.requireNonNull(target, "target")).schema(Objects.requireNonNull(schema, "schema"))
+				.build();
 	}
 
 	@Builder
-	private BulkMigration(final DataSource source, final DataSource target,
-			final Schema schema, final List<String> tableNames,
-			final String jobId,
-			final BulkMigrationMode mode, final Integer chunkSize,
-			final Boolean resume, final String sourceFingerprint,
-			final String targetFingerprint, final String checkpointTableName,
-			final BulkUpsertOption upsertOption,
-			final Map<String, BulkMigrationTableOption> tableOptions,
-			final BulkOption bulkOption, final BulkMigrationRetryOption retryOption,
-			final BulkMigrationJobListener jobListener,
-			final ChunkedBulkMigrationListener chunkListener,
-			final BulkMigrationCheckpointMode checkpointMode,
-			final Path checkpointDirectory,
-			final BulkMigrationCheckpointStore checkpointStore,
-			final BulkMigrationJobLeaseConfiguration leaseConfiguration,
-			final BulkMigrationJobLifecycle lifecycle,
-			final Path maintenanceDirectory,
-			final String maintenanceTableName,
-			final Path operationalReportFile, final Path verificationReportFile,
-			final Path repairPlanOnMismatchFile,
-			final Integer maxReportedMismatches,
-			final BulkMigrationVerificationIsolation verificationIsolation,
-			final Integer verificationChunkSize) {
+	private BulkMigration(final DataSource source, final DataSource target, final Schema schema,
+			final List<String> tableNames, final String jobId, final BulkMigrationMode mode, final Integer chunkSize,
+			final Boolean resume, final String sourceFingerprint, final String targetFingerprint,
+			final String checkpointTableName, final BulkUpsertOption upsertOption,
+			final Map<String, BulkMigrationTableOption> tableOptions, final BulkOption bulkOption,
+			final BulkMigrationRetryOption retryOption, final BulkMigrationJobListener jobListener,
+			final ChunkedBulkMigrationListener chunkListener, final BulkMigrationCheckpointMode checkpointMode,
+			final Path checkpointDirectory, final BulkMigrationCheckpointStore checkpointStore,
+			final BulkMigrationJobLeaseConfiguration leaseConfiguration, final BulkMigrationJobLifecycle lifecycle,
+			final Path maintenanceDirectory, final String maintenanceTableName, final Path operationalReportFile,
+			final Path verificationReportFile, final Path repairPlanOnMismatchFile, final Integer maxReportedMismatches,
+			final BulkMigrationVerificationIsolation verificationIsolation, final Integer verificationChunkSize) {
 		this.source = Objects.requireNonNull(source, "source");
 		this.target = Objects.requireNonNull(target, "target");
 		this.jobId = jobId;
@@ -132,18 +120,16 @@ public final class BulkMigration {
 		this.resume = resume != null && resume;
 		this.sourceFingerprint = sourceFingerprint;
 		this.targetFingerprint = targetFingerprint;
-		this.checkpointTableName = checkpointTableName == null
-				|| checkpointTableName.isBlank() ? "SQLAPP_BULK_MIGRATION_CHECKPOINT"
-						: checkpointTableName;
+		this.checkpointTableName = checkpointTableName == null || checkpointTableName.isBlank()
+				? "SQLAPP_BULK_MIGRATION_CHECKPOINT"
+				: checkpointTableName;
 		this.upsertOption = upsertOption == null ? BulkUpsertOption.defaults() : upsertOption;
 		this.tableOptions = resolveTableOptions(this.tables, tableOptions);
 		this.bulkOption = bulkOption == null ? BulkOption.defaults() : bulkOption;
 		this.retryOption = retryOption == null ? BulkMigrationRetryOption.none() : retryOption;
 		this.jobListener = jobListener == null ? BulkMigrationJobListener.NO_OP : jobListener;
-		this.chunkListener = chunkListener == null
-				? ChunkedBulkMigrationListener.NO_OP : chunkListener;
-		this.checkpointMode = checkpointMode == null
-				? BulkMigrationCheckpointMode.DATABASE : checkpointMode;
+		this.chunkListener = chunkListener == null ? ChunkedBulkMigrationListener.NO_OP : chunkListener;
+		this.checkpointMode = checkpointMode == null ? BulkMigrationCheckpointMode.DATABASE : checkpointMode;
 		this.checkpointDirectory = checkpointDirectory == null ? null
 				: checkpointDirectory.toAbsolutePath().normalize();
 		this.checkpointStore = checkpointStore;
@@ -161,8 +147,8 @@ public final class BulkMigration {
 		this.maxReportedMismatches = maxReportedMismatches == null
 				? BulkMigrationVerificationReportIO.DEFAULT_MAX_REPORTED_MISMATCHES
 				: maxReportedMismatches;
-		this.verificationIsolation = verificationIsolation == null
-				? BulkMigrationVerificationIsolation.DEFAULT : verificationIsolation;
+		this.verificationIsolation = verificationIsolation == null ? BulkMigrationVerificationIsolation.DEFAULT
+				: verificationIsolation;
 		this.verificationChunkSize = verificationChunkSize;
 		validate();
 	}
@@ -176,8 +162,7 @@ public final class BulkMigration {
 			return this;
 		}
 
-		public BulkMigrationBuilder customCheckpointStore(
-				final BulkMigrationCheckpointStore store) {
+		public BulkMigrationBuilder customCheckpointStore(final BulkMigrationCheckpointStore store) {
 			this.checkpointMode = BulkMigrationCheckpointMode.CUSTOM;
 			this.checkpointStore = store;
 			this.checkpointDirectory = null;
@@ -190,10 +175,11 @@ public final class BulkMigration {
 			return this;
 		}
 
-		/** Prevents concurrent execution using a lease file outside the target database. */
+		/**
+		 * Prevents concurrent execution using a lease file outside the target database.
+		 */
 		public BulkMigrationBuilder fileLease(final String ownerId, final Path directory) {
-			this.leaseConfiguration = BulkMigrationJobLeaseConfiguration.file(ownerId,
-					directory);
+			this.leaseConfiguration = BulkMigrationJobLeaseConfiguration.file(ownerId, directory);
 			return this;
 		}
 
@@ -206,8 +192,7 @@ public final class BulkMigration {
 
 		/** Records lifecycle recovery state on a dedicated target connection. */
 		public BulkMigrationBuilder databaseMaintenance() {
-			return databaseMaintenance(
-					JdbcBulkMigrationMaintenanceStateStore.DEFAULT_TABLE_NAME);
+			return databaseMaintenance(JdbcBulkMigrationMaintenanceStateStore.DEFAULT_TABLE_NAME);
 		}
 
 		/** Records lifecycle recovery state in the specified target table. */
@@ -230,21 +215,21 @@ public final class BulkMigration {
 		}
 
 		/** Writes verification JSON while limiting retained mismatch details. */
-		public BulkMigrationBuilder verificationReport(final Path file,
-				final int maxMismatches) {
+		public BulkMigrationBuilder verificationReport(final Path file, final int maxMismatches) {
 			this.verificationReportFile = Objects.requireNonNull(file, "file");
 			this.maxReportedMismatches = maxMismatches;
 			return this;
 		}
 
-		/** Writes a reviewable repair plan when {@link BulkMigration#run()} mismatches. */
+		/**
+		 * Writes a reviewable repair plan when {@link BulkMigration#run()} mismatches.
+		 */
 		public BulkMigrationBuilder repairPlanOnMismatch(final Path file) {
 			this.repairPlanOnMismatchFile = Objects.requireNonNull(file, "file");
 			return this;
 		}
 
-		public BulkMigrationBuilder tableOption(final String tableName,
-				final BulkMigrationTableOption option) {
+		public BulkMigrationBuilder tableOption(final String tableName, final BulkMigrationTableOption option) {
 			if (this.tableOptions == null) {
 				this.tableOptions = new LinkedHashMap<>();
 			}
@@ -257,8 +242,7 @@ public final class BulkMigration {
 			return this;
 		}
 
-		public BulkMigrationBuilder fingerprints(final String source,
-				final String target) {
+		public BulkMigrationBuilder fingerprints(final String source, final String target) {
 			this.sourceFingerprint = source;
 			this.targetFingerprint = target;
 			return this;
@@ -278,29 +262,25 @@ public final class BulkMigration {
 		}
 	}
 
-	private BulkMigrationJobResult execute(final Connection sourceConnection,
-			final Connection targetConnection, final Connection maintenanceConnection)
-			throws SQLException {
-		final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false,
-				false, maintenanceConnection);
+	private BulkMigrationJobResult execute(final Connection sourceConnection, final Connection targetConnection,
+			final Connection maintenanceConnection) throws SQLException {
+		final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false, false, maintenanceConnection);
 		final BulkMigrationJobListener executionListener = executionListener(plan);
 		if (leaseConfiguration == null) {
-			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
-					executionListener, chunkListener);
+			return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener, chunkListener);
 		}
 		if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
-			final BulkMigrationJobLeaseManager manager =
-					BulkMigrationJobLeaseManagerFactory.create(null, leaseConfiguration);
-			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
-					executionListener, chunkListener, manager);
+			final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory.create(null,
+					leaseConfiguration);
+			return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener, chunkListener,
+					manager);
 		}
 		try (Connection leaseConnection = target.getConnection()) {
 			leaseConnection.setAutoCommit(true);
-			final BulkMigrationJobLeaseManager manager =
-					BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
-							leaseConfiguration);
-			return BulkMigrationJobExecutor.executePlan(targetConnection, plan,
-					executionListener, chunkListener, manager);
+			final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+					leaseConfiguration);
+			return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener, chunkListener,
+					manager);
 		}
 	}
 
@@ -308,18 +288,15 @@ public final class BulkMigration {
 	public BulkMigrationOperationalReport dryRun() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
-					targetConnection, true);
-			final BulkMigrationJobStatus status = BulkMigrationJobStatusInspector.inspect(
-					readOnlyPlan);
+			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection, targetConnection, true);
+			final BulkMigrationJobStatus status = BulkMigrationJobStatusInspector.inspect(readOnlyPlan);
 			return new BulkMigrationOperationalReportBuilder().build(readOnlyPlan, status,
 					maintenanceState(readOnlyPlan), null);
 		}
 	}
 
 	/** Writes and returns the same detached dry-run snapshot as JSON. */
-	public BulkMigrationOperationalReport dryRun(final Path reportFile)
-			throws SQLException {
+	public BulkMigrationOperationalReport dryRun(final Path reportFile) throws SQLException {
 		final Path file = Objects.requireNonNull(reportFile, "reportFile");
 		final BulkMigrationOperationalReport report = dryRun();
 		new BulkMigrationOperationalReportIO().write(file, report);
@@ -330,65 +307,49 @@ public final class BulkMigration {
 	 * Deletes only this job's checkpoints after exact plan-fingerprint approval.
 	 * Migrated target rows are not changed.
 	 */
-	public BulkMigrationJobCheckpointResetResult resetCheckpointsWithFingerprint(
-			final String approvedPlanFingerprint) throws SQLException {
+	public BulkMigrationJobCheckpointResetResult resetCheckpointsWithFingerprint(final String approvedPlanFingerprint)
+			throws SQLException {
 		if (approvedPlanFingerprint == null || approvedPlanFingerprint.isBlank()) {
-			throw new IllegalArgumentException(
-					"approvedPlanFingerprint must not be empty");
+			throw new IllegalArgumentException("approvedPlanFingerprint must not be empty");
 		}
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			final BulkMigrationJobPlan reviewedPlan = plan(sourceConnection,
-					targetConnection, true);
+			final BulkMigrationJobPlan reviewedPlan = plan(sourceConnection, targetConnection, true);
 			if (!reviewedPlan.getFingerprint().equals(approvedPlanFingerprint)) {
-				throw new IllegalArgumentException(
-						"Approved plan fingerprint does not match the migration job plan");
+				throw new IllegalArgumentException("Approved plan fingerprint does not match the migration job plan");
 			}
 			if (leaseConfiguration == null) {
-				return resetCheckpoints(sourceConnection, targetConnection,
-						approvedPlanFingerprint);
+				return resetCheckpoints(sourceConnection, targetConnection, approvedPlanFingerprint);
 			}
 			if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
-				final var manager = BulkMigrationJobLeaseManagerFactory.create(null,
-						leaseConfiguration);
-				try (var ignored = manager.acquire(reviewedPlan.getJobId(),
-						reviewedPlan.getFingerprint())) {
-					return resetCheckpoints(sourceConnection, targetConnection,
-							approvedPlanFingerprint);
+				final var manager = BulkMigrationJobLeaseManagerFactory.create(null, leaseConfiguration);
+				try (var ignored = manager.acquire(reviewedPlan.getJobId(), reviewedPlan.getFingerprint())) {
+					return resetCheckpoints(sourceConnection, targetConnection, approvedPlanFingerprint);
 				}
 			}
 			try (Connection leaseConnection = target.getConnection()) {
 				leaseConnection.setAutoCommit(true);
-				final var manager = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
-						leaseConfiguration);
-				try (var ignored = manager.acquire(reviewedPlan.getJobId(),
-						reviewedPlan.getFingerprint())) {
-					return resetCheckpoints(sourceConnection, targetConnection,
-							approvedPlanFingerprint);
+				final var manager = BulkMigrationJobLeaseManagerFactory.create(leaseConnection, leaseConfiguration);
+				try (var ignored = manager.acquire(reviewedPlan.getJobId(), reviewedPlan.getFingerprint())) {
+					return resetCheckpoints(sourceConnection, targetConnection, approvedPlanFingerprint);
 				}
 			}
 		}
 	}
 
-	private BulkMigrationJobCheckpointResetResult resetCheckpoints(
-			final Connection sourceConnection, final Connection targetConnection,
-			final String approvedPlanFingerprint) throws SQLException {
-		final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection,
-				false);
-		return BulkMigrationJobCheckpointManager.reset(resetPlan,
-				approvedPlanFingerprint);
+	private BulkMigrationJobCheckpointResetResult resetCheckpoints(final Connection sourceConnection,
+			final Connection targetConnection, final String approvedPlanFingerprint) throws SQLException {
+		final BulkMigrationJobPlan resetPlan = plan(sourceConnection, targetConnection, false);
+		return BulkMigrationJobCheckpointManager.reset(resetPlan, approvedPlanFingerprint);
 	}
 
 	/**
 	 * Reads a reviewed dry-run JSON report and resets the exact current plan's
 	 * checkpoints.
 	 */
-	public BulkMigrationJobCheckpointResetResult resetCheckpoints(
-			final Path approvedDryRunReport) throws SQLException {
-		final Path reportFile = Objects.requireNonNull(approvedDryRunReport,
-				"approvedDryRunReport");
-		final String approvedFingerprint = new BulkMigrationOperationalReportIO()
-				.read(reportFile).planFingerprint();
+	public BulkMigrationJobCheckpointResetResult resetCheckpoints(final Path approvedDryRunReport) throws SQLException {
+		final Path reportFile = Objects.requireNonNull(approvedDryRunReport, "approvedDryRunReport");
+		final String approvedFingerprint = new BulkMigrationOperationalReportIO().read(reportFile).planFingerprint();
 		return resetCheckpointsWithFingerprint(approvedFingerprint);
 	}
 
@@ -396,69 +357,60 @@ public final class BulkMigration {
 	public BulkMigrationMaintenanceRecoveryResult recoverMaintenanceWithFingerprint(
 			final String approvedPlanFingerprint) throws SQLException {
 		if (approvedPlanFingerprint == null || approvedPlanFingerprint.isBlank()) {
-			throw new IllegalArgumentException(
-					"approvedPlanFingerprint must not be empty");
+			throw new IllegalArgumentException("approvedPlanFingerprint must not be empty");
 		}
 		if (maintenanceDirectory == null && maintenanceTableName == null) {
-			throw new IllegalStateException(
-					"File or database maintenance must be configured");
+			throw new IllegalStateException("File or database maintenance must be configured");
 		}
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			if (maintenanceTableName == null) {
-				return recoverMaintenance(sourceConnection, targetConnection, null,
-						approvedPlanFingerprint);
+				return recoverMaintenance(sourceConnection, targetConnection, null, approvedPlanFingerprint);
 			}
 			try (Connection maintenanceConnection = target.getConnection()) {
 				maintenanceConnection.setAutoCommit(true);
-				return recoverMaintenance(sourceConnection, targetConnection,
-						maintenanceConnection, approvedPlanFingerprint);
+				return recoverMaintenance(sourceConnection, targetConnection, maintenanceConnection,
+						approvedPlanFingerprint);
 			}
 		}
 	}
 
 	/** Restores maintenance approved by a previously reviewed dry-run report. */
-	public BulkMigrationMaintenanceRecoveryResult recoverMaintenance(
-			final Path approvedDryRunReport) throws SQLException {
-		final Path reportFile = Objects.requireNonNull(approvedDryRunReport,
-				"approvedDryRunReport");
+	public BulkMigrationMaintenanceRecoveryResult recoverMaintenance(final Path approvedDryRunReport)
+			throws SQLException {
+		final Path reportFile = Objects.requireNonNull(approvedDryRunReport, "approvedDryRunReport");
 		return recoverMaintenanceWithFingerprint(
 				new BulkMigrationOperationalReportIO().read(reportFile).planFingerprint());
 	}
 
-	private BulkMigrationMaintenanceRecoveryResult recoverMaintenance(
-			final Connection sourceConnection, final Connection targetConnection,
-			final Connection maintenanceConnection,
+	private BulkMigrationMaintenanceRecoveryResult recoverMaintenance(final Connection sourceConnection,
+			final Connection targetConnection, final Connection maintenanceConnection,
 			final String approvedPlanFingerprint) throws SQLException {
-		final BulkMigrationJobPlan recoveryPlan = plan(sourceConnection,
-				targetConnection, true, false, maintenanceConnection);
-		if (!(recoveryPlan.getLifecycle()
-				instanceof DurableBulkMigrationJobLifecycle durable)) {
-			throw new IllegalStateException(
-					"Durable maintenance lifecycle was not configured");
+		final BulkMigrationJobPlan recoveryPlan = plan(sourceConnection, targetConnection, true, false,
+				maintenanceConnection);
+		if (!(recoveryPlan.getLifecycle() instanceof DurableBulkMigrationJobLifecycle durable)) {
+			throw new IllegalStateException("Durable maintenance lifecycle was not configured");
 		}
-		return durable.recoverInterrupted(targetConnection, recoveryPlan,
-				approvedPlanFingerprint);
+		return durable.recoverInterrupted(targetConnection, recoveryPlan, approvedPlanFingerprint);
 	}
 
 	private BulkMigrationJobListener executionListener(final BulkMigrationJobPlan plan) {
 		if (operationalReportFile == null) {
 			return jobListener;
 		}
-		final BulkMigrationJobListener report = new BulkMigrationOperationalReportJobListener(
-				plan, operationalReportFile, () -> maintenanceStateUnchecked(plan),
-				() -> null);
+		final BulkMigrationJobListener report = new BulkMigrationOperationalReportJobListener(plan,
+				operationalReportFile, () -> maintenanceStateUnchecked(plan), () -> null);
 		return jobListener == BulkMigrationJobListener.NO_OP ? report
 				: CompositeBulkMigrationJobListener.of(jobListener, report);
 	}
 
-	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState
-			maintenanceStateUnchecked(final BulkMigrationJobPlan plan) {
+	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState maintenanceStateUnchecked(
+			final BulkMigrationJobPlan plan) {
 		try {
 			return maintenanceState(plan);
 		} catch (SQLException e) {
-			throw new com.sqlapp.exceptions.CommandException(
-					"Failed to inspect migration maintenance state for report", e);
+			throw new com.sqlapp.exceptions.CommandException("Failed to inspect migration maintenance state for report",
+					e);
 		}
 	}
 
@@ -481,8 +433,7 @@ public final class BulkMigration {
 			attachOperationalFailure(failure);
 			throw failure;
 		} catch (SQLException | RuntimeException failure) {
-			final var postExecution = new BulkMigrationPostExecutionException(execution,
-					failure);
+			final var postExecution = new BulkMigrationPostExecutionException(execution, failure);
 			attachOperationalFailure(postExecution);
 			throw postExecution;
 		} catch (Error failure) {
@@ -491,8 +442,7 @@ public final class BulkMigration {
 		}
 	}
 
-	private void writeRepairPlanOnMismatch(
-			final BulkMigrationVerificationMismatchException failure) {
+	private void writeRepairPlanOnMismatch(final BulkMigrationVerificationMismatchException failure) {
 		if (repairPlanOnMismatchFile == null) {
 			return;
 		}
@@ -517,10 +467,8 @@ public final class BulkMigration {
 		}
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection,
-					targetConnection, true);
-			new BulkMigrationOperationalReportJobListener(readOnlyPlan,
-					operationalReportFile,
+			final BulkMigrationJobPlan readOnlyPlan = plan(sourceConnection, targetConnection, true);
+			new BulkMigrationOperationalReportJobListener(readOnlyPlan, operationalReportFile,
 					() -> maintenanceStateUnchecked(readOnlyPlan), () -> null)
 					.onJobFailed(readOnlyPlan.getFingerprint(), failure);
 		}
@@ -530,8 +478,7 @@ public final class BulkMigration {
 	public BulkMigrationJobStatus status() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
-			return BulkMigrationJobStatusInspector.inspect(
-					plan(sourceConnection, targetConnection, true));
+			return BulkMigrationJobStatusInspector.inspect(plan(sourceConnection, targetConnection, true));
 		}
 	}
 
@@ -542,42 +489,36 @@ public final class BulkMigration {
 			return BulkMigrationOperationalReportResumeAssessor.assess(report);
 		}
 		if (leaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
-			final var lease = new FileBulkMigrationJobLeaseStore(
-					leaseConfiguration.directory()).load(report.jobId()).orElse(null);
-			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
-					Instant.now());
+			final var lease = new FileBulkMigrationJobLeaseStore(leaseConfiguration.directory()).load(report.jobId())
+					.orElse(null);
+			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease, Instant.now());
 		}
 		try (Connection connection = target.getConnection()) {
-			final var lease = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-					leaseConfiguration.tableName()).load(report.jobId()).orElse(null);
-			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease,
-					Instant.now());
+			final var lease = JdbcBulkMigrationJobLeaseStore.readOnly(connection, leaseConfiguration.tableName())
+					.load(report.jobId()).orElse(null);
+			return BulkMigrationOperationalReportResumeAssessor.assess(report, lease, Instant.now());
 		}
 	}
 
 	public BulkMigrationJobVerificationResult verify() throws SQLException {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection();
-				BulkMigrationVerificationScope ignored = BulkMigrationVerificationScope.open(
-						verificationIsolation, sourceConnection, targetConnection)) {
-			final BulkMigrationJobPlan verificationPlan = plan(sourceConnection,
-					targetConnection, true);
+				BulkMigrationVerificationScope ignored = BulkMigrationVerificationScope.open(verificationIsolation,
+						sourceConnection, targetConnection)) {
+			final BulkMigrationJobPlan verificationPlan = plan(sourceConnection, targetConnection, true);
 			final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 			for (final Table table : orderedTables()) {
 				final var expected = keysetSource(sourceConnection, table);
 				final var actual = keysetSource(targetConnection, table);
 				final List<String> columns = verificationColumns(table);
-				final var verification = BulkMigrationVerifier.verify(expected, actual,
-						columns, verificationChunkSize(table));
-				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table),
-						columns, verification));
+				final var verification = BulkMigrationVerifier.verify(expected, actual, columns,
+						verificationChunkSize(table));
+				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table), columns, verification));
 			}
-			final var verification = new BulkMigrationJobVerificationResult(
-					verificationPlan.getFingerprint(), results);
+			final var verification = new BulkMigrationJobVerificationResult(verificationPlan.getFingerprint(), results);
 			if (verificationReportFile != null) {
-				new BulkMigrationVerificationReportIO().write(verificationReportFile,
-						verificationPlan.getFingerprint(), verificationIsolation,
-						maxReportedMismatches, verification);
+				new BulkMigrationVerificationReportIO().write(verificationReportFile, verificationPlan.getFingerprint(),
+						verificationIsolation, maxReportedMismatches, verification);
 			}
 			return verification;
 		}
@@ -596,7 +537,9 @@ public final class BulkMigration {
 		return new Repair(this, Objects.requireNonNull(verification, "verification"));
 	}
 
-	/** Runs verification and prepares the existing review-before-repair workflow. */
+	/**
+	 * Runs verification and prepares the existing review-before-repair workflow.
+	 */
 	public Repair verifyAndPlanRepair() throws SQLException {
 		return planRepair(verify());
 	}
@@ -613,20 +556,17 @@ public final class BulkMigration {
 	}
 
 	/** Combined result of the common execute-then-verify workflow. */
-	public record Execution(BulkMigrationJobResult migration,
-			BulkMigrationJobVerificationResult verification) {
+	public record Execution(BulkMigrationJobResult migration, BulkMigrationJobVerificationResult verification) {
 		public Execution {
 			Objects.requireNonNull(migration, "migration");
 			Objects.requireNonNull(verification, "verification");
 			if (migration.getPlanFingerprint() == null
 					|| !migration.getPlanFingerprint().equals(verification.getPlanFingerprint())) {
-				throw new IllegalArgumentException(
-						"Migration and verification results must identify the same plan");
+				throw new IllegalArgumentException("Migration and verification results must identify the same plan");
 			}
-			if (!migration.getTasks().stream().map(
-					com.sqlapp.jdbc.bulk.BulkMigrationJobTaskResult::getTaskId).toList()
-					.equals(verification.getTasks().stream().map(
-							BulkMigrationJobTaskVerificationResult::getTaskId).toList())) {
+			if (!migration.getTasks().stream().map(com.sqlapp.jdbc.bulk.BulkMigrationJobTaskResult::getTaskId).toList()
+					.equals(verification.getTasks().stream().map(BulkMigrationJobTaskVerificationResult::getTaskId)
+							.toList())) {
 				throw new IllegalArgumentException(
 						"Migration and verification result tasks must match in dependency order");
 			}
@@ -644,61 +584,54 @@ public final class BulkMigration {
 		}
 	}
 
-	private BulkMigrationJobPlan plan(final Connection sourceConnection,
-			final Connection targetConnection, final boolean readOnly) throws SQLException {
-		return plan(sourceConnection, targetConnection, readOnly, true,
-				targetConnection);
+	private BulkMigrationJobPlan plan(final Connection sourceConnection, final Connection targetConnection,
+			final boolean readOnly) throws SQLException {
+		return plan(sourceConnection, targetConnection, readOnly, true, targetConnection);
 	}
 
-	private BulkMigrationJobPlan plan(final Connection sourceConnection,
-			final Connection targetConnection, final boolean checkpointReadOnly,
-			final boolean maintenanceReadOnly,
-			final Connection maintenanceConnection) throws SQLException {
+	private BulkMigrationJobPlan plan(final Connection sourceConnection, final Connection targetConnection,
+			final boolean checkpointReadOnly, final boolean maintenanceReadOnly, final Connection maintenanceConnection)
+			throws SQLException {
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
 		for (final Table table : tables) {
 			final var options = options(table);
-			final BulkMigrationCheckpointStore checkpointStore = checkpointStore(
-					table, targetConnection, checkpointReadOnly);
+			final BulkMigrationCheckpointStore checkpointStore = checkpointStore(table, targetConnection,
+					checkpointReadOnly);
 			tasks.add(BulkMigrationJobTask.builder().taskId(taskId(table))
-					.keysetSource(keysetSource(sourceConnection, table))
-					.options(options).checkpointStore(checkpointStore).build());
+					.keysetSource(keysetSource(sourceConnection, table)).options(options)
+					.checkpointStore(checkpointStore).build());
 		}
-		final BulkMigrationJobLifecycle effective =
-				effectiveLifecycle(maintenanceConnection, maintenanceReadOnly);
+		final BulkMigrationJobLifecycle effective = effectiveLifecycle(maintenanceConnection, maintenanceReadOnly);
 		return jobId == null ? BulkMigrationJobPlanner.plan(tasks, effective)
 				: BulkMigrationJobPlanner.plan(jobId, tasks, effective);
 	}
 
-	private BulkMigrationJobLifecycle effectiveLifecycle(
-			final Connection maintenanceConnection, final boolean readOnly)
+	private BulkMigrationJobLifecycle effectiveLifecycle(final Connection maintenanceConnection, final boolean readOnly)
 			throws SQLException {
 		if (maintenanceDirectory != null) {
 			return new DurableBulkMigrationJobLifecycle(lifecycle,
 					new FileBulkMigrationMaintenanceStateStore(maintenanceDirectory));
 		}
 		if (maintenanceTableName != null) {
-			final var store = readOnly
-					? JdbcBulkMigrationMaintenanceStateStore.readOnly(
-							Objects.requireNonNull(maintenanceConnection,
-									"maintenanceConnection"), maintenanceTableName)
+			final var store = readOnly ? JdbcBulkMigrationMaintenanceStateStore.readOnly(
+					Objects.requireNonNull(maintenanceConnection, "maintenanceConnection"), maintenanceTableName)
 					: new JdbcBulkMigrationMaintenanceStateStore(
-							Objects.requireNonNull(maintenanceConnection,
-									"maintenanceConnection"), maintenanceTableName);
+							Objects.requireNonNull(maintenanceConnection, "maintenanceConnection"),
+							maintenanceTableName);
 			return new DurableBulkMigrationJobLifecycle(lifecycle, store);
 		}
 		return lifecycle;
 	}
 
-	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState maintenanceState(
-			final BulkMigrationJobPlan plan) throws SQLException {
+	private static com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState maintenanceState(final BulkMigrationJobPlan plan)
+			throws SQLException {
 		if (plan.getLifecycle() instanceof DurableBulkMigrationJobLifecycle durable) {
 			return durable.inspect(plan).orElse(null);
 		}
 		return null;
 	}
 
-	private BulkMigrationJobRepairPlan repairPlan(final Connection sourceConnection,
-			final Connection targetConnection,
+	private BulkMigrationJobRepairPlan repairPlan(final Connection sourceConnection, final Connection targetConnection,
 			final BulkMigrationJobVerificationResult verification) throws SQLException {
 		final BulkMigrationJobPlan currentPlan = plan(sourceConnection, targetConnection, true);
 		verification.validateAgainst(currentPlan);
@@ -709,26 +642,24 @@ public final class BulkMigration {
 			tasks.add(BulkMigrationJobRepairTask.builder().taskId(taskId(table))
 					.expectedKeysetSource(keysetSource(sourceConnection, table)).target(table)
 					.verificationResult(verified.getVerificationResult())
-					.options(BulkMigrationRepairOption.builder()
-							.bulkUpsertOption(upsertOption(table)).build()).build());
+					.options(BulkMigrationRepairOption.builder().bulkUpsertOption(upsertOption(table)).build())
+					.build());
 		}
 		return BulkMigrationJobRepairPlanner.plan(targetConnection, tasks);
 	}
 
 	private ChunkedBulkMigrationOption options(final Table table) {
 		final BulkMigrationTableOption option = tableOption(table);
-		return ChunkedBulkMigrationOption.builder().migrationId(option.getMigrationId() == null
-				|| option.getMigrationId().isBlank() ? taskId(table) : option.getMigrationId())
-				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize())
-				.mode(mode).resume(resume).checkpointMode(checkpointMode(table))
-				.checkpointTableName(checkpointTableName)
-				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint)
-				.bulkOption(bulkOption(table)).bulkUpsertOption(upsertOption(table))
-				.retryOption(retryOption(table)).build();
+		return ChunkedBulkMigrationOption.builder()
+				.migrationId(option.getMigrationId() == null || option.getMigrationId().isBlank() ? taskId(table)
+						: option.getMigrationId())
+				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize()).mode(mode).resume(resume)
+				.checkpointMode(checkpointMode(table)).checkpointTableName(checkpointTableName)
+				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint).bulkOption(bulkOption(table))
+				.bulkUpsertOption(upsertOption(table)).retryOption(retryOption(table)).build();
 	}
 
-	private JdbcBulkMigrationKeysetSource keysetSource(final Connection connection,
-			final Table table) {
+	private JdbcBulkMigrationKeysetSource keysetSource(final Connection connection, final Table table) {
 		final List<String> columns = tableOption(table).getKeysetColumns();
 		return columns.isEmpty() ? new JdbcBulkMigrationKeysetSource(connection, table)
 				: new JdbcBulkMigrationKeysetSource(connection, table, columns);
@@ -736,8 +667,9 @@ public final class BulkMigration {
 
 	private List<String> verificationColumns(final Table table) {
 		final List<String> columns = tableOption(table).getVerificationColumns();
-		return columns.isEmpty() ? BulkMigrationVerificationColumns.resolve(table, mode,
-				bulkOption(table), upsertOption(table)) : columns;
+		return columns.isEmpty()
+				? BulkMigrationVerificationColumns.resolve(table, mode, bulkOption(table), upsertOption(table))
+				: columns;
 	}
 
 	private int verificationChunkSize(final Table table) {
@@ -767,20 +699,17 @@ public final class BulkMigration {
 	}
 
 	private BulkMigrationCheckpointMode checkpointMode(final Table table) {
-		return tableOption(table).getCheckpointStore() == null
-				? checkpointMode : BulkMigrationCheckpointMode.CUSTOM;
+		return tableOption(table).getCheckpointStore() == null ? checkpointMode : BulkMigrationCheckpointMode.CUSTOM;
 	}
 
-	private BulkMigrationCheckpointStore checkpointStore(final Table table,
-			final Connection targetConnection, final boolean readOnly) throws SQLException {
+	private BulkMigrationCheckpointStore checkpointStore(final Table table, final Connection targetConnection,
+			final boolean readOnly) throws SQLException {
 		final BulkMigrationCheckpointStore perTable = tableOption(table).getCheckpointStore();
 		if (perTable != null) {
 			return perTable;
 		}
 		return switch (checkpointMode) {
-		case DATABASE -> readOnly
-				? JdbcBulkMigrationCheckpointStore.readOnly(targetConnection,
-						checkpointTableName)
+		case DATABASE -> readOnly ? JdbcBulkMigrationCheckpointStore.readOnly(targetConnection, checkpointTableName)
 				: new JdbcBulkMigrationCheckpointStore(targetConnection, checkpointTableName);
 		case FILE -> new FileBulkMigrationCheckpointStore(checkpointDirectory);
 		case CUSTOM -> checkpointStore;
@@ -803,45 +732,34 @@ public final class BulkMigration {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
 		if (maxReportedMismatches <= 0) {
-			throw new IllegalArgumentException(
-					"maxReportedMismatches must be greater than zero");
+			throw new IllegalArgumentException("maxReportedMismatches must be greater than zero");
 		}
 		if (verificationChunkSize != null && verificationChunkSize <= 0) {
-			throw new IllegalArgumentException(
-					"verificationChunkSize must be greater than zero");
+			throw new IllegalArgumentException("verificationChunkSize must be greater than zero");
 		}
 		if (resume && (blank(sourceFingerprint) || blank(targetFingerprint))) {
 			throw new IllegalArgumentException(
 					"sourceFingerprint and targetFingerprint are required when resume is enabled");
 		}
-		if (checkpointMode == BulkMigrationCheckpointMode.FILE
-				&& checkpointDirectory == null) {
-			throw new IllegalArgumentException(
-					"checkpointDirectory is required for FILE checkpoints");
+		if (checkpointMode == BulkMigrationCheckpointMode.FILE && checkpointDirectory == null) {
+			throw new IllegalArgumentException("checkpointDirectory is required for FILE checkpoints");
 		}
-		if (checkpointMode == BulkMigrationCheckpointMode.CUSTOM
-				&& checkpointStore == null) {
-			throw new IllegalArgumentException(
-					"checkpointStore is required for CUSTOM checkpoints");
+		if (checkpointMode == BulkMigrationCheckpointMode.CUSTOM && checkpointStore == null) {
+			throw new IllegalArgumentException("checkpointStore is required for CUSTOM checkpoints");
 		}
 		if (checkpointMode == BulkMigrationCheckpointMode.DATABASE
 				&& (checkpointDirectory != null || checkpointStore != null)) {
-			throw new IllegalArgumentException(
-					"DATABASE checkpoints cannot use a directory or custom store");
+			throw new IllegalArgumentException("DATABASE checkpoints cannot use a directory or custom store");
 		}
 		if (maintenanceDirectory != null && maintenanceTableName != null) {
-			throw new IllegalArgumentException(
-					"File and database maintenance cannot both be configured");
+			throw new IllegalArgumentException("File and database maintenance cannot both be configured");
 		}
-		if (maintenanceTableName != null
-				&& !maintenanceTableName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
-			throw new IllegalArgumentException(
-					"Invalid maintenance table name: " + maintenanceTableName);
+		if (maintenanceTableName != null && !maintenanceTableName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+			throw new IllegalArgumentException("Invalid maintenance table name: " + maintenanceTableName);
 		}
 	}
 
-	private static List<Table> resolveTables(final Schema schema,
-			final List<String> names) {
+	private static List<Table> resolveTables(final Schema schema, final List<String> names) {
 		if (names == null || names.isEmpty()) {
 			return List.copyOf(schema.getTables());
 		}
@@ -860,8 +778,8 @@ public final class BulkMigration {
 		return List.copyOf(result);
 	}
 
-	private static Map<String, BulkMigrationTableOption> resolveTableOptions(
-			final List<Table> tables, final Map<String, BulkMigrationTableOption> values) {
+	private static Map<String, BulkMigrationTableOption> resolveTableOptions(final List<Table> tables,
+			final Map<String, BulkMigrationTableOption> values) {
 		if (values == null || values.isEmpty()) {
 			return Map.of();
 		}
@@ -870,12 +788,10 @@ public final class BulkMigration {
 			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null) {
 				throw new IllegalArgumentException("Table options require a table name and value");
 			}
-			final List<Table> matches = tables.stream().filter(table ->
-					table.getName().equalsIgnoreCase(entry.getKey())
+			final List<Table> matches = tables.stream().filter(table -> table.getName().equalsIgnoreCase(entry.getKey())
 					|| taskId(table).equalsIgnoreCase(entry.getKey())).toList();
 			if (matches.size() != 1) {
-				throw new IllegalArgumentException("Unknown or ambiguous table option: "
-						+ entry.getKey());
+				throw new IllegalArgumentException("Unknown or ambiguous table option: " + entry.getKey());
 			}
 			final Table table = matches.get(0);
 			if (result.put(table.getName(), validateTableOption(table, entry.getValue())) != null) {
@@ -888,22 +804,17 @@ public final class BulkMigration {
 	private static BulkMigrationTableOption validateTableOption(final Table table,
 			final BulkMigrationTableOption option) {
 		if (option.getChunkSize() != null && option.getChunkSize() <= 0) {
-			throw new IllegalArgumentException("chunkSize must be greater than zero: "
-					+ table.getName());
+			throw new IllegalArgumentException("chunkSize must be greater than zero: " + table.getName());
 		}
-		if (option.getVerificationChunkSize() != null
-				&& option.getVerificationChunkSize() <= 0) {
-			throw new IllegalArgumentException(
-					"verificationChunkSize must be greater than zero: "
-							+ table.getName());
+		if (option.getVerificationChunkSize() != null && option.getVerificationChunkSize() <= 0) {
+			throw new IllegalArgumentException("verificationChunkSize must be greater than zero: " + table.getName());
 		}
 		validateColumns(table, option.getKeysetColumns(), "keysetColumns");
 		validateColumns(table, option.getVerificationColumns(), "verificationColumns");
 		return option;
 	}
 
-	private static void validateColumns(final Table table, final List<String> values,
-			final String role) {
+	private static void validateColumns(final Table table, final List<String> values, final String role) {
 		if (values == null) {
 			throw new IllegalArgumentException(role + " must not be null: " + table.getName());
 		}
@@ -911,15 +822,13 @@ public final class BulkMigration {
 		for (final String value : values) {
 			final var column = value == null ? null : table.getColumns().get(value);
 			if (column == null || !names.add(column.getName())) {
-				throw new IllegalArgumentException("Invalid " + role + " column '" + value
-						+ "': " + table.getName());
+				throw new IllegalArgumentException("Invalid " + role + " column '" + value + "': " + table.getName());
 			}
 		}
 	}
 
 	private static String taskId(final Table table) {
-		return table.getSchemaName() == null ? table.getName()
-				: table.getSchemaName() + "." + table.getName();
+		return table.getSchemaName() == null ? table.getName() : table.getSchemaName() + "." + table.getName();
 	}
 
 	private static boolean blank(final String value) {
@@ -931,8 +840,7 @@ public final class BulkMigration {
 		private final BulkMigration migration;
 		private final BulkMigrationJobVerificationResult verification;
 
-		private Repair(final BulkMigration migration,
-				final BulkMigrationJobVerificationResult verification) {
+		private Repair(final BulkMigration migration, final BulkMigrationJobVerificationResult verification) {
 			this.migration = migration;
 			this.verification = verification;
 		}
@@ -945,12 +853,10 @@ public final class BulkMigration {
 			return verification;
 		}
 
-		public BulkMigrationJobRepairPlanReport writeJson(final Path file)
-				throws SQLException {
+		public BulkMigrationJobRepairPlanReport writeJson(final Path file) throws SQLException {
 			try (Connection sourceConnection = migration.source.getConnection();
 					Connection targetConnection = migration.target.getConnection()) {
-				final var plan = migration.repairPlan(sourceConnection, targetConnection,
-						verification);
+				final var plan = migration.repairPlan(sourceConnection, targetConnection, verification);
 				final var io = new BulkMigrationJobRepairPlanReportIO();
 				final var report = io.fromPlan(plan);
 				io.write(file, report);
@@ -958,29 +864,22 @@ public final class BulkMigration {
 			}
 		}
 
-		public BulkMigrationJobRepairResult executeApproved(
-				final String approvedFingerprint) throws SQLException {
+		public BulkMigrationJobRepairResult executeApproved(final String approvedFingerprint) throws SQLException {
 			try (Connection sourceConnection = migration.source.getConnection();
 					Connection targetConnection = migration.target.getConnection()) {
-				final var plan = migration.repairPlan(sourceConnection, targetConnection,
-						verification);
-				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
-						approvedFingerprint);
+				final var plan = migration.repairPlan(sourceConnection, targetConnection, verification);
+				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approvedFingerprint);
 			}
 		}
 
 		/** Reads a previously reviewed JSON report and executes that exact plan. */
-		public BulkMigrationJobRepairResult executeApproved(final Path reportFile)
-				throws SQLException {
+		public BulkMigrationJobRepairResult executeApproved(final Path reportFile) throws SQLException {
 			Objects.requireNonNull(reportFile, "reportFile");
 			try (Connection sourceConnection = migration.source.getConnection();
 					Connection targetConnection = migration.target.getConnection()) {
-				final var plan = migration.repairPlan(sourceConnection, targetConnection,
-						verification);
-				final var approved = new BulkMigrationJobRepairPlanReportIO().read(
-						reportFile, plan.getFingerprint());
-				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
-						approved.planFingerprint());
+				final var plan = migration.repairPlan(sourceConnection, targetConnection, verification);
+				final var approved = new BulkMigrationJobRepairPlanReportIO().read(reportFile, plan.getFingerprint());
+				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approved.planFingerprint());
 			}
 		}
 	}

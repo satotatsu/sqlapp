@@ -28,9 +28,8 @@ public class BulkMigrationTableOption {
 	@Builder
 	public BulkMigrationTableOption(final String migrationId, final Integer chunkSize,
 			final Integer verificationChunkSize, final List<String> keysetColumns,
-			final List<String> verificationColumns, final BulkUpsertOption upsertOption,
-			final BulkOption bulkOption, final BulkMigrationRetryOption retryOption,
-			final BulkMigrationCheckpointStore checkpointStore) {
+			final List<String> verificationColumns, final BulkUpsertOption upsertOption, final BulkOption bulkOption,
+			final BulkMigrationRetryOption retryOption, final BulkMigrationCheckpointStore checkpointStore) {
 		if (migrationId != null && migrationId.isBlank()) {
 			throw new IllegalArgumentException("migrationId must not be empty");
 		}
@@ -38,8 +37,7 @@ public class BulkMigrationTableOption {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
 		if (verificationChunkSize != null && verificationChunkSize <= 0) {
-			throw new IllegalArgumentException(
-					"verificationChunkSize must be greater than zero");
+			throw new IllegalArgumentException("verificationChunkSize must be greater than zero");
 		}
 		this.migrationId = migrationId;
 		this.chunkSize = chunkSize;
@@ -56,8 +54,7 @@ public class BulkMigrationTableOption {
 		final List<String> columns = values == null ? List.of() : List.copyOf(values);
 		if (columns.stream().anyMatch(value -> value == null || value.isBlank())
 				|| new HashSet<>(columns).size() != columns.size()) {
-			throw new IllegalArgumentException(
-					name + " must contain unique non-empty column names");
+			throw new IllegalArgumentException(name + " must contain unique non-empty column names");
 		}
 		return columns;
 	}

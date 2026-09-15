@@ -236,8 +236,8 @@ public class LegacyMigrationMappingBuilder {
 		record.getChanges().put("createdTables",
 				mapping.getTables().stream().map(item -> item.getTarget().getTable()).toList());
 		mapping.getTransformations().add(record);
-		mapping.getStatistics().setSourceTableCount((int) mapping.getTables().stream()
-				.filter(item -> item.getRole() == TableRole.ROOT).count());
+		mapping.getStatistics().setSourceTableCount(
+				(int) mapping.getTables().stream().filter(item -> item.getRole() == TableRole.ROOT).count());
 		mapping.getStatistics().setTargetTableCount(mapping.getTables().size());
 		mapping.getStatistics().setTransformedTableCount(mapping.getTables().size());
 		mapping.getStatistics().setWarningCount(warnings.size());
@@ -377,11 +377,9 @@ public class LegacyMigrationMappingBuilder {
 			}
 			result.getColumns().add(column);
 		}
-		int maximum = result.getColumns().stream()
-				.flatMap(column -> column.getSourceColumns().stream())
-				.map(IndexedSourceColumn::getIndex)
-				.filter(java.util.Objects::nonNull).mapToInt(Integer::intValue)
-				.max().orElse(0);
+		int maximum = result.getColumns().stream().flatMap(column -> column.getSourceColumns().stream())
+				.map(IndexedSourceColumn::getIndex).filter(java.util.Objects::nonNull).mapToInt(Integer::intValue).max()
+				.orElse(0);
 		if (maximum > 0) {
 			Map<String, Object> occurrence = new LinkedHashMap<>();
 			occurrence.put("column", sequenceColumn);
@@ -431,8 +429,8 @@ public class LegacyMigrationMappingBuilder {
 			if (tableMapping == null) {
 				continue;
 			}
-			tableMapping.setOperation(tableMapping.getOperation() == TableOperation.SPLIT
-					? TableOperation.SPLIT : TableOperation.TRANSFORM);
+			tableMapping.setOperation(tableMapping.getOperation() == TableOperation.SPLIT ? TableOperation.SPLIT
+					: TableOperation.TRANSFORM);
 			tableMapping.getKeys().setSourcePrimaryKey(strings(tableLog.get("oldPrimaryKey")));
 			Map<String, Object> newPrimaryKey = map(tableLog.get("newPrimaryKey"));
 			String idColumn = string(newPrimaryKey.get("column"));
@@ -496,8 +494,7 @@ public class LegacyMigrationMappingBuilder {
 					mapping.getRelationships().add(relationship);
 				}
 				relationship.getTargetKeys().clear();
-				relationship.getTargetKeys()
-						.add(new ColumnPair(string(foreignKey.get("referencedColumn")), newColumn));
+				relationship.getTargetKeys().add(new ColumnPair(string(foreignKey.get("referencedColumn")), newColumn));
 				relationship.setParentIdPropagation(true);
 			}
 			converted.add(tableName);
@@ -632,6 +629,7 @@ public class LegacyMigrationMappingBuilder {
 	}
 
 	private Integer integer(Object value) {
-		return value instanceof Number number ? number.intValue() : value == null ? null : Integer.valueOf(value.toString());
+		return value instanceof Number number ? number.intValue()
+				: value == null ? null : Integer.valueOf(value.toString());
 	}
 }

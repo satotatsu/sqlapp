@@ -23,8 +23,7 @@ public class GenerateBulkMigrationJobRepairPlanReportCommand extends AbstractCom
 			throw new CommandException("Bulk migration job repair plan is required.");
 		}
 		if (targetFile == null) {
-			throw new CommandException(
-					"Bulk migration job repair plan report target file is required.");
+			throw new CommandException("Bulk migration job repair plan report target file is required.");
 		}
 		new BulkMigrationJobRepairPlanReportIO().write(targetFile.toPath(), plan);
 		info("Bulk migration job repair plan report: ", targetFile.getAbsolutePath());

@@ -5,10 +5,8 @@ import java.sql.Connection;
 
 /** Portable JDBC isolation choices for post-migration verification. */
 public enum BulkMigrationVerificationIsolation {
-	DEFAULT(null),
-	READ_COMMITTED(Connection.TRANSACTION_READ_COMMITTED),
-	REPEATABLE_READ(Connection.TRANSACTION_REPEATABLE_READ),
-	SERIALIZABLE(Connection.TRANSACTION_SERIALIZABLE);
+	DEFAULT(null), READ_COMMITTED(Connection.TRANSACTION_READ_COMMITTED),
+	REPEATABLE_READ(Connection.TRANSACTION_REPEATABLE_READ), SERIALIZABLE(Connection.TRANSACTION_SERIALIZABLE);
 
 	private final Integer jdbcLevel;
 

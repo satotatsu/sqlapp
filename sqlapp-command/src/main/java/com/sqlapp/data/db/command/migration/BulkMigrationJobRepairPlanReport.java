@@ -6,9 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 /** Stable JSON snapshot of a dependency-ordered migration job repair plan. */
-public record BulkMigrationJobRepairPlanReport(int formatVersion, Instant generatedAt,
-		String planFingerprint, long estimatedReplayRows, long mismatchChunks,
-		boolean atomic, List<Task> tasks) {
+public record BulkMigrationJobRepairPlanReport(int formatVersion, Instant generatedAt, String planFingerprint,
+		long estimatedReplayRows, long mismatchChunks, boolean atomic, List<Task> tasks) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
 
 	public BulkMigrationJobRepairPlanReport {

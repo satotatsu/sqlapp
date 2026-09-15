@@ -9,23 +9,22 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 
-/** Creates a lease manager from the validated database-or-file configuration. */
+/**
+ * Creates a lease manager from the validated database-or-file configuration.
+ */
 public final class BulkMigrationJobLeaseManagerFactory {
 	private BulkMigrationJobLeaseManagerFactory() {
 	}
 
 	public static BulkMigrationJobLeaseManager create(final Connection leaseConnection,
-			final BulkMigrationJobLeaseConfiguration configuration)
-			throws SQLException {
+			final BulkMigrationJobLeaseConfiguration configuration) throws SQLException {
 		Objects.requireNonNull(configuration, "configuration");
 		final BulkMigrationJobLeaseStore store = switch (configuration.mode()) {
 		case DATABASE -> new JdbcBulkMigrationJobLeaseStore(
-					Objects.requireNonNull(leaseConnection,
-							"leaseConnection is required for DATABASE lease mode"),
-					configuration.tableName());
+				Objects.requireNonNull(leaseConnection, "leaseConnection is required for DATABASE lease mode"),
+				configuration.tableName());
 		case FILE -> new FileBulkMigrationJobLeaseStore(configuration.directory());
 		};
-		return new BulkMigrationJobLeaseManager(store, configuration.ownerId(),
-				configuration.duration());
+		return new BulkMigrationJobLeaseManager(store, configuration.ownerId(), configuration.duration());
 	}
 }

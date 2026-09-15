@@ -21,8 +21,8 @@ public class LegacyMigrationMappingOutput {
 		LegacyMigrationMapping result = step;
 		if (previousMappingFile != null) {
 			if (!previousMappingFile.isFile()) {
-				throw new CommandException("migrationMappingFile does not exist or is not a file: "
-						+ previousMappingFile);
+				throw new CommandException(
+						"migrationMappingFile does not exist or is not a file: " + previousMappingFile);
 			}
 			result = new LegacyMigrationMappingMerger().merge(io.read(previousMappingFile), step);
 		}
@@ -34,8 +34,7 @@ public class LegacyMigrationMappingOutput {
 			return;
 		}
 		if (!previousMappingFile.isFile()) {
-			throw new CommandException("migrationMappingFile does not exist or is not a file: "
-					+ previousMappingFile);
+			throw new CommandException("migrationMappingFile does not exist or is not a file: " + previousMappingFile);
 		}
 		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(previousMappingFile);
 		new LegacyMigrationMappingValidator().validateTargetFingerprint(mapping, inputSchemaFile);

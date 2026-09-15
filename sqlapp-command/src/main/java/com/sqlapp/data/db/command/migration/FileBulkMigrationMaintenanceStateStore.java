@@ -19,18 +19,15 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStateStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 
 /** Atomically replaced file storage for migration maintenance state. */
-public class FileBulkMigrationMaintenanceStateStore
-		implements BulkMigrationMaintenanceStateStore {
+public class FileBulkMigrationMaintenanceStateStore implements BulkMigrationMaintenanceStateStore {
 	private final Path directory;
 
 	public FileBulkMigrationMaintenanceStateStore(final Path directory) {
-		this.directory = java.util.Objects.requireNonNull(directory, "directory")
-				.toAbsolutePath().normalize();
+		this.directory = java.util.Objects.requireNonNull(directory, "directory").toAbsolutePath().normalize();
 	}
 
 	@Override
-	public Optional<BulkMigrationMaintenanceState> load(final String jobId)
-			throws SQLException {
+	public Optional<BulkMigrationMaintenanceState> load(final String jobId) throws SQLException {
 		validateJobId(jobId);
 		final Path file = file(jobId);
 		if (!Files.exists(file)) {
@@ -40,14 +37,12 @@ public class FileBulkMigrationMaintenanceStateStore
 		try (InputStream input = Files.newInputStream(file)) {
 			values.load(input);
 			if (!jobId.equals(required(values, "jobId"))) {
-				throw new IllegalArgumentException(
-						"maintenance jobId does not match its file");
+				throw new IllegalArgumentException("maintenance jobId does not match its file");
 			}
 			final BulkMigrationMaintenanceStatus status = BulkMigrationMaintenanceStatus
 					.valueOf(required(values, "status"));
 			final String failureMessage = emptyToNull(values.getProperty("failureMessage"));
-			return Optional.of(new BulkMigrationMaintenanceState(jobId,
-					required(values, "planFingerprint"), status,
+			return Optional.of(new BulkMigrationMaintenanceState(jobId, required(values, "planFingerprint"), status,
 					Instant.parse(required(values, "updatedAt")), failureMessage));
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration maintenance state: " + file, e);
@@ -66,8 +61,7 @@ public class FileBulkMigrationMaintenanceStateStore
 			values.setProperty("status", state.status().name());
 			values.setProperty("updatedAt", state.updatedAt().toString());
 			values.setProperty("failureMessage", nullToEmpty(state.failureMessage()));
-			AtomicMigrationFile.writeProperties(file, values,
-					"sqlapp bulk migration maintenance state");
+			AtomicMigrationFile.writeProperties(file, values, "sqlapp bulk migration maintenance state");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration maintenance state: " + file, e);
 		}

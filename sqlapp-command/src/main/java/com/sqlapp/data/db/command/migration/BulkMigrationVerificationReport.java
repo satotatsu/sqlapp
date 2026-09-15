@@ -6,18 +6,16 @@ import java.util.List;
 import java.util.Objects;
 
 /** Stable JSON summary of post-migration JDBC verification. */
-public record BulkMigrationVerificationReport(int formatVersion, Instant generatedAt,
-		String planFingerprint, String isolation, boolean match, long expectedRows, long actualRows,
-		long mismatchedTasks, List<Task> tasks) {
+public record BulkMigrationVerificationReport(int formatVersion, Instant generatedAt, String planFingerprint,
+		String isolation, boolean match, long expectedRows, long actualRows, long mismatchedTasks, List<Task> tasks) {
 	public static final int CURRENT_FORMAT_VERSION = 5;
 
 	public BulkMigrationVerificationReport {
 		tasks = List.copyOf(Objects.requireNonNull(tasks, "tasks"));
 	}
 
-	public record Task(String taskId, List<String> columns,
-			String expectedKeysetFingerprint, String actualKeysetFingerprint, boolean match,
-			long expectedRows, long actualRows, long mismatchedChunks,
+	public record Task(String taskId, List<String> columns, String expectedKeysetFingerprint,
+			String actualKeysetFingerprint, boolean match, long expectedRows, long actualRows, long mismatchedChunks,
 			List<Chunk> mismatches) {
 		public Task {
 			columns = List.copyOf(Objects.requireNonNull(columns, "columns"));
@@ -25,8 +23,7 @@ public record BulkMigrationVerificationReport(int formatVersion, Instant generat
 		}
 	}
 
-	public record Chunk(long index, int expectedRows, int actualRows,
-			String expectedHash, String actualHash, String expectedFirstKey,
-			String expectedLastKey, String actualFirstKey, String actualLastKey) {
+	public record Chunk(long index, int expectedRows, int actualRows, String expectedHash, String actualHash,
+			String expectedFirstKey, String expectedLastKey, String actualFirstKey, String actualLastKey) {
 	}
 }

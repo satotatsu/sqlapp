@@ -39,8 +39,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class PliSchemaImportCommand extends AbstractCommand
-		implements TargetFileProperty, OutputDirectoryProperty {
+public class PliSchemaImportCommand extends AbstractCommand implements TargetFileProperty, OutputDirectoryProperty {
 
 	private File targetFile;
 
@@ -186,8 +185,8 @@ public class PliSchemaImportCommand extends AbstractCommand
 				continue;
 			}
 			if (table.getColumns().contains(child.name)) {
-				throw new CommandException("Flattened PL/I column name conflicts: table=" + table.getName()
-						+ ", column=" + child.name);
+				throw new CommandException(
+						"Flattened PL/I column name conflicts: table=" + table.getName() + ", column=" + child.name);
 			}
 			Column column = toColumn(child, warnings);
 			List<String> allRemarks = new ArrayList<>(remarks);
@@ -236,8 +235,8 @@ public class PliSchemaImportCommand extends AbstractCommand
 		for (String name : names) {
 			Column column = table.getColumns().get(name);
 			if (column == null) {
-				throw new CommandException("Unknown " + type + " column: table=" + table.getName() + ", column="
-						+ name);
+				throw new CommandException(
+						"Unknown " + type + " column: table=" + table.getName() + ", column=" + name);
 			}
 			result.add(column);
 		}
@@ -245,22 +244,16 @@ public class PliSchemaImportCommand extends AbstractCommand
 	}
 
 	private Map<String, Object> tableLog(Table table, PliItem source, String occurrenceColumn) {
-		List<Map<String, Object>> columns = scalarItems(source).stream()
-				.map(item -> {
-					Column column = table.getColumns().get(item.name);
-					return mapOf("name", column.getName(), "sourceName", item.name, "sourcePath", item.path(),
-							"level", item.level, "pliType", item.type, "declaration", item.declaration(),
-							"sourceLength", item.type != null && item.type.startsWith("FIXED_")
-									? item.precision : item.length,
-							"sourceScale", item.scale, "dataType", column.getDataType().name(),
-							"length", column.getLength(), "scale", column.getScale(), "remarks",
-							column.getRemarks());
-				})
-				.toList();
-		Map<String, Object> result = mapOf("sourcePath", source.path(), "declaration", root(source).name,
-				"level", source.level, "table", table.getName(), "remarks", table.getRemarks(),
-				"columns", columns,
-				"primaryKey",
+		List<Map<String, Object>> columns = scalarItems(source).stream().map(item -> {
+			Column column = table.getColumns().get(item.name);
+			return mapOf("name", column.getName(), "sourceName", item.name, "sourcePath", item.path(), "level",
+					item.level, "pliType", item.type, "declaration", item.declaration(), "sourceLength",
+					item.type != null && item.type.startsWith("FIXED_") ? item.precision : item.length, "sourceScale",
+					item.scale, "dataType", column.getDataType().name(), "length", column.getLength(), "scale",
+					column.getScale(), "remarks", column.getRemarks());
+		}).toList();
+		Map<String, Object> result = mapOf("sourcePath", source.path(), "declaration", root(source).name, "level",
+				source.level, "table", table.getName(), "remarks", table.getRemarks(), "columns", columns, "primaryKey",
 				table.getPrimaryKeyConstraint().getColumns().toColumns().stream().map(Column::getName).toList());
 		if (source.occurs != null) {
 			result.put("occurrence", mapOf("maximum", source.occurs, "column", occurrenceColumn));
@@ -299,8 +292,8 @@ public class PliSchemaImportCommand extends AbstractCommand
 			name = baseName(targetFile.getName()) + "-legacy-migration.yaml";
 		}
 		File file = new File(directory, name);
-		var mapping = new LegacyMigrationMappingBuilder().buildPliImportMapping(targetFile, outputFile,
-				encoding, configuration.getSchemaName(), result.tableLogs, result.warnings);
+		var mapping = new LegacyMigrationMappingBuilder().buildPliImportMapping(targetFile, outputFile, encoding,
+				configuration.getSchemaName(), result.tableLogs, result.warnings);
 		new LegacyMigrationMappingIO().write(file, mapping);
 		info("Output legacy migration mapping: " + file.getAbsolutePath());
 	}
@@ -361,12 +354,12 @@ public class PliSchemaImportCommand extends AbstractCommand
 	private static final class Parser {
 		private static final Pattern ITEM = Pattern.compile("(?is)^(?:DCL|DECLARE)?\\s*(\\d+)\\s+"
 				+ "([A-Z_$#@][A-Z0-9_$#@]*)(?:\\s*\\(\\s*(\\d+)\\s*\\))?\\s*(.*)$");
-		private static final Pattern CHAR = Pattern.compile("(?is)^(CHAR|CHARACTER|BIT|GRAPHIC|WIDECHAR)"
-				+ "\\s*\\(\\s*(\\d+)\\s*\\).*$");
-		private static final Pattern FIXED_BIN = Pattern.compile("(?is)^FIXED\\s+(?:BIN|BINARY)"
-				+ "\\s*\\(\\s*(\\d+)\\s*\\).*$");
-		private static final Pattern FIXED_DEC = Pattern.compile("(?is)^FIXED\\s+(?:DEC|DECIMAL)"
-				+ "\\s*\\(\\s*(\\d+)\\s*(?:,\\s*(-?\\d+)\\s*)?\\).*$");
+		private static final Pattern CHAR = Pattern
+				.compile("(?is)^(CHAR|CHARACTER|BIT|GRAPHIC|WIDECHAR)" + "\\s*\\(\\s*(\\d+)\\s*\\).*$");
+		private static final Pattern FIXED_BIN = Pattern
+				.compile("(?is)^FIXED\\s+(?:BIN|BINARY)" + "\\s*\\(\\s*(\\d+)\\s*\\).*$");
+		private static final Pattern FIXED_DEC = Pattern
+				.compile("(?is)^FIXED\\s+(?:DEC|DECIMAL)" + "\\s*\\(\\s*(\\d+)\\s*(?:,\\s*(-?\\d+)\\s*)?\\).*$");
 
 		private ParseResult parse(String source) {
 			List<String> warnings = new ArrayList<>();

@@ -10,13 +10,15 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 
-/** Selects the columns actually written by a migration for default verification. */
+/**
+ * Selects the columns actually written by a migration for default verification.
+ */
 final class BulkMigrationVerificationColumns {
 	private BulkMigrationVerificationColumns() {
 	}
 
-	static List<String> resolve(final Table table, final BulkMigrationMode mode,
-			final BulkOption bulkOption, final BulkUpsertOption upsertOption) {
+	static List<String> resolve(final Table table, final BulkMigrationMode mode, final BulkOption bulkOption,
+			final BulkUpsertOption upsertOption) {
 		Objects.requireNonNull(table, "table");
 		Objects.requireNonNull(mode, "mode");
 		if (mode == BulkMigrationMode.UPSERT) {
@@ -24,10 +26,9 @@ final class BulkMigrationVerificationColumns {
 					.map(column -> column.getName()).toList();
 		}
 		final BulkOption option = bulkOption == null ? BulkOption.defaults() : bulkOption;
-		return table.getColumns().stream()
-				.filter(column -> !column.isHidden())
+		return table.getColumns().stream().filter(column -> !column.isHidden())
 				.filter(column -> column.getFormula() == null || column.getFormula().isEmpty())
-				.filter(column -> !column.isIdentity() || option.isKeepIdentity())
-				.map(column -> column.getName()).toList();
+				.filter(column -> !column.isIdentity() || option.isKeepIdentity()).map(column -> column.getName())
+				.toList();
 	}
 }

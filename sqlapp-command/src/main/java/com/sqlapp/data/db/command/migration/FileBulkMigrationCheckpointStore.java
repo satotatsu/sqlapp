@@ -21,8 +21,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 	private final Path directory;
 
 	public FileBulkMigrationCheckpointStore(final Path directory) {
-		this.directory = java.util.Objects.requireNonNull(directory, "directory")
-				.toAbsolutePath().normalize();
+		this.directory = java.util.Objects.requireNonNull(directory, "directory").toAbsolutePath().normalize();
 	}
 
 	@Override
@@ -35,20 +34,16 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 		try (InputStream input = Files.newInputStream(file)) {
 			values.load(input);
 			if (!migrationId.equals(required(values, "migrationId"))) {
-				throw new IllegalArgumentException(
-						"checkpoint migrationId does not match its file");
+				throw new IllegalArgumentException("checkpoint migrationId does not match its file");
 			}
-			return Optional.of(BulkMigrationCheckpoint.builder()
-					.migrationId(migrationId)
+			return Optional.of(BulkMigrationCheckpoint.builder().migrationId(migrationId)
 					.sourceFingerprint(emptyToNull(values.getProperty("sourceFingerprint")))
 					.targetFingerprint(emptyToNull(values.getProperty("targetFingerprint")))
 					.processedRows(longValue(values, "processedRows"))
-					.completedChunks(longValue(values, "completedChunks"))
-					.chunkSize(intValue(values, "chunkSize"))
+					.completedChunks(longValue(values, "completedChunks")).chunkSize(intValue(values, "chunkSize"))
 					.lastChunkHash(emptyToNull(values.getProperty("lastChunkHash")))
 					.resumeToken(emptyToNull(values.getProperty("resumeToken")))
-					.complete(booleanValue(values, "complete")).build()
-					.validate());
+					.complete(booleanValue(values, "complete")).build().validate());
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration checkpoint: " + file, e);
 		}
@@ -69,8 +64,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 			values.setProperty("lastChunkHash", nullToEmpty(checkpoint.getLastChunkHash()));
 			values.setProperty("resumeToken", nullToEmpty(checkpoint.getResumeToken()));
 			values.setProperty("complete", Boolean.toString(checkpoint.isComplete()));
-			AtomicMigrationFile.writeProperties(file, values,
-					"sqlapp bulk migration checkpoint");
+			AtomicMigrationFile.writeProperties(file, values, "sqlapp bulk migration checkpoint");
 		} catch (IOException e) {
 			throw new SQLException("Failed to save migration checkpoint: " + file, e);
 		}
@@ -107,8 +101,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 	private static String required(final Properties values, final String name) {
 		final String value = values.getProperty(name);
 		if (value == null || value.isBlank()) {
-			throw new IllegalArgumentException(
-					"Missing checkpoint property: " + name);
+			throw new IllegalArgumentException("Missing checkpoint property: " + name);
 		}
 		return value;
 	}
@@ -121,8 +114,7 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 		return Integer.parseInt(required(values, name));
 	}
 
-	private static boolean booleanValue(final Properties values,
-			final String name) {
+	private static boolean booleanValue(final Properties values, final String name) {
 		final String value = required(values, name);
 		if ("true".equalsIgnoreCase(value)) {
 			return true;
@@ -130,7 +122,6 @@ public class FileBulkMigrationCheckpointStore implements BulkMigrationCheckpoint
 		if ("false".equalsIgnoreCase(value)) {
 			return false;
 		}
-		throw new IllegalArgumentException(
-				"Invalid boolean checkpoint property " + name + ": " + value);
+		throw new IllegalArgumentException("Invalid boolean checkpoint property " + name + ": " + value);
 	}
 }

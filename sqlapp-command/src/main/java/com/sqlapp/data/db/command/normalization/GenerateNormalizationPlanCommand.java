@@ -43,8 +43,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateNormalizationPlanCommand extends AbstractCommand
-		implements ForeignKeyDefinitionDirectoryProperty {
+public class GenerateNormalizationPlanCommand extends AbstractCommand implements ForeignKeyDefinitionDirectoryProperty {
 
 	private static final Pattern DATE_NAME = Pattern.compile("(?i).*(?:DATE|_YMD|YYYYMMDD)$");
 

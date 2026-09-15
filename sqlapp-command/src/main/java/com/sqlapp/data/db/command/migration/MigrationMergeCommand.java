@@ -29,19 +29,20 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
-public class MigrationMergeCommand extends MigrationCommand{
+public class MigrationMergeCommand extends MigrationCommand {
 
 	@Override
-	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
-		final List<Row> rows=dbVersionHandler.getRowsForVersionMerge(table, sqlFiles);
+	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles,
+			final DbVersionHandler dbVersionHandler) {
+		final List<Row> rows = dbVersionHandler.getRowsForVersionMerge(table, sqlFiles);
 		return rows;
 	}
 
 	@Override
-	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final DbVersionHandler dbVersionHandler) throws SQLException{
+	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,
+			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
 	}
 
-	
 //	@Override
 //	protected List<SplitResult> getSqls(final SqlFile sqlFile){
 //		return sqlFile.getDownSqls();

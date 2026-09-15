@@ -26,8 +26,7 @@ public class LegacyMigrationContractIO {
 			throw new CommandException("Legacy migration contract does not exist: " + file);
 		}
 		try {
-			LegacyMigrationContract contract = converter.fromJsonString(file,
-					LegacyMigrationContract.class);
+			LegacyMigrationContract contract = converter.fromJsonString(file, LegacyMigrationContract.class);
 			new LegacyMigrationContractValidator().validate(contract);
 			return contract;
 		} catch (RuntimeException e) {

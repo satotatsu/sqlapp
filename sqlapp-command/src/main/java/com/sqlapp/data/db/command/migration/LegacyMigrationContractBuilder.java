@@ -49,8 +49,7 @@ public class LegacyMigrationContractBuilder {
 			}
 			contract.getDataSets().add(dataSet(table, tables, parentRelationships));
 		}
-		contract.getDataSets().sort(Comparator.comparingInt(DataSet::getLoadOrder)
-				.thenComparing(DataSet::getId));
+		contract.getDataSets().sort(Comparator.comparingInt(DataSet::getLoadOrder).thenComparing(DataSet::getId));
 		return contract;
 	}
 
@@ -78,8 +77,8 @@ public class LegacyMigrationContractBuilder {
 		if (directParent != null) {
 			dataSet.setParentDataSetId(directParent.getParentMappingId());
 			dataSet.setHierarchyDepth(directParent.getDepth());
-			dataSet.setLoadOrder(directParent.getLoadOrder() > 0
-					? directParent.getLoadOrder() : directParent.getDepth());
+			dataSet.setLoadOrder(
+					directParent.getLoadOrder() > 0 ? directParent.getLoadOrder() : directParent.getDepth());
 		}
 		for (ColumnMapping column : table.getColumns()) {
 			Field field = field(column, dataSet.getFields().size() + 1);
@@ -88,8 +87,7 @@ public class LegacyMigrationContractBuilder {
 			}
 			dataSet.getFields().add(field);
 		}
-		if (dataSet.getFields().stream()
-				.anyMatch(field -> !field.getIndexedSources().isEmpty())) {
+		if (dataSet.getFields().stream().anyMatch(field -> !field.getIndexedSources().isEmpty())) {
 			dataSet.setOccurrenceSourceMode("NUMBERED_COLUMNS");
 		}
 		addAncestorKeys(dataSet, table, tables, parentRelationships);
@@ -104,11 +102,9 @@ public class LegacyMigrationContractBuilder {
 		field.setStagingColumn(column.getSource() == null ? column.getTarget() : column.getSource());
 		field.setTargetColumn(column.getTarget());
 		field.setAction(column.getAction().name());
-		field.setGenerated(column.getAction() == ColumnAction.GENERATE
-				|| column.getAction() == ColumnAction.CONSTANT);
+		field.setGenerated(column.getAction() == ColumnAction.GENERATE || column.getAction() == ColumnAction.CONSTANT);
 		field.setOccurrenceIndex("OCCURRENCE_NUMBER".equals(column.getConversion().get("type")));
-		field.setExtracted(field.isOccurrenceIndex() || (column.getSourcePath() != null
-				&& !field.isGenerated()));
+		field.setExtracted(field.isOccurrenceIndex() || (column.getSourcePath() != null && !field.isGenerated()));
 		column.getSourceColumns().forEach(source -> {
 			IndexedSource indexed = new IndexedSource();
 			indexed.setIndex(source.getIndex());
@@ -132,8 +128,7 @@ public class LegacyMigrationContractBuilder {
 	private String tableSourcePath(ColumnMapping column, String sourceColumn) {
 		if (column.getSourcePath() != null) {
 			int index = column.getSourcePath().lastIndexOf('.');
-			return (index < 0 ? "" : column.getSourcePath().substring(0, index + 1))
-					+ sourceColumn;
+			return (index < 0 ? "" : column.getSourcePath().substring(0, index + 1)) + sourceColumn;
 		}
 		return sourceColumn;
 	}
@@ -170,11 +165,9 @@ public class LegacyMigrationContractBuilder {
 		}
 	}
 
-	private void addExtractedAncestorField(DataSet dataSet, TableMapping table,
-			TableMapping ancestor, LegacyMigrationMapping.ColumnPair pair,
-			String targetColumn) {
-		if (dataSet.getFields().stream().anyMatch(field ->
-				equals(field.getStagingColumn(), pair.getChildColumn()))) {
+	private void addExtractedAncestorField(DataSet dataSet, TableMapping table, TableMapping ancestor,
+			LegacyMigrationMapping.ColumnPair pair, String targetColumn) {
+		if (dataSet.getFields().stream().anyMatch(field -> equals(field.getStagingColumn(), pair.getChildColumn()))) {
 			return;
 		}
 		ColumnMapping ancestorColumn = ancestor.getColumns().stream()
@@ -185,12 +178,11 @@ public class LegacyMigrationContractBuilder {
 		field.setPosition(dataSet.getFields().size() + 1);
 		field.setSourceColumn(pair.getChildColumn());
 		field.setStagingColumn(pair.getChildColumn());
-		field.setSourcePath(ancestorColumn != null && ancestorColumn.getSourcePath() != null
-				? ancestorColumn.getSourcePath()
-				: ancestor.getSource().getPath() + "." + pair.getParentColumn());
-		ColumnMapping target = table.getColumns().stream()
-				.filter(column -> equals(column.getSource(), pair.getChildColumn())
-						&& equals(column.getTarget(), targetColumn))
+		field.setSourcePath(
+				ancestorColumn != null && ancestorColumn.getSourcePath() != null ? ancestorColumn.getSourcePath()
+						: ancestor.getSource().getPath() + "." + pair.getParentColumn());
+		ColumnMapping target = table.getColumns().stream().filter(
+				column -> equals(column.getSource(), pair.getChildColumn()) && equals(column.getTarget(), targetColumn))
 				.findFirst().orElse(null);
 		field.setTargetColumn(target == null ? null : targetColumn);
 		field.setAction(target == null ? ColumnAction.DROP.name() : target.getAction().name());
@@ -226,8 +218,8 @@ public class LegacyMigrationContractBuilder {
 		if (!table.getKeys().getBusinessKey().isEmpty()) {
 			return new ArrayList<>(table.getKeys().getBusinessKey());
 		}
-		return table.getColumns().stream().filter(column -> column.getSource() != null)
-				.map(ColumnMapping::getSource).distinct().toList();
+		return table.getColumns().stream().filter(column -> column.getSource() != null).map(ColumnMapping::getSource)
+				.distinct().toList();
 	}
 
 	private String fileName(TableMapping table) {

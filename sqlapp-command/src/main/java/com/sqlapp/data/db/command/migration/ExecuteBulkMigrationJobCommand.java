@@ -32,7 +32,10 @@ import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Executes one validated bulk migration plan against the configured data source. */
+/**
+ * Executes one validated bulk migration plan against the configured data
+ * source.
+ */
 @Getter
 @Setter
 public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
@@ -40,8 +43,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private File configurationFile;
 	private DataSource sourceDataSource;
 	private BulkMigrationJobListener listener = BulkMigrationJobListener.NO_OP;
-	private ChunkedBulkMigrationListener chunkListener =
-			ChunkedBulkMigrationListener.NO_OP;
+	private ChunkedBulkMigrationListener chunkListener = ChunkedBulkMigrationListener.NO_OP;
 	private BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private BulkMigrationJobResult result;
 	private BulkMigrationJobVerificationResult verificationResult;
@@ -54,31 +56,27 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
 		if (plan != null && configurationFile != null) {
-			throw new CommandException(
-					"Specify either a bulk migration plan or configurationFile, not both.");
+			throw new CommandException("Specify either a bulk migration plan or configurationFile, not both.");
 		}
 		if (plan == null && configurationFile == null) {
-			throw new CommandException(
-					"Bulk migration plan or configurationFile is required.");
+			throw new CommandException("Bulk migration plan or configurationFile is required.");
 		}
 		if (configurationFile != null && sourceDataSource == null) {
-			throw new CommandException(
-					"Bulk migration source data source is required for configurationFile.");
+			throw new CommandException("Bulk migration source data source is required for configurationFile.");
 		}
 		if (plan != null) {
 			executePlan(plan);
 			return;
 		}
-			execute(sourceDataSource, sourceConnection -> {
-			final var resolved = new BulkMigrationJobConfigurationResolver()
-					.resolveJob(configurationFile, sourceConnection);
-			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
-				throw new CommandException("Specify lease configuration either in the job file "
-						+ "or as a command property, not both.");
-			}
-			executePlan(resolved.plan(), resolved.leaseConfiguration(), listener,
-					resolved.reportConfiguration(), resolved.verificationConfiguration(),
+		execute(sourceDataSource, sourceConnection -> {
+			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
 					sourceConnection);
+			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
+				throw new CommandException(
+						"Specify lease configuration either in the job file " + "or as a command property, not both.");
+			}
+			executePlan(resolved.plan(), resolved.leaseConfiguration(), listener, resolved.reportConfiguration(),
+					resolved.verificationConfiguration(), sourceConnection);
 		});
 	}
 
@@ -100,93 +98,77 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private void executePlan(final BulkMigrationJobPlan executionPlan,
 			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
 			final BulkMigrationJobListener configuredListener,
-			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration
-					reportConfiguration) {
-		executePlan(executionPlan, executionLeaseConfiguration, configuredListener,
-				reportConfiguration, null);
+			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration reportConfiguration) {
+		executePlan(executionPlan, executionLeaseConfiguration, configuredListener, reportConfiguration, null);
 	}
 
 	private void executePlan(final BulkMigrationJobPlan executionPlan,
 			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
 			final BulkMigrationJobListener configuredListener,
-			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration
-					reportConfiguration,
-			final BulkMigrationJobConfigurationResolver.VerificationConfiguration
-					verificationConfiguration) {
-		executePlan(executionPlan, executionLeaseConfiguration, configuredListener,
-				reportConfiguration, verificationConfiguration, null);
+			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration reportConfiguration,
+			final BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationConfiguration) {
+		executePlan(executionPlan, executionLeaseConfiguration, configuredListener, reportConfiguration,
+				verificationConfiguration, null);
 	}
 
 	private void executePlan(final BulkMigrationJobPlan executionPlan,
 			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
 			final BulkMigrationJobListener configuredListener,
-			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration
-					reportConfiguration,
-			final BulkMigrationJobConfigurationResolver.VerificationConfiguration
-					verificationConfiguration,
+			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration reportConfiguration,
+			final BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationConfiguration,
 			final Connection sourceConnection) {
 		executionPlan.validateUnchanged();
 		execute(getDataSource(), targetConnection -> {
 			// The chunk executor owns commit/rollback boundaries, including durable
 			// checkpoint writes. AbstractDataSourceCommand otherwise starts a transaction.
 			targetConnection.setAutoCommit(true);
-			final BulkMigrationJobPlan effectivePlan = reportConfiguration == null
-					? executionPlan : withExplicitDatabaseCheckpointStores(executionPlan,
-							targetConnection);
+			final BulkMigrationJobPlan effectivePlan = reportConfiguration == null ? executionPlan
+					: withExplicitDatabaseCheckpointStores(executionPlan, targetConnection);
 			final BulkMigrationJobListener executionListener;
 			final BulkMigrationOperationalReportJobListener reportListener;
 			if (reportConfiguration == null) {
 				reportListener = null;
 				executionListener = configuredListener;
 			} else {
-				reportListener = new BulkMigrationOperationalReportJobListener(
-						effectivePlan, reportConfiguration.targetFile(), () -> null, () -> null,
-						reportConfiguration.failurePolicy(), failure -> { });
-				executionListener = configuredListener == BulkMigrationJobListener.NO_OP
-						? reportListener : CompositeBulkMigrationJobListener.of(
-								configuredListener, reportListener);
+				reportListener = new BulkMigrationOperationalReportJobListener(effectivePlan,
+						reportConfiguration.targetFile(), () -> null, () -> null, reportConfiguration.failurePolicy(),
+						failure -> {
+						});
+				executionListener = configuredListener == BulkMigrationJobListener.NO_OP ? reportListener
+						: CompositeBulkMigrationJobListener.of(configuredListener, reportListener);
 			}
 			if (executionLeaseConfiguration == null) {
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
-						executionListener, chunkListener);
+				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
+						chunkListener);
 			} else if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
-				final BulkMigrationJobLeaseManager manager =
-						BulkMigrationJobLeaseManagerFactory.create(null,
-								executionLeaseConfiguration);
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
-						executionListener, chunkListener, manager);
+				final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory.create(null,
+						executionLeaseConfiguration);
+				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
+						chunkListener, manager);
 			} else {
 				try (Connection leaseConnection = getDataSource().getConnection()) {
 					leaseConnection.setAutoCommit(true);
-					final BulkMigrationJobLeaseManager manager =
-							BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
-									executionLeaseConfiguration);
-					result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
-							executionListener, chunkListener, manager);
+					final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory
+							.create(leaseConnection, executionLeaseConfiguration);
+					result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
+							chunkListener, manager);
 				}
 			}
 			if (verificationConfiguration != null) {
-				try (var ignored = BulkMigrationVerificationScope.open(
-						verificationConfiguration.isolation(),
+				try (var ignored = BulkMigrationVerificationScope.open(verificationConfiguration.isolation(),
 						java.util.Objects.requireNonNull(sourceConnection,
 								"sourceConnection is required for verification"),
 						targetConnection)) {
-					verificationResult = verify(effectivePlan, targetConnection,
-							verificationConfiguration.chunkSize(),
+					verificationResult = verify(effectivePlan, targetConnection, verificationConfiguration.chunkSize(),
 							verificationConfiguration.columnsByTask());
 					if (verificationConfiguration.targetFile() != null) {
-						new BulkMigrationVerificationReportIO().write(
-								verificationConfiguration.targetFile(),
-								effectivePlan.getFingerprint(),
-								verificationConfiguration.isolation(),
-								verificationConfiguration.maxReportedMismatches(),
-								verificationResult);
+						new BulkMigrationVerificationReportIO().write(verificationConfiguration.targetFile(),
+								effectivePlan.getFingerprint(), verificationConfiguration.isolation(),
+								verificationConfiguration.maxReportedMismatches(), verificationResult);
 					}
-					if (verificationConfiguration.failOnMismatch()
-							&& !verificationResult.isMatch()) {
+					if (verificationConfiguration.failOnMismatch() && !verificationResult.isMatch()) {
 						throw new CommandException("Bulk migration verification failed: "
-								+ verificationResult.getMismatchedTasks()
-								+ " task(s) mismatched.");
+								+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
 					}
 				} catch (SQLException | RuntimeException | Error failure) {
 					if (reportListener != null) {
@@ -203,9 +185,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
 	}
 
-	static BulkMigrationJobVerificationResult verifyWithIsolation(
-			final BulkMigrationJobPlan plan, final Connection targetConnection,
-			final int chunkSize, final Map<String, List<String>> columnsByTask,
+	static BulkMigrationJobVerificationResult verifyWithIsolation(final BulkMigrationJobPlan plan,
+			final Connection targetConnection, final int chunkSize, final Map<String, List<String>> columnsByTask,
 			final BulkMigrationVerificationIsolation isolation) throws SQLException {
 		if (isolation == null) {
 			throw new IllegalArgumentException("isolation must not be null");
@@ -213,61 +194,56 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		if (isolation == BulkMigrationVerificationIsolation.DEFAULT) {
 			return verify(plan, targetConnection, chunkSize, columnsByTask);
 		}
-		try (var ignored = BulkMigrationVerificationScope.open(isolation,
-				targetConnection)) {
+		try (var ignored = BulkMigrationVerificationScope.open(isolation, targetConnection)) {
 			return verify(plan, targetConnection, chunkSize, columnsByTask);
 		}
 	}
 
-	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
-			final Connection targetConnection, final int chunkSize) throws SQLException {
+	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan, final Connection targetConnection,
+			final int chunkSize) throws SQLException {
 		return verify(plan, targetConnection, chunkSize, Map.of());
 	}
 
-	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
-			final Connection targetConnection, final int chunkSize,
-			final Map<String, List<String>> columnsByTask) throws SQLException {
+	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan, final Connection targetConnection,
+			final int chunkSize, final Map<String, List<String>> columnsByTask) throws SQLException {
 		java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
 		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 		for (final BulkMigrationJobTask task : plan.getTasks()) {
 			if (!(task.getKeysetSource() instanceof JdbcBulkMigrationKeysetSource source)) {
-				throw new CommandException("Declarative verification requires a JDBC keyset source: "
-						+ task.getTaskId());
+				throw new CommandException(
+						"Declarative verification requires a JDBC keyset source: " + task.getTaskId());
 			}
-			final var target = new JdbcBulkMigrationKeysetSource(targetConnection,
-					source.getTable(), source.getKeyColumnNames());
-			final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(),
-					defaultVerificationColumns(task));
-			final var verification = BulkMigrationVerifier.verify(source, target, columns,
-					chunkSize);
-			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(),
-					verification.getColumns(), verification));
+			final var target = new JdbcBulkMigrationKeysetSource(targetConnection, source.getTable(),
+					source.getKeyColumnNames());
+			final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(), defaultVerificationColumns(task));
+			final var verification = BulkMigrationVerifier.verify(source, target, columns, chunkSize);
+			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), verification.getColumns(),
+					verification));
 		}
-		return new BulkMigrationJobVerificationResult(plan.getFingerprint(),
-				List.copyOf(results)).validateAgainst(plan);
+		return new BulkMigrationJobVerificationResult(plan.getFingerprint(), List.copyOf(results))
+				.validateAgainst(plan);
 	}
 
 	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {
-		return BulkMigrationVerificationColumns.resolve(task.getKeysetSource().getTable(),
-				task.getOptions().getMode(), task.getOptions().getBulkOption(),
-				task.getOptions().getBulkUpsertOption());
+		return BulkMigrationVerificationColumns.resolve(task.getKeysetSource().getTable(), task.getOptions().getMode(),
+				task.getOptions().getBulkOption(), task.getOptions().getBulkUpsertOption());
 	}
 
-	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(
-			final BulkMigrationJobPlan plan, final Connection targetConnection)
-			throws SQLException {
+	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(final BulkMigrationJobPlan plan,
+			final Connection targetConnection) throws SQLException {
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>(plan.getTasks().size());
 		for (final BulkMigrationJobTask task : plan.getTasks()) {
-			if (task.getCheckpointStore() != null || task.getOptions().getCheckpointMode()
-					!= BulkMigrationCheckpointMode.DATABASE) {
+			if (task.getCheckpointStore() != null
+					|| task.getOptions().getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE) {
 				tasks.add(task);
 				continue;
 			}
-			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId())
-					.sourceTable(task.getSourceTable()).keysetSource(task.getKeysetSource())
-					.options(task.getOptions()).chunkListener(task.getChunkListener())
+			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId()).sourceTable(task.getSourceTable())
+					.keysetSource(task.getKeysetSource()).options(task.getOptions())
+					.chunkListener(task.getChunkListener())
 					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,
-							task.getOptions().getCheckpointTableName())).build());
+							task.getOptions().getCheckpointTableName()))
+					.build());
 		}
 		return BulkMigrationJobPlanner.plan(plan.getJobId(), tasks, plan.getLifecycle());
 	}

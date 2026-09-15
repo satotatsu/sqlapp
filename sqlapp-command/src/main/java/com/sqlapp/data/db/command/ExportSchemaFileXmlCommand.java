@@ -41,8 +41,7 @@ public class ExportSchemaFileXmlCommand extends AbstractCommand {
 			if (outputFile == null) {
 				throw new IllegalArgumentException("outputFile is required");
 			}
-			final Schema schema = schemaName == null
-					? SchemaFileLoaderResolver.loadSchema(inputFile)
+			final Schema schema = schemaName == null ? SchemaFileLoaderResolver.loadSchema(inputFile)
 					: SchemaFileLoaderResolver.loadSchema(inputFile, schemaName);
 			final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 			filter.setIncludes(includeRowDumpTables);
@@ -55,8 +54,7 @@ public class ExportSchemaFileXmlCommand extends AbstractCommand {
 				}
 			});
 			FileUtils.createParentDirectory(outputFile.getAbsolutePath());
-			try (Writer writer = new OutputStreamWriter(
-					new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
+			try (Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
 				schema.writeXml(writer);
 			}
 		});

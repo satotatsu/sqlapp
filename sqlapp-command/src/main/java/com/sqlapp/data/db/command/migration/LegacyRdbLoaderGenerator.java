@@ -142,10 +142,8 @@ public class LegacyRdbLoaderGenerator {
 			SqlFactory<Table> sqlFactory = registry.getSqlFactory(table, SqlType.CREATE);
 			operations.addAll(sqlFactory.createSql(table));
 		}
-		operations.stream().filter(operation -> operation.getSqlType() != null
-				&& operation.getSqlType().isSql())
-				.filter(operation -> operation.getTerminator() == null
-						|| operation.getTerminator().isEmpty())
+		operations.stream().filter(operation -> operation.getSqlType() != null && operation.getSqlType().isSql())
+				.filter(operation -> operation.getTerminator() == null || operation.getTerminator().isEmpty())
 				.forEach(operation -> operation.setTerminator(";"));
 		return SqlOperation.toText(operations);
 	}
@@ -225,8 +223,7 @@ public class LegacyRdbLoaderGenerator {
 	}
 
 	private void addStagingIndexes(Table table, LoadDataSet dataSet) {
-		List<String> businessKey = existingStagingColumns(dataSet,
-				dataSet.getSourceBusinessKey());
+		List<String> businessKey = existingStagingColumns(dataSet, dataSet.getSourceBusinessKey());
 		if (dataSet.getParentDataSetId() == null) {
 			List<String> pending = new ArrayList<>();
 			pending.add("SQLAPP_LOAD_STATUS");
@@ -236,20 +233,18 @@ public class LegacyRdbLoaderGenerator {
 		addIndex(table, indexName(dataSet, "KEY"), businessKey);
 
 		List<String> parentKey = existingStagingColumns(dataSet,
-				dataSet.getParentJoinKeys().stream()
-						.map(key -> key.getChildStagingColumn()).toList());
+				dataSet.getParentJoinKeys().stream().map(key -> key.getChildStagingColumn()).toList());
 		if (!parentKey.isEmpty() && !startsWithIgnoreCase(businessKey, parentKey)) {
 			addIndex(table, indexName(dataSet, "PARENT"), parentKey);
 		}
 	}
 
-	private List<String> existingStagingColumns(LoadDataSet dataSet,
-			List<String> candidates) {
+	private List<String> existingStagingColumns(LoadDataSet dataSet, List<String> candidates) {
 		Set<String> staging = distinctStagingFields(dataSet).stream()
 				.map(field -> field.getStagingColumn().toLowerCase(Locale.ROOT))
 				.collect(java.util.stream.Collectors.toSet());
-		return candidates.stream().filter(name -> name != null
-				&& staging.contains(name.toLowerCase(Locale.ROOT))).distinct().toList();
+		return candidates.stream().filter(name -> name != null && staging.contains(name.toLowerCase(Locale.ROOT)))
+				.distinct().toList();
 	}
 
 	private void addIndex(Table table, String name, List<String> columns) {

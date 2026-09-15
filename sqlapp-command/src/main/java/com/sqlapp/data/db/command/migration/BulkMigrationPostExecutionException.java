@@ -7,14 +7,14 @@ import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 
 /**
- * Raised when migration committed but a following verification operation failed.
+ * Raised when migration committed but a following verification operation
+ * failed.
  */
 public class BulkMigrationPostExecutionException extends CommandException {
 	private static final long serialVersionUID = 1L;
 	private final BulkMigrationJobResult migrationResult;
 
-	public BulkMigrationPostExecutionException(
-			final BulkMigrationJobResult migrationResult, final Throwable cause) {
+	public BulkMigrationPostExecutionException(final BulkMigrationJobResult migrationResult, final Throwable cause) {
 		super("Bulk migration completed, but post-execution verification failed",
 				Objects.requireNonNull(cause, "cause"));
 		this.migrationResult = Objects.requireNonNull(migrationResult, "migrationResult");

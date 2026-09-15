@@ -58,8 +58,8 @@ public class GenerateLegacyMigrationContractCommand extends AbstractCommand {
 		contract.getCsv().setHeader(header);
 		contract.getCsv().setRecordSeparator(recordSeparator);
 		File outputFile = new File(outputDirectory,
-				outputFileName == null || outputFileName.isBlank()
-						? baseName(mappingFile.getName()) + "-contract.yaml" : outputFileName);
+				outputFileName == null || outputFileName.isBlank() ? baseName(mappingFile.getName()) + "-contract.yaml"
+						: outputFileName);
 		new LegacyMigrationContractIO().write(outputFile, contract);
 		info("Legacy migration contract: ", outputFile.getAbsolutePath());
 	}

@@ -22,12 +22,11 @@ public final class BulkMigrationJobRepairPlanReportIO {
 	public BulkMigrationJobRepairPlanReport fromPlan(final BulkMigrationJobRepairPlan plan) {
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
 		final var planIO = new BulkMigrationRepairPlanReportIO();
-		return validate(new BulkMigrationJobRepairPlanReport(
-				BulkMigrationJobRepairPlanReport.CURRENT_FORMAT_VERSION, Instant.now(),
-				plan.getFingerprint(), plan.getEstimatedReplayRows(), plan.getMismatchChunks(),
-				plan.isAtomic(), plan.getTasks().stream().map(task ->
-						new BulkMigrationJobRepairPlanReport.Task(task.taskId(),
-								planIO.fromPlan(task.repairPlan()))).toList()));
+		return validate(new BulkMigrationJobRepairPlanReport(BulkMigrationJobRepairPlanReport.CURRENT_FORMAT_VERSION,
+				Instant.now(), plan.getFingerprint(), plan.getEstimatedReplayRows(), plan.getMismatchChunks(),
+				plan.isAtomic(),
+				plan.getTasks().stream().map(task -> new BulkMigrationJobRepairPlanReport.Task(task.taskId(),
+						planIO.fromPlan(task.repairPlan()))).toList()));
 	}
 
 	public void write(final Path file, final BulkMigrationJobRepairPlan plan) {
@@ -40,34 +39,29 @@ public final class BulkMigrationJobRepairPlanReportIO {
 		try {
 			final JsonConverter converter = new JsonConverter();
 			converter.setIndentOutput(true);
-			AtomicMigrationFile.write(absolute,
-					temporary -> converter.writeJsonValue(temporary.toFile(), report));
+			AtomicMigrationFile.write(absolute, temporary -> converter.writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
-			throw new CommandException("Failed to write bulk migration job repair plan report: "
-					+ absolute, e);
+			throw new CommandException("Failed to write bulk migration job repair plan report: " + absolute, e);
 		}
 	}
 
 	public BulkMigrationJobRepairPlanReport read(final Path file) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
-			throw new CommandException("Bulk migration job repair plan report does not exist: "
-					+ absolute);
+			throw new CommandException("Bulk migration job repair plan report does not exist: " + absolute);
 		}
 		try {
-			return validate(new JsonConverter().fromJsonString(absolute.toFile(),
-					BulkMigrationJobRepairPlanReport.class));
+			return validate(
+					new JsonConverter().fromJsonString(absolute.toFile(), BulkMigrationJobRepairPlanReport.class));
 		} catch (RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
-			throw new CommandException("Failed to read bulk migration job repair plan report: "
-					+ absolute, e);
+			throw new CommandException("Failed to read bulk migration job repair plan report: " + absolute, e);
 		}
 	}
 
-	public BulkMigrationJobRepairPlanReport read(final Path file,
-			final String expectedPlanFingerprint) {
+	public BulkMigrationJobRepairPlanReport read(final Path file, final String expectedPlanFingerprint) {
 		if (expectedPlanFingerprint == null || expectedPlanFingerprint.isBlank()) {
 			throw new IllegalArgumentException("expectedPlanFingerprint must not be empty");
 		}
@@ -78,19 +72,16 @@ public final class BulkMigrationJobRepairPlanReportIO {
 		return report;
 	}
 
-	static BulkMigrationJobRepairPlanReport validate(
-			final BulkMigrationJobRepairPlanReport report) {
+	static BulkMigrationJobRepairPlanReport validate(final BulkMigrationJobRepairPlanReport report) {
 		if (report == null) {
 			throw new CommandException("Bulk migration job repair plan report must not be null");
 		}
 		if (report.formatVersion() != BulkMigrationJobRepairPlanReport.CURRENT_FORMAT_VERSION) {
-			throw new CommandException("Unsupported bulk migration job repair plan format: "
-					+ report.formatVersion());
+			throw new CommandException("Unsupported bulk migration job repair plan format: " + report.formatVersion());
 		}
 		Objects.requireNonNull(report.generatedAt(), "generatedAt");
-		if (report.planFingerprint() == null || report.planFingerprint().isBlank()
-				|| report.estimatedReplayRows() < 0 || report.mismatchChunks() < 0
-				|| report.tasks() == null) {
+		if (report.planFingerprint() == null || report.planFingerprint().isBlank() || report.estimatedReplayRows() < 0
+				|| report.mismatchChunks() < 0 || report.tasks() == null) {
 			throw new CommandException("Bulk migration job repair plan header is invalid");
 		}
 		long rows = 0;
@@ -98,8 +89,7 @@ public final class BulkMigrationJobRepairPlanReportIO {
 		boolean atomic = true;
 		final var ids = new HashSet<String>();
 		for (final var task : report.tasks()) {
-			if (task == null || task.taskId() == null || task.taskId().isBlank()
-					|| !ids.add(task.taskId())) {
+			if (task == null || task.taskId() == null || task.taskId().isBlank() || !ids.add(task.taskId())) {
 				throw new CommandException("Bulk migration job repair task is invalid");
 			}
 			final var child = BulkMigrationRepairPlanReportIO.validate(task.repairPlan());
@@ -111,8 +101,7 @@ public final class BulkMigrationJobRepairPlanReportIO {
 			}
 			atomic &= child.atomic();
 		}
-		if (rows != report.estimatedReplayRows() || chunks != report.mismatchChunks()
-				|| atomic != report.atomic()
+		if (rows != report.estimatedReplayRows() || chunks != report.mismatchChunks() || atomic != report.atomic()
 				|| !report.planFingerprint().equals(fingerprint(report))) {
 			throw new CommandException("Bulk migration job repair plan summary is inconsistent");
 		}

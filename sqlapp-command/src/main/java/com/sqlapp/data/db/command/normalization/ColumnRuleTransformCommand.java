@@ -35,8 +35,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class ColumnRuleTransformCommand extends AbstractCommand
-		implements TargetFileProperty, OutputDirectoryProperty {
+public class ColumnRuleTransformCommand extends AbstractCommand implements TargetFileProperty, OutputDirectoryProperty {
 
 	private File targetFile;
 
@@ -123,8 +122,8 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 				results.add(result);
 			}
 		}
-		return mapOf("formatVersion", 1, "source", mapOf("file",
-				targetFile == null ? null : targetFile.getName()), "matches", results);
+		return mapOf("formatVersion", 1, "source", mapOf("file", targetFile == null ? null : targetFile.getName()),
+				"matches", results);
 	}
 
 	private void validateRules(List<ColumnRule> rules) {
@@ -144,8 +143,7 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 
 	private boolean matches(ColumnRule rule, Table table, ColumnSnapshot column) {
 		ColumnMatch match = rule.getMatch();
-		if (rule.getExcludeTables().contains(table.getName())
-				|| rule.getExcludeColumns().contains(column.name)) {
+		if (rule.getExcludeTables().contains(table.getName()) || rule.getExcludeColumns().contains(column.name)) {
 			return false;
 		}
 		return matchesText(table.getCatalogName(), match.getCatalogName(), match.getCatalogNameRegex())
@@ -175,8 +173,7 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 		List<ColumnRule> highest = matches.stream().filter(rule -> rule.getPriority() == priority).toList();
 		if (highest.stream().map(rule -> rule.getAction().signature()).distinct().count() > 1) {
 			throw new CommandException("Conflicting column rules have the same priority: table=" + table.getName()
-					+ ", column=" + column.name + ", rules="
-					+ highest.stream().map(ColumnRule::getId).toList());
+					+ ", column=" + column.name + ", rules=" + highest.stream().map(ColumnRule::getId).toList());
 		}
 	}
 
@@ -200,10 +197,9 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 	}
 
 	private Map<String, Object> columnLog(Table table, ColumnSnapshot column) {
-		return mapOf("catalog", table.getCatalogName(), "schema", table.getSchemaName(), "table",
-				table.getName(), "column", column.name, "dataType", column.dataType.name(), "length",
-				column.length, "nullable", !column.notNull, "primaryKey", column.primaryKey, "foreignKey",
-				column.foreignKey);
+		return mapOf("catalog", table.getCatalogName(), "schema", table.getSchemaName(), "table", table.getName(),
+				"column", column.name, "dataType", column.dataType.name(), "length", column.length, "nullable",
+				!column.notNull, "primaryKey", column.primaryKey, "foreignKey", column.foreignKey);
 	}
 
 	private Map<String, Object> targetLog(ColumnSnapshot source, ColumnAction action) {
@@ -319,13 +315,10 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 	}
 
 	public enum LengthHandling {
-		PRESERVE,
-		REMOVE,
-		REPLACE
+		PRESERVE, REMOVE, REPLACE
 	}
 
 	public enum RuleExecutionMode {
-		APPLY,
-		REPORT_ONLY
+		APPLY, REPORT_ONLY
 	}
 }

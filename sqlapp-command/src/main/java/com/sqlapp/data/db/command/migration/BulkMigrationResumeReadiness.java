@@ -3,9 +3,5 @@ package com.sqlapp.data.db.command.migration;
 
 /** Conservative resume decision derived from an operational report. */
 public enum BulkMigrationResumeReadiness {
-	COMPLETE,
-	RESUMABLE,
-	POSSIBLY_RUNNING,
-	RECOVERY_REQUIRED,
-	INCOMPATIBLE
+	COMPLETE, RESUMABLE, POSSIBLY_RUNNING, RECOVERY_REQUIRED, INCOMPATIBLE
 }

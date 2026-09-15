@@ -22,8 +22,7 @@ public class PliCsvExtractorGenerator {
 		java.util.Set<String> symbols = new java.util.HashSet<>();
 		for (DataSet dataSet : contract.getDataSets()) {
 			if (!symbols.add(symbol(dataSet))) {
-				throw new com.sqlapp.exceptions.CommandException(
-						"Duplicate generated PL/I symbol: " + symbol(dataSet));
+				throw new com.sqlapp.exceptions.CommandException("Duplicate generated PL/I symbol: " + symbol(dataSet));
 			}
 		}
 	}
@@ -69,10 +68,10 @@ public class PliCsvExtractorGenerator {
 		line(builder, "/* GENERATED PL/I TEMPLATE. REVIEW IMS PCB AND FILE DECLARATIONS BEFORE USE. */");
 		line(builder, programName + ": PROCEDURE OPTIONS(MAIN);");
 		line(builder, "");
-		line(builder, "   /* CSV: encoding=" + value(contract.getCsv().getEncoding())
-				+ ", delimiter=" + visible(contract.getCsv().getDelimiter())
-				+ ", quote=" + visible(contract.getCsv().getQuote())
-				+ ", null=" + visible(contract.getCsv().getNullValue()) + " */");
+		line(builder,
+				"   /* CSV: encoding=" + value(contract.getCsv().getEncoding()) + ", delimiter="
+						+ visible(contract.getCsv().getDelimiter()) + ", quote=" + visible(contract.getCsv().getQuote())
+						+ ", null=" + visible(contract.getCsv().getNullValue()) + " */");
 		line(builder, "   /* TODO: INCLUDE the actual IMS PCB and PL/I record declarations. */");
 		line(builder, "   /* TODO: DECLARE one OUTPUT RECORD file for each CSV listed below. */");
 		for (DataSet dataSet : contract.getDataSets()) {
@@ -84,8 +83,8 @@ public class PliCsvExtractorGenerator {
 			line(builder, "   CALL WRITE-HEADERS;");
 		}
 		line(builder, "   DO WHILE (READ-NEXT-ROOT());");
-		for (DataSet root : contract.getDataSets().stream()
-				.filter(dataSet -> dataSet.getParentDataSetId() == null).toList()) {
+		for (DataSet root : contract.getDataSets().stream().filter(dataSet -> dataSet.getParentDataSetId() == null)
+				.toList()) {
 			line(builder, "      CALL WRITE-" + symbol(root) + ";");
 			for (DataSet child : directChildren(contract, root.getId())) {
 				line(builder, "      CALL PROCESS-CHILDREN-" + symbol(child) + ";");
@@ -113,8 +112,8 @@ public class PliCsvExtractorGenerator {
 		line(builder, "- Source path: `" + dataSet.getSourcePath() + "`");
 		line(builder, "- Target: `" + qualifiedName(dataSet) + "`");
 		line(builder, "- Staging table: `" + value(dataSet.getStagingTable()) + "`");
-		line(builder, "- Hierarchy depth/load order: `" + dataSet.getHierarchyDepth() + "/"
-				+ dataSet.getLoadOrder() + "`");
+		line(builder,
+				"- Hierarchy depth/load order: `" + dataSet.getHierarchyDepth() + "/" + dataSet.getLoadOrder() + "`");
 		if (dataSet.getParentDataSetId() != null) {
 			line(builder, "- Parent data set: `" + dataSet.getParentDataSetId() + "`");
 		}
@@ -127,17 +126,19 @@ public class PliCsvExtractorGenerator {
 		line(builder, "|---:|---|---|---|---|");
 		int csvPosition = 1;
 		for (Field field : dataSet.getFields().stream().filter(Field::isExtracted).toList()) {
-			line(builder, "| " + csvPosition++ + " | `" + value(field.getStagingColumn()) + "` | `"
-					+ value(field.getSourcePath()) + "` | `" + value(field.getTargetColumn()) + "` | `"
-					+ value(field.getAction()) + "` |");
+			line(builder,
+					"| " + csvPosition++ + " | `" + value(field.getStagingColumn()) + "` | `"
+							+ value(field.getSourcePath()) + "` | `" + value(field.getTargetColumn()) + "` | `"
+							+ value(field.getAction()) + "` |");
 		}
 		if (!dataSet.getAncestorKeys().isEmpty()) {
 			line(builder, "");
 			line(builder, "Ancestor key propagation:");
 			for (var key : dataSet.getAncestorKeys()) {
 				line(builder, "- `" + key.getAncestorDataSetId() + "`: "
-						+ key.getColumns().stream().map(column -> "`" + column.getAncestorColumn()
-								+ "` → `" + column.getSourceColumn() + "`").toList()
+						+ key.getColumns().stream().map(
+								column -> "`" + column.getAncestorColumn() + "` → `" + column.getSourceColumn() + "`")
+								.toList()
 						+ " => target " + key.getTargetForeignKey());
 			}
 		}
@@ -156,20 +157,18 @@ public class PliCsvExtractorGenerator {
 			if (!field.getIndexedSources().isEmpty()) {
 				for (int i = 0; i < field.getIndexedSources().size(); i++) {
 					var source = field.getIndexedSources().get(i);
-					line(builder, "   " + (i == 0 ? "IF " : "ELSE IF ")
-							+ "OCCURRENCE-INDEX-" + symbol(dataSet) + " = "
+					line(builder, "   " + (i == 0 ? "IF " : "ELSE IF ") + "OCCURRENCE-INDEX-" + symbol(dataSet) + " = "
 							+ source.getIndex() + " THEN");
 					line(builder, "      CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", "
-							+ pliReference(source.getSourcePath()) + ");"
-							+ " /* " + field.getStagingColumn() + " */");
+							+ pliReference(source.getSourcePath()) + ");" + " /* " + field.getStagingColumn() + " */");
 				}
-				line(builder, "   ELSE CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet)
-						+ ", ''); /* " + field.getStagingColumn() + " */");
+				line(builder, "   ELSE CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", ''); /* "
+						+ field.getStagingColumn() + " */");
 			} else {
-				String expression = field.isOccurrenceIndex()
-						? "OCCURRENCE-INDEX-" + symbol(dataSet) : pliReference(field.getSourcePath());
-				line(builder, "   CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", " + expression + ");"
-						+ " /* " + field.getStagingColumn() + " */");
+				String expression = field.isOccurrenceIndex() ? "OCCURRENCE-INDEX-" + symbol(dataSet)
+						: pliReference(field.getSourcePath());
+				line(builder, "   CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", " + expression + ");" + " /* "
+						+ field.getStagingColumn() + " */");
 			}
 		}
 		line(builder, "   CALL CSV-END-RECORD(" + fileSymbol(dataSet) + ");");
@@ -179,8 +178,8 @@ public class PliCsvExtractorGenerator {
 	private void childProcedure(StringBuilder builder, LegacyMigrationContract contract, DataSet dataSet) {
 		line(builder, "");
 		line(builder, "PROCESS-CHILDREN-" + symbol(dataSet) + ": PROCEDURE;");
-		line(builder, "   /* TODO: position IMS at children of the current "
-				+ dataSet.getParentDataSetId() + " segment. */");
+		line(builder,
+				"   /* TODO: position IMS at children of the current " + dataSet.getParentDataSetId() + " segment. */");
 		line(builder, "   DO OCCURRENCE-INDEX-" + symbol(dataSet) + " = 1 TO "
 				+ (dataSet.getMaximumOccurrences() == null ? "CHILD-COUNT" : dataSet.getMaximumOccurrences()) + ";");
 		if ("NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode())) {
@@ -209,15 +208,16 @@ public class PliCsvExtractorGenerator {
 		line(builder, "   OPEN-OUTPUT-FILES, WRITE-HEADERS, READ-NEXT-ROOT, READ-NEXT-CHILD,");
 		line(builder, "   SAVE-CHECKPOINT, CLOSE-OUTPUT-FILES, CSV-BEGIN-RECORD,");
 		line(builder, "   CSV-WRITE-DELIMITER, CSV-WRITE-FIELD and CSV-END-RECORD.");
-		line(builder, "   CSV-WRITE-FIELD must use delimiter '" + visible(contract.getCsv().getDelimiter())
-				+ "', quote '" + visible(contract.getCsv().getQuote()) + "', null '"
-				+ visible(contract.getCsv().getNullValue()) + "', double embedded quotes,");
+		line(builder,
+				"   CSV-WRITE-FIELD must use delimiter '" + visible(contract.getCsv().getDelimiter()) + "', quote '"
+						+ visible(contract.getCsv().getQuote()) + "', null '"
+						+ visible(contract.getCsv().getNullValue()) + "', double embedded quotes,");
 		line(builder, "   and quote fields containing delimiter, quote, CR or LF. */");
 	}
 
 	private java.util.List<DataSet> directChildren(LegacyMigrationContract contract, String parentId) {
-		return contract.getDataSets().stream()
-				.filter(dataSet -> parentId.equals(dataSet.getParentDataSetId())).toList();
+		return contract.getDataSets().stream().filter(dataSet -> parentId.equals(dataSet.getParentDataSetId()))
+				.toList();
 	}
 
 	private String qualifiedName(DataSet dataSet) {

@@ -69,8 +69,7 @@ public class JdbcTreeStagingLoader {
 			throws SQLException {
 		this.connection = connection;
 		this.tables = tables;
-		this.plan = new LegacyMigrationLoadPlanWrapper(
-				LegacyMigrationLoadPlanIO.validateExecution(plan));
+		this.plan = new LegacyMigrationLoadPlanWrapper(LegacyMigrationLoadPlanIO.validateExecution(plan));
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tables.forEach(table -> table.setDialect(dialect));
 		initialize();
@@ -129,8 +128,8 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private JdbcTreeDataSession createReader(LoadDataSetWrapper root) throws SQLException {
-		JdbcTreeDataSession reader = new JdbcTreeDataSession(connection, hierarchy(root).stream()
-				.map(dataSet -> stagingTables.get(dataSet.getId())).toList());
+		JdbcTreeDataSession reader = new JdbcTreeDataSession(connection,
+				hierarchy(root).stream().map(dataSet -> stagingTables.get(dataSet.getId())).toList());
 		reader.setRootBatchSize(plan.getRootBatchSize());
 		reader.setFetchSize(plan.getRootBatchSize());
 		reader.setTableOperationMode(TableOperationMode.NONE);
@@ -161,8 +160,7 @@ public class JdbcTreeStagingLoader {
 	private JdbcTreeDataSession createWriter(LoadDataSetWrapper root) {
 		List<LoadDataSetWrapper> hierarchy = hierarchy(root);
 		Set<ForeignKeyConstraint> selectedForeignKeys = hierarchy.stream()
-				.map(LoadDataSetWrapper::getTargetForeignKeyConstraint)
-				.filter(java.util.Objects::nonNull)
+				.map(LoadDataSetWrapper::getTargetForeignKeyConstraint).filter(java.util.Objects::nonNull)
 				.collect(java.util.stream.Collectors.toSet());
 		JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
 				hierarchy.stream().map(dataSet -> targetTables.get(dataSet.getId())).toList(),
@@ -213,8 +211,8 @@ public class JdbcTreeStagingLoader {
 		for (LoadDataSetWrapper child : plan.getDataSets().stream()
 				.filter(dataSet -> dataSet.getParentDataSetId() != null)
 				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getHierarchyDepth)
-						.thenComparingInt(LoadDataSetWrapper::getLoadOrder)
-						.thenComparing(LoadDataSetWrapper::getId)).toList()) {
+						.thenComparingInt(LoadDataSetWrapper::getLoadOrder).thenComparing(LoadDataSetWrapper::getId))
+				.toList()) {
 			count += deleteOrphans(child, dataSets.get(child.getParentDataSetId()));
 		}
 		return count;
@@ -223,8 +221,8 @@ public class JdbcTreeStagingLoader {
 	private long deleteCompletedRoots() throws SQLException {
 		long count = 0;
 		for (LoadDataSetWrapper root : roots()) {
-			String sql = "DELETE FROM " + id(root.getInner().getStagingTable())
-					+ " WHERE " + id(LOAD_STATUS_COLUMN) + "='LOADED'";
+			String sql = "DELETE FROM " + id(root.getInner().getStagingTable()) + " WHERE " + id(LOAD_STATUS_COLUMN)
+					+ "='LOADED'";
 			try (PreparedStatement statement = connection.prepareStatement(sql)) {
 				count += statement.executeUpdate();
 			}
@@ -322,15 +320,16 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private List<LoadDataSetWrapper> roots() {
-		return plan.getDataSets().stream().filter(dataSet -> dataSet.getParentDataSetId() == null)
-				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
-						.thenComparing(LoadDataSetWrapper::getId)).toList();
+		return plan
+				.getDataSets().stream().filter(dataSet -> dataSet.getParentDataSetId() == null).sorted(Comparator
+						.comparingInt(LoadDataSetWrapper::getLoadOrder).thenComparing(LoadDataSetWrapper::getId))
+				.toList();
 	}
 
 	private List<LoadDataSetWrapper> children(String parentId) {
-		return plan.getDataSets().stream().filter(dataSet -> parentId.equals(dataSet.getParentDataSetId()))
-				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
-						.thenComparing(LoadDataSetWrapper::getId)).toList();
+		return plan.getDataSets().stream().filter(dataSet -> parentId.equals(dataSet.getParentDataSetId())).sorted(
+				Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder).thenComparing(LoadDataSetWrapper::getId))
+				.toList();
 	}
 
 	private List<LoadDataSetWrapper> hierarchy(LoadDataSetWrapper root) {
@@ -352,8 +351,7 @@ public class JdbcTreeStagingLoader {
 			}
 			// Target
 			Table table = tables.stream()
-					.filter(item -> (dataSet.getTargetCatalog() == null
-							|| dataSet.getTargetCatalog().isBlank()
+					.filter(item -> (dataSet.getTargetCatalog() == null || dataSet.getTargetCatalog().isBlank()
 							|| equals(item.getCatalogName(), dataSet.getTargetCatalog()))
 							&& equals(item.getSchemaName(), dataSet.getInner().getTargetSchema())
 							&& equals(item.getName(), dataSet.getInner().getTargetTable()))
@@ -390,16 +388,16 @@ public class JdbcTreeStagingLoader {
 					throw new CommandException("Parent join keys are required: " + dataSet.getId());
 				}
 				LoadDataSetWrapper parent = dataSets.get(dataSet.getParentDataSetId());
-				List<ForeignKeyConstraint> targetForeignKeys = dataSet.getTargetTable()
-						.getConstraints().getForeignKeyConstraints().stream()
+				List<ForeignKeyConstraint> targetForeignKeys = dataSet.getTargetTable().getConstraints()
+						.getForeignKeyConstraints().stream()
 						.filter(foreignKey -> SchemaUtils.isSameTable(foreignKey.getRelatedTable(),
 								parent.getTargetTable()))
 						.filter(foreignKey -> sameNames(dataSet.getTargetForeignKey(),
 								foreignKey.getColumns().stream().map(Column::getName).toList()))
 						.toList();
 				if (targetForeignKeys.size() != 1) {
-					throw new CommandException("Target parent foreign key does not uniquely match schema: "
-							+ dataSet.getId());
+					throw new CommandException(
+							"Target parent foreign key does not uniquely match schema: " + dataSet.getId());
 				}
 				dataSet.setTargetForeignKeyConstraint(targetForeignKeys.getFirst());
 				Set<String> parentColumns = stagingColumns(parent).stream().map(name -> name.toLowerCase(Locale.ROOT))
@@ -465,54 +463,42 @@ public class JdbcTreeStagingLoader {
 		List<DatabasePreflightFailure> failures = new ArrayList<>();
 		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			Set<String> targetColumns = new LinkedHashSet<>();
-			dataSet.getFields().stream()
-					.filter(field -> field.getInner().getTargetColumn() != null)
-					.filter(field -> !"DROP".equals(field.getAction()))
-					.map(field -> field.getInner().getTargetColumn())
+			dataSet.getFields().stream().filter(field -> field.getInner().getTargetColumn() != null)
+					.filter(field -> !"DROP".equals(field.getAction())).map(field -> field.getInner().getTargetColumn())
 					.forEach(targetColumns::add);
 			validateReadable(failures, dataSet.getId(), "target",
-					qualifiedId(dataSet.getInner().getTargetSchema(), dataSet.getTargetTable()),
-					targetColumns);
+					qualifiedId(dataSet.getInner().getTargetSchema(), dataSet.getTargetTable()), targetColumns);
 
 			Set<String> staging = new LinkedHashSet<>(stagingColumns(dataSet));
 			staging.add("SQLAPP_LOADED_AT");
 			if (dataSet.getParentDataSetId() == null) {
 				staging.add(LOAD_STATUS_COLUMN);
 			}
-			validateReadable(failures, dataSet.getId(), "staging",
-					id(dataSet.getInner().getStagingTable()), staging);
+			validateReadable(failures, dataSet.getId(), "staging", id(dataSet.getInner().getStagingTable()), staging);
 		}
-		List<String> orderedIds = plan.getDataSets().stream()
-				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)
-						.thenComparing(LoadDataSetWrapper::getId))
+		List<String> orderedIds = plan.getDataSets().stream().sorted(
+				Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder).thenComparing(LoadDataSetWrapper::getId))
 				.map(LoadDataSetWrapper::getId).toList();
-		if (!orderedIds.equals(plan.getDataSets().stream()
-				.map(LoadDataSetWrapper::getId).toList())) {
+		if (!orderedIds.equals(plan.getDataSets().stream().map(LoadDataSetWrapper::getId).toList())) {
 			throw new CommandException("Load data sets must be ordered by loadOrder and id.");
 		}
 		if (!failures.isEmpty()) {
 			SQLException cause = failures.getFirst().cause();
-			failures.stream().skip(1).map(DatabasePreflightFailure::cause)
-					.forEach(cause::addSuppressed);
+			failures.stream().skip(1).map(DatabasePreflightFailure::cause).forEach(cause::addSuppressed);
 			String details = failures.stream().map(DatabasePreflightFailure::description)
-					.reduce((left, right) -> left + System.lineSeparator() + " - " + right)
-					.orElseThrow();
-			throw new CommandException("Database preflight failed:" + System.lineSeparator()
-					+ " - " + details, cause);
+					.reduce((left, right) -> left + System.lineSeparator() + " - " + right).orElseThrow();
+			throw new CommandException("Database preflight failed:" + System.lineSeparator() + " - " + details, cause);
 		}
 	}
 
-	private void validateReadable(List<DatabasePreflightFailure> failures,
-			String dataSetId, String role, String table, Set<String> columns) {
-		String selected = columns.stream().map(this::id)
-				.reduce((left, right) -> left + ", " + right).orElse("1");
+	private void validateReadable(List<DatabasePreflightFailure> failures, String dataSetId, String role, String table,
+			Set<String> columns) {
+		String selected = columns.stream().map(this::id).reduce((left, right) -> left + ", " + right).orElse("1");
 		String sql = "SELECT " + selected + " FROM " + table + " WHERE 1=0";
-		try (PreparedStatement statement = connection.prepareStatement(sql);
-				var resultSet = statement.executeQuery()) {
+		try (PreparedStatement statement = connection.prepareStatement(sql); var resultSet = statement.executeQuery()) {
 			// Opening the result verifies identifiers without reading user data.
 		} catch (SQLException e) {
-			failures.add(new DatabasePreflightFailure(role + " table of data set "
-					+ dataSetId + ": " + table, e));
+			failures.add(new DatabasePreflightFailure(role + " table of data set " + dataSetId + ": " + table, e));
 		}
 	}
 
@@ -523,33 +509,28 @@ public class JdbcTreeStagingLoader {
 			List<String> keys = root.getSourceBusinessKey();
 			String status = id(LOAD_STATUS_COLUMN);
 			String loadedAt = id("SQLAPP_LOADED_AT");
-			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
-					+ " IS NULL OR " + status + " NOT IN ('PENDING','LOADED')",
-					root.getId(), "load status")) {
+			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status + " IS NULL OR " + status
+					+ " NOT IN ('PENDING','LOADED')", root.getId(), "load status")) {
 				failures.add("root contains an unsupported load status: " + root.getId());
 			}
-			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
-					+ "='LOADED' AND " + loadedAt + " IS NULL",
-					root.getId(), "loaded timestamp")) {
+			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status + "='LOADED' AND " + loadedAt
+					+ " IS NULL", root.getId(), "loaded timestamp")) {
 				failures.add("loaded root has no loaded timestamp: " + root.getId());
 			}
-			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status
-					+ "='PENDING' AND " + loadedAt + " IS NOT NULL",
-					root.getId(), "pending timestamp")) {
+			if (hasRow("SELECT " + status + " FROM " + table + " WHERE " + status + "='PENDING' AND " + loadedAt
+					+ " IS NOT NULL", root.getId(), "pending timestamp")) {
 				failures.add("pending root has a loaded timestamp: " + root.getId());
 			}
-			String selected = keys.stream().map(this::id)
-					.reduce((left, right) -> left + ", " + right).orElseThrow();
+			String selected = keys.stream().map(this::id).reduce((left, right) -> left + ", " + right).orElseThrow();
 			String nullCondition = keys.stream().map(key -> id(key) + " IS NULL")
 					.reduce((left, right) -> left + " OR " + right).orElseThrow();
 			String pending = status + "='PENDING'";
-			if (hasRow("SELECT " + selected + " FROM " + table + " WHERE "
-					+ pending + " AND (" + nullCondition + ")", root.getId(), "null key")) {
+			if (hasRow("SELECT " + selected + " FROM " + table + " WHERE " + pending + " AND (" + nullCondition + ")",
+					root.getId(), "null key")) {
 				failures.add("pending root contains a null business key: " + root.getId());
 			}
-			if (hasRow("SELECT " + selected + ", COUNT(*) FROM " + table + " WHERE "
-					+ pending + " GROUP BY " + selected + " HAVING COUNT(*)>1",
-					root.getId(), "duplicate key")) {
+			if (hasRow("SELECT " + selected + ", COUNT(*) FROM " + table + " WHERE " + pending + " GROUP BY " + selected
+					+ " HAVING COUNT(*)>1", root.getId(), "duplicate key")) {
 				failures.add("pending root contains a duplicate business key: " + root.getId());
 			}
 		}
@@ -559,28 +540,23 @@ public class JdbcTreeStagingLoader {
 			}
 			String table = id(child.getInner().getStagingTable());
 			Set<String> keys = new LinkedHashSet<>();
-			child.getParentJoinKeys().stream()
-					.map(key -> key.getInner().getChildStagingColumn()).forEach(keys::add);
+			child.getParentJoinKeys().stream().map(key -> key.getInner().getChildStagingColumn()).forEach(keys::add);
 			keys.addAll(child.getSourceBusinessKey());
-			String selected = keys.stream().map(this::id)
-					.reduce((left, right) -> left + ", " + right).orElseThrow();
+			String selected = keys.stream().map(this::id).reduce((left, right) -> left + ", " + right).orElseThrow();
 			String nullCondition = keys.stream().map(key -> id(key) + " IS NULL")
 					.reduce((left, right) -> left + " OR " + right).orElseThrow();
 			String pendingHierarchy = pendingHierarchyCondition(child, table);
-			if (hasRow("SELECT " + selected + " FROM " + table + " WHERE "
-					+ pendingHierarchy + " AND (" + nullCondition + ")",
-					child.getId(), "null child business key")) {
+			if (hasRow("SELECT " + selected + " FROM " + table + " WHERE " + pendingHierarchy + " AND (" + nullCondition
+					+ ")", child.getId(), "null child business key")) {
 				failures.add("pending child contains a null business key: " + child.getId());
 			}
-			if (hasRow("SELECT " + selected + ", COUNT(*) FROM " + table + " WHERE "
-					+ pendingHierarchy + " GROUP BY " + selected + " HAVING COUNT(*)>1",
-					child.getId(), "duplicate child business key")) {
+			if (hasRow("SELECT " + selected + ", COUNT(*) FROM " + table + " WHERE " + pendingHierarchy + " GROUP BY "
+					+ selected + " HAVING COUNT(*)>1", child.getId(), "duplicate child business key")) {
 				failures.add("pending child contains a duplicate business key: " + child.getId());
 			}
 		}
 		if (!failures.isEmpty()) {
-			throw new CommandException("Staging data preflight failed:"
-					+ System.lineSeparator() + " - "
+			throw new CommandException("Staging data preflight failed:" + System.lineSeparator() + " - "
 					+ String.join(System.lineSeparator() + " - ", failures));
 		}
 	}
@@ -594,8 +570,8 @@ public class JdbcTreeStagingLoader {
 		sql.append(id(parent.getInner().getStagingTable())).append(' ').append(parentAlias);
 		List<String> conditions = new ArrayList<>();
 		for (JoinKeyWrapper key : current.getParentJoinKeys()) {
-			conditions.add(childTable + "." + id(key.getInner().getChildStagingColumn())
-					+ "=" + parentAlias + "." + id(key.getInner().getParentStagingColumn()));
+			conditions.add(childTable + "." + id(key.getInner().getChildStagingColumn()) + "=" + parentAlias + "."
+					+ id(key.getInner().getParentStagingColumn()));
 		}
 		while (parent.getParentDataSetId() != null) {
 			current = parent;
@@ -603,11 +579,11 @@ public class JdbcTreeStagingLoader {
 			String childAlias = parentAlias;
 			parentAlias = "sqlapp_parent_" + (++level);
 			String joinedParentAlias = parentAlias;
-			sql.append(" JOIN ").append(id(parent.getInner().getStagingTable())).append(' ')
-					.append(joinedParentAlias).append(" ON ");
+			sql.append(" JOIN ").append(id(parent.getInner().getStagingTable())).append(' ').append(joinedParentAlias)
+					.append(" ON ");
 			sql.append(current.getParentJoinKeys().stream()
-					.map(key -> childAlias + "." + id(key.getInner().getChildStagingColumn())
-							+ "=" + joinedParentAlias + "." + id(key.getInner().getParentStagingColumn()))
+					.map(key -> childAlias + "." + id(key.getInner().getChildStagingColumn()) + "=" + joinedParentAlias
+							+ "." + id(key.getInner().getParentStagingColumn()))
 					.reduce((left, right) -> left + " AND " + right).orElseThrow());
 		}
 		conditions.add(parentAlias + "." + id(LOAD_STATUS_COLUMN) + "='PENDING'");
@@ -621,8 +597,8 @@ public class JdbcTreeStagingLoader {
 				return resultSet.next();
 			}
 		} catch (SQLException e) {
-			throw new CommandException("Staging data preflight " + check
-					+ " query failed for data set " + dataSetId, e);
+			throw new CommandException("Staging data preflight " + check + " query failed for data set " + dataSetId,
+					e);
 		}
 	}
 
@@ -639,31 +615,24 @@ public class JdbcTreeStagingLoader {
 			Set<String> parentKeys = child.getParentJoinKeys().stream()
 					.map(key -> key.getInner().getParentStagingColumn())
 					.collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-			if (containsNull(id(child.getInner().getStagingTable()), childKeys,
-					child.getId(), "child join key")) {
+			if (containsNull(id(child.getInner().getStagingTable()), childKeys, child.getId(), "child join key")) {
 				failures.add("child staging row contains a null join key: " + child.getId());
 			}
-			if (containsNull(id(parent.getInner().getStagingTable()), parentKeys,
-					child.getId(), "parent join key")) {
-				failures.add("parent staging row contains a null join key for child: "
-						+ child.getId());
+			if (containsNull(id(parent.getInner().getStagingTable()), parentKeys, child.getId(), "parent join key")) {
+				failures.add("parent staging row contains a null join key for child: " + child.getId());
 			}
 		}
 		if (!failures.isEmpty()) {
-			throw new CommandException("Staging relationship preflight failed:"
-					+ System.lineSeparator() + " - "
+			throw new CommandException("Staging relationship preflight failed:" + System.lineSeparator() + " - "
 					+ String.join(System.lineSeparator() + " - ", failures));
 		}
 	}
 
-	private boolean containsNull(String table, Set<String> columns,
-			String dataSetId, String check) {
-		String selected = columns.stream().map(this::id)
-				.reduce((left, right) -> left + ", " + right).orElseThrow();
+	private boolean containsNull(String table, Set<String> columns, String dataSetId, String check) {
+		String selected = columns.stream().map(this::id).reduce((left, right) -> left + ", " + right).orElseThrow();
 		String condition = columns.stream().map(column -> id(column) + " IS NULL")
 				.reduce((left, right) -> left + " OR " + right).orElseThrow();
-		return hasRow("SELECT " + selected + " FROM " + table + " WHERE "
-				+ condition, dataSetId, check);
+		return hasRow("SELECT " + selected + " FROM " + table + " WHERE " + condition, dataSetId, check);
 	}
 
 	private boolean equals(String left, String right) {

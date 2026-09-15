@@ -3,6 +3,5 @@ package com.sqlapp.data.db.command.migration;
 
 /** Effect of an automatic operational-report failure on the migration job. */
 public enum BulkMigrationOperationalReportFailurePolicy {
-	FAIL_JOB,
-	CONTINUE_JOB
+	FAIL_JOB, CONTINUE_JOB
 }

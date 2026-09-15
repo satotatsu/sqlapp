@@ -42,8 +42,7 @@ public final class BulkMigrationOperationalReportIO {
 			throw new CommandException("Bulk migration report does not exist: " + absolute);
 		}
 		try {
-			return validate(converter.fromJsonString(absolute.toFile(),
-					BulkMigrationOperationalReport.class));
+			return validate(converter.fromJsonString(absolute.toFile(), BulkMigrationOperationalReport.class));
 		} catch (RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
@@ -52,11 +51,9 @@ public final class BulkMigrationOperationalReportIO {
 		}
 	}
 
-	public BulkMigrationOperationalReport read(final Path file,
-			final String expectedPlanFingerprint) {
+	public BulkMigrationOperationalReport read(final Path file, final String expectedPlanFingerprint) {
 		if (expectedPlanFingerprint == null || expectedPlanFingerprint.isBlank()) {
-			throw new IllegalArgumentException(
-					"expectedPlanFingerprint must not be empty");
+			throw new IllegalArgumentException("expectedPlanFingerprint must not be empty");
 		}
 		final BulkMigrationOperationalReport report = read(file);
 		if (!expectedPlanFingerprint.equals(report.planFingerprint())) {
@@ -65,22 +62,17 @@ public final class BulkMigrationOperationalReportIO {
 		return report;
 	}
 
-	public BulkMigrationResumeReadiness assessResume(final Path file,
-			final String expectedPlanFingerprint) {
-		return BulkMigrationOperationalReportResumeAssessor.assess(
-				read(file, expectedPlanFingerprint));
+	public BulkMigrationResumeReadiness assessResume(final Path file, final String expectedPlanFingerprint) {
+		return BulkMigrationOperationalReportResumeAssessor.assess(read(file, expectedPlanFingerprint));
 	}
 
-	public BulkMigrationResumeReadiness assessResume(final Path file,
-			final String expectedPlanFingerprint,
-			final BulkMigrationJobLeaseStore leaseStore, final Instant now)
-			throws SQLException {
+	public BulkMigrationResumeReadiness assessResume(final Path file, final String expectedPlanFingerprint,
+			final BulkMigrationJobLeaseStore leaseStore, final Instant now) throws SQLException {
 		Objects.requireNonNull(leaseStore, "leaseStore");
 		Objects.requireNonNull(now, "now");
-		final BulkMigrationOperationalReport report = read(file,
-				expectedPlanFingerprint);
-		return BulkMigrationOperationalReportResumeAssessor.assess(report,
-				leaseStore.load(report.jobId()).orElse(null), now);
+		final BulkMigrationOperationalReport report = read(file, expectedPlanFingerprint);
+		return BulkMigrationOperationalReportResumeAssessor.assess(report, leaseStore.load(report.jobId()).orElse(null),
+				now);
 	}
 
 	public void write(final Path file, final BulkMigrationOperationalReport report) {
@@ -88,42 +80,33 @@ public final class BulkMigrationOperationalReportIO {
 		validate(Objects.requireNonNull(report, "report"));
 		final Path absolute = file.toAbsolutePath();
 		try {
-			AtomicMigrationFile.write(absolute,
-					temporary -> converter.writeJsonValue(temporary.toFile(), report));
+			AtomicMigrationFile.write(absolute, temporary -> converter.writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write bulk migration report: " + absolute, e);
 		}
 	}
 
-	private static BulkMigrationOperationalReport validate(
-			final BulkMigrationOperationalReport report) {
+	private static BulkMigrationOperationalReport validate(final BulkMigrationOperationalReport report) {
 		if (report == null) {
 			throw new CommandException("Bulk migration report must not be null");
 		}
-		if (report.formatVersion()
-				!= BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION) {
-			throw new CommandException("Unsupported bulk migration report formatVersion: "
-					+ report.formatVersion());
+		if (report.formatVersion() != BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION) {
+			throw new CommandException("Unsupported bulk migration report formatVersion: " + report.formatVersion());
 		}
-		if (report.generatedAt() == null || report.jobId() == null
-				|| report.jobId().isBlank() || report.planFingerprint() == null
-				|| report.planFingerprint().isBlank()) {
-			throw new CommandException(
-					"Bulk migration report requires generatedAt, jobId and planFingerprint");
+		if (report.generatedAt() == null || report.jobId() == null || report.jobId().isBlank()
+				|| report.planFingerprint() == null || report.planFingerprint().isBlank()) {
+			throw new CommandException("Bulk migration report requires generatedAt, jobId and planFingerprint");
 		}
-		if (report.processedRows() < 0 || report.completedTasks() < 0
-				|| report.totalTasks() < 0 || report.completedTasks() > report.totalTasks()) {
+		if (report.processedRows() < 0 || report.completedTasks() < 0 || report.totalTasks() < 0
+				|| report.completedTasks() > report.totalTasks()) {
 			throw new CommandException("Bulk migration report contains invalid aggregate counts");
 		}
-		if (report.tasks() == null || report.operations() == null
-				|| report.progressByMigration() == null
+		if (report.tasks() == null || report.operations() == null || report.progressByMigration() == null
 				|| report.tasks().size() != report.totalTasks()) {
-			throw new CommandException(
-					"Bulk migration report contains invalid task or operation lists");
+			throw new CommandException("Bulk migration report contains invalid task or operation lists");
 		}
-		if (report.tasks().stream().anyMatch(task -> task == null || task.taskId() == null
-				|| task.taskId().isBlank() || task.migrationId() == null
-				|| task.migrationId().isBlank())) {
+		if (report.tasks().stream().anyMatch(task -> task == null || task.taskId() == null || task.taskId().isBlank()
+				|| task.migrationId() == null || task.migrationId().isBlank())) {
 			throw new CommandException("Bulk migration report contains an invalid task identity");
 		}
 		final Set<String> taskIds = new HashSet<>();
@@ -134,31 +117,25 @@ public final class BulkMigrationOperationalReportIO {
 		for (BulkMigrationOperationalReport.Task task : report.tasks()) {
 			final BulkMigrationJobTaskState state = taskState(task.state());
 			if (state == null) {
-				throw new CommandException(
-						"Bulk migration report contains an unknown task state");
+				throw new CommandException("Bulk migration report contains an unknown task state");
 			}
-			if (task.tableName() == null || task.tableName().isBlank()
-					|| task.chunkSize() <= 0 || !known(BulkMigrationMode.class, task.mode())
+			if (task.tableName() == null || task.tableName().isBlank() || task.chunkSize() <= 0
+					|| !known(BulkMigrationMode.class, task.mode())
 					|| !known(BulkMigrationCheckpointMode.class, task.checkpointMode())) {
-				throw new CommandException(
-						"Bulk migration report contains invalid task configuration");
+				throw new CommandException("Bulk migration report contains invalid task configuration");
 			}
 			if (!taskIds.add(task.taskId()) || !migrationIds.add(task.migrationId())) {
-				throw new CommandException(
-						"Bulk migration report contains duplicate task identities");
+				throw new CommandException("Bulk migration report contains duplicate task identities");
 			}
 			if (task.checkpoint() != null) {
 				if (!task.migrationId().equals(task.checkpoint().migrationId())) {
-					throw new CommandException(
-							"Bulk migration report checkpoint migrationId mismatch");
+					throw new CommandException("Bulk migration report checkpoint migrationId mismatch");
 				}
 				validateCheckpoint(task.checkpoint());
 				try {
-					processedRows = Math.addExact(processedRows,
-							task.checkpoint().processedRows());
+					processedRows = Math.addExact(processedRows, task.checkpoint().processedRows());
 				} catch (ArithmeticException e) {
-					throw new CommandException(
-							"Bulk migration report processed row count overflow", e);
+					throw new CommandException("Bulk migration report processed row count overflow", e);
 				}
 			}
 			if (state == BulkMigrationJobTaskState.COMPLETE) {
@@ -166,87 +143,68 @@ public final class BulkMigrationOperationalReportIO {
 			}
 			compatible &= state != BulkMigrationJobTaskState.INCOMPATIBLE;
 		}
-		if (processedRows != report.processedRows()
-				|| completedTasks != report.completedTasks()
+		if (processedRows != report.processedRows() || completedTasks != report.completedTasks()
 				|| compatible != report.compatible()) {
-			throw new CommandException(
-					"Bulk migration report aggregate values are inconsistent");
+			throw new CommandException("Bulk migration report aggregate values are inconsistent");
 		}
 		final Set<String> operationIds = new HashSet<>();
 		for (final BulkMigrationOperationalReport.Operation operation : report.operations()) {
 			if (operation == null || operation.id() == null || operation.id().isBlank()
-					|| !operationIds.add(operation.id())
-					|| operation.description() == null || operation.description().isBlank()
+					|| !operationIds.add(operation.id()) || operation.description() == null
+					|| operation.description().isBlank()
 					|| !known(BulkMigrationJobOperationPhase.class, operation.phase())) {
-				throw new CommandException(
-						"Bulk migration report contains an invalid operation");
+				throw new CommandException("Bulk migration report contains an invalid operation");
 			}
 		}
 		final Set<String> progressMigrationIds = new HashSet<>();
 		for (BulkMigrationOperationalReport.Progress progress : report.progressByMigration()) {
-			if (progress == null || progress.migrationId() == null
-					|| !migrationIds.contains(progress.migrationId())
+			if (progress == null || progress.migrationId() == null || !migrationIds.contains(progress.migrationId())
 					|| !progressMigrationIds.add(progress.migrationId())) {
-				throw new CommandException(
-						"Bulk migration report contains invalid progress identities");
+				throw new CommandException("Bulk migration report contains invalid progress identities");
 			}
 			validateProgress(progress);
 		}
-		if (report.progress() != null
-				&& !migrationIds.contains(report.progress().migrationId())) {
-			throw new CommandException(
-					"Bulk migration report current progress migrationId mismatch");
+		if (report.progress() != null && !migrationIds.contains(report.progress().migrationId())) {
+			throw new CommandException("Bulk migration report current progress migrationId mismatch");
 		}
 		if (report.progress() != null) {
 			validateProgress(report.progress());
 		}
 		if (report.maintenance() != null) {
-			if (report.maintenance().planFingerprint() == null
-					|| report.maintenance().planFingerprint().isBlank()) {
-				throw new CommandException(
-						"Bulk migration report maintenance requires planFingerprint");
+			if (report.maintenance().planFingerprint() == null || report.maintenance().planFingerprint().isBlank()) {
+				throw new CommandException("Bulk migration report maintenance requires planFingerprint");
 			}
 			if (!knownMaintenanceStatus(report.maintenance().status())) {
-				throw new CommandException(
-						"Bulk migration report contains an unknown maintenance status");
+				throw new CommandException("Bulk migration report contains an unknown maintenance status");
 			}
-			if (!report.planFingerprint().equals(
-					report.maintenance().planFingerprint())
+			if (!report.planFingerprint().equals(report.maintenance().planFingerprint())
 					|| report.maintenance().updatedAt() == null) {
-				throw new CommandException(
-						"Bulk migration report maintenance does not match the report plan");
+				throw new CommandException("Bulk migration report maintenance does not match the report plan");
 			}
 		}
 		if (report.execution() != null && report.execution().taskId() != null
 				&& !taskIds.contains(report.execution().taskId())) {
-			throw new CommandException(
-					"Bulk migration report execution taskId does not belong to the report");
+			throw new CommandException("Bulk migration report execution taskId does not belong to the report");
 		}
 		return report;
 	}
 
-	private static void validateCheckpoint(
-			final BulkMigrationOperationalReport.Checkpoint checkpoint) {
+	private static void validateCheckpoint(final BulkMigrationOperationalReport.Checkpoint checkpoint) {
 		try {
 			BulkMigrationCheckpoint.builder().migrationId(checkpoint.migrationId())
-					.sourceFingerprint(checkpoint.sourceFingerprint())
-					.targetFingerprint(checkpoint.targetFingerprint())
-					.processedRows(checkpoint.processedRows())
-					.completedChunks(checkpoint.completedChunks())
+					.sourceFingerprint(checkpoint.sourceFingerprint()).targetFingerprint(checkpoint.targetFingerprint())
+					.processedRows(checkpoint.processedRows()).completedChunks(checkpoint.completedChunks())
 					.chunkSize(checkpoint.chunkSize()).complete(checkpoint.complete())
-					.lastChunkHash(checkpoint.lastChunkHash())
-					.resumeToken(checkpoint.resumeToken()).build().validate();
+					.lastChunkHash(checkpoint.lastChunkHash()).resumeToken(checkpoint.resumeToken()).build().validate();
 		} catch (IllegalArgumentException | NullPointerException e) {
 			throw new CommandException("Bulk migration report checkpoint is invalid", e);
 		}
 	}
 
-	private static void validateProgress(
-			final BulkMigrationOperationalReport.Progress progress) {
+	private static void validateProgress(final BulkMigrationOperationalReport.Progress progress) {
 		try {
-			new BulkMigrationProgressSnapshot(progress.migrationId(), progress.processedRows(),
-					progress.totalRows(), Duration.ofMillis(progress.elapsedMillis()),
-					progress.rowsPerSecond(), progress.completionRatio(),
+			new BulkMigrationProgressSnapshot(progress.migrationId(), progress.processedRows(), progress.totalRows(),
+					Duration.ofMillis(progress.elapsedMillis()), progress.rowsPerSecond(), progress.completionRatio(),
 					progress.estimatedRemainingMillis() == null ? null
 							: Duration.ofMillis(progress.estimatedRemainingMillis()));
 		} catch (IllegalArgumentException | NullPointerException | ArithmeticException e) {
@@ -254,8 +212,7 @@ public final class BulkMigrationOperationalReportIO {
 		}
 	}
 
-	private static <E extends Enum<E>> boolean known(final Class<E> type,
-			final String value) {
+	private static <E extends Enum<E>> boolean known(final Class<E> type, final String value) {
 		try {
 			Enum.valueOf(type, value);
 			return true;

@@ -20,54 +20,53 @@
 package com.sqlapp.data.db.command.migration;
 
 public enum Status {
-	Pending(){
+	Pending() {
 		@Override
-		public boolean isPending(){
+		public boolean isPending() {
 			return true;
 		}
 	},
-	Started(){
+	Started() {
 		@Override
-		public boolean isStarted(){
+		public boolean isStarted() {
 			return true;
 		}
 	},
-	Completed(){
+	Completed() {
 		@Override
-		public boolean isCompleted(){
+		public boolean isCompleted() {
 			return true;
 		}
 	},
-	Errored(){
+	Errored() {
 		@Override
-		public boolean isErrord(){
+		public boolean isErrord() {
 			return true;
 		}
-	},
-	;
+	},;
 
-	public boolean isPending(){
-		return false;
-	}
-	
-	public boolean isCompleted(){
+	public boolean isPending() {
 		return false;
 	}
 
-	public boolean isStarted(){
+	public boolean isCompleted() {
 		return false;
 	}
 
-	public boolean isErrord(){
+	public boolean isStarted() {
 		return false;
 	}
 
-	public static Status parse(String text){
-		if (text==null||"".equals(text)){
+	public boolean isErrord() {
+		return false;
+	}
+
+	public static Status parse(String text) {
+		if (text == null || "".equals(text)) {
 			return Pending;
 		}
-		for(Status status:values()){
-			if (status.toString().equalsIgnoreCase(text)){
+		for (Status status : values()) {
+			if (status.toString().equalsIgnoreCase(text)) {
 				return status;
 			}
 		}

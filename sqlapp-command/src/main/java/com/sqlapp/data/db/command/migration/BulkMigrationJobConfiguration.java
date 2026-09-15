@@ -33,8 +33,7 @@ public class BulkMigrationJobConfiguration {
 		private int chunkSize = 10_000;
 		private BulkMigrationMode mode = BulkMigrationMode.UPSERT;
 		private boolean resume = true;
-		private BulkMigrationCheckpointMode checkpointMode =
-				BulkMigrationCheckpointMode.DATABASE;
+		private BulkMigrationCheckpointMode checkpointMode = BulkMigrationCheckpointMode.DATABASE;
 		private String checkpointTableName = "SQLAPP_BULK_MIGRATION_CHECKPOINT";
 		private String checkpointDirectory;
 		private List<String> verificationColumns = new ArrayList<>();
@@ -45,8 +44,7 @@ public class BulkMigrationJobConfiguration {
 		private boolean updateWhenMatched = true;
 		private boolean insertWhenNotMatched = true;
 		private boolean useTransaction = true;
-		private BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy =
-				BulkUpsertDuplicateKeyStrategy.ERROR;
+		private BulkUpsertDuplicateKeyStrategy duplicateKeyStrategy = BulkUpsertDuplicateKeyStrategy.ERROR;
 		private String stagingTableName;
 		private Bulk bulk = new Bulk();
 		private Retry retry = new Retry();
@@ -86,8 +84,7 @@ public class BulkMigrationJobConfiguration {
 	public static class Lease {
 		private BulkMigrationJobLeaseMode mode;
 		private String ownerId;
-		private long durationSeconds =
-				BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION.toSeconds();
+		private long durationSeconds = BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION.toSeconds();
 		private String tableName;
 		private String directory;
 	}
@@ -97,8 +94,7 @@ public class BulkMigrationJobConfiguration {
 	@Setter
 	public static class Report {
 		private String targetFile;
-		private BulkMigrationOperationalReportFailurePolicy failurePolicy =
-				BulkMigrationOperationalReportFailurePolicy.FAIL_JOB;
+		private BulkMigrationOperationalReportFailurePolicy failurePolicy = BulkMigrationOperationalReportFailurePolicy.FAIL_JOB;
 	}
 
 	/** Optional ordered source/target count and chunk-hash verification. */
@@ -110,7 +106,6 @@ public class BulkMigrationJobConfiguration {
 		private boolean failOnMismatch = true;
 		private String targetFile;
 		private int maxReportedMismatches = 1_000;
-		private BulkMigrationVerificationIsolation isolation =
-				BulkMigrationVerificationIsolation.DEFAULT;
+		private BulkMigrationVerificationIsolation isolation = BulkMigrationVerificationIsolation.DEFAULT;
 	}
 }

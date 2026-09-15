@@ -34,8 +34,7 @@ public class GenerateBulkMigrationOperationalReportCommand extends AbstractComma
 		if (targetFile == null) {
 			throw new CommandException("Bulk migration report target file is required.");
 		}
-		final var report = new BulkMigrationOperationalReportBuilder().build(plan, status,
-				maintenanceState, progress);
+		final var report = new BulkMigrationOperationalReportBuilder().build(plan, status, maintenanceState, progress);
 		new BulkMigrationOperationalReportIO().write(targetFile.toPath(), report);
 		info("Bulk migration operational report: ", targetFile.getAbsolutePath());
 	}

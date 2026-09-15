@@ -48,15 +48,14 @@ public class GeneratePliCsvExtractorCommand extends AbstractCommand {
 		generator.validate(contract);
 		write(new File(outputDirectory, programName + "-extraction-spec.md"),
 				generator.specification(contract, programName));
-		write(new File(outputDirectory, programName + ".pli.template"),
-				generator.template(contract, programName));
+		write(new File(outputDirectory, programName + ".pli.template"), generator.template(contract, programName));
 		info("PL/I CSV extraction artifacts: ", outputDirectory.getAbsolutePath());
 	}
 
 	private void write(File file, String value) {
 		try {
-			AtomicMigrationFile.write(file.toPath(), temporary ->
-					Files.writeString(temporary, value, StandardCharsets.UTF_8));
+			AtomicMigrationFile.write(file.toPath(),
+					temporary -> Files.writeString(temporary, value, StandardCharsets.UTF_8));
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write PL/I extraction artifact: " + file, e);
 		}

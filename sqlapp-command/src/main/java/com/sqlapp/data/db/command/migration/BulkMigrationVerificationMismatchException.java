@@ -7,19 +7,19 @@ import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 
-/** Raised when a caller explicitly requires a matching migration verification. */
+/**
+ * Raised when a caller explicitly requires a matching migration verification.
+ */
 public class BulkMigrationVerificationMismatchException extends CommandException {
 	private static final long serialVersionUID = 1L;
 	private final BulkMigrationJobResult migrationResult;
 	private final BulkMigrationJobVerificationResult verificationResult;
 
-	public BulkMigrationVerificationMismatchException(
-			final BulkMigrationJobVerificationResult verificationResult) {
+	public BulkMigrationVerificationMismatchException(final BulkMigrationJobVerificationResult verificationResult) {
 		this(null, verificationResult);
 	}
 
-	public BulkMigrationVerificationMismatchException(
-			final BulkMigrationJobResult migrationResult,
+	public BulkMigrationVerificationMismatchException(final BulkMigrationJobResult migrationResult,
 			final BulkMigrationJobVerificationResult verificationResult) {
 		super(message(verificationResult));
 		this.migrationResult = migrationResult;
@@ -31,7 +31,9 @@ public class BulkMigrationVerificationMismatchException extends CommandException
 		return migrationResult != null;
 	}
 
-	/** Returns the committed migration result, or null for verification-only calls. */
+	/**
+	 * Returns the committed migration result, or null for verification-only calls.
+	 */
 	public BulkMigrationJobResult getMigrationResult() {
 		return migrationResult;
 	}
@@ -40,12 +42,9 @@ public class BulkMigrationVerificationMismatchException extends CommandException
 		return verificationResult;
 	}
 
-	private static String message(
-			final BulkMigrationJobVerificationResult verificationResult) {
-		final var value = Objects.requireNonNull(verificationResult,
-				"verificationResult");
-		return "Bulk migration verification failed: mismatchedTasks="
-				+ value.getMismatchedTasks() + ", expectedRows="
+	private static String message(final BulkMigrationJobVerificationResult verificationResult) {
+		final var value = Objects.requireNonNull(verificationResult, "verificationResult");
+		return "Bulk migration verification failed: mismatchedTasks=" + value.getMismatchedTasks() + ", expectedRows="
 				+ value.getExpectedRows() + ", actualRows=" + value.getActualRows();
 	}
 }

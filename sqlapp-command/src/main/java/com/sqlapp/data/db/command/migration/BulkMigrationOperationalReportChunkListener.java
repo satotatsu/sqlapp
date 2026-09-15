@@ -7,12 +7,10 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
 
 /** Refreshes an operational report after each checkpoint-durable chunk. */
-public final class BulkMigrationOperationalReportChunkListener
-		implements ChunkedBulkMigrationListener {
+public final class BulkMigrationOperationalReportChunkListener implements ChunkedBulkMigrationListener {
 	private final BulkMigrationOperationalReportJobListener reportListener;
 
-	public BulkMigrationOperationalReportChunkListener(
-			final BulkMigrationOperationalReportJobListener reportListener) {
+	public BulkMigrationOperationalReportChunkListener(final BulkMigrationOperationalReportJobListener reportListener) {
 		this.reportListener = Objects.requireNonNull(reportListener, "reportListener");
 	}
 

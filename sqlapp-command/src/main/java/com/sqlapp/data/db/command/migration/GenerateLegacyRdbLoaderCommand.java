@@ -92,13 +92,12 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 			throw new CommandException("Invalid Java runner class name: " + runnerClassName);
 		}
 		String mode = tableOperationMode == null ? null : tableOperationMode.toUpperCase(Locale.ROOT);
-		String cursorStrategy = rootCursorStrategy == null ? null
-				: rootCursorStrategy.toUpperCase(Locale.ROOT);
+		String cursorStrategy = rootCursorStrategy == null ? null : rootCursorStrategy.toUpperCase(Locale.ROOT);
 		var contract = new LegacyMigrationContractIO().read(contractFile);
 		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
 		var generator = new LegacyRdbLoaderGenerator();
-		var plan = generator.plan(contractFile, schemaFile, contract, mode, rootBatchSize,
-				commitEveryRootBatches, deleteCommittedRoots, stagingTablePrefix, cursorStrategy);
+		var plan = generator.plan(contractFile, schemaFile, contract, mode, rootBatchSize, commitEveryRootBatches,
+				deleteCommittedRoots, stagingTablePrefix, cursorStrategy);
 		if (viewpointsFile != null || viewpointId != null) {
 			applyViewpoint(plan);
 		}
@@ -138,8 +137,7 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private void applyViewpoint(LegacyMigrationLoadPlan plan) {
 		Catalog catalog = readCatalog();
-		var resolution = new SchemaViewpointCommandSupport().resolve(catalog, viewpointsFile,
-				viewpointId);
+		var resolution = new SchemaViewpointCommandSupport().resolve(catalog, viewpointsFile, viewpointId);
 		Set<String> selectedIds = new LinkedHashSet<>();
 		for (Table table : resolution.tables()) {
 			List<LoadDataSet> matches = plan.getDataSets().stream()
@@ -211,8 +209,8 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private Dialect resolveDialect() {
 		if (databaseProductName != null && !databaseProductName.isBlank()) {
-			return DialectResolver.getInstance().getDialect(databaseProductName,
-					databaseProductMajorVersion, databaseProductMinorVersion, null);
+			return DialectResolver.getInstance().getDialect(databaseProductName, databaseProductMajorVersion,
+					databaseProductMinorVersion, null);
 		}
 		try {
 			DbCommonObject<?> schema = SchemaUtils.readXml(schemaFile);
@@ -234,8 +232,8 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private void write(File file, String value) {
 		try {
-			AtomicMigrationFile.write(file.toPath(), temporary ->
-					Files.writeString(temporary, value, StandardCharsets.UTF_8));
+			AtomicMigrationFile.write(file.toPath(),
+					temporary -> Files.writeString(temporary, value, StandardCharsets.UTF_8));
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write RDB loader artifact: " + file, e);
 		}

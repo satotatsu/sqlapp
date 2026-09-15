@@ -26,8 +26,7 @@ public class LegacyMigrationMappingIO {
 			throw new CommandException("Legacy migration mapping does not exist: " + file);
 		}
 		try {
-			LegacyMigrationMapping mapping = converter.fromJsonString(file,
-					LegacyMigrationMapping.class);
+			LegacyMigrationMapping mapping = converter.fromJsonString(file, LegacyMigrationMapping.class);
 			new LegacyMigrationMappingValidator().validate(mapping);
 			return mapping;
 		} catch (RuntimeException e) {

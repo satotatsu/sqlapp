@@ -43,13 +43,13 @@ public class DuplicatePropertyFilesException extends SqlappException {
 	private static String createMessage(File... files) {
 		StringBuilder builder = new StringBuilder();
 		builder.append("files=[");
-		boolean first=true;
+		boolean first = true;
 		for (File file : files) {
-			if (!first){
+			if (!first) {
 				builder.append("\n,");
 			}
 			builder.append(file.getAbsolutePath());
-			first=false;
+			first = false;
 		}
 		builder.append("]");
 		return builder.toString();

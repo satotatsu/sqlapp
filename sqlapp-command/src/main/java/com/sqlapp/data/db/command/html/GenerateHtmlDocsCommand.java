@@ -428,8 +428,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}, futures);
 	}
 
-	private void putImage(ParametersContext context, String name,
-			RelationImageHolder holder) {
+	private void putImage(ParametersContext context, String name, RelationImageHolder holder) {
 		synchronized (context) {
 			context.put(name, holder);
 		}

@@ -21,8 +21,7 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 
 /** Publishes a fresh read-only JSON report at job task boundaries. */
-public final class BulkMigrationOperationalReportJobListener
-		implements BulkMigrationJobListener {
+public final class BulkMigrationOperationalReportJobListener implements BulkMigrationJobListener {
 	private final BulkMigrationJobPlan plan;
 	private final Path targetFile;
 	private final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier;
@@ -35,64 +34,52 @@ public final class BulkMigrationOperationalReportJobListener
 	private volatile RuntimeException lastFailure;
 	private volatile BulkMigrationOperationalReport.Execution latestExecution;
 
-	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
-			final Path targetFile) {
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile) {
 		this(plan, targetFile, () -> null, () -> null);
 	}
 
-	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
-			final Path targetFile,
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier) {
-		this(plan, targetFile, maintenanceSupplier, progressSupplier,
-				() -> Map.of(), BulkMigrationOperationalReportFailurePolicy.FAIL_JOB,
-				failure -> { });
-	}
-
-	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
-			final Path targetFile,
-			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
-			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
-			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
-			final Consumer<RuntimeException> failureConsumer) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier, () -> Map.of(),
-				failurePolicy,
-				failureConsumer,
-				new BulkMigrationOperationalReportBuilder(),
-				new BulkMigrationOperationalReportIO());
+				BulkMigrationOperationalReportFailurePolicy.FAIL_JOB, failure -> {
+				});
 	}
 
-	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
-			final Path targetFile,
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
+			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
+			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
+			final Consumer<RuntimeException> failureConsumer) {
+		this(plan, targetFile, maintenanceSupplier, progressSupplier, () -> Map.of(), failurePolicy, failureConsumer,
+				new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO());
+	}
+
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
 			final Supplier<Map<String, BulkMigrationProgressSnapshot>> progressSnapshotsSupplier,
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer) {
-		this(plan, targetFile, maintenanceSupplier, progressSupplier,
-				progressSnapshotsSupplier, failurePolicy, failureConsumer,
-				new BulkMigrationOperationalReportBuilder(),
-				new BulkMigrationOperationalReportIO());
+		this(plan, targetFile, maintenanceSupplier, progressSupplier, progressSnapshotsSupplier, failurePolicy,
+				failureConsumer, new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO());
 	}
 
-	BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan,
-			final Path targetFile,
+	BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
 			final Supplier<Map<String, BulkMigrationProgressSnapshot>> progressSnapshotsSupplier,
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
-			final Consumer<RuntimeException> failureConsumer,
-			final BulkMigrationOperationalReportBuilder builder,
+			final Consumer<RuntimeException> failureConsumer, final BulkMigrationOperationalReportBuilder builder,
 			final BulkMigrationOperationalReportIO reportIO) {
 		this.plan = Objects.requireNonNull(plan, "plan");
 		this.targetFile = Objects.requireNonNull(targetFile, "targetFile");
-		this.maintenanceSupplier = maintenanceSupplier == null ? () -> null
-				: maintenanceSupplier;
+		this.maintenanceSupplier = maintenanceSupplier == null ? () -> null : maintenanceSupplier;
 		this.progressSupplier = progressSupplier == null ? () -> null : progressSupplier;
-		this.progressSnapshotsSupplier = progressSnapshotsSupplier == null
-				? () -> Map.of() : progressSnapshotsSupplier;
+		this.progressSnapshotsSupplier = progressSnapshotsSupplier == null ? () -> Map.of() : progressSnapshotsSupplier;
 		this.failurePolicy = Objects.requireNonNull(failurePolicy, "failurePolicy");
-		this.failureConsumer = failureConsumer == null ? failure -> { } : failureConsumer;
+		this.failureConsumer = failureConsumer == null ? failure -> {
+		} : failureConsumer;
 		this.builder = Objects.requireNonNull(builder, "builder");
 		this.reportIO = Objects.requireNonNull(reportIO, "reportIO");
 	}
@@ -109,55 +96,48 @@ public final class BulkMigrationOperationalReportJobListener
 
 	@Override
 	public void onJobCompleted(final BulkMigrationJobResult result) {
-		publishBoundary(execution("JOB_COMPLETED", null,
-				result == null ? null : result.getProcessedRows(), null));
+		publishBoundary(execution("JOB_COMPLETED", null, result == null ? null : result.getProcessedRows(), null));
 	}
 
 	@Override
 	public void onJobFailed(final String planFingerprint, final Throwable cause) {
-		final String taskId = cause instanceof BulkMigrationJobException jobFailure
-				? jobFailure.getFailedTaskId() : null;
+		final String taskId = cause instanceof BulkMigrationJobException jobFailure ? jobFailure.getFailedTaskId()
+				: null;
 		publishBoundary(execution("JOB_FAILED", taskId, null, cause));
 	}
 
 	@Override
 	public void onJobPaused(final String planFingerprint, final String taskId,
 			final ChunkedBulkMigrationProgress progress) {
-		publishBoundary(execution("JOB_PAUSED", taskId,
-				progress == null ? null : progress.getProcessedRowsAfter(), null));
+		publishBoundary(
+				execution("JOB_PAUSED", taskId, progress == null ? null : progress.getProcessedRowsAfter(), null));
 	}
 
 	@Override
-	public void onTaskStarted(final String taskId, final int taskIndex,
-			final int taskCount) {
+	public void onTaskStarted(final String taskId, final int taskIndex, final int taskCount) {
 		publishBoundary(execution("TASK_STARTED", taskId, null, null));
 	}
 
 	@Override
-	public void onTaskCompleted(final String taskId,
-			final ChunkedBulkMigrationResult result, final int taskIndex,
+	public void onTaskCompleted(final String taskId, final ChunkedBulkMigrationResult result, final int taskIndex,
 			final int taskCount) {
 		publishBoundary(execution("TASK_COMPLETED", taskId,
-				result == null ? null : result.getPreviouslyProcessedRows()
-						+ result.getProcessedRows(), null));
+				result == null ? null : result.getPreviouslyProcessedRows() + result.getProcessedRows(), null));
 	}
 
 	@Override
-	public void onTaskFailed(final String taskId, final SQLException cause,
-			final int taskIndex, final int taskCount) {
+	public void onTaskFailed(final String taskId, final SQLException cause, final int taskIndex, final int taskCount) {
 		publishBoundary(execution("TASK_FAILED", taskId, null, cause));
 	}
 
 	@Override
-	public void onTaskPaused(final String taskId,
-			final ChunkedBulkMigrationProgress progress, final int taskIndex,
+	public void onTaskPaused(final String taskId, final ChunkedBulkMigrationProgress progress, final int taskIndex,
 			final int taskCount) {
-		publishBoundary(execution("TASK_PAUSED", taskId,
-				progress == null ? null : progress.getProcessedRowsAfter(), null));
+		publishBoundary(
+				execution("TASK_PAUSED", taskId, progress == null ? null : progress.getProcessedRowsAfter(), null));
 	}
 
-	private synchronized void publishBoundary(
-			final BulkMigrationOperationalReport.Execution execution) {
+	private synchronized void publishBoundary(final BulkMigrationOperationalReport.Execution execution) {
 		latestExecution = execution;
 		try {
 			publish();
@@ -192,8 +172,8 @@ public final class BulkMigrationOperationalReportJobListener
 	public synchronized BulkMigrationOperationalReport publish() {
 		try {
 			final var status = BulkMigrationJobStatusInspector.inspect(plan);
-			final var report = builder.build(plan, status, maintenanceSupplier.get(),
-					progressSupplier.get(), progressSnapshotsSupplier.get(), latestExecution);
+			final var report = builder.build(plan, status, maintenanceSupplier.get(), progressSupplier.get(),
+					progressSnapshotsSupplier.get(), latestExecution);
 			reportIO.write(targetFile, report);
 			return report;
 		} catch (SQLException e) {
@@ -201,11 +181,10 @@ public final class BulkMigrationOperationalReportJobListener
 		}
 	}
 
-	private static BulkMigrationOperationalReport.Execution execution(
-			final String event, final String taskId, final Long processedRows,
-			final Throwable failure) {
-		return new BulkMigrationOperationalReport.Execution(event, taskId, Instant.now(),
-				processedRows, failure == null ? null : failure.getClass().getName(),
+	private static BulkMigrationOperationalReport.Execution execution(final String event, final String taskId,
+			final Long processedRows, final Throwable failure) {
+		return new BulkMigrationOperationalReport.Execution(event, taskId, Instant.now(), processedRows,
+				failure == null ? null : failure.getClass().getName(),
 				failure == null ? null : failureMessage(failure));
 	}
 
@@ -214,8 +193,7 @@ public final class BulkMigrationOperationalReportJobListener
 		if (raw == null) {
 			return null;
 		}
-		return raw.length() <= BulkMigrationOperationalReport.Execution.FAILURE_MESSAGE_MAX_LENGTH
-				? raw : raw.substring(0,
-						BulkMigrationOperationalReport.Execution.FAILURE_MESSAGE_MAX_LENGTH);
+		return raw.length() <= BulkMigrationOperationalReport.Execution.FAILURE_MESSAGE_MAX_LENGTH ? raw
+				: raw.substring(0, BulkMigrationOperationalReport.Execution.FAILURE_MESSAGE_MAX_LENGTH);
 	}
 }

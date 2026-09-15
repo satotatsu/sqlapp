@@ -23,10 +23,10 @@ import org.mvel2.ParserContext;
 
 import com.sqlapp.util.eval.mvel.SqlappParserContextFactory;
 
-public class CustomParserContextFactory extends SqlappParserContextFactory{
+public class CustomParserContextFactory extends SqlappParserContextFactory {
 
 	@Override
-	protected void addImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException{
+	protected void addImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {
 		super.addImports(parserContext);
 		addAllStaticMethodsImport(parserContext, HtmlUtils.class);
 	}

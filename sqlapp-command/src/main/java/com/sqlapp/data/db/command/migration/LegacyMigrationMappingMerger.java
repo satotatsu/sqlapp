@@ -35,10 +35,8 @@ public class LegacyMigrationMappingMerger {
 		Map<String, TableMapping> existingByTarget = indexByTarget(existing.getTables());
 		Map<String, String> resultingIds = new LinkedHashMap<>();
 		for (TableMapping stepTable : step.getTables()) {
-			TableMapping current = stepTable.getRole() == LegacyMigrationMapping.TableRole.DETAIL
-					? null
-					: existingByTarget.get(key(stepTable.getSource().getSchema(),
-							stepTable.getSource().getTable()));
+			TableMapping current = stepTable.getRole() == LegacyMigrationMapping.TableRole.DETAIL ? null
+					: existingByTarget.get(key(stepTable.getSource().getSchema(), stepTable.getSource().getTable()));
 			if (current == null) {
 				existing.getTables().add(stepTable);
 				resultingIds.put(stepTable.getId(), stepTable.getId());
@@ -93,12 +91,11 @@ public class LegacyMigrationMappingMerger {
 				continue;
 			}
 			ColumnMapping next = step.getColumns().stream()
-					.filter(column -> currentColumn.getTarget().equalsIgnoreCase(column.getSource()))
-					.findFirst().orElse(null);
+					.filter(column -> currentColumn.getTarget().equalsIgnoreCase(column.getSource())).findFirst()
+					.orElse(null);
 			if (next == null) {
-				if (step.getOperation() == TableOperation.SPLIT
-						&& step.getColumns().stream().noneMatch(column ->
-								currentColumn.getTarget().equalsIgnoreCase(column.getTarget()))) {
+				if (step.getOperation() == TableOperation.SPLIT && step.getColumns().stream()
+						.noneMatch(column -> currentColumn.getTarget().equalsIgnoreCase(column.getTarget()))) {
 					currentColumn.setTarget(null);
 					currentColumn.setTargetDefinition(null);
 					currentColumn.setAction(LegacyMigrationMapping.ColumnAction.DROP);
@@ -145,10 +142,10 @@ public class LegacyMigrationMappingMerger {
 	private void mergeRelationships(LegacyMigrationMapping existing, LegacyMigrationMapping step,
 			Map<String, String> ids) {
 		for (RelationshipMapping relationship : step.getRelationships()) {
-			relationship.setParentMappingId(ids.getOrDefault(relationship.getParentMappingId(),
-					relationship.getParentMappingId()));
-			relationship.setChildMappingId(ids.getOrDefault(relationship.getChildMappingId(),
-					relationship.getChildMappingId()));
+			relationship.setParentMappingId(
+					ids.getOrDefault(relationship.getParentMappingId(), relationship.getParentMappingId()));
+			relationship.setChildMappingId(
+					ids.getOrDefault(relationship.getChildMappingId(), relationship.getChildMappingId()));
 			RelationshipMapping current = existing.getRelationships().stream()
 					.filter(item -> item.getParentMappingId().equals(relationship.getParentMappingId())
 							&& item.getChildMappingId().equals(relationship.getChildMappingId()))
@@ -165,8 +162,8 @@ public class LegacyMigrationMappingMerger {
 	}
 
 	private void appendTransformations(LegacyMigrationMapping existing, LegacyMigrationMapping step) {
-		int sequence = existing.getTransformations().stream().mapToInt(TransformationRecord::getSequence)
-				.max().orElse(0);
+		int sequence = existing.getTransformations().stream().mapToInt(TransformationRecord::getSequence).max()
+				.orElse(0);
 		for (TransformationRecord record : step.getTransformations()) {
 			record.setSequence(sequence += 10);
 			existing.getTransformations().add(record);

@@ -24,17 +24,14 @@ final class AtomicMigrationFile {
 		final Path absolute = file.toAbsolutePath().normalize();
 		final Path directory = absolute.getParent();
 		Files.createDirectories(directory);
-		Path temporary = Files.createTempFile(directory,
-				absolute.getFileName().toString(), ".tmp");
+		Path temporary = Files.createTempFile(directory, absolute.getFileName().toString(), ".tmp");
 		try {
 			writer.write(temporary);
-			try (FileChannel channel = FileChannel.open(temporary,
-					StandardOpenOption.WRITE)) {
+			try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
 				channel.force(true);
 			}
 			try {
-				Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE,
-						StandardCopyOption.REPLACE_EXISTING);
+				Files.move(temporary, absolute, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 			} catch (AtomicMoveNotSupportedException e) {
 				Files.move(temporary, absolute, StandardCopyOption.REPLACE_EXISTING);
 			}
@@ -50,12 +47,10 @@ final class AtomicMigrationFile {
 		}
 	}
 
-	static void writeProperties(final Path file, final Properties values,
-			final String comment) throws IOException {
+	static void writeProperties(final Path file, final Properties values, final String comment) throws IOException {
 		write(file, temporary -> {
-			try (FileChannel channel = FileChannel.open(temporary,
-					StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-					var output = Channels.newOutputStream(channel)) {
+			try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE,
+					StandardOpenOption.TRUNCATE_EXISTING); var output = Channels.newOutputStream(channel)) {
 				values.store(output, comment);
 				output.flush();
 			}

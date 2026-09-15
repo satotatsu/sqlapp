@@ -287,7 +287,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 			String[] list = csvListReader.read();
 			while (list != null) {
 				String text = CommonUtils.first(list);
-				if (text!=null&&text.startsWith("#")) {
+				if (text != null && text.startsWith("#")) {
 					continue;
 				}
 				StringBuilder builder = new StringBuilder();

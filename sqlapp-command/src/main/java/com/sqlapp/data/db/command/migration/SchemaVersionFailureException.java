@@ -21,7 +21,7 @@ package com.sqlapp.data.db.command.migration;
 
 import com.sqlapp.exceptions.SqlappException;
 
-public class SchemaVersionFailureException extends SqlappException{
+public class SchemaVersionFailureException extends SqlappException {
 
 	/**
 	 * serialVersionUID
@@ -30,9 +30,9 @@ public class SchemaVersionFailureException extends SqlappException{
 
 	private final Long versionNo;
 
-	public SchemaVersionFailureException(Long versionNo){
-		super("versionNo="+versionNo);
-		this.versionNo=versionNo;
+	public SchemaVersionFailureException(Long versionNo) {
+		super("versionNo=" + versionNo);
+		this.versionNo = versionNo;
 	}
 
 	/**
@@ -41,5 +41,5 @@ public class SchemaVersionFailureException extends SqlappException{
 	public Long getVersionNo() {
 		return versionNo;
 	}
-	
+
 }

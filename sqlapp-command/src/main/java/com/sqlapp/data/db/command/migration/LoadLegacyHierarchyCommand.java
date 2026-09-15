@@ -52,10 +52,8 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 			throw new CommandException("Target schema XML file does not exist: " + targetSchemaFile);
 		}
 		String fingerprint = new LegacyMigrationMappingValidator().fingerprint(targetSchemaFile);
-		if (plan.getSchemaFingerprint() != null
-				&& !plan.getSchemaFingerprint().equals(fingerprint)) {
-			throw new CommandException("Target schema fingerprint does not match the load plan: "
-					+ targetSchemaFile);
+		if (plan.getSchemaFingerprint() != null && !plan.getSchemaFingerprint().equals(fingerprint)) {
+			throw new CommandException("Target schema fingerprint does not match the load plan: " + targetSchemaFile);
 		}
 		validateViewpointsFingerprint(plan);
 		DbCommonObject<?> schema = readSchema(targetSchemaFile);
@@ -70,13 +68,11 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 	private void validateContract(LegacyMigrationLoadPlan plan) {
 		File contractFile = resolveReferencedFile(plan.getContractFile());
 		if (!contractFile.isFile()) {
-			throw new CommandException("Migration contract in load plan does not exist: "
-					+ contractFile);
+			throw new CommandException("Migration contract in load plan does not exist: " + contractFile);
 		}
 		String fingerprint = new LegacyMigrationMappingValidator().fingerprint(contractFile);
 		if (!fingerprint.equalsIgnoreCase(plan.getContractFingerprint())) {
-			throw new CommandException("Migration contract fingerprint does not match the load plan: "
-					+ contractFile);
+			throw new CommandException("Migration contract fingerprint does not match the load plan: " + contractFile);
 		}
 		LegacyMigrationContract contract = new LegacyMigrationContractIO().read(contractFile);
 		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
@@ -86,26 +82,24 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		Map<String, LegacyMigrationContract.DataSet> contractDataSets = new LinkedHashMap<>();
 		contract.getDataSets().forEach(dataSet -> contractDataSets.put(dataSet.getId(), dataSet));
 		var contractIds = new LinkedHashSet<>(contractDataSets.keySet());
-		List<String> orderedPlanIds = plan.getDataSets().stream()
-				.map(LegacyMigrationLoadPlan.LoadDataSet::getId).toList();
+		List<String> orderedPlanIds = plan.getDataSets().stream().map(LegacyMigrationLoadPlan.LoadDataSet::getId)
+				.toList();
 		var planIds = new LinkedHashSet<>(orderedPlanIds);
 		var unexpected = new LinkedHashSet<>(planIds);
 		unexpected.removeAll(contractIds);
 		if (!unexpected.isEmpty()) {
-			throw new CommandException("Load plan data sets disagree with its contract: unexpected="
-					+ unexpected);
+			throw new CommandException("Load plan data sets disagree with its contract: unexpected=" + unexpected);
 		}
 		if (!hasText(plan.getViewpointId()) && !contractIds.equals(planIds)) {
 			var missing = new LinkedHashSet<>(contractIds);
 			missing.removeAll(planIds);
-			throw new CommandException("Load plan data sets disagree with its contract: missing="
-					+ missing + ", unexpected=[]");
+			throw new CommandException(
+					"Load plan data sets disagree with its contract: missing=" + missing + ", unexpected=[]");
 		}
 		for (LegacyMigrationLoadPlan.LoadDataSet dataSet : plan.getDataSets()) {
 			LegacyMigrationContract.DataSet source = contractDataSets.get(dataSet.getId());
 			if (source == null) {
-				throw new CommandException("Load plan data set is absent from its contract: "
-						+ dataSet.getId());
+				throw new CommandException("Load plan data set is absent from its contract: " + dataSet.getId());
 			}
 			validateDataSet(source, dataSet, plan.getStagingTablePrefix());
 		}
@@ -115,11 +109,10 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		return value != null && !value.isBlank();
 	}
 
-	private void validateDataSet(LegacyMigrationContract.DataSet source,
-			LegacyMigrationLoadPlan.LoadDataSet target, String stagingTablePrefix) {
+	private void validateDataSet(LegacyMigrationContract.DataSet source, LegacyMigrationLoadPlan.LoadDataSet target,
+			String stagingTablePrefix) {
 		if (!Objects.equals(source.getFileName(), target.getFileName())
-				|| !Objects.equals(expectedStagingTable(source, stagingTablePrefix),
-						target.getStagingTable())
+				|| !Objects.equals(expectedStagingTable(source, stagingTablePrefix), target.getStagingTable())
 				|| !Objects.equals(source.getTargetCatalog(), target.getTargetCatalog())
 				|| !Objects.equals(source.getTargetSchema(), target.getTargetSchema())
 				|| !Objects.equals(source.getTargetTable(), target.getTargetTable())
@@ -128,18 +121,17 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 				|| source.getLoadOrder() != target.getLoadOrder()
 				|| !Objects.equals(source.getSourceBusinessKey(), target.getSourceBusinessKey())
 				|| !Objects.equals(source.getTargetPrimaryKey(), target.getTargetPrimaryKey())
-				|| !Objects.equals(source.getAncestorKeys().isEmpty() ? List.of()
-						: source.getAncestorKeys().getFirst().getTargetForeignKey(),
+				|| !Objects.equals(
+						source.getAncestorKeys().isEmpty() ? List.of()
+								: source.getAncestorKeys().getFirst().getTargetForeignKey(),
 						target.getTargetForeignKey())) {
-			throw new CommandException("Load plan data set disagrees with its contract: "
-					+ target.getId());
+			throw new CommandException("Load plan data set disagrees with its contract: " + target.getId());
 		}
 		validateJoinKeys(source, target);
 		List<LegacyMigrationContract.Field> fields = source.getFields().stream()
 				.filter(field -> field.isExtracted() || field.isGenerated()).toList();
 		if (fields.size() != target.getFields().size()) {
-			throw new CommandException("Load plan field count disagrees with its contract: "
-					+ target.getId());
+			throw new CommandException("Load plan field count disagrees with its contract: " + target.getId());
 		}
 		int csvPosition = 1;
 		for (int i = 0; i < fields.size(); i++) {
@@ -147,24 +139,22 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 			LegacyMigrationLoadPlan.LoadField planField = target.getFields().get(i);
 			int expectedCsvPosition = contractField.isExtracted() ? csvPosition++ : 0;
 			if (expectedCsvPosition != planField.getCsvPosition()
-					|| !Objects.equals(contractField.getStagingColumn(),
-							planField.getStagingColumn())
+					|| !Objects.equals(contractField.getStagingColumn(), planField.getStagingColumn())
 					|| !Objects.equals(contractField.getTargetColumn(), planField.getTargetColumn())
 					|| !Objects.equals(contractField.getTargetDataType(), planField.getDataType())
 					|| !Objects.equals(contractField.getLength(), planField.getLength())
 					|| !Objects.equals(contractField.getScale(), planField.getScale())
 					|| contractField.isExtracted() != planField.isExtracted()
-					|| (contractField.isGenerated() && !contractField.isOccurrenceIndex())
-							!= planField.isTargetGenerated()
+					|| (contractField.isGenerated() && !contractField.isOccurrenceIndex()) != planField
+							.isTargetGenerated()
 					|| !Objects.equals(contractField.getAction(), planField.getAction())) {
-				throw new CommandException("Load plan field disagrees with its contract: "
-						+ target.getId() + "[" + i + "]");
+				throw new CommandException(
+						"Load plan field disagrees with its contract: " + target.getId() + "[" + i + "]");
 			}
 		}
 	}
 
-	private String expectedStagingTable(LegacyMigrationContract.DataSet source,
-			String stagingTablePrefix) {
+	private String expectedStagingTable(LegacyMigrationContract.DataSet source, String stagingTablePrefix) {
 		if (stagingTablePrefix != null) {
 			return stagingTablePrefix + source.getTargetTable();
 		}
@@ -174,22 +164,19 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		return "TMP_" + source.getTargetTable();
 	}
 
-	private void validateJoinKeys(LegacyMigrationContract.DataSet source,
-			LegacyMigrationLoadPlan.LoadDataSet target) {
-		var expected = source.getAncestorKeys().isEmpty() ? List
-				.<LegacyMigrationContract.KeyColumn>of()
+	private void validateJoinKeys(LegacyMigrationContract.DataSet source, LegacyMigrationLoadPlan.LoadDataSet target) {
+		var expected = source.getAncestorKeys().isEmpty() ? List.<LegacyMigrationContract.KeyColumn>of()
 				: source.getAncestorKeys().getFirst().getColumns();
 		if (expected.size() != target.getParentJoinKeys().size()) {
-			throw new CommandException("Load plan parent join keys disagree with its contract: "
-					+ target.getId());
+			throw new CommandException("Load plan parent join keys disagree with its contract: " + target.getId());
 		}
 		for (int i = 0; i < expected.size(); i++) {
 			var contractKey = expected.get(i);
 			var planKey = target.getParentJoinKeys().get(i);
 			if (!Objects.equals(contractKey.getAncestorColumn(), planKey.getParentStagingColumn())
 					|| !Objects.equals(contractKey.getSourceColumn(), planKey.getChildStagingColumn())) {
-				throw new CommandException("Load plan parent join key disagrees with its contract: "
-						+ target.getId() + "[" + i + "]");
+				throw new CommandException(
+						"Load plan parent join key disagrees with its contract: " + target.getId() + "[" + i + "]");
 			}
 		}
 	}
@@ -203,8 +190,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		return new File(parent, value);
 	}
 
-	private void validateViewpointsFingerprint(
-			com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan plan) {
+	private void validateViewpointsFingerprint(com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan plan) {
 		boolean hasFile = hasText(plan.getViewpointsFile());
 		boolean hasFingerprint = hasText(plan.getViewpointsFingerprint());
 		if (!hasFile && !hasFingerprint) {
@@ -224,21 +210,18 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		}
 	}
 
-	private void validateViewpointResolution(LegacyMigrationLoadPlan plan,
-			DbCommonObject<?> schema) {
+	private void validateViewpointResolution(LegacyMigrationLoadPlan plan, DbCommonObject<?> schema) {
 		if (!hasText(plan.getViewpointId())) {
 			return;
 		}
 		File viewpointsFile = resolveReferencedFile(plan.getViewpointsFile());
-		var resolution = new SchemaViewpointCommandSupport().resolve(toCatalog(schema),
-				viewpointsFile, plan.getViewpointId());
+		var resolution = new SchemaViewpointCommandSupport().resolve(toCatalog(schema), viewpointsFile,
+				plan.getViewpointId());
 		var resolver = new SchemaViewpointResolver();
-		List<String> resolvedTableIds = resolution.tables().stream()
-				.map(resolver::qualifiedName).toList();
+		List<String> resolvedTableIds = resolution.tables().stream().map(resolver::qualifiedName).toList();
 		if (!Objects.equals(plan.getResolvedTableIds(), resolvedTableIds)) {
 			throw new CommandException(
-					"Viewpoint resolvedTableIds disagree with current schema selection: "
-							+ plan.getViewpointId());
+					"Viewpoint resolvedTableIds disagree with current schema selection: " + plan.getViewpointId());
 		}
 		Map<String, LegacyMigrationLoadPlan.LoadDataSet> byId = new LinkedHashMap<>();
 		plan.getDataSets().forEach(dataSet -> byId.put(dataSet.getId(), dataSet));
@@ -250,8 +233,8 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 							&& equalsName(dataSet.getTargetTable(), table.getName()))
 					.toList();
 			if (matches.isEmpty()) {
-				throw new CommandException("Viewpoint table has no selected migration data set: "
-						+ resolver.qualifiedName(table));
+				throw new CommandException(
+						"Viewpoint table has no selected migration data set: " + resolver.qualifiedName(table));
 			}
 			matches.forEach(dataSet -> selectedIds.add(dataSet.getId()));
 		}
@@ -267,8 +250,7 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		var planIds = new LinkedHashSet<>(plan.getResolvedDataSetIds());
 		if (!selectedIds.equals(planIds)) {
 			throw new CommandException(
-					"Viewpoint data set selection disagrees with current schema selection: "
-							+ plan.getViewpointId());
+					"Viewpoint data set selection disagrees with current schema selection: " + plan.getViewpointId());
 		}
 	}
 

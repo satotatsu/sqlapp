@@ -23,12 +23,12 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.FontUtils;
 import com.sqlapp.util.OutputTextBuilder;
 
-public class AvailableFontsCommand extends AbstractCommand{
+public class AvailableFontsCommand extends AbstractCommand {
 
 	@Override
 	protected void doRun() {
-		Table table=FontUtils.getFontsAsTable();
-		OutputTextBuilder builder=new OutputTextBuilder();
+		Table table = FontUtils.getFontsAsTable();
+		OutputTextBuilder builder = new OutputTextBuilder();
 		builder.append(table);
 		System.out.println(builder.toString());
 	}
