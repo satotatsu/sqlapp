@@ -51,7 +51,8 @@ public final class BulkMigrationJobVerifier {
 			throw new IllegalArgumentException(
 					"Verification task dependency order differs from migration plan");
 		}
-		return new BulkMigrationJobVerificationResult(plan.getFingerprint(), result.getTasks());
+		return new BulkMigrationJobVerificationResult(plan.getFingerprint(), result.getTasks())
+				.validateAgainst(plan);
 	}
 
 	public static BulkMigrationJobVerificationResult verify(

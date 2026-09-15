@@ -764,6 +764,9 @@ class BulkMigrationJobVerifierTest {
 				.chunkSize(1).build();
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkMigrationJobVerifier.verify(plan, List.of(parent, wrongTable)));
+		expectedParent.getColumns().get("TXT").setDefaultValue("changed");
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobVerifier.verify(plan, List.of(child, parent)));
 	}
 
 	private static Table table(final String name, final String text) {

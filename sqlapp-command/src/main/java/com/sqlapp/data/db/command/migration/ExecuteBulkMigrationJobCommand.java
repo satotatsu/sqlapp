@@ -227,6 +227,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
 			final Connection targetConnection, final int chunkSize,
 			final Map<String, List<String>> columnsByTask) throws SQLException {
+		java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
 		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 		for (final BulkMigrationJobTask task : plan.getTasks()) {
 			if (!(task.getKeysetSource() instanceof JdbcBulkMigrationKeysetSource source)) {
@@ -243,7 +244,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					verification.getColumns(), verification));
 		}
 		return new BulkMigrationJobVerificationResult(plan.getFingerprint(),
-				List.copyOf(results));
+				List.copyOf(results)).validateAgainst(plan);
 	}
 
 	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {
