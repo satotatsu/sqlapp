@@ -46,28 +46,10 @@ public final class BulkMigrationOperationalReportBuilder {
 			final BulkMigrationProgressSnapshot progress,
 			final Map<String, BulkMigrationProgressSnapshot> progressByMigration,
 			final BulkMigrationOperationalReport.Execution execution) {
-		Objects.requireNonNull(plan, "plan").validateUnchanged();
-		Objects.requireNonNull(status, "status");
-		if (!plan.getFingerprint().equals(status.getPlanFingerprint())) {
-			throw new IllegalArgumentException("Status fingerprint does not match the migration plan");
-		}
+		Objects.requireNonNull(status, "status").validateAgainst(plan);
 		if (maintenance != null && !plan.getJobId().equals(maintenance.jobId())) {
 			throw new IllegalArgumentException(
 					"Maintenance jobId does not match the migration plan");
-		}
-		if (!plan.getTaskIds().equals(status.getTasks().stream()
-				.map(task -> task.getTaskId()).toList())) {
-			throw new IllegalArgumentException(
-					"Status tasks do not match the migration plan execution order");
-		}
-		for (int i = 0; i < plan.getTasks().size(); i++) {
-			final var checkpoint = status.getTasks().get(i).getCheckpoint();
-			if (checkpoint != null && !plan.getTasks().get(i).getOptions().getMigrationId()
-					.equals(checkpoint.getMigrationId())) {
-				throw new IllegalArgumentException(
-						"Checkpoint migrationId does not match planned task: "
-								+ plan.getTaskIds().get(i));
-			}
 		}
 		if (progress != null && plan.getTasks().stream().noneMatch(task ->
 				task.getOptions().getMigrationId().equals(progress.migrationId()))) {

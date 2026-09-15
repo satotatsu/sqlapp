@@ -48,6 +48,20 @@ public class BulkMigrationJobResult {
 		return rows;
 	}
 
+	public BulkMigrationJobResult validateAgainst(final BulkMigrationJobPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Migration result plan differs from the current plan");
+		}
+		if (!tasks.stream().map(BulkMigrationJobTaskResult::getTaskId).toList()
+				.equals(plan.getTaskIds())) {
+			throw new IllegalArgumentException(
+					"Migration result tasks do not match the plan and dependency order");
+		}
+		return this;
+	}
+
 	public long getAlreadyCompleteTasks() {
 		return tasks.stream().map(BulkMigrationJobTaskResult::getMigrationResult)
 				.filter(ChunkedBulkMigrationResult::isAlreadyComplete).count();

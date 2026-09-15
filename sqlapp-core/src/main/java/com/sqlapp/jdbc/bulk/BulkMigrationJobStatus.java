@@ -42,6 +42,28 @@ public class BulkMigrationJobStatus {
 		return rows;
 	}
 
+	public BulkMigrationJobStatus validateAgainst(final BulkMigrationJobPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException("Status fingerprint does not match the migration plan");
+		}
+		if (!tasks.stream().map(BulkMigrationJobTaskStatus::getTaskId).toList()
+				.equals(plan.getTaskIds())) {
+			throw new IllegalArgumentException(
+					"Status tasks do not match the migration plan execution order");
+		}
+		for (int i = 0; i < tasks.size(); i++) {
+			final BulkMigrationCheckpoint checkpoint = tasks.get(i).getCheckpoint();
+			if (checkpoint != null && !plan.getTasks().get(i).getOptions().getMigrationId()
+					.equals(checkpoint.getMigrationId())) {
+				throw new IllegalArgumentException(
+						"Checkpoint migrationId does not match planned task: "
+								+ plan.getTaskIds().get(i));
+			}
+		}
+		return this;
+	}
+
 	public long getCompletedTasks() {
 		return tasks.stream().filter(task -> task.getState() == BulkMigrationJobTaskState.COMPLETE)
 				.count();

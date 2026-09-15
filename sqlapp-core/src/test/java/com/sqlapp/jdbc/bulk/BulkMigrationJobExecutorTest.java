@@ -54,6 +54,24 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void completedMigrationResultValidatesAgainstItsPlan() {
+		final var planTask = tableTask("task", "task-copy", table("ITEMS"));
+		final var plan = BulkMigrationJobPlanner.plan(List.of(planTask));
+		final var taskResult = new BulkMigrationJobTaskResult("task",
+				new ChunkedBulkMigrationResult(0, 1, 1, false));
+		final var result = new BulkMigrationJobResult(plan.getFingerprint(),
+				List.of(taskResult));
+
+		assertEquals(result, result.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobResult("other", List.of(taskResult))
+						.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobResult(plan.getFingerprint(), List.of())
+						.validateAgainst(plan));
+	}
+
+	@Test
 	void jobFailureAndPauseRequireCompleteContext() {
 		final var completed = new BulkMigrationJobResult("plan", List.of());
 		final var cause = new SQLException("failed");

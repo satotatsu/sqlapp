@@ -85,6 +85,7 @@ class BulkMigrationJobStatusInspectorTest {
 
 		final var status = BulkMigrationJobStatusInspector.inspect(plan);
 
+		assertEquals(status, status.validateAgainst(plan));
 		assertEquals(List.of(BulkMigrationJobTaskState.COMPLETE,
 				BulkMigrationJobTaskState.INCOMPATIBLE, BulkMigrationJobTaskState.NOT_STARTED,
 				BulkMigrationJobTaskState.IN_PROGRESS), status.getTasks().stream()
