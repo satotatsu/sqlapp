@@ -43,6 +43,21 @@ public class BulkMigrationJobVerificationResult {
 				.allMatch(BulkMigrationVerificationResult::isMatch);
 	}
 
+	public BulkMigrationJobVerificationResult validateAgainst(
+			final BulkMigrationJobPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Verification result migration plan differs from the current plan");
+		}
+		if (!tasks.stream().map(BulkMigrationJobTaskVerificationResult::getTaskId)
+				.toList().equals(plan.getTaskIds())) {
+			throw new IllegalArgumentException(
+					"Verification tasks do not match the migration plan and dependency order");
+		}
+		return this;
+	}
+
 	public long getMismatchedTasks() {
 		return tasks.stream().map(BulkMigrationJobTaskVerificationResult::getVerificationResult)
 				.filter(result -> !result.isMatch()).count();

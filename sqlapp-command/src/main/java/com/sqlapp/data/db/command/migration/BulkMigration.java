@@ -618,6 +618,18 @@ public final class BulkMigration {
 		public Execution {
 			Objects.requireNonNull(migration, "migration");
 			Objects.requireNonNull(verification, "verification");
+			if (migration.getPlanFingerprint() == null
+					|| !migration.getPlanFingerprint().equals(verification.getPlanFingerprint())) {
+				throw new IllegalArgumentException(
+						"Migration and verification results must identify the same plan");
+			}
+			if (!migration.getTasks().stream().map(
+					com.sqlapp.jdbc.bulk.BulkMigrationJobTaskResult::getTaskId).toList()
+					.equals(verification.getTasks().stream().map(
+							BulkMigrationJobTaskVerificationResult::getTaskId).toList())) {
+				throw new IllegalArgumentException(
+						"Migration and verification result tasks must match in dependency order");
+			}
 		}
 
 		public boolean isMatch() {
@@ -689,20 +701,7 @@ public final class BulkMigration {
 			final Connection targetConnection,
 			final BulkMigrationJobVerificationResult verification) throws SQLException {
 		final BulkMigrationJobPlan currentPlan = plan(sourceConnection, targetConnection, true);
-		if (verification.getPlanFingerprint() == null) {
-			throw new IllegalArgumentException(
-					"Verification result does not identify its migration plan");
-		}
-		if (!verification.getPlanFingerprint().equals(currentPlan.getFingerprint())) {
-			throw new IllegalArgumentException(
-					"Verification result migration plan differs from the current plan");
-		}
-		if (!verification.getTasks().stream().map(
-				BulkMigrationJobTaskVerificationResult::getTaskId).toList()
-				.equals(orderedTables().stream().map(BulkMigration::taskId).toList())) {
-			throw new IllegalArgumentException(
-					"Verification tasks do not match the migration tables and dependency order");
-		}
+		verification.validateAgainst(currentPlan);
 		final List<BulkMigrationJobRepairTask> tasks = new ArrayList<>();
 		for (int i = 0; i < verification.getTasks().size(); i++) {
 			final Table table = orderedTables().get(i);

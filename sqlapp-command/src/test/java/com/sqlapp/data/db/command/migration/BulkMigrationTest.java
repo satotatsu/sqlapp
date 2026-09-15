@@ -29,6 +29,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
@@ -37,6 +38,15 @@ import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 class BulkMigrationTest {
 	@TempDir
 	Path directory;
+
+	@Test
+	void combinedExecutionRequiresResultsFromTheSamePlan() {
+		final var verification = new BulkMigrationJobVerificationResult("plan-b", List.of());
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigration.Execution(
+				new BulkMigrationJobResult("plan-a", List.of()), verification));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigration.Execution(
+				new BulkMigrationJobResult(List.of()), verification));
+	}
 
 	@Test
 	void verifiesAndPlansRepairThroughTheSimpleFacade() throws Exception {

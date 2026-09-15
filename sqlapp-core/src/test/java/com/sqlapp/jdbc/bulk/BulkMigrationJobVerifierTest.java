@@ -698,6 +698,13 @@ class BulkMigrationJobVerifierTest {
 		assertEquals(plan.getFingerprint(), result.getPlanFingerprint());
 		assertEquals(plan.getTaskIds(), result.getTasks().stream()
 				.map(BulkMigrationJobTaskVerificationResult::getTaskId).toList());
+		assertSame(result, result.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobVerificationResult("other-plan", result.getTasks())
+						.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobVerificationResult(plan.getFingerprint(),
+						List.of(result.getTasks().get(0))).validateAgainst(plan));
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkMigrationJobVerifier.verify(plan, List.of(parent)));
 		final var wrongTable = BulkMigrationJobVerificationTask.builder().taskId("child")
