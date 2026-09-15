@@ -22,6 +22,7 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.dialect.test.FailingTransactionalCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationKeysetAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
@@ -279,6 +280,8 @@ class SqlServerBulkUpsertTest {
 			}
 			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName())
 					.load(migrationId).orElseThrow().getProcessedRows());
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointPauseAndResume(connection, table,
+					"CODE", "NAME", "SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET", 3);
 		}
 	}
 
