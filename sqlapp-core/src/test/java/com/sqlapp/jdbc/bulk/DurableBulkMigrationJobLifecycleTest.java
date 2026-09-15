@@ -30,20 +30,30 @@ class DurableBulkMigrationJobLifecycleTest {
 		final var foreign = new BulkMigrationMaintenanceState("other", "plan",
 				BulkMigrationMaintenanceStatus.RESTORED, NOW, null);
 
-		assertFalse(new BulkMigrationMaintenanceRecoveryResult(null, null, false)
+		assertFalse(new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+				null, null, false)
 				.recovered());
-		assertTrue(new BulkMigrationMaintenanceRecoveryResult(prepared, restored, true)
+		assertTrue(new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+				prepared, restored, true)
 				.recovered());
-		assertFalse(new BulkMigrationMaintenanceRecoveryResult(complete, complete, false)
+		assertFalse(new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+				complete, complete, false)
 				.recovered());
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationMaintenanceRecoveryResult(prepared, null, false));
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+						prepared, null, false));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationMaintenanceRecoveryResult(prepared, foreign, true));
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+						prepared, foreign, true));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationMaintenanceRecoveryResult(complete, restored, true));
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+						complete, restored, true));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationMaintenanceRecoveryResult(prepared, prepared, false));
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan",
+						prepared, prepared, false));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult("other", "plan",
+						prepared, restored, true));
 	}
 
 	private static final Instant NOW = Instant.parse("2026-08-31T00:00:00Z");
@@ -310,6 +320,29 @@ class DurableBulkMigrationJobLifecycleTest {
 		assertFalse(noOp.recovered());
 		assertEquals(BulkMigrationMaintenanceStatus.RESTORED,
 				noOp.currentState().status());
+		assertEquals(plan.getJobId(), noOp.jobId());
+		assertEquals(plan.getFingerprint(), noOp.planFingerprint());
+		assertEquals(noOp, noOp.validateAgainst(plan));
+
+		final var otherPlan = BulkMigrationJobPlanner.plan("other-job", List.of(),
+				lifecycle);
+		assertThrows(IllegalArgumentException.class,
+				() -> noOp.validateAgainst(otherPlan));
+	}
+
+	@Test
+	void emptyRecoveryResultStillIdentifiesItsValidatedPlan() throws Exception {
+		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP,
+				new RecordingStore());
+		final var plan = BulkMigrationJobPlanner.plan("empty-job", List.of(), lifecycle);
+
+		final var result = lifecycle.recoverInterrupted(connection(), plan,
+				plan.getFingerprint());
+
+		assertFalse(result.recovered());
+		assertEquals("empty-job", result.jobId());
+		assertEquals(plan.getFingerprint(), result.planFingerprint());
+		assertEquals(result, result.validateAgainst(plan));
 	}
 
 	private static DurableBulkMigrationJobLifecycle lifecycle(

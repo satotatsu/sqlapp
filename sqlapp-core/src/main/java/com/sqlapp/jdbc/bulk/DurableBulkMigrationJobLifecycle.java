@@ -74,7 +74,7 @@ public final class DurableBulkMigrationJobLifecycle
 		final Optional<BulkMigrationMaintenanceState> optional =
 				store.load(plan.getJobId());
 		if (optional.isEmpty()) {
-			return new BulkMigrationMaintenanceRecoveryResult(null, null, false);
+			return recoveryResult(plan, null, null, false);
 		}
 		final BulkMigrationMaintenanceState previous = optional.get();
 		if (!plan.getFingerprint().equals(previous.planFingerprint())) {
@@ -83,7 +83,7 @@ public final class DurableBulkMigrationJobLifecycle
 		}
 		if (previous.status() == BulkMigrationMaintenanceStatus.COMPLETE
 				|| previous.status() == BulkMigrationMaintenanceStatus.RESTORED) {
-			return new BulkMigrationMaintenanceRecoveryResult(previous, previous, false);
+			return recoveryResult(plan, previous, previous, false);
 		}
 		final IllegalStateException interrupted = new IllegalStateException(
 				"Recovering interrupted migration maintenance from " + previous.status());
@@ -91,7 +91,17 @@ public final class DurableBulkMigrationJobLifecycle
 		final BulkMigrationMaintenanceState current = store.load(plan.getJobId())
 				.orElseThrow(() -> new SQLException(
 						"Recovered maintenance state was not persisted"));
-		return new BulkMigrationMaintenanceRecoveryResult(previous, current, true);
+		return recoveryResult(plan, previous, current, true);
+	}
+
+	private BulkMigrationMaintenanceRecoveryResult recoveryResult(
+			final BulkMigrationJobPlan plan,
+			final BulkMigrationMaintenanceState previous,
+			final BulkMigrationMaintenanceState current,
+			final boolean recovered) {
+		return new BulkMigrationMaintenanceRecoveryResult(plan.getJobId(),
+				plan.getFingerprint(), previous, current, recovered)
+				.validateAgainst(plan);
 	}
 
 	@Override
