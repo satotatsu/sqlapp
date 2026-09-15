@@ -38,7 +38,8 @@ public final class BulkMigrationJobStatusInspector {
 			}
 			statuses.add(new BulkMigrationJobTaskStatus(task.getTaskId(), state, checkpoint));
 		}
-		return new BulkMigrationJobStatus(plan.getFingerprint(), List.copyOf(statuses));
+		return new BulkMigrationJobStatus(plan.getFingerprint(), List.copyOf(statuses))
+				.validateAgainst(plan);
 	}
 
 	private static boolean compatible(final BulkMigrationJobTask task,

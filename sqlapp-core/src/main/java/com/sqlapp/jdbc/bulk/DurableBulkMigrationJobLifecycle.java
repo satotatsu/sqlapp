@@ -78,7 +78,7 @@ public final class DurableBulkMigrationJobLifecycle
 			return recoveryResult(plan, null, null, false);
 		}
 		final BulkMigrationMaintenanceState previous = optional.get();
-		if (!plan.getFingerprint().equals(previous.planFingerprint())) {
+		if (!previous.isFor(plan)) {
 			throw new IllegalStateException(
 					"Stored maintenance state belongs to a different plan fingerprint");
 		}
@@ -92,6 +92,7 @@ public final class DurableBulkMigrationJobLifecycle
 		final BulkMigrationMaintenanceState current = store.load(plan.getJobId())
 				.orElseThrow(() -> new SQLException(
 						"Recovered maintenance state was not persisted"));
+		current.validateAgainst(plan);
 		return recoveryResult(plan, previous, current, true);
 	}
 

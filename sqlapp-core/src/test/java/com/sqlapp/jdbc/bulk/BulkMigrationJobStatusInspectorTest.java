@@ -157,6 +157,33 @@ class BulkMigrationJobStatusInspectorTest {
 				() -> BulkMigrationJobStatusInspector.inspect(plan));
 	}
 
+	@Test
+	void rejectsPlanMutationWhileReadingCheckpointStatus() {
+		final Table table = table("MUTATING");
+		final BulkMigrationCheckpointStore store = new BulkMigrationCheckpointStore() {
+			@Override
+			public Optional<BulkMigrationCheckpoint> load(String migrationId) {
+				table.getColumns().get("ID").setDefaultValue("1");
+				return Optional.empty();
+			}
+
+			@Override
+			public void save(BulkMigrationCheckpoint checkpoint) {
+			}
+
+			@Override
+			public void delete(String migrationId) {
+			}
+		};
+		final var task = BulkMigrationJobTask.builder().taskId("mutating")
+				.sourceTable(table).options(options("mutating"))
+				.checkpointStore(store).build();
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobStatusInspector.inspect(plan));
+	}
+
 	private static BulkMigrationJobTask task(final String id,
 			final BulkMigrationCheckpointStore store) {
 		return BulkMigrationJobTask.builder().taskId(id).sourceTable(table(id))

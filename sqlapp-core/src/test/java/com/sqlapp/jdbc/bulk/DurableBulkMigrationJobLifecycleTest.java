@@ -72,6 +72,21 @@ class DurableBulkMigrationJobLifecycleTest {
 	}
 
 	@Test
+	void maintenanceStateCanBeComparedOrStrictlyBoundToAPlan() {
+		final var plan = BulkMigrationJobPlanner.plan("job", List.of());
+		final var matching = new BulkMigrationMaintenanceState("job",
+				plan.getFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE, NOW, null);
+		final var previous = new BulkMigrationMaintenanceState("job", "previous",
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null);
+
+		assertTrue(matching.isFor(plan));
+		assertEquals(matching, matching.validateAgainst(plan));
+		assertFalse(previous.isFor(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> previous.validateAgainst(plan));
+	}
+
+	@Test
 	void classifiesOnlyInterruptedMaintenanceAsRequiringRecovery() {
 		assertTrue(BulkMigrationMaintenanceStatus.PREPARING.requiresRecovery());
 		assertTrue(BulkMigrationMaintenanceStatus.PREPARED.requiresRecovery());

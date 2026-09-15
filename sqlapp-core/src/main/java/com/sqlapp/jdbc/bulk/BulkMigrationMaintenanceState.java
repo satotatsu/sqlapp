@@ -45,4 +45,19 @@ public record BulkMigrationMaintenanceState(String jobId, String planFingerprint
 					+ FAILURE_MESSAGE_MAX_LENGTH + " characters");
 		}
 	}
+
+	public boolean isFor(final BulkMigrationJobPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		return plan.getJobId().equals(jobId)
+				&& plan.getFingerprint().equals(planFingerprint);
+	}
+
+	public BulkMigrationMaintenanceState validateAgainst(
+			final BulkMigrationJobPlan plan) {
+		if (!isFor(plan)) {
+			throw new IllegalArgumentException(
+					"Maintenance state does not match the migration plan");
+		}
+		return this;
+	}
 }
