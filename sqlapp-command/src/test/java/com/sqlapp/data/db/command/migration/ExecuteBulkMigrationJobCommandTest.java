@@ -10,6 +10,8 @@ import java.io.File;
 import java.sql.SQLException;
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -335,6 +337,48 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 								.resolve(configurationFile, connection));
 			}
 		}
+	}
+
+	@Test
+	void configurationResultsOwnAndValidateResolvedValues() {
+		final List<String> columns = new ArrayList<>(List.of("ID"));
+		final Map<String, List<String>> columnsByTask = new LinkedHashMap<>();
+		columnsByTask.put("items", columns);
+		final Path relativeReport = Path.of("build", "verification.json");
+		final var verification = new BulkMigrationJobConfigurationResolver.VerificationConfiguration(
+				10, true, relativeReport, columnsByTask,
+				BulkMigrationVerificationIsolation.REPEATABLE_READ, 25);
+
+		columns.clear();
+		columnsByTask.clear();
+		assertEquals(List.of("ID"), verification.columnsByTask().get("items"));
+		assertEquals(relativeReport.toAbsolutePath().normalize(), verification.targetFile());
+		assertThrows(UnsupportedOperationException.class,
+				() -> verification.columnsByTask().clear());
+		assertThrows(UnsupportedOperationException.class,
+				() -> verification.columnsByTask().get("items").clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> verification(0, 1, Map.of("items", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class,
+				() -> verification(1, 0, Map.of("items", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class,
+				() -> verification(1, 1, Map.of(" ", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class,
+				() -> verification(1, 1, Map.of("items", List.of("ID", "ID"))));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(
+						null, BulkMigrationOperationalReportFailurePolicy.FAIL_JOB));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(
+						relativeReport, null));
+	}
+
+	private static BulkMigrationJobConfigurationResolver.VerificationConfiguration verification(
+			final int chunkSize, final int maxReportedMismatches,
+			final Map<String, List<String>> columnsByTask) {
+		return new BulkMigrationJobConfigurationResolver.VerificationConfiguration(chunkSize,
+				true, null, columnsByTask, BulkMigrationVerificationIsolation.DEFAULT,
+				maxReportedMismatches);
 	}
 
 	@Test

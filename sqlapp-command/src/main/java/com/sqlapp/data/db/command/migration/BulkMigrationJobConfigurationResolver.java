@@ -36,15 +36,44 @@ public class BulkMigrationJobConfigurationResolver {
 			BulkMigrationJobLeaseConfiguration leaseConfiguration,
 			OperationalReportConfiguration reportConfiguration,
 			VerificationConfiguration verificationConfiguration) {
+		public Resolution {
+			java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
+		}
 	}
 
 	public record OperationalReportConfiguration(java.nio.file.Path targetFile,
 			BulkMigrationOperationalReportFailurePolicy failurePolicy) {
+		public OperationalReportConfiguration {
+			targetFile = java.util.Objects.requireNonNull(targetFile, "targetFile")
+					.toAbsolutePath().normalize();
+			java.util.Objects.requireNonNull(failurePolicy, "failurePolicy");
+		}
 	}
 
 	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch,
 			java.nio.file.Path targetFile, Map<String, List<String>> columnsByTask,
 			BulkMigrationVerificationIsolation isolation, int maxReportedMismatches) {
+		public VerificationConfiguration {
+			if (chunkSize <= 0 || maxReportedMismatches <= 0) {
+				throw new IllegalArgumentException(
+						"verification sizes must be greater than zero");
+			}
+			java.util.Objects.requireNonNull(isolation, "isolation");
+			targetFile = targetFile == null ? null : targetFile.toAbsolutePath().normalize();
+			java.util.Objects.requireNonNull(columnsByTask, "columnsByTask");
+			final Map<String, List<String>> copy = new LinkedHashMap<>();
+			columnsByTask.forEach((taskId, columns) -> {
+				if (taskId == null || taskId.isBlank() || columns == null
+						|| columns.isEmpty() || columns.stream()
+								.anyMatch(name -> name == null || name.isBlank())
+						|| new HashSet<>(columns).size() != columns.size()) {
+					throw new IllegalArgumentException(
+							"verification columns must have non-empty task and column names");
+				}
+				copy.put(taskId, List.copyOf(columns));
+			});
+			columnsByTask = Map.copyOf(copy);
+		}
 	}
 
 	public BulkMigrationJobPlan resolve(final File configurationFile,

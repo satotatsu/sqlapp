@@ -175,6 +175,33 @@ class BulkMigrationTest {
 	}
 
 	@Test
+	void validatesAndOwnsAdvancedTableOverrides() {
+		final List<String> keysetColumns = new ArrayList<>(List.of("ID"));
+		final List<String> verificationColumns = new ArrayList<>(List.of("ID", "TXT"));
+		final BulkMigrationTableOption option = BulkMigrationTableOption.builder()
+				.migrationId("items").chunkSize(10).verificationChunkSize(5)
+				.keysetColumns(keysetColumns).verificationColumns(verificationColumns).build();
+
+		keysetColumns.clear();
+		verificationColumns.clear();
+		assertEquals(List.of("ID"), option.getKeysetColumns());
+		assertEquals(List.of("ID", "TXT"), option.getVerificationColumns());
+		assertThrows(UnsupportedOperationException.class,
+				() -> option.getKeysetColumns().clear());
+		assertTrue(BulkMigrationTableOption.defaults().getKeysetColumns().isEmpty());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationTableOption.builder().migrationId(" ").build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationTableOption.builder().chunkSize(0).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationTableOption.builder().verificationChunkSize(0).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationTableOption.builder()
+				.keysetColumns(List.of("ID", "ID")).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationTableOption.builder()
+				.verificationColumns(List.of(" ")).build());
+	}
+
+	@Test
 	void appliesOnlyTheRequestedAdvancedTableOverrides() throws Exception {
 		final JDBCDataSource source = dataSource("facade_override_source");
 		final JDBCDataSource target = dataSource("facade_override_target");
