@@ -37,7 +37,7 @@ public final class BulkMigrationJobRepairExecutor {
 			}
 		}
 		return new BulkMigrationJobRepairResult(plan.getFingerprint(),
-				List.copyOf(results));
+				List.copyOf(results)).validateAgainst(plan);
 	}
 
 	public static BulkMigrationJobRepairResult execute(final Connection targetConnection,

@@ -428,10 +428,14 @@ class BulkMigrationJobVerifierTest {
 		final var repair = new BulkMigrationRepairResult(1, 1, 1, 1,
 				manualChunks, List.of());
 		final var task = new BulkMigrationJobTaskRepairResult("task", repair);
-		final var result = new BulkMigrationJobRepairResult("plan-v1", List.of(task));
+		final var plan = new BulkMigrationJobRepairPlan(List.of(
+				new BulkMigrationJobRepairPlan.Task("task", repairPlan("ITEMS"))));
+		final var result = new BulkMigrationJobRepairResult(plan.getFingerprint(),
+				List.of(task));
 		manualChunks.clear();
 
-		assertEquals("plan-v1", result.getPlanFingerprint());
+		assertEquals(plan.getFingerprint(), result.getPlanFingerprint());
+		assertSame(result, result.validateAgainst(plan));
 		assertEquals(List.of(2L), repair.getChunksWithExtraActualRows());
 		assertThrows(UnsupportedOperationException.class, () -> result.getTasks().clear());
 		assertThrows(IllegalArgumentException.class,
@@ -442,6 +446,12 @@ class BulkMigrationJobVerifierTest {
 				() -> new BulkMigrationJobTaskRepairResult(" ", repair));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobRepairResult("plan-v1", List.of(task, task)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult("other", List.of(task))
+						.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of())
+						.validateAgainst(plan));
 
 		final var max = new BulkMigrationJobTaskRepairResult("max",
 				new BulkMigrationRepairResult(1, 1, Long.MAX_VALUE, Long.MAX_VALUE,
@@ -730,6 +740,14 @@ class BulkMigrationJobVerifierTest {
 		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table)
 				.options(ChunkedBulkMigrationOption.builder().migrationId(migrationId)
 						.mode(BulkMigrationMode.INSERT).resume(false).build()).build();
+	}
+
+	private static BulkMigrationRepairPlan repairPlan(final String tableName) {
+		final Table table = table(tableName, "value");
+		return new BulkMigrationRepairPlan(table, null, table,
+				new BulkMigrationVerificationResult(1, 0, 0, List.of()),
+				BulkMigrationRepairOption.builder().build(), null, false, true,
+				"test", "1", "test-executor");
 	}
 
 	private static Table numberedTable(final String name, final String... texts) {

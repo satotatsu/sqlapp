@@ -52,6 +52,21 @@ public class BulkMigrationJobRepairResult {
 		return sum(BulkMigrationRepairResult::getAffectedRows);
 	}
 
+	public BulkMigrationJobRepairResult validateAgainst(
+			final BulkMigrationJobRepairPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Repair result plan differs from the current repair plan");
+		}
+		if (!tasks.stream().map(BulkMigrationJobTaskRepairResult::getTaskId).toList()
+				.equals(plan.getTaskIds())) {
+			throw new IllegalArgumentException(
+					"Repair result tasks do not match the repair plan and dependency order");
+		}
+		return this;
+	}
+
 	private long sum(final java.util.function.ToLongFunction<BulkMigrationRepairResult> value) {
 		long total = 0;
 		for (final BulkMigrationJobTaskRepairResult task : tasks) {
