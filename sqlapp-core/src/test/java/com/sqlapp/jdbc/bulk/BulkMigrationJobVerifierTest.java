@@ -423,6 +423,30 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
+	void plannedRepairFailureRejectsForeignOrNonPrefixResults() {
+		final var firstPlan = repairPlan("FIRST");
+		final var secondPlan = repairPlan("SECOND");
+		final var plan = new BulkMigrationJobRepairPlan(List.of(
+				new BulkMigrationJobRepairPlan.Task("first", firstPlan),
+				new BulkMigrationJobRepairPlan.Task("second", secondPlan)));
+		final var first = new BulkMigrationJobTaskRepairResult("first",
+				new BulkMigrationRepairResult(0, 0, 0, 0, List.of(), List.of()));
+		final var completed = new BulkMigrationJobRepairResult(plan.getFingerprint(),
+				List.of(first));
+		final var cause = new SQLException("failed");
+
+		final var failure = new BulkMigrationJobRepairException(plan, "second",
+				completed, cause);
+
+		assertSame(completed, failure.getCompletedResult());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairException(plan, "first", completed, cause));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairException(plan, "second",
+						new BulkMigrationJobRepairResult("foreign", List.of(first)), cause));
+	}
+
+	@Test
 	void repairResultsArePlanBoundImmutableAndStructurallyValidated() {
 		final var manualChunks = new ArrayList<>(List.of(2L));
 		final var repair = new BulkMigrationRepairResult(1, 1, 1, 1,

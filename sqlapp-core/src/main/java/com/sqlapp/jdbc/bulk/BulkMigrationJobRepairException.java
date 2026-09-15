@@ -31,4 +31,18 @@ public class BulkMigrationJobRepairException extends SQLException {
 		this.completedResult = Objects.requireNonNull(completedResult, "completedResult");
 		Objects.requireNonNull(cause, "cause");
 	}
+
+	public BulkMigrationJobRepairException(final BulkMigrationJobRepairPlan plan,
+			final String failedTaskId,
+			final BulkMigrationJobRepairResult completedResult, final Throwable cause) {
+		super("Migration job repair task failed: " + failedTaskId, cause);
+		if (failedTaskId == null || failedTaskId.isBlank()) {
+			throw new IllegalArgumentException("failedTaskId must not be empty");
+		}
+		this.failedTaskId = failedTaskId;
+		this.completedResult = Objects.requireNonNull(completedResult, "completedResult")
+				.validateCompletedPrefixAgainst(
+						Objects.requireNonNull(plan, "plan"), failedTaskId);
+		Objects.requireNonNull(cause, "cause");
+	}
 }

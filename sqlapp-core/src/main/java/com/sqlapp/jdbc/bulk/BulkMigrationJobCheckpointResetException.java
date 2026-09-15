@@ -14,7 +14,8 @@ public class BulkMigrationJobCheckpointResetException extends SQLException {
 	private final String failedTaskId;
 	private final BulkMigrationJobCheckpointResetResult completedResult;
 
-	public BulkMigrationJobCheckpointResetException(final String failedTaskId,
+	public BulkMigrationJobCheckpointResetException(final BulkMigrationJobPlan plan,
+			final String failedTaskId,
 			final BulkMigrationJobCheckpointResetResult completedResult,
 			final SQLException cause) {
 		super("Migration job checkpoint reset failed: " + failedTaskId, cause);
@@ -22,7 +23,14 @@ public class BulkMigrationJobCheckpointResetException extends SQLException {
 			throw new IllegalArgumentException("failedTaskId must not be empty");
 		}
 		this.failedTaskId = failedTaskId;
-		this.completedResult = Objects.requireNonNull(completedResult, "completedResult");
+		final BulkMigrationJobPlan validatedPlan = Objects.requireNonNull(plan, "plan");
+		this.completedResult = Objects.requireNonNull(completedResult, "completedResult")
+				.validateAgainst(validatedPlan);
+		final int failedIndex = validatedPlan.getTaskIds().indexOf(failedTaskId);
+		if (failedIndex < 0 || completedResult.getResetTaskIds().size() != failedIndex) {
+			throw new IllegalArgumentException(
+					"Completed checkpoint resets must precede the failed task");
+		}
 		Objects.requireNonNull(cause, "cause");
 	}
 }

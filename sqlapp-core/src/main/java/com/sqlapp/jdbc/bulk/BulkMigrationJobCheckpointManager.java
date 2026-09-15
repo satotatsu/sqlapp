@@ -32,7 +32,7 @@ public final class BulkMigrationJobCheckpointManager {
 			} catch (SQLException e) {
 				final var completed = new BulkMigrationJobCheckpointResetResult(
 						plan.getFingerprint(), List.copyOf(resetTaskIds)).validateAgainst(plan);
-				throw new BulkMigrationJobCheckpointResetException(task.getTaskId(),
+				throw new BulkMigrationJobCheckpointResetException(plan, task.getTaskId(),
 						completed, e);
 			}
 		}

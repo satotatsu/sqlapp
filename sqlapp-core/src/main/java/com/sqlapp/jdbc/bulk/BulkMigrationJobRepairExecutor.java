@@ -33,7 +33,7 @@ public final class BulkMigrationJobRepairExecutor {
 			} catch (SQLException | RuntimeException e) {
 				final var completed = new BulkMigrationJobRepairResult(plan.getFingerprint(),
 						List.copyOf(results)).validateCompletedPrefixAgainst(plan, task.taskId());
-				throw new BulkMigrationJobRepairException(task.taskId(),
+				throw new BulkMigrationJobRepairException(plan, task.taskId(),
 						completed, e);
 			}
 		}
@@ -67,7 +67,7 @@ public final class BulkMigrationJobRepairExecutor {
 				BulkMigrationRepairPlanner.validateExecutionConnection(connection,
 						task.repairPlan());
 			} catch (SQLException | RuntimeException e) {
-				throw new BulkMigrationJobRepairException(task.taskId(),
+				throw new BulkMigrationJobRepairException(plan, task.taskId(),
 						new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()), e);
 			}
 		}
