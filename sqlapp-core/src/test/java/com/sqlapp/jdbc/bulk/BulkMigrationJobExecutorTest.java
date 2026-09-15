@@ -379,8 +379,11 @@ class BulkMigrationJobExecutorTest {
 		final var childTask = tableTask("child", "plan-child", child);
 
 		final var plan = BulkMigrationJobPlanner.plan(List.of(childTask, parentTask));
+		final var directPlan = new BulkMigrationJobPlan(List.of(childTask, parentTask));
 
 		assertEquals(List.of("parent", "child"), plan.getTaskIds());
+		assertEquals(plan.getTaskIds(), directPlan.getTaskIds());
+		assertEquals(plan.getFingerprint(), directPlan.getFingerprint());
 		assertThrows(UnsupportedOperationException.class,
 				() -> plan.getTasks().add(parentTask));
 		assertEquals(plan.getFingerprint(), BulkMigrationJobPlanner
@@ -391,6 +394,8 @@ class BulkMigrationJobExecutorTest {
 						.chunkSize(123).build());
 		assertNotEquals(plan.getFingerprint(),
 				BulkMigrationJobPlanner.plan(List.of(changedChild, parentTask)).getFingerprint());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobPlan(List.of(parentTask, parentTask)));
 	}
 
 	@Test

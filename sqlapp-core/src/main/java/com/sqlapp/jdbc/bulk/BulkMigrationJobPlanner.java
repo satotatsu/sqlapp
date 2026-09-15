@@ -9,19 +9,17 @@ public final class BulkMigrationJobPlanner {
 	}
 
 	public static BulkMigrationJobPlan plan(final List<BulkMigrationJobTask> tasks) {
-		return new BulkMigrationJobPlan(List.copyOf(BulkMigrationJobExecutor.order(tasks)));
+		return new BulkMigrationJobPlan(tasks);
 	}
 
 	public static BulkMigrationJobPlan plan(final List<BulkMigrationJobTask> tasks,
 			final BulkMigrationJobLifecycle lifecycle) {
-		return new BulkMigrationJobPlan(List.copyOf(BulkMigrationJobExecutor.order(tasks)),
-				lifecycle);
+		return new BulkMigrationJobPlan(tasks, lifecycle);
 	}
 
 	public static BulkMigrationJobPlan plan(final String jobId,
 			final List<BulkMigrationJobTask> tasks,
 			final BulkMigrationJobLifecycle lifecycle) {
-		return new BulkMigrationJobPlan(List.copyOf(BulkMigrationJobExecutor.order(tasks)),
-				lifecycle, jobId);
+		return new BulkMigrationJobPlan(tasks, lifecycle, jobId);
 	}
 }

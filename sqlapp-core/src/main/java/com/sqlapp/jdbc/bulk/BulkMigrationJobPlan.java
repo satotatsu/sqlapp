@@ -32,7 +32,7 @@ public class BulkMigrationJobPlan {
 
 	public BulkMigrationJobPlan(final List<BulkMigrationJobTask> tasks,
 			final BulkMigrationJobLifecycle lifecycle, final String jobId) {
-		this.tasks = List.copyOf(tasks);
+		this.tasks = List.copyOf(BulkMigrationJobExecutor.order(tasks));
 		this.lifecycle = java.util.Objects.requireNonNull(lifecycle, "lifecycle");
 		this.operations = List.copyOf(lifecycle.plan(this.tasks));
 		this.jobId = jobId == null ? defaultJobId(this.tasks) : validateJobId(jobId);
