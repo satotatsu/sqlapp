@@ -44,16 +44,16 @@ class SapHanaJdbcTreeDataSessionTest {
 	private static final String PASSWORD = "HxeTest9xA";
 	private static final String PASSWORD_JSON = "{\"master_password\":\"" + PASSWORD + "\"}";
 	private static final Path PASSWORD_DIRECTORY = createPasswordDirectory();
-	private static final GenericContainer<?> HANA = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse("saplabs/hanaexpress:2.00.088.00.20251110.1"))
+	private static final GenericContainer<?> HANA = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("saplabs/hanaexpress:2.00.088.00.20251110.1"))
 					.withFileSystemBind(PASSWORD_DIRECTORY.toString(), "/hana/mounts", BindMode.READ_WRITE)
 					.withCommand("--passwords-url", "file:///hana/mounts/password.json", "--agree-to-sap-license",
 							"--dont-check-system")
 					.withExposedPorts(39041)
-					.withCreateContainerCmdModifier(command -> command.withHostName("hxehost")
-							.getHostConfig().withShmSize(1L << 30))
-					.waitingFor(Wait.forLogMessage(".*Startup finished.*", 1)
-							.withStartupTimeout(Duration.ofMinutes(15))));
+					.withCreateContainerCmdModifier(
+							command -> command.withHostName("hxehost").getHostConfig().withShmSize(1L << 30))
+					.waitingFor(
+							Wait.forLogMessage(".*Startup finished.*", 1).withStartupTimeout(Duration.ofMinutes(15))));
 
 	@BeforeAll
 	static void startContainer() {
@@ -90,8 +90,7 @@ class SapHanaJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 			assertTrue(parent.getColumns().get("ID").isIdentity());
-			assertEquals(IdentityGenerationType.ByDefault,
-					parent.getColumns().get("ID").getIdentityGenerationType());
+			assertEquals(IdentityGenerationType.ByDefault, parent.getColumns().get("ID").getIdentityGenerationType());
 			Sequence sequence = new Sequence("PARENT_SEQ");
 			schema.getSequences().add(sequence);
 			assertNotNull(schema.getSequences().get("PARENT_SEQ"));
@@ -108,13 +107,12 @@ class SapHanaJdbcTreeDataSessionTest {
 				}
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, p.txt, c.parent_id, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, p.txt, c.parent_id, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 1; i <= 5; i++) {
 					assertTrue(resultSet.next());
 					assertEquals(1000L + i, resultSet.getLong(1));

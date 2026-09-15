@@ -31,8 +31,8 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 /** Exercises JDBC staging and MERGE against Oracle Database 23ai Free. */
 class OracleBulkUpsertTest {
-	private static final OracleContainer ORACLE = ReusableTestcontainers.configure(
-			new OracleContainer("gvenzl/oracle-free:23-slim-faststart"));
+	private static final OracleContainer ORACLE = ReusableTestcontainers
+			.configure(new OracleContainer("gvenzl/oracle-free:23-slim-faststart"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -46,41 +46,41 @@ class OracleBulkUpsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = ORACLE.createConnection("");
-				Connection second = ORACLE.createConnection("")) {
+		try (Connection first = ORACLE.createConnection(""); Connection second = ORACLE.createConnection("")) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
 
 	@Test
-	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
-			@TempDir final Path checkpointDirectory) throws Exception {
-		try (Connection connection = ORACLE.createConnection("");
-				var statement = connection.createStatement()) {
+	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(@TempDir final Path checkpointDirectory)
+			throws Exception {
+		try (Connection connection = ORACLE.createConnection(""); var statement = connection.createStatement()) {
 			dropTable(statement, "SQLAPP_BULK_JOB_CHILD_ORACLE");
 			dropTable(statement, "SQLAPP_BULK_JOB_PARENT_ORACLE");
-			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_PARENT_ORACLE "
-					+ "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_JOB_PARENT_ORACLE " + "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
 			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_CHILD_ORACLE "
 					+ "(ID NUMBER(10) PRIMARY KEY, PARENT_ID NUMBER(10) NOT NULL, "
 					+ "TXT VARCHAR2(100), CONSTRAINT FK_SQLAPP_JOB_CHILD_ORACLE "
 					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB_PARENT_ORACLE(ID))");
 			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT_ORACLE", false);
-			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "parent");
+			});
 			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD_ORACLE", true);
 			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_JOB_CHILD_ORACLE",
 					new Column[] { child.getColumns().get("PARENT_ID") },
 					new Column[] { parent.getColumns().get("ID") });
 			child.getRows().add(row -> {
-				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child,
-					new FileBulkMigrationCheckpointStore(checkpointDirectory),
-					BulkMigrationCheckpointMode.FILE);
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_ORACLE c "
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory), BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_ORACLE c "
 					+ "JOIN SQLAPP_BULK_JOB_PARENT_ORACLE p ON p.ID = c.PARENT_ID")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
@@ -89,12 +89,12 @@ class OracleBulkUpsertTest {
 	}
 
 	@Test
-	void databaseCheckpointRejectsTransactionBreakingStaging(
-			@TempDir final Path checkpointDirectory) throws Exception {
-		try (Connection connection = ORACLE.createConnection("");
-				var statement = connection.createStatement()) {
-			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_ORACLE"); }
-			catch (java.sql.SQLException ignored) { }
+	void databaseCheckpointRejectsTransactionBreakingStaging(@TempDir final Path checkpointDirectory) throws Exception {
+		try (Connection connection = ORACLE.createConnection(""); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_ORACLE");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_ORACLE "
 					+ "(CODE VARCHAR2(20) PRIMARY KEY, NAME VARCHAR2(100))");
 			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_ORACLE");
@@ -102,29 +102,24 @@ class OracleBulkUpsertTest {
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_ORACLE", code);
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
-					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
-					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
 			statement.execute("DELETE FROM SQLAPP_CHUNK_MIGRATION_ORACLE");
-			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection,
-					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE",
-					checkpointDirectory);
+			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_ORACLE", checkpointDirectory);
 			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
 
 	@Test
-	void updatesMatchesAndInsertsMissingRowsThroughBatchStaging()
-			throws Exception {
-		try (Connection connection = ORACLE.createConnection("");
-				var statement = connection.createStatement()) {
+	void updatesMatchesAndInsertsMissingRowsThroughBatchStaging() throws Exception {
+		try (Connection connection = ORACLE.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE SQLAPP_BULK_UPSERT_ORACLE ("
 					+ "ID NUMBER GENERATED BY DEFAULT AS IDENTITY UNIQUE, "
-					+ "CODE VARCHAR2(20) PRIMARY KEY, NAME NVARCHAR2(100), "
-					+ "AMOUNT NUMBER(12,2), PAYLOAD RAW(20))");
-			statement.execute("INSERT INTO SQLAPP_BULK_UPSERT_ORACLE "
-					+ "(CODE, NAME, AMOUNT, PAYLOAD) VALUES "
+					+ "CODE VARCHAR2(20) PRIMARY KEY, NAME NVARCHAR2(100), " + "AMOUNT NUMBER(12,2), PAYLOAD RAW(20))");
+			statement.execute("INSERT INTO SQLAPP_BULK_UPSERT_ORACLE " + "(CODE, NAME, AMOUNT, PAYLOAD) VALUES "
 					+ "('A', 'old', 1.00, HEXTORAW('01'))");
 
 			final Table table = createTable();
@@ -147,19 +142,16 @@ class OracleBulkUpsertTest {
 			});
 
 			assertEquals(3, BulkUpsertResolver.execute(connection, table,
-					BulkUpsertOption.builder().bulkOption(
-							BulkOption.builder().batchSize(2).build()).build()));
+					BulkUpsertOption.builder().bulkOption(BulkOption.builder().batchSize(2).build()).build()));
 
-			try (var resultSet = statement.executeQuery("SELECT ID, CODE, NAME, "
-					+ "AMOUNT, PAYLOAD FROM SQLAPP_BULK_UPSERT_ORACLE ORDER BY CODE")) {
+			try (var resultSet = statement.executeQuery(
+					"SELECT ID, CODE, NAME, " + "AMOUNT, PAYLOAD FROM SQLAPP_BULK_UPSERT_ORACLE ORDER BY CODE")) {
 				resultSet.next();
 				assertEquals(1L, resultSet.getLong("ID"));
 				assertEquals("A", resultSet.getString("CODE"));
 				assertEquals("更新後\nline", resultSet.getString("NAME"));
-				assertEquals(new BigDecimal("12.34"),
-						resultSet.getBigDecimal("AMOUNT"));
-				assertArrayEquals(new byte[] { 0, (byte) 0xff },
-						resultSet.getBytes("PAYLOAD"));
+				assertEquals(new BigDecimal("12.34"), resultSet.getBigDecimal("AMOUNT"));
+				assertArrayEquals(new byte[] { 0, (byte) 0xff }, resultSet.getBytes("PAYLOAD"));
 				resultSet.next();
 				assertEquals("B", resultSet.getString("CODE"));
 				assertNull(resultSet.getString("NAME"));
@@ -175,18 +167,13 @@ class OracleBulkUpsertTest {
 
 	private static Table createTable() {
 		final Table table = new Table("SQLAPP_BULK_UPSERT_ORACLE");
-		final Column id = new Column("ID").setDataType(DataType.DECIMAL)
-				.setIdentity(true);
-		final Column code = new Column("CODE").setDataType(DataType.VARCHAR)
-				.setLength(20).setNotNull(true);
+		final Column id = new Column("ID").setDataType(DataType.DECIMAL).setIdentity(true);
+		final Column code = new Column("CODE").setDataType(DataType.VARCHAR).setLength(20).setNotNull(true);
 		table.getColumns().add(id);
 		table.getColumns().add(code);
-		table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR)
-				.setLength(100));
-		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL)
-				.setLength(12).setScale(2));
-		table.getColumns().add(new Column("PAYLOAD")
-				.setDataType(DataType.VARBINARY).setLength(20));
+		table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR).setLength(100));
+		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_ORACLE", code);
 		return table;
 	}
@@ -198,19 +185,18 @@ class OracleBulkUpsertTest {
 				var statement = targetConnection.createStatement()) {
 			dropTable(statement, "SQLAPP_BULK_REPAIR_SOURCE_ORA");
 			dropTable(statement, "SQLAPP_BULK_REPAIR_TARGET_ORA");
-			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_ORA "
-					+ "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
-			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_ORA "
-					+ "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_ORA " + "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_ORA " + "(ID NUMBER(10) PRIMARY KEY, TXT VARCHAR2(100))");
 			for (int id = 1; id <= 4; id++) {
-				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_ORA VALUES ("
-						+ id + ",'value-" + id + "')");
-				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_ORA VALUES ("
-						+ id + ",'" + (id == 2 ? "wrong" : "value-" + id) + "')");
+				statement.executeUpdate(
+						"INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_ORA VALUES (" + id + ",'value-" + id + "')");
+				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_ORA VALUES (" + id + ",'"
+						+ (id == 2 ? "wrong" : "value-" + id) + "')");
 			}
-			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
-					targetConnection, jobTable("SQLAPP_BULK_REPAIR_SOURCE_ORA", false),
-					jobTable("SQLAPP_BULK_REPAIR_TARGET_ORA", false),
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("SQLAPP_BULK_REPAIR_SOURCE_ORA", false), jobTable("SQLAPP_BULK_REPAIR_TARGET_ORA", false),
 					List.of("ID", "TXT"), false);
 		}
 	}
@@ -220,8 +206,7 @@ class OracleBulkUpsertTest {
 		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(id);
 		if (child) {
-			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT)
-					.setNotNull(true));
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT).setNotNull(true));
 		}
 		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(100));
 		table.setPrimaryKey("PK_" + name, id);

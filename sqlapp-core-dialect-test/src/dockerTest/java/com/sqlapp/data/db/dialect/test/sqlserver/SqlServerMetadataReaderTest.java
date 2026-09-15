@@ -43,21 +43,18 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** SQL Server 2025 integration coverage for the full metadata reader tree. */
 class SqlServerMetadataReaderTest {
-	private static final String IMAGE =
-			"mcr.microsoft.com/mssql/server:2025-latest";
+	private static final String IMAGE = "mcr.microsoft.com/mssql/server:2025-latest";
 	private static final String DATABASE_NAME = "METADATA_READER_TEST";
 
-	private static final MSSQLServerContainer SQL_SERVER =
-			ReusableTestcontainers.configure(
-					new MSSQLServerContainer(IMAGE).acceptLicense());
+	private static final MSSQLServerContainer SQL_SERVER = ReusableTestcontainers
+			.configure(new MSSQLServerContainer(IMAGE).acceptLicense());
 
 	@BeforeAll
 	static void startContainer() throws SQLException {
 		ReusableTestcontainers.start(SQL_SERVER);
 		try (Connection connection = SQL_SERVER.createConnection("");
 				Statement statement = connection.createStatement()) {
-			statement.execute("IF DB_ID(N'" + DATABASE_NAME
-					+ "') IS NULL CREATE DATABASE " + DATABASE_NAME);
+			statement.execute("IF DB_ID(N'" + DATABASE_NAME + "') IS NULL CREATE DATABASE " + DATABASE_NAME);
 		}
 	}
 
@@ -67,39 +64,30 @@ class SqlServerMetadataReaderTest {
 	}
 
 	@Test
-	void testReadsRepresentativeSchemaObjectsFromLatestSqlServer()
-			throws SQLException {
+	void testReadsRepresentativeSchemaObjectsFromLatestSqlServer() throws SQLException {
 		try (Connection connection = createTestDatabaseConnection()) {
 			createSchemaObjects(connection);
 
-			Dialect dialect = DialectResolver.getInstance()
-					.getDialect(connection);
-			assertInstanceOf(SqlServer2022.class, dialect,
-					"SQL Server 17.x must use the newest supported dialect.");
+			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			assertInstanceOf(SqlServer2022.class, dialect, "SQL Server 17.x must use the newest supported dialect.");
 
 			var catalogReader = dialect.getCatalogReader();
 			catalogReader.setCatalogName(connection.getCatalog());
 			Catalog catalog = catalogReader.getAllFull(connection).stream()
-					.filter(current -> connectionCatalogEquals(connection, current))
-					.findFirst()
-					.orElseThrow(() -> new AssertionError(
-							"Current SQL Server catalog was not loaded."));
+					.filter(current -> connectionCatalogEquals(connection, current)).findFirst()
+					.orElseThrow(() -> new AssertionError("Current SQL Server catalog was not loaded."));
 			Schema schema = catalog.getSchemas().get("dbo");
 			assertNotNull(schema, "SQL Server dbo schema was not loaded.");
 			Schema auxiliarySchema = catalog.getSchemas().get("METADATA_AUX");
 			assertNotNull(auxiliarySchema);
-			Table auxiliaryParent = auxiliarySchema.getTables()
-					.get("METADATA_PARENT");
+			Table auxiliaryParent = auxiliarySchema.getTables().get("METADATA_PARENT");
 			assertNotNull(auxiliaryParent);
 			assertNotNull(auxiliaryParent.getColumns().get("AUXILIARY_VALUE"));
 			assertEquals(2, auxiliaryParent.getColumns().size());
-			assertNotNull(auxiliaryParent.getConstraints()
-					.get("PK_METADATA_AUX_PARENT"));
-			assertNotNull(auxiliaryParent.getIndexes()
-					.get("IDX_METADATA_AUX_PARENT"));
+			assertNotNull(auxiliaryParent.getConstraints().get("PK_METADATA_AUX_PARENT"));
+			assertNotNull(auxiliaryParent.getIndexes().get("IDX_METADATA_AUX_PARENT"));
 
-			PartitionFunction partitionFunction = catalog.getPartitionFunctions()
-					.get("METADATA_PARTITION_FUNCTION");
+			PartitionFunction partitionFunction = catalog.getPartitionFunctions().get("METADATA_PARTITION_FUNCTION");
 			assertNotNull(partitionFunction);
 			assertTrue(partitionFunction.isBoundaryValueOnRight());
 			assertEquals(3, partitionFunction.getValues().size());
@@ -107,66 +95,56 @@ class SqlServerMetadataReaderTest {
 			assertEquals("1000", partitionFunction.getValues().get(1));
 			assertEquals("10000", partitionFunction.getValues().get(2));
 
-			PartitionScheme partitionScheme = catalog.getPartitionSchemes()
-					.get("METADATA_PARTITION_SCHEME");
+			PartitionScheme partitionScheme = catalog.getPartitionSchemes().get("METADATA_PARTITION_SCHEME");
 			assertNotNull(partitionScheme);
-			assertEquals("METADATA_PARTITION_FUNCTION",
-					partitionScheme.getPartitionFunctionName());
+			assertEquals("METADATA_PARTITION_FUNCTION", partitionScheme.getPartitionFunctionName());
 			assertEquals(5, partitionScheme.getTableSpaces().size());
-			assertEquals("PRIMARY",
-					partitionScheme.getTableSpaces().get(0).getName());
-			assertEquals("PRIMARY",
-					partitionScheme.getTableSpaces().get(4).getName());
+			assertEquals("PRIMARY", partitionScheme.getTableSpaces().get(0).getName());
+			assertEquals("PRIMARY", partitionScheme.getTableSpaces().get(4).getName());
 			assertTrue(catalog.getSettings().size() > 0);
 			assertNotNull(catalog.getSettings().get("Collation"));
-			assertEquals(catalog.getSettings().get("Collation").getValue(),
-					catalog.getCollation());
+			assertEquals(catalog.getSettings().get("Collation").getValue(), catalog.getCollation());
 			assertNotNull(catalog.getTableSpaces().get("PRIMARY"));
-			assertTrue(catalog.getTableSpaces().get("PRIMARY")
-					.getTableSpaceFiles().size() > 0);
+			assertTrue(catalog.getTableSpaces().get("PRIMARY").getTableSpaceFiles().size() > 0);
 
-			assertEquals("dbo", catalog.getUsers().get("METADATA_USER")
-					.getDefaultSchemaName());
+			assertEquals("dbo", catalog.getUsers().get("METADATA_USER").getDefaultSchemaName());
 			assertNotNull(catalog.getRoles().get("METADATA_ROLE"));
-			assertTrue(catalog.getRoleMembers().stream().anyMatch(member ->
-					"METADATA_USER".equals(member.getGranteeName())
-					&& "METADATA_ROLE".equals(member.getMemberRoleName())),
+			assertTrue(
+					catalog.getRoleMembers().stream()
+							.anyMatch(member -> "METADATA_USER".equals(member.getGranteeName())
+									&& "METADATA_ROLE".equals(member.getMemberRoleName())),
 					catalog.getRoleMembers().toString());
-			assertTrue(catalog.getObjectPrivileges().stream().anyMatch(privilege ->
-					"METADATA_PARENT".equals(privilege.getObjectName())
-					&& "METADATA_ROLE".equals(privilege.getGranteeName())
-					&& "SELECT".equals(privilege.getPrivilege())));
-			assertTrue(catalog.getColumnPrivileges().stream().anyMatch(privilege ->
-					"METADATA_PARENT".equals(privilege.getObjectName())
-					&& "NAME".equals(privilege.getColumnName())
-					&& "METADATA_USER".equals(privilege.getGranteeName())
-					&& "UPDATE".equals(privilege.getPrivilege())));
+			assertTrue(catalog.getObjectPrivileges().stream()
+					.anyMatch(privilege -> "METADATA_PARENT".equals(privilege.getObjectName())
+							&& "METADATA_ROLE".equals(privilege.getGranteeName())
+							&& "SELECT".equals(privilege.getPrivilege())));
+			assertTrue(catalog.getColumnPrivileges().stream()
+					.anyMatch(privilege -> "METADATA_PARENT".equals(privilege.getObjectName())
+							&& "NAME".equals(privilege.getColumnName())
+							&& "METADATA_USER".equals(privilege.getGranteeName())
+							&& "UPDATE".equals(privilege.getPrivilege())));
 
 			Table parent = schema.getTables().get("METADATA_PARENT");
 			assertNotNull(parent);
 			assertEquals("Metadata parent table", parent.getRemarks());
-			UniqueConstraint primaryKey = assertInstanceOf(
-					UniqueConstraint.class,
+			UniqueConstraint primaryKey = assertInstanceOf(UniqueConstraint.class,
 					parent.getConstraints().get("PK_METADATA_PARENT"));
 			assertEquals("ID", primaryKey.getColumns().get(0).getName());
 			assertEquals("REGION", primaryKey.getColumns().get(1).getName());
-			assertEquals("Display name",
-					parent.getColumns().get("NAME").getRemarks());
+			assertEquals("Display name", parent.getColumns().get("NAME").getRemarks());
 
 			Table child = schema.getTables().get("METADATA_CHILD");
 			assertNotNull(child);
 			assertNotNull(child.getConstraints().get("PK_METADATA_CHILD"));
 			assertNotNull(child.getConstraints().get("UK_METADATA_CHILD_CODE"));
 			assertNotNull(child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
-			ForeignKeyConstraint foreignKey = assertInstanceOf(
-					ForeignKeyConstraint.class,
+			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
 			assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
 			assertEquals("PARENT_REGION", foreignKey.getColumns().get(1).getName());
 			assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
 			assertEquals("REGION", foreignKey.getRelatedColumns().get(1).getName());
-			Index index = child.getIndexes()
-					.get("IDX_METADATA_CHILD_PARENT");
+			Index index = child.getIndexes().get("IDX_METADATA_CHILD_PARENT");
 			assertNotNull(index);
 			assertEquals("PARENT_ID", index.getColumns().get(0).getName());
 			assertEquals(Order.Desc, index.getColumns().get(0).getOrder());
@@ -174,49 +152,35 @@ class SqlServerMetadataReaderTest {
 			assertEquals(Order.Asc, index.getColumns().get(1).getOrder());
 			assertTrue(index.getWhere().contains("AMOUNT"), index.getWhere());
 			assertNotNull(index.getIncludes().get("CODE"));
-			assertEquals("true", index.getSpecifics()
-					.get("OPTIMIZE_FOR_SEQUENTIAL_KEY"));
-			Index columnStoreIndex = parent.getIndexes()
-					.get("IDX_METADATA_PARENT_COLUMNSTORE");
+			assertEquals("true", index.getSpecifics().get("OPTIMIZE_FOR_SEQUENTIAL_KEY"));
+			Index columnStoreIndex = parent.getIndexes().get("IDX_METADATA_PARENT_COLUMNSTORE");
 			assertNotNull(columnStoreIndex);
-			assertEquals(IndexType.NonClusteredColumnStore,
-					columnStoreIndex.getIndexType());
+			assertEquals(IndexType.NonClusteredColumnStore, columnStoreIndex.getIndexType());
 			assertEquals(2, columnStoreIndex.getColumns().size());
-			Table columnStoreTable = schema.getTables()
-					.get("METADATA_COLUMNSTORE");
+			Table columnStoreTable = schema.getTables().get("METADATA_COLUMNSTORE");
 			assertNotNull(columnStoreTable);
-			Index clusteredColumnStoreIndex = columnStoreTable.getIndexes()
-					.get("IDX_METADATA_COLUMNSTORE");
+			Index clusteredColumnStoreIndex = columnStoreTable.getIndexes().get("IDX_METADATA_COLUMNSTORE");
 			assertNotNull(clusteredColumnStoreIndex);
-			assertEquals(IndexType.ClusteredColumnStore,
-					clusteredColumnStoreIndex.getIndexType());
+			assertEquals(IndexType.ClusteredColumnStore, clusteredColumnStoreIndex.getIndexType());
 			assertEquals(2, clusteredColumnStoreIndex.getColumns().size());
-			Index spatialIndex = schema.getTables().get("METADATA_SPATIAL")
-					.getIndexes().get("IDX_METADATA_SPATIAL_LOCATION");
+			Index spatialIndex = schema.getTables().get("METADATA_SPATIAL").getIndexes()
+					.get("IDX_METADATA_SPATIAL_LOCATION");
 			assertNotNull(spatialIndex);
 			assertEquals(IndexType.Spatial, spatialIndex.getIndexType());
 			assertEquals("LOCATION", spatialIndex.getColumns().get(0).getName());
-			assertEquals("GEOMETRY_AUTO_GRID", spatialIndex.getSpecifics()
-					.get("tessellation_scheme"));
-			assertEquals("16", spatialIndex.getSpecifics()
-					.get("cells_per_object"));
-			assertEquals("1000.0", spatialIndex.getSpecifics()
-					.get("bounding_box_xmax"));
-			assertEquals("-1000.0", spatialIndex.getSpecifics()
-					.get("bounding_box_xmin"));
-			assertEquals("true", schema.getTables().get("METADATA_NODE")
-					.getSpecifics().get("is_node"));
-			assertEquals("true", schema.getTables().get("METADATA_EDGE")
-					.getSpecifics().get("is_edge"));
-			Index jsonIndex = schema.getTables().get("METADATA_JSON")
-					.getIndexes().get("IDX_METADATA_JSON_DOCUMENT");
+			assertEquals("GEOMETRY_AUTO_GRID", spatialIndex.getSpecifics().get("tessellation_scheme"));
+			assertEquals("16", spatialIndex.getSpecifics().get("cells_per_object"));
+			assertEquals("1000.0", spatialIndex.getSpecifics().get("bounding_box_xmax"));
+			assertEquals("-1000.0", spatialIndex.getSpecifics().get("bounding_box_xmin"));
+			assertEquals("true", schema.getTables().get("METADATA_NODE").getSpecifics().get("is_node"));
+			assertEquals("true", schema.getTables().get("METADATA_EDGE").getSpecifics().get("is_edge"));
+			Index jsonIndex = schema.getTables().get("METADATA_JSON").getIndexes().get("IDX_METADATA_JSON_DOCUMENT");
 			assertNotNull(jsonIndex);
 			assertEquals(IndexType.Json, jsonIndex.getIndexType());
 			assertEquals("DOCUMENT", jsonIndex.getColumns().get(0).getName());
 			Table ledgerTable = schema.getTables().get("METADATA_LEDGER");
 			assertNotNull(ledgerTable);
-			assertEquals("APPEND_ONLY_LEDGER_TABLE",
-					ledgerTable.getSpecifics().get("ledger_type"));
+			assertEquals("APPEND_ONLY_LEDGER_TABLE", ledgerTable.getSpecifics().get("ledger_type"));
 			assertNotNull(ledgerTable.getSpecifics().get("ledger_view_id"));
 			assertNotNull(schema.getViews().get("METADATA_LEDGER_Ledger"));
 			Column id = child.getColumns().get("ID");
@@ -226,46 +190,33 @@ class SqlServerMetadataReaderTest {
 
 			Column code = child.getColumns().get("CODE");
 			assertTrue(code.isNotNull());
-			assertTrue(code.getDefaultValue().contains("unknown"),
-					code.getDefaultValue());
+			assertTrue(code.getDefaultValue().contains("unknown"), code.getDefaultValue());
 
 			Column total = child.getColumns().get("TOTAL");
 			assertNotNull(total.getFormula());
-			assertTrue(total.getFormula().contains("AMOUNT"),
-					total.getFormula());
+			assertTrue(total.getFormula().contains("AMOUNT"), total.getFormula());
 			assertTrue(total.isFormulaPersisted());
 
 			Table typeCoverage = schema.getTables().get("METADATA_TYPES");
-			Index xmlIndex = typeCoverage.getIndexes()
-					.get("IDX_METADATA_TYPES_XML");
+			Index xmlIndex = typeCoverage.getIndexes().get("IDX_METADATA_TYPES_XML");
 			assertNotNull(xmlIndex);
 			assertEquals(IndexType.Xml, xmlIndex.getIndexType());
 			assertEquals("XML_VALUE", xmlIndex.getColumns().get(0).getName());
 			assertNotNull(typeCoverage);
 			assertNotNull(schema.getXmlSchemas().get("METADATA_XML_SCHEMA"));
-			assertTrue(schema.getXmlSchemas().get("METADATA_XML_SCHEMA")
-					.getDefinition().toString().contains("root"));
-			assertEquals(DataType.NVARCHAR,
-					typeCoverage.getColumns().get("UNICODE_VALUE").getDataType());
-			assertEquals(123, typeCoverage.getColumns().get("UNICODE_VALUE")
-					.getLength().intValue());
-			assertEquals(DataType.VARCHAR,
-					typeCoverage.getColumns().get("MAX_VALUE").getDataType());
-			assertEquals(DataType.TIMESTAMP_WITH_TIMEZONE,
-					typeCoverage.getColumns().get("OFFSET_VALUE").getDataType());
-			assertEquals(DataType.VARBINARY,
-					typeCoverage.getColumns().get("BINARY_VALUE").getDataType());
+			assertTrue(schema.getXmlSchemas().get("METADATA_XML_SCHEMA").getDefinition().toString().contains("root"));
+			assertEquals(DataType.NVARCHAR, typeCoverage.getColumns().get("UNICODE_VALUE").getDataType());
+			assertEquals(123, typeCoverage.getColumns().get("UNICODE_VALUE").getLength().intValue());
+			assertEquals(DataType.VARCHAR, typeCoverage.getColumns().get("MAX_VALUE").getDataType());
+			assertEquals(DataType.TIMESTAMP_WITH_TIMEZONE, typeCoverage.getColumns().get("OFFSET_VALUE").getDataType());
+			assertEquals(DataType.VARBINARY, typeCoverage.getColumns().get("BINARY_VALUE").getDataType());
 			assertEquals("dbo.METADATA_XML_SCHEMA",
-					typeCoverage.getColumns().get("XML_VALUE")
-						.getSpecifics().get("xmlschema"));
-			assertEquals("partial(1, \"XXXX\", 1)",
-					typeCoverage.getColumns().get("MASKED_VALUE")
-						.getMaskingFunction());
+					typeCoverage.getColumns().get("XML_VALUE").getSpecifics().get("xmlschema"));
+			assertEquals("partial(1, \"XXXX\", 1)", typeCoverage.getColumns().get("MASKED_VALUE").getMaskingFunction());
 
 			Table temporal = schema.getTables().get("METADATA_TEMPORAL");
 			assertNotNull(temporal);
-			assertEquals("SYSTEM_VERSIONED_TEMPORAL_TABLE",
-					temporal.getSpecifics().get("temporal_type"));
+			assertEquals("SYSTEM_VERSIONED_TEMPORAL_TABLE", temporal.getSpecifics().get("temporal_type"));
 			assertNotNull(temporal.getColumns().get("VALID_FROM"));
 			assertNotNull(temporal.getColumns().get("VALID_TO"));
 
@@ -282,47 +233,39 @@ class SqlServerMetadataReaderTest {
 			var view = schema.getViews().get("METADATA_VIEW");
 			assertNotNull(view);
 			assertNotNull(view.getColumns().get("TOTAL"));
-			assertTrue(view.getStatement().toString()
-					.contains("METADATA_CHILD"), view.getStatement().toString());
+			assertTrue(view.getStatement().toString().contains("METADATA_CHILD"), view.getStatement().toString());
 
-			var procedure = schema.getProcedures()
-					.get("METADATA_PROCEDURE");
+			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("@PARENT_ID", procedure.getArguments().get(0).getName());
-			assertEquals(DataType.BIGINT,
-					procedure.getArguments().get(0).getDataType());
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("@AMOUNT", function.getArguments().get(0).getName());
-			assertEquals(DataType.DECIMAL,
-					function.getArguments().get(0).getDataType());
-			assertTrue(String.join("\n", function.getStatement())
-					.toUpperCase(Locale.ROOT).contains("@AMOUNT * 2"));
+			assertEquals(DataType.DECIMAL, function.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", function.getStatement()).toUpperCase(Locale.ROOT).contains("@AMOUNT * 2"));
 
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_CHILD", trigger.getTableName());
 			assertEquals("AFTER", trigger.getActionTiming());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertTrue(trigger.getStatement().toString()
-					.contains("METADATA_PARENT"), trigger.getStatement().toString());
+			assertTrue(trigger.getStatement().toString().contains("METADATA_PARENT"),
+					trigger.getStatement().toString());
 
 			var synonym = schema.getSynonyms().get("METADATA_PARENT_SYNONYM");
 			assertNotNull(synonym);
-			assertTrue(synonym.getObjectName().contains("METADATA_PARENT"),
-					synonym.getObjectName());
+			assertTrue(synonym.getObjectName().contains("METADATA_PARENT"), synonym.getObjectName());
 		}
 	}
 
 	private static Connection createTestDatabaseConnection() throws SQLException {
-		return DriverManager.getConnection(SQL_SERVER.getJdbcUrl()
-				+ ";databaseName=" + DATABASE_NAME, SQL_SERVER.getUsername(),
-				SQL_SERVER.getPassword());
+		return DriverManager.getConnection(SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME,
+				SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
 	}
 
 	private boolean connectionCatalogEquals(Connection connection, Catalog catalog) {

@@ -37,8 +37,7 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 class MariadbMetadataReaderTest {
 	private static final String ROOT_PASSWORD = "metadata-root";
 	private static final MariaDBContainer MARIADB = ReusableTestcontainers
-			.configure(new MariaDBContainer("mariadb:11.8")
-					.withEnv("MARIADB_ROOT_PASSWORD", ROOT_PASSWORD)
+			.configure(new MariaDBContainer("mariadb:11.8").withEnv("MARIADB_ROOT_PASSWORD", ROOT_PASSWORD)
 					.withCommand("--log-bin-trust-function-creators=1"));
 
 	@BeforeAll
@@ -53,8 +52,7 @@ class MariadbMetadataReaderTest {
 
 	@Test
 	void testReadsRepresentativeSchemaObjectsFromMariaDb118() throws SQLException {
-		try (Connection connection = DriverManager.getConnection(
-				MARIADB.getJdbcUrl(), "root", ROOT_PASSWORD);
+		try (Connection connection = DriverManager.getConnection(MARIADB.getJdbcUrl(), "root", ROOT_PASSWORD);
 				Statement statement = connection.createStatement()) {
 			createObjects(statement);
 			var dialect = DialectResolver.getInstance().getDialect(connection);
@@ -67,15 +65,13 @@ class MariadbMetadataReaderTest {
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName(MARIADB.getDatabaseName());
 			var schema = reader.getAllFull(connection).stream()
-					.filter(s -> MARIADB.getDatabaseName().equals(s.getName()))
-					.findFirst().orElseThrow();
+					.filter(s -> MARIADB.getDatabaseName().equals(s.getName())).findFirst().orElseThrow();
 
 			var parent = schema.getTables().get("metadata_parent");
 			assertNotNull(parent);
 			assertEquals("metadata parent", parent.getRemarks());
 			assertTrue(parent.getColumns().get("id").isIdentity());
-			var primaryKey = assertInstanceOf(UniqueConstraint.class,
-					parent.getConstraints().get("PRIMARY"));
+			var primaryKey = assertInstanceOf(UniqueConstraint.class, parent.getConstraints().get("PRIMARY"));
 			assertTrue(primaryKey.isPrimaryKey());
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
 			var unique = assertInstanceOf(UniqueConstraint.class,
@@ -83,8 +79,7 @@ class MariadbMetadataReaderTest {
 			assertEquals("code", unique.getColumns().get(0).getName());
 			var check = assertInstanceOf(CheckConstraint.class,
 					parent.getConstraints().get("ck_metadata_parent_amount"));
-			assertTrue(check.getExpression().replace("`", "")
-					.contains("amount >= 0"), check::getExpression);
+			assertTrue(check.getExpression().replace("`", "").contains("amount >= 0"), check::getExpression);
 			var nameIndex = parent.getIndexes().get("idx_metadata_parent_name");
 			assertNotNull(nameIndex);
 			assertEquals("name", nameIndex.getColumns().get(0).getName());
@@ -99,39 +94,28 @@ class MariadbMetadataReaderTest {
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertEquals(CascadeRule.Cascade, foreignKey.getUpdateRule());
 			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
-			assertNotNull(child.getColumns().get("normalized_code")
-					.getFormula());
+			assertNotNull(child.getColumns().get("normalized_code").getFormula());
 
 			var partitioned = schema.getTables().get("metadata_partitioned");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
-			assertEquals(PartitioningType.Hash,
-					partitioned.getPartitioning().getSubPartitioningType());
-			assertEquals("bucket", partitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
-			assertEquals("id", partitioned.getPartitioning()
-					.getSubPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Hash, partitioned.getPartitioning().getSubPartitioningType());
+			assertEquals("bucket", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
+			assertEquals("id", partitioned.getPartitioning().getSubPartitioningColumns().get(0).getName());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
 			assertTrue(partitioned.getPartitioning().getPartitions().stream()
 					.allMatch(partition -> partition.getSubPartitions().size() == 2));
-			assertEquals("p0s0 comment", partitioned.getPartitioning().getPartitions()
-					.get("p0").getSubPartitions().get("p0s0").getRemarks());
-			assertNull(partitioned.getPartitioning().getPartitions()
-					.get("p0").getRemarks());
-			assertEquals("10", partitioned.getPartitioning().getPartitions()
-					.get("p0").getHighValue());
-			assertEquals("MAXVALUE", partitioned.getPartitioning().getPartitions()
-					.get("pmax").getHighValue());
-			assertNotNull(partitioned.getPartitioning().getPartitions()
-					.get("pmax").getSubPartitions().get("pmaxs1"));
+			assertEquals("p0s0 comment", partitioned.getPartitioning().getPartitions().get("p0").getSubPartitions()
+					.get("p0s0").getRemarks());
+			assertNull(partitioned.getPartitioning().getPartitions().get("p0").getRemarks());
+			assertEquals("10", partitioned.getPartitioning().getPartitions().get("p0").getHighValue());
+			assertEquals("MAXVALUE", partitioned.getPartitioning().getPartitions().get("pmax").getHighValue());
+			assertNotNull(partitioned.getPartitioning().getPartitions().get("pmax").getSubPartitions().get("pmaxs1"));
 			var versioned = schema.getTables().get("metadata_versioned");
 			assertNotNull(versioned.getSystemVersioning());
 			assertTrue(versioned.getSystemVersioning().isEnable());
-			assertEquals("row_start", versioned.getTemporalPeriods().get(0)
-					.getStartColumnName());
-			assertEquals("row_end", versioned.getTemporalPeriods().get(0)
-					.getEndColumnName());
+			assertEquals("row_start", versioned.getTemporalPeriods().get(0).getStartColumnName());
+			assertEquals("row_end", versioned.getTemporalPeriods().get(0).getEndColumnName());
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
 			String viewStatement = String.join("\n", view.getStatement()).toLowerCase();
@@ -152,11 +136,9 @@ class MariadbMetadataReaderTest {
 			assertNotNull(procedure);
 			String procedureStatement = String.join("\n", procedure.getStatement()).toLowerCase();
 			assertTrue(procedureStatement.contains("select name into p_name"), procedureStatement);
-			assertEquals(ParameterDirection.Input,
-					procedure.getArguments().get("p_id").getDirection());
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get("p_id").getDirection());
 			assertEquals(DataType.BIGINT, procedure.getArguments().get("p_id").getDataType());
-			assertEquals(ParameterDirection.Output,
-					procedure.getArguments().get("p_name").getDirection());
+			assertEquals(ParameterDirection.Output, procedure.getArguments().get("p_name").getDirection());
 			assertEquals(DataType.VARCHAR, procedure.getArguments().get("p_name").getDataType());
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
@@ -171,8 +153,7 @@ class MariadbMetadataReaderTest {
 			assertEquals("metadata_parent", trigger.getTableName());
 			assertEquals("AFTER", trigger.getActionTiming());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertTrue(String.join("\n", trigger.getStatement())
-					.contains("metadata_audit"));
+			assertTrue(String.join("\n", trigger.getStatement()).contains("metadata_audit"));
 			var event = schema.getEvents().get("metadata_event");
 			assertNotNull(event);
 			assertEquals(EventType.Recurring, event.getEventType());
@@ -181,8 +162,7 @@ class MariadbMetadataReaderTest {
 			assertEquals("PRESERVE", event.getOnCompletion());
 			assertTrue(!event.isEnable());
 			assertEquals("metadata event", event.getRemarks());
-			assertTrue(String.join("\n", event.getStatement())
-					.contains("metadata_audit"));
+			assertTrue(String.join("\n", event.getStatement()).contains("metadata_audit"));
 		}
 	}
 
@@ -246,7 +226,8 @@ class MariadbMetadataReaderTest {
 				) WITH SYSTEM VERSIONING
 				""");
 		statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_parent");
-		statement.execute("CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5 MINVALUE 10 MAXVALUE 1000 CYCLE");
+		statement.execute(
+				"CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5 MINVALUE 10 MAXVALUE 1000 CYCLE");
 		statement.execute("""
 				CREATE PROCEDURE metadata_procedure(IN p_id BIGINT, OUT p_name VARCHAR(100))
 				 SELECT name INTO p_name FROM metadata_parent WHERE id = p_id

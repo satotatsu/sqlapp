@@ -37,8 +37,7 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 class MySqlJdbcTreeDataSessionTest {
 	private static final String IMAGE = "mysql:8.4";
 
-	private static final MySQLContainer MYSQL =
-			ReusableTestcontainers.configure(new MySQLContainer(IMAGE));
+	private static final MySQLContainer MYSQL = ReusableTestcontainers.configure(new MySQLContainer(IMAGE));
 
 	@BeforeAll
 	static void startContainer() {
@@ -52,8 +51,7 @@ class MySqlJdbcTreeDataSessionTest {
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
-		try (Connection writer = MYSQL.createConnection("");
-				Connection observer = MYSQL.createConnection("")) {
+		try (Connection writer = MYSQL.createConnection(""); Connection observer = MYSQL.createConnection("")) {
 			writer.setAutoCommit(false);
 			createTables(writer);
 			Schema schema = loadSchema(writer);
@@ -148,14 +146,13 @@ class MySqlJdbcTreeDataSessionTest {
 				addChild(session, child, "child-200");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, c.parent_id
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id IN (100, 200)
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, c.parent_id
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.id IN (100, 200)
+					ORDER BY p.id
+					""")) {
 				assertIdentityPair(resultSet, 100L);
 				assertIdentityPair(resultSet, 200L);
 				assertFalse(resultSet.next());
@@ -204,14 +201,13 @@ class MySqlJdbcTreeDataSessionTest {
 				addChild(session, child, "child-4");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4')
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4')
+					ORDER BY p.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertFalse(resultSet.next());
@@ -245,13 +241,12 @@ class MySqlJdbcTreeDataSessionTest {
 			assertEquals(2, statements.size());
 			assertEquals(6, executions.get());
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 3; i <= 8; i++) {
 					assertParentChild(resultSet, "parent-" + i, "child-" + i);
 				}
@@ -280,14 +275,13 @@ class MySqlJdbcTreeDataSessionTest {
 				addChild(session, child, "child-5");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							LEFT JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
-							ORDER BY p.id, c.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					LEFT JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+					ORDER BY p.id, c.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3a");
 				assertParentChild(resultSet, "parent-3", "child-3b");
 				assertParentChild(resultSet, "parent-4", null);
@@ -302,7 +296,8 @@ class MySqlJdbcTreeDataSessionTest {
 				.orElseThrow(() -> new AssertionError("MySQL test schema was not loaded."));
 	}
 
-	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text) throws SQLException {
+	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text)
+			throws SQLException {
 		Row row = session.newRow(parent);
 		row.put("txt", text);
 		return row;

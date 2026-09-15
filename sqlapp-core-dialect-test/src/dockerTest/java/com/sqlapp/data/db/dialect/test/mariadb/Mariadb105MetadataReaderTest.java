@@ -44,25 +44,21 @@ class Mariadb105MetadataReaderTest {
 
 	@Test
 	void readsCoreSchemaObjectsWithThe105Reader() throws SQLException {
-		try (Connection connection = MARIADB.createConnection("");
-				Statement statement = connection.createStatement()) {
+		try (Connection connection = MARIADB.createConnection(""); Statement statement = connection.createStatement()) {
 			createObjects(statement);
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Mariadb10_50.class, dialect);
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName(MARIADB.getDatabaseName());
 			var schema = reader.getAllFull(connection).stream()
-					.filter(s -> MARIADB.getDatabaseName().equals(s.getName()))
-					.findFirst().orElseThrow();
+					.filter(s -> MARIADB.getDatabaseName().equals(s.getName())).findFirst().orElseThrow();
 
 			var parent = schema.getTables().get("metadata105_parent");
 			assertNotNull(parent);
 			assertTrue(parent.getColumns().get("id").isIdentity());
-			var primaryKey = assertInstanceOf(UniqueConstraint.class,
-					parent.getConstraints().get("PRIMARY"));
+			var primaryKey = assertInstanceOf(UniqueConstraint.class, parent.getConstraints().get("PRIMARY"));
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
-			assertEquals("code", parent.getIndexes().get("idx_metadata105_code")
-					.getColumns().get(0).getName());
+			assertEquals("code", parent.getIndexes().get("idx_metadata105_code").getColumns().get(0).getName());
 
 			var child = schema.getTables().get("metadata105_child");
 			var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
@@ -81,10 +77,8 @@ class Mariadb105MetadataReaderTest {
 
 			var procedure = schema.getProcedures().get("metadata105_procedure");
 			assertNotNull(procedure);
-			assertEquals(ParameterDirection.Input,
-					procedure.getArguments().get("p_id").getDirection());
-			assertTrue(String.join("\n", procedure.getStatement()).toLowerCase()
-					.contains("select code"));
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get("p_id").getDirection());
+			assertTrue(String.join("\n", procedure.getStatement()).toLowerCase().contains("select code"));
 		}
 	}
 
@@ -93,17 +87,12 @@ class Mariadb105MetadataReaderTest {
 		statement.execute("DROP VIEW IF EXISTS metadata105_view");
 		statement.execute("DROP TABLE IF EXISTS metadata105_child");
 		statement.execute("DROP TABLE IF EXISTS metadata105_parent");
-		statement.execute("CREATE TABLE metadata105_parent ("
-				+ "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
-				+ "code VARCHAR(40) NOT NULL, "
-				+ "INDEX idx_metadata105_code (code)) ENGINE=InnoDB");
-		statement.execute("CREATE TABLE metadata105_child ("
-				+ "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
-				+ "parent_id BIGINT NOT NULL, "
-				+ "CONSTRAINT fk_metadata105_parent FOREIGN KEY (parent_id) "
+		statement.execute("CREATE TABLE metadata105_parent (" + "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+				+ "code VARCHAR(40) NOT NULL, " + "INDEX idx_metadata105_code (code)) ENGINE=InnoDB");
+		statement.execute("CREATE TABLE metadata105_child (" + "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+				+ "parent_id BIGINT NOT NULL, " + "CONSTRAINT fk_metadata105_parent FOREIGN KEY (parent_id) "
 				+ "REFERENCES metadata105_parent(id) ON DELETE CASCADE) ENGINE=InnoDB");
-		statement.execute("CREATE VIEW metadata105_view AS "
-				+ "SELECT id, code FROM metadata105_parent");
+		statement.execute("CREATE VIEW metadata105_view AS " + "SELECT id, code FROM metadata105_parent");
 		statement.execute("CREATE PROCEDURE metadata105_procedure(IN p_id BIGINT) "
 				+ "SELECT code FROM metadata105_parent WHERE id = p_id");
 	}

@@ -40,40 +40,34 @@ class Mariadb114MetadataReaderTest {
 
 	@Test
 	void readsSystemPeriodWithThe114Reader() throws SQLException {
-		try (Connection connection = MARIADB.createConnection("");
-				Statement statement = connection.createStatement()) {
-			statement.execute("CREATE TABLE metadata114_parent ("
-					+ "id BIGINT NOT NULL PRIMARY KEY, code VARCHAR(40))");
-			statement.execute("CREATE TABLE metadata114_versioned ("
-					+ "id BIGINT NOT NULL PRIMARY KEY, value_text VARCHAR(100), "
-					+ "row_start TIMESTAMP(6) GENERATED ALWAYS AS ROW START, "
-					+ "row_end TIMESTAMP(6) GENERATED ALWAYS AS ROW END, "
-					+ "PERIOD FOR SYSTEM_TIME (row_start, row_end)) WITH SYSTEM VERSIONING");
-			statement.execute("CREATE VIEW metadata114_view AS "
-					+ "SELECT id, code FROM metadata114_parent");
+		try (Connection connection = MARIADB.createConnection(""); Statement statement = connection.createStatement()) {
+			statement
+					.execute("CREATE TABLE metadata114_parent (" + "id BIGINT NOT NULL PRIMARY KEY, code VARCHAR(40))");
+			statement.execute(
+					"CREATE TABLE metadata114_versioned (" + "id BIGINT NOT NULL PRIMARY KEY, value_text VARCHAR(100), "
+							+ "row_start TIMESTAMP(6) GENERATED ALWAYS AS ROW START, "
+							+ "row_end TIMESTAMP(6) GENERATED ALWAYS AS ROW END, "
+							+ "PERIOD FOR SYSTEM_TIME (row_start, row_end)) WITH SYSTEM VERSIONING");
+			statement.execute("CREATE VIEW metadata114_view AS " + "SELECT id, code FROM metadata114_parent");
 
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Mariadb11_40.class, dialect);
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName(MARIADB.getDatabaseName());
 			var schema = reader.getAllFull(connection).stream()
-					.filter(s -> MARIADB.getDatabaseName().equals(s.getName()))
-					.findFirst().orElseThrow();
+					.filter(s -> MARIADB.getDatabaseName().equals(s.getName())).findFirst().orElseThrow();
 
 			var versioned = schema.getTables().get("metadata114_versioned");
 			assertNotNull(versioned);
 			assertNotNull(versioned.getSystemVersioning());
 			assertTrue(versioned.getSystemVersioning().isEnable());
 			assertEquals(1, versioned.getTemporalPeriods().size());
-			assertEquals("row_start", versioned.getTemporalPeriods().get(0)
-					.getStartColumnName());
-			assertEquals("row_end", versioned.getTemporalPeriods().get(0)
-					.getEndColumnName());
+			assertEquals("row_start", versioned.getTemporalPeriods().get(0).getStartColumnName());
+			assertEquals("row_end", versioned.getTemporalPeriods().get(0).getEndColumnName());
 
 			var view = schema.getViews().get("metadata114_view");
 			assertNotNull(view);
-			assertTrue(String.join("\n", view.getStatement()).toLowerCase()
-					.contains("metadata114_parent"));
+			assertTrue(String.join("\n", view.getStatement()).toLowerCase().contains("metadata114_parent"));
 			assertEquals(2, view.getColumns().size());
 		}
 	}

@@ -40,8 +40,8 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** Cloud Spanner emulator coverage for multi-row DML THEN RETURN. */
 class SpannerJdbcTreeDataSessionTest {
-	private static final GenericContainer<?> SPANNER = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator:latest"))
+	private static final GenericContainer<?> SPANNER = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator:latest"))
 					.withExposedPorts(9010)
 					.waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2))));
 
@@ -85,12 +85,11 @@ class SpannerJdbcTreeDataSessionTest {
 
 			assertEquals(2, statements.size());
 			assertEquals(6, executions.get());
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, p.txt, c.parent_id, c.txt
-							FROM parent_table p JOIN child_table c ON c.parent_id=p.id
-							ORDER BY p.txt
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, p.txt, c.parent_id, c.txt
+					FROM parent_table p JOIN child_table c ON c.parent_id=p.id
+					ORDER BY p.txt
+					""")) {
 				for (int i = 1; i <= 6; i++) {
 					assertTrue(resultSet.next());
 					assertEquals(resultSet.getLong(1), resultSet.getLong(3));
@@ -106,20 +105,17 @@ class SpannerJdbcTreeDataSessionTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		Table parent = new Table("parent_table");
 		parent.setDialect(dialect);
-		parent.getColumns().add(new Column("id")
-				.setDataType(DataType.BIGINT).setIdentity(true));
-		parent.getColumns().add(new Column("txt")
-				.setDataType(DataType.VARCHAR).setLength(30));
+		parent.getColumns().add(new Column("id").setDataType(DataType.BIGINT).setIdentity(true));
+		parent.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(30));
 		parent.setPrimaryKey(parent.getColumns().get("id"));
 		Table child = new Table("child_table");
 		child.setDialect(dialect);
 		child.getColumns().add(new Column("id").setDataType(DataType.BIGINT));
 		child.getColumns().add(new Column("parent_id").setDataType(DataType.BIGINT));
-		child.getColumns().add(new Column("txt")
-				.setDataType(DataType.VARCHAR).setLength(30));
+		child.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(30));
 		child.setPrimaryKey(child.getColumns().get("id"));
-		child.getConstraints().addForeignKeyConstraint("fk_child_parent",
-				child.getColumns().get("parent_id"), parent.getColumns().get("id"));
+		child.getConstraints().addForeignKeyConstraint("fk_child_parent", child.getColumns().get("parent_id"),
+				parent.getColumns().get("id"));
 		return new Table[] { parent, child };
 	}
 

@@ -36,8 +36,7 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 /** MySQL 8.4 integration coverage for the metadata reader tree. */
 class MySqlMetadataReaderTest {
 	private static final MySQLContainer MYSQL = ReusableTestcontainers
-			.configure(new MySQLContainer("mysql:8.4")
-					.withCommand("--log-bin-trust-function-creators=1"));
+			.configure(new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -51,25 +50,21 @@ class MySqlMetadataReaderTest {
 
 	@Test
 	void testReadsRepresentativeSchemaObjectsFromMySql84() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("");
-				Statement statement = connection.createStatement()) {
+		try (Connection connection = MYSQL.createConnection(""); Statement statement = connection.createStatement()) {
 			createObjects(statement);
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(MySql840.class, dialect);
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName(MYSQL.getDatabaseName());
-			var schema = reader.getAllFull(connection).stream()
-					.filter(s -> MYSQL.getDatabaseName().equals(s.getName()))
+			var schema = reader.getAllFull(connection).stream().filter(s -> MYSQL.getDatabaseName().equals(s.getName()))
 					.findFirst().orElseThrow();
 
 			var parent = schema.getTables().get("metadata_parent");
 			assertNotNull(parent);
 			assertEquals("metadata parent", parent.getRemarks());
 			assertTrue(parent.getColumns().get("id").isIdentity());
-			assertEquals("display name",
-					parent.getColumns().get("name").getRemarks());
-			var primaryKey = assertInstanceOf(UniqueConstraint.class,
-					parent.getConstraints().get("PRIMARY"));
+			assertEquals("display name", parent.getColumns().get("name").getRemarks());
+			var primaryKey = assertInstanceOf(UniqueConstraint.class, parent.getConstraints().get("PRIMARY"));
 			assertTrue(primaryKey.isPrimaryKey());
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
 			var unique = assertInstanceOf(UniqueConstraint.class,
@@ -77,16 +72,14 @@ class MySqlMetadataReaderTest {
 			assertEquals("code", unique.getColumns().get(0).getName());
 			var check = assertInstanceOf(CheckConstraint.class,
 					parent.getConstraints().get("ck_metadata_parent_amount"));
-			assertTrue(check.getExpression().replace("`", "")
-					.contains("amount >= 0"), check::getExpression);
+			assertTrue(check.getExpression().replace("`", "").contains("amount >= 0"), check::getExpression);
 			var nameIndex = parent.getIndexes().get("idx_metadata_parent_name");
 			assertNotNull(nameIndex);
 			assertEquals("name", nameIndex.getColumns().get(0).getName());
 			assertTrue(!parent.getIndexes().get("idx_metadata_parent_invisible").isEnable());
 			var functionalIndex = parent.getIndexes().get("idx_metadata_parent_lower_name");
 			assertNotNull(functionalIndex);
-			assertTrue(functionalIndex.getColumns().get(0).getName()
-					.toLowerCase().contains("lower"));
+			assertTrue(functionalIndex.getColumns().get(0).getName().toLowerCase().contains("lower"));
 			var orderedIndex = parent.getIndexes().get("idx_metadata_parent_ordered");
 			assertEquals(Order.Desc, orderedIndex.getColumns().get(0).getOrder());
 			assertEquals(10L, orderedIndex.getColumns().get(1).getLength());
@@ -99,32 +92,23 @@ class MySqlMetadataReaderTest {
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertEquals(CascadeRule.Cascade, foreignKey.getUpdateRule());
 			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
-			assertNotNull(child.getColumns().get("normalized_code")
-					.getFormula());
+			assertNotNull(child.getColumns().get("normalized_code").getFormula());
 
 			var partitioned = schema.getTables().get("metadata_partitioned");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
-			assertEquals(PartitioningType.Hash,
-					partitioned.getPartitioning().getSubPartitioningType());
-			assertEquals("bucket", partitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
-			assertEquals("id", partitioned.getPartitioning()
-					.getSubPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Hash, partitioned.getPartitioning().getSubPartitioningType());
+			assertEquals("bucket", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
+			assertEquals("id", partitioned.getPartitioning().getSubPartitioningColumns().get(0).getName());
 			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
 			assertTrue(partitioned.getPartitioning().getPartitions().stream()
 					.allMatch(partition -> partition.getSubPartitions().size() == 2));
-			assertEquals("p0s0 comment", partitioned.getPartitioning().getPartitions()
-					.get("p0").getSubPartitions().get("p0s0").getRemarks());
-			assertNull(partitioned.getPartitioning().getPartitions()
-					.get("p0").getRemarks());
-			assertEquals("10", partitioned.getPartitioning().getPartitions()
-					.get("p0").getHighValue());
-			assertEquals("MAXVALUE", partitioned.getPartitioning().getPartitions()
-					.get("pmax").getHighValue());
-			assertNotNull(partitioned.getPartitioning().getPartitions()
-					.get("pmax").getSubPartitions().get("pmaxs1"));
+			assertEquals("p0s0 comment", partitioned.getPartitioning().getPartitions().get("p0").getSubPartitions()
+					.get("p0s0").getRemarks());
+			assertNull(partitioned.getPartitioning().getPartitions().get("p0").getRemarks());
+			assertEquals("10", partitioned.getPartitioning().getPartitions().get("p0").getHighValue());
+			assertEquals("MAXVALUE", partitioned.getPartitioning().getPartitions().get("pmax").getHighValue());
+			assertNotNull(partitioned.getPartitioning().getPartitions().get("pmax").getSubPartitions().get("pmaxs1"));
 
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
@@ -138,11 +122,9 @@ class MySqlMetadataReaderTest {
 			assertNotNull(procedure);
 			String procedureStatement = String.join("\n", procedure.getStatement()).toLowerCase();
 			assertTrue(procedureStatement.contains("select name into p_name"), procedureStatement);
-			assertEquals(ParameterDirection.Input,
-					procedure.getArguments().get("p_id").getDirection());
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get("p_id").getDirection());
 			assertEquals(DataType.BIGINT, procedure.getArguments().get("p_id").getDataType());
-			assertEquals(ParameterDirection.Output,
-					procedure.getArguments().get("p_name").getDirection());
+			assertEquals(ParameterDirection.Output, procedure.getArguments().get("p_name").getDirection());
 			assertEquals(DataType.VARCHAR, procedure.getArguments().get("p_name").getDataType());
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
@@ -157,8 +139,7 @@ class MySqlMetadataReaderTest {
 			assertEquals("metadata_parent", trigger.getTableName());
 			assertEquals("AFTER", trigger.getActionTiming());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertTrue(String.join("\n", trigger.getStatement())
-					.contains("metadata_audit"));
+			assertTrue(String.join("\n", trigger.getStatement()).contains("metadata_audit"));
 			var event = schema.getEvents().get("metadata_event");
 			assertNotNull(event);
 			assertEquals(EventType.Recurring, event.getEventType());
@@ -167,8 +148,7 @@ class MySqlMetadataReaderTest {
 			assertEquals("PRESERVE", event.getOnCompletion());
 			assertTrue(!event.isEnable());
 			assertEquals("metadata event", event.getRemarks());
-			assertTrue(String.join("\n", event.getStatement())
-					.contains("metadata_audit"));
+			assertTrue(String.join("\n", event.getStatement()).contains("metadata_audit"));
 		}
 	}
 

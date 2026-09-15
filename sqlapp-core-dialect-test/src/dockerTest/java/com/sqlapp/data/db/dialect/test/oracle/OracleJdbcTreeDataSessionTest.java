@@ -37,8 +37,7 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 class OracleJdbcTreeDataSessionTest {
 	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
 
-	private static final OracleContainer ORACLE =
-			ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+	private static final OracleContainer ORACLE = ReusableTestcontainers.configure(new OracleContainer(IMAGE));
 
 	@BeforeAll
 	static void startContainer() {
@@ -52,8 +51,7 @@ class OracleJdbcTreeDataSessionTest {
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
-		try (Connection writer = ORACLE.createConnection("");
-				Connection observer = ORACLE.createConnection("")) {
+		try (Connection writer = ORACLE.createConnection(""); Connection observer = ORACLE.createConnection("")) {
 			writer.setAutoCommit(false);
 			createTables(writer, "BY DEFAULT");
 			Schema schema = loadSchema(writer);
@@ -161,13 +159,12 @@ class OracleJdbcTreeDataSessionTest {
 			assertEquals(4, preparedStatements.size(),
 					"Two-row batches must reuse their prepared statements; only final one-row shapes differ.");
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 3; i <= 7; i++) {
 					assertParentChild(resultSet, "parent-" + i, "child-" + i);
 				}
@@ -196,14 +193,13 @@ class OracleJdbcTreeDataSessionTest {
 				addChild(session, child, "child-5");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							LEFT JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
-							ORDER BY p.id, c.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					LEFT JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+					ORDER BY p.id, c.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3a");
 				assertParentChild(resultSet, "parent-3", "child-3b");
 				assertParentChild(resultSet, "parent-4", null);
@@ -254,14 +250,13 @@ class OracleJdbcTreeDataSessionTest {
 				addChild(session, child, "child-4");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4')
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4')
+					ORDER BY p.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertFalse(resultSet.next());
@@ -289,14 +284,13 @@ class OracleJdbcTreeDataSessionTest {
 				addChild(session, child, "child-200");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, c.parent_id
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id IN (100, 200)
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, c.parent_id
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.id IN (100, 200)
+					ORDER BY p.id
+					""")) {
 				assertIdentityPair(resultSet, 100L);
 				assertIdentityPair(resultSet, 200L);
 				assertFalse(resultSet.next());
@@ -330,7 +324,8 @@ class OracleJdbcTreeDataSessionTest {
 				.orElseThrow(() -> new AssertionError("Oracle test schema was not loaded."));
 	}
 
-	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text) throws SQLException {
+	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text)
+			throws SQLException {
 		Row row = session.newRow(parent);
 		row.put("TXT", text);
 		return row;

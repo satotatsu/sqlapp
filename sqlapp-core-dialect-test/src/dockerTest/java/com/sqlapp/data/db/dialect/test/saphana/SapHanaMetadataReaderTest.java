@@ -43,23 +43,18 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
 class SapHanaMetadataReaderTest {
 	private static final String PASSWORD = "HxeTest9xA";
-	private static final String PASSWORD_JSON =
-			"{\"master_password\":\"" + PASSWORD + "\"}";
+	private static final String PASSWORD_JSON = "{\"master_password\":\"" + PASSWORD + "\"}";
 	private static final Path PASSWORD_DIRECTORY = createPasswordDirectory();
-	private static final GenericContainer<?> HANA = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse(
-					"saplabs/hanaexpress:2.00.088.00.20251110.1"))
-					.withFileSystemBind(PASSWORD_DIRECTORY.toString(),
-							"/hana/mounts", BindMode.READ_WRITE)
-					.withCommand("--passwords-url",
-							"file:///hana/mounts/password.json",
-							"--agree-to-sap-license", "--dont-check-system")
+	private static final GenericContainer<?> HANA = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("saplabs/hanaexpress:2.00.088.00.20251110.1"))
+					.withFileSystemBind(PASSWORD_DIRECTORY.toString(), "/hana/mounts", BindMode.READ_WRITE)
+					.withCommand("--passwords-url", "file:///hana/mounts/password.json", "--agree-to-sap-license",
+							"--dont-check-system")
 					.withExposedPorts(39041)
-					.withCreateContainerCmdModifier(command -> command
-							.withHostName("hxehost").getHostConfig()
-							.withShmSize(1L << 30))
-					.waitingFor(Wait.forLogMessage(".*Startup finished.*", 1)
-							.withStartupTimeout(Duration.ofMinutes(30))));
+					.withCreateContainerCmdModifier(
+							command -> command.withHostName("hxehost").getHostConfig().withShmSize(1L << 30))
+					.waitingFor(
+							Wait.forLogMessage(".*Startup finished.*", 1).withStartupTimeout(Duration.ofMinutes(30))));
 
 	@BeforeAll
 	static void startContainer() {
@@ -79,206 +74,156 @@ class SapHanaMetadataReaderTest {
 
 	@Test
 	void testReadsRepresentativeSchemaObjectsFromHana2() throws SQLException {
-		try (Connection connection = createConnection();
-				Statement statement = connection.createStatement()) {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
 			try {
 				createObjects(statement);
 				createSecurityObjects(statement);
 				var dialect = DialectResolver.getInstance().getDialect(connection);
-			assertInstanceOf(SapHana.class, dialect);
-			var reader = dialect.getCatalogReader().getSchemaReader();
-			reader.setSchemaName("METADATA_TEST");
-			var schema = reader.getAllFull(connection).stream()
-					.filter(s -> "METADATA_TEST".equals(s.getName()))
-					.findFirst().orElseThrow();
-			var parent = schema.getTables().get("METADATA_PARENT");
-			assertNotNull(parent);
-			assertEquals(TableDataStoreType.Column,
-					parent.getTableDataStoreType());
-			assertEquals("TRUE",
-					parent.getSpecifics().get("IS_COLUMN_TABLE"));
-			assertEquals("FALSE",
-					parent.getSpecifics().get("IS_INSERT_ONLY"));
-			assertEquals("FALSE",
-					parent.getSpecifics().get("IS_TEMPORARY"));
-			assertNotNull(parent.getSpecifics().get("AUTO_MERGE_ON"));
-			assertEquals("Metadata parent table", parent.getRemarks());
-			assertEquals("Display name",
-					parent.getColumns().get("NAME").getRemarks());
-			var parentPrimaryKey = assertInstanceOf(UniqueConstraint.class,
-					parent.getConstraints().get("PK_METADATA_PARENT"));
-			assertTrue(parentPrimaryKey.isPrimaryKey());
-			assertEquals("ID",
-					parentPrimaryKey.getColumns().get(0).getName());
-			assertEquals("REGION",
-					parentPrimaryKey.getColumns().get(1).getName());
-			var rowStore = schema.getTables().get("METADATA_ROW_STORE");
-			assertNotNull(rowStore);
-			assertEquals(TableDataStoreType.Row,
-					rowStore.getTableDataStoreType());
-			assertEquals("FALSE",
-					rowStore.getSpecifics().get("IS_COLUMN_TABLE"));
-			var child = schema.getTables().get("METADATA_CHILD");
-			assertNotNull(child);
-			assertEquals(IdentityGenerationType.ByDefault,
-					child.getColumns().get("ID").getIdentityGenerationType());
-			assertTrue(child.getColumns().get("CODE").getDefaultValue()
-					.contains("unknown"));
-			var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
-					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
-			assertEquals(2, foreignKey.getColumns().size());
-			assertEquals("PARENT_ID",
-					foreignKey.getColumns().get(0).getName());
-			assertEquals("PARENT_REGION",
-					foreignKey.getColumns().get(1).getName());
-			assertEquals("ID",
-					foreignKey.getRelatedColumns().get(0).getName());
-			assertEquals("REGION",
-					foreignKey.getRelatedColumns().get(1).getName());
-			var childUniqueKey = assertInstanceOf(UniqueConstraint.class,
-					child.getConstraints().get("UK_METADATA_CHILD_CODE"));
-			assertTrue(!childUniqueKey.isPrimaryKey());
-			assertEquals("CODE",
-					childUniqueKey.getColumns().get(0).getName());
-			var checkConstraint = assertInstanceOf(CheckConstraint.class,
-					child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
-			assertTrue(checkConstraint.getExpression().contains("AMOUNT"));
-			assertTrue(checkConstraint.getExpression().contains(">= 0"));
-			var childIndex = child.getIndexes()
-					.get("IDX_METADATA_CHILD_PARENT");
-			assertNotNull(childIndex);
-			assertEquals(IndexType.InvertedValue, childIndex.getIndexType());
-			assertEquals("PARENT_ID",
-					childIndex.getColumns().get(0).getName());
-			assertEquals("PARENT_REGION",
-					childIndex.getColumns().get(1).getName());
-			var sequence = schema.getSequences().get("METADATA_SEQ");
-			assertNotNull(sequence);
-			assertEquals(50L, sequence.getStartValue().longValue());
-			assertEquals(10L, sequence.getIncrementBy().longValue());
-			assertEquals(10L, sequence.getMinValue().longValue());
-			assertEquals(1000L, sequence.getMaxValue().longValue());
-			assertTrue(sequence.isCycle());
-			var view = schema.getViews().get("METADATA_VIEW");
-			assertNotNull(view);
-			assertTrue(view.getDefinition().toString()
-					.contains("METADATA_CHILD"));
-			assertEquals(3, view.getColumns().size());
-			assertEquals(DataType.BIGINT,
-					view.getColumns().get("ID").getDataType());
-			assertEquals(DataType.DECIMAL,
-					view.getColumns().get("AMOUNT").getDataType());
-			var synonym = schema.getSynonyms().get("METADATA_PARENT_SYNONYM");
-			assertNotNull(synonym);
-			assertEquals("METADATA_TEST", synonym.getSchemaName());
-			assertEquals("METADATA_TEST", synonym.getObjectSchemaName());
-			assertEquals("METADATA_PARENT", synonym.getObjectName());
-			var partitioned = schema.getTables().get("METADATA_PARTITIONED");
-			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
-			assertEquals("BUCKET", partitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
-			assertEquals(3, partitioned.getPartitioning().getPartitions().size());
-			assertTrue(partitioned.getPartitioning().getPartitions().stream()
-					.allMatch(partition -> partition.getSpecifics()
-							.get("LOAD_UNIT") != null));
-			assertTrue(partitioned.getPartitioning().getPartitions().stream()
-					.allMatch(partition -> partition.getSpecifics()
-							.get("STORAGE_TYPE") != null));
-			var multiPartitioned = schema.getTables()
-					.get("METADATA_MULTI_PARTITIONED");
-			assertNotNull(multiPartitioned);
-			assertEquals(PartitioningType.Hash,
-					multiPartitioned.getPartitioning().getPartitioningType());
-			assertEquals(PartitioningType.Range,
-					multiPartitioned.getPartitioning().getSubPartitioningType());
-			assertEquals("ID", multiPartitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
-			assertEquals("BUCKET", multiPartitioned.getPartitioning()
-					.getSubPartitioningColumns().get(0).getName());
-			assertEquals(2,
-					multiPartitioned.getPartitioning().getPartitions().size());
-			assertEquals(6, multiPartitioned.getPartitioning().getPartitions()
-					.stream().mapToInt(partition -> partition.getSubPartitions().size())
-					.sum());
-			var documents = schema.getTables().get("METADATA_DOCUMENTS");
-			assertNotNull(documents);
-			var fulltextIndex = documents.getIndexes()
-					.get("IDX_METADATA_DOCUMENTS_TEXT");
-			assertNotNull(fulltextIndex);
-			assertEquals(IndexType.FullText, fulltextIndex.getIndexType());
-			assertEquals(1, fulltextIndex.getColumns().size());
-			assertNotNull(fulltextIndex.getColumns().get(0).getName());
-			assertEquals("FALSE",
-					fulltextIndex.getSpecifics().get("FAST_PREPROCESS"));
-			assertEquals("FALSE",
-					fulltextIndex.getSpecifics().get("FUZZY_SEARCH_INDEX"));
-			assertEquals("TRUE",
-					fulltextIndex.getSpecifics().get("SEARCH_ONLY"));
-			assertEquals("TRUE",
-					fulltextIndex.getSpecifics().get("IS_EXPLICIT"));
-			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
-			assertNotNull(procedure);
-			assertNotNull(procedure.getStatement());
-			assertEquals(2, procedure.getArguments().size());
-			var procedureInput = procedure.getArguments().get("P_ID");
-			assertNotNull(procedureInput);
-			assertEquals(ParameterDirection.Input,
-					procedureInput.getDirection());
-			assertEquals(DataType.BIGINT, procedureInput.getDataType());
-			var procedureOutput = procedure.getArguments().get("P_NAME");
-			assertNotNull(procedureOutput);
-			assertEquals(ParameterDirection.Output,
-					procedureOutput.getDirection());
-			assertEquals(DataType.NVARCHAR, procedureOutput.getDataType());
-			var function = schema.getFunctions().get("METADATA_FUNCTION");
-			assertNotNull(function);
-			assertNotNull(function.getDefinition());
-			assertEquals(2, function.getArguments().size());
-			var functionInput = function.getArguments().get("P_AMOUNT");
-			assertNotNull(functionInput);
-			assertEquals(ParameterDirection.Input,
-					functionInput.getDirection());
-			assertEquals(DataType.DECIMAL, functionInput.getDataType());
-			var functionResult = function.getArguments().get("RESULT");
-			assertNotNull(functionResult);
-			assertEquals(ParameterDirection.Output,
-					functionResult.getDirection());
-			assertEquals(DataType.DECIMAL, functionResult.getDataType());
-			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
-			assertNotNull(trigger);
-			assertEquals("AFTER", trigger.getActionTiming());
-			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertEquals("METADATA_TEST", trigger.getTableSchemaName());
-			assertEquals("METADATA_CHILD", trigger.getTableName());
+				assertInstanceOf(SapHana.class, dialect);
+				var reader = dialect.getCatalogReader().getSchemaReader();
+				reader.setSchemaName("METADATA_TEST");
+				var schema = reader.getAllFull(connection).stream().filter(s -> "METADATA_TEST".equals(s.getName()))
+						.findFirst().orElseThrow();
+				var parent = schema.getTables().get("METADATA_PARENT");
+				assertNotNull(parent);
+				assertEquals(TableDataStoreType.Column, parent.getTableDataStoreType());
+				assertEquals("TRUE", parent.getSpecifics().get("IS_COLUMN_TABLE"));
+				assertEquals("FALSE", parent.getSpecifics().get("IS_INSERT_ONLY"));
+				assertEquals("FALSE", parent.getSpecifics().get("IS_TEMPORARY"));
+				assertNotNull(parent.getSpecifics().get("AUTO_MERGE_ON"));
+				assertEquals("Metadata parent table", parent.getRemarks());
+				assertEquals("Display name", parent.getColumns().get("NAME").getRemarks());
+				var parentPrimaryKey = assertInstanceOf(UniqueConstraint.class,
+						parent.getConstraints().get("PK_METADATA_PARENT"));
+				assertTrue(parentPrimaryKey.isPrimaryKey());
+				assertEquals("ID", parentPrimaryKey.getColumns().get(0).getName());
+				assertEquals("REGION", parentPrimaryKey.getColumns().get(1).getName());
+				var rowStore = schema.getTables().get("METADATA_ROW_STORE");
+				assertNotNull(rowStore);
+				assertEquals(TableDataStoreType.Row, rowStore.getTableDataStoreType());
+				assertEquals("FALSE", rowStore.getSpecifics().get("IS_COLUMN_TABLE"));
+				var child = schema.getTables().get("METADATA_CHILD");
+				assertNotNull(child);
+				assertEquals(IdentityGenerationType.ByDefault,
+						child.getColumns().get("ID").getIdentityGenerationType());
+				assertTrue(child.getColumns().get("CODE").getDefaultValue().contains("unknown"));
+				var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
+						child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
+				assertEquals(2, foreignKey.getColumns().size());
+				assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
+				assertEquals("PARENT_REGION", foreignKey.getColumns().get(1).getName());
+				assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
+				assertEquals("REGION", foreignKey.getRelatedColumns().get(1).getName());
+				var childUniqueKey = assertInstanceOf(UniqueConstraint.class,
+						child.getConstraints().get("UK_METADATA_CHILD_CODE"));
+				assertTrue(!childUniqueKey.isPrimaryKey());
+				assertEquals("CODE", childUniqueKey.getColumns().get(0).getName());
+				var checkConstraint = assertInstanceOf(CheckConstraint.class,
+						child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
+				assertTrue(checkConstraint.getExpression().contains("AMOUNT"));
+				assertTrue(checkConstraint.getExpression().contains(">= 0"));
+				var childIndex = child.getIndexes().get("IDX_METADATA_CHILD_PARENT");
+				assertNotNull(childIndex);
+				assertEquals(IndexType.InvertedValue, childIndex.getIndexType());
+				assertEquals("PARENT_ID", childIndex.getColumns().get(0).getName());
+				assertEquals("PARENT_REGION", childIndex.getColumns().get(1).getName());
+				var sequence = schema.getSequences().get("METADATA_SEQ");
+				assertNotNull(sequence);
+				assertEquals(50L, sequence.getStartValue().longValue());
+				assertEquals(10L, sequence.getIncrementBy().longValue());
+				assertEquals(10L, sequence.getMinValue().longValue());
+				assertEquals(1000L, sequence.getMaxValue().longValue());
+				assertTrue(sequence.isCycle());
+				var view = schema.getViews().get("METADATA_VIEW");
+				assertNotNull(view);
+				assertTrue(view.getDefinition().toString().contains("METADATA_CHILD"));
+				assertEquals(3, view.getColumns().size());
+				assertEquals(DataType.BIGINT, view.getColumns().get("ID").getDataType());
+				assertEquals(DataType.DECIMAL, view.getColumns().get("AMOUNT").getDataType());
+				var synonym = schema.getSynonyms().get("METADATA_PARENT_SYNONYM");
+				assertNotNull(synonym);
+				assertEquals("METADATA_TEST", synonym.getSchemaName());
+				assertEquals("METADATA_TEST", synonym.getObjectSchemaName());
+				assertEquals("METADATA_PARENT", synonym.getObjectName());
+				var partitioned = schema.getTables().get("METADATA_PARTITIONED");
+				assertNotNull(partitioned);
+				assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+				assertEquals("BUCKET", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
+				assertEquals(3, partitioned.getPartitioning().getPartitions().size());
+				assertTrue(partitioned.getPartitioning().getPartitions().stream()
+						.allMatch(partition -> partition.getSpecifics().get("LOAD_UNIT") != null));
+				assertTrue(partitioned.getPartitioning().getPartitions().stream()
+						.allMatch(partition -> partition.getSpecifics().get("STORAGE_TYPE") != null));
+				var multiPartitioned = schema.getTables().get("METADATA_MULTI_PARTITIONED");
+				assertNotNull(multiPartitioned);
+				assertEquals(PartitioningType.Hash, multiPartitioned.getPartitioning().getPartitioningType());
+				assertEquals(PartitioningType.Range, multiPartitioned.getPartitioning().getSubPartitioningType());
+				assertEquals("ID", multiPartitioned.getPartitioning().getPartitioningColumns().get(0).getName());
+				assertEquals("BUCKET", multiPartitioned.getPartitioning().getSubPartitioningColumns().get(0).getName());
+				assertEquals(2, multiPartitioned.getPartitioning().getPartitions().size());
+				assertEquals(6, multiPartitioned.getPartitioning().getPartitions().stream()
+						.mapToInt(partition -> partition.getSubPartitions().size()).sum());
+				var documents = schema.getTables().get("METADATA_DOCUMENTS");
+				assertNotNull(documents);
+				var fulltextIndex = documents.getIndexes().get("IDX_METADATA_DOCUMENTS_TEXT");
+				assertNotNull(fulltextIndex);
+				assertEquals(IndexType.FullText, fulltextIndex.getIndexType());
+				assertEquals(1, fulltextIndex.getColumns().size());
+				assertNotNull(fulltextIndex.getColumns().get(0).getName());
+				assertEquals("FALSE", fulltextIndex.getSpecifics().get("FAST_PREPROCESS"));
+				assertEquals("FALSE", fulltextIndex.getSpecifics().get("FUZZY_SEARCH_INDEX"));
+				assertEquals("TRUE", fulltextIndex.getSpecifics().get("SEARCH_ONLY"));
+				assertEquals("TRUE", fulltextIndex.getSpecifics().get("IS_EXPLICIT"));
+				var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
+				assertNotNull(procedure);
+				assertNotNull(procedure.getStatement());
+				assertEquals(2, procedure.getArguments().size());
+				var procedureInput = procedure.getArguments().get("P_ID");
+				assertNotNull(procedureInput);
+				assertEquals(ParameterDirection.Input, procedureInput.getDirection());
+				assertEquals(DataType.BIGINT, procedureInput.getDataType());
+				var procedureOutput = procedure.getArguments().get("P_NAME");
+				assertNotNull(procedureOutput);
+				assertEquals(ParameterDirection.Output, procedureOutput.getDirection());
+				assertEquals(DataType.NVARCHAR, procedureOutput.getDataType());
+				var function = schema.getFunctions().get("METADATA_FUNCTION");
+				assertNotNull(function);
+				assertNotNull(function.getDefinition());
+				assertEquals(2, function.getArguments().size());
+				var functionInput = function.getArguments().get("P_AMOUNT");
+				assertNotNull(functionInput);
+				assertEquals(ParameterDirection.Input, functionInput.getDirection());
+				assertEquals(DataType.DECIMAL, functionInput.getDataType());
+				var functionResult = function.getArguments().get("RESULT");
+				assertNotNull(functionResult);
+				assertEquals(ParameterDirection.Output, functionResult.getDirection());
+				assertEquals(DataType.DECIMAL, functionResult.getDataType());
+				var trigger = schema.getTriggers().get("METADATA_TRIGGER");
+				assertNotNull(trigger);
+				assertEquals("AFTER", trigger.getActionTiming());
+				assertTrue(trigger.getEventManipulation().contains("INSERT"));
+				assertEquals("METADATA_TEST", trigger.getTableSchemaName());
+				assertEquals("METADATA_CHILD", trigger.getTableName());
 				assertNotNull(trigger.getDefinition());
 				var catalogReader = dialect.getCatalogReader();
 				var roleReader = catalogReader.getRoleReader();
 				roleReader.setObjectName("METADATA_ROLE");
 				assertNotNull(roleReader.getAll(connection).stream()
-						.filter(role -> "METADATA_ROLE".equals(role.getName()))
-						.findFirst().orElseThrow());
+						.filter(role -> "METADATA_ROLE".equals(role.getName())).findFirst().orElseThrow());
 				var userReader = catalogReader.getUserReader();
 				userReader.setObjectName("METADATA_USER");
 				assertNotNull(userReader.getAll(connection).stream()
-						.filter(user -> "METADATA_USER".equals(user.getName()))
-						.findFirst().orElseThrow());
+						.filter(user -> "METADATA_USER".equals(user.getName())).findFirst().orElseThrow());
 				var roleMemberReader = catalogReader.getRoleMemberReader();
 				roleMemberReader.setGrantee("METADATA_USER");
 				assertTrue(roleMemberReader.getAll(connection).stream()
-						.anyMatch(member -> "METADATA_ROLE".equals(
-								member.getMemberRoleName())
-								&& member.isAdmin()));
-				var objectPrivilegeReader = catalogReader
-						.getObjectPrivilegeReader();
+						.anyMatch(member -> "METADATA_ROLE".equals(member.getMemberRoleName()) && member.isAdmin()));
+				var objectPrivilegeReader = catalogReader.getObjectPrivilegeReader();
 				objectPrivilegeReader.setSchemaName("METADATA_TEST");
 				objectPrivilegeReader.setObjectName("METADATA_PARENT");
 				assertTrue(objectPrivilegeReader.getAll(connection).stream()
-						.anyMatch(privilege -> "METADATA_ROLE".equals(
-								privilege.getGranteeName())
-								&& "SELECT".equals(privilege.getPrivilege())
-								&& privilege.isGrantable()));
+						.anyMatch(privilege -> "METADATA_ROLE".equals(privilege.getGranteeName())
+								&& "SELECT".equals(privilege.getPrivilege()) && privilege.isGrantable()));
 			} finally {
 				cleanupSecurityObjects(statement);
 			}
@@ -286,15 +231,15 @@ class SapHanaMetadataReaderTest {
 	}
 
 	private Connection createConnection() throws SQLException {
-		String url = "jdbc:sap://localhost:" + HANA.getMappedPort(39041)
-				+ "/?databaseName=HXE";
+		String url = "jdbc:sap://localhost:" + HANA.getMappedPort(39041) + "/?databaseName=HXE";
 		return DriverManager.getConnection(url, "SYSTEM", PASSWORD);
 	}
 
 	private void createObjects(final Statement statement) throws SQLException {
 		drop(statement, "DROP SCHEMA METADATA_TEST CASCADE");
 		statement.execute("CREATE SCHEMA METADATA_TEST");
-		statement.execute("CREATE SEQUENCE METADATA_TEST.METADATA_SEQ START WITH 50 INCREMENT BY 10 MINVALUE 10 MAXVALUE 1000 CYCLE");
+		statement.execute(
+				"CREATE SEQUENCE METADATA_TEST.METADATA_SEQ START WITH 50 INCREMENT BY 10 MINVALUE 10 MAXVALUE 1000 CYCLE");
 		statement.execute("""
 				CREATE COLUMN TABLE METADATA_TEST.METADATA_PARTITIONED (
 				 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL, PAYLOAD NVARCHAR(100))
@@ -402,8 +347,7 @@ class SapHanaMetadataReaderTest {
 		}
 	}
 
-	private void createSecurityObjects(final Statement statement)
-			throws SQLException {
+	private void createSecurityObjects(final Statement statement) throws SQLException {
 		drop(statement, "DROP USER METADATA_USER CASCADE");
 		drop(statement, "DROP ROLE METADATA_ROLE");
 		statement.execute("CREATE USER METADATA_USER PASSWORD HxeTest9xB NO FORCE_FIRST_PASSWORD_CHANGE");
@@ -420,8 +364,7 @@ class SapHanaMetadataReaderTest {
 	private static Path createPasswordDirectory() {
 		try {
 			Path directory = Files.createTempDirectory("sqlapp-hana-metadata-");
-			Files.writeString(directory.resolve("password.json"), PASSWORD_JSON,
-					StandardCharsets.UTF_8);
+			Files.writeString(directory.resolve("password.json"), PASSWORD_JSON, StandardCharsets.UTF_8);
 			return directory;
 		} catch (Exception e) {
 			throw new ExceptionInInitializerError(e);

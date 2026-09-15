@@ -30,8 +30,8 @@ import com.sqlapp.data.schemas.PartitioningType;
 
 /** PostgreSQL 14 compatibility coverage for the metadata reader tree. */
 class Postgres140MetadataReaderTest {
-	private static final PostgreSQLContainer POSTGRES =
-			ReusableTestcontainers.configure(new PostgreSQLContainer("postgres:14"));
+	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
+			.configure(new PostgreSQLContainer("postgres:14"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -53,8 +53,7 @@ class Postgres140MetadataReaderTest {
 			var reader = dialect.getCatalogReader();
 			String catalogName = connection.getCatalog();
 			reader.setCatalogName(catalogName);
-			var catalog = reader.getAllFull(connection).stream()
-					.filter(c -> catalogName.equals(c.getName()))
+			var catalog = reader.getAllFull(connection).stream().filter(c -> catalogName.equals(c.getName()))
 					.findFirst().orElseThrow();
 			var schema = catalog.getSchemas().get("metadata_test_14");
 			assertNotNull(schema);
@@ -68,53 +67,43 @@ class Postgres140MetadataReaderTest {
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
 			assertEquals(2, view.getColumns().size());
-			assertTrue(String.join("\n", view.getStatement())
-					.toLowerCase(Locale.ROOT).contains("metadata_child"));
+			assertTrue(String.join("\n", view.getStatement()).toLowerCase(Locale.ROOT).contains("metadata_child"));
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("p_amount", function.getArguments().get(0).getName());
-			assertTrue(String.join("\n", function.getStatement())
-					.toLowerCase(Locale.ROOT).contains("p_amount * 2"));
+			assertTrue(String.join("\n", function.getStatement()).toLowerCase(Locale.ROOT).contains("p_amount * 2"));
 			var trigger = schema.getTriggers().get("metadata_trigger");
 			assertNotNull(trigger);
 			assertEquals("metadata_child", trigger.getTableName());
-			assertTrue(String.join("\n", trigger.getStatement())
-					.toLowerCase(Locale.ROOT).contains("metadata_trigger_function"));
+			assertTrue(String.join("\n", trigger.getStatement()).toLowerCase(Locale.ROOT)
+					.contains("metadata_trigger_function"));
 			var operator = schema.getOperators().get("#@#");
 			assertNotNull(operator);
-			assertEquals(DataType.INT,
-					operator.getLeftArgument().getDataType());
-			assertEquals(DataType.INT,
-					operator.getRightArgument().getDataType());
+			assertEquals(DataType.INT, operator.getLeftArgument().getDataType());
+			assertEquals(DataType.INT, operator.getRightArgument().getDataType());
 			assertEquals("metadata_test_14", operator.getFunctionSchemaName());
 			assertEquals("metadata_int_add", operator.getFunctionName());
-			var operatorClass = schema.getOperatorClasses()
-					.get("metadata_int_ops");
+			var operatorClass = schema.getOperatorClasses().get("metadata_int_ops");
 			assertNotNull(operatorClass);
 			assertEquals(DataType.INT, operatorClass.getDataType());
 			assertEquals(IndexType.BTree, operatorClass.getIndexType());
 			assertEquals(5, operatorClass.getOperatorFamilies().size());
 			assertEquals(1, operatorClass.getFunctionFamilies().size());
-			assertTrue(operatorClass.getFunctionFamilies().get(0)
-					.getFunctionName().startsWith("metadata_int_cmp"));
+			assertTrue(operatorClass.getFunctionFamilies().get(0).getFunctionName().startsWith("metadata_int_cmp"));
 			var partitioned = schema.getTables().get("metadata_events");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
 			var partition = schema.getTables().get("metadata_events_2025");
 			assertNotNull(partition);
-			assertEquals("metadata_events",
-					partition.getPartitionParent().getTableName());
+			assertEquals("metadata_events", partition.getPartitionParent().getTableName());
 			var booking = schema.getTables().get("metadata_booking");
 			assertNotNull(booking);
-			assertNotNull(booking.getConstraints()
-					.get("ex_metadata_booking_during"));
+			assertNotNull(booking.getConstraints().get("ex_metadata_booking_during"));
 			var rule = schema.getRules().get("metadata_child_audit");
 			assertNotNull(rule);
 			assertEquals("metadata_child", rule.getTableName());
-			assertTrue(rule.getDefinition().stream()
-					.anyMatch(line -> line.contains("metadata_audit")));
+			assertTrue(rule.getDefinition().stream().anyMatch(line -> line.contains("metadata_audit")));
 		}
 	}
 

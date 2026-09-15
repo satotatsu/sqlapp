@@ -39,8 +39,7 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 class OracleMetadataReaderTest {
 	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
 
-	private static final OracleContainer ORACLE =
-			ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+	private static final OracleContainer ORACLE = ReusableTestcontainers.configure(new OracleContainer(IMAGE));
 
 	@BeforeAll
 	static void startContainer() {
@@ -53,8 +52,7 @@ class OracleMetadataReaderTest {
 	}
 
 	@Test
-	void testReadsRepresentativeSchemaObjectsFromLatestOracle()
-			throws SQLException {
+	void testReadsRepresentativeSchemaObjectsFromLatestOracle() throws SQLException {
 		try (Connection connection = ORACLE.createConnection("")) {
 			grantDirectoryAccess();
 			createSchemaObjects(connection);
@@ -66,29 +64,24 @@ class OracleMetadataReaderTest {
 			var schemaReader = dialect.getCatalogReader().getSchemaReader();
 			schemaReader.setSchemaName(schemaName);
 			Schema schema = schemaReader.getAllFull(connection).stream()
-					.filter(current -> schemaName.equalsIgnoreCase(current.getName()))
-					.findFirst()
-					.orElseThrow(() -> new AssertionError(
-							"Oracle test schema was not loaded."));
+					.filter(current -> schemaName.equalsIgnoreCase(current.getName())).findFirst()
+					.orElseThrow(() -> new AssertionError("Oracle test schema was not loaded."));
 
 			Table parent = schema.getTables().get("METADATA_PARENT");
 			assertNotNull(parent);
 			assertEquals("Metadata parent table", parent.getRemarks());
-			UniqueConstraint primaryKey = assertInstanceOf(
-					UniqueConstraint.class,
+			UniqueConstraint primaryKey = assertInstanceOf(UniqueConstraint.class,
 					parent.getConstraints().get("PK_METADATA_PARENT"));
 			assertEquals("ID", primaryKey.getColumns().get(0).getName());
 			assertEquals("REGION", primaryKey.getColumns().get(1).getName());
-			assertEquals("Display name",
-					parent.getColumns().get("NAME").getRemarks());
+			assertEquals("Display name", parent.getColumns().get("NAME").getRemarks());
 
 			Table child = schema.getTables().get("METADATA_CHILD");
 			assertNotNull(child);
 			assertNotNull(child.getConstraints().get("PK_METADATA_CHILD"));
 			assertNotNull(child.getConstraints().get("UK_METADATA_CHILD_CODE"));
 			assertNotNull(child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
-			ForeignKeyConstraint foreignKey = assertInstanceOf(
-					ForeignKeyConstraint.class,
+			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
 			assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
 			assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
@@ -97,65 +90,49 @@ class OracleMetadataReaderTest {
 			assertNotNull(index);
 			assertEquals("PARENT_ID", index.getColumns().get(0).getName());
 			assertEquals("CODE", index.getColumns().get(1).getName());
-			Index functionIndex = parent.getIndexes()
-					.get("IDX_METADATA_PARENT_UPPER_NAME");
+			Index functionIndex = parent.getIndexes().get("IDX_METADATA_PARENT_UPPER_NAME");
 			assertNotNull(functionIndex);
-			assertTrue(functionIndex.getColumns().get(0).getName()
-					.contains("UPPER"));
+			assertTrue(functionIndex.getColumns().get(0).getName().contains("UPPER"));
 
 			Table partitioned = schema.getTables().get("METADATA_PARTITIONED");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
-			assertEquals("CREATED_AT", partitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
-			assertEquals(PartitioningType.Hash,
-					partitioned.getPartitioning().getSubPartitioningType());
-			assertEquals("REGION", partitioned.getPartitioning()
-					.getSubPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+			assertEquals("CREATED_AT", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Hash, partitioned.getPartitioning().getSubPartitioningType());
+			assertEquals("REGION", partitioned.getPartitioning().getSubPartitioningColumns().get(0).getName());
 			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
-			assertEquals(2, partitioned.getPartitioning().getPartitions()
-					.get("P_2025").getSubPartitions().size());
-			Index localIndex = partitioned.getIndexes()
-					.get("IDX_METADATA_PARTITIONED_REGION");
+			assertEquals(2, partitioned.getPartitioning().getPartitions().get("P_2025").getSubPartitions().size());
+			Index localIndex = partitioned.getIndexes().get("IDX_METADATA_PARTITIONED_REGION");
 			assertNotNull(localIndex);
 			assertEquals(2, localIndex.getPartitioning().getPartitions().size());
 
 			assertTrue(child.getColumns().get("ID").isIdentity());
 			assertTrue(child.getColumns().get("CODE").isNotNull());
-			assertTrue(child.getColumns().get("CODE").getDefaultValue()
-					.contains("unknown"));
+			assertTrue(child.getColumns().get("CODE").getDefaultValue().contains("unknown"));
 			assertNotNull(child.getColumns().get("TOTAL"));
 
 			Table vectorTable = schema.getTables().get("METADATA_VECTOR");
 			assertNotNull(vectorTable);
-			assertEquals(DataType.VECTOR,
-					vectorTable.getColumns().get("EMBEDDING").getDataType());
+			assertEquals(DataType.VECTOR, vectorTable.getColumns().get("EMBEDDING").getDataType());
 
-			var externalTable = schema.getExternalTables()
-					.get("METADATA_EXTERNAL");
+			var externalTable = schema.getExternalTables().get("METADATA_EXTERNAL");
 			assertNotNull(externalTable);
-			assertEquals("DATA_PUMP_DIR",
-					externalTable.getDefaultDirectoryName());
+			assertEquals("DATA_PUMP_DIR", externalTable.getDefaultDirectoryName());
 			assertEquals("DATA_PUMP_DIR", externalTable.getDirectoryName());
 			assertEquals("metadata_external.csv", externalTable.getLocation());
 			assertEquals("ORACLE_LOADER", externalTable.getTypeName());
 			assertEquals("CLOB", externalTable.getAccessType());
 			assertEquals("10", externalTable.getRejectLimit());
-			assertTrue(externalTable.getAccessParameters()
-					.contains("TERMINATED BY"));
+			assertTrue(externalTable.getAccessParameters().contains("TERMINATED BY"));
 
 			var dimension = schema.getDimensions().get("METADATA_DIMENSION");
 			assertNotNull(dimension);
 			assertEquals(schemaName, dimension.getSchemaName());
-			assertEquals("VALID",
-					dimension.getSpecifics().get("COMPILE_STATE"));
+			assertEquals("VALID", dimension.getSpecifics().get("COMPILE_STATE"));
 			var productLevel = dimension.getLevels().get("PRODUCT");
 			assertNotNull(productLevel);
-			assertEquals("METADATA_DIM_PRODUCT",
-					productLevel.getColumns().get(0).getTableName());
-			assertEquals("PRODUCT_ID",
-					productLevel.getColumns().get(0).getName());
+			assertEquals("METADATA_DIM_PRODUCT", productLevel.getColumns().get(0).getTableName());
+			assertEquals("PRODUCT_ID", productLevel.getColumns().get(0).getName());
 			assertNotNull(dimension.getLevels().get("CATEGORY"));
 			var hierarchy = dimension.getHierarchies().get("PRODUCT_ROLLUP");
 			assertNotNull(hierarchy);
@@ -163,8 +140,7 @@ class OracleMetadataReaderTest {
 			assertEquals("CATEGORY", hierarchy.getLevels().get(1).getName());
 			var attribute = dimension.getAttributes().get("PRODUCT");
 			assertNotNull(attribute);
-			assertEquals("PRODUCT_NAME",
-					attribute.getColumns().get(0).getName());
+			assertEquals("PRODUCT_NAME", attribute.getColumns().get(0).getName());
 
 			Sequence sequence = schema.getSequences().get("METADATA_SEQ");
 			assertNotNull(sequence);
@@ -172,17 +148,14 @@ class OracleMetadataReaderTest {
 			var view = schema.getViews().get("METADATA_VIEW");
 			assertNotNull(view);
 			assertNotNull(view.getColumns().get("TOTAL"));
-			assertTrue(String.join("\n", view.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			assertTrue(String.join("\n", view.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var mview = schema.getMviews().get("METADATA_MVIEW");
 			assertNotNull(mview);
 			assertNotNull(mview.getStatement());
-			assertTrue(mview.getStatement().toString()
-					.contains("METADATA_PARENT"));
+			assertTrue(mview.getStatement().toString().contains("METADATA_PARENT"));
 			var mviewLog = schema.getMviewLogs().stream()
-					.filter(current -> "METADATA_PARENT".equals(
-							current.getMasterTableName()))
-					.findFirst().orElseThrow();
+					.filter(current -> "METADATA_PARENT".equals(current.getMasterTableName())).findFirst()
+					.orElseThrow();
 			assertTrue(mviewLog.isSavePrimaryKey());
 			assertTrue(mviewLog.isSaveRowIds());
 			assertTrue(mviewLog.isIncludeNewValues());
@@ -190,27 +163,23 @@ class OracleMetadataReaderTest {
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
-			assertTrue(String.join("\n", function.getStatement())
-					.toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
+			assertTrue(String.join("\n", function.getStatement()).toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_CHILD", trigger.getTableName());
 			assertEquals("BEFORE", trigger.getActionTiming());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertTrue(String.join("\n", trigger.getStatement())
-					.toUpperCase(Locale.ROOT).contains("UPPER"));
+			assertTrue(String.join("\n", trigger.getStatement()).toUpperCase(Locale.ROOT).contains("UPPER"));
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_SYNONYM"));
 			var metadataPackage = schema.getPackages().get("METADATA_PACKAGE");
 			assertNotNull(metadataPackage);
 			assertNotNull(metadataPackage.getStatement());
-			assertTrue(metadataPackage.getStatement().stream()
-					.anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
+			assertTrue(metadataPackage.getStatement().stream().anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
 			assertNotNull(metadataPackage.getBody());
 			assertNotNull(metadataPackage.getBody().getStatement());
 			assertTrue(metadataPackage.getBody().getStatement().stream()
@@ -218,14 +187,12 @@ class OracleMetadataReaderTest {
 		}
 	}
 
-	private void createSchemaObjects(final Connection connection)
-			throws SQLException {
+	private void createSchemaObjects(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			drop(statement, "DROP SYNONYM METADATA_PARENT_SYNONYM", 1434);
 			drop(statement, "DROP TRIGGER METADATA_TRIGGER", 4080);
 			drop(statement, "DROP MATERIALIZED VIEW METADATA_MVIEW", 12003);
-			drop(statement, "DROP MATERIALIZED VIEW LOG ON METADATA_PARENT",
-					942, 12002);
+			drop(statement, "DROP MATERIALIZED VIEW LOG ON METADATA_PARENT", 942, 12002);
 			drop(statement, "DROP VIEW METADATA_VIEW", 942);
 			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE", 4043);
 			drop(statement, "DROP FUNCTION METADATA_FUNCTION", 4043);
@@ -384,16 +351,15 @@ class OracleMetadataReaderTest {
 	}
 
 	private void grantDirectoryAccess() throws SQLException {
-		try (Connection connection = DriverManager.getConnection(
-				ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+		try (Connection connection = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
 				Statement statement = connection.createStatement()) {
-			statement.execute("GRANT READ, WRITE ON DIRECTORY DATA_PUMP_DIR TO "
-					+ ORACLE.getUsername().toUpperCase(Locale.ROOT));
+			statement.execute(
+					"GRANT READ, WRITE ON DIRECTORY DATA_PUMP_DIR TO " + ORACLE.getUsername().toUpperCase(Locale.ROOT));
 		}
 	}
 
-	private void drop(final Statement statement, final String sql,
-			final int... missingObjectErrorCodes) throws SQLException {
+	private void drop(final Statement statement, final String sql, final int... missingObjectErrorCodes)
+			throws SQLException {
 		try {
 			statement.execute(sql);
 		} catch (SQLException e) {

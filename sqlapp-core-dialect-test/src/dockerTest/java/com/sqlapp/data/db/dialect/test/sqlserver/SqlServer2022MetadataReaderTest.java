@@ -31,9 +31,8 @@ import com.sqlapp.data.schemas.Table;
 /** Verifies the SQL Server 2022 metadata path and Ledger catalog columns. */
 class SqlServer2022MetadataReaderTest {
 	private static final String DATABASE_NAME = "METADATA_READER_2022_TEST";
-	private static final MSSQLServerContainer SQL_SERVER =
-			ReusableTestcontainers.configure(new MSSQLServerContainer(
-					"mcr.microsoft.com/mssql/server:2022-latest").acceptLicense());
+	private static final MSSQLServerContainer SQL_SERVER = ReusableTestcontainers
+			.configure(new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2022-latest").acceptLicense());
 
 	@BeforeAll
 	static void startContainer() throws SQLException {
@@ -52,9 +51,8 @@ class SqlServer2022MetadataReaderTest {
 	@Test
 	void testReadsLedgerMetadataOnSqlServer2022() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME,
-				SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				Statement statement = connection.createStatement()) {
+				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME, SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); Statement statement = connection.createStatement()) {
 			statement.execute("""
 					CREATE TABLE METADATA_LEDGER_2022 (
 						ID BIGINT NOT NULL PRIMARY KEY,
@@ -72,29 +70,25 @@ class SqlServer2022MetadataReaderTest {
 			var reader = dialect.getCatalogReader();
 			reader.setCatalogName(connection.getCatalog());
 			Catalog catalog = reader.getAllFull(connection).stream()
-					.filter(current -> connectionCatalogEquals(connection, current))
-					.findFirst().orElseThrow();
-			Table table = catalog.getSchemas().get("dbo").getTables()
-					.get("METADATA_LEDGER_2022");
+					.filter(current -> connectionCatalogEquals(connection, current)).findFirst().orElseThrow();
+			Table table = catalog.getSchemas().get("dbo").getTables().get("METADATA_LEDGER_2022");
 			assertNotNull(table);
-			assertEquals("APPEND_ONLY_LEDGER_TABLE",
-					table.getSpecifics().get("ledger_type"));
+			assertEquals("APPEND_ONLY_LEDGER_TABLE", table.getSpecifics().get("ledger_type"));
 			var schema = catalog.getSchemas().get("dbo");
 			var view = schema.getViews().get("METADATA_LEDGER_2022_VIEW");
 			assertNotNull(view);
 			assertNotNull(view.getColumns().get("VALUE"));
-			assertTrue(String.join("\n", view.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_LEDGER_2022"));
+			assertTrue(
+					String.join("\n", view.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_LEDGER_2022"));
 			var procedure = schema.getProcedures().get("METADATA_2022_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getArguments().get("@P_ID"));
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_LEDGER_2022"));
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT)
+					.contains("METADATA_LEDGER_2022"));
 		}
 	}
 
-	private boolean connectionCatalogEquals(final Connection connection,
-			final Catalog catalog) {
+	private boolean connectionCatalogEquals(final Connection connection, final Catalog catalog) {
 		try {
 			return connection.getCatalog().equalsIgnoreCase(catalog.getName());
 		} catch (SQLException e) {

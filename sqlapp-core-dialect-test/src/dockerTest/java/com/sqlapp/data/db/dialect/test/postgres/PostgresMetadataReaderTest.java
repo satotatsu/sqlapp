@@ -33,8 +33,8 @@ import com.sqlapp.data.schemas.Table;
 
 /** PostgreSQL 18 integration coverage for the metadata reader tree. */
 class PostgresMetadataReaderTest {
-	private static final PostgreSQLContainer POSTGRES =
-			ReusableTestcontainers.configure(new PostgreSQLContainer("postgres:18.4"));
+	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
+			.configure(new PostgreSQLContainer("postgres:18.4"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -47,8 +47,7 @@ class PostgresMetadataReaderTest {
 	}
 
 	@Test
-	void testReadsRepresentativeSchemaObjectsFromLatestPostgres()
-			throws SQLException {
+	void testReadsRepresentativeSchemaObjectsFromLatestPostgres() throws SQLException {
 		try (Connection connection = POSTGRES.createConnection("");
 				Statement statement = connection.createStatement()) {
 			createObjects(statement);
@@ -57,8 +56,7 @@ class PostgresMetadataReaderTest {
 			var reader = dialect.getCatalogReader();
 			String catalogName = connection.getCatalog();
 			reader.setCatalogName(catalogName);
-			var catalog = reader.getAllFull(connection).stream()
-					.filter(c -> catalogName.equals(c.getName()))
+			var catalog = reader.getAllFull(connection).stream().filter(c -> catalogName.equals(c.getName()))
 					.findFirst().orElseThrow();
 			Schema schema = catalog.getSchemas().get("metadata_test");
 			assertNotNull(schema);
@@ -70,81 +68,63 @@ class PostgresMetadataReaderTest {
 			assertNotNull(child);
 			assertTrue(child.getColumns().get("id").isIdentity());
 			assertNotNull(child.getConstraints().get("ck_metadata_child_amount"));
-			ForeignKeyConstraint foreignKey = assertInstanceOf(
-					ForeignKeyConstraint.class,
+			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("fk_metadata_child_parent"));
 			assertEquals(2, foreignKey.getColumns().size());
 			assertNotNull(child.getIndexes().get("idx_metadata_child_parent"));
-			var expressionIndex = child.getIndexes()
-					.get("idx_metadata_child_lower_code");
+			var expressionIndex = child.getIndexes().get("idx_metadata_child_lower_code");
 			assertNotNull(expressionIndex);
-			assertTrue(expressionIndex.getColumns().get(0).getName()
-					.toLowerCase(Locale.ROOT).contains("lower"));
+			assertTrue(expressionIndex.getColumns().get(0).getName().toLowerCase(Locale.ROOT).contains("lower"));
 			Table booking = schema.getTables().get("metadata_booking");
 			assertNotNull(booking);
-			assertNotNull(booking.getConstraints()
-					.get("ex_metadata_booking_during"));
+			assertNotNull(booking.getConstraints().get("ex_metadata_booking_during"));
 			assertNotNull(schema.getSequences().get("metadata_seq"));
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
 			assertEquals(3, view.getColumns().size());
-			assertTrue(String.join("\n", view.getStatement()).toLowerCase(Locale.ROOT)
-					.contains("metadata_child"));
+			assertTrue(String.join("\n", view.getStatement()).toLowerCase(Locale.ROOT).contains("metadata_child"));
 			var materializedView = schema.getMviews().get("metadata_mview");
 			assertNotNull(materializedView);
-			assertTrue(String.join("\n", materializedView.getStatement())
-					.toLowerCase(Locale.ROOT).contains("count"));
+			assertTrue(String.join("\n", materializedView.getStatement()).toLowerCase(Locale.ROOT).contains("count"));
 			var function = schema.getFunctions().get("metadata_function");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("p_amount", function.getArguments().get(0).getName());
-			assertEquals(DataType.NUMERIC,
-					function.getArguments().get(0).getDataType());
-			assertTrue(String.join("\n", function.getStatement())
-					.toLowerCase(Locale.ROOT).contains("p_amount * 2"));
+			assertEquals(DataType.NUMERIC, function.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", function.getStatement()).toLowerCase(Locale.ROOT).contains("p_amount * 2"));
 			var operator = schema.getOperators().get("#@#");
 			assertNotNull(operator);
-			assertEquals(DataType.INT,
-					operator.getLeftArgument().getDataType());
-			assertEquals(DataType.INT,
-					operator.getRightArgument().getDataType());
+			assertEquals(DataType.INT, operator.getLeftArgument().getDataType());
+			assertEquals(DataType.INT, operator.getRightArgument().getDataType());
 			assertEquals("metadata_test", operator.getFunctionSchemaName());
 			assertEquals("metadata_int_add", operator.getFunctionName());
-			var operatorClass = schema.getOperatorClasses()
-					.get("metadata_int_ops");
+			var operatorClass = schema.getOperatorClasses().get("metadata_int_ops");
 			assertNotNull(operatorClass);
 			assertEquals(DataType.INT, operatorClass.getDataType());
 			assertEquals(IndexType.BTree, operatorClass.getIndexType());
 			assertEquals(5, operatorClass.getOperatorFamilies().size());
 			assertEquals(1, operatorClass.getFunctionFamilies().size());
-			assertTrue(operatorClass.getFunctionFamilies().get(0)
-					.getFunctionName().startsWith("metadata_int_cmp"));
+			assertTrue(operatorClass.getFunctionFamilies().get(0).getFunctionName().startsWith("metadata_int_cmp"));
 			var trigger = schema.getTriggers().get("metadata_trigger");
 			assertNotNull(trigger);
 			assertEquals("metadata_child", trigger.getTableName());
-			assertTrue(String.join("\n", trigger.getStatement())
-					.toLowerCase(Locale.ROOT).contains("metadata_trigger_function"));
+			assertTrue(String.join("\n", trigger.getStatement()).toLowerCase(Locale.ROOT)
+					.contains("metadata_trigger_function"));
 			var rule = schema.getRules().get("metadata_child_audit");
 			assertNotNull(rule);
 			assertEquals("metadata_child", rule.getTableName());
-			assertTrue(rule.getDefinition().stream()
-					.anyMatch(line -> line.contains("metadata_audit")));
+			assertTrue(rule.getDefinition().stream().anyMatch(line -> line.contains("metadata_audit")));
 			assertNotNull(schema.getDomains().get("metadata_code"));
 			assertNotNull(schema.getDomains().get("metadata_status"));
 			Table partitioned = schema.getTables().get("metadata_events");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
-			assertEquals("occurred_at", partitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+			assertEquals("occurred_at", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
 			Table partition2025 = schema.getTables().get("metadata_events_2025");
 			assertNotNull(partition2025);
-			assertEquals("metadata_events",
-					partition2025.getPartitionParent().getTableName());
-			assertTrue(partition2025.getPartitionParent().getLowValue()
-					.contains("2025-01-01"));
-			assertTrue(partition2025.getPartitionParent().getHighValue()
-					.contains("2026-01-01"));
+			assertEquals("metadata_events", partition2025.getPartitionParent().getTableName());
+			assertTrue(partition2025.getPartitionParent().getLowValue().contains("2025-01-01"));
+			assertTrue(partition2025.getPartitionParent().getHighValue().contains("2026-01-01"));
 		}
 	}
 
@@ -206,8 +186,10 @@ class PostgresMetadataReaderTest {
 				""");
 		statement.execute("COMMENT ON TABLE metadata_test.metadata_parent IS 'Metadata parent table'");
 		statement.execute("COMMENT ON COLUMN metadata_test.metadata_parent.name IS 'Display name'");
-		statement.execute("CREATE VIEW metadata_test.metadata_view AS SELECT id, code, total FROM metadata_test.metadata_child");
-		statement.execute("CREATE MATERIALIZED VIEW metadata_test.metadata_mview AS SELECT count(*) AS count FROM metadata_test.metadata_child");
+		statement.execute(
+				"CREATE VIEW metadata_test.metadata_view AS SELECT id, code, total FROM metadata_test.metadata_child");
+		statement.execute(
+				"CREATE MATERIALIZED VIEW metadata_test.metadata_mview AS SELECT count(*) AS count FROM metadata_test.metadata_child");
 		statement.execute("""
 				CREATE FUNCTION metadata_test.metadata_function(p_amount numeric)
 				 RETURNS numeric LANGUAGE sql IMMUTABLE AS $$ SELECT p_amount * 2 $$

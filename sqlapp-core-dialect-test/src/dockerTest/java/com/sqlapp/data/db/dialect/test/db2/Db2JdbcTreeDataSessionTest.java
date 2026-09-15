@@ -107,12 +107,11 @@ class Db2JdbcTreeDataSessionTest {
 				addChild(session, child, "child-6");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5', 'parent-6') ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5', 'parent-6') ORDER BY p.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertParentChild(resultSet, "parent-5", "child-5");
@@ -143,12 +142,11 @@ class Db2JdbcTreeDataSessionTest {
 				addChild(session, child, "child-200");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, c.parent_id FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id IN (100, 200) ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, c.parent_id FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.id IN (100, 200) ORDER BY p.id
+					""")) {
 				assertIdentityPair(resultSet, 100L);
 				assertIdentityPair(resultSet, 200L);
 				assertFalse(resultSet.next());
@@ -207,7 +205,8 @@ class Db2JdbcTreeDataSessionTest {
 				.orElseThrow(() -> new AssertionError("Db2 test schema was not loaded."));
 	}
 
-	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text) throws SQLException {
+	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text)
+			throws SQLException {
 		Row row = session.newRow(parent);
 		row.put("TXT", text);
 		return row;

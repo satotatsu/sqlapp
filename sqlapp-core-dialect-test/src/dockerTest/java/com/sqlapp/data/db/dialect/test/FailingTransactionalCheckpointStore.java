@@ -10,8 +10,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.TransactionalBulkMigrationCheckpointStore;
 
 /** Injects a checkpoint write failure while retaining the target connection. */
-public final class FailingTransactionalCheckpointStore
-		implements TransactionalBulkMigrationCheckpointStore {
+public final class FailingTransactionalCheckpointStore implements TransactionalBulkMigrationCheckpointStore {
 	private final Connection connection;
 	private final BulkMigrationCheckpointStore delegate;
 

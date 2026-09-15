@@ -41,8 +41,8 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 /** Exercises COPY staging and ON CONFLICT against PostgreSQL 18. */
 class PostgresBulkUpsertTest {
-	private static final PostgreSQLContainer POSTGRES =
-			ReusableTestcontainers.configure(new PostgreSQLContainer("postgres:18.4"));
+	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
+			.configure(new PostgreSQLContainer("postgres:18.4"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -56,107 +56,98 @@ class PostgresBulkUpsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = POSTGRES.createConnection("");
-				Connection second = POSTGRES.createConnection("")) {
+		try (Connection first = POSTGRES.createConnection(""); Connection second = POSTGRES.createConnection("")) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
 
 	@Test
 	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS \"SQLAPP_BMC_LEGACY_PG\"");
 			statement.execute("CREATE TABLE \"SQLAPP_BMC_LEGACY_PG\" ("
 					+ "\"MIGRATION_ID\" VARCHAR(255) NOT NULL PRIMARY KEY, "
 					+ "\"SOURCE_FINGERPRINT\" VARCHAR(255), \"TARGET_FINGERPRINT\" VARCHAR(255), "
-					+ "\"PROCESSED_ROWS\" NUMERIC(19,0) NOT NULL, "
-					+ "\"COMPLETED_CHUNKS\" NUMERIC(19,0) NOT NULL, "
+					+ "\"PROCESSED_ROWS\" NUMERIC(19,0) NOT NULL, " + "\"COMPLETED_CHUNKS\" NUMERIC(19,0) NOT NULL, "
 					+ "\"LAST_CHUNK_HASH\" VARCHAR(64), \"COMPLETE_FLAG\" CHAR(1) NOT NULL)");
-			final var store = new JdbcBulkMigrationCheckpointStore(connection,
-					"SQLAPP_BMC_LEGACY_PG");
-			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
-					.migrationId("legacy-pg").processedRows(1).completedChunks(1)
-					.chunkSize(1).lastChunkHash("checkpoint-hash")
-					.resumeToken("token-pg").complete(false).build());
+			final var store = new JdbcBulkMigrationCheckpointStore(connection, "SQLAPP_BMC_LEGACY_PG");
+			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder().migrationId("legacy-pg").processedRows(1)
+					.completedChunks(1).chunkSize(1).lastChunkHash("checkpoint-hash").resumeToken("token-pg")
+					.complete(false).build());
 			assertEquals("token-pg", store.load("legacy-pg").orElseThrow().getResumeToken());
 		}
 	}
 
 	@Test
-	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
-			throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS public.bulk_job_child");
 			statement.execute("DROP TABLE IF EXISTS public.bulk_job_parent");
-			statement.execute("CREATE TABLE public.bulk_job_parent "
-					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
-			statement.execute("CREATE TABLE public.bulk_job_child "
-					+ "(id INTEGER PRIMARY KEY, parent_id INTEGER NOT NULL "
-					+ "REFERENCES public.bulk_job_parent(id), txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_job_parent " + "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute(
+					"CREATE TABLE public.bulk_job_child " + "(id INTEGER PRIMARY KEY, parent_id INTEGER NOT NULL "
+							+ "REFERENCES public.bulk_job_parent(id), txt TEXT)");
 			final Table parent = jobTable("bulk_job_parent", false);
-			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "parent");
+			});
 			final Table child = jobTable("bulk_job_child", true);
 			child.getConstraints().addForeignKeyConstraint("bulk_job_child_parent_fk",
 					new Column[] { child.getColumns().get("parent_id") },
 					new Column[] { parent.getColumns().get("id") });
 			child.getRows().add(row -> {
-				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+				row.put("id", 10);
+				row.put("parent_id", 1);
+				row.put("txt", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child);
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child);
 			assertEquals(1, scalar(statement, "SELECT COUNT(*) FROM public.bulk_job_child c "
 					+ "JOIN public.bulk_job_parent p ON p.id = c.parent_id"));
 		}
 	}
 
 	@Test
-	void inspectsAndResetsJdbcJobCheckpointWithoutRemovingUpsertedRows()
-			throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+	void inspectsAndResetsJdbcJobCheckpointWithoutRemovingUpsertedRows() throws Exception {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS public.bulk_job_reset_target");
-			statement.execute("CREATE TABLE public.bulk_job_reset_target "
-					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_job_reset_target " + "(id INTEGER PRIMARY KEY, txt TEXT)");
 			final Table source = repairTable("bulk_job_reset_target");
-			source.getRows().add(row -> { row.put("id", 1); row.put("txt", "one"); });
-			source.getRows().add(row -> { row.put("id", 2); row.put("txt", "two"); });
+			source.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "one");
+			});
+			source.getRows().add(row -> {
+				row.put("id", 2);
+				row.put("txt", "two");
+			});
 			final var options = ChunkedBulkMigrationOption.builder()
-					.migrationId("postgres-job-reset-" + java.util.UUID.randomUUID())
-					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-					.chunkSize(1).build();
-			final var store = new JdbcBulkMigrationCheckpointStore(connection,
-					options.getCheckpointTableName());
-			final var task = BulkMigrationJobTask.builder().taskId("reset")
-					.sourceTable(source).options(options).checkpointStore(store).build();
+					.migrationId("postgres-job-reset-" + java.util.UUID.randomUUID()).sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(1).build();
+			final var store = new JdbcBulkMigrationCheckpointStore(connection, options.getCheckpointTableName());
+			final var task = BulkMigrationJobTask.builder().taskId("reset").sourceTable(source).options(options)
+					.checkpointStore(store).build();
 			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
 
-			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
-					.getProcessedRows());
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan).getProcessedRows());
 			assertEquals(BulkMigrationJobTaskState.COMPLETE,
 					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
 
-			assertEquals(List.of("reset"), BulkMigrationJobCheckpointManager
-					.reset(plan, plan.getFingerprint()).getResetTaskIds());
+			assertEquals(List.of("reset"),
+					BulkMigrationJobCheckpointManager.reset(plan, plan.getFingerprint()).getResetTaskIds());
 			assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
-			assertEquals(2, scalar(statement,
-					"SELECT COUNT(*) FROM public.bulk_job_reset_target"));
+			assertEquals(2, scalar(statement, "SELECT COUNT(*) FROM public.bulk_job_reset_target"));
 
-			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
-					.getProcessedRows());
-			assertEquals(2, scalar(statement,
-					"SELECT COUNT(*) FROM public.bulk_job_reset_target"));
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan).getProcessedRows());
+			assertEquals(2, scalar(statement, "SELECT COUNT(*) FROM public.bulk_job_reset_target"));
 		}
 	}
 
 	@Test
-	void updatesMatchesAndInsertsMissingRowsThroughCopyStaging()
-			throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+	void updatesMatchesAndInsertsMissingRowsThroughCopyStaging() throws Exception {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("CREATE SCHEMA bulk_upsert_test");
 			statement.execute("""
 					CREATE TABLE bulk_upsert_test.target (
@@ -194,20 +185,16 @@ class PostgresBulkUpsertTest {
 				row.put("payload", new byte[] { 2 });
 			});
 
-			assertEquals(3, BulkUpsertResolver.execute(connection, table,
-					BulkUpsertOption.defaults()));
+			assertEquals(3, BulkUpsertResolver.execute(connection, table, BulkUpsertOption.defaults()));
 
 			try (var resultSet = statement.executeQuery("SELECT id, code, name, "
-					+ "amount, payload, tags FROM bulk_upsert_test.target "
-					+ "ORDER BY code")) {
+					+ "amount, payload, tags FROM bulk_upsert_test.target " + "ORDER BY code")) {
 				resultSet.next();
 				assertEquals(1L, resultSet.getLong("id"));
 				assertEquals("A", resultSet.getString("code"));
 				assertEquals("更新後\nline", resultSet.getString("name"));
-				assertEquals(new BigDecimal("12.34"),
-						resultSet.getBigDecimal("amount"));
-				assertArrayEquals(new byte[] { 0, (byte) 0xff },
-						resultSet.getBytes("payload"));
+				assertEquals(new BigDecimal("12.34"), resultSet.getBigDecimal("amount"));
+				assertArrayEquals(new byte[] { 0, (byte) 0xff }, resultSet.getBytes("payload"));
 				assertArrayEquals(new String[] { "one", "two,three" },
 						(String[]) resultSet.getArray("tags").getArray());
 				resultSet.next();
@@ -224,14 +211,11 @@ class PostgresBulkUpsertTest {
 
 	@Test
 	void resumesWithDatabaseCheckpointInTheTargetTransaction() throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS public.chunk_migration_target");
-			statement.execute("CREATE TABLE public.chunk_migration_target "
-					+ "(code TEXT PRIMARY KEY, name TEXT)");
+			statement.execute("CREATE TABLE public.chunk_migration_target " + "(code TEXT PRIMARY KEY, name TEXT)");
 			final Table table = new Table("chunk_migration_target").setSchemaName("public");
-			final Column code = new Column("code").setDataType(DataType.LONGVARCHAR)
-					.setNotNull(true);
+			final Column code = new Column("code").setDataType(DataType.LONGVARCHAR).setNotNull(true);
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("name").setDataType(DataType.LONGVARCHAR));
 			table.setPrimaryKey("chunk_migration_target_pkey", code);
@@ -243,38 +227,33 @@ class PostgresBulkUpsertTest {
 				});
 			}
 			final String migrationId = "postgres-" + java.util.UUID.randomUUID();
-			final var option = ChunkedBulkMigrationOption.builder()
-					.migrationId(migrationId).sourceFingerprint("source-v1")
-					.targetFingerprint("target-v1").chunkSize(2).build();
+			final var option = ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1").chunkSize(2).build();
 			final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 					option.getCheckpointTableName());
-			assertThrows(java.sql.SQLException.class,
-					() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
-							new FailingTransactionalCheckpointStore(connection, checkpointStore)));
-			assertEquals(0, scalar(statement,
-					"SELECT COUNT(*) FROM public.chunk_migration_target"));
+			assertThrows(java.sql.SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(connection, table,
+					option, new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+			assertEquals(0, scalar(statement, "SELECT COUNT(*) FROM public.chunk_migration_target"));
 			assertTrue(checkpointStore.load(migrationId).isEmpty());
 
 			final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option);
 			assertEquals(3, result.getProcessedRows());
 			assertEquals(2, result.getCompletedChunks());
-			assertEquals(3, scalar(statement,
-					"SELECT COUNT(*) FROM public.chunk_migration_target"));
-			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection,
-					option.getCheckpointTableName()).load(migrationId).orElseThrow().getProcessedRows());
+			assertEquals(3, scalar(statement, "SELECT COUNT(*) FROM public.chunk_migration_target"));
+			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName())
+					.load(migrationId).orElseThrow().getProcessedRows());
 		}
 	}
 
 	@Test
 	void readsAfterACompositeJdbcKeyset() throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS public.keyset_source");
-			statement.execute("CREATE TABLE public.keyset_source ("
-					+ "\"KEY1\" INTEGER NOT NULL, \"KEY2\" INTEGER NOT NULL, "
-					+ "\"TXT\" TEXT, PRIMARY KEY (\"KEY1\", \"KEY2\"))");
-			statement.executeUpdate("INSERT INTO public.keyset_source VALUES "
-					+ "(1,1,'a'),(1,2,'b'),(2,1,'c'),(2,2,'d')");
+			statement.execute(
+					"CREATE TABLE public.keyset_source (" + "\"KEY1\" INTEGER NOT NULL, \"KEY2\" INTEGER NOT NULL, "
+							+ "\"TXT\" TEXT, PRIMARY KEY (\"KEY1\", \"KEY2\"))");
+			statement.executeUpdate(
+					"INSERT INTO public.keyset_source VALUES " + "(1,1,'a'),(1,2,'b'),(2,1,'c'),(2,2,'d')");
 			BulkMigrationKeysetAssertions.assertCompositeResume(connection,
 					compositeKeysetTable("keyset_source", "public"));
 		}
@@ -282,11 +261,9 @@ class PostgresBulkUpsertTest {
 
 	@Test
 	void repairsOnlyMismatchedChunksAndReverifies() throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS public.bulk_repair_target");
-			statement.execute("CREATE TABLE public.bulk_repair_target "
-					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_repair_target " + "(id INTEGER PRIMARY KEY, txt TEXT)");
 			statement.executeUpdate("INSERT INTO public.bulk_repair_target VALUES "
 					+ "(1,'value-1'),(2,'value-2'),(3,'wrong'),(4,'value-4')");
 			final Table expected = repairTable();
@@ -304,14 +281,13 @@ class PostgresBulkUpsertTest {
 			}
 			final var verification = BulkMigrationVerifier.verify(expected, before, 2);
 			assertEquals(1, verification.getMismatches().size());
-			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
-					verification, BulkMigrationRepairOption.builder().build());
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected, verification,
+					BulkMigrationRepairOption.builder().build());
 			assertEquals(1, repair.getReplayedChunks());
 			assertEquals(2, repair.getReplayedRows());
 
 			final Table after = repairTable();
-			try (var resultSet = statement.executeQuery(
-					"SELECT id, txt FROM public.bulk_repair_target ORDER BY id")) {
+			try (var resultSet = statement.executeQuery("SELECT id, txt FROM public.bulk_repair_target ORDER BY id")) {
 				while (resultSet.next()) {
 					after.getRows().add(row -> {
 						try {
@@ -329,41 +305,32 @@ class PostgresBulkUpsertTest {
 
 	@Test
 	void repairsJdbcKeysetMismatchByBoundaryAndReverifies() throws Exception {
-		try (Connection connection = POSTGRES.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection(""); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS public.bulk_repair_source");
 			statement.execute("DROP TABLE IF EXISTS public.bulk_repair_target");
-			statement.execute("CREATE TABLE public.bulk_repair_source "
-					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
-			statement.execute("CREATE TABLE public.bulk_repair_target "
-					+ "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_repair_source " + "(id INTEGER PRIMARY KEY, txt TEXT)");
+			statement.execute("CREATE TABLE public.bulk_repair_target " + "(id INTEGER PRIMARY KEY, txt TEXT)");
 			statement.executeUpdate("INSERT INTO public.bulk_repair_source VALUES "
 					+ "(1,'value-1'),(2,'value-2'),(3,'value-3'),(4,'value-4')");
 			statement.executeUpdate("INSERT INTO public.bulk_repair_target VALUES "
 					+ "(1,'value-1'),(2,'wrong'),(3,'value-3'),(4,'value-4')");
-			final var expected = new JdbcBulkMigrationKeysetSource(connection,
-					repairTable("bulk_repair_source"));
-			final var actual = new JdbcBulkMigrationKeysetSource(connection,
-					repairTable("bulk_repair_target"));
-			final var verification = BulkMigrationVerifier.verify(expected, actual,
-					List.of("id", "txt"), 1);
+			final var expected = new JdbcBulkMigrationKeysetSource(connection, repairTable("bulk_repair_source"));
+			final var actual = new JdbcBulkMigrationKeysetSource(connection, repairTable("bulk_repair_target"));
+			final var verification = BulkMigrationVerifier.verify(expected, actual, List.of("id", "txt"), 1);
 
 			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
-					repairTable("bulk_repair_target"), verification,
-					BulkMigrationRepairOption.defaults());
+					repairTable("bulk_repair_target"), verification, BulkMigrationRepairOption.defaults());
 
 			assertEquals(1, repair.getReplayedChunks());
 			assertEquals(1, repair.getReplayedRows());
 			final var after = BulkMigrationVerifier.verify(expected,
-					new JdbcBulkMigrationKeysetSource(connection,
-							repairTable("bulk_repair_target")),
+					new JdbcBulkMigrationKeysetSource(connection, repairTable("bulk_repair_target")),
 					List.of("id", "txt"), 1);
 			assertTrue(after.isMatch());
 		}
 	}
 
-	private static int scalar(final java.sql.Statement statement, final String sql)
-			throws java.sql.SQLException {
+	private static int scalar(final java.sql.Statement statement, final String sql) throws java.sql.SQLException {
 		try (var resultSet = statement.executeQuery(sql)) {
 			resultSet.next();
 			return resultSet.getInt(1);
@@ -372,15 +339,12 @@ class PostgresBulkUpsertTest {
 
 	private static Table createTable() {
 		final Table table = new Table("target").setSchemaName("bulk_upsert_test");
-		final Column id = new Column("id").setDataType(DataType.BIGINT)
-				.setIdentity(true);
-		final Column code = new Column("code").setDataType(DataType.LONGVARCHAR)
-				.setNotNull(true);
+		final Column id = new Column("id").setDataType(DataType.BIGINT).setIdentity(true);
+		final Column code = new Column("code").setDataType(DataType.LONGVARCHAR).setNotNull(true);
 		table.getColumns().add(id);
 		table.getColumns().add(code);
 		table.getColumns().add(new Column("name").setDataType(DataType.LONGVARCHAR));
-		table.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL)
-				.setLength(12).setScale(2));
+		table.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
 		table.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY));
 		table.getColumns().add(new Column("tags").setDataType(DataType.ARRAY));
 		table.setPrimaryKey("target_pkey", code);
@@ -414,8 +378,7 @@ class PostgresBulkUpsertTest {
 	private static Table jobTable(final String name, final boolean child) {
 		final Table table = repairTable(name);
 		if (child) {
-			table.getColumns().add(1,
-					new Column("parent_id").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(1, new Column("parent_id").setDataType(DataType.INT).setNotNull(true));
 		}
 		return table;
 	}

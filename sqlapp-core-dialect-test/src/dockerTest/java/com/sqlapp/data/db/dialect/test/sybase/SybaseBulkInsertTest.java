@@ -36,14 +36,12 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 
 /** Exercises streaming JDBC batches against Sybase ASE 16.0 SP03. */
 class SybaseBulkInsertTest {
-	private static final GenericContainer<?> ASE = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse("blieusong/ase-server:latest"))
+	private static final GenericContainer<?> ASE = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("blieusong/ase-server:latest"))
 					.withCreateContainerCmdModifier(command -> command.withHostName("ase-server")
-							.withEntrypoint("/home/sybase/bin/entrypoint.sh")
-							.withWorkingDir("/home/sybase"))
+							.withEntrypoint("/home/sybase/bin/entrypoint.sh").withWorkingDir("/home/sybase"))
 					.withExposedPorts(5000)
-					.waitingFor(Wait.forListeningPort()
-							.withStartupTimeout(Duration.ofMinutes(4))));
+					.waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(4))));
 
 	@BeforeAll
 	static void startContainer() {
@@ -57,8 +55,7 @@ class SybaseBulkInsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = createConnection();
-				Connection second = createConnection()) {
+		try (Connection first = createConnection(); Connection second = createConnection()) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
@@ -67,49 +64,48 @@ class SybaseBulkInsertTest {
 	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			dropTable(statement, "SQLAPP_BMC_LEGACY_ASE");
-			statement.execute("CREATE TABLE SQLAPP_BMC_LEGACY_ASE ("
-					+ "MIGRATION_ID VARCHAR(255) NOT NULL PRIMARY KEY, "
-					+ "SOURCE_FINGERPRINT VARCHAR(255) NULL, TARGET_FINGERPRINT VARCHAR(255) NULL, "
-					+ "PROCESSED_ROWS DECIMAL(19,0) NOT NULL, "
-					+ "COMPLETED_CHUNKS DECIMAL(19,0) NOT NULL, "
-					+ "LAST_CHUNK_HASH VARCHAR(64) NULL, COMPLETE_FLAG CHAR(1) NOT NULL)");
-			final var store = new JdbcBulkMigrationCheckpointStore(connection,
-					"SQLAPP_BMC_LEGACY_ASE");
-			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
-					.migrationId("legacy-ase").processedRows(1).completedChunks(1)
-					.chunkSize(1).lastChunkHash("checkpoint-hash")
-					.resumeToken("token-ase").complete(false).build());
+			statement
+					.execute("CREATE TABLE SQLAPP_BMC_LEGACY_ASE (" + "MIGRATION_ID VARCHAR(255) NOT NULL PRIMARY KEY, "
+							+ "SOURCE_FINGERPRINT VARCHAR(255) NULL, TARGET_FINGERPRINT VARCHAR(255) NULL, "
+							+ "PROCESSED_ROWS DECIMAL(19,0) NOT NULL, " + "COMPLETED_CHUNKS DECIMAL(19,0) NOT NULL, "
+							+ "LAST_CHUNK_HASH VARCHAR(64) NULL, COMPLETE_FLAG CHAR(1) NOT NULL)");
+			final var store = new JdbcBulkMigrationCheckpointStore(connection, "SQLAPP_BMC_LEGACY_ASE");
+			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder().migrationId("legacy-ase").processedRows(1)
+					.completedChunks(1).chunkSize(1).lastChunkHash("checkpoint-hash").resumeToken("token-ase")
+					.complete(false).build());
 			assertEquals("token-ase", store.load("legacy-ase").orElseThrow().getResumeToken());
 		}
 	}
 
 	@Test
-	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
-			@TempDir final Path checkpointDirectory) throws Exception {
+	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(@TempDir final Path checkpointDirectory)
+			throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			dropTable(statement, "sqlapp_bulk_job_child_sybase");
 			dropTable(statement, "sqlapp_bulk_job_parent_sybase");
-			statement.execute("CREATE TABLE sqlapp_bulk_job_parent_sybase "
-					+ "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute(
+					"CREATE TABLE sqlapp_bulk_job_parent_sybase " + "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
 			statement.execute("CREATE TABLE sqlapp_bulk_job_child_sybase "
 					+ "(id INT PRIMARY KEY, parent_id INT NOT NULL, txt VARCHAR(100) NULL, "
 					+ "FOREIGN KEY (parent_id) REFERENCES sqlapp_bulk_job_parent_sybase(id))");
 			final Table parent = jobTable("sqlapp_bulk_job_parent_sybase", false);
-			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "parent");
+			});
 			final Table child = jobTable("sqlapp_bulk_job_child_sybase", true);
 			child.getConstraints().addForeignKeyConstraint("fk_sqlapp_job_child_sybase",
 					new Column[] { child.getColumns().get("parent_id") },
 					new Column[] { parent.getColumns().get("id") });
 			child.getRows().add(row -> {
-				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+				row.put("id", 10);
+				row.put("parent_id", 1);
+				row.put("txt", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child,
-					new FileBulkMigrationCheckpointStore(checkpointDirectory),
-					BulkMigrationCheckpointMode.FILE);
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM sqlapp_bulk_job_child_sybase c "
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory), BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sqlapp_bulk_job_child_sybase c "
 					+ "JOIN sqlapp_bulk_job_parent_sybase p ON p.id = c.parent_id")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
@@ -121,8 +117,10 @@ class SybaseBulkInsertTest {
 	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			dropTable(statement, "sqlapp_bulk_migration_checkpoint");
-			try { statement.execute("DROP TABLE sqlapp_chunk_migration_sybase"); }
-			catch (java.sql.SQLException ignored) { }
+			try {
+				statement.execute("DROP TABLE sqlapp_chunk_migration_sybase");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE TABLE sqlapp_chunk_migration_sybase "
 					+ "(code VARCHAR(20) PRIMARY KEY, name VARCHAR(100) NULL)");
 			final Table table = new Table("sqlapp_chunk_migration_sybase");
@@ -130,10 +128,10 @@ class SybaseBulkInsertTest {
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(100));
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_sybase", code);
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
-					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
-					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection, table, "code", "name",
+					"SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection, table, "code", "name",
+					"SELECT COUNT(*) FROM sqlapp_chunk_migration_sybase");
 		}
 	}
 
@@ -144,10 +142,10 @@ class SybaseBulkInsertTest {
 				var statement = targetConnection.createStatement()) {
 			dropTable(statement, "sqlapp_bulk_repair_source_sybase");
 			dropTable(statement, "sqlapp_bulk_repair_target_sybase");
-			statement.execute("CREATE TABLE sqlapp_bulk_repair_source_sybase "
-					+ "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
-			statement.execute("CREATE TABLE sqlapp_bulk_repair_target_sybase "
-					+ "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute(
+					"CREATE TABLE sqlapp_bulk_repair_source_sybase " + "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
+			statement.execute(
+					"CREATE TABLE sqlapp_bulk_repair_target_sybase " + "(id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (1, 'one')");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (2, 'two')");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_source_sybase VALUES (3, 'three')");
@@ -156,17 +154,15 @@ class SybaseBulkInsertTest {
 			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (2, 'wrong')");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (3, 'three')");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_target_sybase VALUES (4, 'four')");
-			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
-					targetConnection, jobTable("sqlapp_bulk_repair_source_sybase", false),
-					jobTable("sqlapp_bulk_repair_target_sybase", false), List.of("id", "txt"),
-					false);
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("sqlapp_bulk_repair_source_sybase", false),
+					jobTable("sqlapp_bulk_repair_target_sybase", false), List.of("id", "txt"), false);
 		}
 	}
 
 	@Test
 	void insertsBatchesAndOmitsIdentity() throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			recreateTable(statement);
 			final Table table = createTable();
 			for (int i = 0; i < 3; i++) {
@@ -179,18 +175,16 @@ class SybaseBulkInsertTest {
 				});
 			}
 
-			assertEquals(3, BulkInsertResolver.execute(connection, table,
-					BulkOption.builder().batchSize(2).build()));
-			try (var resultSet = statement.executeQuery("SELECT id, txt, nullable_value, "
-					+ "empty_value, payload FROM sqlapp_bulk_sybase ORDER BY id")) {
+			assertEquals(3, BulkInsertResolver.execute(connection, table, BulkOption.builder().batchSize(2).build()));
+			try (var resultSet = statement.executeQuery(
+					"SELECT id, txt, nullable_value, " + "empty_value, payload FROM sqlapp_bulk_sybase ORDER BY id")) {
 				for (int i = 0; i < 3; i++) {
 					resultSet.next();
 					assertEquals(i + 1, resultSet.getInt("id"));
 					assertEquals("row-" + i + "\npath\\value", resultSet.getString("txt"));
 					assertNull(resultSet.getString("nullable_value"));
 					assertEquals("", resultSet.getString("empty_value"));
-					assertArrayEquals(new byte[] { 0, (byte) (0xfd + i) },
-							resultSet.getBytes("payload"));
+					assertArrayEquals(new byte[] { 0, (byte) (0xfd + i) }, resultSet.getBytes("payload"));
 				}
 			}
 		}
@@ -198,8 +192,7 @@ class SybaseBulkInsertTest {
 
 	@Test
 	void preservesExplicitIdentityWhenRequested() throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			recreateTable(statement);
 			final Table table = createTable();
 			table.getRows().add(row -> {
@@ -208,10 +201,9 @@ class SybaseBulkInsertTest {
 				row.put("empty_value", "");
 				row.put("payload", new byte[] { 1 });
 			});
-			assertEquals(1, BulkInsertResolver.execute(connection, table,
-					BulkOption.builder().keepIdentity(true).build()));
-			try (var resultSet = statement.executeQuery(
-					"SELECT id FROM sqlapp_bulk_sybase")) {
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, table, BulkOption.builder().keepIdentity(true).build()));
+			try (var resultSet = statement.executeQuery("SELECT id FROM sqlapp_bulk_sybase")) {
 				resultSet.next();
 				assertEquals(42, resultSet.getInt(1));
 			}
@@ -221,43 +213,67 @@ class SybaseBulkInsertTest {
 	@Test
 	void upsertsAndSupportsSingleActionModes() throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
-			try { statement.execute("DROP TABLE sqlapp_upsert_sybase"); }
-			catch (java.sql.SQLException ignored) { }
+			try {
+				statement.execute("DROP TABLE sqlapp_upsert_sybase");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE TABLE sqlapp_upsert_sybase (id INT PRIMARY KEY, txt VARCHAR(100) NULL)");
 			statement.execute("INSERT INTO sqlapp_upsert_sybase VALUES (1, 'old')");
 
 			Table table = createUpsertTable();
-			table.getRows().add(row -> { row.put("id", 1); row.put("txt", "updated"); });
-			table.getRows().add(row -> { row.put("id", 2); row.put("txt", "inserted"); });
+			table.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "updated");
+			});
+			table.getRows().add(row -> {
+				row.put("id", 2);
+				row.put("txt", "inserted");
+			});
 			assertEquals(2, BulkUpsertResolver.execute(connection, table, BulkUpsertOption.defaults()));
 
 			table = createUpsertTable();
-			table.getRows().add(row -> { row.put("id", 1); row.put("txt", "update-only"); });
-			table.getRows().add(row -> { row.put("id", 3); row.put("txt", "ignored"); });
+			table.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "update-only");
+			});
+			table.getRows().add(row -> {
+				row.put("id", 3);
+				row.put("txt", "ignored");
+			});
 			BulkUpsertResolver.execute(connection, table,
 					BulkUpsertOption.builder().insertWhenNotMatched(false).build());
 
 			table = createUpsertTable();
-			table.getRows().add(row -> { row.put("id", 1); row.put("txt", "ignored"); });
-			table.getRows().add(row -> { row.put("id", 3); row.put("txt", "insert-only"); });
-			BulkUpsertResolver.execute(connection, table,
-					BulkUpsertOption.builder().updateWhenMatched(false).build());
+			table.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "ignored");
+			});
+			table.getRows().add(row -> {
+				row.put("id", 3);
+				row.put("txt", "insert-only");
+			});
+			BulkUpsertResolver.execute(connection, table, BulkUpsertOption.builder().updateWhenMatched(false).build());
 
 			try (var rs = statement.executeQuery("SELECT id, txt FROM sqlapp_upsert_sybase ORDER BY id")) {
-				rs.next(); assertEquals(1, rs.getInt(1)); assertEquals("update-only", rs.getString(2));
-				rs.next(); assertEquals(2, rs.getInt(1)); assertEquals("inserted", rs.getString(2));
-				rs.next(); assertEquals(3, rs.getInt(1)); assertEquals("insert-only", rs.getString(2));
+				rs.next();
+				assertEquals(1, rs.getInt(1));
+				assertEquals("update-only", rs.getString(2));
+				rs.next();
+				assertEquals(2, rs.getInt(1));
+				assertEquals("inserted", rs.getString(2));
+				rs.next();
+				assertEquals(3, rs.getInt(1));
+				assertEquals("insert-only", rs.getString(2));
 			}
 		}
 	}
 
 	private static Connection createConnection() throws Exception {
-		return DriverManager.getConnection("jdbc:jtds:sybase://localhost:"
-				+ ASE.getMappedPort(5000) + "/master", "sa", "sybase");
+		return DriverManager.getConnection("jdbc:jtds:sybase://localhost:" + ASE.getMappedPort(5000) + "/master", "sa",
+				"sybase");
 	}
 
-	private static void recreateTable(final java.sql.Statement statement)
-			throws Exception {
+	private static void recreateTable(final java.sql.Statement statement) throws Exception {
 		try {
 			statement.execute("DROP TABLE sqlapp_bulk_sybase");
 		} catch (java.sql.SQLException ignored) {

@@ -27,34 +27,29 @@ public final class BulkMigrationTransactionAssertions {
 	private BulkMigrationTransactionAssertions() {
 	}
 
-	public static void assertJdbcCheckpointReadOnly(final Connection connection)
-			throws SQLException {
+	public static void assertJdbcCheckpointReadOnly(final Connection connection) throws SQLException {
 		final String tableName = "SQLAPP_BULK_READ_ONLY_CHECKPOINT";
 		final String migrationId = "read-only-" + java.util.UUID.randomUUID();
-		final var checkpoint = BulkMigrationCheckpoint.builder()
-				.migrationId(migrationId).sourceFingerprint("source-v1")
-				.targetFingerprint("target-v1").processedRows(3).completedChunks(2)
-				.chunkSize(2).lastChunkHash("hash-3").resumeToken("token-3")
-				.complete(true).build().validate();
+		final var checkpoint = BulkMigrationCheckpoint.builder().migrationId(migrationId).sourceFingerprint("source-v1")
+				.targetFingerprint("target-v1").processedRows(3).completedChunks(2).chunkSize(2).lastChunkHash("hash-3")
+				.resumeToken("token-3").complete(true).build().validate();
 		new JdbcBulkMigrationCheckpointStore(connection, tableName).save(checkpoint);
-		assertEquals(checkpoint, JdbcBulkMigrationCheckpointStore
-				.readOnly(connection, tableName).load(migrationId).orElseThrow());
+		assertEquals(checkpoint,
+				JdbcBulkMigrationCheckpointStore.readOnly(connection, tableName).load(migrationId).orElseThrow());
 	}
 
-	public static void assertJdbcMaintenanceReadOnly(final Connection connection)
-			throws SQLException {
+	public static void assertJdbcMaintenanceReadOnly(final Connection connection) throws SQLException {
 		final String tableName = "SQLAPP_BULK_READ_ONLY_MAINTENANCE";
 		final String fingerprint = "read-only-" + java.util.UUID.randomUUID();
 		final var state = new BulkMigrationMaintenanceState(fingerprint, fingerprint,
 				BulkMigrationMaintenanceStatus.PREPARED, Instant.EPOCH, null);
 		new JdbcBulkMigrationMaintenanceStateStore(connection, tableName).save(state);
-		assertEquals(state, JdbcBulkMigrationMaintenanceStateStore
-				.readOnly(connection, tableName).load(fingerprint).orElseThrow());
+		assertEquals(state,
+				JdbcBulkMigrationMaintenanceStateStore.readOnly(connection, tableName).load(fingerprint).orElseThrow());
 	}
 
-	public static void assertDatabaseCheckpointAtomic(final Connection connection,
-			final Table table, final String codeColumn, final String nameColumn,
-			final String countSql) throws SQLException {
+	public static void assertDatabaseCheckpointAtomic(final Connection connection, final Table table,
+			final String codeColumn, final String nameColumn, final String countSql) throws SQLException {
 		for (int i = 1; i <= 3; i++) {
 			final int value = i;
 			table.getRows().add(row -> {
@@ -63,15 +58,12 @@ public final class BulkMigrationTransactionAssertions {
 			});
 		}
 		final String migrationId = "docker-" + java.util.UUID.randomUUID();
-		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId(migrationId).checkpointTableName(checkpointTableName())
-				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.chunkSize(2).build();
-		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
-				option.getCheckpointTableName());
-		assertThrows(SQLException.class,
-				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
-						new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+		final var option = ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+				.checkpointTableName(checkpointTableName()).sourceFingerprint("source-v1")
+				.targetFingerprint("target-v1").chunkSize(2).build();
+		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName());
+		assertThrows(SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
+				new FailingTransactionalCheckpointStore(connection, checkpointStore)));
 		assertEquals(0, count(connection, countSql));
 		assertTrue(checkpointStore.load(migrationId).isEmpty());
 
@@ -80,30 +72,26 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(2, result.getCompletedChunks());
 		assertEquals(3, count(connection, countSql));
 		assertEquals(3, checkpointStore.load(migrationId).orElseThrow().getProcessedRows());
-		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection,
-				option.getCheckpointTableName()).load(migrationId).orElseThrow()
-				.getProcessedRows());
+		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection, option.getCheckpointTableName())
+				.load(migrationId).orElseThrow().getProcessedRows());
 	}
 
-	public static void assertDatabaseCheckpointRejected(final Connection connection,
-			final Table table, final String codeColumn, final String nameColumn,
-			final String countSql) throws SQLException {
+	public static void assertDatabaseCheckpointRejected(final Connection connection, final Table table,
+			final String codeColumn, final String nameColumn, final String countSql) throws SQLException {
 		table.getRows().add(row -> {
 			row.put(codeColumn, "C1");
 			row.put(nameColumn, "name-1");
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId("docker-rejected-" + java.util.UUID.randomUUID())
-				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.checkpointTableName(checkpointTableName()).build();
+				.migrationId("docker-rejected-" + java.util.UUID.randomUUID()).sourceFingerprint("source-v1")
+				.targetFingerprint("target-v1").checkpointTableName(checkpointTableName()).build();
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
 		assertEquals(0, count(connection, countSql));
 	}
 
-	public static void assertDatabaseCheckpointInsertAtomic(final Connection connection,
-			final Table table, final String codeColumn, final String nameColumn,
-			final String countSql) throws SQLException {
+	public static void assertDatabaseCheckpointInsertAtomic(final Connection connection, final Table table,
+			final String codeColumn, final String nameColumn, final String countSql) throws SQLException {
 		table.getRows().clear();
 		for (int i = 1; i <= 3; i++) {
 			final int value = i;
@@ -113,15 +101,12 @@ public final class BulkMigrationTransactionAssertions {
 			});
 		}
 		final String migrationId = "docker-insert-" + java.util.UUID.randomUUID();
-		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId(migrationId).checkpointTableName(checkpointTableName())
-				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.chunkSize(2).mode(BulkMigrationMode.INSERT).build();
-		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
-				option.getCheckpointTableName());
-		assertThrows(SQLException.class,
-				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
-						new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+		final var option = ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+				.checkpointTableName(checkpointTableName()).sourceFingerprint("source-v1")
+				.targetFingerprint("target-v1").chunkSize(2).mode(BulkMigrationMode.INSERT).build();
+		final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName());
+		assertThrows(SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
+				new FailingTransactionalCheckpointStore(connection, checkpointStore)));
 		assertEquals(0, count(connection, countSql));
 		assertTrue(checkpointStore.load(migrationId).isEmpty());
 
@@ -129,32 +114,29 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(3, result.getProcessedRows());
 		assertEquals(2, result.getCompletedChunks());
 		assertEquals(3, count(connection, countSql));
-		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection,
-				option.getCheckpointTableName()).load(migrationId).orElseThrow()
-				.getProcessedRows());
+		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection, option.getCheckpointTableName())
+				.load(migrationId).orElseThrow().getProcessedRows());
 	}
 
-	public static void assertDatabaseCheckpointInsertRejected(final Connection connection,
-			final Table table, final String codeColumn, final String nameColumn,
-			final String countSql) throws SQLException {
+	public static void assertDatabaseCheckpointInsertRejected(final Connection connection, final Table table,
+			final String codeColumn, final String nameColumn, final String countSql) throws SQLException {
 		table.getRows().clear();
 		table.getRows().add(row -> {
 			row.put(codeColumn, "I1");
 			row.put(nameColumn, "insert-1");
 		});
 		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId("docker-insert-rejected-" + java.util.UUID.randomUUID())
-				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.checkpointTableName(checkpointTableName())
+				.migrationId("docker-insert-rejected-" + java.util.UUID.randomUUID()).sourceFingerprint("source-v1")
+				.targetFingerprint("target-v1").checkpointTableName(checkpointTableName())
 				.mode(BulkMigrationMode.INSERT).build();
 		assertThrows(IllegalStateException.class,
 				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option));
 		assertEquals(0, count(connection, countSql));
 	}
 
-	public static void assertFileCheckpointCompletes(final Connection connection,
-			final Table table, final String codeColumn, final String nameColumn,
-			final String countSql, final Path checkpointDirectory) throws SQLException {
+	public static void assertFileCheckpointCompletes(final Connection connection, final Table table,
+			final String codeColumn, final String nameColumn, final String countSql, final Path checkpointDirectory)
+			throws SQLException {
 		table.getRows().clear();
 		for (int i = 1; i <= 3; i++) {
 			final int value = i;
@@ -164,8 +146,7 @@ public final class BulkMigrationTransactionAssertions {
 			});
 		}
 		final String migrationId = "docker-file-" + java.util.UUID.randomUUID();
-		final var option = ChunkedBulkMigrationOption.builder()
-				.migrationId(migrationId).chunkSize(2)
+		final var option = ChunkedBulkMigrationOption.builder().migrationId(migrationId).chunkSize(2)
 				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
 				.checkpointMode(BulkMigrationCheckpointMode.FILE).build();
 		final var store = new FileBulkMigrationCheckpointStore(checkpointDirectory);
@@ -174,20 +155,18 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(2, result.getCompletedChunks());
 		assertEquals(3, count(connection, countSql));
 		assertTrue(store.load(migrationId).orElseThrow().isComplete());
-		assertTrue(ChunkedBulkMigrationExecutor.execute(connection, table, option, store)
-				.isAlreadyComplete());
+		assertTrue(ChunkedBulkMigrationExecutor.execute(connection, table, option, store).isAlreadyComplete());
 	}
 
 	private static int count(final Connection connection, final String sql) throws SQLException {
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			resultSet.next();
 			return resultSet.getInt(1);
 		}
 	}
 
 	private static String checkpointTableName() {
-		return "SQLAPP_BMC_" + java.util.UUID.randomUUID().toString()
-				.replace("-", "").substring(0, 8).toUpperCase(java.util.Locale.ROOT);
+		return "SQLAPP_BMC_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8)
+				.toUpperCase(java.util.Locale.ROOT);
 	}
 }

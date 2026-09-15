@@ -39,20 +39,16 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 class SapHanaBulkInsertTest {
 	private static final String PASSWORD = "HxeTest9xA";
 	private static final Path PASSWORD_DIRECTORY = createPasswordDirectory();
-	private static final GenericContainer<?> HANA = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse(
-					"saplabs/hanaexpress:2.00.088.00.20251110.1"))
-					.withFileSystemBind(PASSWORD_DIRECTORY.toString(),
-							"/hana/mounts", BindMode.READ_WRITE)
-					.withCommand("--passwords-url",
-							"file:///hana/mounts/password.json",
-							"--agree-to-sap-license", "--dont-check-system")
+	private static final GenericContainer<?> HANA = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("saplabs/hanaexpress:2.00.088.00.20251110.1"))
+					.withFileSystemBind(PASSWORD_DIRECTORY.toString(), "/hana/mounts", BindMode.READ_WRITE)
+					.withCommand("--passwords-url", "file:///hana/mounts/password.json", "--agree-to-sap-license",
+							"--dont-check-system")
 					.withExposedPorts(39041)
-					.withCreateContainerCmdModifier(command -> command
-							.withHostName("hxehost").getHostConfig()
-							.withShmSize(1L << 30))
-					.waitingFor(Wait.forLogMessage(".*Startup finished.*", 1)
-							.withStartupTimeout(Duration.ofMinutes(30))));
+					.withCreateContainerCmdModifier(
+							command -> command.withHostName("hxehost").getHostConfig().withShmSize(1L << 30))
+					.waitingFor(
+							Wait.forLogMessage(".*Startup finished.*", 1).withStartupTimeout(Duration.ofMinutes(30))));
 
 	@BeforeAll
 	static void startContainer() {
@@ -66,8 +62,7 @@ class SapHanaBulkInsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = createConnection();
-				Connection second = createConnection()) {
+		try (Connection first = createConnection(); Connection second = createConnection()) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
@@ -75,32 +70,35 @@ class SapHanaBulkInsertTest {
 	@Test
 	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
 			@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory) throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
-			try { statement.execute("DROP SCHEMA SQLAPP_BULK_JOB CASCADE"); }
-			catch (java.sql.SQLException ignored) { }
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_BULK_JOB CASCADE");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE SCHEMA SQLAPP_BULK_JOB");
-			statement.execute("CREATE TABLE SQLAPP_BULK_JOB.PARENT_ROWS "
-					+ "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_JOB.PARENT_ROWS " + "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
 			statement.execute("CREATE TABLE SQLAPP_BULK_JOB.CHILD_ROWS "
 					+ "(ID INTEGER PRIMARY KEY, PARENT_ID INTEGER NOT NULL, TXT NVARCHAR(100), "
 					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB.PARENT_ROWS(ID))");
 			final Table parent = jobTable("PARENT_ROWS", false);
-			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "parent");
+			});
 			final Table child = jobTable("CHILD_ROWS", true);
 			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_BULK_JOB_CHILD",
 					new Column[] { child.getColumns().get("PARENT_ID") },
 					new Column[] { parent.getColumns().get("ID") });
 			child.getRows().add(row -> {
-				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child,
-					new FileBulkMigrationCheckpointStore(checkpointDirectory),
-					BulkMigrationCheckpointMode.FILE);
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB.CHILD_ROWS c "
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory), BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM SQLAPP_BULK_JOB.CHILD_ROWS c "
 					+ "JOIN SQLAPP_BULK_JOB.PARENT_ROWS p ON p.ID = c.PARENT_ID")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
@@ -110,10 +108,11 @@ class SapHanaBulkInsertTest {
 
 	@Test
 	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
-			try { statement.execute("DROP SCHEMA SQLAPP_CHUNK_MIGRATION CASCADE"); }
-			catch (java.sql.SQLException ignored) { }
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_CHUNK_MIGRATION CASCADE");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE SCHEMA SQLAPP_CHUNK_MIGRATION");
 			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION.TARGET_ROWS "
 					+ "(CODE NVARCHAR(20) PRIMARY KEY, NAME NVARCHAR(100))");
@@ -122,11 +121,9 @@ class SapHanaBulkInsertTest {
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR).setLength(100));
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION", code);
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
-					table, "CODE", "NAME",
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection, table, "CODE", "NAME",
 					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection,
-					table, "CODE", "NAME",
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection, table, "CODE", "NAME",
 					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
 		}
 	}
@@ -136,8 +133,10 @@ class SapHanaBulkInsertTest {
 		try (Connection sourceConnection = createConnection();
 				Connection targetConnection = createConnection();
 				var statement = targetConnection.createStatement()) {
-			try { statement.execute("DROP SCHEMA SQLAPP_BULK_REPAIR CASCADE"); }
-			catch (java.sql.SQLException ignored) { }
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_BULK_REPAIR CASCADE");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE SCHEMA SQLAPP_BULK_REPAIR");
 			statement.execute("CREATE COLUMN TABLE SQLAPP_BULK_REPAIR.SOURCE_ROWS "
 					+ "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
@@ -151,17 +150,15 @@ class SapHanaBulkInsertTest {
 			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (2, 'wrong')");
 			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (3, 'three')");
 			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (4, 'four')");
-			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
-					targetConnection, jobTable("SQLAPP_BULK_REPAIR", "SOURCE_ROWS", false),
-					jobTable("SQLAPP_BULK_REPAIR", "TARGET_ROWS", false), List.of("ID", "TXT"),
-					false);
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("SQLAPP_BULK_REPAIR", "SOURCE_ROWS", false),
+					jobTable("SQLAPP_BULK_REPAIR", "TARGET_ROWS", false), List.of("ID", "TXT"), false);
 		}
 	}
 
 	@Test
 	void insertsBatchesAndGeneratedByDefaultIdentity() throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			try {
 				statement.execute("DROP SCHEMA SQLAPP_BULK CASCADE");
 			} catch (java.sql.SQLException ignored) {
@@ -182,8 +179,8 @@ class SapHanaBulkInsertTest {
 			});
 			generated.getRows().add(row -> row.put("TXT", "second"));
 			generated.getRows().add(row -> row.put("TXT", "third"));
-			assertEquals(3, BulkInsertResolver.execute(connection, generated,
-					BulkOption.builder().batchSize(2).build()));
+			assertEquals(3,
+					BulkInsertResolver.execute(connection, generated, BulkOption.builder().batchSize(2).build()));
 
 			final Table explicit = createTable();
 			explicit.getRows().add(row -> {
@@ -192,19 +189,17 @@ class SapHanaBulkInsertTest {
 				row.put("EMPTY_VALUE", "");
 				row.put("PAYLOAD", new byte[] { 1 });
 			});
-			assertEquals(1, BulkInsertResolver.execute(connection, explicit,
-					BulkOption.builder().keepIdentity(true).build()));
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, explicit, BulkOption.builder().keepIdentity(true).build()));
 
-			try (var resultSet = statement.executeQuery("SELECT ID, TXT, "
-					+ "NULLABLE_VALUE, EMPTY_VALUE, PAYLOAD "
+			try (var resultSet = statement.executeQuery("SELECT ID, TXT, " + "NULLABLE_VALUE, EMPTY_VALUE, PAYLOAD "
 					+ "FROM SQLAPP_BULK.BULK_ROWS ORDER BY ID")) {
 				resultSet.next();
 				assertEquals(1L, resultSet.getLong("ID"));
 				assertEquals("日本語\nline", resultSet.getString("TXT"));
 				assertNull(resultSet.getString("NULLABLE_VALUE"));
 				assertEquals("", resultSet.getString("EMPTY_VALUE"));
-				assertArrayEquals(new byte[] { 0, (byte) 0xff },
-						resultSet.getBytes("PAYLOAD"));
+				assertArrayEquals(new byte[] { 0, (byte) 0xff }, resultSet.getBytes("PAYLOAD"));
 				resultSet.next();
 				assertEquals(2L, resultSet.getLong("ID"));
 				resultSet.next();
@@ -217,8 +212,7 @@ class SapHanaBulkInsertTest {
 
 	@Test
 	void upsertsThroughLocalTableAndMerge() throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			try {
 				statement.execute("DROP SCHEMA SQLAPP_UPSERT CASCADE");
 			} catch (java.sql.SQLException ignored) {
@@ -234,25 +228,36 @@ class SapHanaBulkInsertTest {
 
 			final Table table = createUpsertTable();
 			table.getRows().add(row -> {
-				row.put("CODE", "A"); row.put("TXT", "更新後\nline");
+				row.put("CODE", "A");
+				row.put("TXT", "更新後\nline");
 				row.put("AMOUNT", new java.math.BigDecimal("12.34"));
 				row.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
 			});
-			table.getRows().add(row -> { row.put("CODE", "B"); row.put("TXT", null); });
-			table.getRows().add(row -> { row.put("CODE", "C"); row.put("TXT", "");
-				row.put("PAYLOAD", new byte[] { 2 }); });
+			table.getRows().add(row -> {
+				row.put("CODE", "B");
+				row.put("TXT", null);
+			});
+			table.getRows().add(row -> {
+				row.put("CODE", "C");
+				row.put("TXT", "");
+				row.put("PAYLOAD", new byte[] { 2 });
+			});
 
 			assertEquals(3, BulkUpsertResolver.execute(connection, table,
-					BulkUpsertOption.builder().bulkOption(
-							BulkOption.builder().batchSize(2).build()).build()));
-			try (var rs = statement.executeQuery("SELECT ID, CODE, TXT, AMOUNT, PAYLOAD "
-					+ "FROM SQLAPP_UPSERT.UPSERT_ROWS ORDER BY CODE")) {
-				rs.next(); assertEquals(1L, rs.getLong("ID"));
+					BulkUpsertOption.builder().bulkOption(BulkOption.builder().batchSize(2).build()).build()));
+			try (var rs = statement.executeQuery(
+					"SELECT ID, CODE, TXT, AMOUNT, PAYLOAD " + "FROM SQLAPP_UPSERT.UPSERT_ROWS ORDER BY CODE")) {
+				rs.next();
+				assertEquals(1L, rs.getLong("ID"));
 				assertEquals("更新後\nline", rs.getString("TXT"));
 				assertEquals(new java.math.BigDecimal("12.34"), rs.getBigDecimal("AMOUNT"));
 				assertArrayEquals(new byte[] { 0, (byte) 0xff }, rs.getBytes("PAYLOAD"));
-				rs.next(); assertEquals("B", rs.getString("CODE")); assertNull(rs.getString("TXT"));
-				rs.next(); assertEquals("C", rs.getString("CODE")); assertEquals("", rs.getString("TXT"));
+				rs.next();
+				assertEquals("B", rs.getString("CODE"));
+				assertNull(rs.getString("TXT"));
+				rs.next();
+				assertEquals("C", rs.getString("CODE"));
+				assertEquals("", rs.getString("TXT"));
 				assertArrayEquals(new byte[] { 2 }, rs.getBytes("PAYLOAD"));
 			}
 		}
@@ -260,15 +265,11 @@ class SapHanaBulkInsertTest {
 
 	private static Table createTable() {
 		final Table table = new Table("BULK_ROWS").setSchemaName("SQLAPP_BULK");
-		table.getColumns().add(new Column("ID").setDataType(DataType.BIGINT)
-				.setIdentity(true));
+		table.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setIdentity(true));
 		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR));
-		table.getColumns().add(new Column("NULLABLE_VALUE")
-				.setDataType(DataType.NVARCHAR));
-		table.getColumns().add(new Column("EMPTY_VALUE")
-				.setDataType(DataType.NVARCHAR));
-		table.getColumns().add(new Column("PAYLOAD")
-				.setDataType(DataType.VARBINARY));
+		table.getColumns().add(new Column("NULLABLE_VALUE").setDataType(DataType.NVARCHAR));
+		table.getColumns().add(new Column("EMPTY_VALUE").setDataType(DataType.NVARCHAR));
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY));
 		return table;
 	}
 
@@ -276,10 +277,10 @@ class SapHanaBulkInsertTest {
 		final Table table = new Table("UPSERT_ROWS").setSchemaName("SQLAPP_UPSERT");
 		final Column id = new Column("ID").setDataType(DataType.BIGINT).setIdentity(true);
 		final Column code = new Column("CODE").setDataType(DataType.NVARCHAR).setLength(20);
-		table.getColumns().add(id); table.getColumns().add(code);
+		table.getColumns().add(id);
+		table.getColumns().add(code);
 		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(200));
-		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL)
-				.setLength(12).setScale(2));
+		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
 		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_UPSERT", code);
 		return table;
@@ -289,8 +290,7 @@ class SapHanaBulkInsertTest {
 		return jobTable("SQLAPP_BULK_JOB", name, child);
 	}
 
-	private static Table jobTable(final String schemaName, final String name,
-			final boolean child) {
+	private static Table jobTable(final String schemaName, final String name, final boolean child) {
 		final Table table = new Table(name).setSchemaName(schemaName);
 		final Column id = new Column("ID").setDataType(DataType.INT);
 		table.getColumns().add(id);
@@ -303,16 +303,14 @@ class SapHanaBulkInsertTest {
 	}
 
 	private static Connection createConnection() throws Exception {
-		final String url = "jdbc:sap://localhost:" + HANA.getMappedPort(39041)
-				+ "/?databaseName=HXE";
+		final String url = "jdbc:sap://localhost:" + HANA.getMappedPort(39041) + "/?databaseName=HXE";
 		return DriverManager.getConnection(url, "SYSTEM", PASSWORD);
 	}
 
 	private static Path createPasswordDirectory() {
 		try {
 			final Path directory = Files.createTempDirectory("sqlapp-hana-bulk-");
-			Files.writeString(directory.resolve("password.json"),
-					"{\"master_password\":\"" + PASSWORD + "\"}",
+			Files.writeString(directory.resolve("password.json"), "{\"master_password\":\"" + PASSWORD + "\"}",
 					StandardCharsets.UTF_8);
 			return directory;
 		} catch (Exception e) {

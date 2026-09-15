@@ -26,8 +26,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 /** Exercises JCC staging and MERGE against DB2 Community 12.1.5. */
 class Db2BulkUpsertTest {
-	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container(
-			"icr.io/db2_community/db2:12.1.5.0");
+	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container("icr.io/db2_community/db2:12.1.5.0");
 
 	@BeforeAll
 	static void startContainer() {
@@ -36,40 +35,40 @@ class Db2BulkUpsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = DB2.createConnection("");
-				Connection second = DB2.createConnection("")) {
+		try (Connection first = DB2.createConnection(""); Connection second = DB2.createConnection("")) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
 
 	@Test
-	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
-			throws Exception {
-		try (Connection connection = DB2.createConnection("");
-				var statement = connection.createStatement()) {
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
+		try (Connection connection = DB2.createConnection(""); var statement = connection.createStatement()) {
 			ensureUserTemporaryTablespace(statement);
 			dropTable(statement, "SQLAPP_BULK_JOB_CHILD_DB2");
 			dropTable(statement, "SQLAPP_BULK_JOB_PARENT_DB2");
-			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_PARENT_DB2 "
-					+ "(ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_JOB_PARENT_DB2 " + "(ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(100))");
 			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_CHILD_DB2 "
 					+ "(ID INTEGER NOT NULL PRIMARY KEY, PARENT_ID INTEGER NOT NULL, "
 					+ "TXT VARCHAR(100), CONSTRAINT FK_SQLAPP_JOB_CHILD_PARENT "
 					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB_PARENT_DB2(ID))");
 			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT_DB2", false);
-			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "parent");
+			});
 			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD_DB2", true);
 			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_JOB_CHILD_PARENT",
 					new Column[] { child.getColumns().get("PARENT_ID") },
 					new Column[] { parent.getColumns().get("ID") });
 			child.getRows().add(row -> {
-				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child);
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_DB2 c "
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_DB2 c "
 					+ "JOIN SQLAPP_BULK_JOB_PARENT_DB2 p ON p.ID = c.PARENT_ID")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
@@ -79,21 +78,21 @@ class Db2BulkUpsertTest {
 
 	@Test
 	void databaseCheckpointRollsBackWithTheChunk() throws Exception {
-		try (Connection connection = DB2.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = DB2.createConnection(""); var statement = connection.createStatement()) {
 			ensureUserTemporaryTablespace(statement);
-			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_DB2"); }
-			catch (java.sql.SQLException ignored) { }
+			try {
+				statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_DB2");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_DB2 "
 					+ "(CODE VARCHAR(20) NOT NULL PRIMARY KEY, NAME VARCHAR(100))");
 			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_DB2");
-			final Column code = new Column("CODE").setDataType(DataType.VARCHAR)
-					.setLength(20).setNotNull(true);
+			final Column code = new Column("CODE").setDataType(DataType.VARCHAR).setLength(20).setNotNull(true);
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_DB2", code);
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
-					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_DB2");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_DB2");
 			BulkMigrationTransactionAssertions.assertJdbcMaintenanceReadOnly(connection);
 		}
 	}
@@ -122,16 +121,15 @@ class Db2BulkUpsertTest {
 			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_DB2 VALUES "
 					+ "(1, 'one'), (2, 'wrong'), (3, 'three'), (4, 'four')");
 
-			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
-					targetConnection, jobTable("SQLAPP_BULK_REPAIR_SOURCE_DB2", false),
-					jobTable("SQLAPP_BULK_REPAIR_TARGET_DB2", false), List.of("ID", "TXT"));
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("SQLAPP_BULK_REPAIR_SOURCE_DB2", false), jobTable("SQLAPP_BULK_REPAIR_TARGET_DB2", false),
+					List.of("ID", "TXT"));
 		}
 	}
 
 	@Test
 	void updatesMatchesAndInsertsMissingRowsThroughBatchStaging() throws Exception {
-		try (Connection connection = DB2.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = DB2.createConnection(""); var statement = connection.createStatement()) {
 			ensureUserTemporaryTablespace(statement);
 			try {
 				statement.execute("DROP TABLE SQLAPP_BULK_UPSERT_DB2");
@@ -165,11 +163,10 @@ class Db2BulkUpsertTest {
 			});
 
 			assertEquals(3, BulkUpsertResolver.execute(connection, table,
-					BulkUpsertOption.builder().bulkOption(
-							BulkOption.builder().batchSize(2).build()).build()));
+					BulkUpsertOption.builder().bulkOption(BulkOption.builder().batchSize(2).build()).build()));
 
-			try (var resultSet = statement.executeQuery("SELECT ID, CODE, NAME, "
-					+ "AMOUNT, PAYLOAD FROM SQLAPP_BULK_UPSERT_DB2 ORDER BY CODE")) {
+			try (var resultSet = statement.executeQuery(
+					"SELECT ID, CODE, NAME, " + "AMOUNT, PAYLOAD FROM SQLAPP_BULK_UPSERT_DB2 ORDER BY CODE")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt("ID"));
 				assertEquals("更新後\nline", resultSet.getString("NAME"));
@@ -189,13 +186,11 @@ class Db2BulkUpsertTest {
 	private static Table createTable() {
 		final Table table = new Table("SQLAPP_BULK_UPSERT_DB2");
 		final Column id = new Column("ID").setDataType(DataType.INT).setIdentity(true);
-		final Column code = new Column("CODE").setDataType(DataType.VARCHAR)
-				.setLength(20).setNotNull(true);
+		final Column code = new Column("CODE").setDataType(DataType.VARCHAR).setLength(20).setNotNull(true);
 		table.getColumns().add(id);
 		table.getColumns().add(code);
 		table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
-		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL)
-				.setLength(12).setScale(2));
+		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
 		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_DB2", code);
 		return table;
@@ -206,19 +201,16 @@ class Db2BulkUpsertTest {
 		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(id);
 		if (child) {
-			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT)
-					.setNotNull(true));
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT).setNotNull(true));
 		}
 		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(100));
 		table.setPrimaryKey("PK_" + name, id);
 		return table;
 	}
 
-	private static void ensureUserTemporaryTablespace(final java.sql.Statement statement)
-			throws java.sql.SQLException {
+	private static void ensureUserTemporaryTablespace(final java.sql.Statement statement) throws java.sql.SQLException {
 		try {
-			statement.execute("CREATE USER TEMPORARY TABLESPACE SQLAPP_USERTEMP "
-					+ "MANAGED BY AUTOMATIC STORAGE");
+			statement.execute("CREATE USER TEMPORARY TABLESPACE SQLAPP_USERTEMP " + "MANAGED BY AUTOMATIC STORAGE");
 		} catch (java.sql.SQLException e) {
 			if (!"42710".equals(e.getSQLState())) {
 				throw e;

@@ -41,11 +41,9 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 /** Firebird 5 integration coverage for multi-row INSERT RETURNING. */
 class FirebirdJdbcTreeDataSessionTest {
 	private static final String PASSWORD = "masterkey";
-	private static final GenericContainer<?> FIREBIRD = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:v5.0"))
-					.withEnv("ISC_PASSWORD", PASSWORD)
-					.withEnv("FIREBIRD_DATABASE", "test.fdb")
-					.withExposedPorts(3050)
+	private static final GenericContainer<?> FIREBIRD = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:v5.0"))
+					.withEnv("ISC_PASSWORD", PASSWORD).withEnv("FIREBIRD_DATABASE", "test.fdb").withExposedPorts(3050)
 					.waitingFor(Wait.forListeningPort()));
 
 	@BeforeAll
@@ -67,22 +65,17 @@ class FirebirdJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 			assertTrue(parent.getColumns().get("ID").isIdentity());
-			assertEquals(IdentityGenerationType.ByDefault,
-					parent.getColumns().get("ID").getIdentityGenerationType());
+			assertEquals(IdentityGenerationType.ByDefault, parent.getColumns().get("ID").getIdentityGenerationType());
 			assertNotNull(parent.getColumns().get("ID").getSequenceName());
-			var alwaysIdentity = schema.getTables().get("METADATA_IDENTITY_ALWAYS")
-					.getColumns().get("ID");
+			var alwaysIdentity = schema.getTables().get("METADATA_IDENTITY_ALWAYS").getColumns().get("ID");
 			assertTrue(alwaysIdentity.isIdentity());
-			assertEquals(IdentityGenerationType.Always,
-					alwaysIdentity.getIdentityGenerationType());
+			assertEquals(IdentityGenerationType.Always, alwaysIdentity.getIdentityGenerationType());
 			assertNotNull(alwaysIdentity.getSequenceName());
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint());
-			assertEquals("ID", parent.getConstraints().getPrimaryKeyConstraint()
-					.getColumns().get(0).getName());
+			assertEquals("ID", parent.getConstraints().getPrimaryKeyConstraint().getColumns().get(0).getName());
 			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
-					.filter(ForeignKeyConstraint.class::isInstance)
-					.map(ForeignKeyConstraint.class::cast)
-					.findFirst().orElseThrow();
+					.filter(ForeignKeyConstraint.class::isInstance).map(ForeignKeyConstraint.class::cast).findFirst()
+					.orElseThrow();
 			assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
 			assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
 			assertEquals(CascadeRule.SetNull, foreignKey.getUpdateRule());
@@ -92,20 +85,17 @@ class FirebirdJdbcTreeDataSessionTest {
 			assertEquals("TXT", childTextIndex.getColumns().get(0).getName());
 			var features = schema.getTables().get("METADATA_FEATURES");
 			assertNotNull(features.getColumns().get("NORMALIZED_TXT").getFormula());
-			var check = features.getConstraints().stream()
-					.filter(CheckConstraint.class::isInstance)
+			var check = features.getConstraints().stream().filter(CheckConstraint.class::isInstance)
 					.map(CheckConstraint.class::cast).findFirst().orElseThrow();
-			assertTrue(check.getExpression().toUpperCase()
-					.contains("CHAR_LENGTH(TXT) > 0"), check::getExpression);
+			assertTrue(check.getExpression().toUpperCase().contains("CHAR_LENGTH(TXT) > 0"), check::getExpression);
 			var descendingIndex = features.getIndexes().get("IDX_FEATURES_TXT_DESC");
 			assertTrue(descendingIndex.isUnique());
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
 			var expressionIndex = features.getIndexes().get("IDX_FEATURES_UPPER_TXT");
 			assertNotNull(expressionIndex);
-			assertTrue(expressionIndex.getColumns().get(0).getName().toUpperCase()
-					.contains("UPPER"));
-			assertEquals("TXT IS NOT NULL", features.getIndexes()
-					.get("IDX_FEATURES_TXT_PARTIAL").getWhere().toUpperCase());
+			assertTrue(expressionIndex.getColumns().get(0).getName().toUpperCase().contains("UPPER"));
+			assertEquals("TXT IS NOT NULL",
+					features.getIndexes().get("IDX_FEATURES_TXT_PARTIAL").getWhere().toUpperCase());
 			var view = schema.getViews().get("PARENT_VIEW");
 			assertNotNull(view);
 			String viewStatement = String.join("\n", view.getStatement()).toUpperCase();
@@ -148,31 +138,28 @@ class FirebirdJdbcTreeDataSessionTest {
 			assertTrue(domain.getCheck().toUpperCase().contains("VALUE > 0"));
 			var metadataPackage = schema.getPackages().get("METADATA_PACKAGE");
 			assertNotNull(metadataPackage);
-			assertTrue(metadataPackage.getStatement().toString().toUpperCase()
-					.contains("FUNCTION ADD_ONE"));
+			assertTrue(metadataPackage.getStatement().toString().toUpperCase().contains("FUNCTION ADD_ONE"));
 			var packageBody = schema.getPackageBodies().get("METADATA_PACKAGE");
 			assertNotNull(packageBody);
-			assertTrue(packageBody.getStatement().toString().toUpperCase()
-					.contains("RETURN P_VALUE + 1"));
+			assertTrue(packageBody.getStatement().toString().toUpperCase().contains("RETURN P_VALUE + 1"));
 
 			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
-				session.setAfterRootBatchHandler((batch, table, rows) -> rows
-						.forEach(row -> assertNotNull(row.get("ID"))));
+				session.setAfterRootBatchHandler(
+						(batch, table, rows) -> rows.forEach(row -> assertNotNull(row.get("ID"))));
 				for (int i = 3; i <= 7; i++) {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 3; i <= 7; i++) {
 					assertTrue(resultSet.next());
 					assertEquals("parent-" + i, resultSet.getString(1).trim());
@@ -190,10 +177,10 @@ class FirebirdJdbcTreeDataSessionTest {
 	}
 
 	private Schema loadSchema(final Connection connection) throws SQLException {
-		return SchemaUtils.getSchema(connection, null, "PARENT_TABLE", "CHILD_TABLE", "PARENT_VIEW",
-				"METADATA_AUDIT", "TRG_PARENT_AUDIT", "METADATA_SEQUENCE", "METADATA_PROCEDURE",
-				"METADATA_FUNCTION", "METADATA_FEATURES", "METADATA_IDENTITY_ALWAYS",
-				"METADATA_POSITIVE_INT", "METADATA_PACKAGE")
+		return SchemaUtils
+				.getSchema(connection, null, "PARENT_TABLE", "CHILD_TABLE", "PARENT_VIEW", "METADATA_AUDIT",
+						"TRG_PARENT_AUDIT", "METADATA_SEQUENCE", "METADATA_PROCEDURE", "METADATA_FUNCTION",
+						"METADATA_FEATURES", "METADATA_IDENTITY_ALWAYS", "METADATA_POSITIVE_INT", "METADATA_PACKAGE")
 				.orElseThrow(() -> new AssertionError("Firebird test schema was not loaded."));
 	}
 
@@ -224,8 +211,8 @@ class FirebirdJdbcTreeDataSessionTest {
 			dropTable(statement, "CHILD_TABLE");
 			dropTable(statement, "PARENT_TABLE");
 			dropObject(statement, "DOMAIN", "METADATA_POSITIVE_INT");
-			statement.execute("CREATE DOMAIN metadata_positive_int AS INTEGER "
-					+ "DEFAULT 1 NOT NULL CHECK (VALUE > 0)");
+			statement.execute(
+					"CREATE DOMAIN metadata_positive_int AS INTEGER " + "DEFAULT 1 NOT NULL CHECK (VALUE > 0)");
 			statement.execute("""
 					CREATE TABLE parent_table (
 					id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -256,12 +243,10 @@ class FirebirdJdbcTreeDataSessionTest {
 					 CONSTRAINT ck_features_txt CHECK (txt IS NULL OR CHAR_LENGTH(txt) > 0)
 					)
 					""");
-			statement.execute("CREATE UNIQUE DESCENDING INDEX idx_features_txt_desc "
-					+ "ON metadata_features(txt)");
-			statement.execute("CREATE INDEX idx_features_upper_txt ON metadata_features "
-					+ "COMPUTED BY (UPPER(txt))");
-			statement.execute("CREATE INDEX idx_features_txt_partial ON metadata_features(txt) "
-					+ "WHERE txt IS NOT NULL");
+			statement.execute("CREATE UNIQUE DESCENDING INDEX idx_features_txt_desc " + "ON metadata_features(txt)");
+			statement.execute("CREATE INDEX idx_features_upper_txt ON metadata_features " + "COMPUTED BY (UPPER(txt))");
+			statement.execute(
+					"CREATE INDEX idx_features_txt_partial ON metadata_features(txt) " + "WHERE txt IS NOT NULL");
 			statement.execute("CREATE VIEW parent_view AS SELECT id, txt FROM parent_table");
 			statement.execute("CREATE SEQUENCE metadata_sequence START WITH 10 INCREMENT BY 5");
 			statement.execute("CREATE TABLE metadata_audit (parent_id BIGINT NOT NULL)");

@@ -31,11 +31,9 @@ final class SqlReadyDb2Container extends Db2Container {
 		final long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(10);
 		SQLException lastException = null;
 		while (System.nanoTime() < deadline) {
-			try (Connection connection = DriverManager.getConnection(
-					getJdbcUrl(), getUsername(), getPassword());
+			try (Connection connection = DriverManager.getConnection(getJdbcUrl(), getUsername(), getPassword());
 					Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery(
-							"SELECT 1 FROM SYSIBM.SYSDUMMY1")) {
+					ResultSet resultSet = statement.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1")) {
 				if (resultSet.next()) {
 					return;
 				}
@@ -46,12 +44,9 @@ final class SqlReadyDb2Container extends Db2Container {
 				Thread.sleep(1000L);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
-				throw new ContainerLaunchException(
-						"Interrupted while waiting for Db2 readiness.", e);
+				throw new ContainerLaunchException("Interrupted while waiting for Db2 readiness.", e);
 			}
 		}
-		throw new ContainerLaunchException(
-				"Db2 did not accept JDBC connections within 10 minutes.",
-				lastException);
+		throw new ContainerLaunchException("Db2 did not accept JDBC connections within 10 minutes.", lastException);
 	}
 }

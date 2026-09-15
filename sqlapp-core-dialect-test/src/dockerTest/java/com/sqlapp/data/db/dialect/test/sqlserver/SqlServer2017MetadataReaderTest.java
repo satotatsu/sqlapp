@@ -26,12 +26,13 @@ import com.sqlapp.data.db.dialect.sqlserver.SqlServer2017;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Catalog;
 
-/** Ensures the inherited SQL Server 2016 metadata path works on SQL Server 2017. */
+/**
+ * Ensures the inherited SQL Server 2016 metadata path works on SQL Server 2017.
+ */
 class SqlServer2017MetadataReaderTest {
 	private static final String DATABASE_NAME = "METADATA_READER_2017_TEST";
-	private static final MSSQLServerContainer SQL_SERVER =
-			ReusableTestcontainers.configure(new MSSQLServerContainer(
-					"mcr.microsoft.com/mssql/server:2017-latest").acceptLicense());
+	private static final MSSQLServerContainer SQL_SERVER = ReusableTestcontainers
+			.configure(new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2017-latest").acceptLicense());
 
 	@BeforeAll
 	static void startContainer() throws SQLException {
@@ -50,9 +51,8 @@ class SqlServer2017MetadataReaderTest {
 	@Test
 	void testMetadataReaderRemainsUsableOnSqlServer2017() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME,
-				SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				Statement statement = connection.createStatement()) {
+				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME, SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); Statement statement = connection.createStatement()) {
 			statement.execute("""
 					CREATE TABLE METADATA_2017 (
 						ID BIGINT NOT NULL PRIMARY KEY,
@@ -74,29 +74,24 @@ class SqlServer2017MetadataReaderTest {
 			var reader = dialect.getCatalogReader();
 			reader.setCatalogName(connection.getCatalog());
 			Catalog catalog = reader.getAllFull(connection).stream()
-					.filter(current -> connectionCatalogEquals(connection, current))
-					.findFirst().orElseThrow();
+					.filter(current -> connectionCatalogEquals(connection, current)).findFirst().orElseThrow();
 			var schema = catalog.getSchemas().get("dbo");
 			assertNotNull(schema.getTables().get("METADATA_2017"));
 			var view = schema.getViews().get("METADATA_2017_VIEW");
 			assertNotNull(view);
 			assertNotNull(view.getColumns().get("VALUE"));
-			assertTrue(String.join("\n", view.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_2017"));
+			assertTrue(String.join("\n", view.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_2017"));
 			var procedure = schema.getProcedures().get("METADATA_2017_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getArguments().get("@P_ID"));
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_2017"));
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_2017"));
 			var trigger = schema.getTriggers().get("METADATA_2017_TRIGGER");
 			assertNotNull(trigger);
-			assertTrue(String.join("\n", trigger.getStatement())
-					.toUpperCase(Locale.ROOT).contains("INSERTED"));
+			assertTrue(String.join("\n", trigger.getStatement()).toUpperCase(Locale.ROOT).contains("INSERTED"));
 		}
 	}
 
-	private boolean connectionCatalogEquals(final Connection connection,
-			final Catalog catalog) {
+	private boolean connectionCatalogEquals(final Connection connection, final Catalog catalog) {
 		try {
 			return connection.getCatalog().equalsIgnoreCase(catalog.getName());
 		} catch (SQLException e) {

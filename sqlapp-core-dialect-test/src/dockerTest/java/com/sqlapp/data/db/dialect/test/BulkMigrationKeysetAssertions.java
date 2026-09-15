@@ -15,8 +15,7 @@ public final class BulkMigrationKeysetAssertions {
 	private BulkMigrationKeysetAssertions() {
 	}
 
-	public static void assertCompositeResume(final Connection connection, final Table table)
-			throws Exception {
+	public static void assertCompositeResume(final Connection connection, final Table table) throws Exception {
 		final var source = new JdbcBulkMigrationKeysetSource(connection, table);
 		final var all = source.iterator(null);
 		assertEquals(Integer.valueOf(1), all.next().get("KEY1"));

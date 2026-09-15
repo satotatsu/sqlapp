@@ -35,12 +35,9 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 /** Exercises VerticaCopyStream against Vertica CE. */
 class VirticaBulkInsertTest {
-	private static final GenericContainer<?> VERTICA =
-			ReusableTestcontainers.configure(new GenericContainer<>(
-					DockerImageName.parse("ratiopbc/vertica-ce:v25.1.0-0"))
-					.withExposedPorts(5433)
-					.waitingFor(Wait.forLogMessage(
-							".*Vertica is now running.*\\n", 1)
+	private static final GenericContainer<?> VERTICA = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("ratiopbc/vertica-ce:v25.1.0-0"))
+					.withExposedPorts(5433).waitingFor(Wait.forLogMessage(".*Vertica is now running.*\\n", 1)
 							.withStartupTimeout(Duration.ofMinutes(3))));
 
 	@BeforeAll
@@ -55,8 +52,7 @@ class VirticaBulkInsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = createConnection();
-				Connection second = createConnection()) {
+		try (Connection first = createConnection(); Connection second = createConnection()) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
@@ -70,32 +66,34 @@ class VirticaBulkInsertTest {
 	}
 
 	@Test
-	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
-			@TempDir final Path checkpointDirectory) throws Exception {
+	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(@TempDir final Path checkpointDirectory)
+			throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_job_child_vertica");
 			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_job_parent_vertica");
-			statement.execute("CREATE TABLE sqlapp_bulk_job_parent_vertica "
-					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement
+					.execute("CREATE TABLE sqlapp_bulk_job_parent_vertica " + "(id INT PRIMARY KEY, txt VARCHAR(100))");
 			statement.execute("CREATE TABLE sqlapp_bulk_job_child_vertica "
 					+ "(id INT PRIMARY KEY, parent_id INT NOT NULL, txt VARCHAR(100), "
 					+ "FOREIGN KEY (parent_id) REFERENCES sqlapp_bulk_job_parent_vertica(id))");
 			final Table parent = jobTable("sqlapp_bulk_job_parent_vertica", false);
-			parent.getRows().add(row -> { row.put("id", 1); row.put("txt", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("txt", "parent");
+			});
 			final Table child = jobTable("sqlapp_bulk_job_child_vertica", true);
 			child.getConstraints().addForeignKeyConstraint("fk_sqlapp_job_child_vertica",
 					new Column[] { child.getColumns().get("parent_id") },
 					new Column[] { parent.getColumns().get("id") });
 			child.getRows().add(row -> {
-				row.put("id", 10); row.put("parent_id", 1); row.put("txt", "child");
+				row.put("id", 10);
+				row.put("parent_id", 1);
+				row.put("txt", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child,
-					new FileBulkMigrationCheckpointStore(checkpointDirectory),
-					BulkMigrationCheckpointMode.FILE);
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM sqlapp_bulk_job_child_vertica c "
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory), BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sqlapp_bulk_job_child_vertica c "
 					+ "JOIN sqlapp_bulk_job_parent_vertica p ON p.id = c.parent_id")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
@@ -104,8 +102,7 @@ class VirticaBulkInsertTest {
 	}
 
 	@Test
-	void databaseCheckpointRejectsTransactionBreakingStaging(
-			@TempDir final Path checkpointDirectory) throws Exception {
+	void databaseCheckpointRejectsTransactionBreakingStaging(@TempDir final Path checkpointDirectory) throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS sqlapp_chunk_migration_vertica");
 			statement.execute("CREATE TABLE sqlapp_chunk_migration_vertica "
@@ -115,13 +112,12 @@ class VirticaBulkInsertTest {
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(100));
 			table.setPrimaryKey("pk_sqlapp_chunk_migration_vertica", code);
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection,
-					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertRejected(connection,
-					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
-			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection,
-					table, "code", "name", "SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica",
-					checkpointDirectory);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection, table, "code", "name",
+					"SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertRejected(connection, table, "code", "name",
+					"SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica");
+			BulkMigrationTransactionAssertions.assertFileCheckpointCompletes(connection, table, "code", "name",
+					"SELECT COUNT(*) FROM sqlapp_chunk_migration_vertica", checkpointDirectory);
 		}
 	}
 
@@ -132,34 +128,31 @@ class VirticaBulkInsertTest {
 				var statement = targetConnection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_repair_source_vertica");
 			statement.execute("DROP TABLE IF EXISTS sqlapp_bulk_repair_target_vertica");
-			statement.execute("CREATE TABLE sqlapp_bulk_repair_source_vertica "
-					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
-			statement.execute("CREATE TABLE sqlapp_bulk_repair_target_vertica "
-					+ "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE sqlapp_bulk_repair_source_vertica " + "(id INT PRIMARY KEY, txt VARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE sqlapp_bulk_repair_target_vertica " + "(id INT PRIMARY KEY, txt VARCHAR(100))");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_source_vertica VALUES "
 					+ "(1, 'one'), (2, 'two'), (3, 'three'), (4, 'four')");
 			statement.execute("INSERT INTO sqlapp_bulk_repair_target_vertica VALUES "
 					+ "(1, 'one'), (2, 'wrong'), (3, 'three'), (4, 'four')");
-			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
-					targetConnection, jobTable("sqlapp_bulk_repair_source_vertica", false),
-					jobTable("sqlapp_bulk_repair_target_vertica", false), List.of("id", "txt"),
-					false);
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("sqlapp_bulk_repair_source_vertica", false),
+					jobTable("sqlapp_bulk_repair_target_vertica", false), List.of("id", "txt"), false);
 		}
 	}
 
 	@Test
 	void copiesRowsAndPreservesCsvSemantics() throws Exception {
-		try (Connection connection = createConnection();
-				var statement = connection.createStatement()) {
-			statement.execute("CREATE TABLE sqlapp_bulk_vertica (id IDENTITY, name VARCHAR(200), nullable_value VARCHAR(20), empty_value VARCHAR(20), amount NUMERIC(12,2))");
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			statement.execute(
+					"CREATE TABLE sqlapp_bulk_vertica (id IDENTITY, name VARCHAR(200), nullable_value VARCHAR(20), empty_value VARCHAR(20), amount NUMERIC(12,2))");
 			final Table table = new Table("sqlapp_bulk_vertica");
-			table.getColumns().add(new Column("id").setDataType(DataType.BIGINT)
-					.setIdentity(true));
+			table.getColumns().add(new Column("id").setDataType(DataType.BIGINT).setIdentity(true));
 			table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR));
 			table.getColumns().add(new Column("nullable_value").setDataType(DataType.VARCHAR));
 			table.getColumns().add(new Column("empty_value").setDataType(DataType.VARCHAR));
-			table.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL)
-					.setLength(12).setScale(2));
+			table.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
 			table.getRows().add(row -> {
 				row.put("name", "山田,\"太郎\"\nline");
 				row.put("nullable_value", null);
@@ -167,10 +160,9 @@ class VirticaBulkInsertTest {
 				row.put("amount", new BigDecimal("123.45"));
 			});
 
-			assertEquals(1, BulkInsertResolver.execute(connection, table,
-					BulkOption.defaults()));
-			try (var resultSet = statement.executeQuery(
-					"SELECT id, name, nullable_value, empty_value, amount FROM sqlapp_bulk_vertica")) {
+			assertEquals(1, BulkInsertResolver.execute(connection, table, BulkOption.defaults()));
+			try (var resultSet = statement
+					.executeQuery("SELECT id, name, nullable_value, empty_value, amount FROM sqlapp_bulk_vertica")) {
 				resultSet.next();
 				assertEquals(1L, resultSet.getLong("id"));
 				assertEquals("山田,\"太郎\"\nline", resultSet.getString("name"));
@@ -183,38 +175,63 @@ class VirticaBulkInsertTest {
 
 	@Test
 	void upsertsThroughCopyStagingAndMerge() throws Exception {
-		try(Connection connection=createConnection();var statement=connection.createStatement()){
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			statement.execute("DROP TABLE IF EXISTS sqlapp_upsert_vertica");
 			statement.execute("CREATE TABLE sqlapp_upsert_vertica (id IDENTITY UNIQUE, "
 					+ "code VARCHAR(20) PRIMARY KEY, name VARCHAR(200), nullable_value VARCHAR(20), "
 					+ "empty_value VARCHAR(20), amount NUMERIC(12,2))");
 			statement.execute("INSERT INTO sqlapp_upsert_vertica(code,name,amount) VALUES('A','old',1.00)");
-			final Table table=upsertTable();
-			table.getRows().add(r->{r.put("code","A");r.put("name","更新後\nline");
-				r.put("nullable_value",null);r.put("empty_value","");r.put("amount",new BigDecimal("12.34"));});
-			table.getRows().add(r->{r.put("code","B");r.put("name",null);r.put("empty_value","");});
-			table.getRows().add(r->{r.put("code","C");r.put("name","");r.put("amount",new BigDecimal("0.00"));});
-			assertEquals(3,BulkUpsertResolver.execute(connection,table,BulkUpsertOption.defaults()));
-			try(var rs=statement.executeQuery("SELECT id,code,name,nullable_value,empty_value,amount "
-					+ "FROM sqlapp_upsert_vertica ORDER BY code")){
-				rs.next();assertEquals(1L,rs.getLong("id"));assertEquals("更新後\nline",rs.getString("name"));
-				assertNull(rs.getString("nullable_value"));assertEquals("",rs.getString("empty_value"));
-				assertEquals(new BigDecimal("12.34"),rs.getBigDecimal("amount"));
-				rs.next();assertEquals("B",rs.getString("code"));assertNull(rs.getString("name"));assertEquals("",rs.getString("empty_value"));
-				rs.next();assertEquals("C",rs.getString("code"));assertEquals("",rs.getString("name"));
+			final Table table = upsertTable();
+			table.getRows().add(r -> {
+				r.put("code", "A");
+				r.put("name", "更新後\nline");
+				r.put("nullable_value", null);
+				r.put("empty_value", "");
+				r.put("amount", new BigDecimal("12.34"));
+			});
+			table.getRows().add(r -> {
+				r.put("code", "B");
+				r.put("name", null);
+				r.put("empty_value", "");
+			});
+			table.getRows().add(r -> {
+				r.put("code", "C");
+				r.put("name", "");
+				r.put("amount", new BigDecimal("0.00"));
+			});
+			assertEquals(3, BulkUpsertResolver.execute(connection, table, BulkUpsertOption.defaults()));
+			try (var rs = statement.executeQuery("SELECT id,code,name,nullable_value,empty_value,amount "
+					+ "FROM sqlapp_upsert_vertica ORDER BY code")) {
+				rs.next();
+				assertEquals(1L, rs.getLong("id"));
+				assertEquals("更新後\nline", rs.getString("name"));
+				assertNull(rs.getString("nullable_value"));
+				assertEquals("", rs.getString("empty_value"));
+				assertEquals(new BigDecimal("12.34"), rs.getBigDecimal("amount"));
+				rs.next();
+				assertEquals("B", rs.getString("code"));
+				assertNull(rs.getString("name"));
+				assertEquals("", rs.getString("empty_value"));
+				rs.next();
+				assertEquals("C", rs.getString("code"));
+				assertEquals("", rs.getString("name"));
 			}
 		}
 	}
 
-	private static Table upsertTable(){final Table t=new Table("sqlapp_upsert_vertica");
-		final Column id=new Column("id").setDataType(DataType.BIGINT).setIdentity(true);
-		final Column code=new Column("code").setDataType(DataType.VARCHAR).setLength(20);
-		t.getColumns().add(id);t.getColumns().add(code);
+	private static Table upsertTable() {
+		final Table t = new Table("sqlapp_upsert_vertica");
+		final Column id = new Column("id").setDataType(DataType.BIGINT).setIdentity(true);
+		final Column code = new Column("code").setDataType(DataType.VARCHAR).setLength(20);
+		t.getColumns().add(id);
+		t.getColumns().add(code);
 		t.getColumns().add(new Column("name").setDataType(DataType.VARCHAR).setLength(200));
 		t.getColumns().add(new Column("nullable_value").setDataType(DataType.VARCHAR).setLength(20));
 		t.getColumns().add(new Column("empty_value").setDataType(DataType.VARCHAR).setLength(20));
 		t.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
-		t.setPrimaryKey("pk_sqlapp_upsert_vertica",code);return t;}
+		t.setPrimaryKey("pk_sqlapp_upsert_vertica", code);
+		return t;
+	}
 
 	private static Table jobTable(final String name, final boolean child) {
 		final Table table = new Table(name);
@@ -229,7 +246,7 @@ class VirticaBulkInsertTest {
 	}
 
 	private static Connection createConnection() throws Exception {
-		return DriverManager.getConnection("jdbc:vertica://localhost:"
-				+ VERTICA.getMappedPort(5433) + "/VMart", "dbadmin", "");
+		return DriverManager.getConnection("jdbc:vertica://localhost:" + VERTICA.getMappedPort(5433) + "/VMart",
+				"dbadmin", "");
 	}
 }

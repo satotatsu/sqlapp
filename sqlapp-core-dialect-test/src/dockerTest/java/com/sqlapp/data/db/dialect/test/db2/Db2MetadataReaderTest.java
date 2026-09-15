@@ -33,10 +33,8 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Db2 12.1.5 integration coverage for the metadata reader tree. */
 class Db2MetadataReaderTest {
-	private static final String IMAGE =
-			"icr.io/db2_community/db2:12.1.5.0";
-	private static final SqlReadyDb2Container DB2 =
-			new SqlReadyDb2Container(IMAGE);
+	private static final String IMAGE = "icr.io/db2_community/db2:12.1.5.0";
+	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container(IMAGE);
 
 	@BeforeAll
 	static void startContainer() {
@@ -51,8 +49,7 @@ class Db2MetadataReaderTest {
 	}
 
 	@Test
-	void testReadsRepresentativeSchemaObjectsFromLatestDb2()
-			throws SQLException {
+	void testReadsRepresentativeSchemaObjectsFromLatestDb2() throws SQLException {
 		try (Connection connection = DB2.createConnection("")) {
 			createSchemaObjects(connection);
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -62,19 +59,16 @@ class Db2MetadataReaderTest {
 			var schemaReader = dialect.getCatalogReader().getSchemaReader();
 			schemaReader.setSchemaName(schemaName);
 			Schema schema = schemaReader.getAllFull(connection).stream()
-					.filter(current -> schemaName.equalsIgnoreCase(current.getName()))
-					.findFirst().orElseThrow(() -> new AssertionError(
-							"Db2 test schema was not loaded."));
+					.filter(current -> schemaName.equalsIgnoreCase(current.getName())).findFirst()
+					.orElseThrow(() -> new AssertionError("Db2 test schema was not loaded."));
 
 			Table parent = schema.getTables().get("METADATA_PARENT");
 			assertNotNull(parent);
 			assertEquals("Metadata parent table", parent.getRemarks());
-			UniqueConstraint primaryKey = assertInstanceOf(
-					UniqueConstraint.class,
+			UniqueConstraint primaryKey = assertInstanceOf(UniqueConstraint.class,
 					parent.getConstraints().get("PK_METADATA_PARENT"));
 			assertEquals(2, primaryKey.getColumns().size());
-			assertEquals("Display name",
-					parent.getColumns().get("NAME").getRemarks());
+			assertEquals("Display name", parent.getColumns().get("NAME").getRemarks());
 
 			Table child = schema.getTables().get("METADATA_CHILD");
 			assertNotNull(child);
@@ -82,18 +76,15 @@ class Db2MetadataReaderTest {
 			assertTrue(child.getColumns().get("CODE").isNotNull());
 			assertNotNull(child.getConstraints().get("UK_METADATA_CHILD_CODE"));
 			assertNotNull(child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
-			ForeignKeyConstraint foreignKey = assertInstanceOf(
-					ForeignKeyConstraint.class,
+			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
 			assertEquals(2, foreignKey.getColumns().size());
 			assertEquals(2, foreignKey.getRelatedColumns().size());
 			assertNotNull(child.getIndexes().get("IDX_METADATA_CHILD_PARENT"));
 			Table partitioned = schema.getTables().get("METADATA_PARTITIONED");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
-			assertEquals("BUCKET", partitioned.getPartitioning()
-					.getPartitioningColumns().get(0).getName());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+			assertEquals("BUCKET", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
 			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
 			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_LOW"));
 			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_HIGH"));
@@ -101,72 +92,57 @@ class Db2MetadataReaderTest {
 			assertNotNull(temporal);
 			var businessTime = temporal.getTemporalPeriods().get("BUSINESS_TIME");
 			assertNotNull(businessTime);
-			assertEquals(TemporalPeriodType.APPLICATION_TIME,
-					businessTime.getPeriodType());
+			assertEquals(TemporalPeriodType.APPLICATION_TIME, businessTime.getPeriodType());
 			assertEquals("BUSINESS_START", businessTime.getStartColumnName());
 			assertEquals("BUSINESS_END", businessTime.getEndColumnName());
 			Table mdc = schema.getTables().get("METADATA_MDC");
 			assertNotNull(mdc);
-			assertEquals("C", mdc.getColumns().get("REGION")
-					.getSpecifics().get("TYPE"));
-			assertNotNull(mdc.getColumns().get("REGION")
-					.getSpecifics().get("DIMENSION"));
-			assertNotNull(mdc.getColumns().get("BUCKET")
-					.getSpecifics().get("DIMENSION"));
+			assertEquals("C", mdc.getColumns().get("REGION").getSpecifics().get("TYPE"));
+			assertNotNull(mdc.getColumns().get("REGION").getSpecifics().get("DIMENSION"));
+			assertNotNull(mdc.getColumns().get("BUCKET").getSpecifics().get("DIMENSION"));
 			var money = schema.getDomains().get("METADATA_MONEY");
 			assertNotNull(money);
 			assertEquals(DataType.DECIMAL, money.getDataType());
 			Table typed = schema.getTables().get("METADATA_TYPED");
 			assertNotNull(typed);
-			assertEquals("METADATA_MONEY",
-					typed.getColumns().get("AMOUNT").getDataTypeName());
+			assertEquals("METADATA_MONEY", typed.getColumns().get("AMOUNT").getDataTypeName());
 			var address = schema.getTypes().get("METADATA_ADDRESS");
 			assertNotNull(address);
 			assertEquals(2, address.getColumns().size());
-			assertEquals(DataType.VARCHAR,
-					address.getColumns().get("STREET").getDataType());
-			assertEquals(100L,
-					address.getColumns().get("STREET").getLength());
-			assertEquals(DataType.CHAR,
-					address.getColumns().get("POSTAL_CODE").getDataType());
+			assertEquals(DataType.VARCHAR, address.getColumns().get("STREET").getDataType());
+			assertEquals(100L, address.getColumns().get("STREET").getLength());
+			assertEquals(DataType.CHAR, address.getColumns().get("POSTAL_CODE").getDataType());
 			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
 			var view = schema.getViews().get("METADATA_VIEW");
 			assertNotNull(view);
-			assertTrue(String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT)
-					.contains("METADATA_CHILD"));
+			assertTrue(String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertEquals(DataType.BIGINT,
-					procedure.getArguments().get(0).getDataType());
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
+			assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
-			assertEquals(DataType.DECIMAL,
-					function.getArguments().get(0).getDataType());
-			var compiledFunction = schema.getFunctions()
-					.get("METADATA_COMPILED_FUNCTION");
+			assertEquals(DataType.DECIMAL, function.getArguments().get(0).getDataType());
+			var compiledFunction = schema.getFunctions().get("METADATA_COMPILED_FUNCTION");
 			assertNotNull(compiledFunction);
 			assertEquals(1, compiledFunction.getArguments().size());
-			String compiledFunctionStatement = String.join("\n",
-					compiledFunction.getStatement()).toUpperCase(Locale.ROOT);
+			String compiledFunctionStatement = String.join("\n", compiledFunction.getStatement())
+					.toUpperCase(Locale.ROOT);
 			assertTrue(compiledFunctionStatement.contains("RETURN"));
 			assertTrue(compiledFunctionStatement.contains("P_AMOUNT"));
 			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_CHILD", trigger.getTableName());
-			assertTrue(String.join("\n", trigger.getDefinition())
-					.toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
+			assertTrue(String.join("\n", trigger.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_ALIAS"));
 		}
 	}
 
-	private void createSchemaObjects(final Connection connection)
-			throws SQLException {
+	private void createSchemaObjects(final Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
 			drop(statement, "DROP TRIGGER METADATA_TRIGGER");
 			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE");
@@ -264,8 +240,7 @@ class Db2MetadataReaderTest {
 		}
 	}
 
-	private void drop(final Statement statement, final String sql)
-			throws SQLException {
+	private void drop(final Statement statement, final String sql) throws SQLException {
 		try {
 			statement.execute(sql);
 		} catch (SQLException e) {

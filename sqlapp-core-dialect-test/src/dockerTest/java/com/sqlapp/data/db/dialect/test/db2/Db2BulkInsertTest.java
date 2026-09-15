@@ -20,8 +20,7 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 
 /** Exercises JCC JDBC batching against DB2 Community 12.1.5. */
 class Db2BulkInsertTest {
-	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container(
-			"icr.io/db2_community/db2:12.1.5.0");
+	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container("icr.io/db2_community/db2:12.1.5.0");
 
 	@BeforeAll
 	static void startContainer() {
@@ -37,8 +36,7 @@ class Db2BulkInsertTest {
 
 	@Test
 	void insertsBatchesAndGeneratedByDefaultIdentity() throws Exception {
-		try (Connection connection = DB2.createConnection("");
-				var statement = connection.createStatement()) {
+		try (Connection connection = DB2.createConnection(""); var statement = connection.createStatement()) {
 			try {
 				statement.execute("DROP TABLE SQLAPP_BULK_DB2");
 			} catch (java.sql.SQLException ignored) {
@@ -55,8 +53,8 @@ class Db2BulkInsertTest {
 				row.put("EMPTY_VALUE", "");
 				row.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
 			});
-			assertEquals(1, BulkInsertResolver.execute(connection, generated,
-					BulkOption.builder().batchSize(2).build()));
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, generated, BulkOption.builder().batchSize(2).build()));
 
 			final Table explicit = createTable();
 			explicit.getRows().add(row -> {
@@ -65,11 +63,11 @@ class Db2BulkInsertTest {
 				row.put("EMPTY_VALUE", "");
 				row.put("PAYLOAD", new byte[] { 1 });
 			});
-			assertEquals(1, BulkInsertResolver.execute(connection, explicit,
-					BulkOption.builder().keepIdentity(true).build()));
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, explicit, BulkOption.builder().keepIdentity(true).build()));
 
-			try (var resultSet = statement.executeQuery("SELECT ID, TXT, NULLABLE_VALUE, "
-					+ "EMPTY_VALUE, PAYLOAD FROM SQLAPP_BULK_DB2 ORDER BY ID")) {
+			try (var resultSet = statement.executeQuery(
+					"SELECT ID, TXT, NULLABLE_VALUE, " + "EMPTY_VALUE, PAYLOAD FROM SQLAPP_BULK_DB2 ORDER BY ID")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt("ID"));
 				assertEquals("日本語\nline", resultSet.getString("TXT"));

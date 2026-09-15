@@ -40,11 +40,10 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** Sybase ASE 16.0 SP03 identity behavior with the jTDS driver. */
 class SybaseJdbcTreeDataSessionTest {
-	private static final GenericContainer<?> ASE = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse("blieusong/ase-server:latest"))
+	private static final GenericContainer<?> ASE = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("blieusong/ase-server:latest"))
 					.withCreateContainerCmdModifier(command -> command.withHostName("ase-server")
-							.withEntrypoint("/home/sybase/bin/entrypoint.sh")
-							.withWorkingDir("/home/sybase"))
+							.withEntrypoint("/home/sybase/bin/entrypoint.sh").withWorkingDir("/home/sybase"))
 					.withExposedPorts(5000)
 					.waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(4))));
 
@@ -60,9 +59,8 @@ class SybaseJdbcTreeDataSessionTest {
 
 	@Test
 	void metadataReaderLoadsIdentityPrimaryKeyIndexAndForeignKey() throws SQLException {
-		try (Connection connection = DriverManager.getConnection(
-				"jdbc:jtds:sybase://localhost:" + ASE.getMappedPort(5000)
-						+ "/master", "sa", "sybase");
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:jtds:sybase://localhost:" + ASE.getMappedPort(5000) + "/master", "sa", "sybase");
 				Statement statement = connection.createStatement()) {
 			try {
 				statement.execute("DROP PROCEDURE metadata_procedure");
@@ -103,27 +101,25 @@ class SybaseJdbcTreeDataSessionTest {
 			statement.execute("sp_addtype metadata_code, 'varchar(30)', 'not null'");
 			statement.execute("CREATE TABLE metadata_table (id INT IDENTITY NOT NULL, "
 					+ "parent_id INT NULL, code metadata_code DEFAULT 'unknown', "
-					+ "normalized_code COMPUTE upper(code), "
-					+ "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
+					+ "normalized_code COMPUTE upper(code), " + "CONSTRAINT pk_metadata_table PRIMARY KEY (id), "
 					+ "CONSTRAINT uk_metadata_table_code UNIQUE (code), "
 					+ "CONSTRAINT ck_metadata_table_code CHECK (code <> ''), "
 					+ "CONSTRAINT fk_metadata_table_parent FOREIGN KEY (parent_id) "
 					+ "REFERENCES metadata_table(id))");
 			statement.execute("CREATE INDEX idx_metadata_table_code ON metadata_table(code)");
-			statement.execute("sp_chgattribute 'metadata_table.idx_metadata_table_code', "
-					+ "'fillfactor', 70");
+			statement.execute("sp_chgattribute 'metadata_table.idx_metadata_table_code', " + "'fillfactor', 70");
 			statement.execute("CREATE INDEX idx_metadata_table_code_desc ON metadata_table(code DESC)");
 			statement.execute("CREATE TRIGGER metadata_trigger ON metadata_table FOR INSERT, UPDATE AS "
 					+ "SELECT id FROM inserted");
 			statement.execute("CREATE VIEW metadata_view AS SELECT id, code FROM metadata_table");
 			statement.execute("CREATE PROCEDURE metadata_procedure @p_id INT AS "
 					+ "SELECT code FROM metadata_table WHERE id = @p_id");
-			statement.execute("CREATE FUNCTION metadata_function(@p_id INT) RETURNS INT AS "
-					+ "BEGIN RETURN @p_id * 2 END");
+			statement.execute(
+					"CREATE FUNCTION metadata_function(@p_id INT) RETURNS INT AS " + "BEGIN RETURN @p_id * 2 END");
 			String functionObjectType;
-			try (var resultSet = statement.executeQuery("SELECT o.type, COUNT(c.colid) "
-					+ "FROM sysobjects o LEFT JOIN syscomments c ON o.id = c.id "
-					+ "WHERE o.name = 'metadata_function' GROUP BY o.type")) {
+			try (var resultSet = statement.executeQuery(
+					"SELECT o.type, COUNT(c.colid) " + "FROM sysobjects o LEFT JOIN syscomments c ON o.id = c.id "
+							+ "WHERE o.name = 'metadata_function' GROUP BY o.type")) {
 				assertTrue(resultSet.next());
 				functionObjectType = resultSet.getString(1).trim();
 				int functionTextRows = resultSet.getInt(2);
@@ -134,15 +130,13 @@ class SybaseJdbcTreeDataSessionTest {
 			var settings = dialect.getCatalogReader().getSettingReader().getAllFull(connection);
 			assertTrue(settings.size() > 0);
 			var connectionSetting = settings.stream()
-					.filter(setting -> "number of user connections".equals(setting.getName()))
-					.findFirst().orElseThrow();
+					.filter(setting -> "number of user connections".equals(setting.getName())).findFirst()
+					.orElseThrow();
 			assertNotNull(connectionSetting.getId());
 			assertNotNull(connectionSetting.getValue());
 			assertNotNull(connectionSetting.getDisplayValue());
-			var tableSpaces = dialect.getCatalogReader().getTableSpaceReader()
-					.getAllFull(connection);
-			var defaultSegment = tableSpaces.stream()
-					.filter(tableSpace -> "default".equals(tableSpace.getName()))
+			var tableSpaces = dialect.getCatalogReader().getTableSpaceReader().getAllFull(connection);
+			var defaultSegment = tableSpaces.stream().filter(tableSpace -> "default".equals(tableSpace.getName()))
 					.findFirst().orElseThrow();
 			assertTrue(defaultSegment.getTableSpaceFiles().size() > 0);
 			assertNotNull(defaultSegment.getTableSpaceFiles().get(0).getFilePath());
@@ -170,8 +164,7 @@ class SybaseJdbcTreeDataSessionTest {
 			var roleMembers = roleMemberReader.getAllFull(connection);
 			assertTrue(roleMembers.stream().anyMatch(member -> "sa_role".equals(member.getMemberRoleName())));
 			var schema = SchemaUtils.getSchema(connection, "dbo", "metadata_table", "metadata_view",
-					"metadata_procedure", "metadata_function", "metadata_code", "metadata_trigger")
-					.orElseThrow();
+					"metadata_procedure", "metadata_function", "metadata_code", "metadata_trigger").orElseThrow();
 			var domain = schema.getDomains().get("metadata_code");
 			assertNotNull(domain);
 			assertEquals(DataType.VARCHAR, domain.getDataType());
@@ -179,40 +172,29 @@ class SybaseJdbcTreeDataSessionTest {
 			assertTrue(domain.isNotNull());
 			var table = schema.getTables().get("metadata_table");
 			assertNotNull(table);
-			assertEquals(Boolean.TRUE,
-					table.getSpecifics().get("has_clustered_index", Boolean.class));
+			assertEquals(Boolean.TRUE, table.getSpecifics().get("has_clustered_index", Boolean.class));
 			assertTrue(table.getColumns().get("id").isIdentity());
-			assertTrue(table.getColumns().get("code").getDefaultValue()
-					.contains("unknown"));
-			assertTrue(table.getColumns().get("normalized_code").getFormula()
-					.toLowerCase().contains("upper"));
-			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint()
-					.getColumns().get(0).getName());
-			var unique = assertInstanceOf(UniqueConstraint.class,
-					table.getConstraints().get("uk_metadata_table_code"));
+			assertTrue(table.getColumns().get("code").getDefaultValue().contains("unknown"));
+			assertTrue(table.getColumns().get("normalized_code").getFormula().toLowerCase().contains("upper"));
+			assertEquals("id", table.getConstraints().getPrimaryKeyConstraint().getColumns().get(0).getName());
+			var unique = assertInstanceOf(UniqueConstraint.class, table.getConstraints().get("uk_metadata_table_code"));
 			assertEquals("code", unique.getColumns().get(0).getName());
-			var check = assertInstanceOf(CheckConstraint.class,
-					table.getConstraints().get("ck_metadata_table_code"));
-			assertTrue(check.getExpression().replaceAll("\\s+", "")
-					.contains("code<>''"), check::getExpression);
+			var check = assertInstanceOf(CheckConstraint.class, table.getConstraints().get("ck_metadata_table_code"));
+			assertTrue(check.getExpression().replaceAll("\\s+", "").contains("code<>''"), check::getExpression);
 			var codeIndex = table.getIndexes().get("idx_metadata_table_code");
 			assertNotNull(codeIndex);
 			assertEquals("code", codeIndex.getColumns().get(0).getName());
-			assertEquals("70",
-					codeIndex.getSpecifics().get("fill_factor").toString());
+			assertEquals("70", codeIndex.getSpecifics().get("fill_factor").toString());
 			var descendingIndex = table.getIndexes().get("idx_metadata_table_code_desc");
 			assertEquals("code", descendingIndex.getColumns().get(0).getName());
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
-			var foreignKey = table.getConstraints().stream()
-					.filter(ForeignKeyConstraint.class::isInstance)
-					.map(ForeignKeyConstraint.class::cast)
-					.findFirst().orElseThrow();
+			var foreignKey = table.getConstraints().stream().filter(ForeignKeyConstraint.class::isInstance)
+					.map(ForeignKeyConstraint.class::cast).findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
-			String viewStatement = String.join(" ", view.getStatement())
-					.toLowerCase().replaceAll("\\s+", " ");
+			String viewStatement = String.join(" ", view.getStatement()).toLowerCase().replaceAll("\\s+", " ");
 			assertTrue(viewStatement.contains("select id, code from metadata_table"), viewStatement);
 			assertEquals(2, view.getColumns().size());
 			assertEquals("id", view.getColumns().get(0).getName());
@@ -226,23 +208,22 @@ class SybaseJdbcTreeDataSessionTest {
 			assertTrue(trigger.getEventManipulation().contains("UPDATE"));
 			String triggerDefinition = String.join(" ", trigger.getDefinition()) + " "
 					+ String.join(" ", trigger.getStatement());
-			triggerDefinition = triggerDefinition
-					.toLowerCase().replaceAll("\\s+", " ");
+			triggerDefinition = triggerDefinition.toLowerCase().replaceAll("\\s+", " ");
 			assertTrue(triggerDefinition.contains("create trigger"), triggerDefinition);
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
-			String procedureDefinition = String.join(" ", procedure.getDefinition())
-					.toLowerCase().replaceAll("\\s+", " ");
+			String procedureDefinition = String.join(" ", procedure.getDefinition()).toLowerCase().replaceAll("\\s+",
+					" ");
 			assertTrue(procedureDefinition.contains("create procedure"), procedureDefinition);
 			assertTrue(procedureDefinition.contains("metadata_procedure"), procedureDefinition);
 			assertTrue(procedureDefinition.contains("@p_id int"), procedureDefinition);
 			assertTrue(procedureDefinition.contains("select code from metadata_table"), procedureDefinition);
 			var function = schema.getFunctions().stream()
-					.filter(current -> "metadata_function".equalsIgnoreCase(current.getName()))
-					.findFirst().orElseThrow(() -> new AssertionError(
+					.filter(current -> "metadata_function".equalsIgnoreCase(current.getName())).findFirst()
+					.orElseThrow(() -> new AssertionError(
 							"type=" + functionObjectType + ", functions=" + schema.getFunctions()));
-			String functionDefinition = String.join(" ", function.getDefinition())
-					.toLowerCase().replaceAll("\\s+", " ");
+			String functionDefinition = String.join(" ", function.getDefinition()).toLowerCase().replaceAll("\\s+",
+					" ");
 			assertTrue(functionDefinition.contains("create function"), functionDefinition);
 			assertTrue(functionDefinition.contains("metadata_function"), functionDefinition);
 			assertTrue(functionDefinition.contains("@p_id int"), functionDefinition);
@@ -253,8 +234,8 @@ class SybaseJdbcTreeDataSessionTest {
 
 	@Test
 	void generatedIdentityFailsBeforePreparingPerRowStatements() throws SQLException {
-		try (Connection connection = DriverManager.getConnection(
-				"jdbc:jtds:sybase://localhost:" + ASE.getMappedPort(5000) + "/master", "sa", "sybase")) {
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:jtds:sybase://localhost:" + ASE.getMappedPort(5000) + "/master", "sa", "sybase")) {
 			connection.setAutoCommit(false);
 			Table table = new Table("sqlapp_identity_probe");
 			table.setDialect(DialectResolver.getInstance().getDialect(connection));

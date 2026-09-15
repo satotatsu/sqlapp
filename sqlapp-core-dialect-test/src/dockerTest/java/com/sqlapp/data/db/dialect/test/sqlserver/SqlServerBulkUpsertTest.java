@@ -44,9 +44,8 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 
 /** Exercises staging-table bulk upsert against SQL Server 2022. */
 class SqlServerBulkUpsertTest {
-	private static final MSSQLServerContainer SQL_SERVER =
-			ReusableTestcontainers.configure(new MSSQLServerContainer(
-					"mcr.microsoft.com/mssql/server:2022-latest").acceptLicense());
+	private static final MSSQLServerContainer SQL_SERVER = ReusableTestcontainers
+			.configure(new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2022-latest").acceptLicense());
 
 	@BeforeAll
 	static void startContainer() {
@@ -60,32 +59,28 @@ class SqlServerBulkUpsertTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(),
-				SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				Connection second = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(),
-						SQL_SERVER.getUsername(), SQL_SERVER.getPassword())) {
+		try (Connection first = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword());
+				Connection second = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+						SQL_SERVER.getPassword())) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
 
 	@Test
 	void upgradesLegacyJdbcCheckpointTableThroughDialectAlterFactory() throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BMC_LEGACY_SQLSERVER') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_BMC_LEGACY_SQLSERVER");
 			statement.execute("CREATE TABLE dbo.SQLAPP_BMC_LEGACY_SQLSERVER ("
 					+ "MIGRATION_ID VARCHAR(255) NOT NULL PRIMARY KEY, "
 					+ "SOURCE_FINGERPRINT VARCHAR(255), TARGET_FINGERPRINT VARCHAR(255), "
-					+ "PROCESSED_ROWS DECIMAL(19,0) NOT NULL, "
-					+ "COMPLETED_CHUNKS DECIMAL(19,0) NOT NULL, "
+					+ "PROCESSED_ROWS DECIMAL(19,0) NOT NULL, " + "COMPLETED_CHUNKS DECIMAL(19,0) NOT NULL, "
 					+ "LAST_CHUNK_HASH VARCHAR(64), COMPLETE_FLAG CHAR(1) NOT NULL)");
-			final var store = new JdbcBulkMigrationCheckpointStore(connection,
-					"SQLAPP_BMC_LEGACY_SQLSERVER");
-			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder()
-					.migrationId("legacy-sqlserver").processedRows(1).completedChunks(1)
-					.chunkSize(1).lastChunkHash("checkpoint-hash")
+			final var store = new JdbcBulkMigrationCheckpointStore(connection, "SQLAPP_BMC_LEGACY_SQLSERVER");
+			store.save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.builder().migrationId("legacy-sqlserver")
+					.processedRows(1).completedChunks(1).chunkSize(1).lastChunkHash("checkpoint-hash")
 					.resumeToken("token-sqlserver").build());
 
 			final var loaded = store.load("legacy-sqlserver").orElseThrow();
@@ -95,86 +90,83 @@ class SqlServerBulkUpsertTest {
 	}
 
 	@Test
-	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus()
-			throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
-			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_CHILD') IS NOT NULL "
-					+ "DROP TABLE dbo.SQLAPP_BULK_JOB_CHILD");
+	void migratesParentBeforeChildAndAggregatesJdbcCheckpointStatus() throws Exception {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
+			statement.execute(
+					"IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_CHILD') IS NOT NULL " + "DROP TABLE dbo.SQLAPP_BULK_JOB_CHILD");
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_PARENT') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_BULK_JOB_PARENT");
-			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_JOB_PARENT "
-					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
-			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_JOB_CHILD "
-					+ "(ID INT NOT NULL PRIMARY KEY, PARENT_ID INT NOT NULL "
-					+ "REFERENCES dbo.SQLAPP_BULK_JOB_PARENT(ID), TXT NVARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE dbo.SQLAPP_BULK_JOB_PARENT " + "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE dbo.SQLAPP_BULK_JOB_CHILD " + "(ID INT NOT NULL PRIMARY KEY, PARENT_ID INT NOT NULL "
+							+ "REFERENCES dbo.SQLAPP_BULK_JOB_PARENT(ID), TXT NVARCHAR(100))");
 			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT", false);
-			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "parent");
+			});
 			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD", true);
 			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_BULK_JOB_CHILD_PARENT",
 					new Column[] { child.getColumns().get("PARENT_ID") },
 					new Column[] { parent.getColumns().get("ID") });
 			child.getRows().add(row -> {
-				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child);
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child);
 			assertEquals(1, scalar(statement, "SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_CHILD c "
 					+ "JOIN dbo.SQLAPP_BULK_JOB_PARENT p ON p.ID = c.PARENT_ID"));
 		}
 	}
 
 	@Test
-	void inspectsAndResetsJdbcJobCheckpointWithoutRemovingUpsertedRows()
-			throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
+	void inspectsAndResetsJdbcJobCheckpointWithoutRemovingUpsertedRows() throws Exception {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_JOB_RESET_TARGET') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_BULK_JOB_RESET_TARGET");
 			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_JOB_RESET_TARGET "
 					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
 			final Table source = repairTable("SQLAPP_BULK_JOB_RESET_TARGET");
-			source.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "one"); });
-			source.getRows().add(row -> { row.put("ID", 2); row.put("TXT", "two"); });
+			source.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "one");
+			});
+			source.getRows().add(row -> {
+				row.put("ID", 2);
+				row.put("TXT", "two");
+			});
 			final var options = ChunkedBulkMigrationOption.builder()
-					.migrationId("sqlserver-job-reset-" + java.util.UUID.randomUUID())
-					.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-					.chunkSize(1).build();
-			final var store = new JdbcBulkMigrationCheckpointStore(connection,
-					options.getCheckpointTableName());
-			final var task = BulkMigrationJobTask.builder().taskId("reset")
-					.sourceTable(source).options(options).checkpointStore(store).build();
+					.migrationId("sqlserver-job-reset-" + java.util.UUID.randomUUID()).sourceFingerprint("source-v1")
+					.targetFingerprint("target-v1").chunkSize(1).build();
+			final var store = new JdbcBulkMigrationCheckpointStore(connection, options.getCheckpointTableName());
+			final var task = BulkMigrationJobTask.builder().taskId("reset").sourceTable(source).options(options)
+					.checkpointStore(store).build();
 			final var plan = BulkMigrationJobPlanner.plan(List.of(task));
 
-			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
-					.getProcessedRows());
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan).getProcessedRows());
 			assertEquals(BulkMigrationJobTaskState.COMPLETE,
 					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
 
-			assertEquals(List.of("reset"), BulkMigrationJobCheckpointManager
-					.reset(plan, plan.getFingerprint()).getResetTaskIds());
+			assertEquals(List.of("reset"),
+					BulkMigrationJobCheckpointManager.reset(plan, plan.getFingerprint()).getResetTaskIds());
 			assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 					BulkMigrationJobStatusInspector.inspect(plan).getTasks().get(0).getState());
-			assertEquals(2, scalar(statement,
-					"SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_RESET_TARGET"));
+			assertEquals(2, scalar(statement, "SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_RESET_TARGET"));
 
-			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan)
-					.getProcessedRows());
-			assertEquals(2, scalar(statement,
-					"SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_RESET_TARGET"));
+			assertEquals(2, BulkMigrationJobExecutor.executePlan(connection, plan).getProcessedRows());
+			assertEquals(2, scalar(statement, "SELECT COUNT(*) FROM dbo.SQLAPP_BULK_JOB_RESET_TARGET"));
 		}
 	}
 
 	@Test
-	void updatesMatchesAndInsertsMissingRowsThroughBulkStaging()
-			throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
-				SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
+	void updatesMatchesAndInsertsMissingRowsThroughBulkStaging() throws Exception {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
 			statement.execute("""
 					CREATE TABLE dbo.SQLAPP_BULK_UPSERT_TEST (
 					  ID BIGINT IDENTITY(1,1) NOT NULL UNIQUE,
@@ -208,26 +200,28 @@ class SqlServerBulkUpsertTest {
 				row.put("AMOUNT", new BigDecimal("0.00"));
 				row.put("PAYLOAD", new byte[] { 2 });
 			});
-			table.getRows().add(row -> { row.put("CODE", "D"); row.put("NAME", "first"); });
-			table.getRows().add(row -> { row.put("CODE", "D"); row.put("NAME", "discarded"); });
+			table.getRows().add(row -> {
+				row.put("CODE", "D");
+				row.put("NAME", "first");
+			});
+			table.getRows().add(row -> {
+				row.put("CODE", "D");
+				row.put("NAME", "discarded");
+			});
 
-			assertEquals(4, BulkUpsertResolver.execute(connection, table,
-					BulkUpsertOption.builder()
-							.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
-							.bulkOption(BulkOption.builder().batchSize(2).build())
-							.build()));
+			assertEquals(4,
+					BulkUpsertResolver.execute(connection, table,
+							BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
+									.bulkOption(BulkOption.builder().batchSize(2).build()).build()));
 
 			try (var resultSet = statement.executeQuery("SELECT ID, CODE, NAME, "
-					+ "AMOUNT, PAYLOAD FROM dbo.SQLAPP_BULK_UPSERT_TEST "
-					+ "ORDER BY CODE")) {
+					+ "AMOUNT, PAYLOAD FROM dbo.SQLAPP_BULK_UPSERT_TEST " + "ORDER BY CODE")) {
 				resultSet.next();
 				assertEquals(1L, resultSet.getLong("ID"));
 				assertEquals("A", resultSet.getString("CODE"));
 				assertEquals("更新後", resultSet.getString("NAME"));
-				assertEquals(new BigDecimal("12.34"),
-						resultSet.getBigDecimal("AMOUNT"));
-				assertArrayEquals(new byte[] { 0, (byte) 0xff },
-						resultSet.getBytes("PAYLOAD"));
+				assertEquals(new BigDecimal("12.34"), resultSet.getBigDecimal("AMOUNT"));
+				assertArrayEquals(new byte[] { 0, (byte) 0xff }, resultSet.getBytes("PAYLOAD"));
 				resultSet.next();
 				assertEquals("B", resultSet.getString("CODE"));
 				assertNull(resultSet.getString("NAME"));
@@ -245,19 +239,16 @@ class SqlServerBulkUpsertTest {
 
 	@Test
 	void resumesWithDatabaseCheckpointInTheTargetTransaction() throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_CHUNK_MIGRATION_TARGET') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_CHUNK_MIGRATION_TARGET");
 			statement.execute("CREATE TABLE dbo.SQLAPP_CHUNK_MIGRATION_TARGET "
 					+ "(CODE NVARCHAR(20) NOT NULL PRIMARY KEY, NAME NVARCHAR(100))");
 			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_TARGET").setSchemaName("dbo");
-			final Column code = new Column("CODE").setDataType(DataType.NVARCHAR)
-					.setLength(20).setNotNull(true);
+			final Column code = new Column("CODE").setDataType(DataType.NVARCHAR).setLength(20).setNotNull(true);
 			table.getColumns().add(code);
-			table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR)
-					.setLength(100));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR).setLength(100));
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_TARGET", code);
 			for (int i = 1; i <= 3; i++) {
 				final int value = i;
@@ -267,16 +258,13 @@ class SqlServerBulkUpsertTest {
 				});
 			}
 			final String migrationId = "sqlserver-" + java.util.UUID.randomUUID();
-			final var option = ChunkedBulkMigrationOption.builder()
-					.migrationId(migrationId).sourceFingerprint("source-v1")
-					.targetFingerprint("target-v1").chunkSize(2).build();
+			final var option = ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+					.sourceFingerprint("source-v1").targetFingerprint("target-v1").chunkSize(2).build();
 			final var checkpointStore = new JdbcBulkMigrationCheckpointStore(connection,
 					option.getCheckpointTableName());
-			assertThrows(java.sql.SQLException.class,
-					() -> ChunkedBulkMigrationExecutor.execute(connection, table, option,
-							new FailingTransactionalCheckpointStore(connection, checkpointStore)));
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET")) {
+			assertThrows(java.sql.SQLException.class, () -> ChunkedBulkMigrationExecutor.execute(connection, table,
+					option, new FailingTransactionalCheckpointStore(connection, checkpointStore)));
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET")) {
 				resultSet.next();
 				assertEquals(0, resultSet.getInt(1));
 			}
@@ -285,42 +273,37 @@ class SqlServerBulkUpsertTest {
 			final var result = ChunkedBulkMigrationExecutor.execute(connection, table, option);
 			assertEquals(3, result.getProcessedRows());
 			assertEquals(2, result.getCompletedChunks());
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET")) {
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET")) {
 				resultSet.next();
 				assertEquals(3, resultSet.getInt(1));
 			}
-			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection,
-					option.getCheckpointTableName()).load(migrationId).orElseThrow().getProcessedRows());
+			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName())
+					.load(migrationId).orElseThrow().getProcessedRows());
 		}
 	}
 
 	@Test
 	void readsAfterACompositeJdbcKeyset() throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
-			statement.execute("IF OBJECT_ID('dbo.SQLAPP_KEYSET_SOURCE') IS NOT NULL "
-					+ "DROP TABLE dbo.SQLAPP_KEYSET_SOURCE");
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
+			statement.execute(
+					"IF OBJECT_ID('dbo.SQLAPP_KEYSET_SOURCE') IS NOT NULL " + "DROP TABLE dbo.SQLAPP_KEYSET_SOURCE");
 			statement.execute("CREATE TABLE dbo.SQLAPP_KEYSET_SOURCE ("
-					+ "KEY1 INT NOT NULL, KEY2 INT NOT NULL, TXT NVARCHAR(20), "
-					+ "PRIMARY KEY (KEY1, KEY2))");
-			statement.executeUpdate("INSERT INTO dbo.SQLAPP_KEYSET_SOURCE VALUES "
-					+ "(1,1,'a'),(1,2,'b'),(2,1,'c'),(2,2,'d')");
-			BulkMigrationKeysetAssertions.assertCompositeResume(connection,
-					compositeKeysetTable());
+					+ "KEY1 INT NOT NULL, KEY2 INT NOT NULL, TXT NVARCHAR(20), " + "PRIMARY KEY (KEY1, KEY2))");
+			statement.executeUpdate(
+					"INSERT INTO dbo.SQLAPP_KEYSET_SOURCE VALUES " + "(1,1,'a'),(1,2,'b'),(2,1,'c'),(2,2,'d')");
+			BulkMigrationKeysetAssertions.assertCompositeResume(connection, compositeKeysetTable());
 		}
 	}
 
 	@Test
 	void repairsOnlyMismatchedChunksAndReverifies() throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_REPAIR_TARGET') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_BULK_REPAIR_TARGET");
-			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_REPAIR_TARGET "
-					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE dbo.SQLAPP_BULK_REPAIR_TARGET " + "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
 			statement.executeUpdate("INSERT INTO dbo.SQLAPP_BULK_REPAIR_TARGET VALUES "
 					+ "(1,'value-1'),(2,'value-2'),(3,'wrong'),(4,'value-4')");
 			final Table expected = repairTable();
@@ -338,14 +321,14 @@ class SqlServerBulkUpsertTest {
 			}
 			final var verification = BulkMigrationVerifier.verify(expected, before, 2);
 			assertEquals(1, verification.getMismatches().size());
-			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
-					verification, BulkMigrationRepairOption.builder().build());
+			final var repair = BulkMigrationRepairExecutor.execute(connection, expected, verification,
+					BulkMigrationRepairOption.builder().build());
 			assertEquals(1, repair.getReplayedChunks());
 			assertEquals(2, repair.getReplayedRows());
 
 			final Table after = repairTable();
-			try (var resultSet = statement.executeQuery(
-					"SELECT ID, TXT FROM dbo.SQLAPP_BULK_REPAIR_TARGET ORDER BY ID")) {
+			try (var resultSet = statement
+					.executeQuery("SELECT ID, TXT FROM dbo.SQLAPP_BULK_REPAIR_TARGET ORDER BY ID")) {
 				while (resultSet.next()) {
 					after.getRows().add(row -> {
 						try {
@@ -363,37 +346,32 @@ class SqlServerBulkUpsertTest {
 
 	@Test
 	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
-		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				var statement = connection.createStatement()) {
+		try (Connection connection = DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); var statement = connection.createStatement()) {
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_REPAIR_SOURCE') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_BULK_REPAIR_SOURCE");
 			statement.execute("IF OBJECT_ID('dbo.SQLAPP_BULK_REPAIR_TARGET') IS NOT NULL "
 					+ "DROP TABLE dbo.SQLAPP_BULK_REPAIR_TARGET");
-			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_REPAIR_SOURCE "
-					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
-			statement.execute("CREATE TABLE dbo.SQLAPP_BULK_REPAIR_TARGET "
-					+ "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE dbo.SQLAPP_BULK_REPAIR_SOURCE " + "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE dbo.SQLAPP_BULK_REPAIR_TARGET " + "(ID INT NOT NULL PRIMARY KEY, TXT NVARCHAR(100))");
 			statement.executeUpdate("INSERT INTO dbo.SQLAPP_BULK_REPAIR_SOURCE VALUES "
 					+ "(1,'value-1'),(2,'value-2'),(3,'value-3'),(4,'value-4')");
 			statement.executeUpdate("INSERT INTO dbo.SQLAPP_BULK_REPAIR_TARGET VALUES "
 					+ "(1,'value-1'),(2,'wrong'),(3,'value-3'),(4,'value-4')");
 			final var expected = new JdbcBulkMigrationKeysetSource(connection,
 					repairTable("SQLAPP_BULK_REPAIR_SOURCE"));
-			final var actual = new JdbcBulkMigrationKeysetSource(connection,
-					repairTable("SQLAPP_BULK_REPAIR_TARGET"));
-			final var verification = BulkMigrationVerifier.verify(expected, actual,
-					List.of("ID", "TXT"), 1);
+			final var actual = new JdbcBulkMigrationKeysetSource(connection, repairTable("SQLAPP_BULK_REPAIR_TARGET"));
+			final var verification = BulkMigrationVerifier.verify(expected, actual, List.of("ID", "TXT"), 1);
 
 			final var repair = BulkMigrationRepairExecutor.execute(connection, expected,
-					repairTable("SQLAPP_BULK_REPAIR_TARGET"), verification,
-					BulkMigrationRepairOption.defaults());
+					repairTable("SQLAPP_BULK_REPAIR_TARGET"), verification, BulkMigrationRepairOption.defaults());
 
 			assertEquals(1, repair.getReplayedChunks());
 			assertEquals(1, repair.getReplayedRows());
 			final var after = BulkMigrationVerifier.verify(expected,
-					new JdbcBulkMigrationKeysetSource(connection,
-							repairTable("SQLAPP_BULK_REPAIR_TARGET")),
+					new JdbcBulkMigrationKeysetSource(connection, repairTable("SQLAPP_BULK_REPAIR_TARGET")),
 					List.of("ID", "TXT"), 1);
 			assertTrue(after.isMatch());
 		}
@@ -402,18 +380,13 @@ class SqlServerBulkUpsertTest {
 	private static Table createTable() {
 		final Table table = new Table("SQLAPP_BULK_UPSERT_TEST");
 		table.setSchemaName("dbo");
-		final Column id = new Column("ID").setDataType(DataType.BIGINT)
-				.setIdentity(true);
-		final Column code = new Column("CODE").setDataType(DataType.NVARCHAR)
-				.setLength(20).setNotNull(true);
+		final Column id = new Column("ID").setDataType(DataType.BIGINT).setIdentity(true);
+		final Column code = new Column("CODE").setDataType(DataType.NVARCHAR).setLength(20).setNotNull(true);
 		table.getColumns().add(id);
 		table.getColumns().add(code);
-		table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR)
-				.setLength(100));
-		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL)
-				.setLength(12).setScale(2));
-		table.getColumns().add(new Column("PAYLOAD")
-				.setDataType(DataType.VARBINARY).setLength(20));
+		table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR).setLength(100));
+		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
 		table.setPrimaryKey("PK_SQLAPP_BULK_UPSERT_TEST", code);
 		return table;
 	}
@@ -445,14 +418,12 @@ class SqlServerBulkUpsertTest {
 	private static Table jobTable(final String name, final boolean child) {
 		final Table table = repairTable(name);
 		if (child) {
-			table.getColumns().add(1, new Column("PARENT_ID").setDataType(DataType.INT)
-					.setNotNull(true));
+			table.getColumns().add(1, new Column("PARENT_ID").setDataType(DataType.INT).setNotNull(true));
 		}
 		return table;
 	}
 
-	private static int scalar(final java.sql.Statement statement, final String sql)
-			throws java.sql.SQLException {
+	private static int scalar(final java.sql.Statement statement, final String sql) throws java.sql.SQLException {
 		try (var resultSet = statement.executeQuery(sql)) {
 			resultSet.next();
 			return resultSet.getInt(1);

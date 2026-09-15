@@ -29,8 +29,7 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** MySQL 5.7 compatibility coverage for the metadata reader tree. */
 class MySql57MetadataReaderTest {
-	private static final MySQLContainer MYSQL = ReusableTestcontainers
-			.configure(new MySQLContainer("mysql:5.7"));
+	private static final MySQLContainer MYSQL = ReusableTestcontainers.configure(new MySQLContainer("mysql:5.7"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -44,25 +43,21 @@ class MySql57MetadataReaderTest {
 
 	@Test
 	void readsCoreSchemaObjectsWithThe57Reader() throws SQLException {
-		try (Connection connection = MYSQL.createConnection("");
-				Statement statement = connection.createStatement()) {
+		try (Connection connection = MYSQL.createConnection(""); Statement statement = connection.createStatement()) {
 			createObjects(statement);
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(MySql570.class, dialect);
 			var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName(MYSQL.getDatabaseName());
-			var schema = reader.getAllFull(connection).stream()
-					.filter(s -> MYSQL.getDatabaseName().equals(s.getName()))
+			var schema = reader.getAllFull(connection).stream().filter(s -> MYSQL.getDatabaseName().equals(s.getName()))
 					.findFirst().orElseThrow();
 
 			var parent = schema.getTables().get("metadata57_parent");
 			assertNotNull(parent);
 			assertTrue(parent.getColumns().get("id").isIdentity());
-			var primaryKey = assertInstanceOf(UniqueConstraint.class,
-					parent.getConstraints().get("PRIMARY"));
+			var primaryKey = assertInstanceOf(UniqueConstraint.class, parent.getConstraints().get("PRIMARY"));
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
-			assertEquals("code", parent.getIndexes().get("idx_metadata57_code")
-					.getColumns().get(0).getName());
+			assertEquals("code", parent.getIndexes().get("idx_metadata57_code").getColumns().get(0).getName());
 
 			var child = schema.getTables().get("metadata57_child");
 			var foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
@@ -81,10 +76,8 @@ class MySql57MetadataReaderTest {
 
 			var procedure = schema.getProcedures().get("metadata57_procedure");
 			assertNotNull(procedure);
-			assertEquals(ParameterDirection.Input,
-					procedure.getArguments().get("p_id").getDirection());
-			assertTrue(String.join("\n", procedure.getStatement()).toLowerCase()
-					.contains("select code"));
+			assertEquals(ParameterDirection.Input, procedure.getArguments().get("p_id").getDirection());
+			assertTrue(String.join("\n", procedure.getStatement()).toLowerCase().contains("select code"));
 		}
 	}
 
@@ -93,17 +86,12 @@ class MySql57MetadataReaderTest {
 		statement.execute("DROP VIEW IF EXISTS metadata57_view");
 		statement.execute("DROP TABLE IF EXISTS metadata57_child");
 		statement.execute("DROP TABLE IF EXISTS metadata57_parent");
-		statement.execute("CREATE TABLE metadata57_parent ("
-				+ "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
-				+ "code VARCHAR(40) NOT NULL, "
-				+ "INDEX idx_metadata57_code (code)) ENGINE=InnoDB");
-		statement.execute("CREATE TABLE metadata57_child ("
-				+ "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
-				+ "parent_id BIGINT NOT NULL, "
-				+ "CONSTRAINT fk_metadata57_parent FOREIGN KEY (parent_id) "
+		statement.execute("CREATE TABLE metadata57_parent (" + "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+				+ "code VARCHAR(40) NOT NULL, " + "INDEX idx_metadata57_code (code)) ENGINE=InnoDB");
+		statement.execute("CREATE TABLE metadata57_child (" + "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "
+				+ "parent_id BIGINT NOT NULL, " + "CONSTRAINT fk_metadata57_parent FOREIGN KEY (parent_id) "
 				+ "REFERENCES metadata57_parent(id) ON DELETE CASCADE) ENGINE=InnoDB");
-		statement.execute("CREATE VIEW metadata57_view AS "
-				+ "SELECT id, code FROM metadata57_parent");
+		statement.execute("CREATE VIEW metadata57_view AS " + "SELECT id, code FROM metadata57_parent");
 		statement.execute("CREATE PROCEDURE metadata57_procedure(IN p_id BIGINT) "
 				+ "SELECT code FROM metadata57_parent WHERE id = p_id");
 	}

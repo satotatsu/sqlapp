@@ -32,8 +32,8 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 class PostgresJdbcTreeDataSessionTest {
 	private static final String IMAGE = "postgres:18.4";
 
-	private static final PostgreSQLContainer POSTGRES =
-			ReusableTestcontainers.configure(new PostgreSQLContainer(IMAGE));
+	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
+			.configure(new PostgreSQLContainer(IMAGE));
 
 	@BeforeAll
 	static void startContainer() {
@@ -111,14 +111,13 @@ class PostgresJdbcTreeDataSessionTest {
 				addChild(session, child, "child-200");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, c.parent_id, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id IN (100, 200)
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, c.parent_id, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.id IN (100, 200)
+					ORDER BY p.id
+					""")) {
 				assertIdentityChild(resultSet, 100L, "child-100");
 				assertIdentityChild(resultSet, 200L, "child-200");
 				assertFalse(resultSet.next());
@@ -128,8 +127,7 @@ class PostgresJdbcTreeDataSessionTest {
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
-		try (Connection writer = POSTGRES.createConnection("");
-				Connection observer = POSTGRES.createConnection("")) {
+		try (Connection writer = POSTGRES.createConnection(""); Connection observer = POSTGRES.createConnection("")) {
 			writer.setAutoCommit(false);
 			createTables(writer);
 			Schema schema = loadPublicSchema(writer);
@@ -203,13 +201,12 @@ class PostgresJdbcTreeDataSessionTest {
 
 			assertEquals(7, count(connection, "parent_table"));
 			assertEquals(5, count(connection, "child_table"));
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 3; i <= 7; i++) {
 					assertParentChild(resultSet, "parent-" + i, "child-" + i);
 				}
@@ -239,14 +236,13 @@ class PostgresJdbcTreeDataSessionTest {
 				addChild(session, child, "child-5");
 			}
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							LEFT JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
-							ORDER BY p.id, c.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					LEFT JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+					ORDER BY p.id, c.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3a");
 				assertParentChild(resultSet, "parent-3", "child-3b");
 				assertParentChild(resultSet, "parent-4", null);
@@ -282,13 +278,12 @@ class PostgresJdbcTreeDataSessionTest {
 
 			assertEquals(4, count(connection, "parent_table"));
 			assertEquals(2, count(connection, "child_table"));
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertFalse(resultSet.next());
@@ -305,13 +300,10 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (Statement statement = connection.createStatement(
-					ResultSet.TYPE_FORWARD_ONLY,
-					ResultSet.CONCUR_READ_ONLY,
-					ResultSet.HOLD_CURSORS_OVER_COMMIT)) {
+			try (Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+					ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT)) {
 				statement.setFetchSize(1);
-				try (ResultSet cursor = statement.executeQuery(
-						"SELECT id, txt FROM parent_table ORDER BY id")) {
+				try (ResultSet cursor = statement.executeQuery("SELECT id, txt FROM parent_table ORDER BY id")) {
 					assertTrue(cursor.next());
 
 					try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {

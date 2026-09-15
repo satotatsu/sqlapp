@@ -38,12 +38,10 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Cloud Spanner emulator integration coverage for MetadataReader. */
 class SpannerMetadataReaderTest {
-	private static final GenericContainer<?> SPANNER = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse(
-					"gcr.io/cloud-spanner-emulator/emulator:latest"))
+	private static final GenericContainer<?> SPANNER = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator:latest"))
 					.withExposedPorts(9010)
-					.waitingFor(Wait.forListeningPort()
-							.withStartupTimeout(Duration.ofMinutes(2))));
+					.waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2))));
 
 	@BeforeAll
 	static void startContainer() {
@@ -57,8 +55,7 @@ class SpannerMetadataReaderTest {
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		try (Connection first = createConnection();
-				Connection second = createConnection()) {
+		try (Connection first = createConnection(); Connection second = createConnection()) {
 			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
 		}
 	}
@@ -73,10 +70,9 @@ class SpannerMetadataReaderTest {
 
 	@Test
 	void readsRepresentativeSchemaObjectsFromCurrentEmulator() throws Exception {
-		try (Connection connection = createConnection();
-				Statement statement = connection.createStatement()) {
-			statement.execute("ALTER DATABASE `metadata-db` SET OPTIONS "
-					+ "(default_sequence_kind='bit_reversed_positive')");
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			statement.execute(
+					"ALTER DATABASE `metadata-db` SET OPTIONS " + "(default_sequence_kind='bit_reversed_positive')");
 			statement.execute("""
 					CREATE SEQUENCE metadata_sequence OPTIONS (
 					 sequence_kind='bit_reversed_positive', start_with_counter=1000,
@@ -101,13 +97,11 @@ class SpannerMetadataReaderTest {
 					  CHECK (amount IS NULL OR amount >= 0)
 					) PRIMARY KEY (id)
 					""");
-			statement.execute("CREATE UNIQUE INDEX uq_metadata_parent_code "
-					+ "ON metadata_parent(code)");
-			statement.execute("CREATE SEARCH INDEX search_metadata_parent_code "
-					+ "ON metadata_parent(tokenized_code)");
+			statement.execute("CREATE UNIQUE INDEX uq_metadata_parent_code " + "ON metadata_parent(code)");
+			statement
+					.execute("CREATE SEARCH INDEX search_metadata_parent_code " + "ON metadata_parent(tokenized_code)");
 			statement.execute("CREATE VECTOR INDEX vector_metadata_parent_embedding "
-					+ "ON metadata_parent(embedding) WHERE embedding IS NOT NULL "
-					+ "OPTIONS(distance_type='COSINE')");
+					+ "ON metadata_parent(embedding) WHERE embedding IS NOT NULL " + "OPTIONS(distance_type='COSINE')");
 			statement.execute("""
 					CREATE TABLE metadata_composite_parent (
 					 tenant_id INT64 NOT NULL,
@@ -129,8 +123,7 @@ class SpannerMetadataReaderTest {
 					  ON DELETE CASCADE
 					) PRIMARY KEY (id)
 					""");
-			statement.execute("CREATE INDEX idx_metadata_child_code "
-					+ "ON metadata_child(code DESC)");
+			statement.execute("CREATE INDEX idx_metadata_child_code " + "ON metadata_child(code DESC)");
 			statement.execute("CREATE NULL_FILTERED INDEX idx_metadata_child_filtered "
 					+ "ON metadata_child(code) STORING (parent_id)");
 			statement.execute("""
@@ -146,59 +139,46 @@ class SpannerMetadataReaderTest {
 
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			assertInstanceOf(Spanner.class, dialect);
-			var schemas = dialect.getCatalogReader().getSchemaReader()
-					.getAllFull(connection);
-			var schema = schemas.stream()
-					.filter(s -> s.getTables().get("metadata_parent") != null)
-					.findFirst().orElseThrow();
+			var schemas = dialect.getCatalogReader().getSchemaReader().getAllFull(connection);
+			var schema = schemas.stream().filter(s -> s.getTables().get("metadata_parent") != null).findFirst()
+					.orElseThrow();
 			var parent = schema.getTables().get("metadata_parent");
 			var identity = parent.getColumns().get("id");
 			assertTrue(identity.isIdentity());
 			assertEquals(2000L, identity.getIdentityStartValue().longValue());
-			assertEquals(Boolean.TRUE, identity.getSpecifics().get(
-					SpannerSqlBuilder.IDENTITY_BIT_REVERSED_POSITIVE, Boolean.class));
-			assertEquals(200L, identity.getSpecifics().get(
-					SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN, Long.class).longValue());
-			assertEquals(299L, identity.getSpecifics().get(
-					SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX, Long.class).longValue());
+			assertEquals(Boolean.TRUE,
+					identity.getSpecifics().get(SpannerSqlBuilder.IDENTITY_BIT_REVERSED_POSITIVE, Boolean.class));
+			assertEquals(200L,
+					identity.getSpecifics().get(SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN, Long.class).longValue());
+			assertEquals(299L,
+					identity.getSpecifics().get(SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX, Long.class).longValue());
 			var normalizedCode = parent.getColumns().get("normalized_code");
 			assertEquals("LOWER(code)", normalizedCode.getFormula());
 			assertTrue(normalizedCode.isFormulaPersisted());
 			var createdAt = parent.getColumns().get("created_at");
-			assertTrue(createdAt.getDefaultValue().contains(
-					"PENDING_COMMIT_TIMESTAMP"));
-			assertEquals("TRUE",
-					createdAt.getSpecifics().get("allow_commit_timestamp"));
+			assertTrue(createdAt.getDefaultValue().contains("PENDING_COMMIT_TIMESTAMP"));
+			assertEquals("TRUE", createdAt.getSpecifics().get("allow_commit_timestamp"));
 			var updatedAt = parent.getColumns().get("updated_at");
-			assertTrue(updatedAt.getOnUpdate().contains(
-					"PENDING_COMMIT_TIMESTAMP"));
-			assertEquals("TRUE",
-					updatedAt.getSpecifics().get("allow_commit_timestamp"));
+			assertTrue(updatedAt.getOnUpdate().contains("PENDING_COMMIT_TIMESTAMP"));
+			assertEquals("TRUE", updatedAt.getSpecifics().get("allow_commit_timestamp"));
 			assertTrue(parent.getColumns().get("tokenized_code").isHidden());
 			assertNotNull(parent.getColumns().get("embedding"));
-			var primaryKey = parent.getConstraints().stream()
-					.filter(UniqueConstraint.class::isInstance)
-					.map(UniqueConstraint.class::cast)
-					.filter(UniqueConstraint::isPrimaryKey)
-					.findFirst().orElseThrow();
+			var primaryKey = parent.getConstraints().stream().filter(UniqueConstraint.class::isInstance)
+					.map(UniqueConstraint.class::cast).filter(UniqueConstraint::isPrimaryKey).findFirst().orElseThrow();
 			assertEquals("id", primaryKey.getColumns().get(0).getName());
 			assertTrue(parent.getIndexes().get("uq_metadata_parent_code").isUnique());
 			var searchIndex = parent.getIndexes().get("search_metadata_parent_code");
 			assertNotNull(searchIndex);
 			assertEquals(IndexType.FullText, searchIndex.getIndexType());
-			assertEquals("tokenized_code",
-					searchIndex.getColumns().get(0).getName());
-			var vectorIndex = parent.getIndexes().get(
-					"vector_metadata_parent_embedding");
+			assertEquals("tokenized_code", searchIndex.getColumns().get(0).getName());
+			var vectorIndex = parent.getIndexes().get("vector_metadata_parent_embedding");
 			assertNotNull(vectorIndex);
 			assertEquals(IndexType.Vector, vectorIndex.getIndexType());
 			assertEquals("embedding", vectorIndex.getColumns().get(0).getName());
-			var amountCheck = parent.getConstraints().stream()
-					.filter(CheckConstraint.class::isInstance)
+			var amountCheck = parent.getConstraints().stream().filter(CheckConstraint.class::isInstance)
 					.map(CheckConstraint.class::cast)
-					.filter(constraint -> "ck_metadata_parent_amount"
-							.equals(constraint.getName()))
-					.findFirst().orElseThrow();
+					.filter(constraint -> "ck_metadata_parent_amount".equals(constraint.getName())).findFirst()
+					.orElseThrow();
 			assertTrue(amountCheck.getExpression().contains("amount >= 0"));
 			var child = schema.getTables().get("metadata_child");
 			var orderedIndex = child.getIndexes().get("idx_metadata_child_code");
@@ -206,54 +186,42 @@ class SpannerMetadataReaderTest {
 			assertEquals(Order.Desc, orderedIndex.getColumns().get(0).getOrder());
 			var filteredIndex = child.getIndexes().get("idx_metadata_child_filtered");
 			assertNotNull(filteredIndex);
-			assertEquals(Boolean.TRUE,
-					filteredIndex.getSpecifics().get("is_null_filtered", Boolean.class));
+			assertEquals(Boolean.TRUE, filteredIndex.getSpecifics().get("is_null_filtered", Boolean.class));
 			assertEquals("parent_id", filteredIndex.getIncludes().get(0).getName());
-			var foreignKey = child.getConstraints().stream()
-					.filter(ForeignKeyConstraint.class::isInstance)
+			var foreignKey = child.getConstraints().stream().filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
-					.filter(constraint -> "fk_metadata_child_parent"
-							.equals(constraint.getName()))
-					.findFirst().orElseThrow();
+					.filter(constraint -> "fk_metadata_child_parent".equals(constraint.getName())).findFirst()
+					.orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertTrue(!foreignKey.isEnable());
 			assertNotNull(foreignKey.getSpecifics().get("spanner_state"));
-			var compositeForeignKey = child.getConstraints().stream()
-					.filter(ForeignKeyConstraint.class::isInstance)
+			var compositeForeignKey = child.getConstraints().stream().filter(ForeignKeyConstraint.class::isInstance)
 					.map(ForeignKeyConstraint.class::cast)
-					.filter(constraint -> "fk_metadata_child_composite"
-							.equals(constraint.getName()))
-					.findFirst().orElseThrow();
-			assertEquals("tenant_id",
-					compositeForeignKey.getColumns().get(0).getName());
-			assertEquals("composite_parent_id",
-					compositeForeignKey.getColumns().get(1).getName());
-			assertEquals("tenant_id",
-					compositeForeignKey.getRelatedColumns().get(0).getName());
-			assertEquals("parent_id",
-					compositeForeignKey.getRelatedColumns().get(1).getName());
+					.filter(constraint -> "fk_metadata_child_composite".equals(constraint.getName())).findFirst()
+					.orElseThrow();
+			assertEquals("tenant_id", compositeForeignKey.getColumns().get(0).getName());
+			assertEquals("composite_parent_id", compositeForeignKey.getColumns().get(1).getName());
+			assertEquals("tenant_id", compositeForeignKey.getRelatedColumns().get(0).getName());
+			assertEquals("parent_id", compositeForeignKey.getRelatedColumns().get(1).getName());
 			assertEquals(CascadeRule.Cascade, compositeForeignKey.getDeleteRule());
 			assertTrue(compositeForeignKey.isEnable());
 			var interleaved = schema.getTables().get("metadata_interleaved_child");
 			assertNotNull(interleaved);
 			assertEquals("metadata_parent", interleaved.getSpecifics().get("parent_table_name"));
 			assertEquals("CASCADE", interleaved.getSpecifics().get("on_delete_action"));
-			var interleavedPrimaryKey = interleaved.getConstraints().stream()
-					.filter(UniqueConstraint.class::isInstance)
-					.map(UniqueConstraint.class::cast)
-					.filter(UniqueConstraint::isPrimaryKey)
-					.findFirst().orElseThrow();
+			var interleavedPrimaryKey = interleaved.getConstraints().stream().filter(UniqueConstraint.class::isInstance)
+					.map(UniqueConstraint.class::cast).filter(UniqueConstraint::isPrimaryKey).findFirst().orElseThrow();
 			assertEquals("id", interleavedPrimaryKey.getColumns().get(0).getName());
 			assertEquals("child_id", interleavedPrimaryKey.getColumns().get(1).getName());
 			assertEquals(Order.Desc, interleavedPrimaryKey.getColumns().get(1).getOrder());
 			var sequence = schema.getSequences().get("metadata_sequence");
 			assertNotNull(sequence);
 			assertEquals(1000L, sequence.getStartValue().longValue());
-			assertEquals(100L, sequence.getSpecifics().get(
-					SpannerCreateSequenceFactory.SKIP_RANGE_MIN, Long.class).longValue());
-			assertEquals(199L, sequence.getSpecifics().get(
-					SpannerCreateSequenceFactory.SKIP_RANGE_MAX, Long.class).longValue());
+			assertEquals(100L,
+					sequence.getSpecifics().get(SpannerCreateSequenceFactory.SKIP_RANGE_MIN, Long.class).longValue());
+			assertEquals(199L,
+					sequence.getSpecifics().get(SpannerCreateSequenceFactory.SKIP_RANGE_MAX, Long.class).longValue());
 			var view = schema.getViews().get("metadata_view");
 			assertNotNull(view);
 			String viewStatement = String.join("\n", view.getStatement()).toLowerCase();

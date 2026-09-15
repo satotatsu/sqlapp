@@ -30,8 +30,7 @@ import com.sqlapp.data.schemas.Table;
 
 /** Db2 11.5 compatibility coverage for the full metadata reader tree. */
 class Db2_1150MetadataReaderTest {
-	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container(
-			"icr.io/db2_community/db2:11.5.8.0");
+	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container("icr.io/db2_community/db2:11.5.8.0");
 
 	@BeforeAll
 	static void startContainer() {
@@ -47,9 +46,8 @@ class Db2_1150MetadataReaderTest {
 
 	@Test
 	void testMetadataReaderOperatesOnDb2_11_5() throws SQLException {
-		try (Connection connection = DB2.createConnection("");
-				Statement statement = connection.createStatement()) {
-				drop(statement, "DROP VIEW METADATA_COMPAT_VIEW");
+		try (Connection connection = DB2.createConnection(""); Statement statement = connection.createStatement()) {
+			drop(statement, "DROP VIEW METADATA_COMPAT_VIEW");
 			drop(statement, "DROP TRIGGER METADATA_COMPAT_TRIGGER");
 			drop(statement, "DROP PROCEDURE METADATA_COMPAT_PROCEDURE");
 			drop(statement, "DROP FUNCTION METADATA_COMPAT_FUNCTION");
@@ -126,8 +124,7 @@ class Db2_1150MetadataReaderTest {
 			var schemaReader = dialect.getCatalogReader().getSchemaReader();
 			schemaReader.setSchemaName(schemaName);
 			Schema schema = schemaReader.getAllFull(connection).stream()
-					.filter(current -> schemaName.equalsIgnoreCase(current.getName()))
-					.findFirst().orElseThrow();
+					.filter(current -> schemaName.equalsIgnoreCase(current.getName())).findFirst().orElseThrow();
 			Table child = schema.getTables().get("METADATA_COMPAT_CHILD");
 			assertNotNull(child);
 			assertNotNull(child.getConstraints().get("CK_METADATA_COMPAT"));
@@ -136,54 +133,44 @@ class Db2_1150MetadataReaderTest {
 			assertNotNull(schema.getSequences().get("METADATA_COMPAT_SEQ"));
 			var view = schema.getViews().get("METADATA_COMPAT_VIEW");
 			assertNotNull(view);
-			assertTrue(String.join("\n", view.getDefinition())
-					.toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_CHILD"));
-			var procedure = schema.getProcedures()
-					.get("METADATA_COMPAT_PROCEDURE");
+			assertTrue(
+					String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_CHILD"));
+			var procedure = schema.getProcedures().get("METADATA_COMPAT_PROCEDURE");
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_AUDIT"));
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT)
+					.contains("METADATA_COMPAT_AUDIT"));
 			var function = schema.getFunctions().get("METADATA_COMPAT_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
-			assertTrue(String.join("\n", function.getStatement())
-					.toUpperCase(Locale.ROOT).contains("P_AMOUNT"));
+			assertTrue(String.join("\n", function.getStatement()).toUpperCase(Locale.ROOT).contains("P_AMOUNT"));
 			var trigger = schema.getTriggers().get("METADATA_COMPAT_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_COMPAT_CHILD", trigger.getTableName());
-			assertTrue(String.join("\n", trigger.getDefinition())
-					.toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_AUDIT"));
-			Table partitioned = schema.getTables()
-					.get("METADATA_COMPAT_PARTITIONED");
+			assertTrue(String.join("\n", trigger.getDefinition()).toUpperCase(Locale.ROOT)
+					.contains("METADATA_COMPAT_AUDIT"));
+			Table partitioned = schema.getTables().get("METADATA_COMPAT_PARTITIONED");
 			assertNotNull(partitioned);
-			assertEquals(PartitioningType.Range,
-					partitioned.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
 			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
 			Table mdc = schema.getTables().get("METADATA_COMPAT_MDC");
 			assertNotNull(mdc);
-			assertEquals("C", mdc.getColumns().get("REGION")
-					.getSpecifics().get("TYPE"));
-			assertNotNull(mdc.getColumns().get("REGION")
-					.getSpecifics().get("DIMENSION"));
-			assertNotNull(mdc.getColumns().get("BUCKET")
-					.getSpecifics().get("DIMENSION"));
+			assertEquals("C", mdc.getColumns().get("REGION").getSpecifics().get("TYPE"));
+			assertNotNull(mdc.getColumns().get("REGION").getSpecifics().get("DIMENSION"));
+			assertNotNull(mdc.getColumns().get("BUCKET").getSpecifics().get("DIMENSION"));
 			var money = schema.getDomains().get("METADATA_COMPAT_MONEY");
 			assertNotNull(money);
 			assertEquals(DataType.DECIMAL, money.getDataType());
-			assertEquals("METADATA_COMPAT_MONEY", schema.getTables()
-					.get("METADATA_COMPAT_TYPED").getColumns().get("AMOUNT")
-					.getDataTypeName());
+			assertEquals("METADATA_COMPAT_MONEY",
+					schema.getTables().get("METADATA_COMPAT_TYPED").getColumns().get("AMOUNT").getDataTypeName());
 			var address = schema.getTypes().get("METADATA_COMPAT_ADDRESS");
 			assertNotNull(address);
 			assertEquals(2, address.getColumns().size());
-			assertEquals(DataType.VARCHAR,
-					address.getColumns().get("STREET").getDataType());
+			assertEquals(DataType.VARCHAR, address.getColumns().get("STREET").getDataType());
 		}
 	}
 
-	private void drop(final Statement statement, final String sql)
-			throws SQLException {
+	private void drop(final Statement statement, final String sql) throws SQLException {
 		try {
 			statement.execute(sql);
 		} catch (SQLException e) {

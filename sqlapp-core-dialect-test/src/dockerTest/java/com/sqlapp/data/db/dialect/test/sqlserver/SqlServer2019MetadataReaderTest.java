@@ -26,12 +26,13 @@ import com.sqlapp.data.db.dialect.sqlserver.SqlServer2019;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.Catalog;
 
-/** Ensures the version-specific metadata path remains usable on SQL Server 2019. */
+/**
+ * Ensures the version-specific metadata path remains usable on SQL Server 2019.
+ */
 class SqlServer2019MetadataReaderTest {
 	private static final String DATABASE_NAME = "METADATA_READER_2019_TEST";
-	private static final MSSQLServerContainer SQL_SERVER =
-			ReusableTestcontainers.configure(new MSSQLServerContainer(
-					"mcr.microsoft.com/mssql/server:2019-latest").acceptLicense());
+	private static final MSSQLServerContainer SQL_SERVER = ReusableTestcontainers
+			.configure(new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2019-latest").acceptLicense());
 
 	@BeforeAll
 	static void startContainer() throws SQLException {
@@ -50,9 +51,8 @@ class SqlServer2019MetadataReaderTest {
 	@Test
 	void testMetadataReaderRemainsUsableOnSqlServer2019() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME,
-				SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
-				Statement statement = connection.createStatement()) {
+				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME, SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword()); Statement statement = connection.createStatement()) {
 			statement.execute("""
 					CREATE TABLE METADATA_2019 (
 						ID BIGINT NOT NULL PRIMARY KEY,
@@ -74,29 +74,24 @@ class SqlServer2019MetadataReaderTest {
 			var reader = dialect.getCatalogReader();
 			reader.setCatalogName(connection.getCatalog());
 			Catalog catalog = reader.getAllFull(connection).stream()
-					.filter(current -> connectionCatalogEquals(connection, current))
-					.findFirst().orElseThrow();
+					.filter(current -> connectionCatalogEquals(connection, current)).findFirst().orElseThrow();
 			var schema = catalog.getSchemas().get("dbo");
 			assertNotNull(schema.getTables().get("METADATA_2019"));
 			var view = schema.getViews().get("METADATA_2019_VIEW");
 			assertNotNull(view);
 			assertNotNull(view.getColumns().get("VALUE"));
-			assertTrue(String.join("\n", view.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_2019"));
+			assertTrue(String.join("\n", view.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_2019"));
 			var procedure = schema.getProcedures().get("METADATA_2019_PROCEDURE");
 			assertNotNull(procedure);
 			assertNotNull(procedure.getArguments().get("@P_ID"));
-			assertTrue(String.join("\n", procedure.getStatement())
-					.toUpperCase(Locale.ROOT).contains("METADATA_2019"));
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_2019"));
 			var trigger = schema.getTriggers().get("METADATA_2019_TRIGGER");
 			assertNotNull(trigger);
-			assertTrue(String.join("\n", trigger.getStatement())
-					.toUpperCase(Locale.ROOT).contains("INSERTED"));
+			assertTrue(String.join("\n", trigger.getStatement()).toUpperCase(Locale.ROOT).contains("INSERTED"));
 		}
 	}
 
-	private boolean connectionCatalogEquals(final Connection connection,
-			final Catalog catalog) {
+	private boolean connectionCatalogEquals(final Connection connection, final Catalog catalog) {
 		try {
 			return connection.getCatalog().equalsIgnoreCase(catalog.getName());
 		} catch (SQLException e) {

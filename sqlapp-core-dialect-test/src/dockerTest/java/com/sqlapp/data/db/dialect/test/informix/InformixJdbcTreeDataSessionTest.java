@@ -51,13 +51,9 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 /** Informix 14.10 integration coverage for JDBC batch generated keys. */
 class InformixJdbcTreeDataSessionTest {
 	private static final GenericContainer<?> INFORMIX = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse(
-					"icr.io/informix/informix-developer-database:14.10.FC9W1DE"))
-					.withPrivilegedMode(true)
-					.withEnv("LICENSE", "accept")
-					.withEnv("STORAGE", "local")
-					.withEnv("SIZE", "small")
-					.withExposedPorts(9088)
+			new GenericContainer<>(DockerImageName.parse("icr.io/informix/informix-developer-database:14.10.FC9W1DE"))
+					.withPrivilegedMode(true).withEnv("LICENSE", "accept").withEnv("STORAGE", "local")
+					.withEnv("SIZE", "small").withExposedPorts(9088)
 					.waitingFor(Wait.forLogMessage(".*'sysadmin' database built successfully.*\\n", 1)
 							.withStartupTimeout(Duration.ofMinutes(3))));
 
@@ -76,15 +72,13 @@ class InformixJdbcTreeDataSessionTest {
 		try (Connection connection = createConnection()) {
 			connection.setAutoCommit(false);
 			createTables(connection);
-			Schema schema = SchemaUtils.getSchema(connection, "informix", "parent_table", "child_table",
-					"composite_parent",
-					"parent_view", "metadata_complex_view", "metadata_audit", "metadata_trigger",
-					"metadata_procedure",
-					"metadata_update_trigger",
-					"metadata_function", "metadata_sequence", "metadata_fragmented",
-					"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
-					"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial",
-					"metadata_types", "MetadataCaseTable")
+			Schema schema = SchemaUtils
+					.getSchema(connection, "informix", "parent_table", "child_table", "composite_parent", "parent_view",
+							"metadata_complex_view", "metadata_audit", "metadata_trigger", "metadata_procedure",
+							"metadata_update_trigger", "metadata_function", "metadata_sequence", "metadata_fragmented",
+							"metadata_round_robin", "metadata_list_fragmented", "metadata_range_fragmented",
+							"metadata_parent_synonym", "metadata_serial8", "metadata_bigserial", "metadata_types",
+							"MetadataCaseTable")
 					.orElseThrow(() -> new AssertionError("Informix test schema was not loaded."));
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
@@ -95,13 +89,12 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(2, compositePrimaryKey.getColumns().size());
 			assertEquals("code", compositePrimaryKey.getColumns().get(0).getName());
 			assertEquals("version_no", compositePrimaryKey.getColumns().get(1).getName());
-			assertTrue(parent.getColumns().get("id").isIdentity(), () -> "dialect="
-					+ schema.getDialect().getClass().getName() + ", dataType="
-					+ parent.getColumns().get("id").getDataType() + ", dataTypeName="
-					+ parent.getColumns().get("id").getDataTypeName());
+			assertTrue(parent.getColumns().get("id").isIdentity(),
+					() -> "dialect=" + schema.getDialect().getClass().getName() + ", dataType="
+							+ parent.getColumns().get("id").getDataType() + ", dataTypeName="
+							+ parent.getColumns().get("id").getDataTypeName());
 			assertEquals(DataType.SERIAL, parent.getColumns().get("id").getDataType());
-			assertEquals(IdentityGenerationType.ByDefault,
-					parent.getColumns().get("id").getIdentityGenerationType());
+			assertEquals(IdentityGenerationType.ByDefault, parent.getColumns().get("id").getIdentityGenerationType());
 			assertBigSerialIdentity(schema.getTables().get("metadata_serial8"));
 			assertBigSerialIdentity(schema.getTables().get("metadata_bigserial"));
 			var types = schema.getTables().get("metadata_types");
@@ -120,10 +113,8 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(4, decimalColumn.getScale());
 			var moneyColumn = types.getColumns().get("money_value");
 			assertEquals(DataType.MONEY, moneyColumn.getDataType());
-			assertEquals(DataType.INTERVAL_YEAR_TO_MONTH,
-					types.getColumns().get("year_month_value").getDataType());
-			assertEquals(DataType.INTERVAL_DAY_TO_SECOND,
-					types.getColumns().get("day_second_value").getDataType());
+			assertEquals(DataType.INTERVAL_YEAR_TO_MONTH, types.getColumns().get("year_month_value").getDataType());
+			assertEquals(DataType.INTERVAL_DAY_TO_SECOND, types.getColumns().get("day_second_value").getDataType());
 			var caseTable = schema.getTables().get("MetadataCaseTable");
 			assertNotNull(caseTable);
 			assertEquals("MetadataCaseTable", caseTable.getName());
@@ -135,43 +126,28 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals("'quoted'", reservedColumn.getDefaultValue());
 			assertNotNull(parent.getConstraints().getPrimaryKeyConstraint(),
 					() -> constraintDetails(connection, parent));
-			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint()
-					.getColumns().get(0).getName());
+			assertEquals("id", parent.getConstraints().getPrimaryKeyConstraint().getColumns().get(0).getName());
 			assertEquals("'child-default'", child.getColumns().get("txt").getDefaultValue());
-			var textCheck = assertInstanceOf(CheckConstraint.class,
-					child.getConstraints().get("ck_child_txt"));
-			String textCheckExpression = textCheck.getExpression().toLowerCase()
-					.replaceAll("\\s+", "");
-			assertTrue(textCheckExpression.contains("txt!=''"),
-					textCheck::getExpression);
-			assertTrue(textCheck.getExpression().length() < 100,
-					textCheck::getExpression);
-			var complexCheck = assertInstanceOf(CheckConstraint.class,
-					child.getConstraints().get("ck_child_complex"));
-			String complexCheckExpression = complexCheck.getExpression().toLowerCase()
-					.replaceAll("\\s+", "");
-			assertTrue(complexCheckExpression.contains("parent_id>0"),
-					complexCheck::getExpression);
-			assertTrue(complexCheckExpression.contains("length(txt)>=1"),
-					complexCheck::getExpression);
-			assertTrue(complexCheckExpression.contains("txt='allow,empty'"),
-					complexCheck::getExpression);
-			assertTrue(complexCheck.getExpression().length() < 200,
-					complexCheck::getExpression);
+			var textCheck = assertInstanceOf(CheckConstraint.class, child.getConstraints().get("ck_child_txt"));
+			String textCheckExpression = textCheck.getExpression().toLowerCase().replaceAll("\\s+", "");
+			assertTrue(textCheckExpression.contains("txt!=''"), textCheck::getExpression);
+			assertTrue(textCheck.getExpression().length() < 100, textCheck::getExpression);
+			var complexCheck = assertInstanceOf(CheckConstraint.class, child.getConstraints().get("ck_child_complex"));
+			String complexCheckExpression = complexCheck.getExpression().toLowerCase().replaceAll("\\s+", "");
+			assertTrue(complexCheckExpression.contains("parent_id>0"), complexCheck::getExpression);
+			assertTrue(complexCheckExpression.contains("length(txt)>=1"), complexCheck::getExpression);
+			assertTrue(complexCheckExpression.contains("txt='allow,empty'"), complexCheck::getExpression);
+			assertTrue(complexCheck.getExpression().length() < 200, complexCheck::getExpression);
 			ForeignKeyConstraint foreignKey = child.getConstraints().stream()
-					.filter(ForeignKeyConstraint.class::isInstance)
-					.map(ForeignKeyConstraint.class::cast)
-					.filter(constraint -> "fk_child_parent".equals(constraint.getName()))
-					.findFirst().orElseThrow();
+					.filter(ForeignKeyConstraint.class::isInstance).map(ForeignKeyConstraint.class::cast)
+					.filter(constraint -> "fk_child_parent".equals(constraint.getName())).findFirst().orElseThrow();
 			assertEquals("parent_id", foreignKey.getColumns().get(0).getName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			assertEquals("fk_child_parent", foreignKey.getName());
 			assertEquals(CascadeRule.Cascade, foreignKey.getDeleteRule());
 			ForeignKeyConstraint compositeForeignKey = child.getConstraints().stream()
-					.filter(ForeignKeyConstraint.class::isInstance)
-					.map(ForeignKeyConstraint.class::cast)
-					.filter(constraint -> "fk_child_composite".equals(constraint.getName()))
-					.findFirst().orElseThrow();
+					.filter(ForeignKeyConstraint.class::isInstance).map(ForeignKeyConstraint.class::cast)
+					.filter(constraint -> "fk_child_composite".equals(constraint.getName())).findFirst().orElseThrow();
 			assertEquals(2, compositeForeignKey.getColumns().size());
 			assertEquals("ref_code", compositeForeignKey.getColumns().get(0).getName());
 			assertEquals("ref_version", compositeForeignKey.getColumns().get(1).getName());
@@ -180,23 +156,20 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals("version_no", compositeForeignKey.getRelatedColumns().get(1).getName());
 			assertEquals("composite_parent", compositeForeignKey.getRelatedTableName());
 			assertEquals(CascadeRule.Cascade, compositeForeignKey.getDeleteRule());
-			var unique = assertInstanceOf(UniqueConstraint.class,
-					child.getConstraints().get("uq_child_parent_txt"));
+			var unique = assertInstanceOf(UniqueConstraint.class, child.getConstraints().get("uq_child_parent_txt"));
 			assertEquals(2, unique.getColumns().size());
 			assertEquals("parent_id", unique.getColumns().get(0).getName());
 			assertEquals("txt", unique.getColumns().get(1).getName());
 			var childTextIndex = child.getIndexes().stream()
-					.filter(index -> "idx_child_txt".equalsIgnoreCase(index.getName()))
-					.findFirst().orElseThrow();
+					.filter(index -> "idx_child_txt".equalsIgnoreCase(index.getName())).findFirst().orElseThrow();
 			assertEquals("txt", childTextIndex.getColumns().get(0).getName());
 			var descendingIndex = child.getIndexes().stream()
-					.filter(index -> "idx_child_txt_desc".equalsIgnoreCase(index.getName()))
-					.findFirst().orElseThrow();
+					.filter(index -> "idx_child_txt_desc".equalsIgnoreCase(index.getName())).findFirst().orElseThrow();
 			assertTrue(descendingIndex.isUnique());
 			assertEquals(Order.Desc, descendingIndex.getColumns().get(0).getOrder());
 			var mixedOrderIndex = child.getIndexes().stream()
-					.filter(index -> "idx_child_parent_txt_mixed".equalsIgnoreCase(index.getName()))
-					.findFirst().orElseThrow();
+					.filter(index -> "idx_child_parent_txt_mixed".equalsIgnoreCase(index.getName())).findFirst()
+					.orElseThrow();
 			assertFalse(mixedOrderIndex.isUnique());
 			assertEquals(2, mixedOrderIndex.getColumns().size());
 			assertEquals("parent_id", mixedOrderIndex.getColumns().get(0).getName());
@@ -228,8 +201,7 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals("AFTER", trigger.getActionTiming());
 			assertEquals("ROW", trigger.getActionOrientation());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertTrue(trigger.getStatement().toString().toLowerCase()
-					.contains("metadata_audit"));
+			assertTrue(trigger.getStatement().toString().toLowerCase().contains("metadata_audit"));
 			var updateTrigger = schema.getTriggers().get("metadata_update_trigger");
 			assertNotNull(updateTrigger);
 			assertEquals("child_table", updateTrigger.getTableName());
@@ -238,8 +210,7 @@ class InformixJdbcTreeDataSessionTest {
 			assertTrue(updateTrigger.getEventManipulation().contains("UPDATE"));
 			assertEquals("old_row", updateTrigger.getActionReferenceOldRow());
 			assertEquals("new_row", updateTrigger.getActionReferenceNewRow());
-			assertTrue(updateTrigger.getStatement().toString().toLowerCase()
-					.contains("old_row.parent_id"));
+			assertTrue(updateTrigger.getStatement().toString().toLowerCase().contains("old_row.parent_id"));
 			var procedure = schema.getProcedures().get("metadata_procedure");
 			assertNotNull(procedure);
 			String procedureSql = procedure.getDefinition().toString().toLowerCase();
@@ -278,71 +249,59 @@ class InformixJdbcTreeDataSessionTest {
 			assertEquals(10L, sequence.getCacheSize().longValue());
 			var fragmented = schema.getTables().get("metadata_fragmented");
 			assertNotNull(fragmented.getPartitioning(), () -> fragmentDetails(connection));
-			assertEquals("E", fragmented.getPartitioning().getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
+			assertEquals("E",
+					fragmented.getPartitioning().getSpecifics().get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
 			assertEquals(2, fragmented.getPartitioning().getPartitions().size());
 			var lowFragment = fragmented.getPartitioning().getPartitions().get("frag_low");
 			assertNotNull(lowFragment);
 			assertEquals("rootdbs", lowFragment.getTableSpaceName());
-			assertTrue(lowFragment.getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+			assertTrue(lowFragment.getSpecifics().get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
 					.contains("id < 100"));
 			var highFragment = fragmented.getPartitioning().getPartitions().get("frag_high");
 			assertNotNull(highFragment);
-			assertTrue(highFragment.getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
+			assertTrue(highFragment.getSpecifics().get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
 					.contains("id >= 100"));
 			var roundRobin = schema.getTables().get("metadata_round_robin");
 			assertNotNull(roundRobin.getPartitioning(), () -> fragmentDetails(connection));
-			assertEquals(PartitioningType.RoundRobin,
-					roundRobin.getPartitioning().getPartitioningType());
-			assertEquals("R", roundRobin.getPartitioning().getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
+			assertEquals(PartitioningType.RoundRobin, roundRobin.getPartitioning().getPartitioningType());
+			assertEquals("R",
+					roundRobin.getPartitioning().getSpecifics().get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
 			assertEquals(2, roundRobin.getPartitioning().getPartitions().size());
-			assertEquals("rootdbs", roundRobin.getPartitioning().getPartitions()
-					.get("round_robin_one").getTableSpaceName());
-			assertEquals("rootdbs", roundRobin.getPartitioning().getPartitions()
-					.get("round_robin_two").getTableSpaceName());
+			assertEquals("rootdbs",
+					roundRobin.getPartitioning().getPartitions().get("round_robin_one").getTableSpaceName());
+			assertEquals("rootdbs",
+					roundRobin.getPartitioning().getPartitions().get("round_robin_two").getTableSpaceName());
 			var listFragmented = schema.getTables().get("metadata_list_fragmented");
 			assertNotNull(listFragmented.getPartitioning(), () -> fragmentDetails(connection));
-			assertEquals(PartitioningType.List,
-					listFragmented.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.List, listFragmented.getPartitioning().getPartitioningType());
 			assertEquals("L", listFragmented.getPartitioning().getSpecifics()
 					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
 			assertEquals(3, listFragmented.getPartitioning().getPartitions().size());
-			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
-					.get("list_active").getTableSpaceName());
-			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
-					.get("list_inactive").getTableSpaceName());
-			assertEquals("rootdbs", listFragmented.getPartitioning().getPartitions()
-					.get("list_remainder").getTableSpaceName());
-			assertTrue(listFragmented.getPartitioning().getPartitions()
-					.get("list_active").getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
-					.toLowerCase().contains("active"));
-			assertTrue(listFragmented.getPartitioning().getPartitions()
-					.get("list_inactive").getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
-					.toLowerCase().contains("inactive"));
+			assertEquals("rootdbs",
+					listFragmented.getPartitioning().getPartitions().get("list_active").getTableSpaceName());
+			assertEquals("rootdbs",
+					listFragmented.getPartitioning().getPartitions().get("list_inactive").getTableSpaceName());
+			assertEquals("rootdbs",
+					listFragmented.getPartitioning().getPartitions().get("list_remainder").getTableSpaceName());
+			assertTrue(listFragmented.getPartitioning().getPartitions().get("list_active").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString().toLowerCase().contains("active"));
+			assertTrue(listFragmented.getPartitioning().getPartitions().get("list_inactive").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString().toLowerCase()
+					.contains("inactive"));
 			var rangeFragmented = schema.getTables().get("metadata_range_fragmented");
 			assertNotNull(rangeFragmented.getPartitioning(), () -> fragmentDetails(connection));
-			assertEquals(PartitioningType.Range,
-					rangeFragmented.getPartitioning().getPartitioningType());
+			assertEquals(PartitioningType.Range, rangeFragmented.getPartitioning().getPartitioningType());
 			assertEquals("N", rangeFragmented.getPartitioning().getSpecifics()
 					.get(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY));
 			assertEquals(2, rangeFragmented.getPartitioning().getPartitions().size());
-			assertEquals("rootdbs", rangeFragmented.getPartitioning().getPartitions()
-					.get("range_low").getTableSpaceName());
-			assertEquals("rootdbs", rangeFragmented.getPartitioning().getPartitions()
-					.get("range_transition").getTableSpaceName());
-			assertTrue(rangeFragmented.getPartitioning().getPartitions()
-					.get("range_low").getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
-					.contains("100"));
-			assertTrue(rangeFragmented.getPartitioning().getPartitions()
-					.get("range_transition").getSpecifics()
-					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString()
-					.contains("200"));
+			assertEquals("rootdbs",
+					rangeFragmented.getPartitioning().getPartitions().get("range_low").getTableSpaceName());
+			assertEquals("rootdbs",
+					rangeFragmented.getPartitioning().getPartitions().get("range_transition").getTableSpaceName());
+			assertTrue(rangeFragmented.getPartitioning().getPartitions().get("range_low").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString().contains("100"));
+			assertTrue(rangeFragmented.getPartitioning().getPartitions().get("range_transition").getSpecifics()
+					.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION).toString().contains("200"));
 			var synonym = schema.getSynonyms().get("metadata_parent_synonym");
 			assertNotNull(synonym);
 			assertEquals("parent_table", synonym.getObjectName());
@@ -367,13 +326,12 @@ class InformixJdbcTreeDataSessionTest {
 
 			assertEquals(2, statements.size());
 			assertEquals(6, executions.get());
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 1; i <= 6; i++) {
 					assertTrue(resultSet.next());
 					assertEquals("parent-" + i, resultSet.getString(1));
@@ -388,8 +346,7 @@ class InformixJdbcTreeDataSessionTest {
 		var column = table.getColumns().get("id");
 		assertTrue(column.isIdentity());
 		assertEquals(DataType.BIGSERIAL, column.getDataType());
-		assertEquals(IdentityGenerationType.ByDefault,
-				column.getIdentityGenerationType());
+		assertEquals(IdentityGenerationType.ByDefault, column.getIdentityGenerationType());
 	}
 
 	private Connection createConnection() throws SQLException {
@@ -399,14 +356,13 @@ class InformixJdbcTreeDataSessionTest {
 	}
 
 	private String fragmentDetails(final Connection connection) {
-		try (Statement statement = connection.createStatement();
-				ResultSet resultSet = statement.executeQuery("""
-						SELECT t.owner, t.tabname, f.fragtype, f.strategy, f.evalpos,
-						       f.partition, f.exprtext, f.dbspace
-						FROM systables t JOIN sysfragments f ON t.tabid = f.tabid
-						WHERE t.tabname = 'metadata_fragmented'
-						ORDER BY f.evalpos
-						""")) {
+		try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+				SELECT t.owner, t.tabname, f.fragtype, f.strategy, f.evalpos,
+				       f.partition, f.exprtext, f.dbspace
+				FROM systables t JOIN sysfragments f ON t.tabid = f.tabid
+				WHERE t.tabname = 'metadata_fragmented'
+				ORDER BY f.evalpos
+				""")) {
 			StringBuilder builder = new StringBuilder("sysfragments=");
 			while (resultSet.next()) {
 				builder.append('[');
@@ -426,18 +382,15 @@ class InformixJdbcTreeDataSessionTest {
 
 	private String constraintDetails(final Connection connection, final Table table) {
 		StringBuilder builder = new StringBuilder("model=").append(table.getConstraints());
-		try (Statement statement = connection.createStatement();
-				ResultSet resultSet = statement.executeQuery("""
-						SELECT c.constrname, c.constrtype, c.idxname, t.tabid
-						FROM sysconstraints c JOIN systables t ON c.tabid = t.tabid
-						WHERE t.tabname = 'parent_table'
-						""")) {
+		try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+				SELECT c.constrname, c.constrtype, c.idxname, t.tabid
+				FROM sysconstraints c JOIN systables t ON c.tabid = t.tabid
+				WHERE t.tabname = 'parent_table'
+				""")) {
 			builder.append(", catalog=");
 			while (resultSet.next()) {
-				builder.append('[').append(resultSet.getString(1)).append(',')
-						.append(resultSet.getString(2)).append(',')
-						.append(resultSet.getString(3)).append(',')
-						.append(resultSet.getInt(4)).append(']');
+				builder.append('[').append(resultSet.getString(1)).append(',').append(resultSet.getString(2))
+						.append(',').append(resultSet.getString(3)).append(',').append(resultSet.getInt(4)).append(']');
 			}
 		} catch (SQLException e) {
 			builder.append(", error=").append(e.getMessage());
@@ -501,8 +454,7 @@ class InformixJdbcTreeDataSessionTest {
 					""");
 			statement.execute("CREATE INDEX idx_child_txt ON child_table(txt)");
 			statement.execute("CREATE UNIQUE INDEX idx_child_txt_desc ON child_table(txt DESC)");
-			statement.execute(
-					"CREATE INDEX idx_child_parent_txt_mixed ON child_table(parent_id, txt DESC)");
+			statement.execute("CREATE INDEX idx_child_parent_txt_mixed ON child_table(parent_id, txt DESC)");
 			statement.execute("CREATE TABLE metadata_serial8 (id SERIAL8 PRIMARY KEY)");
 			statement.execute("CREATE TABLE metadata_bigserial (id BIGSERIAL PRIMARY KEY)");
 			statement.execute("""
@@ -614,8 +566,8 @@ class InformixJdbcTreeDataSessionTest {
 	}
 
 	private void dropTrigger(final Statement statement, final String triggerName) throws SQLException {
-		try (ResultSet resultSet = statement.executeQuery(
-				"SELECT COUNT(*) FROM systriggers WHERE trigname = '" + triggerName + "'")) {
+		try (ResultSet resultSet = statement
+				.executeQuery("SELECT COUNT(*) FROM systriggers WHERE trigname = '" + triggerName + "'")) {
 			resultSet.next();
 			if (resultSet.getInt(1) == 0) {
 				return;
@@ -624,11 +576,10 @@ class InformixJdbcTreeDataSessionTest {
 		statement.execute("DROP TRIGGER " + triggerName);
 	}
 
-	private void dropRoutine(final Statement statement, final String routineName,
-			final boolean procedure) throws SQLException {
-		try (ResultSet resultSet = statement.executeQuery(
-				"SELECT COUNT(*) FROM sysprocedures WHERE procname = '" + routineName
-						+ "' AND isproc = '" + (procedure ? "t" : "f") + "'")) {
+	private void dropRoutine(final Statement statement, final String routineName, final boolean procedure)
+			throws SQLException {
+		try (ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM sysprocedures WHERE procname = '"
+				+ routineName + "' AND isproc = '" + (procedure ? "t" : "f") + "'")) {
 			resultSet.next();
 			if (resultSet.getInt(1) == 0) {
 				return;
@@ -653,8 +604,7 @@ class InformixJdbcTreeDataSessionTest {
 
 	private void dropSynonym(final Statement statement, final String synonymName) throws SQLException {
 		try (ResultSet resultSet = statement.executeQuery(
-				"SELECT COUNT(*) FROM systables WHERE tabname = '" + synonymName
-						+ "' AND tabtype IN ('P', 'S')")) {
+				"SELECT COUNT(*) FROM systables WHERE tabname = '" + synonymName + "' AND tabtype IN ('P', 'S')")) {
 			resultSet.next();
 			if (resultSet.getInt(1) == 0) {
 				return;
@@ -683,8 +633,7 @@ class InformixJdbcTreeDataSessionTest {
 		}
 	}
 
-	private void dropQuotedTable(final Statement statement, final String tableName)
-			throws SQLException {
+	private void dropQuotedTable(final Statement statement, final String tableName) throws SQLException {
 		try {
 			statement.execute("DROP TABLE \"" + tableName.replace("\"", "\"\"") + "\"");
 		} catch (SQLException e) {

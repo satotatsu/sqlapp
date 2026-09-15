@@ -28,18 +28,24 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 class FirebirdBulkInsertTest {
 	private static final String PASSWORD = "masterkey";
-	private static final GenericContainer<?> FIREBIRD = ReusableTestcontainers.configure(
-			new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:v5.0"))
-					.withEnv("ISC_PASSWORD", PASSWORD).withEnv("FIREBIRD_DATABASE", "test.fdb")
-					.withExposedPorts(3050).waitingFor(Wait.forListeningPort()));
+	private static final GenericContainer<?> FIREBIRD = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:v5.0"))
+					.withEnv("ISC_PASSWORD", PASSWORD).withEnv("FIREBIRD_DATABASE", "test.fdb").withExposedPorts(3050)
+					.waitingFor(Wait.forListeningPort()));
 
-	@BeforeAll static void start() { ReusableTestcontainers.start(FIREBIRD); }
-	@AfterAll static void stop() { ReusableTestcontainers.stop(FIREBIRD); }
+	@BeforeAll
+	static void start() {
+		ReusableTestcontainers.start(FIREBIRD);
+	}
+
+	@AfterAll
+	static void stop() {
+		ReusableTestcontainers.stop(FIREBIRD);
+	}
 
 	@Test
 	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
-		final String url = "jdbc:firebirdsql://localhost:"
-				+ FIREBIRD.getMappedPort(3050)
+		final String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
 				+ "//firebird/data/test.fdb?encoding=UTF8";
 		try (var first = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
 				var second = DriverManager.getConnection(url, "SYSDBA", PASSWORD)) {
@@ -55,25 +61,28 @@ class FirebirdBulkInsertTest {
 				var statement = connection.createStatement()) {
 			dropTable(statement, "SQLAPP_BULK_JOB_CHILD_FIREBIRD");
 			dropTable(statement, "SQLAPP_BULK_JOB_PARENT_FIREBIRD");
-			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_PARENT_FIREBIRD "
-					+ "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_JOB_PARENT_FIREBIRD " + "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
 			statement.execute("CREATE TABLE SQLAPP_BULK_JOB_CHILD_FIREBIRD "
 					+ "(ID INTEGER PRIMARY KEY, PARENT_ID INTEGER NOT NULL, TXT VARCHAR(100), "
 					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB_PARENT_FIREBIRD(ID))");
 			final Table parent = jobTable("SQLAPP_BULK_JOB_PARENT_FIREBIRD", false);
-			parent.getRows().add(row -> { row.put("ID", 1); row.put("TXT", "parent"); });
+			parent.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "parent");
+			});
 			final Table child = jobTable("SQLAPP_BULK_JOB_CHILD_FIREBIRD", true);
 			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_JOB_CHILD_FIREBIRD",
 					new Column[] { child.getColumns().get("PARENT_ID") },
 					new Column[] { parent.getColumns().get("ID") });
 			child.getRows().add(row -> {
-				row.put("ID", 10); row.put("PARENT_ID", 1); row.put("TXT", "child");
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
 			});
 
-			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(
-					connection, parent, child);
-			try (var resultSet = statement.executeQuery(
-					"SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_FIREBIRD c "
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM SQLAPP_BULK_JOB_CHILD_FIREBIRD c "
 					+ "JOIN SQLAPP_BULK_JOB_PARENT_FIREBIRD p ON p.ID = c.PARENT_ID")) {
 				resultSet.next();
 				assertEquals(1, resultSet.getInt(1));
@@ -87,8 +96,10 @@ class FirebirdBulkInsertTest {
 				+ "//firebird/data/test.fdb?encoding=UTF8";
 		try (var connection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
 				var statement = connection.createStatement()) {
-			try { statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_FIREBIRD"); }
-			catch (java.sql.SQLException ignored) { }
+			try {
+				statement.execute("DROP TABLE SQLAPP_CHUNK_MIGRATION_FIREBIRD");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION_FIREBIRD "
 					+ "(CODE VARCHAR(20) PRIMARY KEY, NAME VARCHAR(100))");
 			final Table table = new Table("SQLAPP_CHUNK_MIGRATION_FIREBIRD");
@@ -96,8 +107,8 @@ class FirebirdBulkInsertTest {
 			table.getColumns().add(code);
 			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
 			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION_FIREBIRD", code);
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection,
-					table, "CODE", "NAME", "SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_FIREBIRD");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointAtomic(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION_FIREBIRD");
 		}
 	}
 
@@ -107,25 +118,36 @@ class FirebirdBulkInsertTest {
 				+ "//firebird/data/test.fdb?encoding=UTF8";
 		try (var connection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
 				var statement = connection.createStatement()) {
-			try { statement.execute("DROP TABLE SQLAPP_BULK_FIREBIRD"); }
-			catch (java.sql.SQLException ignored) { }
+			try {
+				statement.execute("DROP TABLE SQLAPP_BULK_FIREBIRD");
+			} catch (java.sql.SQLException ignored) {
+			}
 			statement.execute("CREATE TABLE SQLAPP_BULK_FIREBIRD (ID INTEGER GENERATED BY "
 					+ "DEFAULT AS IDENTITY PRIMARY KEY, TXT VARCHAR(200), NULLABLE_VALUE VARCHAR(20), "
 					+ "EMPTY_VALUE VARCHAR(20), PAYLOAD VARBINARY(20))");
 			final Table generated = createTable();
-			generated.getRows().add(row -> { row.put("TXT", "日本語\nline");
-				row.put("NULLABLE_VALUE", null); row.put("EMPTY_VALUE", "");
-				row.put("PAYLOAD", new byte[] { 0, (byte) 0xff }); });
-			assertEquals(1, BulkInsertResolver.execute(connection, generated,
-					BulkOption.builder().batchSize(2).build()));
+			generated.getRows().add(row -> {
+				row.put("TXT", "日本語\nline");
+				row.put("NULLABLE_VALUE", null);
+				row.put("EMPTY_VALUE", "");
+				row.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
+			});
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, generated, BulkOption.builder().batchSize(2).build()));
 			final Table explicit = createTable();
-			explicit.getRows().add(row -> { row.put("ID", 42); row.put("TXT", "explicit");
-				row.put("EMPTY_VALUE", ""); row.put("PAYLOAD", new byte[] { 1 }); });
-			assertEquals(1, BulkInsertResolver.execute(connection, explicit,
-					BulkOption.builder().keepIdentity(true).build()));
+			explicit.getRows().add(row -> {
+				row.put("ID", 42);
+				row.put("TXT", "explicit");
+				row.put("EMPTY_VALUE", "");
+				row.put("PAYLOAD", new byte[] { 1 });
+			});
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, explicit, BulkOption.builder().keepIdentity(true).build()));
 			try (var rs = statement.executeQuery("SELECT * FROM SQLAPP_BULK_FIREBIRD WHERE ID=1")) {
-				rs.next(); assertEquals("日本語\nline", rs.getString("TXT"));
-				assertNull(rs.getString("NULLABLE_VALUE")); assertEquals("", rs.getString("EMPTY_VALUE"));
+				rs.next();
+				assertEquals("日本語\nline", rs.getString("TXT"));
+				assertNull(rs.getString("NULLABLE_VALUE"));
+				assertEquals("", rs.getString("EMPTY_VALUE"));
 				assertArrayEquals(new byte[] { 0, (byte) 0xff }, rs.getBytes("PAYLOAD"));
 			}
 		}
@@ -133,35 +155,67 @@ class FirebirdBulkInsertTest {
 
 	@Test
 	void upsertsAndSupportsSingleActionModes() throws Exception {
-		final String url="jdbc:firebirdsql://localhost:"+FIREBIRD.getMappedPort(3050)
-				+"//firebird/data/test.fdb?encoding=UTF8";
-		try(var connection=DriverManager.getConnection(url,"SYSDBA",PASSWORD);var statement=connection.createStatement()){
-			try{statement.execute("DROP TABLE SQLAPP_UPSERT_FIREBIRD");}catch(java.sql.SQLException ignored){}
-			statement.execute("CREATE TABLE SQLAPP_UPSERT_FIREBIRD (ID INTEGER GENERATED BY DEFAULT AS IDENTITY UNIQUE, "
-					+"CODE VARCHAR(20) PRIMARY KEY, TXT VARCHAR(200), PAYLOAD VARBINARY(20))");
+		final String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
+				+ "//firebird/data/test.fdb?encoding=UTF8";
+		try (var connection = DriverManager.getConnection(url, "SYSDBA", PASSWORD);
+				var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP TABLE SQLAPP_UPSERT_FIREBIRD");
+			} catch (java.sql.SQLException ignored) {
+			}
+			statement
+					.execute("CREATE TABLE SQLAPP_UPSERT_FIREBIRD (ID INTEGER GENERATED BY DEFAULT AS IDENTITY UNIQUE, "
+							+ "CODE VARCHAR(20) PRIMARY KEY, TXT VARCHAR(200), PAYLOAD VARBINARY(20))");
 			statement.execute("INSERT INTO SQLAPP_UPSERT_FIREBIRD(CODE,TXT) VALUES('A','old')");
-			final Table both=upsertTable();
-			both.getRows().add(r->{r.put("CODE","A");r.put("TXT","更新後\nline");r.put("PAYLOAD",new byte[]{0,(byte)0xff});});
-			both.getRows().add(r->{r.put("CODE","B");r.put("TXT",null);});
-			assertEquals(2,BulkUpsertResolver.execute(connection,both,BulkUpsertOption.builder()
-					.bulkOption(BulkOption.builder().batchSize(1).build()).build()));
+			final Table both = upsertTable();
+			both.getRows().add(r -> {
+				r.put("CODE", "A");
+				r.put("TXT", "更新後\nline");
+				r.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
+			});
+			both.getRows().add(r -> {
+				r.put("CODE", "B");
+				r.put("TXT", null);
+			});
+			assertEquals(2, BulkUpsertResolver.execute(connection, both,
+					BulkUpsertOption.builder().bulkOption(BulkOption.builder().batchSize(1).build()).build()));
 
-			final Table updateOnly=upsertTable();
-			updateOnly.getRows().add(r->{r.put("CODE","A");r.put("TXT","update-only");});
-			updateOnly.getRows().add(r->{r.put("CODE","D");r.put("TXT","must-not-insert");});
-			assertEquals(1,BulkUpsertResolver.execute(connection,updateOnly,
+			final Table updateOnly = upsertTable();
+			updateOnly.getRows().add(r -> {
+				r.put("CODE", "A");
+				r.put("TXT", "update-only");
+			});
+			updateOnly.getRows().add(r -> {
+				r.put("CODE", "D");
+				r.put("TXT", "must-not-insert");
+			});
+			assertEquals(1, BulkUpsertResolver.execute(connection, updateOnly,
 					BulkUpsertOption.builder().insertWhenNotMatched(false).build()));
 
-			final Table insertOnly=upsertTable();
-			insertOnly.getRows().add(r->{r.put("CODE","A");r.put("TXT","must-not-update");});
-			insertOnly.getRows().add(r->{r.put("CODE","C");r.put("TXT","");r.put("PAYLOAD",new byte[]{2});});
-			assertEquals(1,BulkUpsertResolver.execute(connection,insertOnly,
+			final Table insertOnly = upsertTable();
+			insertOnly.getRows().add(r -> {
+				r.put("CODE", "A");
+				r.put("TXT", "must-not-update");
+			});
+			insertOnly.getRows().add(r -> {
+				r.put("CODE", "C");
+				r.put("TXT", "");
+				r.put("PAYLOAD", new byte[] { 2 });
+			});
+			assertEquals(1, BulkUpsertResolver.execute(connection, insertOnly,
 					BulkUpsertOption.builder().updateWhenMatched(false).build()));
 
-			try(var rs=statement.executeQuery("SELECT CODE,TXT,PAYLOAD FROM SQLAPP_UPSERT_FIREBIRD ORDER BY CODE")){
-				rs.next();assertEquals("A",rs.getString("CODE"));assertEquals("update-only",rs.getString("TXT"));
-				rs.next();assertEquals("B",rs.getString("CODE"));assertNull(rs.getString("TXT"));
-				rs.next();assertEquals("C",rs.getString("CODE"));assertEquals("",rs.getString("TXT"));assertArrayEquals(new byte[]{2},rs.getBytes("PAYLOAD"));
+			try (var rs = statement.executeQuery("SELECT CODE,TXT,PAYLOAD FROM SQLAPP_UPSERT_FIREBIRD ORDER BY CODE")) {
+				rs.next();
+				assertEquals("A", rs.getString("CODE"));
+				assertEquals("update-only", rs.getString("TXT"));
+				rs.next();
+				assertEquals("B", rs.getString("CODE"));
+				assertNull(rs.getString("TXT"));
+				rs.next();
+				assertEquals("C", rs.getString("CODE"));
+				assertEquals("", rs.getString("TXT"));
+				assertArrayEquals(new byte[] { 2 }, rs.getBytes("PAYLOAD"));
 			}
 		}
 	}
@@ -175,29 +229,33 @@ class FirebirdBulkInsertTest {
 				var statement = targetConnection.createStatement()) {
 			dropTable(statement, "SQLAPP_BULK_REPAIR_SOURCE_FB");
 			dropTable(statement, "SQLAPP_BULK_REPAIR_TARGET_FB");
-			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_FB "
-					+ "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
-			statement.execute("CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_FB "
-					+ "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_REPAIR_SOURCE_FB " + "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_REPAIR_TARGET_FB " + "(ID INTEGER PRIMARY KEY, TXT VARCHAR(100))");
 			for (int id = 1; id <= 4; id++) {
-				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_FB VALUES ("
-						+ id + ",'value-" + id + "')");
-				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_FB VALUES ("
-						+ id + ",'" + (id == 2 ? "wrong" : "value-" + id) + "')");
+				statement.executeUpdate(
+						"INSERT INTO SQLAPP_BULK_REPAIR_SOURCE_FB VALUES (" + id + ",'value-" + id + "')");
+				statement.executeUpdate("INSERT INTO SQLAPP_BULK_REPAIR_TARGET_FB VALUES (" + id + ",'"
+						+ (id == 2 ? "wrong" : "value-" + id) + "')");
 			}
-			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection,
-					targetConnection, jobTable("SQLAPP_BULK_REPAIR_SOURCE_FB", false),
-					jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false),
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("SQLAPP_BULK_REPAIR_SOURCE_FB", false), jobTable("SQLAPP_BULK_REPAIR_TARGET_FB", false),
 					java.util.List.of("ID", "TXT"));
 		}
 	}
 
-	private static Table upsertTable(){final Table t=new Table("SQLAPP_UPSERT_FIREBIRD");
-		final Column id=new Column("ID").setDataType(DataType.INT).setIdentity(true);
-		final Column code=new Column("CODE").setDataType(DataType.VARCHAR).setLength(20);
-		t.getColumns().add(id);t.getColumns().add(code);t.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(200));
+	private static Table upsertTable() {
+		final Table t = new Table("SQLAPP_UPSERT_FIREBIRD");
+		final Column id = new Column("ID").setDataType(DataType.INT).setIdentity(true);
+		final Column code = new Column("CODE").setDataType(DataType.VARCHAR).setLength(20);
+		t.getColumns().add(id);
+		t.getColumns().add(code);
+		t.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(200));
 		t.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
-		t.setPrimaryKey("PK_SQLAPP_UPSERT_FIREBIRD",code);return t;}
+		t.setPrimaryKey("PK_SQLAPP_UPSERT_FIREBIRD", code);
+		return t;
+	}
 
 	private static Table createTable() {
 		final Table table = new Table("SQLAPP_BULK_FIREBIRD");
@@ -214,8 +272,7 @@ class FirebirdBulkInsertTest {
 		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(id);
 		if (child) {
-			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT)
-					.setNotNull(true));
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT).setNotNull(true));
 		}
 		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(100));
 		table.setPrimaryKey("PK_" + name, id);
