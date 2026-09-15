@@ -349,16 +349,13 @@ class BulkMigrationJobVerifierTest {
 		final Connection connection = (Connection) Proxy.newProxyInstance(
 				getClass().getClassLoader(), new Class<?>[] { Connection.class },
 				(proxy, method, args) -> null);
-		final var both = BulkMigrationJobRepairTask.builder().taskId("items")
-				.expected(table).expectedKeysetSource(source)
-				.verificationResult(verification).options(options).build();
-		final var neither = BulkMigrationJobRepairTask.builder().taskId("items")
-				.verificationResult(verification).options(options).build();
-
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(both)));
+				() -> BulkMigrationJobRepairTask.builder().taskId("items")
+						.expected(table).expectedKeysetSource(source)
+						.verificationResult(verification).options(options).build());
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(neither)));
+				() -> BulkMigrationJobRepairTask.builder().taskId("items")
+						.verificationResult(verification).options(options).build());
 	}
 
 	@Test
@@ -580,20 +577,23 @@ class BulkMigrationJobVerifierTest {
 
 	@Test
 	void repairJobRejectsANegativeBufferLimitDuringPreflight() {
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationRepairOption.builder().maxBufferedRows(-1).build());
+		assertThrows(NullPointerException.class,
+				() -> BulkMigrationRepairOption.builder().bulkUpsertOption(null).build());
+	}
+
+	@Test
+	void verificationTasksRejectIncompleteInputWhileBuilding() {
 		final Table table = table("ITEMS", "expected");
-		final var task = BulkMigrationJobRepairTask.builder().taskId("items")
-				.expected(table)
-				.verificationResult(new BulkMigrationVerificationResult(1, 0, 0, List.of()))
-				.options(BulkMigrationRepairOption.builder().maxBufferedRows(-1).build())
-				.build();
-		final Connection connection = (Connection) Proxy.newProxyInstance(
-				getClass().getClassLoader(), new Class<?>[] { Connection.class },
-				(proxy, method, args) -> null);
-
-		final var failure = assertThrows(BulkMigrationJobRepairException.class,
-				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(task)));
-
-		assertTrue(failure.getCause().getMessage().contains("must not be negative"));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobVerificationTask
+				.builder().taskId(" ").expected(table).actual(table).chunkSize(1).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobVerificationTask
+				.builder().taskId("items").expected(table).actual(table).chunkSize(0).build());
+		assertThrows(NullPointerException.class, () -> BulkMigrationJobVerificationTask
+				.builder().taskId("items").actual(table).chunkSize(1).build());
+		assertThrows(NullPointerException.class, () -> BulkMigrationJobVerificationTask
+				.builder().taskId("items").expected(table).chunkSize(1).build());
 	}
 
 	@Test

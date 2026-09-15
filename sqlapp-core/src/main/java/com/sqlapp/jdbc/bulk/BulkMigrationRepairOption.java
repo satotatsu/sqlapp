@@ -3,15 +3,12 @@ package com.sqlapp.jdbc.bulk;
 
 import java.io.Serializable;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 /** Options for replaying expected rows from mismatched verification chunks. */
 @Getter
 @Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class BulkMigrationRepairOption implements Serializable {
 	private static final long serialVersionUID = 1L;
 
@@ -27,4 +24,15 @@ public class BulkMigrationRepairOption implements Serializable {
 	@Builder.Default
 	private final BulkUpsertOption bulkUpsertOption = BulkUpsertOption.builder()
 			.useTransaction(true).build();
+
+	private BulkMigrationRepairOption(final boolean verifyExpectedHashes,
+			final long maxBufferedRows, final BulkUpsertOption bulkUpsertOption) {
+		if (maxBufferedRows < 0) {
+			throw new IllegalArgumentException("maxBufferedRows must not be negative");
+		}
+		this.verifyExpectedHashes = verifyExpectedHashes;
+		this.maxBufferedRows = maxBufferedRows;
+		this.bulkUpsertOption = java.util.Objects.requireNonNull(bulkUpsertOption,
+				"bulkUpsertOption");
+	}
 }

@@ -19,6 +19,26 @@ public class BulkMigrationJobRepairTask {
 	@Builder.Default
 	BulkMigrationRepairOption options = BulkMigrationRepairOption.defaults();
 
+	private BulkMigrationJobRepairTask(final String taskId, final Table expected,
+			final BulkMigrationKeysetSource expectedKeysetSource, final Table target,
+			final BulkMigrationVerificationResult verificationResult,
+			final BulkMigrationRepairOption options) {
+		if (taskId == null || taskId.isBlank()) {
+			throw new IllegalArgumentException("taskId must not be empty");
+		}
+		if ((expected == null) == (expectedKeysetSource == null)) {
+			throw new IllegalArgumentException("Exactly one of expected or expectedKeysetSource "
+					+ "is required for task " + taskId);
+		}
+		this.taskId = taskId;
+		this.expected = expected;
+		this.expectedKeysetSource = expectedKeysetSource;
+		this.target = target;
+		this.verificationResult = java.util.Objects.requireNonNull(verificationResult,
+				"verificationResult");
+		this.options = java.util.Objects.requireNonNull(options, "options");
+	}
+
 	Table getExpectedTable() {
 		return expected != null ? expected
 				: expectedKeysetSource == null ? null : expectedKeysetSource.getTable();
