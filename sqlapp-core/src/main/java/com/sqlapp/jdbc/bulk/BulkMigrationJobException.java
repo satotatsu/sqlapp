@@ -14,11 +14,14 @@ public class BulkMigrationJobException extends SQLException {
 	private final String failedTaskId;
 	private final BulkMigrationJobResult completedResult;
 
-	public BulkMigrationJobException(final String failedTaskId,
+	public BulkMigrationJobException(final BulkMigrationJobPlan plan,
+			final String failedTaskId,
 			final BulkMigrationJobResult completedResult, final SQLException cause) {
 		super("Migration job task failed: " + failedTaskId, cause);
 		this.failedTaskId = taskId(failedTaskId);
-		this.completedResult = Objects.requireNonNull(completedResult, "completedResult");
+		this.completedResult = Objects.requireNonNull(completedResult, "completedResult")
+				.validateCompletedPrefixAgainst(
+						Objects.requireNonNull(plan, "plan"), this.failedTaskId);
 		Objects.requireNonNull(cause, "cause");
 	}
 

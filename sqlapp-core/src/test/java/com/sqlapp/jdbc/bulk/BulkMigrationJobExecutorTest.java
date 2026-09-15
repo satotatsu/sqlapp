@@ -86,23 +86,35 @@ class BulkMigrationJobExecutorTest {
 
 	@Test
 	void jobFailureAndPauseRequireCompleteContext() {
-		final var completed = new BulkMigrationJobResult("plan", List.of());
+		final var task = tableTask("task", "migration", table("TARGET"));
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+		final var completed = new BulkMigrationJobResult(plan.getFingerprint(), List.of());
 		final var cause = new SQLException("failed");
 		final var progress = new ChunkedBulkMigrationProgress("migration", 0, 1, 0, 1);
 		final var paused = new ChunkedBulkMigrationPausedException(progress);
 
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobException(" ", completed, cause));
+				() -> new BulkMigrationJobException(plan, " ", completed, cause));
 		assertThrows(NullPointerException.class,
-				() -> new BulkMigrationJobException("task", null, cause));
+				() -> new BulkMigrationJobException(plan, "task", null, cause));
 		assertThrows(NullPointerException.class,
-				() -> new BulkMigrationJobException("task", completed, null));
+				() -> new BulkMigrationJobException(plan, "task", completed, null));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobPausedException(" ", completed, paused));
+				() -> new BulkMigrationJobPausedException(plan, " ", completed, paused));
 		assertThrows(NullPointerException.class,
-				() -> new BulkMigrationJobPausedException("task", null, paused));
+				() -> new BulkMigrationJobPausedException(plan, "task", null, paused));
 		assertThrows(NullPointerException.class,
-				() -> new BulkMigrationJobPausedException("task", completed, null));
+				() -> new BulkMigrationJobPausedException(plan, "task", completed, null));
+		assertThrows(NullPointerException.class,
+				() -> new ChunkedBulkMigrationPausedException(null));
+		final var foreignResult = new BulkMigrationJobResult("foreign", List.of());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobException(plan, "task", foreignResult, cause));
+		final var foreignProgress = new ChunkedBulkMigrationPausedException(
+				new ChunkedBulkMigrationProgress("other", 0, 1, 0, 1));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobPausedException(plan, "task", completed,
+						foreignProgress));
 	}
 
 	@Test

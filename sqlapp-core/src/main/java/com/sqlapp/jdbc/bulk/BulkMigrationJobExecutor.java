@@ -162,7 +162,7 @@ public final class BulkMigrationJobExecutor {
 				} catch (RuntimeException listenerFailure) {
 					e.addSuppressed(listenerFailure);
 				}
-				throw new BulkMigrationJobPausedException(task.getTaskId(),
+				throw new BulkMigrationJobPausedException(plan, task.getTaskId(),
 						partialResult(plan, results, task.getTaskId()), e);
 			} catch (SQLException e) {
 				try {
@@ -170,7 +170,7 @@ public final class BulkMigrationJobExecutor {
 				} catch (RuntimeException listenerFailure) {
 					e.addSuppressed(listenerFailure);
 				}
-				throw new BulkMigrationJobException(task.getTaskId(),
+				throw new BulkMigrationJobException(plan, task.getTaskId(),
 						partialResult(plan, results, task.getTaskId()), e);
 			}
 		}

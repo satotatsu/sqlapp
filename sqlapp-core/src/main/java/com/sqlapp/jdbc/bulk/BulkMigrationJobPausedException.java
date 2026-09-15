@@ -14,7 +14,8 @@ public class BulkMigrationJobPausedException extends RuntimeException {
 	private final BulkMigrationJobResult completedResult;
 	private final ChunkedBulkMigrationProgress progress;
 
-	public BulkMigrationJobPausedException(final String pausedTaskId,
+	public BulkMigrationJobPausedException(final BulkMigrationJobPlan plan,
+			final String pausedTaskId,
 			final BulkMigrationJobResult completedResult,
 			final ChunkedBulkMigrationPausedException cause) {
 		super("Migration job paused in task: " + pausedTaskId, cause);
@@ -22,7 +23,16 @@ public class BulkMigrationJobPausedException extends RuntimeException {
 			throw new IllegalArgumentException("pausedTaskId must not be empty");
 		}
 		this.pausedTaskId = pausedTaskId;
-		this.completedResult = Objects.requireNonNull(completedResult, "completedResult");
+		final BulkMigrationJobPlan validatedPlan = Objects.requireNonNull(plan, "plan");
+		this.completedResult = Objects.requireNonNull(completedResult, "completedResult")
+				.validateCompletedPrefixAgainst(validatedPlan, pausedTaskId);
 		this.progress = Objects.requireNonNull(cause, "cause").getProgress();
+		final int taskIndex = validatedPlan.getTaskIds().indexOf(pausedTaskId);
+		final String migrationId = validatedPlan.getTasks().get(taskIndex)
+				.getOptions().getMigrationId();
+		if (!migrationId.equals(progress.getMigrationId())) {
+			throw new IllegalArgumentException(
+					"Paused progress migrationId does not match the stopped task");
+		}
 	}
 }
