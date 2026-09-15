@@ -369,6 +369,8 @@ reported by `BulkMigrationVerificationResult.getMismatches()`. Repair uses
 UPSERT, so changed target values and missing target rows can be corrected
 without rewriting chunks whose hashes already match.
 
+### Quick start
+
 For the common Java workflow, `sqlapp-command` provides the `BulkMigration`
 facade. It owns source/target connection lifetimes and hides job tasks, keyset
 sources, dependency sorting, checkpoint stores, verification tasks, and repair
@@ -379,8 +381,14 @@ BulkMigration migration = BulkMigration.of(sourceDataSource, targetDataSource, s
 BulkMigration.Execution execution = migration.run();
 ```
 
-The default form migrates every table. Switch to the builder only when tables
-or advanced behavior must be selected:
+This is the recommended entry point. It performs UPSERT followed by
+verification, fails on a mismatch, migrates all Schema tables in foreign-key
+order, and returns both detailed migration and verification results. Start with
+this form unless a requirement below makes an option necessary.
+
+### Common options
+
+Switch to the builder only when tables or execution behavior must be selected:
 
 ```java
 BulkMigration migration = BulkMigration.builder()
@@ -414,6 +422,18 @@ fingerprints, for example `.resume(true).fingerprints(sourceVersion,
 targetVersion)`. Advanced checkpoint, retry, listener, lease, lifecycle, custom
 keyset, and per-table UPSERT configurations remain available through the
 underlying APIs and declarative job configuration.
+
+| Requirement | Add to the standard builder |
+|---|---|
+| Resume after an interruption | `resume(true)` and stable `fingerprints(...)` |
+| Keep control state outside the target DB | `fileCheckpoints(directory)` |
+| Prevent concurrent workers | `databaseLease(owner)` or `fileLease(owner, directory)` |
+| Recover vendor preparation after a crash | `databaseMaintenance()` or `fileMaintenance(directory)` |
+| Persist operational or verification evidence | `operationalReport(file)` or `verificationReport(file)` |
+| Limit migration to selected tables | `tables(...)` |
+| Override one table only | `tableOption(table, option)` |
+
+### Operational and advanced flows
 
 Call `dryRun()` before execution when an approval screen needs a detached
 snapshot of the resolved task order, lifecycle operations, core options,

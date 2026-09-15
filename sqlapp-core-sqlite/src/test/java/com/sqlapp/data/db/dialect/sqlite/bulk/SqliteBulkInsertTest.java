@@ -40,35 +40,36 @@ class SqliteBulkInsertTest {
 					"SQLAPP_BJL_SQLITE");
 			final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection,
 					"SQLAPP_BJL_SQLITE");
+			final String jobId = "sqlite-job";
 			final String fingerprint = "sqlite-plan";
 			final Instant now = Instant.parse("2026-01-01T00:00:00Z");
 			final Duration duration = Duration.ofMinutes(5);
-			assertTrue(first.tryAcquire(new BulkMigrationJobLease(fingerprint,
+			assertTrue(first.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint,
 					"owner-first", now.plus(duration)), now));
-			assertFalse(second.tryAcquire(new BulkMigrationJobLease(fingerprint,
+			assertFalse(second.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint,
 					"owner-second", now.plus(duration).plusSeconds(1)),
 					now.plusSeconds(1)));
 			final Instant takeoverAt = now.plus(duration).plusSeconds(1);
-			assertTrue(second.tryAcquire(new BulkMigrationJobLease(fingerprint,
+			assertTrue(second.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint,
 					"owner-second", takeoverAt.plus(duration)), takeoverAt));
-			first.release(fingerprint, "owner-first");
-			assertEquals("owner-second", first.load(fingerprint).orElseThrow().ownerId());
-			second.release(fingerprint, "owner-second");
-			assertTrue(first.load(fingerprint).isEmpty());
+			first.release(jobId, "owner-first");
+			assertEquals("owner-second", first.load(jobId).orElseThrow().ownerId());
+			second.release(jobId, "owner-second");
+			assertTrue(first.load(jobId).isEmpty());
 
-			final String concurrentFingerprint = fingerprint + "-concurrent";
+			final String concurrentJobId = jobId + "-concurrent";
 			final var barrier = new CyclicBarrier(2);
 			try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 				final var firstResult = executor.submit(() -> {
 					barrier.await();
 					return first.tryAcquire(new BulkMigrationJobLease(
-							concurrentFingerprint, "owner-first",
+							concurrentJobId, fingerprint, "owner-first",
 							now.plus(duration)), now);
 				});
 				final var secondResult = executor.submit(() -> {
 					barrier.await();
 					return second.tryAcquire(new BulkMigrationJobLease(
-							concurrentFingerprint, "owner-second",
+							concurrentJobId, fingerprint, "owner-second",
 							now.plus(duration)), now);
 				});
 				assertTrue(firstResult.get() ^ secondResult.get());

@@ -404,7 +404,7 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
-	void repairJobExceptionRetainsTheSqlExceptionConstructor() {
+	void repairJobExceptionAcceptsSqlFailuresThroughTheThrowableConstructor() {
 		final SQLException cause = new SQLException("write failed");
 		final var completed = new BulkMigrationJobRepairResult(List.of());
 

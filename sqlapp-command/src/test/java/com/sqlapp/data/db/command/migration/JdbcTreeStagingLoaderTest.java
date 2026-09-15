@@ -171,6 +171,8 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
 			createTables(connection);
+			executeSql(connection, "DROP TABLE TMP_SECOND_ROOT IF EXISTS");
+			executeSql(connection, "DROP TABLE SECOND_ROOT IF EXISTS");
 			executeSql(connection, "CREATE TABLE SECOND_ROOT (CODE VARCHAR(4) PRIMARY KEY)");
 			executeSql(connection, """
 					CREATE TABLE TMP_SECOND_ROOT
@@ -205,6 +207,8 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
 			createTables(connection);
+			executeSql(connection, "DROP TABLE TMP_SECOND_ROOT IF EXISTS");
+			executeSql(connection, "DROP TABLE SECOND_ROOT IF EXISTS");
 			executeSql(connection, "CREATE TABLE SECOND_ROOT (CODE VARCHAR(4) PRIMARY KEY, "
 					+ "CONSTRAINT CK_SECOND_ROOT CHECK (CODE <> 'FAIL'))");
 			executeSql(connection, """
