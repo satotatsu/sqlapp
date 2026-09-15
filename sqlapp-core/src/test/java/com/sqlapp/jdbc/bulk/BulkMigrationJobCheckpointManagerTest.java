@@ -31,6 +31,7 @@ class BulkMigrationJobCheckpointManagerTest {
 
 		assertEquals(plan.getFingerprint(), result.getPlanFingerprint());
 		assertEquals(List.of("first", "second"), result.getResetTaskIds());
+		assertTrue(result.isCompleteFor(plan));
 		assertTrue(firstStore.load("first").isEmpty());
 		assertTrue(secondStore.load("second").isEmpty());
 	}
@@ -47,8 +48,25 @@ class BulkMigrationJobCheckpointManagerTest {
 
 		assertEquals("second", failure.getFailedTaskId());
 		assertEquals(List.of("first"), failure.getCompletedResult().getResetTaskIds());
+		assertEquals(false, failure.getCompletedResult().isCompleteFor(plan));
 		assertTrue(firstStore.load("first").isEmpty());
 		assertTrue(failingStore.load("second").isPresent());
+	}
+
+	@Test
+	void resetResultRejectsForeignAndOutOfOrderTaskIds() throws Exception {
+		final var plan = BulkMigrationJobPlanner.plan(List.of(
+				task("first", store("first")), task("second", store("second"))));
+
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult("other", List.of())
+						.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult(plan.getFingerprint(),
+						List.of("missing")).validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult(plan.getFingerprint(),
+						List.of("second", "first")).validateAgainst(plan));
 	}
 
 	private static InMemoryBulkMigrationCheckpointStore store(final String id) throws SQLException {

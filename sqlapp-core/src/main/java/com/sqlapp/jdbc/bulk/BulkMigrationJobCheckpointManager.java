@@ -30,12 +30,13 @@ public final class BulkMigrationJobCheckpointManager {
 				task.getCheckpointStore().delete(task.getOptions().getMigrationId());
 				resetTaskIds.add(task.getTaskId());
 			} catch (SQLException e) {
+				final var completed = new BulkMigrationJobCheckpointResetResult(
+						plan.getFingerprint(), List.copyOf(resetTaskIds)).validateAgainst(plan);
 				throw new BulkMigrationJobCheckpointResetException(task.getTaskId(),
-						new BulkMigrationJobCheckpointResetResult(plan.getFingerprint(),
-								List.copyOf(resetTaskIds)), e);
+						completed, e);
 			}
 		}
 		return new BulkMigrationJobCheckpointResetResult(plan.getFingerprint(),
-				List.copyOf(resetTaskIds));
+				List.copyOf(resetTaskIds)).validateAgainst(plan);
 	}
 }

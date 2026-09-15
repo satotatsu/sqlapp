@@ -27,4 +27,28 @@ public class BulkMigrationJobCheckpointResetResult {
 		this.planFingerprint = planFingerprint;
 		this.resetTaskIds = List.copyOf(resetTaskIds);
 	}
+
+	public BulkMigrationJobCheckpointResetResult validateAgainst(
+			final BulkMigrationJobPlan plan) {
+		Objects.requireNonNull(plan, "plan").validateUnchanged();
+		if (!plan.getFingerprint().equals(planFingerprint)) {
+			throw new IllegalArgumentException(
+					"Checkpoint reset result plan differs from the current plan");
+		}
+		int previous = -1;
+		for (final String taskId : resetTaskIds) {
+			final int current = plan.getTaskIds().indexOf(taskId);
+			if (current <= previous) {
+				throw new IllegalArgumentException(
+						"Reset task IDs must be a dependency-ordered subset of the plan");
+			}
+			previous = current;
+		}
+		return this;
+	}
+
+	public boolean isCompleteFor(final BulkMigrationJobPlan plan) {
+		validateAgainst(plan);
+		return resetTaskIds.equals(plan.getTaskIds());
+	}
 }
