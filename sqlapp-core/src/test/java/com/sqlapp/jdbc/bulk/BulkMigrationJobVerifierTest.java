@@ -676,6 +676,37 @@ class BulkMigrationJobVerifierTest {
 						.map(BulkMigrationJobTaskVerificationResult::getColumns).toList());
 	}
 
+	@Test
+	void bindsCompleteVerificationToItsMigrationPlan() {
+		final Table expectedParent = table("PARENT", "parent");
+		final Table expectedChild = table("CHILD", "child");
+		expectedChild.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
+				expectedChild.getColumns().get("ID"), expectedParent.getColumns().get("ID"));
+		final var parentPlanTask = tableTask("parent", "parent-copy", expectedParent);
+		final var childPlanTask = tableTask("child", "child-copy", expectedChild);
+		final var plan = BulkMigrationJobPlanner.plan("nightly-copy",
+				List.of(childPlanTask, parentPlanTask));
+		final var parent = BulkMigrationJobVerificationTask.builder().taskId("parent")
+				.expected(expectedParent).actual(table("PARENT", "parent")).chunkSize(1)
+				.build();
+		final var child = BulkMigrationJobVerificationTask.builder().taskId("child")
+				.expected(expectedChild).actual(table("CHILD", "child")).chunkSize(1)
+				.build();
+
+		final var result = BulkMigrationJobVerifier.verify(plan, List.of(child, parent));
+
+		assertEquals(plan.getFingerprint(), result.getPlanFingerprint());
+		assertEquals(plan.getTaskIds(), result.getTasks().stream()
+				.map(BulkMigrationJobTaskVerificationResult::getTaskId).toList());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobVerifier.verify(plan, List.of(parent)));
+		final var wrongTable = BulkMigrationJobVerificationTask.builder().taskId("child")
+				.expected(table("OTHER", "child")).actual(table("OTHER", "child"))
+				.chunkSize(1).build();
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobVerifier.verify(plan, List.of(parent, wrongTable)));
+	}
+
 	private static Table table(final String name, final String text) {
 		final Table table = new Table(name);
 		table.getColumns().add(new Column("ID"));
@@ -685,6 +716,13 @@ class BulkMigrationJobVerifierTest {
 			row.put("TXT", text);
 		});
 		return table;
+	}
+
+	private static BulkMigrationJobTask tableTask(final String taskId,
+			final String migrationId, final Table table) {
+		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table)
+				.options(ChunkedBulkMigrationOption.builder().migrationId(migrationId)
+						.mode(BulkMigrationMode.INSERT).resume(false).build()).build();
 	}
 
 	private static Table numberedTable(final String name, final String... texts) {
