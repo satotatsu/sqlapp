@@ -40,8 +40,7 @@ public class DbPlugin implements Plugin<Project> {
 				GenerateBulkMigrationOperationalReportTask.class);
 		registerTask(project, "generateBulkMigrationJobRepairPlanReport",
 				GenerateBulkMigrationJobRepairPlanReportTask.class);
-		registerTask(project, "executeBulkMigrationJob",
-				ExecuteBulkMigrationJobTask.class);
+		registerTask(project, "executeBulkMigrationJob", ExecuteBulkMigrationJobTask.class);
 		//
 		registerTask(project, "exportSchemaXml", ExportSchemaXmlTask.class);
 		registerTask(project, "exportAccessSchemaXml", ExportAccessSchemaXmlTask.class);

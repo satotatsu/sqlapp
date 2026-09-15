@@ -11,7 +11,10 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.migration.GenerateBulkMigrationJobRepairPlanReportCommand;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlan;
 
-/** Writes a review-only JSON snapshot for a programmatically assembled repair plan. */
+/**
+ * Writes a review-only JSON snapshot for a programmatically assembled repair
+ * plan.
+ */
 @DisableCachingByDefault(because = "The programmatic repair plan is not a serializable Gradle input")
 public abstract class GenerateBulkMigrationJobRepairPlanReportTask
 		extends AbstractTask<GenerateBulkMigrationJobRepairPlanReportCommand> {

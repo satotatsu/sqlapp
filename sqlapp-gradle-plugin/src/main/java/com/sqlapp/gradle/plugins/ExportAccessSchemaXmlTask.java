@@ -2,6 +2,5 @@
 package com.sqlapp.gradle.plugins;
 
 /** Exports an Access MDB/ACCDB file as sqlapp Schema XML. */
-public abstract class ExportAccessSchemaXmlTask
-		extends AbstractExportSchemaFileXmlTask {
+public abstract class ExportAccessSchemaXmlTask extends AbstractExportSchemaFileXmlTask {
 }

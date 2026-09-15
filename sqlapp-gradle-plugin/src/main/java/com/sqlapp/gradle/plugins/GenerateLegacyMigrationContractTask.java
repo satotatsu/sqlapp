@@ -23,8 +23,7 @@ import com.sqlapp.data.db.command.migration.GenerateLegacyMigrationContractComma
  * Gradle task for generating the legacy extraction and load contract.
  */
 @DisableCachingByDefault
-public abstract class GenerateLegacyMigrationContractTask
-		extends AbstractTask<GenerateLegacyMigrationContractCommand> {
+public abstract class GenerateLegacyMigrationContractTask extends AbstractTask<GenerateLegacyMigrationContractCommand> {
 
 	public GenerateLegacyMigrationContractTask() {
 		getEncoding().convention("UTF-8");

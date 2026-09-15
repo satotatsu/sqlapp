@@ -14,8 +14,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import com.sqlapp.data.db.command.ExportSchemaFileXmlCommand;
 
 /** Common task contract for exporting a database file as Schema XML. */
-public abstract class AbstractExportSchemaFileXmlTask
-		extends AbstractTask<ExportSchemaFileXmlCommand> {
+public abstract class AbstractExportSchemaFileXmlTask extends AbstractTask<ExportSchemaFileXmlCommand> {
 
 	@InputFile
 	@PathSensitive(PathSensitivity.RELATIVE)
@@ -52,12 +51,10 @@ public abstract class AbstractExportSchemaFileXmlTask
 			command.setSchemaName(getSchemaName().get());
 		}
 		if (getIncludeRowDumpTables().isPresent()) {
-			command.setIncludeRowDumpTables(getIncludeRowDumpTables().get()
-					.toArray(String[]::new));
+			command.setIncludeRowDumpTables(getIncludeRowDumpTables().get().toArray(String[]::new));
 		}
 		if (getExcludeRowDumpTables().isPresent()) {
-			command.setExcludeRowDumpTables(getExcludeRowDumpTables().get()
-					.toArray(String[]::new));
+			command.setExcludeRowDumpTables(getExcludeRowDumpTables().get().toArray(String[]::new));
 		}
 	}
 

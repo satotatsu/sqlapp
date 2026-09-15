@@ -21,8 +21,7 @@ import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 
 /** Executes a programmatically assembled bulk migration job. */
 @DisableCachingByDefault(because = "Executes mutations against an external database")
-public abstract class ExecuteBulkMigrationJobTask
-		extends AbstractDbTask<ExecuteBulkMigrationJobCommand> {
+public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<ExecuteBulkMigrationJobCommand> {
 
 	public ExecuteBulkMigrationJobTask() {
 		setSourceDataSource(getProject().getObjects().newInstance(DataSourceExtension.class));
@@ -56,8 +55,7 @@ public abstract class ExecuteBulkMigrationJobTask
 	public abstract Property<ChunkedBulkMigrationListener> getChunkListener();
 
 	@Internal
-	public abstract Property<BulkMigrationJobLeaseConfiguration>
-			getLeaseConfiguration();
+	public abstract Property<BulkMigrationJobLeaseConfiguration> getLeaseConfiguration();
 
 	@Override
 	protected void beforeRun(final ExecuteBulkMigrationJobCommand command) {
