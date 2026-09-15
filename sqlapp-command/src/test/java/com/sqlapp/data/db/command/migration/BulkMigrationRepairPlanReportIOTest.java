@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,43 @@ class BulkMigrationRepairPlanReportIOTest {
 		final Path file = directory.resolve("missing.json");
 		assertThrows(CommandException.class, () -> io.read(file));
 		assertThrows(IllegalArgumentException.class, () -> io.read(file, " "));
+	}
+
+	@Test
+	void reportRecordsOwnTheirCollectionSnapshots() {
+		final var columns = new ArrayList<>(List.of("ID"));
+		final var chunks = new ArrayList<>(List.of(
+				new BulkMigrationRepairPlanReport.Chunk(0, 1, 0,
+						"expected", "actual", null, null, null, null)));
+		final var repair = new BulkMigrationRepairPlanReport(1, Instant.EPOCH, "plan",
+				new BulkMigrationRepairPlanReport.Relation(null, null, "SOURCE"),
+				new BulkMigrationRepairPlanReport.Relation(null, null, "TARGET"),
+				false, null, null, "SQLite", "3.50", "Executor", true, false,
+				"stage", 1, 1, 100, true, columns, columns, columns, List.of(), chunks);
+		columns.clear();
+		chunks.clear();
+		assertEquals(List.of("ID"), repair.verificationColumns());
+		assertEquals(1, repair.mismatchChunks().size());
+		assertThrows(UnsupportedOperationException.class,
+				() -> repair.keyColumns().clear());
+
+		final var verificationColumns = new ArrayList<>(List.of("ID"));
+		final var mismatches = new ArrayList<>(List.of(
+				new BulkMigrationVerificationReport.Chunk(0, 1, 0,
+						"expected", "actual", null, null, null, null)));
+		final var task = new BulkMigrationVerificationReport.Task("task",
+				verificationColumns, null, null, false, 1, 0, 1, mismatches);
+		final var tasks = new ArrayList<>(List.of(task));
+		final var verification = new BulkMigrationVerificationReport(5, Instant.EPOCH,
+				"plan", "DEFAULT", false, 1, 0, 1, tasks);
+		verificationColumns.clear();
+		mismatches.clear();
+		tasks.clear();
+		assertEquals(List.of("ID"), task.columns());
+		assertEquals(1, task.mismatches().size());
+		assertEquals(List.of(task), verification.tasks());
+		assertThrows(UnsupportedOperationException.class,
+				() -> verification.tasks().clear());
 	}
 
 	private static BulkMigrationRepairPlanReport report(final int formatVersion,

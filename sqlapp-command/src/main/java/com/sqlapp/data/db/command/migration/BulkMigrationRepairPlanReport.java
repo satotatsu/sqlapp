@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 /** Stable JSON snapshot of a reviewed bulk migration repair plan. */
 public record BulkMigrationRepairPlanReport(int formatVersion, Instant generatedAt,
@@ -15,6 +16,19 @@ public record BulkMigrationRepairPlanReport(int formatVersion, Instant generated
 		List<String> keyColumns, List<String> stagingColumns, List<String> updateColumns,
 		List<Chunk> mismatchChunks) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
+
+	public BulkMigrationRepairPlanReport {
+		verificationColumns = copy(verificationColumns, "verificationColumns");
+		keyColumns = copy(keyColumns, "keyColumns");
+		stagingColumns = copy(stagingColumns, "stagingColumns");
+		updateColumns = copy(updateColumns, "updateColumns");
+		mismatchChunks = List.copyOf(Objects.requireNonNull(mismatchChunks,
+				"mismatchChunks"));
+	}
+
+	private static <T> List<T> copy(final List<T> values, final String name) {
+		return List.copyOf(Objects.requireNonNull(values, name));
+	}
 
 	public record Relation(String catalogName, String schemaName, String tableName) {
 	}

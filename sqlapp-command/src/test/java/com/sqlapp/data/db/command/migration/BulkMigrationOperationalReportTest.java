@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -201,6 +202,24 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("foreign-maintenance.json"),
 						copyWithMaintenance(report, foreignMaintenance)));
+	}
+
+	@Test
+	void operationalReportOwnsItsCollectionSnapshots() {
+		final var tasks = new ArrayList<BulkMigrationOperationalReport.Task>();
+		final var operations = new ArrayList<BulkMigrationOperationalReport.Operation>();
+		final var progress = new ArrayList<BulkMigrationOperationalReport.Progress>();
+		final var report = new BulkMigrationOperationalReport(2, Instant.EPOCH,
+				"job", "plan", true, 0, 0, 0, tasks, operations, null, null,
+				progress, null);
+		tasks.add(null);
+		operations.add(null);
+		progress.add(null);
+
+		assertTrue(report.tasks().isEmpty());
+		assertTrue(report.operations().isEmpty());
+		assertTrue(report.progressByMigration().isEmpty());
+		assertThrows(UnsupportedOperationException.class, () -> report.tasks().clear());
 	}
 
 	@Test

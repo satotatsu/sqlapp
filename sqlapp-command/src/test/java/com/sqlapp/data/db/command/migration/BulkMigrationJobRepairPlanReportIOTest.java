@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,17 @@ class BulkMigrationJobRepairPlanReportIOTest {
 		assertThrows(CommandException.class,
 				() -> io.write(directory.resolve("rows.json"),
 						report(List.of(first), 2, 1, true)));
+	}
+
+	@Test
+	void jobReportOwnsItsTaskSnapshot() throws Exception {
+		final var task = new BulkMigrationJobRepairPlanReport.Task("task", child("child"));
+		final var tasks = new ArrayList<>(List.of(task));
+		final var report = report(tasks, 1, 1, true);
+		tasks.clear();
+
+		assertEquals(List.of(task), report.tasks());
+		assertThrows(UnsupportedOperationException.class, () -> report.tasks().clear());
 	}
 
 	private static BulkMigrationJobRepairPlanReport report(

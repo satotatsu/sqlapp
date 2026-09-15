@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /** Stable, read-only operational snapshot for a bulk migration job. */
@@ -12,6 +13,13 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 		List<Operation> operations, Maintenance maintenance, Progress progress,
 		List<Progress> progressByMigration, Execution execution) {
 	public static final int CURRENT_FORMAT_VERSION = 2;
+
+	public BulkMigrationOperationalReport {
+		tasks = List.copyOf(Objects.requireNonNull(tasks, "tasks"));
+		operations = List.copyOf(Objects.requireNonNull(operations, "operations"));
+		progressByMigration = List.copyOf(Objects.requireNonNull(progressByMigration,
+				"progressByMigration"));
+	}
 
 	public record Task(String taskId, String migrationId, String catalogName,
 			String schemaName, String tableName, String mode, int chunkSize,
