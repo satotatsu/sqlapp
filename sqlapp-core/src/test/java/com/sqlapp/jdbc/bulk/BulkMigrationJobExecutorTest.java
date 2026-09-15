@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -180,6 +181,53 @@ class BulkMigrationJobExecutorTest {
 		assertThrows(SQLException.class,
 				() -> BulkMigrationJobExecutor.executePlan(connection(), failing, listener));
 		assertEquals(List.of("started:0", "failed:prepare failed"), events);
+	}
+
+	@Test
+	void revalidatesThePlanAcrossAfterAndCompletionCallbacks() throws Exception {
+		final var lifecycleVersion = new AtomicInteger(1);
+		final var restored = new java.util.concurrent.atomic.AtomicBoolean();
+		final BulkMigrationJobLifecycle mutatingLifecycle = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "lifecycle-" + lifecycleVersion.get();
+			}
+
+			@Override
+			public void after(Connection connection, BulkMigrationJobPlan plan,
+					BulkMigrationJobResult result) {
+				lifecycleVersion.incrementAndGet();
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan,
+					Throwable failure) {
+				restored.set(true);
+			}
+		};
+		final var afterPlan = BulkMigrationJobPlanner.plan(List.of(), mutatingLifecycle);
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), afterPlan));
+		assertTrue(restored.get());
+
+		final var listenerVersion = new AtomicInteger(1);
+		final BulkMigrationJobLifecycle stableUntilNotification =
+				new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "listener-" + listenerVersion.get();
+			}
+		};
+		final var listenerPlan = BulkMigrationJobPlanner.plan(List.of(),
+				stableUntilNotification);
+		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onJobCompleted(BulkMigrationJobResult result) {
+				listenerVersion.incrementAndGet();
+			}
+		};
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobExecutor
+				.executePlan(connection(), listenerPlan, listener));
 	}
 
 	@Test

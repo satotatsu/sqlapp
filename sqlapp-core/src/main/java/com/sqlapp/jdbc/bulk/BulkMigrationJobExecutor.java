@@ -73,6 +73,7 @@ public final class BulkMigrationJobExecutor {
 			lifecycle.before(targetConnection, plan);
 			result = executeTasks(targetConnection, plan, listener, commonChunkListener);
 			lifecycle.after(targetConnection, plan, result);
+			result.validateAgainst(plan);
 		} catch (SQLException | RuntimeException | Error failure) {
 			try {
 				lifecycle.restore(targetConnection, plan, failure);
@@ -92,7 +93,7 @@ public final class BulkMigrationJobExecutor {
 			throw failure;
 		}
 		listener.onJobCompleted(result);
-		return result;
+		return result.validateAgainst(plan);
 	}
 
 	public static BulkMigrationJobResult executePlan(final Connection targetConnection,
