@@ -439,11 +439,21 @@ class BulkMigrationJobVerifierTest {
 				completed, cause);
 
 		assertSame(completed, failure.getCompletedResult());
+		assertEquals(BulkMigrationJobRepairException.Phase.EXECUTION,
+				failure.getPhase());
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobRepairException(plan, "first", completed, cause));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobRepairException(plan, "second",
 						new BulkMigrationJobRepairResult("foreign", List.of(first)), cause));
+		final var preflight = BulkMigrationJobRepairException.preflight(plan, "second",
+				new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()), cause);
+		assertEquals(BulkMigrationJobRepairException.Phase.PREFLIGHT,
+				preflight.getPhase());
+		assertTrue(preflight.getCompletedResult().getTasks().isEmpty());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairException.preflight(plan, "second", completed,
+						cause));
 	}
 
 	@Test

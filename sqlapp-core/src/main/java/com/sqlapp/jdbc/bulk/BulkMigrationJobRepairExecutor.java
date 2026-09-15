@@ -67,7 +67,7 @@ public final class BulkMigrationJobRepairExecutor {
 				BulkMigrationRepairPlanner.validateExecutionConnection(connection,
 						task.repairPlan());
 			} catch (SQLException | RuntimeException e) {
-				throw new BulkMigrationJobRepairException(plan, task.taskId(),
+				throw BulkMigrationJobRepairException.preflight(plan, task.taskId(),
 						new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()), e);
 			}
 		}
