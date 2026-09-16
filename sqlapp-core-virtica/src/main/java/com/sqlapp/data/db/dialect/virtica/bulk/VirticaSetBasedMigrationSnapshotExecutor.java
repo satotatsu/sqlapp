@@ -8,6 +8,7 @@ import com.sqlapp.jdbc.bulk.AbstractStagingMigrationSnapshotExecutor;
 /** Vertica local-temporary-table SCD2 flow. */
 public final class VirticaSetBasedMigrationSnapshotExecutor extends AbstractStagingMigrationSnapshotExecutor {
 	public VirticaSetBasedMigrationSnapshotExecutor(final Dialect dialect) { super(dialect); }
+	@Override public boolean supportsCallerTransactionAtomicity() { return false; }
 	@Override protected String createStageSql(final String stage, final String target, final List<String> columns) {
 		return "CREATE LOCAL TEMPORARY TABLE " + stage + " ON COMMIT PRESERVE ROWS AS SELECT "
 				+ list(columns, "t") + " FROM " + target + " t WHERE 1=0";

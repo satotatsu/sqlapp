@@ -8,6 +8,7 @@ import com.sqlapp.jdbc.bulk.AbstractStagingMigrationSnapshotExecutor;
 /** SAP HANA-specific session-local column-table SCD2 flow. */
 public final class SapHanaSetBasedMigrationSnapshotExecutor extends AbstractStagingMigrationSnapshotExecutor {
 	public SapHanaSetBasedMigrationSnapshotExecutor(final Dialect dialect) { super(dialect); }
+	@Override public boolean supportsCallerTransactionAtomicity() { return false; }
 	@Override protected String stageIdentifier(final String name) { return dialect.quote("#" + name); }
 	@Override protected String createStageSql(final String stage, final String target, final List<String> columns) {
 		return "CREATE LOCAL TEMPORARY COLUMN TABLE " + stage + " AS (SELECT " + list(columns, "t") + " FROM "

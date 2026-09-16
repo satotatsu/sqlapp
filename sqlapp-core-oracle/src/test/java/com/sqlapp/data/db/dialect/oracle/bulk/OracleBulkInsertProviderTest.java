@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.oracle.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -19,8 +20,9 @@ class OracleBulkInsertProviderTest {
 
 	@Test
 	void resolvesSetBasedSnapshotProviderFromOracle18c() {
-		assertInstanceOf(OracleSetBasedMigrationSnapshotExecutor.class,
-				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.oracle18cDialect));
+		final var executor = SetBasedMigrationSnapshotResolver.resolve(DialectHolder.oracle18cDialect);
+		assertInstanceOf(OracleSetBasedMigrationSnapshotExecutor.class, executor);
+		assertFalse(executor.supportsCallerTransactionAtomicity());
 		assertInstanceOf(OracleSetBasedMigrationSnapshotExecutor.class,
 				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.oracle23aiDialect));
 	}

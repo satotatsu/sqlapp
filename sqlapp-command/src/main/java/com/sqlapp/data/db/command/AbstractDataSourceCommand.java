@@ -128,6 +128,18 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand
 	}
 
 	/**
+	 * Executes without an outer transaction while retaining the command's normal
+	 * connection and data-source release policy.
+	 */
+	protected void executeNoTranAndClose(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		if (this.isCloseDataSource()) {
+			executeInternal(dataSource, cons, releaseConnectionAndCloseDataSourceHandler);
+		} else {
+			executeInternal(dataSource, cons, releaseConnectionHandler);
+		}
+	}
+
+	/**
 	 * データソースからコネクションを取得して処理を行い、コネクションとデータソースのクローズを行います
 	 * 
 	 * @param dataSource               DataSource

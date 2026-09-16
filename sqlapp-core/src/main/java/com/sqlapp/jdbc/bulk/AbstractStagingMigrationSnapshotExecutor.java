@@ -38,6 +38,11 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 			final MigrationSnapshotDefinition definition, final Instant effectiveAt,
 			final Iterable<? extends Map<String, Object>> sourceRows, final int batchSize) throws SQLException {
 		if (batchSize <= 0) throw new IllegalArgumentException("batchSize must be greater than zero");
+		if (!connection.getAutoCommit() && !supportsCallerTransactionAtomicity()) {
+			throw new SQLException("The " + dialect.getProductName()
+					+ " set-based snapshot staging DDL cannot preserve a caller-owned transaction; "
+					+ "use an auto-commit connection so the executor can own the snapshot transaction");
+		}
 		final List<String> data = new ArrayList<>(definition.keyColumns()); data.addAll(definition.trackedColumns());
 		validate(table, definition, data);
 		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());

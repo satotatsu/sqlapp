@@ -15,4 +15,11 @@ public interface SetBasedMigrationSnapshotExecutor {
 	MigrationSnapshotExecutionResult execute(Connection connection, Table targetTable,
 			MigrationSnapshotDefinition definition, Instant effectiveAt,
 			Iterable<? extends Map<String, Object>> sourceRows, int batchSize) throws SQLException;
+
+	/**
+	 * Whether staging DDL preserves a transaction already owned by the caller.
+	 */
+	default boolean supportsCallerTransactionAtomicity() {
+		return true;
+	}
 }

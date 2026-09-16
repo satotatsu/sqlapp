@@ -13,6 +13,11 @@ public final class SybaseSetBasedMigrationSnapshotExecutor extends AbstractStagi
 	}
 
 	@Override
+	public boolean supportsCallerTransactionAtomicity() {
+		return false;
+	}
+
+	@Override
 	protected String stageIdentifier(final String name) {
 		return "#" + name;
 	}

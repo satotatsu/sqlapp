@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.saphana.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,8 @@ class SapHanaBulkInsertProviderTest {
 
 	@Test
 	void resolvesSetBasedSnapshotProvider() {
-		assertInstanceOf(SapHanaSetBasedMigrationSnapshotExecutor.class,
-				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect));
+		final var executor = SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect);
+		assertInstanceOf(SapHanaSetBasedMigrationSnapshotExecutor.class, executor);
+		assertFalse(executor.supportsCallerTransactionAtomicity());
 	}
 }

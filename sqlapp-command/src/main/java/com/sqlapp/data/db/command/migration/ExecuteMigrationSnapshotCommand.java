@@ -27,7 +27,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 		if (getDataSource() == null) throw new CommandException("Migration snapshot target data source is required.");
 		if (sourceDataSource == null) throw new CommandException("Migration snapshot source data source is required.");
 		final var resolved = new MigrationSnapshotConfigurationResolver().resolve(configurationFile);
-		execute(sourceDataSource, source -> execute(getDataSource(), target -> result =
+		execute(sourceDataSource, source -> executeNoTranAndClose(getDataSource(), target -> result =
 				JdbcStreamingMigrationSnapshotExecutor.execute(source, target, resolved.sourceTable(),
 						resolved.targetTable(), resolved.definition(), resolved.effectiveAt(), resolved.fetchSize(),
 						resolved.batchSize())));

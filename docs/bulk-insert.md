@@ -1261,10 +1261,20 @@ object. When the caller supplies an existing transaction, the executor joins
 it and leaves commit or rollback ownership with that caller. It also avoids a
 staging-object `DROP` that could implicitly commit the caller's work; the
 connection-local object then remains isolated until the connection ends. The
-command and Gradle task close that connection after committing or rolling back
-the outer transaction.
+command and Gradle task instead supply an auto-commit target connection and let
+the selected executor own the complete target snapshot transaction, then close
+that connection. This also keeps providers with transaction-breaking staging
+DDL out of a caller-owned transaction.
 The H2 provider creates its local stage with H2's `TRANSACTIONAL` modifier so
 the stage declaration itself also preserves a caller-owned transaction.
+
+`SetBasedMigrationSnapshotExecutor.supportsCallerTransactionAtomicity()`
+exposes this capability to advanced callers. Oracle, SAP HANA, Vertica, and
+SAP ASE return `false`; passing them a connection whose auto-commit is already
+disabled fails before staging DDL is executed. Use an auto-commit connection
+for these providers so the executor can establish and complete its own target
+transaction. Other set-based providers and the prepared-statement fallback can
+join a caller-owned transaction.
 
 Set-based providers are available for H2, HSQLDB, PostgreSQL, DB2, MySQL and
 MariaDB, SQLite, SQL Server, SAP HANA, Oracle 18c and later, Vertica, SAP ASE,

@@ -8,6 +8,7 @@ import com.sqlapp.jdbc.bulk.AbstractStagingMigrationSnapshotExecutor;
 /** Oracle 18c+ transaction-private-table SCD2 flow. */
 public final class OracleSetBasedMigrationSnapshotExecutor extends AbstractStagingMigrationSnapshotExecutor {
 	public OracleSetBasedMigrationSnapshotExecutor(final Dialect dialect) { super(dialect); }
+	@Override public boolean supportsCallerTransactionAtomicity() { return false; }
 	@Override protected String stageName() { return "ORA$PTT_" + super.stageName(); }
 	@Override protected String createStageSql(final String stage, final String target, final List<String> columns) {
 		return "CREATE PRIVATE TEMPORARY TABLE " + stage + " ON COMMIT DROP DEFINITION AS SELECT "

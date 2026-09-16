@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.sybase.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,8 @@ class SybaseBulkInsertProviderTest {
 
 	@Test
 	void resolvesSetBasedMigrationSnapshotProvider() {
-		assertInstanceOf(SybaseSetBasedMigrationSnapshotExecutor.class,
-				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect));
+		final var executor = SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect);
+		assertInstanceOf(SybaseSetBasedMigrationSnapshotExecutor.class, executor);
+		assertFalse(executor.supportsCallerTransactionAtomicity());
 	}
 }
