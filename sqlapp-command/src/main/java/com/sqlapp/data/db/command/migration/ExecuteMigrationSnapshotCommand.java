@@ -46,7 +46,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 					name(resolved.sourceTable()),
 					name(resolved.targetTable()), resolved.definition().keyColumns(),
 					resolved.definition().trackedColumns(), resolved.definition().expireMissingRows(),
-					resolved.effectiveAt(), resolved.fetchSize(), resolved.batchSize(),
+					resolved.effectiveAt(), resolved.fetchSize(), resolved.batchSize(), resolved.approvalValidFor(),
 					metadata.getDatabaseProductName(), metadata.getDatabaseProductVersion(),
 					setBased.<String>map(x -> x.getClass().getName())
 							.orElse(JdbcBatchMigrationSnapshotExecutor.class.getName()),

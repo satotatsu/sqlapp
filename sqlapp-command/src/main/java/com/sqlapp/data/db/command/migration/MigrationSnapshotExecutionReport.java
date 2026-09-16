@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -8,7 +9,8 @@ import java.util.List;
 public record MigrationSnapshotExecutionReport(int formatVersion, Instant generatedAt, String snapshotId,
 		String configurationFingerprint, Instant approvalGeneratedAt, String approvalArtifactFingerprint,
 		String sourceTable, String targetTable, List<String> keyColumns, List<String> trackedColumns,
-		boolean expireMissingRows, Instant effectiveAt, int fetchSize, int batchSize, String databaseProductName,
+		boolean expireMissingRows, Instant effectiveAt, int fetchSize, int batchSize, Duration approvalValidFor,
+		String databaseProductName,
 		String databaseProductVersion, String executorClassName, boolean callerTransactionAtomicity,
 		long expiredRows, long insertedRows, long unchangedRows) {
 	public static final int CURRENT_FORMAT_VERSION = 1;

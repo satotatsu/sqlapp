@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ public class MigrationSnapshotConfiguration {
 	private Instant effectiveAt;
 	private int fetchSize = 10_000;
 	private int batchSize = 10_000;
+	private Duration approvalValidFor;
 	private String approvalReportFile;
 	private String reportFile;
 }

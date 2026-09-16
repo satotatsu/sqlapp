@@ -39,6 +39,6 @@ class MigrationSnapshotApprovalReportIOTest {
 		return new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION,
 				Instant.parse("2026-09-16T01:00:00Z"), fingerprint, "CUSTOMER", "PUBLIC.CUSTOMER",
 				"PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true,
-				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500);
+				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500, null);
 	}
 }

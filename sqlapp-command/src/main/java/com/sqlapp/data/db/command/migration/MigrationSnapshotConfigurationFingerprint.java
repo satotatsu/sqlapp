@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
@@ -19,11 +20,11 @@ public final class MigrationSnapshotConfigurationFingerprint {
 
 	public static String calculate(final Table source, final Table target,
 			final MigrationSnapshotDefinition definition, final Instant effectiveAt, final int fetchSize,
-			final int batchSize) {
+			final int batchSize, final Duration approvalValidFor) {
 		try {
 			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			update(digest, "sqlapp-migration-snapshot", 1, definition.id(), definition.tableId(), effectiveAt,
-					fetchSize, batchSize, definition.expireMissingRows(), definition.validFromColumn(),
+					fetchSize, batchSize, approvalValidFor, definition.expireMissingRows(), definition.validFromColumn(),
 					definition.validToColumn(), definition.currentColumn());
 			list(digest, definition.keyColumns());
 			list(digest, definition.trackedColumns());

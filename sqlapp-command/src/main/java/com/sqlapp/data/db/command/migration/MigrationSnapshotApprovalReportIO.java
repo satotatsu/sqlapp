@@ -27,7 +27,7 @@ public final class MigrationSnapshotApprovalReportIO {
 				Instant.now(), resolution.configurationFingerprint(), resolution.definition().id(),
 				name(resolution.sourceTable()), name(resolution.targetTable()), resolution.definition().keyColumns(),
 				resolution.definition().trackedColumns(), resolution.definition().expireMissingRows(),
-				resolution.effectiveAt(), resolution.fetchSize(), resolution.batchSize()));
+				resolution.effectiveAt(), resolution.fetchSize(), resolution.batchSize(), resolution.approvalValidFor()));
 	}
 
 	public void write(final Path file, final MigrationSnapshotApprovalReport report) {
@@ -99,6 +99,7 @@ public final class MigrationSnapshotApprovalReportIO {
 		matches(report.effectiveAt(), resolved.effectiveAt(), "effectiveAt");
 		matches(report.fetchSize(), resolved.fetchSize(), "fetchSize");
 		matches(report.batchSize(), resolved.batchSize(), "batchSize");
+		matches(report.approvalValidFor(), resolved.approvalValidFor(), "approvalValidFor");
 		return artifact;
 	}
 
@@ -125,6 +126,10 @@ public final class MigrationSnapshotApprovalReportIO {
 		columns(report.trackedColumns(), "trackedColumns");
 		if (report.fetchSize() <= 0 || report.batchSize() <= 0) {
 			throw new CommandException("Migration snapshot approval report contains invalid sizes");
+		}
+		if (report.approvalValidFor() != null
+				&& (report.approvalValidFor().isZero() || report.approvalValidFor().isNegative())) {
+			throw new CommandException("Migration snapshot approval report contains invalid approvalValidFor");
 		}
 		return report;
 	}

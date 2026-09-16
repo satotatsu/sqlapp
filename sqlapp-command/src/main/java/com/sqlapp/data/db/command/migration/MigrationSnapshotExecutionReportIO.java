@@ -72,6 +72,7 @@ public final class MigrationSnapshotExecutionReportIO {
 		matches(approval.effectiveAt(), report.effectiveAt(), "effectiveAt");
 		matches(approval.fetchSize(), report.fetchSize(), "fetchSize");
 		matches(approval.batchSize(), report.batchSize(), "batchSize");
+		matches(approval.approvalValidFor(), report.approvalValidFor(), "approvalValidFor");
 		return approval;
 	}
 
@@ -107,6 +108,10 @@ public final class MigrationSnapshotExecutionReportIO {
 		if (report.fetchSize() <= 0 || report.batchSize() <= 0 || report.expiredRows() < 0
 				|| report.insertedRows() < 0 || report.unchangedRows() < 0) {
 			throw new CommandException("Migration snapshot report contains invalid sizes or counts");
+		}
+		if (report.approvalValidFor() != null
+				&& (report.approvalValidFor().isZero() || report.approvalValidFor().isNegative())) {
+			throw new CommandException("Migration snapshot report contains invalid approvalValidFor");
 		}
 		return report;
 	}

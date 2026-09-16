@@ -3,6 +3,9 @@ package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import com.sqlapp.data.schemas.Catalog;
@@ -18,9 +21,19 @@ import com.sqlapp.util.YamlConverter;
 
 /** Resolves snapshot YAML names against the canonical Schema model. */
 public final class MigrationSnapshotConfigurationResolver {
+	private final Clock clock;
+
+	public MigrationSnapshotConfigurationResolver() {
+		this(Clock.systemUTC());
+	}
+
+	public MigrationSnapshotConfigurationResolver(final Clock clock) {
+		this.clock = java.util.Objects.requireNonNull(clock, "clock");
+	}
+
 	public record Resolution(Table sourceTable, Table targetTable, MigrationSnapshotDefinition definition,
 			java.time.Instant effectiveAt, int fetchSize, int batchSize, String configurationFingerprint,
-			java.nio.file.Path approvalReportFile, java.time.Instant approvalGeneratedAt,
+			Duration approvalValidFor, java.nio.file.Path approvalReportFile, java.time.Instant approvalGeneratedAt,
 			String approvalArtifactFingerprint, java.nio.file.Path reportFile) { }
 
 	public Resolution resolve(final File configurationFile) {
@@ -44,6 +57,10 @@ public final class MigrationSnapshotConfigurationResolver {
 		}
 		if (value.getFetchSize() <= 0 || value.getBatchSize() <= 0) {
 			throw new CommandException("fetchSize and batchSize must be greater than zero.");
+		}
+		if (value.getApprovalValidFor() != null && (value.getApprovalValidFor().isZero()
+				|| value.getApprovalValidFor().isNegative())) {
+			throw new CommandException("approvalValidFor must be greater than zero.");
 		}
 		final File schemaFile = resolve(configurationFile, value.getSchemaFile());
 		final List<Table> tables = readTables(schemaFile);
@@ -69,19 +86,31 @@ public final class MigrationSnapshotConfigurationResolver {
 		final java.nio.file.Path reportFile = value.getReportFile() == null || value.getReportFile().isBlank() ? null
 				: resolve(configurationFile, value.getReportFile()).toPath().toAbsolutePath().normalize();
 		final String fingerprint = MigrationSnapshotConfigurationFingerprint.calculate(source, target, definition,
-				value.getEffectiveAt(), value.getFetchSize(), value.getBatchSize());
+				value.getEffectiveAt(), value.getFetchSize(), value.getBatchSize(), value.getApprovalValidFor());
 		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
 				|| value.getApprovalReportFile().isBlank() ? null
 						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
 		Resolution resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-				value.getBatchSize(), fingerprint, approvalReportFile, null, null, reportFile);
+				value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile, null, null, reportFile);
 		if (validateApproval && approvalReportFile != null) {
 			final var artifact = new MigrationSnapshotApprovalReportIO().readApproved(approvalReportFile, resolution);
+			validateApprovalTime(artifact.report(), value.getApprovalValidFor());
 			resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-					value.getBatchSize(), fingerprint, approvalReportFile, artifact.report().generatedAt(),
+					value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile,
+					artifact.report().generatedAt(),
 					artifact.artifactFingerprint(), reportFile);
 		}
 		return resolution;
+	}
+
+	private void validateApprovalTime(final MigrationSnapshotApprovalReport report, final Duration validFor) {
+		final Instant now = clock.instant();
+		if (report.generatedAt().isAfter(now)) {
+			throw new CommandException("Migration snapshot approval report generatedAt is in the future");
+		}
+		if (validFor != null && report.generatedAt().plus(validFor).isBefore(now)) {
+			throw new CommandException("Migration snapshot approval report has expired");
+		}
 	}
 
 	private static void validateColumns(final Table table, final List<String> names, final String property,

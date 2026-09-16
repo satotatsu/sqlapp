@@ -1279,6 +1279,11 @@ also compared with the resolved plan, preventing a retained fingerprint from
 masking altered table names, columns, timestamps, or execution sizes. The
 approval path is resolved relative to the YAML file, like `schemaFile` and
 `reportFile`. Failed executions do not replace the report file.
+Set optional `approvalValidFor` to a positive ISO-8601 duration such as `PT24H`
+to prevent indefinite replay. The policy is included in the configuration
+fingerprint and both artifacts. Expired approvals and approvals dated in the
+future are rejected before database access. Omitting it preserves intentional
+long-lived approvals.
 When approval is required, the success report also records the approval's
 generation timestamp and a SHA-256 digest of the exact validated JSON bytes.
 This binds the database result to the reviewed artifact for later audit.

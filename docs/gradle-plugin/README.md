@@ -105,6 +105,7 @@ effectiveAt: 2026-09-16T00:00:00Z
 fetchSize: 10000
 batchSize: 10000
 # Optional: require a reviewed approval artifact to match this run.
+approvalValidFor: PT24H
 approvalReportFile: approvals/customer-snapshot.json
 reportFile: reports/customer-snapshot.json
 ```
@@ -113,7 +114,9 @@ reportFile: reports/customer-snapshot.json
 timestamp. `schemaFile` and optional `reportFile` are resolved relative to the
 YAML file. Optional `approvalReportFile` is also relative to the YAML file. It
 must contain the same configuration fingerprint or execution fails before a
-database connection is opened. A report is written only after successful
+database connection is opened. Optional `approvalValidFor` is an ISO-8601
+duration; expired and future-dated approvals are rejected before connection.
+A report is written only after successful
 database execution and contains the resolved snapshot identity, source and
 target tables, effective timestamp, selected executor and affected-row counts.
 It also carries a deterministic configuration fingerprint covering the
