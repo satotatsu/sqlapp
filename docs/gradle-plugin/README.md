@@ -136,7 +136,8 @@ The generator intentionally ignores `approvalReportFile` while producing the
 candidate artifact, so the first approval can be created before that file
 exists. `executeMigrationSnapshot` performs the strict validation. Its success
 report records the approval generation time and the SHA-256 of the exact
-validated approval file.
+validated approval file. It also records separate execution start and completion
+timestamps and validates that approval was active at execution start.
 
 Audit the saved pair later without opening either database:
 

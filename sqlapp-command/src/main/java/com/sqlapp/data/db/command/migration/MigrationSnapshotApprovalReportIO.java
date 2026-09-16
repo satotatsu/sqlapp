@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -18,13 +19,23 @@ import com.sqlapp.util.JsonConverter;
 
 /** Reads and atomically writes review-only SCD2 approval artifacts. */
 public final class MigrationSnapshotApprovalReportIO {
+	private final Clock clock;
+
+	public MigrationSnapshotApprovalReportIO() {
+		this(Clock.systemUTC());
+	}
+
+	public MigrationSnapshotApprovalReportIO(final Clock clock) {
+		this.clock = Objects.requireNonNull(clock, "clock");
+	}
+
 	public record ApprovedArtifact(MigrationSnapshotApprovalReport report, String artifactFingerprint) { }
 
 	public MigrationSnapshotApprovalReport fromResolution(
 			final MigrationSnapshotConfigurationResolver.Resolution resolution) {
 		Objects.requireNonNull(resolution, "resolution");
 		return validate(new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION,
-				Instant.now(), resolution.configurationFingerprint(), resolution.definition().id(),
+				clock.instant(), resolution.configurationFingerprint(), resolution.definition().id(),
 				name(resolution.sourceTable()), name(resolution.targetTable()), resolution.definition().keyColumns(),
 				resolution.definition().trackedColumns(), resolution.definition().expireMissingRows(),
 				resolution.effectiveAt(), resolution.fetchSize(), resolution.batchSize(), resolution.approvalValidFor()));

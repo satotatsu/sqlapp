@@ -87,16 +87,33 @@ public final class MigrationSnapshotExecutionReportIO {
 			throw new CommandException("Unsupported or missing migration snapshot report formatVersion");
 		}
 		required(report.generatedAt(), "generatedAt");
+		required(report.startedAt(), "startedAt");
 		required(report.effectiveAt(), "effectiveAt");
+		if (report.generatedAt().isBefore(report.startedAt())) {
+			throw new CommandException("Migration snapshot report generatedAt precedes startedAt");
+		}
 		nonBlank(report.snapshotId(), "snapshotId");
 		if (report.configurationFingerprint() == null
 				|| !report.configurationFingerprint().matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("Migration snapshot report contains invalid configurationFingerprint");
 		}
+		if (report.approvalValidFor() != null
+				&& (report.approvalValidFor().isZero() || report.approvalValidFor().isNegative())) {
+			throw new CommandException("Migration snapshot report contains invalid approvalValidFor");
+		}
 		if ((report.approvalGeneratedAt() == null) != (report.approvalArtifactFingerprint() == null)
 				|| report.approvalArtifactFingerprint() != null
 						&& !report.approvalArtifactFingerprint().matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("Migration snapshot report contains invalid approval evidence");
+		}
+		if (report.approvalGeneratedAt() != null) {
+			if (report.approvalGeneratedAt().isAfter(report.startedAt())) {
+				throw new CommandException("Migration snapshot report approval postdates execution start");
+			}
+			if (report.approvalValidFor() != null
+					&& !report.approvalGeneratedAt().plus(report.approvalValidFor()).isAfter(report.startedAt())) {
+				throw new CommandException("Migration snapshot report approval was expired at execution start");
+			}
 		}
 		nonBlank(report.sourceTable(), "sourceTable");
 		nonBlank(report.targetTable(), "targetTable");
@@ -108,10 +125,6 @@ public final class MigrationSnapshotExecutionReportIO {
 		if (report.fetchSize() <= 0 || report.batchSize() <= 0 || report.expiredRows() < 0
 				|| report.insertedRows() < 0 || report.unchangedRows() < 0) {
 			throw new CommandException("Migration snapshot report contains invalid sizes or counts");
-		}
-		if (report.approvalValidFor() != null
-				&& (report.approvalValidFor().isZero() || report.approvalValidFor().isNegative())) {
-			throw new CommandException("Migration snapshot report contains invalid approvalValidFor");
 		}
 		return report;
 	}

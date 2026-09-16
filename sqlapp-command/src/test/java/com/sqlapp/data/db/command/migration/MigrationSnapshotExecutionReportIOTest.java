@@ -34,10 +34,10 @@ class MigrationSnapshotExecutionReportIOTest {
 	@Test
 	void rejectsUnsupportedAndCorruptReports() throws Exception {
 		final var io = new MigrationSnapshotExecutionReportIO();
-		assertThrows(CommandException.class, () -> io.write(directory.resolve("unsupported.json"), report(2)));
+		assertThrows(CommandException.class, () -> io.write(directory.resolve("unsupported.json"), report(1)));
 		final MigrationSnapshotExecutionReport valid = report(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION);
 		final var invalidFingerprint = new MigrationSnapshotExecutionReport(valid.formatVersion(), valid.generatedAt(),
-				valid.snapshotId(), "invalid", valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(),
+				valid.startedAt(), valid.snapshotId(), "invalid", valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(),
 				valid.sourceTable(), valid.targetTable(), valid.keyColumns(),
 				valid.trackedColumns(), valid.expireMissingRows(), valid.effectiveAt(), valid.fetchSize(),
 				valid.batchSize(), valid.approvalValidFor(), valid.databaseProductName(), valid.databaseProductVersion(),
@@ -50,10 +50,46 @@ class MigrationSnapshotExecutionReportIOTest {
 		assertThrows(CommandException.class, () -> io.read(corrupt));
 	}
 
+	@Test
+	void rejectsInvalidExecutionAndApprovalChronology() {
+		final MigrationSnapshotExecutionReport valid = report(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION);
+		final var completionBeforeStart = copy(valid, Instant.parse("2026-09-16T00:58:00Z"),
+				valid.startedAt(), null, null, null);
+		assertThrows(CommandException.class,
+				() -> new MigrationSnapshotExecutionReportIO().write(directory.resolve("before-start.json"),
+						completionBeforeStart));
+		final var approvalAfterStart = copy(valid, valid.generatedAt(), valid.startedAt(),
+				Instant.parse("2026-09-16T01:00:00Z"), "sha256:" + "1".repeat(64), java.time.Duration.ofHours(1));
+		assertThrows(CommandException.class,
+				() -> new MigrationSnapshotExecutionReportIO().write(directory.resolve("approval-after.json"),
+						approvalAfterStart));
+		final var expiredAtStart = copy(valid, valid.generatedAt(), valid.startedAt(),
+				Instant.parse("2026-09-16T00:00:00Z"), "sha256:" + "1".repeat(64), java.time.Duration.ofMinutes(30));
+		assertThrows(CommandException.class,
+				() -> new MigrationSnapshotExecutionReportIO().write(directory.resolve("expired.json"), expiredAtStart));
+		final var expiresExactlyAtStart = copy(valid, valid.generatedAt(), valid.startedAt(),
+				Instant.parse("2026-09-16T00:00:00Z"), "sha256:" + "1".repeat(64), java.time.Duration.ofMinutes(59));
+		assertThrows(CommandException.class,
+				() -> new MigrationSnapshotExecutionReportIO().write(directory.resolve("expired-at-boundary.json"),
+						expiresExactlyAtStart));
+	}
+
 	private static MigrationSnapshotExecutionReport report(final int version) {
-		return new MigrationSnapshotExecutionReport(version, Instant.parse("2026-09-16T01:00:00Z"), "customer",
+		return new MigrationSnapshotExecutionReport(version, Instant.parse("2026-09-16T01:00:00Z"),
+				Instant.parse("2026-09-16T00:59:00Z"), "customer",
 				"sha256:" + "0".repeat(64), null, null, "PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true,
 				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500, null, "HSQL Database Engine", "2.7",
 				"example.Executor", true, 2, 2, 1);
+	}
+
+	private static MigrationSnapshotExecutionReport copy(final MigrationSnapshotExecutionReport value,
+			final Instant generatedAt, final Instant startedAt, final Instant approvalGeneratedAt,
+			final String approvalArtifactFingerprint, final java.time.Duration approvalValidFor) {
+		return new MigrationSnapshotExecutionReport(value.formatVersion(), generatedAt, startedAt, value.snapshotId(),
+				value.configurationFingerprint(), approvalGeneratedAt, approvalArtifactFingerprint, value.sourceTable(),
+				value.targetTable(), value.keyColumns(), value.trackedColumns(), value.expireMissingRows(),
+				value.effectiveAt(), value.fetchSize(), value.batchSize(), approvalValidFor,
+				value.databaseProductName(), value.databaseProductVersion(), value.executorClassName(),
+				value.callerTransactionAtomicity(), value.expiredRows(), value.insertedRows(), value.unchangedRows());
 	}
 }

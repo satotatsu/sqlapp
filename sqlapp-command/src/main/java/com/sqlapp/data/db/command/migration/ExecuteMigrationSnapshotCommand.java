@@ -2,6 +2,9 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.util.Objects;
 
 import javax.sql.DataSource;
 
@@ -21,10 +24,19 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
+	private final Clock clock;
 	private File configurationFile;
 	private DataSource sourceDataSource;
 	private MigrationSnapshotExecutionResult result;
 	private MigrationSnapshotExecutionReport report;
+
+	public ExecuteMigrationSnapshotCommand() {
+		this(Clock.systemUTC());
+	}
+
+	public ExecuteMigrationSnapshotCommand(final Clock clock) {
+		this.clock = Objects.requireNonNull(clock, "clock");
+	}
 
 	@Override
 	protected void doRun() {
@@ -32,7 +44,9 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 		report = null;
 		if (getDataSource() == null) throw new CommandException("Migration snapshot target data source is required.");
 		if (sourceDataSource == null) throw new CommandException("Migration snapshot source data source is required.");
-		final var resolved = new MigrationSnapshotConfigurationResolver().resolve(configurationFile);
+		final java.time.Instant startedAt = clock.instant();
+		final var resolved = new MigrationSnapshotConfigurationResolver(
+				Clock.fixed(startedAt, ZoneOffset.UTC)).resolve(configurationFile);
 		execute(sourceDataSource, source -> executeNoTranAndClose(getDataSource(), target -> {
 			final var dialect = DialectResolver.getInstance().getDialect(target);
 			final var setBased = SetBasedMigrationSnapshotResolver.find(dialect);
@@ -41,7 +55,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 					resolved.batchSize());
 			final var metadata = target.getMetaData();
 			report = new MigrationSnapshotExecutionReport(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION,
-					java.time.Instant.now(), resolved.definition().id(), resolved.configurationFingerprint(),
+					clock.instant(), startedAt, resolved.definition().id(), resolved.configurationFingerprint(),
 					resolved.approvalGeneratedAt(), resolved.approvalArtifactFingerprint(),
 					name(resolved.sourceTable()),
 					name(resolved.targetTable()), resolved.definition().keyColumns(),

@@ -108,7 +108,7 @@ public final class MigrationSnapshotConfigurationResolver {
 		if (report.generatedAt().isAfter(now)) {
 			throw new CommandException("Migration snapshot approval report generatedAt is in the future");
 		}
-		if (validFor != null && report.generatedAt().plus(validFor).isBefore(now)) {
+		if (validFor != null && !report.generatedAt().plus(validFor).isAfter(now)) {
 			throw new CommandException("Migration snapshot approval report has expired");
 		}
 	}

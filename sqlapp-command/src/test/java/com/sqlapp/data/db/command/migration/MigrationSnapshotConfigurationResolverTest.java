@@ -101,6 +101,11 @@ class MigrationSnapshotConfigurationResolverTest {
 		var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
 		assertEquals("Migration snapshot approval report has expired", error.getMessage());
 
+		io.write(approval, report(initial.configurationFingerprint(), Instant.parse("2026-09-16T02:00:00Z"),
+				Duration.ofHours(1)));
+		error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
+		assertEquals("Migration snapshot approval report has expired", error.getMessage());
+
 		io.write(approval, report(initial.configurationFingerprint(), Instant.parse("2026-09-16T04:00:00Z"),
 				Duration.ofHours(1)));
 		error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));

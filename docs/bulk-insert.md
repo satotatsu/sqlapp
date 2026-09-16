@@ -1287,6 +1287,12 @@ long-lived approvals.
 When approval is required, the success report also records the approval's
 generation timestamp and a SHA-256 digest of the exact validated JSON bytes.
 This binds the database result to the reviewed artifact for later audit.
+Execution-report format version 2 separately records execution start and completion timestamps.
+Validation enforces approval generation <= execution start <= completion and
+checks approval expiry at the recorded start, so a long-running valid execution
+does not become invalid merely because it finishes after the approval window.
+The approval window is half-open: execution must start strictly before its
+expiration timestamp; starting exactly at expiration is rejected.
 Use `VerifyMigrationSnapshotReportCommand` or the
 `verifyMigrationSnapshotReport` Gradle task to validate the saved pair without
 database access. Even a whitespace-only change to the approval JSON is detected.
