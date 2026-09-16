@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,12 @@ class ExecuteMigrationSnapshotCommandTest {
 			statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES(1,'same',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(2,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(3,'removed',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
 		}
 		final Path yaml = configuration();
+		final Path approval = directory.resolve("snapshot-approval.json");
+		final var approvalCommand = new GenerateMigrationSnapshotApprovalReportCommand();
+		approvalCommand.setConfigurationFile(yaml.toFile());
+		approvalCommand.setTargetFile(approval.toFile());
+		approvalCommand.run();
+		Files.writeString(yaml, Files.readString(yaml) + "approvalReportFile: snapshot-approval.json\n");
 		final var command = new ExecuteMigrationSnapshotCommand();
 		command.setSourceDataSource(source);
 		command.setDataSource(target);
@@ -45,6 +53,10 @@ class ExecuteMigrationSnapshotCommandTest {
 		final var report = new MigrationSnapshotExecutionReportIO().read(directory.resolve("snapshot-result.json"));
 		assertEquals("CUSTOMER", report.snapshotId());
 		assertTrue(report.configurationFingerprint().matches("sha256:[0-9a-f]{64}"));
+		assertEquals(approvalCommand.getReport().generatedAt(), report.approvalGeneratedAt());
+		assertEquals("sha256:" + HexFormat.of().formatHex(
+				MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(approval))),
+				report.approvalArtifactFingerprint());
 		assertEquals(report, command.getReport());
 		assertEquals("PUBLIC.CUSTOMER_HISTORY", report.targetTable());
 		assertEquals(2, report.expiredRows());

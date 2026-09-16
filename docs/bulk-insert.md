@@ -1279,6 +1279,9 @@ also compared with the resolved plan, preventing a retained fingerprint from
 masking altered table names, columns, timestamps, or execution sizes. The
 approval path is resolved relative to the YAML file, like `schemaFile` and
 `reportFile`. Failed executions do not replace the report file.
+When approval is required, the success report also records the approval's
+generation timestamp and a SHA-256 digest of the exact validated JSON bytes.
+This binds the database result to the reviewed artifact for later audit.
 When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging

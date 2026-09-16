@@ -2,10 +2,14 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.Objects;
 
 import com.sqlapp.data.schemas.Table;
@@ -14,6 +18,8 @@ import com.sqlapp.util.JsonConverter;
 
 /** Reads and atomically writes review-only SCD2 approval artifacts. */
 public final class MigrationSnapshotApprovalReportIO {
+	public record ApprovedArtifact(MigrationSnapshotApprovalReport report, String artifactFingerprint) { }
+
 	public MigrationSnapshotApprovalReport fromResolution(
 			final MigrationSnapshotConfigurationResolver.Resolution resolution) {
 		Objects.requireNonNull(resolution, "resolution");
@@ -36,13 +42,20 @@ public final class MigrationSnapshotApprovalReportIO {
 	}
 
 	public MigrationSnapshotApprovalReport read(final Path file) {
+		return load(file).report();
+	}
+
+	private ApprovedArtifact load(final Path file) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Migration snapshot approval report does not exist: " + absolute);
 		}
 		try {
-			return validate(converter().fromJsonString(absolute.toFile(), MigrationSnapshotApprovalReport.class));
-		} catch (RuntimeException e) {
+			final byte[] bytes = Files.readAllBytes(absolute);
+			final MigrationSnapshotApprovalReport report = validate(converter().fromJsonString(
+					new String(bytes, StandardCharsets.UTF_8), MigrationSnapshotApprovalReport.class));
+			return new ApprovedArtifact(report, sha256(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) throw commandException;
 			throw new CommandException("Failed to read migration snapshot approval report: " + absolute, e);
 		}
@@ -61,8 +74,17 @@ public final class MigrationSnapshotApprovalReportIO {
 
 	public MigrationSnapshotApprovalReport read(final Path file,
 			final MigrationSnapshotConfigurationResolver.Resolution expected) {
+		return readApproved(file, expected).report();
+	}
+
+	public ApprovedArtifact readApproved(final Path file,
+			final MigrationSnapshotConfigurationResolver.Resolution expected) {
 		Objects.requireNonNull(expected, "expected");
-		final MigrationSnapshotApprovalReport report = read(file, expected.configurationFingerprint());
+		final ApprovedArtifact artifact = load(file);
+		final MigrationSnapshotApprovalReport report = artifact.report();
+		if (!expected.configurationFingerprint().equals(report.configurationFingerprint())) {
+			throw new CommandException("Migration snapshot approval report configuration fingerprint mismatch");
+		}
 		final MigrationSnapshotApprovalReport resolved = fromResolution(expected);
 		matches(report.snapshotId(), resolved.snapshotId(), "snapshotId");
 		matches(report.sourceTable(), resolved.sourceTable(), "sourceTable");
@@ -73,7 +95,7 @@ public final class MigrationSnapshotApprovalReportIO {
 		matches(report.effectiveAt(), resolved.effectiveAt(), "effectiveAt");
 		matches(report.fetchSize(), resolved.fetchSize(), "fetchSize");
 		matches(report.batchSize(), resolved.batchSize(), "batchSize");
-		return report;
+		return artifact;
 	}
 
 	private static JsonConverter converter() {
@@ -131,6 +153,14 @@ public final class MigrationSnapshotApprovalReportIO {
 	private static void matches(final Object actual, final Object expected, final String name) {
 		if (!Objects.equals(actual, expected)) {
 			throw new CommandException("Migration snapshot approval report " + name + " mismatch");
+		}
+	}
+
+	private static String sha256(final byte[] bytes) {
+		try {
+			return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException("SHA-256 is unavailable", e);
 		}
 	}
 }

@@ -37,7 +37,8 @@ class MigrationSnapshotExecutionReportIOTest {
 		assertThrows(CommandException.class, () -> io.write(directory.resolve("unsupported.json"), report(2)));
 		final MigrationSnapshotExecutionReport valid = report(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION);
 		final var invalidFingerprint = new MigrationSnapshotExecutionReport(valid.formatVersion(), valid.generatedAt(),
-				valid.snapshotId(), "invalid", valid.sourceTable(), valid.targetTable(), valid.keyColumns(),
+				valid.snapshotId(), "invalid", valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(),
+				valid.sourceTable(), valid.targetTable(), valid.keyColumns(),
 				valid.trackedColumns(), valid.expireMissingRows(), valid.effectiveAt(), valid.fetchSize(),
 				valid.batchSize(), valid.databaseProductName(), valid.databaseProductVersion(),
 				valid.executorClassName(), valid.callerTransactionAtomicity(), valid.expiredRows(),
@@ -51,7 +52,7 @@ class MigrationSnapshotExecutionReportIOTest {
 
 	private static MigrationSnapshotExecutionReport report(final int version) {
 		return new MigrationSnapshotExecutionReport(version, Instant.parse("2026-09-16T01:00:00Z"), "customer",
-				"sha256:" + "0".repeat(64), "PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true,
+				"sha256:" + "0".repeat(64), null, null, "PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true,
 				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500, "HSQL Database Engine", "2.7",
 				"example.Executor", true, 2, 2, 1);
 	}

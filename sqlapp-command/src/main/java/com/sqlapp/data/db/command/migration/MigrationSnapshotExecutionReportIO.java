@@ -63,6 +63,11 @@ public final class MigrationSnapshotExecutionReportIO {
 				|| !report.configurationFingerprint().matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("Migration snapshot report contains invalid configurationFingerprint");
 		}
+		if ((report.approvalGeneratedAt() == null) != (report.approvalArtifactFingerprint() == null)
+				|| report.approvalArtifactFingerprint() != null
+						&& !report.approvalArtifactFingerprint().matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("Migration snapshot report contains invalid approval evidence");
+		}
 		nonBlank(report.sourceTable(), "sourceTable");
 		nonBlank(report.targetTable(), "targetTable");
 		nonBlank(report.databaseProductName(), "databaseProductName");

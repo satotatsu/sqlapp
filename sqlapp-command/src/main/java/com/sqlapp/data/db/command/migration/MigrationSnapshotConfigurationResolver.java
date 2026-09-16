@@ -20,7 +20,8 @@ import com.sqlapp.util.YamlConverter;
 public final class MigrationSnapshotConfigurationResolver {
 	public record Resolution(Table sourceTable, Table targetTable, MigrationSnapshotDefinition definition,
 			java.time.Instant effectiveAt, int fetchSize, int batchSize, String configurationFingerprint,
-			java.nio.file.Path approvalReportFile, java.nio.file.Path reportFile) { }
+			java.nio.file.Path approvalReportFile, java.time.Instant approvalGeneratedAt,
+			String approvalArtifactFingerprint, java.nio.file.Path reportFile) { }
 
 	public Resolution resolve(final File configurationFile) {
 		return resolve(configurationFile, true);
@@ -72,10 +73,13 @@ public final class MigrationSnapshotConfigurationResolver {
 		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
 				|| value.getApprovalReportFile().isBlank() ? null
 						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
-		final Resolution resolution = new Resolution(source, target, definition, value.getEffectiveAt(),
-				value.getFetchSize(), value.getBatchSize(), fingerprint, approvalReportFile, reportFile);
+		Resolution resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
+				value.getBatchSize(), fingerprint, approvalReportFile, null, null, reportFile);
 		if (validateApproval && approvalReportFile != null) {
-			new MigrationSnapshotApprovalReportIO().read(approvalReportFile, resolution);
+			final var artifact = new MigrationSnapshotApprovalReportIO().readApproved(approvalReportFile, resolution);
+			resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
+					value.getBatchSize(), fingerprint, approvalReportFile, artifact.report().generatedAt(),
+					artifact.artifactFingerprint(), reportFile);
 		}
 		return resolution;
 	}

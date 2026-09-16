@@ -131,7 +131,9 @@ generateMigrationSnapshotApprovalReport {
 
 The generator intentionally ignores `approvalReportFile` while producing the
 candidate artifact, so the first approval can be created before that file
-exists. `executeMigrationSnapshot` performs the strict validation.
+exists. `executeMigrationSnapshot` performs the strict validation. Its success
+report records the approval generation time and the SHA-256 of the exact
+validated approval file.
 
 ### `executeBulkMigrationJob`
 
