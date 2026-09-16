@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +17,13 @@ import javax.sql.DataSource;
 
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.migration.MigrationDataTest;
+import com.sqlapp.data.schemas.migration.MigrationFreshnessCheck;
+import com.sqlapp.data.schemas.migration.MigrationNodeManifest;
+import com.sqlapp.data.schemas.migration.MigrationNodeSelection;
+import com.sqlapp.data.schemas.migration.MigrationNodeStateSelector;
+import com.sqlapp.data.schemas.migration.MigrationTransformationTest;
+import com.sqlapp.data.schemas.migration.SchemaCompatibilityReport;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointManager;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobCheckpointResetResult;
@@ -39,6 +47,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationIncrementalStrategy;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceRecoveryResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
@@ -66,6 +75,7 @@ public final class BulkMigration {
 	private final String jobId;
 	private final List<Table> tables;
 	private final BulkMigrationMode mode;
+	private final BulkMigrationIncrementalStrategy incrementalStrategy;
 	private final int chunkSize;
 	private final boolean resume;
 	private final String sourceFingerprint;
@@ -100,7 +110,8 @@ public final class BulkMigration {
 
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target, final Schema schema,
-			final List<String> tableNames, final String jobId, final BulkMigrationMode mode, final Integer chunkSize,
+			final List<String> tableNames, final String jobId, final BulkMigrationMode mode,
+			final BulkMigrationIncrementalStrategy incrementalStrategy, final Integer chunkSize,
 			final Boolean resume, final String sourceFingerprint, final String targetFingerprint,
 			final String checkpointTableName, final BulkUpsertOption upsertOption,
 			final Map<String, BulkMigrationTableOption> tableOptions, final BulkOption bulkOption,
@@ -115,7 +126,15 @@ public final class BulkMigration {
 		this.target = Objects.requireNonNull(target, "target");
 		this.jobId = jobId;
 		this.tables = resolveTables(Objects.requireNonNull(schema, "schema"), tableNames);
-		this.mode = mode == null ? BulkMigrationMode.UPSERT : mode;
+		this.incrementalStrategy = incrementalStrategy == null
+				? BulkMigrationIncrementalStrategy.fromMode(mode == null ? BulkMigrationMode.UPSERT : mode)
+				: incrementalStrategy;
+		if (!this.incrementalStrategy.isImplemented()) {
+			throw new IllegalArgumentException("Incremental strategy is not implemented: "
+					+ this.incrementalStrategy);
+		}
+		this.mode = incrementalStrategy == null ? (mode == null ? BulkMigrationMode.UPSERT : mode)
+				: incrementalStrategy.mode();
 		this.chunkSize = chunkSize == null ? 10_000 : chunkSize;
 		this.resume = resume != null && resume;
 		this.sourceFingerprint = sourceFingerprint;
@@ -265,6 +284,11 @@ public final class BulkMigration {
 	private BulkMigrationJobResult execute(final Connection sourceConnection, final Connection targetConnection,
 			final Connection maintenanceConnection) throws SQLException {
 		final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false, false, maintenanceConnection);
+		return executePlan(targetConnection, plan);
+	}
+
+	private BulkMigrationJobResult executePlan(final Connection targetConnection, final BulkMigrationJobPlan plan)
+			throws SQLException {
 		final BulkMigrationJobListener executionListener = executionListener(plan);
 		if (leaseConfiguration == null) {
 			return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener, chunkListener);
@@ -282,6 +306,67 @@ public final class BulkMigration {
 			return BulkMigrationJobExecutor.executePlan(targetConnection, plan, executionListener, chunkListener,
 					manager);
 		}
+	}
+
+	/** Returns per-table fingerprints and FK dependency IDs without executing. */
+	public MigrationNodeManifest nodeManifest() throws SQLException {
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			return plan(sourceConnection, targetConnection, true).getNodeManifest();
+		}
+	}
+
+	/** Writes the current node state as an atomic, reviewable JSON artifact. */
+	public MigrationNodeManifest writeNodeManifest(final Path file) throws SQLException {
+		final MigrationNodeManifest manifest = nodeManifest();
+		new MigrationNodeManifestIO().write(file, manifest);
+		return manifest;
+	}
+
+	/** Executes changes relative to a previously persisted node manifest. */
+	public StateExecution executeModified(final Path previousManifest) throws SQLException {
+		return executeModified(new MigrationNodeManifestIO().read(previousManifest));
+	}
+
+	/** Assesses watermark lag and verification recency for a cutover decision. */
+	public MigrationCutoverReport assessCutover(final List<MigrationFreshnessCheck> checks,
+			final Instant lastVerifiedAt, final Duration maximumVerificationAge) throws SQLException {
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			return MigrationCutoverAssessor.assess(sourceConnection, targetConnection, List.copyOf(checks),
+					lastVerifiedAt, maximumVerificationAge, Instant.now());
+		}
+	}
+
+	/**
+	 * Executes only added/modified tables and their transitive FK dependents.
+	 * Removed nodes are reported but never translated into destructive work.
+	 */
+	public StateExecution executeModified(final MigrationNodeManifest previous) throws SQLException {
+		Objects.requireNonNull(previous, "previous");
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			if (maintenanceTableName == null) {
+				return executeModified(sourceConnection, targetConnection, null, previous);
+			}
+			try (Connection maintenanceConnection = target.getConnection()) {
+				maintenanceConnection.setAutoCommit(true);
+				return executeModified(sourceConnection, targetConnection, maintenanceConnection, previous);
+			}
+		}
+	}
+
+	private StateExecution executeModified(final Connection sourceConnection, final Connection targetConnection,
+			final Connection maintenanceConnection, final MigrationNodeManifest previous) throws SQLException {
+		final BulkMigrationJobPlan fullPlan = plan(sourceConnection, targetConnection, false, false,
+				maintenanceConnection);
+		final MigrationNodeManifest current = fullPlan.getNodeManifest();
+		final MigrationNodeSelection selection = MigrationNodeStateSelector.modifiedAndDownstream(previous, current);
+		if (selection.selected().isEmpty()) {
+			return new StateExecution(current, selection, null);
+		}
+		final BulkMigrationJobPlan selectedPlan = fullPlan.selectTasks(selection.selected());
+		return new StateExecution(current, selection, executePlan(targetConnection, selectedPlan));
 	}
 
 	/** Returns a detached, read-only plan and status snapshot without executing. */
@@ -442,6 +527,113 @@ public final class BulkMigration {
 		}
 	}
 
+	/** Runs Schema-derived invariants against the current target without mutation. */
+	public List<MigrationDataTestResult> testTarget() throws SQLException {
+		return testTarget(MigrationDataTestPlanner.infer(tables));
+	}
+
+	/**
+	 * Runs supplied invariants against the current target. Custom SQL uses the
+	 * standard sqlapp comment-template syntax.
+	 */
+	public List<MigrationDataTestResult> testTarget(final List<MigrationDataTest> tests) throws SQLException {
+		try (Connection connection = target.getConnection()) {
+			return MigrationDataTestRunner.run(connection, List.copyOf(tests));
+		}
+	}
+
+	/** Runs SQL transformation fixtures against the source without mutation. */
+	public List<MigrationTransformationTestResult> testSourceTransformations(
+			final List<MigrationTransformationTest> tests) throws SQLException {
+		try (Connection connection = source.getConnection()) {
+			return MigrationTransformationTestRunner.run(connection, List.copyOf(tests));
+		}
+	}
+
+	/**
+	 * Runs transformation fixtures and data invariants before migration, then the
+	 * normal verified migration and target data invariants. Transformation SQL uses
+	 * the standard sqlapp comment-template syntax.
+	 */
+	public ComprehensiveValidatedExecution runWithValidation(final List<MigrationTransformationTest> transformations,
+			final List<MigrationDataTest> dataTests) throws SQLException {
+		final List<MigrationTransformationTest> immutableTransformations = List.copyOf(transformations);
+		final List<MigrationDataTest> immutableDataTests = List.copyOf(dataTests);
+		final List<MigrationTransformationTestResult> transformationResults;
+		final List<MigrationDataTestResult> preflight;
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			requireNoBreakingDrift(MigrationSchemaDriftAssessor.assess(targetConnection, tables));
+			transformationResults = MigrationTransformationTestRunner.run(sourceConnection,
+					immutableTransformations);
+			requireTransformationTests(transformationResults);
+			preflight = MigrationDataTestRunner.run(sourceConnection, immutableDataTests);
+		}
+		requireDataTests("source preflight", preflight);
+		final Execution execution = run();
+		final List<MigrationDataTestResult> postflight = testTarget(immutableDataTests);
+		requireDataTests("target postflight", postflight);
+		return new ComprehensiveValidatedExecution(execution, transformationResults, preflight, postflight);
+	}
+
+	/**
+	 * Runs source preflight tests, the usual safe migration workflow, then target
+	 * postflight tests. An ERROR result prevents execution or completion.
+	 */
+	public ValidatedExecution runWithDataTests(final List<MigrationDataTest> tests) throws SQLException {
+		final List<MigrationDataTest> immutable = List.copyOf(tests);
+		final List<MigrationDataTestResult> preflight;
+		try (Connection sourceConnection = source.getConnection();
+				Connection targetConnection = target.getConnection()) {
+			requireNoBreakingDrift(MigrationSchemaDriftAssessor.assess(targetConnection, tables));
+			preflight = MigrationDataTestRunner.run(sourceConnection, immutable);
+		}
+		requireDataTests("source preflight", preflight);
+		final Execution execution = run();
+		final List<MigrationDataTestResult> postflight = testTarget(immutable);
+		requireDataTests("target postflight", postflight);
+		return new ValidatedExecution(execution, preflight, postflight);
+	}
+
+	/** Reads the current target definition and compares it with migration tables. */
+	public SchemaCompatibilityReport assessTargetDrift() throws SQLException {
+		try (Connection connection = target.getConnection()) {
+			return MigrationSchemaDriftAssessor.assess(connection, tables);
+		}
+	}
+
+	private static void requireNoBreakingDrift(final SchemaCompatibilityReport report) {
+		if (!report.isCompatible()) {
+			final List<String> objects = report.changes().stream()
+					.filter(change -> change.compatibility()
+							== com.sqlapp.data.schemas.migration.SchemaCompatibility.BREAKING)
+					.map(change -> change.objectId() + "." + change.property()).toList();
+			throw new IllegalStateException("Breaking target schema drift detected: " + objects);
+		}
+	}
+
+	/** Uses invariants inferred from the canonical Schema tables. */
+	public ValidatedExecution runWithDataTests() throws SQLException {
+		return runWithDataTests(MigrationDataTestPlanner.infer(tables));
+	}
+
+	private static void requireDataTests(final String phase, final List<MigrationDataTestResult> results) {
+		final List<String> failures = results.stream()
+				.filter(result -> result.status() == MigrationDataTestResult.Status.ERROR)
+				.map(result -> result.id() + "=" + result.failures()).toList();
+		if (!failures.isEmpty()) {
+			throw new IllegalStateException("Migration data tests failed during " + phase + ": " + failures);
+		}
+	}
+
+	private static void requireTransformationTests(final List<MigrationTransformationTestResult> results) {
+		final List<String> failures = results.stream().filter(result -> !result.match())
+				.map(MigrationTransformationTestResult::id).toList();
+		if (!failures.isEmpty()) {
+			throw new IllegalStateException("Migration transformation tests failed: " + failures);
+		}
+	}
+
 	private void writeRepairPlanOnMismatch(final BulkMigrationVerificationMismatchException failure) {
 		if (repairPlanOnMismatchFile == null) {
 			return;
@@ -584,6 +776,44 @@ public final class BulkMigration {
 		}
 	}
 
+	/** Result of the preflight, execute/verify, and postflight workflow. */
+	public record ValidatedExecution(Execution execution, List<MigrationDataTestResult> preflight,
+			List<MigrationDataTestResult> postflight) {
+		public ValidatedExecution {
+			Objects.requireNonNull(execution, "execution");
+			preflight = List.copyOf(preflight);
+			postflight = List.copyOf(postflight);
+		}
+	}
+
+	/** Result of transformation, data, execution, verification, and postflight checks. */
+	public record ComprehensiveValidatedExecution(Execution execution,
+			List<MigrationTransformationTestResult> transformations, List<MigrationDataTestResult> preflight,
+			List<MigrationDataTestResult> postflight) {
+		public ComprehensiveValidatedExecution {
+			Objects.requireNonNull(execution, "execution");
+			transformations = List.copyOf(transformations);
+			preflight = List.copyOf(preflight);
+			postflight = List.copyOf(postflight);
+		}
+	}
+
+	/** Result of state-aware execution; migration is null when no node changed. */
+	public record StateExecution(MigrationNodeManifest current, MigrationNodeSelection selection,
+			BulkMigrationJobResult migration) {
+		public StateExecution {
+			Objects.requireNonNull(current, "current");
+			Objects.requireNonNull(selection, "selection");
+			if (selection.selected().isEmpty() != (migration == null)) {
+				throw new IllegalArgumentException("Migration result must exist exactly when nodes were selected");
+			}
+		}
+
+		public boolean isNoOp() {
+			return migration == null;
+		}
+	}
+
 	private BulkMigrationJobPlan plan(final Connection sourceConnection, final Connection targetConnection,
 			final boolean readOnly) throws SQLException {
 		return plan(sourceConnection, targetConnection, readOnly, true, targetConnection);
@@ -653,7 +883,8 @@ public final class BulkMigration {
 		return ChunkedBulkMigrationOption.builder()
 				.migrationId(option.getMigrationId() == null || option.getMigrationId().isBlank() ? taskId(table)
 						: option.getMigrationId())
-				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize()).mode(mode).resume(resume)
+				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize()).mode(mode)
+				.incrementalStrategy(incrementalStrategy).resume(resume)
 				.checkpointMode(checkpointMode(table)).checkpointTableName(checkpointTableName)
 				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint).bulkOption(bulkOption(table))
 				.bulkUpsertOption(upsertOption(table)).retryOption(retryOption(table)).build();

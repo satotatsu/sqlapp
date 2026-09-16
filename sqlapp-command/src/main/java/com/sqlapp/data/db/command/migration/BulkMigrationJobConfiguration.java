@@ -7,6 +7,7 @@ import java.util.List;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationIncrementalStrategy;
 import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 
 import lombok.Getter;
@@ -32,6 +33,7 @@ public class BulkMigrationJobConfiguration {
 		private String migrationId;
 		private int chunkSize = 10_000;
 		private BulkMigrationMode mode = BulkMigrationMode.UPSERT;
+		private BulkMigrationIncrementalStrategy incrementalStrategy;
 		private boolean resume = true;
 		private BulkMigrationCheckpointMode checkpointMode = BulkMigrationCheckpointMode.DATABASE;
 		private String checkpointTableName = "SQLAPP_BULK_MIGRATION_CHECKPOINT";

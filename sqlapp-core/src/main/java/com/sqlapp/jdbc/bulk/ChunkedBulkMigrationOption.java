@@ -16,6 +16,7 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	private final int chunkSize = 10_000;
 	@Builder.Default
 	private final BulkMigrationMode mode = BulkMigrationMode.UPSERT;
+	private final BulkMigrationIncrementalStrategy incrementalStrategy;
 	@Builder.Default
 	private final boolean resume = true;
 	@Builder.Default
@@ -32,7 +33,8 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	private final BulkMigrationRetryOption retryOption = BulkMigrationRetryOption.none();
 
 	private ChunkedBulkMigrationOption(final String migrationId, final int chunkSize,
-			final BulkMigrationMode mode, final boolean resume,
+			final BulkMigrationMode mode, final BulkMigrationIncrementalStrategy incrementalStrategy,
+			final boolean resume,
 			final BulkMigrationCheckpointMode checkpointMode,
 			final String checkpointTableName, final String sourceFingerprint,
 			final String targetFingerprint, final BulkOption bulkOption,
@@ -41,6 +43,7 @@ public class ChunkedBulkMigrationOption implements Serializable {
 		this.migrationId = migrationId;
 		this.chunkSize = chunkSize;
 		this.mode = mode;
+		this.incrementalStrategy = strategy(mode, incrementalStrategy);
 		this.resume = resume;
 		this.checkpointMode = checkpointMode;
 		this.checkpointTableName = checkpointTableName;
@@ -50,6 +53,17 @@ public class ChunkedBulkMigrationOption implements Serializable {
 		this.bulkUpsertOption = bulkUpsertOption;
 		this.retryOption = retryOption;
 		validateStructure();
+	}
+
+	private static BulkMigrationIncrementalStrategy strategy(final BulkMigrationMode mode,
+			final BulkMigrationIncrementalStrategy value) {
+		if (value != null) {
+			return value;
+		}
+		if (mode == null) {
+			throw new IllegalArgumentException("mode must not be null");
+		}
+		return BulkMigrationIncrementalStrategy.fromMode(mode);
 	}
 
 	void validate() {
@@ -69,8 +83,15 @@ public class ChunkedBulkMigrationOption implements Serializable {
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
+		if (!incrementalStrategy.isImplemented()) {
+			throw new IllegalArgumentException("Incremental strategy is not implemented: " + incrementalStrategy);
+		}
 		if (mode == null) {
 			throw new IllegalArgumentException("mode must not be null");
+		}
+		if (incrementalStrategy.mode() != mode) {
+			throw new IllegalArgumentException("mode " + mode + " does not match incrementalStrategy "
+					+ incrementalStrategy);
 		}
 		if (checkpointMode == null) {
 			throw new IllegalArgumentException("checkpointMode must not be null");

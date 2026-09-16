@@ -29,4 +29,6 @@ module com.sqlapp.core.saphana {
 			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaSetBasedMigrationSnapshotProvider;
 }

@@ -6,9 +6,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.migration.MigrationNodeManifest;
 
 import lombok.Getter;
 
@@ -43,6 +49,35 @@ public class BulkMigrationJobPlan {
 		return tasks.stream().map(BulkMigrationJobTask::getTaskId).toList();
 	}
 
+	/** Returns stable per-task fingerprints and explicit FK dependencies. */
+	public MigrationNodeManifest getNodeManifest() {
+		final Map<String, MigrationNodeManifest.Node> nodes = new LinkedHashMap<>();
+		for (final BulkMigrationJobTask task : tasks) {
+			final Table table = sourceTable(task);
+			final List<String> dependencies = new ArrayList<>();
+			table.getConstraints().getForeignKeyConstraints(fk -> fk.getRelatedTable() != null
+					&& !SchemaUtils.isSameTable(fk.getRelatedTable(), table)).forEach(fk -> tasks.stream()
+						.filter(candidate -> SchemaUtils.isSameTable(sourceTable(candidate), fk.getRelatedTable()))
+						.map(BulkMigrationJobTask::getTaskId).filter(id -> !dependencies.contains(id))
+						.forEach(dependencies::add));
+			nodes.put(task.getTaskId(), new MigrationNodeManifest.Node(task.getTaskId(), taskFingerprint(task),
+					dependencies));
+		}
+		return new MigrationNodeManifest(MigrationNodeManifest.CURRENT_VERSION, fingerprint, nodes);
+	}
+
+	/** Creates a dependency-ordered projection while preserving task objects. */
+	public BulkMigrationJobPlan selectTasks(final Set<String> taskIds) {
+		java.util.Objects.requireNonNull(taskIds, "taskIds");
+		final List<String> unknown = taskIds.stream().filter(id -> tasks.stream()
+				.noneMatch(task -> task.getTaskId().equals(id))).toList();
+		if (!unknown.isEmpty()) {
+			throw new IllegalArgumentException("Unknown migration task IDs: " + unknown);
+		}
+		return new BulkMigrationJobPlan(tasks.stream().filter(task -> taskIds.contains(task.getTaskId())).toList(),
+				lifecycle, jobId);
+	}
+
 	public boolean isUnchanged() {
 		return fingerprint.equals(fingerprint(tasks, lifecycle,
 				List.copyOf(lifecycle.plan(tasks)), jobId));
@@ -65,13 +100,31 @@ public class BulkMigrationJobPlan {
 			operations.forEach(operation -> update(digest, operation.id(), operation.phase(),
 					operation.description(), operation.transactionBreaking()));
 			for (final BulkMigrationJobTask task : tasks) {
-				final Table table = task.getSourceTable() != null ? task.getSourceTable()
-						: task.getKeysetSource().getTable();
+				task(digest, task);
+			}
+			return HexFormat.of().formatHex(digest.digest());
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private static String taskFingerprint(final BulkMigrationJobTask task) {
+		try {
+			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			task(digest, task);
+			return HexFormat.of().formatHex(digest.digest());
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private static void task(final MessageDigest digest, final BulkMigrationJobTask task) {
+				final Table table = sourceTable(task);
 				final ChunkedBulkMigrationOption option = task.getOptions();
 				update(digest, task.getTaskId(), table.getCatalogName(), table.getSchemaName(),
 						table.getName(), task.getKeysetSource() != null,
 						option.getMigrationId(), option.getChunkSize(),
-						option.getMode(), option.isResume(), option.getCheckpointMode(),
+						option.getMode(), option.getIncrementalStrategy(), option.isResume(), option.getCheckpointMode(),
 						option.getCheckpointTableName(), option.getSourceFingerprint(),
 						option.getTargetFingerprint());
 				table(digest, table);
@@ -104,11 +157,10 @@ public class BulkMigrationJobPlan {
 				list(digest, retry.getSqlStates());
 				update(digest, retry.getErrorCodes().size());
 				retry.getErrorCodes().forEach(code -> update(digest, code));
-			}
-			return HexFormat.of().formatHex(digest.digest());
-		} catch (NoSuchAlgorithmException e) {
-			throw new IllegalStateException(e);
-		}
+	}
+
+	private static Table sourceTable(final BulkMigrationJobTask task) {
+		return task.getSourceTable() != null ? task.getSourceTable() : task.getKeysetSource().getTable();
 	}
 
 	private static String defaultJobId(final List<BulkMigrationJobTask> tasks) {

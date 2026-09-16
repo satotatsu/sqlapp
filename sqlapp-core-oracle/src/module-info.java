@@ -30,5 +30,7 @@ module com.sqlapp.core.oracle {
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.oracle.bulk.OracleBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
-			com.sqlapp.data.db.dialect.oracle.bulk.OracleBulkUpsertProvider;
+		com.sqlapp.data.db.dialect.oracle.bulk.OracleBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+		com.sqlapp.data.db.dialect.oracle.bulk.OracleSetBasedMigrationSnapshotProvider;
 }

@@ -568,6 +568,27 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void exposesNodeFingerprintsAndProjectsStateSelectedTasks() {
+		final Table parent = table("STATE_PARENT");
+		final Table child = table("STATE_CHILD");
+		child.getConstraints().addForeignKeyConstraint("FK_STATE_CHILD_PARENT",
+				child.getColumns().get("ID"), parent.getColumns().get("ID"));
+		final var plan = BulkMigrationJobPlanner.plan("state-job", List.of(
+				tableTask("child", "state-child", child), tableTask("parent", "state-parent", parent)));
+
+		final var manifest = plan.getNodeManifest();
+		final var selected = plan.selectTasks(java.util.Set.of("child"));
+
+		assertEquals(plan.getFingerprint(), manifest.planFingerprint());
+		assertEquals(List.of("parent"), manifest.nodes().get("child").dependencies());
+		assertEquals(List.of("child"), selected.getTaskIds());
+		assertEquals("state-job", selected.getJobId());
+		assertNotEquals(plan.getFingerprint(), selected.getFingerprint());
+		assertThrows(IllegalArgumentException.class,
+				() -> plan.selectTasks(java.util.Set.of("missing")));
+	}
+
+	@Test
 	void detectsSchemaMutationAfterPlanning() {
 		final Table table = table("BEFORE");
 		final var plan = BulkMigrationJobPlanner.plan(List.of(

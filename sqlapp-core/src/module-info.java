@@ -78,4 +78,5 @@ module com.sqlapp.core {
 	exports com.sqlapp.util.xml;
 	uses com.sqlapp.jdbc.bulk.BulkInsertProvider;
 	uses com.sqlapp.jdbc.bulk.BulkUpsertProvider;
+	uses com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 }

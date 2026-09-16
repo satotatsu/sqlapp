@@ -27,5 +27,7 @@ module com.sqlapp.core.postgres {
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
-			com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertProvider;
+		com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+		com.sqlapp.data.db.dialect.postgres.bulk.PostgresSetBasedMigrationSnapshotProvider;
 }

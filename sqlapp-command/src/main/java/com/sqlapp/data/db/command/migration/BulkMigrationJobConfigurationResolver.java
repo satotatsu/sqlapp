@@ -101,7 +101,9 @@ public class BulkMigrationJobConfigurationResolver {
 					.bulkOption(bulk).build();
 			final var options = ChunkedBulkMigrationOption.builder()
 					.migrationId(value(task.getMigrationId(), task.getId())).chunkSize(task.getChunkSize())
-					.mode(task.getMode()).resume(task.isResume()).checkpointMode(task.getCheckpointMode())
+					.mode(task.getIncrementalStrategy() == null ? task.getMode() : task.getIncrementalStrategy().mode())
+					.incrementalStrategy(task.getIncrementalStrategy()).resume(task.isResume())
+					.checkpointMode(task.getCheckpointMode())
 					.checkpointTableName(task.getCheckpointTableName()).sourceFingerprint(task.getSourceFingerprint())
 					.targetFingerprint(task.getTargetFingerprint()).bulkOption(bulk).bulkUpsertOption(upsert)
 					.retryOption(retry).build();
