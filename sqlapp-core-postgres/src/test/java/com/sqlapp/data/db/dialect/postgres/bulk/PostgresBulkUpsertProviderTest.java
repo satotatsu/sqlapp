@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class PostgresBulkUpsertProviderTest {
 	@Test
@@ -18,5 +19,13 @@ class PostgresBulkUpsertProviderTest {
 				BulkUpsertResolver.resolve(DialectHolder.postgreSQL180));
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkUpsertResolver.resolve(DialectHolder.postgreSQL94));
+	}
+
+	@Test
+	void resolvesSetBasedSnapshotAcrossSupportedVersions() {
+		assertInstanceOf(PostgresSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.postgreSQL94));
+		assertInstanceOf(PostgresSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.postgreSQL180));
 	}
 }

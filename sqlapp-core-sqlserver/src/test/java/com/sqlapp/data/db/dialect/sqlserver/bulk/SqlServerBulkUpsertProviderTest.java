@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.sqlserver.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class SqlServerBulkUpsertProviderTest {
 	@Test
@@ -16,5 +17,13 @@ class SqlServerBulkUpsertProviderTest {
 				BulkUpsertResolver.resolve(DialectHolder.defaultDialect2022));
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkUpsertResolver.resolve(DialectHolder.defaultDialect2005));
+	}
+
+	@Test
+	void resolvesSetBasedSnapshotAcrossSupportedVersions() {
+		assertInstanceOf(SqlServerSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect2005));
+		assertInstanceOf(SqlServerSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect2022));
 	}
 }

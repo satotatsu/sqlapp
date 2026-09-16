@@ -7,11 +7,18 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.saphana.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class SapHanaBulkInsertProviderTest {
 	@Test
 	void resolvesSapHanaProvider() {
 		assertInstanceOf(SapHanaBulkInsertExecutor.class,
 				BulkInsertResolver.resolve(DialectHolder.defaultDialect));
+	}
+
+	@Test
+	void resolvesSetBasedSnapshotProvider() {
+		assertInstanceOf(SapHanaSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect));
 	}
 }

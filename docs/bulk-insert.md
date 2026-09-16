@@ -1241,8 +1241,12 @@ history. `MigrationSnapshotPlanner` is the in-memory planner and
 with bounded memory. `JdbcBatchMigrationSnapshotExecutor` reuses prepared
 statements and JDBC batches for the portable fallback.
 
-For larger snapshots, call `SetBasedMigrationSnapshotResolver.find` with the
-target connection or Dialect. When present, the returned executor loads a
+For the common JDBC path, call `JdbcStreamingMigrationSnapshotExecutor.execute`.
+It resolves the target Dialect automatically: a set-based provider reads only
+the ordered source stream, while an unsupported target also streams its current
+rows through the bounded-memory prepared-statement fallback. Advanced callers
+can use `SetBasedMigrationSnapshotResolver.find` with the target connection or
+Dialect directly. When present, the returned executor loads a
 connection-local staging table with a reused prepared statement and batches,
 then expires and inserts rows with set-based SQL in one target transaction.
 `resolve` is the stricter variant and throws when no provider is available.

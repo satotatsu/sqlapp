@@ -18,7 +18,11 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.MigrationSnapshotDefinition;
 
-/** Streams ordered JDBC tables directly into the bounded-memory SCD2 executor. */
+/**
+ * Streams an ordered JDBC source into the fastest available SCD2 executor.
+ * A dialect set-based provider avoids reading current target rows; otherwise
+ * the bounded-memory prepared-statement fallback compares both ordered streams.
+ */
 public final class JdbcStreamingMigrationSnapshotExecutor {
 	private JdbcStreamingMigrationSnapshotExecutor() {
 	}
@@ -40,12 +44,17 @@ public final class JdbcStreamingMigrationSnapshotExecutor {
 		final Dialect sourceDialect = DialectResolver.getInstance().getDialect(sourceConnection);
 		final Dialect targetDialect = DialectResolver.getInstance().getDialect(targetConnection);
 		try (var source = new RowStream(sourceConnection, selectSql(sourceDialect, sourceTable, definition, columns, false),
-				columns, fetchSize);
-				var current = new RowStream(targetConnection,
-						selectSql(targetDialect, targetTable, definition, columns, true), columns, fetchSize)) {
+				columns, fetchSize)) {
 			try {
-				return JdbcBatchMigrationSnapshotExecutor.executeStreaming(targetConnection, targetTable, definition,
-						effectiveAt, source, current, batchSize);
+				final var setBased = SetBasedMigrationSnapshotResolver.find(targetDialect);
+				if (setBased.isPresent()) {
+					return setBased.get().execute(targetConnection, targetTable, definition, effectiveAt, source, batchSize);
+				}
+				try (var current = new RowStream(targetConnection,
+						selectSql(targetDialect, targetTable, definition, columns, true), columns, fetchSize)) {
+					return JdbcBatchMigrationSnapshotExecutor.executeStreaming(targetConnection, targetTable, definition,
+							effectiveAt, source, current, batchSize);
+				}
 			} catch (CursorFailure e) {
 				throw e.sqlException;
 			}
