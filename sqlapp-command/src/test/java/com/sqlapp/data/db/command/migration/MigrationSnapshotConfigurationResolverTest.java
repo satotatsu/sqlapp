@@ -2,6 +2,9 @@
 package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
@@ -28,7 +31,22 @@ class MigrationSnapshotConfigurationResolverTest {
 		assertEquals(java.time.Instant.parse("2026-09-16T00:00:00Z"), resolved.effectiveAt());
 		assertEquals(10_000, resolved.batchSize());
 		assertEquals(java.util.List.of("ID"), resolved.definition().keyColumns());
+		assertEquals(71, resolved.configurationFingerprint().length());
+		assertTrue(resolved.configurationFingerprint().startsWith("sha256:"));
 		assertEquals(directory.resolve("reports/result.json").toAbsolutePath().normalize(), resolved.reportFile());
+	}
+
+	@Test
+	void fingerprintIsDeterministicAndChangesWithResolvedSchemaShape() throws Exception {
+		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\n");
+		final var resolver = new MigrationSnapshotConfigurationResolver();
+		final String original = resolver.resolve(files.yaml().toFile()).configurationFingerprint();
+		assertEquals(original, resolver.resolve(files.yaml().toFile()).configurationFingerprint());
+
+		final Schema changed = (Schema) com.sqlapp.data.schemas.SchemaUtils.readXml(files.xml().toFile());
+		changed.getTables().get("CUSTOMER").getColumns().get("NAME").setLength(200L);
+		changed.writeXml(files.xml().toFile());
+		assertNotEquals(original, resolver.resolve(files.yaml().toFile()).configurationFingerprint());
 	}
 
 	@Test

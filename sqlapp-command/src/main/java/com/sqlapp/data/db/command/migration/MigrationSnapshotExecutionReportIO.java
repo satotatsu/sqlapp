@@ -37,6 +37,15 @@ public final class MigrationSnapshotExecutionReportIO {
 		}
 	}
 
+	public MigrationSnapshotExecutionReport read(final Path file, final String expectedConfigurationFingerprint) {
+		nonBlank(expectedConfigurationFingerprint, "expectedConfigurationFingerprint");
+		final MigrationSnapshotExecutionReport report = read(file);
+		if (!expectedConfigurationFingerprint.equals(report.configurationFingerprint())) {
+			throw new CommandException("Migration snapshot report configuration fingerprint mismatch");
+		}
+		return report;
+	}
+
 	private static JsonConverter converter() {
 		final var converter = new JsonConverter();
 		converter.setIndentOutput(true);
@@ -50,6 +59,10 @@ public final class MigrationSnapshotExecutionReportIO {
 		required(report.generatedAt(), "generatedAt");
 		required(report.effectiveAt(), "effectiveAt");
 		nonBlank(report.snapshotId(), "snapshotId");
+		if (report.configurationFingerprint() == null
+				|| !report.configurationFingerprint().matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("Migration snapshot report contains invalid configurationFingerprint");
+		}
 		nonBlank(report.sourceTable(), "sourceTable");
 		nonBlank(report.targetTable(), "targetTable");
 		nonBlank(report.databaseProductName(), "databaseProductName");

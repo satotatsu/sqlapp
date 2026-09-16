@@ -1263,7 +1263,12 @@ Set optional `reportFile` in YAML to atomically write a versioned JSON success
 artifact after both database execution scopes complete. The report records the
 resolved tables, business and tracked columns, effective timestamp, selected
 executor, transaction capability, configured fetch/batch sizes, and affected
-row counts. Failed executions do not replace the report file.
+row counts. It also contains a deterministic SHA-256 configuration fingerprint
+covering the snapshot definition, effective timestamp, fetch/batch sizes and
+resolved source/target table shapes. Consumers can call
+`MigrationSnapshotExecutionReportIO.read(reportFile, expectedFingerprint)` to
+reject a success artifact produced from different configuration or Schema
+metadata. Failed executions do not replace the report file.
 When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging

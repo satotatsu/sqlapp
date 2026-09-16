@@ -44,6 +44,8 @@ class ExecuteMigrationSnapshotCommandTest {
 		assertEquals(new MigrationSnapshotExecutionResult(2, 2, 1), command.getResult());
 		final var report = new MigrationSnapshotExecutionReportIO().read(directory.resolve("snapshot-result.json"));
 		assertEquals("CUSTOMER", report.snapshotId());
+		assertTrue(report.configurationFingerprint().matches("sha256:[0-9a-f]{64}"));
+		assertEquals(report, command.getReport());
 		assertEquals("PUBLIC.CUSTOMER_HISTORY", report.targetTable());
 		assertEquals(2, report.expiredRows());
 		assertEquals(2, report.insertedRows());

@@ -111,7 +111,9 @@ reportFile: reports/customer-snapshot.json
 timestamp. `schemaFile` and optional `reportFile` are resolved relative to the
 YAML file. A report is written only after successful database execution and
 contains the resolved snapshot identity, source and target tables, effective
-timestamp, selected executor and affected-row counts.
+timestamp, selected executor and affected-row counts. It also carries a
+deterministic configuration fingerprint covering the snapshot definition,
+execution sizes and resolved source/target table shapes.
 
 ### `executeBulkMigrationJob`
 

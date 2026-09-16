@@ -6,6 +6,7 @@ import java.util.List;
 
 /** Stable, reviewable result of one completed atomic SCD2 snapshot. */
 public record MigrationSnapshotExecutionReport(int formatVersion, Instant generatedAt, String snapshotId,
+		String configurationFingerprint,
 		String sourceTable, String targetTable, List<String> keyColumns, List<String> trackedColumns,
 		boolean expireMissingRows, Instant effectiveAt, int fetchSize, int batchSize, String databaseProductName,
 		String databaseProductVersion, String executorClassName, boolean callerTransactionAtomicity,

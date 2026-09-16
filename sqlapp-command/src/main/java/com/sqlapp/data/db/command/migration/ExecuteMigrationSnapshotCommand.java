@@ -41,7 +41,8 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 					resolved.batchSize());
 			final var metadata = target.getMetaData();
 			report = new MigrationSnapshotExecutionReport(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION,
-					java.time.Instant.now(), resolved.definition().id(), name(resolved.sourceTable()),
+					java.time.Instant.now(), resolved.definition().id(), resolved.configurationFingerprint(),
+					name(resolved.sourceTable()),
 					name(resolved.targetTable()), resolved.definition().keyColumns(),
 					resolved.definition().trackedColumns(), resolved.definition().expireMissingRows(),
 					resolved.effectiveAt(), resolved.fetchSize(), resolved.batchSize(),

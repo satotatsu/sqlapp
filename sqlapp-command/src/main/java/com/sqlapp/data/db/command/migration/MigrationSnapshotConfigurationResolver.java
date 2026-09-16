@@ -19,7 +19,8 @@ import com.sqlapp.util.YamlConverter;
 /** Resolves snapshot YAML names against the canonical Schema model. */
 public final class MigrationSnapshotConfigurationResolver {
 	public record Resolution(Table sourceTable, Table targetTable, MigrationSnapshotDefinition definition,
-			java.time.Instant effectiveAt, int fetchSize, int batchSize, java.nio.file.Path reportFile) { }
+			java.time.Instant effectiveAt, int fetchSize, int batchSize, String configurationFingerprint,
+			java.nio.file.Path reportFile) { }
 
 	public Resolution resolve(final File configurationFile) {
 		if (configurationFile == null || !configurationFile.isFile()) {
@@ -58,8 +59,10 @@ public final class MigrationSnapshotConfigurationResolver {
 		}
 		final java.nio.file.Path reportFile = value.getReportFile() == null || value.getReportFile().isBlank() ? null
 				: resolve(configurationFile, value.getReportFile()).toPath().toAbsolutePath().normalize();
+		final String fingerprint = MigrationSnapshotConfigurationFingerprint.calculate(source, target, definition,
+				value.getEffectiveAt(), value.getFetchSize(), value.getBatchSize());
 		return new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-				value.getBatchSize(), reportFile);
+				value.getBatchSize(), fingerprint, reportFile);
 	}
 
 	private static void validateColumns(final Table table, final List<String> names, final String property,
