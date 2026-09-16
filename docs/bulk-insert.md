@@ -1250,6 +1250,10 @@ Dialect directly. When present, the returned executor loads a
 connection-local staging table with a reused prepared statement and batches,
 then expires and inserts rows with set-based SQL in one target transaction.
 `resolve` is the stricter variant and throws when no provider is available.
+For declarative execution, use the Gradle `executeMigrationSnapshot` task or
+`ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
+execution is atomic and intentionally not split into resumable migration
+chunks, because per-chunk missing-row expiry would be incorrect.
 
 Set-based providers are available for H2, HSQLDB, PostgreSQL, DB2, MySQL and
 MariaDB, SQLite, SQL Server, SAP HANA, Oracle 18c and later, Vertica, SAP ASE,

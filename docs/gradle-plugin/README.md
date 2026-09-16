@@ -32,6 +32,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
+| Migration | `executeMigrationSnapshot` | Apply one atomic SCD2 snapshot from YAML |
 | Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
 | Migration | `generateBulkMigrationJobRepairPlanReport` | Write a review-only repair plan as JSON |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
@@ -73,6 +74,40 @@ generateBulkMigrationJobRepairPlanReport {
     targetFile = layout.buildDirectory.file('reports/migration/repair-plan.json')
 }
 ```
+
+### `executeMigrationSnapshot`
+
+This task applies one complete SCD2 source snapshot atomically. It deliberately
+does not use resumable chunks: missing-row expiry is correct only when the
+complete source snapshot is evaluated as one unit. The target Dialect selects
+set-based staging when supported and otherwise uses the bounded-memory JDBC
+fallback.
+
+```groovy
+executeMigrationSnapshot {
+    configurationFile = file('migration/customer-snapshot.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:postgresql://source/app' }
+    dataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
+}
+```
+
+```yaml
+schemaFile: schema.xml
+sourceTable: public.customer
+targetTable: public.customer_history
+keyColumns: [customer_id]
+trackedColumns: [name, department]
+validFromColumn: valid_from
+validToColumn: valid_to
+currentColumn: is_current
+expireMissingRows: true
+effectiveAt: 2026-09-16T00:00:00Z
+fetchSize: 10000
+batchSize: 10000
+```
+
+`effectiveAt` is required so retries and reviewed runs retain the same business
+timestamp. `schemaFile` is resolved relative to the YAML file.
 
 ### `executeBulkMigrationJob`
 
