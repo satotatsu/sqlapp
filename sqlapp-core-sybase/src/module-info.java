@@ -29,4 +29,6 @@ module com.sqlapp.core.sybase {
 		with com.sqlapp.data.db.dialect.sybase.bulk.SybaseBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider
 		with com.sqlapp.data.db.dialect.sybase.bulk.SybaseBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider
+		with com.sqlapp.data.db.dialect.sybase.bulk.SybaseSetBasedMigrationSnapshotProvider;
 }

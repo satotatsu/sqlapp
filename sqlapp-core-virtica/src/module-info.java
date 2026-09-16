@@ -29,4 +29,6 @@ module com.sqlapp.core.virtica {
 			com.sqlapp.data.db.dialect.virtica.bulk.VirticaBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 			com.sqlapp.data.db.dialect.virtica.bulk.VirticaBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+			com.sqlapp.data.db.dialect.virtica.bulk.VirticaSetBasedMigrationSnapshotProvider;
 }

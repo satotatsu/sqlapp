@@ -1230,3 +1230,42 @@ JSON is written. `JOB_COMPLETED` is emitted only after lifecycle post-processing
 succeeds. Job completion-listener failure is propagated after completion and
 does not invoke lifecycle restoration; failure and pause notifications occur
 after restoration has been attempted.
+
+## Type 2 snapshot execution
+
+`MigrationSnapshotDefinition` models a slowly changing dimension (SCD2): its
+business-key and tracked columns identify unchanged, changed, new, and missing
+rows, while the configured validity and optional current-marker columns retain
+history. `MigrationSnapshotPlanner` is the in-memory planner and
+`MigrationSnapshotStreamingPlanner` compares two strictly key-ordered streams
+with bounded memory. `JdbcBatchMigrationSnapshotExecutor` reuses prepared
+statements and JDBC batches for the portable fallback.
+
+For larger snapshots, call `SetBasedMigrationSnapshotResolver.find` with the
+target connection or Dialect. When present, the returned executor loads a
+connection-local staging table with a reused prepared statement and batches,
+then expires and inserts rows with set-based SQL in one target transaction.
+`resolve` is the stricter variant and throws when no provider is available.
+
+Set-based providers are available for H2, HSQLDB, PostgreSQL, DB2, MySQL and
+MariaDB, SQLite, SQL Server, SAP HANA, Oracle 18c and later, Vertica, SAP ASE,
+and Informix. The Oracle provider uses a private temporary table, so older
+Oracle versions use the streaming fallback. Firebird, Derby, Cloud Spanner,
+Phoenix, HiRDB, Symfoware, and Access intentionally use the fallback:
+
+- Firebird global temporary table definitions are persistent catalog objects,
+  not safely generated per execution.
+- Derby cannot derive a declared global temporary table with `AS SELECT` or
+  `LIKE`, and declared temporary tables support only a restricted type set.
+- Cloud Spanner and Phoenix do not provide the connection-local temporary-table
+  semantics required by the shared executor.
+- HiRDB and Symfoware are outside this enhancement scope.
+- Access/UCanAccess does not offer a suitable native set-based temporary-table
+  path; its portable JDBC fallback remains the supported route.
+
+Informix uses `WITH NO LOG` only for the disposable session temporary table;
+the target history-table updates remain transaction controlled. Provider SQL
+has module coverage, but SAP HANA, DB2, Oracle, Vertica, SAP ASE, and Informix
+still require validation against supported real server and JDBC-driver
+versions. In particular, a future JDBC driver may remove current generated-key
+or temporary-table limitations without requiring a public API change.

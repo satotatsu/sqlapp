@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.sybase.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class SybaseBulkInsertProviderTest {
 	@Test
@@ -20,5 +21,11 @@ class SybaseBulkInsertProviderTest {
 	void resolvesSybaseUpsertProvider() {
 		assertInstanceOf(SybaseBulkUpsertExecutor.class,
 				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
+	}
+
+	@Test
+	void resolvesSetBasedMigrationSnapshotProvider() {
+		assertInstanceOf(SybaseSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect));
 	}
 }

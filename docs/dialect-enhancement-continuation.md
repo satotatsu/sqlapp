@@ -168,6 +168,12 @@ the JDBC driver cannot return every generated key in input order.
 - SAP HANA, Cloud Spanner, and Vertica metadata queries have unit/module
   coverage but have not been executed against real database catalogs in this
   workspace.
+- Set-based SCD2 providers for SAP HANA, DB2, Oracle, Vertica, SAP ASE, and
+  Informix have compile/module coverage but have not been executed against real
+  servers in this workspace. `SetBasedMigrationSnapshotResolver.find` returns
+  an empty result for unsupported dialect/version combinations so callers can
+  retain the prepared-statement streaming fallback. See `docs/bulk-insert.md`
+  for the provider matrix and temporary-table restrictions.
 - Vertica does not expose the original IDENTITY start value after values have
   been generated; only the current distributed value is available.
 - Features requiring new shared objects are listed in `docs/roadmap.md` and

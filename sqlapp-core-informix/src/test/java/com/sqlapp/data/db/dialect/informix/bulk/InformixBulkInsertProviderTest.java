@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.informix.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class InformixBulkInsertProviderTest {
 	@Test
@@ -20,5 +21,11 @@ class InformixBulkInsertProviderTest {
 	void resolvesUpsertProvider() {
 		assertInstanceOf(InformixBulkUpsertExecutor.class,
 				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
+	}
+
+	@Test
+	void resolvesSetBasedMigrationSnapshotProvider() {
+		assertInstanceOf(InformixSetBasedMigrationSnapshotExecutor.class,
+				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.defaultDialect));
 	}
 }
