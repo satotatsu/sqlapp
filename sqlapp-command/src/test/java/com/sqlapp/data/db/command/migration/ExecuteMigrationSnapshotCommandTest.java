@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
@@ -20,6 +21,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.MigrationSnapshotExecutionResult;
 
 class ExecuteMigrationSnapshotCommandTest {
@@ -68,6 +70,16 @@ class ExecuteMigrationSnapshotCommandTest {
 			rs.next();
 			assertEquals(3, rs.getInt(1));
 		}
+		final var verify = new VerifyMigrationSnapshotReportCommand();
+		verify.setReportFile(directory.resolve("snapshot-result.json").toFile());
+		verify.setApprovalFile(approval.toFile());
+		verify.run();
+		assertEquals(report, verify.getReport());
+		assertEquals(approvalCommand.getReport(), verify.getApproval());
+
+		Files.writeString(approval, System.lineSeparator(), StandardOpenOption.APPEND);
+		final var error = assertThrows(CommandException.class, verify::run);
+		assertEquals("Migration snapshot approval evidence artifact fingerprint mismatch", error.getMessage());
 	}
 
 	@Test

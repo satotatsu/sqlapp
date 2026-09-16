@@ -45,6 +45,10 @@ public final class MigrationSnapshotApprovalReportIO {
 		return load(file).report();
 	}
 
+	public ApprovedArtifact readArtifact(final Path file) {
+		return load(file);
+	}
+
 	private ApprovedArtifact load(final Path file) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {

@@ -135,6 +135,18 @@ exists. `executeMigrationSnapshot` performs the strict validation. Its success
 report records the approval generation time and the SHA-256 of the exact
 validated approval file.
 
+Audit the saved pair later without opening either database:
+
+```groovy
+verifyMigrationSnapshotReport {
+    reportFile = layout.buildDirectory.file('reports/customer-snapshot.json')
+    approvalFile = layout.buildDirectory.file('migration-approvals/customer.json')
+}
+```
+
+Verification checks the exact file digest, approval generation time,
+configuration fingerprint, tables, columns, timestamp and execution sizes.
+
 ### `executeBulkMigrationJob`
 
 This task synchronously executes either a programmatically assembled

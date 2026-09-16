@@ -46,6 +46,35 @@ public final class MigrationSnapshotExecutionReportIO {
 		return report;
 	}
 
+	public MigrationSnapshotExecutionReport verifyApproval(final Path reportFile, final Path approvalFile) {
+		final MigrationSnapshotExecutionReport report = read(reportFile);
+		verifyApproval(report, approvalFile);
+		return report;
+	}
+
+	public MigrationSnapshotApprovalReport verifyApproval(final MigrationSnapshotExecutionReport report,
+			final Path approvalFile) {
+		validate(report);
+		if (report.approvalGeneratedAt() == null || report.approvalArtifactFingerprint() == null) {
+			throw new CommandException("Migration snapshot report does not contain approval evidence");
+		}
+		final var artifact = new MigrationSnapshotApprovalReportIO().readArtifact(approvalFile);
+		final MigrationSnapshotApprovalReport approval = artifact.report();
+		matches(artifact.artifactFingerprint(), report.approvalArtifactFingerprint(), "artifact fingerprint");
+		matches(approval.generatedAt(), report.approvalGeneratedAt(), "generatedAt");
+		matches(approval.configurationFingerprint(), report.configurationFingerprint(), "configuration fingerprint");
+		matches(approval.snapshotId(), report.snapshotId(), "snapshotId");
+		matches(approval.sourceTable(), report.sourceTable(), "sourceTable");
+		matches(approval.targetTable(), report.targetTable(), "targetTable");
+		matches(approval.keyColumns(), report.keyColumns(), "keyColumns");
+		matches(approval.trackedColumns(), report.trackedColumns(), "trackedColumns");
+		matches(approval.expireMissingRows(), report.expireMissingRows(), "expireMissingRows");
+		matches(approval.effectiveAt(), report.effectiveAt(), "effectiveAt");
+		matches(approval.fetchSize(), report.fetchSize(), "fetchSize");
+		matches(approval.batchSize(), report.batchSize(), "batchSize");
+		return approval;
+	}
+
 	private static JsonConverter converter() {
 		final var converter = new JsonConverter();
 		converter.setIndentOutput(true);
@@ -95,5 +124,11 @@ public final class MigrationSnapshotExecutionReportIO {
 
 	private static void nonBlank(final String value, final String name) {
 		if (value == null || value.isBlank()) throw new CommandException("Migration snapshot report requires " + name);
+	}
+
+	private static void matches(final Object approval, final Object execution, final String name) {
+		if (!Objects.equals(approval, execution)) {
+			throw new CommandException("Migration snapshot approval evidence " + name + " mismatch");
+		}
 	}
 }
