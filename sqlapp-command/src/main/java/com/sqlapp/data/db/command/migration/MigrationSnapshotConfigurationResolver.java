@@ -72,11 +72,12 @@ public final class MigrationSnapshotConfigurationResolver {
 		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
 				|| value.getApprovalReportFile().isBlank() ? null
 						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
+		final Resolution resolution = new Resolution(source, target, definition, value.getEffectiveAt(),
+				value.getFetchSize(), value.getBatchSize(), fingerprint, approvalReportFile, reportFile);
 		if (validateApproval && approvalReportFile != null) {
-			new MigrationSnapshotApprovalReportIO().read(approvalReportFile, fingerprint);
+			new MigrationSnapshotApprovalReportIO().read(approvalReportFile, resolution);
 		}
-		return new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-				value.getBatchSize(), fingerprint, approvalReportFile, reportFile);
+		return resolution;
 	}
 
 	private static void validateColumns(final Table table, final List<String> names, final String property,

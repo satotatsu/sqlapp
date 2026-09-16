@@ -59,6 +59,23 @@ public final class MigrationSnapshotApprovalReportIO {
 		return report;
 	}
 
+	public MigrationSnapshotApprovalReport read(final Path file,
+			final MigrationSnapshotConfigurationResolver.Resolution expected) {
+		Objects.requireNonNull(expected, "expected");
+		final MigrationSnapshotApprovalReport report = read(file, expected.configurationFingerprint());
+		final MigrationSnapshotApprovalReport resolved = fromResolution(expected);
+		matches(report.snapshotId(), resolved.snapshotId(), "snapshotId");
+		matches(report.sourceTable(), resolved.sourceTable(), "sourceTable");
+		matches(report.targetTable(), resolved.targetTable(), "targetTable");
+		matches(report.keyColumns(), resolved.keyColumns(), "keyColumns");
+		matches(report.trackedColumns(), resolved.trackedColumns(), "trackedColumns");
+		matches(report.expireMissingRows(), resolved.expireMissingRows(), "expireMissingRows");
+		matches(report.effectiveAt(), resolved.effectiveAt(), "effectiveAt");
+		matches(report.fetchSize(), resolved.fetchSize(), "fetchSize");
+		matches(report.batchSize(), resolved.batchSize(), "batchSize");
+		return report;
+	}
+
 	private static JsonConverter converter() {
 		final var converter = new JsonConverter();
 		converter.setIndentOutput(true);
@@ -108,6 +125,12 @@ public final class MigrationSnapshotApprovalReportIO {
 	private static void nonBlank(final String value, final String name) {
 		if (value == null || value.isBlank()) {
 			throw new CommandException("Migration snapshot approval report requires " + name);
+		}
+	}
+
+	private static void matches(final Object actual, final Object expected, final String name) {
+		if (!Objects.equals(actual, expected)) {
+			throw new CommandException("Migration snapshot approval report " + name + " mismatch");
 		}
 	}
 }

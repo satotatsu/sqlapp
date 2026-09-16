@@ -1274,9 +1274,11 @@ and Schema XML without database access using
 `GenerateMigrationSnapshotApprovalReportCommand` or the
 `generateMigrationSnapshotApprovalReport` Gradle task. Resolution requires its
 fingerprint to match the current configuration and Schema metadata before
-either database connection is opened. The approval path is resolved relative
-to the YAML file, like `schemaFile` and `reportFile`. Failed executions do not
-replace the report file.
+either database connection is opened. Every review-visible semantic field is
+also compared with the resolved plan, preventing a retained fingerprint from
+masking altered table names, columns, timestamps, or execution sizes. The
+approval path is resolved relative to the YAML file, like `schemaFile` and
+`reportFile`. Failed executions do not replace the report file.
 When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging

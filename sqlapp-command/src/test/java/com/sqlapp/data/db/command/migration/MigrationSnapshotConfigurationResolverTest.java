@@ -2,10 +2,9 @@
 package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,6 +65,23 @@ class MigrationSnapshotConfigurationResolverTest {
 				"2026-09-17T00:00:00Z"));
 		final var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
 		assertEquals("Migration snapshot approval report configuration fingerprint mismatch", error.getMessage());
+	}
+
+	@Test
+	void rejectsTamperedReviewFieldsEvenWhenFingerprintIsUnchanged() throws Exception {
+		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\n");
+		final var resolver = new MigrationSnapshotConfigurationResolver();
+		final var initial = resolver.resolve(files.yaml().toFile());
+		final MigrationSnapshotApprovalReport valid = report(initial.configurationFingerprint());
+		final var tampered = new MigrationSnapshotApprovalReport(valid.formatVersion(), valid.generatedAt(),
+				valid.configurationFingerprint(), valid.snapshotId(), "PUBLIC.OTHER_SOURCE", valid.targetTable(),
+				valid.keyColumns(), valid.trackedColumns(), valid.expireMissingRows(), valid.effectiveAt(),
+				valid.fetchSize(), valid.batchSize());
+		new MigrationSnapshotApprovalReportIO().write(directory.resolve("approved.json"), tampered);
+		Files.writeString(files.yaml(), Files.readString(files.yaml()) + "approvalReportFile: approved.json\n");
+
+		final var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
+		assertEquals("Migration snapshot approval report sourceTable mismatch", error.getMessage());
 	}
 
 	@Test
