@@ -1269,10 +1269,14 @@ resolved source/target table shapes. Consumers can call
 `MigrationSnapshotExecutionReportIO.read(reportFile, expectedFingerprint)` to
 reject a success artifact produced from different configuration or Schema
 metadata. To make this a declarative execution gate, set `approvalReportFile`
-in YAML to a reviewed report. Resolution requires its fingerprint to match the
-current configuration and Schema metadata before either database connection is
-opened. The approval path is resolved relative to the YAML file, like
-`schemaFile` and `reportFile`. Failed executions do not replace the report file.
+in YAML to a reviewed `MigrationSnapshotApprovalReport`. Create it from YAML
+and Schema XML without database access using
+`GenerateMigrationSnapshotApprovalReportCommand` or the
+`generateMigrationSnapshotApprovalReport` Gradle task. Resolution requires its
+fingerprint to match the current configuration and Schema metadata before
+either database connection is opened. The approval path is resolved relative
+to the YAML file, like `schemaFile` and `reportFile`. Failed executions do not
+replace the report file.
 When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging

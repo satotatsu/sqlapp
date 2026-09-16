@@ -56,7 +56,7 @@ class MigrationSnapshotConfigurationResolverTest {
 		final var resolver = new MigrationSnapshotConfigurationResolver();
 		final var initial = resolver.resolve(files.yaml().toFile());
 		final Path approval = directory.resolve("approved.json");
-		new MigrationSnapshotExecutionReportIO().write(approval, report(initial.configurationFingerprint()));
+		new MigrationSnapshotApprovalReportIO().write(approval, report(initial.configurationFingerprint()));
 		Files.writeString(files.yaml(), Files.readString(files.yaml()) + "approvalReportFile: approved.json\n");
 
 		final var approved = resolver.resolve(files.yaml().toFile());
@@ -65,7 +65,7 @@ class MigrationSnapshotConfigurationResolverTest {
 		Files.writeString(files.yaml(), Files.readString(files.yaml()).replace("2026-09-16T00:00:00Z",
 				"2026-09-17T00:00:00Z"));
 		final var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
-		assertEquals("Migration snapshot report configuration fingerprint mismatch", error.getMessage());
+		assertEquals("Migration snapshot approval report configuration fingerprint mismatch", error.getMessage());
 	}
 
 	@Test
@@ -112,11 +112,10 @@ class MigrationSnapshotConfigurationResolverTest {
 
 	private record FileSet(Path xml, Path yaml) { }
 
-	private static MigrationSnapshotExecutionReport report(final String fingerprint) {
-		return new MigrationSnapshotExecutionReport(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION,
-				Instant.parse("2026-09-16T01:00:00Z"), "CUSTOMER", fingerprint, "PUBLIC.CUSTOMER",
+	private static MigrationSnapshotApprovalReport report(final String fingerprint) {
+		return new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION,
+				Instant.parse("2026-09-16T01:00:00Z"), fingerprint, "CUSTOMER", "PUBLIC.CUSTOMER",
 				"PUBLIC.CUSTOMER_HISTORY", java.util.List.of("ID"), java.util.List.of("NAME"), true,
-				Instant.parse("2026-09-16T00:00:00Z"), 10_000, 10_000, "HSQL Database Engine", "2.7",
-				"example.Executor", true, 1, 1, 0);
+				Instant.parse("2026-09-16T00:00:00Z"), 10_000, 10_000);
 	}
 }

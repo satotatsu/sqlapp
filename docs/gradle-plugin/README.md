@@ -104,7 +104,7 @@ expireMissingRows: true
 effectiveAt: 2026-09-16T00:00:00Z
 fetchSize: 10000
 batchSize: 10000
-# Optional: require an earlier reviewed success artifact to match this run.
+# Optional: require a reviewed approval artifact to match this run.
 approvalReportFile: approvals/customer-snapshot.json
 reportFile: reports/customer-snapshot.json
 ```
@@ -116,8 +116,22 @@ must contain the same configuration fingerprint or execution fails before a
 database connection is opened. A report is written only after successful
 database execution and contains the resolved snapshot identity, source and
 target tables, effective timestamp, selected executor and affected-row counts.
-It also carries a deterministic configuration fingerprint covering the snapshot definition,
-execution sizes and resolved source/target table shapes.
+It also carries a deterministic configuration fingerprint covering the
+snapshot definition, execution sizes and resolved source/target table shapes.
+
+Generate the approval artifact without opening a database, review it, and then
+reference it from the YAML shown above:
+
+```groovy
+generateMigrationSnapshotApprovalReport {
+    configurationFile = layout.projectDirectory.file('snapshot.yaml')
+    targetFile = layout.buildDirectory.file('migration-approvals/customer.json')
+}
+```
+
+The generator intentionally ignores `approvalReportFile` while producing the
+candidate artifact, so the first approval can be created before that file
+exists. `executeMigrationSnapshot` performs the strict validation.
 
 ### `executeBulkMigrationJob`
 

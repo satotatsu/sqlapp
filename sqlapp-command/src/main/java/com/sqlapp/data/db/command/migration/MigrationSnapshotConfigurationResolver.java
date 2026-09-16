@@ -23,6 +23,14 @@ public final class MigrationSnapshotConfigurationResolver {
 			java.nio.file.Path approvalReportFile, java.nio.file.Path reportFile) { }
 
 	public Resolution resolve(final File configurationFile) {
+		return resolve(configurationFile, true);
+	}
+
+	public Resolution resolveForApproval(final File configurationFile) {
+		return resolve(configurationFile, false);
+	}
+
+	private Resolution resolve(final File configurationFile, final boolean validateApproval) {
 		if (configurationFile == null || !configurationFile.isFile()) {
 			throw new CommandException("Migration snapshot configuration file is required.");
 		}
@@ -64,8 +72,8 @@ public final class MigrationSnapshotConfigurationResolver {
 		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
 				|| value.getApprovalReportFile().isBlank() ? null
 						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
-		if (approvalReportFile != null) {
-			new MigrationSnapshotExecutionReportIO().read(approvalReportFile, fingerprint);
+		if (validateApproval && approvalReportFile != null) {
+			new MigrationSnapshotApprovalReportIO().read(approvalReportFile, fingerprint);
 		}
 		return new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
 				value.getBatchSize(), fingerprint, approvalReportFile, reportFile);
