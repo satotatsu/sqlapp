@@ -1259,6 +1259,11 @@ For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration
 chunks, because per-chunk missing-row expiry would be incorrect.
+Set optional `reportFile` in YAML to atomically write a versioned JSON success
+artifact after both database execution scopes complete. The report records the
+resolved tables, business and tracked columns, effective timestamp, selected
+executor, transaction capability, configured fetch/batch sizes, and affected
+row counts. Failed executions do not replace the report file.
 When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging

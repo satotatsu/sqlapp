@@ -42,6 +42,13 @@ class ExecuteMigrationSnapshotCommandTest {
 		command.setConfigurationFile(yaml.toFile());
 		command.run();
 		assertEquals(new MigrationSnapshotExecutionResult(2, 2, 1), command.getResult());
+		final var report = new MigrationSnapshotExecutionReportIO().read(directory.resolve("snapshot-result.json"));
+		assertEquals("CUSTOMER", report.snapshotId());
+		assertEquals("PUBLIC.CUSTOMER_HISTORY", report.targetTable());
+		assertEquals(2, report.expiredRows());
+		assertEquals(2, report.insertedRows());
+		assertEquals(1, report.unchangedRows());
+		assertTrue(report.executorClassName().endsWith("HsqlSetBasedMigrationSnapshotExecutor"));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE IS_CURRENT")) {
 			rs.next();
@@ -71,6 +78,8 @@ class ExecuteMigrationSnapshotCommandTest {
 
 		assertThrows(RuntimeException.class, command::run);
 		assertNull(command.getResult());
+		assertNull(command.getReport());
+		assertFalse(Files.exists(directory.resolve("snapshot-result.json")));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rs = statement.executeQuery(
 						"SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
@@ -99,7 +108,8 @@ class ExecuteMigrationSnapshotCommandTest {
 		Files.writeString(yaml, "schemaFile: schema.xml\nsourceTable: CUSTOMER\ntargetTable: CUSTOMER_HISTORY\n"
 				+ "keyColumns: [ID]\ntrackedColumns: [NAME]\nvalidFromColumn: VALID_FROM\n"
 				+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\nexpireMissingRows: true\n"
-				+ "effectiveAt: 2026-09-16T00:00:00Z\nfetchSize: 2\nbatchSize: 2\n");
+				+ "effectiveAt: 2026-09-16T00:00:00Z\nfetchSize: 2\nbatchSize: 2\n"
+				+ "reportFile: snapshot-result.json\n");
 		return yaml;
 	}
 

@@ -104,10 +104,14 @@ expireMissingRows: true
 effectiveAt: 2026-09-16T00:00:00Z
 fetchSize: 10000
 batchSize: 10000
+reportFile: reports/customer-snapshot.json
 ```
 
 `effectiveAt` is required so retries and reviewed runs retain the same business
-timestamp. `schemaFile` is resolved relative to the YAML file.
+timestamp. `schemaFile` and optional `reportFile` are resolved relative to the
+YAML file. A report is written only after successful database execution and
+contains the resolved snapshot identity, source and target tables, effective
+timestamp, selected executor and affected-row counts.
 
 ### `executeBulkMigrationJob`
 

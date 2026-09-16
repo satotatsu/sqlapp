@@ -21,13 +21,14 @@ class MigrationSnapshotConfigurationResolverTest {
 
 	@Test
 	void resolvesConciseYamlAgainstSchemaModel() throws Exception {
-		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\n");
+		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\nreportFile: reports/result.json\n");
 		final var resolved = new MigrationSnapshotConfigurationResolver().resolve(files.yaml().toFile());
 		assertEquals("CUSTOMER", resolved.sourceTable().getName());
 		assertEquals("CUSTOMER_HISTORY", resolved.targetTable().getName());
 		assertEquals(java.time.Instant.parse("2026-09-16T00:00:00Z"), resolved.effectiveAt());
 		assertEquals(10_000, resolved.batchSize());
 		assertEquals(java.util.List.of("ID"), resolved.definition().keyColumns());
+		assertEquals(directory.resolve("reports/result.json").toAbsolutePath().normalize(), resolved.reportFile());
 	}
 
 	@Test
