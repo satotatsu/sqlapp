@@ -30,6 +30,14 @@ public final class BulkUpsertExecutionScope implements AutoCloseable {
 		cleanupSql.add(java.util.Objects.requireNonNull(sql, "sql"));
 	}
 
+	/**
+	 * Returns whether this scope changed an auto-commit connection into a
+	 * transaction and therefore owns its completion.
+	 */
+	public boolean isTransactionManaged() {
+		return transaction.isManaged();
+	}
+
 	public void commit() throws SQLException {
 		transaction.commit();
 	}

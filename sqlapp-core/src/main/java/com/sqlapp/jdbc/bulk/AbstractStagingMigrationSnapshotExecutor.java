@@ -46,7 +46,10 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 			try {
 				try (var statement = connection.createStatement()) { statement.execute(createStageSql(stage, target, data)); }
 				final String cleanupSql = cleanupStageSql(stage);
-				if (cleanupSql != null) scope.addCleanupSql(cleanupSql);
+				// A DROP may implicitly commit on databases such as HSQLDB. When the
+				// caller owns the transaction, retain the connection-local object until
+				// that connection ends instead of violating the caller's boundary.
+				if (cleanupSql != null && scope.isTransactionManaged()) scope.addCleanupSql(cleanupSql);
 				stage(connection, stage, data, sourceRows, batchSize);
 				final long unchanged = unchanged(connection, target, stage, definition);
 				final long expired = close(connection, target, stage, definition, effectiveAt);

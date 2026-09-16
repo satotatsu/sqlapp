@@ -1258,8 +1258,13 @@ When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging
 object. When the caller supplies an existing transaction, the executor joins
-it and leaves commit or rollback ownership with that caller; the command and
-Gradle task roll back that outer transaction when execution fails.
+it and leaves commit or rollback ownership with that caller. It also avoids a
+staging-object `DROP` that could implicitly commit the caller's work; the
+connection-local object then remains isolated until the connection ends. The
+command and Gradle task close that connection after committing or rolling back
+the outer transaction.
+The H2 provider creates its local stage with H2's `TRANSACTIONAL` modifier so
+the stage declaration itself also preserves a caller-owned transaction.
 
 Set-based providers are available for H2, HSQLDB, PostgreSQL, DB2, MySQL and
 MariaDB, SQLite, SQL Server, SAP HANA, Oracle 18c and later, Vertica, SAP ASE,
