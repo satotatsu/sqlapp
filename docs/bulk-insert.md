@@ -1250,6 +1250,11 @@ Dialect directly. When present, the returned executor loads a
 connection-local staging table with a reused prepared statement and batches,
 then expires and inserts rows with set-based SQL in one target transaction.
 `resolve` is the stricter variant and throws when no provider is available.
+Staging rejects rows with missing columns or null business keys while they are
+streamed. Before mutating history, two bounded-result set-based checks reject
+duplicate source keys and duplicate or null keys among current target rows.
+These checks retain bounded JVM memory; indexes beginning with the configured
+business-key columns keep the grouped validation and subsequent joins fast.
 For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration

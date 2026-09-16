@@ -130,6 +130,89 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 		}
 	}
 
+	@Test
+	void rejectsDuplicateSourceKeysBeforeChangingHistory() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_set_scd2_source_duplicate", "SA", "")) {
+			createHistory(connection, "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+			final var definition = definition();
+
+			final var error = assertThrows(java.sql.SQLException.class,
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "new-a"), row(1, "new-b")), 100));
+
+			assertTrue(error.getMessage().contains("source snapshot contains duplicate"));
+			assertCurrentRows(connection, 1, "old");
+		}
+	}
+
+	@Test
+	void rejectsDuplicateCurrentTargetKeysBeforeChangingHistory() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_set_scd2_target_duplicate", "SA", "")) {
+			createHistory(connection, "(1, 'old-a', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE), "
+					+ "(1, 'old-b', TIMESTAMP '2026-02-01 00:00:00', NULL, TRUE)");
+			final var definition = definition();
+
+			final var error = assertThrows(java.sql.SQLException.class,
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "new")), 100));
+
+			assertTrue(error.getMessage().contains("current target snapshot contains duplicate"));
+			try (var statement = connection.createStatement();
+					var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE VALID_TO IS NULL")) {
+				rs.next();
+				assertEquals(2, rs.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void rejectsIncompleteOrNullSourceKeysBeforeChangingHistory() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_set_scd2_invalid_source", "SA", "")) {
+			createHistory(connection, "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+			final var definition = definition();
+			final Map<String, Object> missingTracked = new LinkedHashMap<>();
+			missingTracked.put("ID", 1);
+			final Map<String, Object> nullKey = row(1, "new");
+			nullKey.put("ID", null);
+
+			final var missing = assertThrows(IllegalArgumentException.class,
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(missingTracked), 100));
+			assertTrue(missing.getMessage().contains("missing column: NAME"));
+			final var nullable = assertThrows(IllegalArgumentException.class,
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(nullKey), 100));
+			assertTrue(nullable.getMessage().contains("key must not contain null: ID"));
+			assertCurrentRows(connection, 1, "old");
+		}
+	}
+
+	private static MigrationSnapshotDefinition definition() {
+		return new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"),
+				"VALID_FROM", "VALID_TO", "IS_CURRENT", true);
+	}
+
+	private static void createHistory(final java.sql.Connection connection, final String values) throws Exception {
+		try (var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
+					+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+			statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES " + values);
+		}
+	}
+
+	private static void assertCurrentRows(final java.sql.Connection connection, final int expected, final String name)
+			throws Exception {
+		try (var statement = connection.createStatement();
+				var rs = statement.executeQuery("SELECT NAME FROM CUSTOMER_HISTORY WHERE VALID_TO IS NULL")) {
+			int count = 0;
+			while (rs.next()) {
+				assertEquals(name, rs.getString(1));
+				count++;
+			}
+			assertEquals(expected, count);
+		}
+	}
+
 	private static Table table() {
 		final Table table = new Table("CUSTOMER_HISTORY").setSchemaName("PUBLIC");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));

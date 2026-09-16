@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,7 +56,10 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 				// caller owns the transaction, retain the connection-local object until
 				// that connection ends instead of violating the caller's boundary.
 				if (cleanupSql != null && scope.isTransactionManaged()) scope.addCleanupSql(cleanupSql);
-				stage(connection, stage, data, sourceRows, batchSize);
+				stage(connection, stage, data, definition.keyColumns(), sourceRows, batchSize);
+				requireValidKeys(connection, stage, definition.keyColumns(), null, false, "source snapshot");
+				requireValidKeys(connection, target, definition.keyColumns(),
+						q("t", definition.validToColumn()) + " IS NULL", true, "current target snapshot");
 				final long unchanged = unchanged(connection, target, stage, definition);
 				final long expired = close(connection, target, stage, definition, effectiveAt);
 				final long inserted = insert(connection, target, stage, definition, data, effectiveAt);
@@ -65,17 +69,45 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 		}
 	}
 
-	private void stage(final Connection c, final String stage, final List<String> columns,
+	private void stage(final Connection c, final String stage, final List<String> columns, final List<String> keys,
 			final Iterable<? extends Map<String, Object>> rows, final int batchSize) throws SQLException {
 		final String sql = "INSERT INTO " + stage + " (" + list(columns, null) + ") VALUES ("
 				+ String.join(", ", java.util.Collections.nCopies(columns.size(), "?")) + ")";
 		try (var st = c.prepareStatement(sql)) {
+			final var keyNames = new HashSet<>(keys);
 			int pending = 0;
 			for (final Map<String, Object> row : rows) {
-				for (int i = 0; i < columns.size(); i++) st.setObject(i + 1, row.get(columns.get(i)));
+				for (int i = 0; i < columns.size(); i++) {
+					final String column = columns.get(i);
+					if (!row.containsKey(column)) {
+						throw new IllegalArgumentException("source snapshot row is missing column: " + column);
+					}
+					final Object value = row.get(column);
+					if (value == null && keyNames.contains(column)) {
+						throw new IllegalArgumentException("source snapshot key must not contain null: " + column);
+					}
+					st.setObject(i + 1, value);
+				}
 				st.addBatch(); if (++pending == batchSize) { st.executeBatch(); pending = 0; }
 			}
 			if (pending > 0) st.executeBatch();
+		}
+	}
+
+	private void requireValidKeys(final Connection c, final String table, final List<String> keys,
+			final String condition, final boolean rejectNulls, final String side) throws SQLException {
+		final String keyList = list(keys, "t");
+		final StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ").append(table).append(" t");
+		if (condition != null) sql.append(" WHERE ").append(condition);
+		sql.append(" GROUP BY ").append(keyList).append(" HAVING COUNT(*) > 1");
+		if (rejectNulls) {
+			for (final String key : keys) sql.append(" OR COUNT(").append(q("t", key)).append(") = 0");
+		}
+		try (var st = c.createStatement()) {
+			st.setMaxRows(1);
+			try (var rs = st.executeQuery(sql.toString())) {
+				if (rs.next()) throw new SQLException(side + " contains duplicate or null snapshot keys");
+			}
 		}
 	}
 
