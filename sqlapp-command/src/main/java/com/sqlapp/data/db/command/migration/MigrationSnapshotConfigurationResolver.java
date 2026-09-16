@@ -20,7 +20,7 @@ import com.sqlapp.util.YamlConverter;
 public final class MigrationSnapshotConfigurationResolver {
 	public record Resolution(Table sourceTable, Table targetTable, MigrationSnapshotDefinition definition,
 			java.time.Instant effectiveAt, int fetchSize, int batchSize, String configurationFingerprint,
-			java.nio.file.Path reportFile) { }
+			java.nio.file.Path approvalReportFile, java.nio.file.Path reportFile) { }
 
 	public Resolution resolve(final File configurationFile) {
 		if (configurationFile == null || !configurationFile.isFile()) {
@@ -61,8 +61,14 @@ public final class MigrationSnapshotConfigurationResolver {
 				: resolve(configurationFile, value.getReportFile()).toPath().toAbsolutePath().normalize();
 		final String fingerprint = MigrationSnapshotConfigurationFingerprint.calculate(source, target, definition,
 				value.getEffectiveAt(), value.getFetchSize(), value.getBatchSize());
+		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
+				|| value.getApprovalReportFile().isBlank() ? null
+						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
+		if (approvalReportFile != null) {
+			new MigrationSnapshotExecutionReportIO().read(approvalReportFile, fingerprint);
+		}
 		return new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-				value.getBatchSize(), fingerprint, reportFile);
+				value.getBatchSize(), fingerprint, approvalReportFile, reportFile);
 	}
 
 	private static void validateColumns(final Table table, final List<String> names, final String property,

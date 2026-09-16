@@ -24,5 +24,6 @@ public class MigrationSnapshotConfiguration {
 	private Instant effectiveAt;
 	private int fetchSize = 10_000;
 	private int batchSize = 10_000;
+	private String approvalReportFile;
 	private String reportFile;
 }

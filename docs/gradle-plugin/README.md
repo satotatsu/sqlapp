@@ -104,15 +104,19 @@ expireMissingRows: true
 effectiveAt: 2026-09-16T00:00:00Z
 fetchSize: 10000
 batchSize: 10000
+# Optional: require an earlier reviewed success artifact to match this run.
+approvalReportFile: approvals/customer-snapshot.json
 reportFile: reports/customer-snapshot.json
 ```
 
 `effectiveAt` is required so retries and reviewed runs retain the same business
 timestamp. `schemaFile` and optional `reportFile` are resolved relative to the
-YAML file. A report is written only after successful database execution and
-contains the resolved snapshot identity, source and target tables, effective
-timestamp, selected executor and affected-row counts. It also carries a
-deterministic configuration fingerprint covering the snapshot definition,
+YAML file. Optional `approvalReportFile` is also relative to the YAML file. It
+must contain the same configuration fingerprint or execution fails before a
+database connection is opened. A report is written only after successful
+database execution and contains the resolved snapshot identity, source and
+target tables, effective timestamp, selected executor and affected-row counts.
+It also carries a deterministic configuration fingerprint covering the snapshot definition,
 execution sizes and resolved source/target table shapes.
 
 ### `executeBulkMigrationJob`

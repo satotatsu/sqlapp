@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -47,6 +48,24 @@ class MigrationSnapshotConfigurationResolverTest {
 		changed.getTables().get("CUSTOMER").getColumns().get("NAME").setLength(200L);
 		changed.writeXml(files.xml().toFile());
 		assertNotEquals(original, resolver.resolve(files.yaml().toFile()).configurationFingerprint());
+	}
+
+	@Test
+	void validatesApprovalReportBeforeExecution() throws Exception {
+		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\n");
+		final var resolver = new MigrationSnapshotConfigurationResolver();
+		final var initial = resolver.resolve(files.yaml().toFile());
+		final Path approval = directory.resolve("approved.json");
+		new MigrationSnapshotExecutionReportIO().write(approval, report(initial.configurationFingerprint()));
+		Files.writeString(files.yaml(), Files.readString(files.yaml()) + "approvalReportFile: approved.json\n");
+
+		final var approved = resolver.resolve(files.yaml().toFile());
+		assertEquals(approval.toAbsolutePath().normalize(), approved.approvalReportFile());
+
+		Files.writeString(files.yaml(), Files.readString(files.yaml()).replace("2026-09-16T00:00:00Z",
+				"2026-09-17T00:00:00Z"));
+		final var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
+		assertEquals("Migration snapshot report configuration fingerprint mismatch", error.getMessage());
 	}
 
 	@Test
@@ -92,4 +111,12 @@ class MigrationSnapshotConfigurationResolverTest {
 	}
 
 	private record FileSet(Path xml, Path yaml) { }
+
+	private static MigrationSnapshotExecutionReport report(final String fingerprint) {
+		return new MigrationSnapshotExecutionReport(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION,
+				Instant.parse("2026-09-16T01:00:00Z"), "CUSTOMER", fingerprint, "PUBLIC.CUSTOMER",
+				"PUBLIC.CUSTOMER_HISTORY", java.util.List.of("ID"), java.util.List.of("NAME"), true,
+				Instant.parse("2026-09-16T00:00:00Z"), 10_000, 10_000, "HSQL Database Engine", "2.7",
+				"example.Executor", true, 1, 1, 0);
+	}
 }
