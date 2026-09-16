@@ -2,6 +2,10 @@
 package com.sqlapp.data.db.dialect.hsql.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
 import java.time.Instant;
@@ -48,6 +52,41 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 					var rs = statement.executeQuery("SELECT NAME FROM CUSTOMER_HISTORY WHERE ID=2 AND VALID_TO IS NULL")) {
 				rs.next();
 				assertEquals("new", rs.getString(1));
+			}
+		}
+	}
+
+	@Test
+	void rollsBackExpiredRowsWhenTheSetBasedInsertFails() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_set_scd2_rollback", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, "
+						+ "NAME VARCHAR(20) CHECK (NAME <> 'forbidden'), "
+						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+						+ "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+			}
+			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
+					List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
+
+			assertThrows(java.sql.SQLException.class,
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "forbidden")), 100));
+
+			assertTrue(connection.getAutoCommit());
+			try (var statement = connection.createStatement();
+					var rs = statement.executeQuery("SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
+				assertTrue(rs.next());
+				assertEquals("old", rs.getString(1));
+				assertNull(rs.getTimestamp(2));
+				assertTrue(rs.getBoolean(3));
+				assertFalse(rs.next());
+			}
+			try (var statement = connection.createStatement();
+					var rs = statement.executeQuery("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+							+ "WHERE TABLE_NAME LIKE 'SQLAPP_SCD2_%'")) {
+				rs.next();
+				assertEquals(0, rs.getInt(1));
 			}
 		}
 	}

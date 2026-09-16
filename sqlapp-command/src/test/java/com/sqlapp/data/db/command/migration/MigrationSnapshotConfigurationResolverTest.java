@@ -37,7 +37,19 @@ class MigrationSnapshotConfigurationResolverTest {
 				() -> new MigrationSnapshotConfigurationResolver().resolve(files.yaml().toFile()));
 	}
 
+	@Test
+	void rejectsUnknownColumnsBeforeOpeningDatabaseConnections() throws Exception {
+		final FileSet files = files("trackedColumns: [UNKNOWN]\neffectiveAt: 2026-09-16T00:00:00Z\n", false);
+		final var error = assertThrows(CommandException.class,
+				() -> new MigrationSnapshotConfigurationResolver().resolve(files.yaml().toFile()));
+		assertEquals("Unknown column 'UNKNOWN' in sourceTable: CUSTOMER", error.getMessage());
+	}
+
 	private FileSet files(final String tail) throws Exception {
+		return files(tail, true);
+	}
+
+	private FileSet files(final String tail, final boolean includeTrackedColumns) throws Exception {
 		final Schema schema = new Schema("PUBLIC");
 		final Table source = new Table("CUSTOMER");
 		source.getColumns().add(new Column("ID").setDataType(DataType.INT));
@@ -54,7 +66,8 @@ class MigrationSnapshotConfigurationResolverTest {
 		schema.writeXml(xml.toFile());
 		final Path yaml = directory.resolve("snapshot.yaml");
 		Files.writeString(yaml, "schemaFile: schema.xml\nsourceTable: CUSTOMER\ntargetTable: CUSTOMER_HISTORY\n"
-				+ "keyColumns: [ID]\ntrackedColumns: [NAME]\nvalidFromColumn: VALID_FROM\n"
+				+ "keyColumns: [ID]\n" + (includeTrackedColumns ? "trackedColumns: [NAME]\n" : "")
+				+ "validFromColumn: VALID_FROM\n"
 				+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\n" + tail);
 		return new FileSet(xml, yaml);
 	}

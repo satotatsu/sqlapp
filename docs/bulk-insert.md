@@ -1254,6 +1254,12 @@ For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration
 chunks, because per-chunk missing-row expiry would be incorrect.
+When the executor owns an auto-commit target connection, a staging, expiry, or
+history-row insert failure rolls back the complete snapshot, restores the
+connection's auto-commit state, and removes the connection-local staging
+object. When the caller supplies an existing transaction, the executor joins
+it and leaves commit or rollback ownership with that caller; the command and
+Gradle task roll back that outer transaction when execution fails.
 
 Set-based providers are available for H2, HSQLDB, PostgreSQL, DB2, MySQL and
 MariaDB, SQLite, SQL Server, SAP HANA, Oracle 18c and later, Vertica, SAP ASE,

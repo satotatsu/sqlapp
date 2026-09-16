@@ -47,8 +47,26 @@ public final class MigrationSnapshotConfigurationResolver {
 		} catch (IllegalArgumentException e) {
 			throw new CommandException("Invalid migration snapshot definition: " + e.getMessage(), e);
 		}
+		validateColumns(source, definition.keyColumns(), "sourceTable", value.getSourceTable());
+		validateColumns(source, definition.trackedColumns(), "sourceTable", value.getSourceTable());
+		validateColumns(target, definition.keyColumns(), "targetTable", value.getTargetTable());
+		validateColumns(target, definition.trackedColumns(), "targetTable", value.getTargetTable());
+		validateColumns(target, List.of(definition.validFromColumn(), definition.validToColumn()), "targetTable",
+				value.getTargetTable());
+		if (definition.currentColumn() != null) {
+			validateColumns(target, List.of(definition.currentColumn()), "targetTable", value.getTargetTable());
+		}
 		return new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
 				value.getBatchSize());
+	}
+
+	private static void validateColumns(final Table table, final List<String> names, final String property,
+			final String configuredName) {
+		for (final String name : names) {
+			if (table.getColumns().get(name) == null) {
+				throw new CommandException("Unknown column '" + name + "' in " + property + ": " + configuredName);
+			}
+		}
 	}
 
 	private static File resolve(final File configurationFile, final String path) {
