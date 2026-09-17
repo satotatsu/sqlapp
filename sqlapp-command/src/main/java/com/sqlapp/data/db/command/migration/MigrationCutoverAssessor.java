@@ -22,7 +22,10 @@ import com.sqlapp.jdbc.sql.JdbcQueryHandler;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.SqlParser;
 
-/** Evaluates watermark lag and verification recency without changing either database. */
+/**
+ * Evaluates watermark lag and verification recency without changing either
+ * database.
+ */
 public final class MigrationCutoverAssessor {
 
 	private MigrationCutoverAssessor() {
@@ -52,8 +55,8 @@ public final class MigrationCutoverAssessor {
 		return new MigrationCutoverReport(assessedAt, overall, verificationAge, results);
 	}
 
-	private static MigrationCutoverReport.Freshness result(final MigrationFreshnessCheck check,
-			final Instant source, final Instant target) {
+	private static MigrationCutoverReport.Freshness result(final MigrationFreshnessCheck check, final Instant source,
+			final Instant target) {
 		if (source == null) {
 			return new MigrationCutoverReport.Freshness(check.id(), null, target, null,
 					MigrationCutoverReport.Status.NOT_READY_SOURCE_EMPTY);
@@ -65,8 +68,7 @@ public final class MigrationCutoverAssessor {
 		final Duration lag = Duration.between(target, source);
 		final MigrationCutoverReport.Status status = lag.isNegative()
 				? MigrationCutoverReport.Status.NOT_READY_TARGET_AHEAD
-				: lag.compareTo(check.maximumLag()) > 0
-						? MigrationCutoverReport.Status.NOT_READY_LAG_EXCEEDED
+				: lag.compareTo(check.maximumLag()) > 0 ? MigrationCutoverReport.Status.NOT_READY_LAG_EXCEEDED
 						: MigrationCutoverReport.Status.READY;
 		return new MigrationCutoverReport.Freshness(check.id(), source, target, lag, status);
 	}

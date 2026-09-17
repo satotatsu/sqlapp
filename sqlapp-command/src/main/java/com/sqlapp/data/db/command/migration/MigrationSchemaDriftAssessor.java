@@ -17,14 +17,17 @@ import com.sqlapp.data.schemas.migration.SchemaCompatibilityAnalyzer;
 import com.sqlapp.data.schemas.migration.SchemaCompatibilityChange;
 import com.sqlapp.data.schemas.migration.SchemaCompatibilityReport;
 
-/** Reads only migration tables from the live target and classifies structural drift. */
+/**
+ * Reads only migration tables from the live target and classifies structural
+ * drift.
+ */
 public final class MigrationSchemaDriftAssessor {
 
 	private MigrationSchemaDriftAssessor() {
 	}
 
-	public static SchemaCompatibilityReport assess(final Connection connection,
-			final Collection<Table> expectedTables) throws SQLException {
+	public static SchemaCompatibilityReport assess(final Connection connection, final Collection<Table> expectedTables)
+			throws SQLException {
 		Objects.requireNonNull(connection, "connection");
 		Objects.requireNonNull(expectedTables, "expectedTables");
 		final TableReader reader = DialectResolver.getInstance().getDialect(connection).getCatalogReader()

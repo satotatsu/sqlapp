@@ -9,7 +9,9 @@ import com.sqlapp.exceptions.CommandException;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Verifies that a completed SCD2 report is bound to an exact approval artifact. */
+/**
+ * Verifies that a completed SCD2 report is bound to an exact approval artifact.
+ */
 @Getter
 @Setter
 public class VerifyMigrationSnapshotReportCommand extends AbstractCommand {
@@ -23,8 +25,10 @@ public class VerifyMigrationSnapshotReportCommand extends AbstractCommand {
 	protected void doRun() {
 		report = null;
 		approval = null;
-		if (reportFile == null) throw new CommandException("Migration snapshot report file is required.");
-		if (approvalFile == null) throw new CommandException("Migration snapshot approval file is required.");
+		if (reportFile == null)
+			throw new CommandException("Migration snapshot report file is required.");
+		if (approvalFile == null)
+			throw new CommandException("Migration snapshot approval file is required.");
 		final var io = new MigrationSnapshotExecutionReportIO();
 		report = io.read(reportFile.toPath());
 		approval = io.verifyApproval(report, approvalFile.toPath());

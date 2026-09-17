@@ -19,7 +19,8 @@ public final class MigrationSnapshotExecutionReportIO {
 			final var converter = converter();
 			AtomicMigrationFile.write(absolute, temporary -> converter.writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
-			if (e instanceof CommandException commandException) throw commandException;
+			if (e instanceof CommandException commandException)
+				throw commandException;
 			throw new CommandException("Failed to write migration snapshot report: " + absolute, e);
 		}
 	}
@@ -32,7 +33,8 @@ public final class MigrationSnapshotExecutionReportIO {
 		try {
 			return validate(converter().fromJsonString(absolute.toFile(), MigrationSnapshotExecutionReport.class));
 		} catch (RuntimeException e) {
-			if (e instanceof CommandException commandException) throw commandException;
+			if (e instanceof CommandException commandException)
+				throw commandException;
 			throw new CommandException("Failed to read migration snapshot report: " + absolute, e);
 		}
 	}
@@ -134,8 +136,8 @@ public final class MigrationSnapshotExecutionReportIO {
 		nonBlank(report.executorClassName(), "executorClassName");
 		columns(report.keyColumns(), "keyColumns");
 		columns(report.trackedColumns(), "trackedColumns");
-		if (report.fetchSize() <= 0 || report.batchSize() <= 0 || report.expiredRows() < 0
-				|| report.insertedRows() < 0 || report.unchangedRows() < 0) {
+		if (report.fetchSize() <= 0 || report.batchSize() <= 0 || report.expiredRows() < 0 || report.insertedRows() < 0
+				|| report.unchangedRows() < 0) {
 			throw new CommandException("Migration snapshot report contains invalid sizes or counts");
 		}
 		return report;
@@ -149,11 +151,13 @@ public final class MigrationSnapshotExecutionReportIO {
 	}
 
 	private static void required(final Object value, final String name) {
-		if (value == null) throw new CommandException("Migration snapshot report requires " + name);
+		if (value == null)
+			throw new CommandException("Migration snapshot report requires " + name);
 	}
 
 	private static void nonBlank(final String value, final String name) {
-		if (value == null || value.isBlank()) throw new CommandException("Migration snapshot report requires " + name);
+		if (value == null || value.isBlank())
+			throw new CommandException("Migration snapshot report requires " + name);
 	}
 
 	private static void matches(final Object approval, final Object execution, final String name) {

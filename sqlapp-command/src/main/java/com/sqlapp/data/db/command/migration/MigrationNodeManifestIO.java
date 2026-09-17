@@ -15,7 +15,9 @@ import com.sqlapp.data.schemas.migration.MigrationNodeManifest;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
 
-/** Atomically persists the state artifact consumed by selective migration runs. */
+/**
+ * Atomically persists the state artifact consumed by selective migration runs.
+ */
 public final class MigrationNodeManifestIO {
 
 	public MigrationNodeManifest read(final Path file) {
@@ -55,8 +57,8 @@ public final class MigrationNodeManifestIO {
 			}
 			for (final String dependency : node.dependencies()) {
 				if (!manifest.nodes().containsKey(dependency)) {
-					throw new CommandException("Migration node dependency is missing: " + node.id() + " -> "
-							+ dependency);
+					throw new CommandException(
+							"Migration node dependency is missing: " + node.id() + " -> " + dependency);
 				}
 			}
 		}

@@ -43,11 +43,13 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 	protected void doRun() {
 		result = null;
 		report = null;
-		if (getDataSource() == null) throw new CommandException("Migration snapshot target data source is required.");
-		if (sourceDataSource == null) throw new CommandException("Migration snapshot source data source is required.");
+		if (getDataSource() == null)
+			throw new CommandException("Migration snapshot target data source is required.");
+		if (sourceDataSource == null)
+			throw new CommandException("Migration snapshot source data source is required.");
 		final java.time.Instant startedAt = clock.instant();
-		final var resolved = new MigrationSnapshotConfigurationResolver(
-				Clock.fixed(startedAt, ZoneOffset.UTC)).resolve(configurationFile);
+		final var resolved = new MigrationSnapshotConfigurationResolver(Clock.fixed(startedAt, ZoneOffset.UTC))
+				.resolve(configurationFile);
 		try {
 			execute(sourceDataSource, source -> executeNoTranAndClose(getDataSource(), target -> {
 				final var dialect = DialectResolver.getInstance().getDialect(target);
@@ -57,8 +59,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 				report = new MigrationSnapshotExecutionReport(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION,
 						clock.instant(), startedAt, resolved.definition().id(), resolved.configurationFingerprint(),
 						resolved.approvalGeneratedAt(), resolved.approvalArtifactFingerprint(),
-						name(resolved.sourceTable()),
-						name(resolved.targetTable()), resolved.definition().keyColumns(),
+						name(resolved.sourceTable()), name(resolved.targetTable()), resolved.definition().keyColumns(),
 						resolved.definition().trackedColumns(), resolved.definition().expireMissingRows(),
 						resolved.effectiveAt(), resolved.fetchSize(), resolved.batchSize(), resolved.approvalValidFor(),
 						MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()),
@@ -92,7 +93,8 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 			throws java.sql.SQLException {
 		final var lease = resolved.leaseConfiguration();
 		if (lease == null) {
-			return executeSnapshot(source, target, resolved, com.sqlapp.jdbc.bulk.MigrationSnapshotExecutionGuard.NO_OP);
+			return executeSnapshot(source, target, resolved,
+					com.sqlapp.jdbc.bulk.MigrationSnapshotExecutionGuard.NO_OP);
 		}
 		if (lease.mode() == BulkMigrationJobLeaseMode.FILE) {
 			return executeSnapshotWithLease(source, target, resolved,
@@ -128,16 +130,19 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 	private void writeFailure(final MigrationSnapshotConfigurationResolver.Resolution resolved,
 			final java.time.Instant startedAt, final MigrationSnapshotFailurePhase phase,
 			final RuntimeException failure) {
-		if (resolved.failureReportFile() == null) return;
+		if (resolved.failureReportFile() == null)
+			return;
 		final String message = failure.getMessage() == null || failure.getMessage().isBlank()
-				? failure.getClass().getName() : failure.getMessage();
+				? failure.getClass().getName()
+				: failure.getMessage();
 		final String bounded = message.length() <= MigrationSnapshotFailureReportIO.FAILURE_MESSAGE_MAX_LENGTH ? message
 				: message.substring(0, MigrationSnapshotFailureReportIO.FAILURE_MESSAGE_MAX_LENGTH);
-		final var failureReport = new MigrationSnapshotFailureReport(MigrationSnapshotFailureReport.CURRENT_FORMAT_VERSION,
-				clock.instant(), startedAt, phase, resolved.definition().id(), resolved.configurationFingerprint(),
-				resolved.approvalGeneratedAt(), resolved.approvalArtifactFingerprint(), name(resolved.sourceTable()),
-				name(resolved.targetTable()), resolved.effectiveAt(),
-				MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()), failure.getClass().getName(), bounded);
+		final var failureReport = new MigrationSnapshotFailureReport(
+				MigrationSnapshotFailureReport.CURRENT_FORMAT_VERSION, clock.instant(), startedAt, phase,
+				resolved.definition().id(), resolved.configurationFingerprint(), resolved.approvalGeneratedAt(),
+				resolved.approvalArtifactFingerprint(), name(resolved.sourceTable()), name(resolved.targetTable()),
+				resolved.effectiveAt(), MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()),
+				failure.getClass().getName(), bounded);
 		try {
 			new MigrationSnapshotFailureReportIO().write(resolved.failureReportFile(), failureReport);
 			info("Migration snapshot failure report: ", resolved.failureReportFile());
@@ -148,8 +153,10 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 
 	private static String name(final Table table) {
 		final var parts = new java.util.ArrayList<String>();
-		if (table.getCatalogName() != null) parts.add(table.getCatalogName());
-		if (table.getSchemaName() != null) parts.add(table.getSchemaName());
+		if (table.getCatalogName() != null)
+			parts.add(table.getCatalogName());
+		if (table.getSchemaName() != null)
+			parts.add(table.getSchemaName());
 		parts.add(table.getName());
 		return String.join(".", parts);
 	}

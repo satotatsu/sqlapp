@@ -103,9 +103,9 @@ public final class FileBulkMigrationJobLeaseStore implements BulkMigrationJobLea
 			if (!jobId.equals(required(values, "jobId"))) {
 				throw new IllegalArgumentException("lease jobId does not match its file");
 			}
-			return Optional.of(new BulkMigrationJobLease(jobId, required(values, "planFingerprint"),
-					required(values, "ownerId"), required(values, "acquisitionId"),
-					Instant.parse(required(values, "expiresAt"))));
+			return Optional.of(
+					new BulkMigrationJobLease(jobId, required(values, "planFingerprint"), required(values, "ownerId"),
+							required(values, "acquisitionId"), Instant.parse(required(values, "expiresAt"))));
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration job lease: " + file, e);
 		}

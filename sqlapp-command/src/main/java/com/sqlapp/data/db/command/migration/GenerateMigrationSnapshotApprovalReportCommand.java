@@ -9,7 +9,10 @@ import com.sqlapp.exceptions.CommandException;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Generates a connection-free review artifact from snapshot YAML and Schema XML. */
+/**
+ * Generates a connection-free review artifact from snapshot YAML and Schema
+ * XML.
+ */
 @Getter
 @Setter
 public class GenerateMigrationSnapshotApprovalReportCommand extends AbstractCommand {

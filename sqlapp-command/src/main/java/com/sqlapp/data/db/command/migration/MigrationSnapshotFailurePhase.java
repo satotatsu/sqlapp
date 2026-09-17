@@ -5,8 +5,13 @@ package com.sqlapp.data.db.command.migration;
 public enum MigrationSnapshotFailurePhase {
 	/** Target execution failed; the executor rolled its target transaction back. */
 	DATABASE_EXECUTION,
-	/** Target execution committed, but command finalization failed before success publication. */
+	/**
+	 * Target execution committed, but command finalization failed before success
+	 * publication.
+	 */
 	POST_COMMIT_FINALIZATION,
-	/** Target execution committed, but the success artifact could not be published. */
+	/**
+	 * Target execution committed, but the success artifact could not be published.
+	 */
 	SUCCESS_REPORT_WRITE
 }

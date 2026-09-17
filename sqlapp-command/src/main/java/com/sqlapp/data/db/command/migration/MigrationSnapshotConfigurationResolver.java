@@ -36,8 +36,9 @@ public final class MigrationSnapshotConfigurationResolver {
 	public record Resolution(Table sourceTable, Table targetTable, MigrationSnapshotDefinition definition,
 			java.time.Instant effectiveAt, int fetchSize, int batchSize, String configurationFingerprint,
 			Duration approvalValidFor, java.nio.file.Path approvalReportFile, java.time.Instant approvalGeneratedAt,
-			String approvalArtifactFingerprint, java.nio.file.Path reportFile,
-			java.nio.file.Path failureReportFile, BulkMigrationJobLeaseConfiguration leaseConfiguration) { }
+			String approvalArtifactFingerprint, java.nio.file.Path reportFile, java.nio.file.Path failureReportFile,
+			BulkMigrationJobLeaseConfiguration leaseConfiguration) {
+	}
 
 	public Resolution resolve(final File configurationFile) {
 		return resolve(configurationFile, true);
@@ -61,8 +62,8 @@ public final class MigrationSnapshotConfigurationResolver {
 		if (value.getFetchSize() <= 0 || value.getBatchSize() <= 0) {
 			throw new CommandException("fetchSize and batchSize must be greater than zero.");
 		}
-		if (value.getApprovalValidFor() != null && (value.getApprovalValidFor().isZero()
-				|| value.getApprovalValidFor().isNegative())) {
+		if (value.getApprovalValidFor() != null
+				&& (value.getApprovalValidFor().isZero() || value.getApprovalValidFor().isNegative())) {
 			throw new CommandException("approvalValidFor must be greater than zero.");
 		}
 		final File schemaFile = resolve(configurationFile, value.getSchemaFile());
@@ -71,9 +72,9 @@ public final class MigrationSnapshotConfigurationResolver {
 		final Table target = findTable(tables, value.getTargetTable(), "targetTable");
 		final MigrationSnapshotDefinition definition;
 		try {
-			definition = new MigrationSnapshotDefinition(value.getSourceTable(), target.getName(), value.getKeyColumns(),
-					value.getTrackedColumns(), value.getValidFromColumn(), value.getValidToColumn(),
-					value.getCurrentColumn(), value.isExpireMissingRows());
+			definition = new MigrationSnapshotDefinition(value.getSourceTable(), target.getName(),
+					value.getKeyColumns(), value.getTrackedColumns(), value.getValidFromColumn(),
+					value.getValidToColumn(), value.getCurrentColumn(), value.isExpireMissingRows());
 		} catch (IllegalArgumentException e) {
 			throw new CommandException("Invalid migration snapshot definition: " + e.getMessage(), e);
 		}
@@ -90,38 +91,41 @@ public final class MigrationSnapshotConfigurationResolver {
 			final var current = target.getColumns().get(definition.currentColumn());
 			if (current.getDataType() == null
 					|| !(current.getDataType().isBoolean() || current.getDataType().isNumeric())) {
-				throw new CommandException("Snapshot currentColumn must be boolean or numeric: "
-						+ definition.currentColumn());
+				throw new CommandException(
+						"Snapshot currentColumn must be boolean or numeric: " + definition.currentColumn());
 			}
 		}
 		final java.nio.file.Path reportFile = value.getReportFile() == null || value.getReportFile().isBlank() ? null
 				: resolve(configurationFile, value.getReportFile()).toPath().toAbsolutePath().normalize();
 		final java.nio.file.Path failureReportFile = value.getFailureReportFile() == null
 				|| value.getFailureReportFile().isBlank() ? null
-						: resolve(configurationFile, value.getFailureReportFile()).toPath().toAbsolutePath().normalize();
+						: resolve(configurationFile, value.getFailureReportFile()).toPath().toAbsolutePath()
+								.normalize();
 		final String fingerprint = MigrationSnapshotConfigurationFingerprint.calculate(source, target, definition,
 				value.getEffectiveAt(), value.getFetchSize(), value.getBatchSize(), value.getApprovalValidFor());
 		final BulkMigrationJobLeaseConfiguration leaseConfiguration = lease(configurationFile, value.getLease());
 		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
 				|| value.getApprovalReportFile().isBlank() ? null
-						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
+						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath()
+								.normalize();
 		Resolution resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-				value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile, null, null, reportFile,
-				failureReportFile, leaseConfiguration);
+				value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile, null, null,
+				reportFile, failureReportFile, leaseConfiguration);
 		if (validateApproval && approvalReportFile != null) {
 			final var artifact = new MigrationSnapshotApprovalReportIO().readApproved(approvalReportFile, resolution);
 			validateApprovalTime(artifact.report(), value.getApprovalValidFor());
 			resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
 					value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile,
-					artifact.report().generatedAt(),
-					artifact.artifactFingerprint(), reportFile, failureReportFile, leaseConfiguration);
+					artifact.report().generatedAt(), artifact.artifactFingerprint(), reportFile, failureReportFile,
+					leaseConfiguration);
 		}
 		return resolution;
 	}
 
 	private static BulkMigrationJobLeaseConfiguration lease(final File configurationFile,
 			final MigrationSnapshotConfiguration.Lease value) {
-		if (value == null) return null;
+		if (value == null)
+			return null;
 		if (value.getMode() == null) {
 			throw new CommandException("lease.mode is required in migration snapshot configuration.");
 		}
@@ -134,8 +138,10 @@ public final class MigrationSnapshotConfigurationResolver {
 		try {
 			if (value.getMode() == BulkMigrationJobLeaseMode.DATABASE) {
 				final String table = value.getTableName() == null || value.getTableName().isBlank()
-						? JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME : value.getTableName();
-				return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(), duration, table, null);
+						? JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME
+						: value.getTableName();
+				return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(), duration, table,
+						null);
 			}
 			if (value.getDirectory() == null || value.getDirectory().isBlank()) {
 				throw new CommandException("lease.directory is required for FILE lease mode.");
@@ -179,33 +185,48 @@ public final class MigrationSnapshotConfigurationResolver {
 	}
 
 	private static List<Table> readTables(final File file) {
-		if (!file.isFile()) throw new CommandException("Schema XML does not exist: " + file);
-		try { return tables(SchemaUtils.readXml(file)); }
-		catch (IOException e) { throw new CommandException("Failed to read Schema XML: " + file, e); }
+		if (!file.isFile())
+			throw new CommandException("Schema XML does not exist: " + file);
+		try {
+			return tables(SchemaUtils.readXml(file));
+		} catch (IOException e) {
+			throw new CommandException("Failed to read Schema XML: " + file, e);
+		}
 	}
 
 	private static List<Table> tables(final DbCommonObject<?> root) {
-		if (root instanceof Table table) return List.of(table);
-		if (root instanceof TableCollection collection) return List.copyOf(collection);
-		if (root instanceof Schema schema) return List.copyOf(schema.getTables());
-		if (root instanceof SchemaCollection schemas) return schemas.stream().flatMap(x -> x.getTables().stream()).toList();
-		if (root instanceof Catalog catalog) return catalog.getSchemas().stream().flatMap(x -> x.getTables().stream()).toList();
+		if (root instanceof Table table)
+			return List.of(table);
+		if (root instanceof TableCollection collection)
+			return List.copyOf(collection);
+		if (root instanceof Schema schema)
+			return List.copyOf(schema.getTables());
+		if (root instanceof SchemaCollection schemas)
+			return schemas.stream().flatMap(x -> x.getTables().stream()).toList();
+		if (root instanceof Catalog catalog)
+			return catalog.getSchemas().stream().flatMap(x -> x.getTables().stream()).toList();
 		throw new CommandException("Schema XML must contain tables.");
 	}
 
 	private static Table findTable(final List<Table> tables, final String name, final String property) {
-		if (name == null || name.isBlank()) throw new CommandException(property + " is required.");
+		if (name == null || name.isBlank())
+			throw new CommandException(property + " is required.");
 		final String[] parts = name.split("\\.", -1);
-		if (parts.length > 3) throw new CommandException("Invalid " + property + ": " + name);
+		if (parts.length > 3)
+			throw new CommandException("Invalid " + property + ": " + name);
 		final List<Table> matches = tables.stream().filter(t -> matches(t, parts)).toList();
-		if (matches.isEmpty()) throw new CommandException(property + " was not found in Schema XML: " + name);
-		if (matches.size() > 1) throw new CommandException("Ambiguous " + property + " in Schema XML: " + name);
+		if (matches.isEmpty())
+			throw new CommandException(property + " was not found in Schema XML: " + name);
+		if (matches.size() > 1)
+			throw new CommandException("Ambiguous " + property + " in Schema XML: " + name);
 		return matches.getFirst();
 	}
 
 	private static boolean matches(final Table table, final String[] parts) {
-		if (!equalsName(table.getName(), parts[parts.length - 1])) return false;
-		if (parts.length >= 2 && !equalsName(table.getSchemaName(), parts[parts.length - 2])) return false;
+		if (!equalsName(table.getName(), parts[parts.length - 1]))
+			return false;
+		if (parts.length >= 2 && !equalsName(table.getSchemaName(), parts[parts.length - 2]))
+			return false;
 		return parts.length < 3 || equalsName(table.getCatalogName(), parts[0]);
 	}
 

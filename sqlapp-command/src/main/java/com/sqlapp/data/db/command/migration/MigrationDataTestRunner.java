@@ -21,14 +21,16 @@ import com.sqlapp.jdbc.sql.JdbcQueryHandler;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.SqlParser;
 
-/** Executes failure-row queries using sqlapp's existing SQL comment templates. */
+/**
+ * Executes failure-row queries using sqlapp's existing SQL comment templates.
+ */
 public final class MigrationDataTestRunner {
 
 	private MigrationDataTestRunner() {
 	}
 
-	public static List<MigrationDataTestResult> run(final Connection connection,
-			final List<MigrationDataTest> tests) throws SQLException {
+	public static List<MigrationDataTestResult> run(final Connection connection, final List<MigrationDataTest> tests)
+			throws SQLException {
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final List<MigrationDataTestResult> results = new ArrayList<>();
 		for (final MigrationDataTest test : tests) {
@@ -37,8 +39,8 @@ public final class MigrationDataTestRunner {
 		return List.copyOf(results);
 	}
 
-	static MigrationDataTestResult run(final Connection connection, final Dialect dialect,
-			final MigrationDataTest test) throws SQLException {
+	static MigrationDataTestResult run(final Connection connection, final Dialect dialect, final MigrationDataTest test)
+			throws SQLException {
 		final String sql = sql(dialect, test);
 		final ParametersContext context = new ParametersContext();
 		context.putAll(test.parameters());
@@ -81,8 +83,8 @@ public final class MigrationDataTestRunner {
 		final String table = dialect.getObjectFullName(test.catalogName(), test.schemaName(), test.tableName());
 		final List<String> columns = test.columns().stream().map(dialect::quote).toList();
 		return switch (test.type()) {
-		case NOT_NULL -> "SELECT " + columns.getFirst() + " FROM " + table + " WHERE " + columns.getFirst()
-				+ " IS NULL";
+		case NOT_NULL ->
+			"SELECT " + columns.getFirst() + " FROM " + table + " WHERE " + columns.getFirst() + " IS NULL";
 		case UNIQUE -> "SELECT " + String.join(", ", columns) + ", COUNT(*) FROM " + table + " GROUP BY "
 				+ String.join(", ", columns) + " HAVING COUNT(*) > 1";
 		default -> throw new IllegalArgumentException("Test type requires additional arguments: " + test.type());

@@ -13,19 +13,20 @@ import java.util.List;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.MigrationSnapshotDefinition;
 
-/** Deterministic identity of a resolved SCD2 definition and its table shapes. */
+/**
+ * Deterministic identity of a resolved SCD2 definition and its table shapes.
+ */
 public final class MigrationSnapshotConfigurationFingerprint {
 	private MigrationSnapshotConfigurationFingerprint() {
 	}
 
-	public static String calculate(final Table source, final Table target,
-			final MigrationSnapshotDefinition definition, final Instant effectiveAt, final int fetchSize,
-			final int batchSize, final Duration approvalValidFor) {
+	public static String calculate(final Table source, final Table target, final MigrationSnapshotDefinition definition,
+			final Instant effectiveAt, final int fetchSize, final int batchSize, final Duration approvalValidFor) {
 		try {
 			final MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			update(digest, "sqlapp-migration-snapshot", 1, definition.id(), definition.tableId(), effectiveAt,
-					fetchSize, batchSize, approvalValidFor, definition.expireMissingRows(), definition.validFromColumn(),
-					definition.validToColumn(), definition.currentColumn());
+					fetchSize, batchSize, approvalValidFor, definition.expireMissingRows(),
+					definition.validFromColumn(), definition.validToColumn(), definition.currentColumn());
 			list(digest, definition.keyColumns());
 			list(digest, definition.trackedColumns());
 			table(digest, source);
@@ -38,9 +39,10 @@ public final class MigrationSnapshotConfigurationFingerprint {
 
 	private static void table(final MessageDigest digest, final Table table) {
 		update(digest, table.getCatalogName(), table.getSchemaName(), table.getName(), table.getColumns().size());
-		table.getColumns().forEach(column -> update(digest, column.getName(), column.getDataType(),
-				column.getDataTypeName(), column.getLength(), column.getScale(), column.isNotNull(), column.isIdentity(),
-				column.isHidden(), column.getFormula(), column.getDefaultValue()));
+		table.getColumns()
+				.forEach(column -> update(digest, column.getName(), column.getDataType(), column.getDataTypeName(),
+						column.getLength(), column.getScale(), column.isNotNull(), column.isIdentity(),
+						column.isHidden(), column.getFormula(), column.getDefaultValue()));
 	}
 
 	private static void list(final MessageDigest digest, final List<String> values) {

@@ -17,11 +17,10 @@ public record MigrationCutoverReport(Instant assessedAt, Status status, Duration
 	}
 
 	public enum Status {
-		READY, NOT_READY_SOURCE_EMPTY, NOT_READY_TARGET_EMPTY, NOT_READY_LAG_EXCEEDED,
-		NOT_READY_TARGET_AHEAD, NOT_READY_VERIFICATION_STALE
+		READY, NOT_READY_SOURCE_EMPTY, NOT_READY_TARGET_EMPTY, NOT_READY_LAG_EXCEEDED, NOT_READY_TARGET_AHEAD,
+		NOT_READY_VERIFICATION_STALE
 	}
 
-	public record Freshness(String id, Instant sourceWatermark, Instant targetWatermark, Duration lag,
-			Status status) {
+	public record Freshness(String id, Instant sourceWatermark, Instant targetWatermark, Duration lag, Status status) {
 	}
 }

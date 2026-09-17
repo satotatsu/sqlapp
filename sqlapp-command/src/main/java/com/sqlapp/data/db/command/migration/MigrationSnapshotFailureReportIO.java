@@ -19,7 +19,8 @@ public final class MigrationSnapshotFailureReportIO {
 		try {
 			AtomicMigrationFile.write(absolute, temporary -> converter().writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
-			if (e instanceof CommandException commandException) throw commandException;
+			if (e instanceof CommandException commandException)
+				throw commandException;
 			throw new CommandException("Failed to write migration snapshot failure report: " + absolute, e);
 		}
 	}
@@ -32,7 +33,8 @@ public final class MigrationSnapshotFailureReportIO {
 		try {
 			return validate(converter().fromJsonString(absolute.toFile(), MigrationSnapshotFailureReport.class));
 		} catch (RuntimeException e) {
-			if (e instanceof CommandException commandException) throw commandException;
+			if (e instanceof CommandException commandException)
+				throw commandException;
 			throw new CommandException("Failed to read migration snapshot failure report: " + absolute, e);
 		}
 	}
@@ -112,7 +114,8 @@ public final class MigrationSnapshotFailureReportIO {
 	}
 
 	private static void required(final Object value, final String name) {
-		if (value == null) throw new CommandException("Migration snapshot failure report requires " + name);
+		if (value == null)
+			throw new CommandException("Migration snapshot failure report requires " + name);
 	}
 
 	private static void nonBlank(final String value, final String name) {

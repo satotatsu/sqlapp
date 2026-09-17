@@ -18,7 +18,10 @@ import com.sqlapp.jdbc.sql.JdbcQueryHandler;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.SqlParser;
 
-/** Runs transformation queries against small inline fixtures without materializing a model. */
+/**
+ * Runs transformation queries against small inline fixtures without
+ * materializing a model.
+ */
 public final class MigrationTransformationTestRunner {
 
 	private MigrationTransformationTestRunner() {
@@ -45,7 +48,8 @@ public final class MigrationTransformationTestRunner {
 			}).execute(connection, context);
 			final List<List<String>> expected = new ArrayList<>(test.expectedRows());
 			if (!test.ordered()) {
-				final Comparator<List<String>> comparator = Comparator.comparing(MigrationTransformationTestRunner::key);
+				final Comparator<List<String>> comparator = Comparator
+						.comparing(MigrationTransformationTestRunner::key);
 				expected.sort(comparator);
 				actual.sort(comparator);
 			}
@@ -65,7 +69,7 @@ public final class MigrationTransformationTestRunner {
 	}
 
 	private static String key(final List<String> row) {
-		return row.stream().map(value -> value == null ? "<null>" : value.length() + ":" + value)
-				.reduce("", (left, right) -> left + "|" + right);
+		return row.stream().map(value -> value == null ? "<null>" : value.length() + ":" + value).reduce("",
+				(left, right) -> left + "|" + right);
 	}
 }

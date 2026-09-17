@@ -29,7 +29,8 @@ public final class MigrationSnapshotApprovalReportIO {
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
-	public record ApprovedArtifact(MigrationSnapshotApprovalReport report, String artifactFingerprint) { }
+	public record ApprovedArtifact(MigrationSnapshotApprovalReport report, String artifactFingerprint) {
+	}
 
 	public MigrationSnapshotApprovalReport fromResolution(
 			final MigrationSnapshotConfigurationResolver.Resolution resolution) {
@@ -38,7 +39,8 @@ public final class MigrationSnapshotApprovalReportIO {
 				clock.instant(), resolution.configurationFingerprint(), resolution.definition().id(),
 				name(resolution.sourceTable()), name(resolution.targetTable()), resolution.definition().keyColumns(),
 				resolution.definition().trackedColumns(), resolution.definition().expireMissingRows(),
-				resolution.effectiveAt(), resolution.fetchSize(), resolution.batchSize(), resolution.approvalValidFor()));
+				resolution.effectiveAt(), resolution.fetchSize(), resolution.batchSize(),
+				resolution.approvalValidFor()));
 	}
 
 	public void write(final Path file, final MigrationSnapshotApprovalReport report) {
@@ -47,7 +49,8 @@ public final class MigrationSnapshotApprovalReportIO {
 		try {
 			AtomicMigrationFile.write(absolute, temporary -> converter().writeJsonValue(temporary.toFile(), report));
 		} catch (IOException | RuntimeException e) {
-			if (e instanceof CommandException commandException) throw commandException;
+			if (e instanceof CommandException commandException)
+				throw commandException;
 			throw new CommandException("Failed to write migration snapshot approval report: " + absolute, e);
 		}
 	}
@@ -67,11 +70,12 @@ public final class MigrationSnapshotApprovalReportIO {
 		}
 		try {
 			final byte[] bytes = Files.readAllBytes(absolute);
-			final MigrationSnapshotApprovalReport report = validate(converter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), MigrationSnapshotApprovalReport.class));
+			final MigrationSnapshotApprovalReport report = validate(converter()
+					.fromJsonString(new String(bytes, StandardCharsets.UTF_8), MigrationSnapshotApprovalReport.class));
 			return new ApprovedArtifact(report, sha256(bytes));
 		} catch (IOException | RuntimeException e) {
-			if (e instanceof CommandException commandException) throw commandException;
+			if (e instanceof CommandException commandException)
+				throw commandException;
 			throw new CommandException("Failed to read migration snapshot approval report: " + absolute, e);
 		}
 	}
@@ -147,8 +151,10 @@ public final class MigrationSnapshotApprovalReportIO {
 
 	private static String name(final Table table) {
 		final var parts = new java.util.ArrayList<String>();
-		if (table.getCatalogName() != null) parts.add(table.getCatalogName());
-		if (table.getSchemaName() != null) parts.add(table.getSchemaName());
+		if (table.getCatalogName() != null)
+			parts.add(table.getCatalogName());
+		if (table.getSchemaName() != null)
+			parts.add(table.getSchemaName());
 		parts.add(table.getName());
 		return String.join(".", parts);
 	}
@@ -161,7 +167,8 @@ public final class MigrationSnapshotApprovalReportIO {
 	}
 
 	private static void required(final Object value, final String name) {
-		if (value == null) throw new CommandException("Migration snapshot approval report requires " + name);
+		if (value == null)
+			throw new CommandException("Migration snapshot approval report requires " + name);
 	}
 
 	private static void nonBlank(final String value, final String name) {

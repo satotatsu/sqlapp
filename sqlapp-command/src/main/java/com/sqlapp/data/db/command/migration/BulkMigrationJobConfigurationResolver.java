@@ -103,10 +103,9 @@ public class BulkMigrationJobConfigurationResolver {
 					.migrationId(value(task.getMigrationId(), task.getId())).chunkSize(task.getChunkSize())
 					.mode(task.getIncrementalStrategy() == null ? task.getMode() : task.getIncrementalStrategy().mode())
 					.incrementalStrategy(task.getIncrementalStrategy()).resume(task.isResume())
-					.checkpointMode(task.getCheckpointMode())
-					.checkpointTableName(task.getCheckpointTableName()).sourceFingerprint(task.getSourceFingerprint())
-					.targetFingerprint(task.getTargetFingerprint()).bulkOption(bulk).bulkUpsertOption(upsert)
-					.retryOption(retry).build();
+					.checkpointMode(task.getCheckpointMode()).checkpointTableName(task.getCheckpointTableName())
+					.sourceFingerprint(task.getSourceFingerprint()).targetFingerprint(task.getTargetFingerprint())
+					.bulkOption(bulk).bulkUpsertOption(upsert).retryOption(retry).build();
 			final JdbcBulkMigrationKeysetSource source = task.getKeysetColumns() == null
 					|| task.getKeysetColumns().isEmpty() ? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
 							: new JdbcBulkMigrationKeysetSource(sourceConnection, table, task.getKeysetColumns());

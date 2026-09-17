@@ -111,13 +111,13 @@ public final class BulkMigration {
 	@Builder
 	private BulkMigration(final DataSource source, final DataSource target, final Schema schema,
 			final List<String> tableNames, final String jobId, final BulkMigrationMode mode,
-			final BulkMigrationIncrementalStrategy incrementalStrategy, final Integer chunkSize,
-			final Boolean resume, final String sourceFingerprint, final String targetFingerprint,
-			final String checkpointTableName, final BulkUpsertOption upsertOption,
-			final Map<String, BulkMigrationTableOption> tableOptions, final BulkOption bulkOption,
-			final BulkMigrationRetryOption retryOption, final BulkMigrationJobListener jobListener,
-			final ChunkedBulkMigrationListener chunkListener, final BulkMigrationCheckpointMode checkpointMode,
-			final Path checkpointDirectory, final BulkMigrationCheckpointStore checkpointStore,
+			final BulkMigrationIncrementalStrategy incrementalStrategy, final Integer chunkSize, final Boolean resume,
+			final String sourceFingerprint, final String targetFingerprint, final String checkpointTableName,
+			final BulkUpsertOption upsertOption, final Map<String, BulkMigrationTableOption> tableOptions,
+			final BulkOption bulkOption, final BulkMigrationRetryOption retryOption,
+			final BulkMigrationJobListener jobListener, final ChunkedBulkMigrationListener chunkListener,
+			final BulkMigrationCheckpointMode checkpointMode, final Path checkpointDirectory,
+			final BulkMigrationCheckpointStore checkpointStore,
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration, final BulkMigrationJobLifecycle lifecycle,
 			final Path maintenanceDirectory, final String maintenanceTableName, final Path operationalReportFile,
 			final Path verificationReportFile, final Path repairPlanOnMismatchFile, final Integer maxReportedMismatches,
@@ -130,8 +130,7 @@ public final class BulkMigration {
 				? BulkMigrationIncrementalStrategy.fromMode(mode == null ? BulkMigrationMode.UPSERT : mode)
 				: incrementalStrategy;
 		if (!this.incrementalStrategy.isImplemented()) {
-			throw new IllegalArgumentException("Incremental strategy is not implemented: "
-					+ this.incrementalStrategy);
+			throw new IllegalArgumentException("Incremental strategy is not implemented: " + this.incrementalStrategy);
 		}
 		this.mode = incrementalStrategy == null ? (mode == null ? BulkMigrationMode.UPSERT : mode)
 				: incrementalStrategy.mode();
@@ -527,7 +526,9 @@ public final class BulkMigration {
 		}
 	}
 
-	/** Runs Schema-derived invariants against the current target without mutation. */
+	/**
+	 * Runs Schema-derived invariants against the current target without mutation.
+	 */
 	public List<MigrationDataTestResult> testTarget() throws SQLException {
 		return testTarget(MigrationDataTestPlanner.infer(tables));
 	}
@@ -564,8 +565,7 @@ public final class BulkMigration {
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			requireNoBreakingDrift(MigrationSchemaDriftAssessor.assess(targetConnection, tables));
-			transformationResults = MigrationTransformationTestRunner.run(sourceConnection,
-					immutableTransformations);
+			transformationResults = MigrationTransformationTestRunner.run(sourceConnection, immutableTransformations);
 			requireTransformationTests(transformationResults);
 			preflight = MigrationDataTestRunner.run(sourceConnection, immutableDataTests);
 		}
@@ -595,7 +595,9 @@ public final class BulkMigration {
 		return new ValidatedExecution(execution, preflight, postflight);
 	}
 
-	/** Reads the current target definition and compares it with migration tables. */
+	/**
+	 * Reads the current target definition and compares it with migration tables.
+	 */
 	public SchemaCompatibilityReport assessTargetDrift() throws SQLException {
 		try (Connection connection = target.getConnection()) {
 			return MigrationSchemaDriftAssessor.assess(connection, tables);
@@ -604,9 +606,8 @@ public final class BulkMigration {
 
 	private static void requireNoBreakingDrift(final SchemaCompatibilityReport report) {
 		if (!report.isCompatible()) {
-			final List<String> objects = report.changes().stream()
-					.filter(change -> change.compatibility()
-							== com.sqlapp.data.schemas.migration.SchemaCompatibility.BREAKING)
+			final List<String> objects = report.changes().stream().filter(
+					change -> change.compatibility() == com.sqlapp.data.schemas.migration.SchemaCompatibility.BREAKING)
 					.map(change -> change.objectId() + "." + change.property()).toList();
 			throw new IllegalStateException("Breaking target schema drift detected: " + objects);
 		}
@@ -786,7 +787,10 @@ public final class BulkMigration {
 		}
 	}
 
-	/** Result of transformation, data, execution, verification, and postflight checks. */
+	/**
+	 * Result of transformation, data, execution, verification, and postflight
+	 * checks.
+	 */
 	public record ComprehensiveValidatedExecution(Execution execution,
 			List<MigrationTransformationTestResult> transformations, List<MigrationDataTestResult> preflight,
 			List<MigrationDataTestResult> postflight) {
@@ -884,9 +888,9 @@ public final class BulkMigration {
 				.migrationId(option.getMigrationId() == null || option.getMigrationId().isBlank() ? taskId(table)
 						: option.getMigrationId())
 				.chunkSize(option.getChunkSize() == null ? chunkSize : option.getChunkSize()).mode(mode)
-				.incrementalStrategy(incrementalStrategy).resume(resume)
-				.checkpointMode(checkpointMode(table)).checkpointTableName(checkpointTableName)
-				.sourceFingerprint(sourceFingerprint).targetFingerprint(targetFingerprint).bulkOption(bulkOption(table))
+				.incrementalStrategy(incrementalStrategy).resume(resume).checkpointMode(checkpointMode(table))
+				.checkpointTableName(checkpointTableName).sourceFingerprint(sourceFingerprint)
+				.targetFingerprint(targetFingerprint).bulkOption(bulkOption(table))
 				.bulkUpsertOption(upsertOption(table)).retryOption(retryOption(table)).build();
 	}
 

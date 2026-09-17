@@ -33,7 +33,10 @@ public class MigrationSnapshotConfiguration {
 	private String failureReportFile;
 	private Lease lease;
 
-	/** Optional cross-process fence for one snapshot ID and configuration fingerprint. */
+	/**
+	 * Optional cross-process fence for one snapshot ID and configuration
+	 * fingerprint.
+	 */
 	@Getter
 	@Setter
 	public static class Lease {

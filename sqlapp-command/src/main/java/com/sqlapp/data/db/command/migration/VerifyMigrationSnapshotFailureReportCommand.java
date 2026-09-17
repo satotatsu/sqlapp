@@ -23,8 +23,10 @@ public class VerifyMigrationSnapshotFailureReportCommand extends AbstractCommand
 	protected void doRun() {
 		report = null;
 		approval = null;
-		if (reportFile == null) throw new CommandException("Migration snapshot failure report file is required.");
-		if (approvalFile == null) throw new CommandException("Migration snapshot approval file is required.");
+		if (reportFile == null)
+			throw new CommandException("Migration snapshot failure report file is required.");
+		if (approvalFile == null)
+			throw new CommandException("Migration snapshot approval file is required.");
 		final var io = new MigrationSnapshotFailureReportIO();
 		report = io.read(reportFile.toPath());
 		approval = io.verifyApproval(report, approvalFile.toPath());
