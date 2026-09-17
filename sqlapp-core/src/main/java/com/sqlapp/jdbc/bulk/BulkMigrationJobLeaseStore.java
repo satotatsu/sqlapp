@@ -20,4 +20,12 @@ public interface BulkMigrationJobLeaseStore {
 
 	/** Releases only when both job and owner still match. */
 	void release(String jobId, String ownerId) throws SQLException;
+
+	/** Releases only this exact acquisition. Built-in stores override atomically. */
+	default void release(final BulkMigrationJobLease lease) throws SQLException {
+		final Optional<BulkMigrationJobLease> current = load(lease.jobId());
+		if (current.isPresent() && current.get().acquisitionId().equals(lease.acquisitionId())) {
+			release(lease.jobId(), lease.ownerId());
+		}
+	}
 }

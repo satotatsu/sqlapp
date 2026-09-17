@@ -112,7 +112,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 				var heartbeat = handle.startHeartbeat()) {
 			// Record the committed result before heartbeat shutdown or lease release.
 			// A later cleanup failure is post-commit finalization, never a rollback.
-			result = executeSnapshot(source, target, resolved, heartbeat::check);
+			result = executeSnapshot(source, target, resolved, heartbeat::renewAndCheck);
 			return result;
 		}
 	}

@@ -48,6 +48,7 @@ public final class InMemoryBulkMigrationJobLeaseStore
 		final AtomicBoolean renewed = new AtomicBoolean();
 		leases.computeIfPresent(lease.jobId(), (key, current) -> {
 			if (current.ownerId().equals(lease.ownerId())
+					&& current.acquisitionId().equals(lease.acquisitionId())
 					&& current.planFingerprint().equals(lease.planFingerprint())
 					&& !current.isExpiredAt(now)) {
 				renewed.set(true);
@@ -56,6 +57,13 @@ public final class InMemoryBulkMigrationJobLeaseStore
 			return current;
 		});
 		return renewed.get();
+	}
+
+	@Override
+	public void release(final BulkMigrationJobLease lease) {
+		Objects.requireNonNull(lease, "lease");
+		leases.computeIfPresent(lease.jobId(), (key, current) ->
+				current.acquisitionId().equals(lease.acquisitionId()) ? null : current);
 	}
 
 	@Override

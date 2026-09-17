@@ -101,11 +101,25 @@ public final class JdbcBulkMigrationJobLeaseStore
 					.orElse(null);
 			if (current == null || current.isExpiredAt(now)
 					|| !current.ownerId().equals(lease.ownerId())
+					|| !current.acquisitionId().equals(lease.acquisitionId())
 					|| !current.planFingerprint().equals(lease.planFingerprint())) {
 				return false;
 			}
 			write(lease, SqlType.UPDATE);
 			return true;
+		});
+	}
+
+	@Override
+	public void release(final BulkMigrationJobLease lease) throws SQLException {
+		Objects.requireNonNull(lease, "lease");
+		transaction(() -> {
+			final BulkMigrationJobLease current = loadInternal(lease.jobId()).orElse(null);
+			if (current != null && current.acquisitionId().equals(lease.acquisitionId())) {
+				new JdbcHandler(sqlNodes.get(SqlType.DELETE)).execute(connection,
+						JdbcBulkMigrationJobLeaseTable.parameters(lease.jobId()));
+			}
+			return null;
 		});
 	}
 

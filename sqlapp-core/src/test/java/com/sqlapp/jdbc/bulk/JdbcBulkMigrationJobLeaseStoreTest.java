@@ -70,7 +70,8 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 				try (var statement = connection.createStatement()) {
 					statement.execute("CREATE TABLE " + table
 							+ " (JOB_ID VARCHAR(256) NOT NULL, PLAN_FINGERPRINT VARCHAR(256) NOT NULL,"
-							+ " OWNER_ID VARCHAR(256) NOT NULL, EXPIRES_AT VARCHAR(40) NOT NULL"
+							+ " OWNER_ID VARCHAR(256) NOT NULL, ACQUISITION_ID VARCHAR(256) NOT NULL,"
+							+ " EXPIRES_AT VARCHAR(40) NOT NULL"
 							+ ("COMPOSITE".equals(suffix)
 									? ", PRIMARY KEY (JOB_ID, OWNER_ID)" : "") + ")");
 				}
@@ -97,14 +98,15 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
 					"SQLAPP_BML_CORRUPT");
 			try (var statement = connection.prepareStatement(
-					"INSERT INTO SQLAPP_BML_CORRUPT VALUES (?, ?, ?, ?)")) {
+					"INSERT INTO SQLAPP_BML_CORRUPT VALUES (?, ?, ?, ?, ?)")) {
 				for (String[] values : new String[][] {
 						{ "bad-time", "owner", "not-an-instant" },
 						{ "bad-owner", " ", "2026-08-31T12:00:00Z" } }) {
 					statement.setString(1, values[0]);
 					statement.setString(2, "plan");
 					statement.setString(3, values[1]);
-					statement.setString(4, values[2]);
+					statement.setString(4, "token");
+					statement.setString(5, values[2]);
 					statement.executeUpdate();
 					assertThrows(SQLException.class, () -> writer.load(values[0]));
 					assertThrows(SQLException.class, () -> reader.load(values[0]));
@@ -221,13 +223,34 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 			first.release("job", "owner-1");
 			assertEquals("owner-2", first.load("job").orElseThrow().ownerId());
 			assertTrue(second.renew(new BulkMigrationJobLease("job", "changed-plan", "owner-2",
-					now.plusSeconds(90)), now.plusSeconds(31)));
-			second.release("job", "owner-2");
+					owner2.acquisitionId(), now.plusSeconds(90)), now.plusSeconds(31)));
+			second.release(owner2);
 			assertTrue(first.load("job").isEmpty());
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
 				closeable.close();
 			}
+		}
+	}
+
+	@Test
+	void acquisitionTokenFencesAStaleJdbcProcessWithTheSameOwnerId() throws Exception {
+		final var dataSource = createDataSource();
+		try (var firstConnection = dataSource.getConnection(); var secondConnection = dataSource.getConnection()) {
+			final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection, "SQLAPP_BML_TOKEN");
+			final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection, "SQLAPP_BML_TOKEN");
+			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
+			final var stale = new BulkMigrationJobLease("job", "plan", "shared", "old-token", now);
+			final var replacement = new BulkMigrationJobLease("job", "plan", "shared", "new-token",
+					now.plusSeconds(30));
+			assertTrue(first.tryAcquire(stale, now.minusSeconds(1)));
+			assertTrue(second.tryAcquire(replacement, now));
+			assertFalse(first.renew(new BulkMigrationJobLease("job", "plan", "shared", "old-token",
+					now.plusSeconds(60)), now));
+			first.release(stale);
+			assertEquals("new-token", second.load("job").orElseThrow().acquisitionId());
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) closeable.close();
 		}
 	}
 }

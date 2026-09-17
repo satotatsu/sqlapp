@@ -60,17 +60,12 @@ public final class BulkMigrationJobLeaseManager {
 	public LeaseHandle acquire(final String jobId, final String planFingerprint)
 			throws SQLException {
 		final Instant now = Instant.now(clock);
-		final BulkMigrationJobLease lease = lease(jobId, planFingerprint, now);
+		final BulkMigrationJobLease lease = new BulkMigrationJobLease(jobId, planFingerprint, ownerId,
+				java.util.UUID.randomUUID().toString(), now.plus(duration));
 		if (!store.tryAcquire(lease, now)) {
 			throw new BulkMigrationJobLeaseUnavailableException(jobId);
 		}
 		return new LeaseHandle(lease);
-	}
-
-	private BulkMigrationJobLease lease(final String jobId,
-			final String planFingerprint, final Instant now) {
-		return new BulkMigrationJobLease(jobId, planFingerprint, ownerId,
-				now.plus(duration));
 	}
 
 	public final class LeaseHandle implements AutoCloseable {
@@ -90,8 +85,8 @@ public final class BulkMigrationJobLeaseManager {
 				throw new IllegalStateException("Migration job lease is already closed");
 			}
 			final Instant now = Instant.now(clock);
-			final BulkMigrationJobLease renewed = lease(lease.jobId(),
-					lease.planFingerprint(), now);
+			final BulkMigrationJobLease renewed = new BulkMigrationJobLease(lease.jobId(),
+					lease.planFingerprint(), lease.ownerId(), lease.acquisitionId(), now.plus(duration));
 			if (!store.renew(renewed, now)) {
 				throw new BulkMigrationJobLeaseUnavailableException(
 						lease.jobId());
@@ -130,7 +125,7 @@ public final class BulkMigrationJobLeaseManager {
 		@Override
 		public synchronized void close() throws SQLException {
 			if (!closed) {
-				store.release(lease.jobId(), lease.ownerId());
+				store.release(lease);
 				closed = true;
 			}
 		}

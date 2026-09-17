@@ -1055,9 +1055,11 @@ recovery before ordinary resume.
 For execution fencing, `BulkMigrationJobLeaseStore` defines an atomic,
 owner-aware lease contract shared by database and file-backed implementations.
 `BulkMigrationJobLeaseManager` acquires a lease for the immutable plan
-fingerprint, renews it with the same owner ID, and releases it idempotently.
+fingerprint, assigns a unique acquisition token, renews that exact acquisition,
+and releases it idempotently.
 Only an absent or expired lease may be acquired; an expired or replaced lease
-cannot be renewed or released by its former owner. The process-local
+cannot be renewed or released by its former process, even when a replacement
+process intentionally reuses the same configured owner ID. The process-local
 `InMemoryBulkMigrationJobLeaseStore` is intended for tests and single-process
 execution, not coordination between application instances.
 The lease-aware `BulkMigrationJobExecutor.executePlan` overload acquires the
@@ -1069,10 +1071,11 @@ failed. Configure the lease duration above the maximum expected duration of a
 single chunk because renewal occurs at chunk boundaries rather than on a
 background thread.
 `JdbcBulkMigrationJobLeaseStore` is the multi-process default building block.
-An existing JDBC lease table must have `PLAN_FINGERPRINT` as its sole primary-key
+An existing JDBC lease table must have `JOB_ID` as its sole primary-key
 column. Both stores reject missing or composite primary keys, which would allow
 multiple owners to be stored for the same plan. Automatically created tables
-already use this structure.
+already use this structure. Its required columns are `JOB_ID`,
+`PLAN_FINGERPRINT`, `OWNER_ID`, `ACQUISITION_ID`, and `EXPIRES_AT`.
 Lease metadata lookup rejects ambiguous table matches, including names that
 differ only in case. Ensure that the connection's catalog and schema identify
 a single lease table; metadata from multiple tables is never combined.
@@ -1270,7 +1273,9 @@ sharing a filesystem directory; `DATABASE` mode uses a dedicated auto-commit
 connection to the target and the configured lease table. A background
 heartbeat renews the lease during source streaming and target DML. Every shared
 executor checks the heartbeat after post-DML invariant validation and
-immediately before commit, so detected lease loss rolls back the complete
+immediately before commit. That fence performs a synchronous renewal rather
+than relying only on the last background result, so an intervening JVM pause,
+expiry, or ownership loss rolls back the complete
 snapshot. Custom set-based executors that have not implemented this commit-time
 guard reject guarded execution instead of silently weakening the fence.
 Configuration resolution verifies from the Schema model that both validity

@@ -36,7 +36,7 @@ class BulkMigrationJobLeaseManagerTest {
 		store.release("job", "owner-2");
 		assertEquals("owner-1", store.load("job").orElseThrow().ownerId());
 		assertTrue(store.renew(new BulkMigrationJobLease("job", "plan", "owner-1",
-				NOW.plusSeconds(60)), NOW));
+				first.acquisitionId(), NOW.plusSeconds(60)), NOW));
 		store.release("job", "owner-1");
 		assertTrue(store.load("job").isEmpty());
 	}
@@ -51,6 +51,21 @@ class BulkMigrationJobLeaseManagerTest {
 		assertFalse(store.renew(new BulkMigrationJobLease("job", "plan", "old",
 				NOW.plusSeconds(60)), NOW));
 		assertEquals("new", store.load("job").orElseThrow().ownerId());
+	}
+
+	@Test
+	void acquisitionTokenFencesAStaleProcessReusingTheSameOwnerId() throws Exception {
+		final var store = new InMemoryBulkMigrationJobLeaseStore();
+		final var stale = new BulkMigrationJobLease("job", "plan", "shared-owner", "old-token", NOW);
+		final var replacement = new BulkMigrationJobLease("job", "plan", "shared-owner", "new-token",
+				NOW.plusSeconds(30));
+		assertTrue(store.tryAcquire(stale, NOW.minusSeconds(1)));
+		assertTrue(store.tryAcquire(replacement, NOW));
+
+		assertFalse(store.renew(new BulkMigrationJobLease("job", "plan", "shared-owner", "old-token",
+				NOW.plusSeconds(60)), NOW));
+		store.release(stale);
+		assertEquals("new-token", store.load("job").orElseThrow().acquisitionId());
 	}
 
 	@Test
@@ -212,6 +227,30 @@ class BulkMigrationJobLeaseManagerTest {
 					() -> handle.startHeartbeat(Duration.ofSeconds(3)));
 			assertThrows(IllegalArgumentException.class,
 					() -> handle.startHeartbeat(Duration.ZERO));
+		}
+	}
+
+	@Test
+	void commitFencePerformsASynchronousRenewal() throws Exception {
+		final var delegate = new InMemoryBulkMigrationJobLeaseStore();
+		final var renewals = new AtomicInteger();
+		final BulkMigrationJobLeaseStore store = new BulkMigrationJobLeaseStore() {
+			@Override public Optional<BulkMigrationJobLease> load(String jobId) { return delegate.load(jobId); }
+			@Override public boolean tryAcquire(BulkMigrationJobLease lease, Instant now) {
+				return delegate.tryAcquire(lease, now);
+			}
+			@Override public boolean renew(BulkMigrationJobLease lease, Instant now) {
+				renewals.incrementAndGet();
+				return delegate.renew(lease, now);
+			}
+			@Override public void release(String jobId, String ownerId) { delegate.release(jobId, ownerId); }
+		};
+		final var manager = new BulkMigrationJobLeaseManager(store, "owner", Duration.ofSeconds(30),
+				Clock.fixed(NOW, ZoneOffset.UTC));
+		try (var handle = manager.acquire("job", "plan");
+				var heartbeat = handle.startHeartbeat(Duration.ofSeconds(10))) {
+			heartbeat.renewAndCheck();
+			assertEquals(1, renewals.get());
 		}
 	}
 }

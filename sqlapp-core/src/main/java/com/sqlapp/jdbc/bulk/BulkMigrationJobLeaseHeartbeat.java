@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /** Background renewal for chunks that may run longer than a lease interval. */
 public final class BulkMigrationJobLeaseHeartbeat implements AutoCloseable {
+	private final BulkMigrationJobLeaseManager.LeaseHandle handle;
 	private final ScheduledExecutorService executor;
 	private final AtomicReference<Throwable> failure = new AtomicReference<>();
 	private final Object renewalMonitor = new Object();
@@ -20,6 +21,7 @@ public final class BulkMigrationJobLeaseHeartbeat implements AutoCloseable {
 			final Duration interval) {
 		Objects.requireNonNull(handle, "handle");
 		Objects.requireNonNull(interval, "interval");
+		this.handle = handle;
 		executor = Executors.newSingleThreadScheduledExecutor(runnable ->
 				Thread.ofPlatform().daemon().name("sqlapp-bulk-lease-heartbeat").unstarted(
 						runnable));
@@ -40,11 +42,33 @@ public final class BulkMigrationJobLeaseHeartbeat implements AutoCloseable {
 
 	public void check() {
 		synchronized (renewalMonitor) {
-			final Throwable cause = failure.get();
-			if (cause != null) {
-				throw cause instanceof BulkMigrationJobLeaseLostException lost ? lost
-						: new BulkMigrationJobLeaseLostException(cause);
+			throwIfFailed();
+		}
+	}
+
+	/**
+	 * Serializes with the background heartbeat and renews ownership immediately.
+	 * Use this as a commit-time fence so a long JVM or host pause cannot leave the
+	 * final commit relying on an old successful heartbeat.
+	 */
+	public void renewAndCheck() throws SQLException {
+		synchronized (renewalMonitor) {
+			throwIfFailed();
+			try {
+				handle.renew();
+			} catch (SQLException | RuntimeException e) {
+				failure.compareAndSet(null, e);
+				throw e;
 			}
+			throwIfFailed();
+		}
+	}
+
+	private void throwIfFailed() {
+		final Throwable cause = failure.get();
+		if (cause != null) {
+			throw cause instanceof BulkMigrationJobLeaseLostException lost ? lost
+					: new BulkMigrationJobLeaseLostException(cause);
 		}
 	}
 

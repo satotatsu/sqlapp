@@ -13,16 +13,23 @@ import java.util.Objects;
  * @param expiresAt instant at which another owner may acquire the lease
  */
 public record BulkMigrationJobLease(String jobId, String planFingerprint,
-		String ownerId, Instant expiresAt) {
+		String ownerId, String acquisitionId, Instant expiresAt) {
 	public static final int ID_MAX_LENGTH = 256;
 
 	public BulkMigrationJobLease {
 		requireId(jobId, "jobId");
 		requireId(planFingerprint, "planFingerprint");
 		requireId(ownerId, "ownerId");
+		requireId(acquisitionId, "acquisitionId");
 		if (expiresAt == null) {
 			throw new IllegalArgumentException("expiresAt must not be null");
 		}
+	}
+
+	/** Creates a new acquisition with a generated fencing token. */
+	public BulkMigrationJobLease(final String jobId, final String planFingerprint,
+			final String ownerId, final Instant expiresAt) {
+		this(jobId, planFingerprint, ownerId, java.util.UUID.randomUUID().toString(), expiresAt);
 	}
 
 	public boolean isExpiredAt(final Instant instant) {

@@ -34,9 +34,9 @@ class FileBulkMigrationJobLeaseStoreTest {
 		assertFalse(second.renew(owner2, now));
 		assertEquals(owner1, second.load("job").orElseThrow());
 		assertTrue(second.tryAcquire(owner2, now.plusSeconds(30)));
-		first.release("job", "owner-1");
+		first.release(owner1);
 		assertEquals(owner2, first.load("job").orElseThrow());
-		second.release("job", "owner-2");
+		second.release(owner2);
 		assertTrue(first.load("job").isEmpty());
 	}
 
@@ -64,5 +64,21 @@ class FileBulkMigrationJobLeaseStoreTest {
 			start.countDown();
 			assertTrue(firstResult.get() ^ secondResult.get());
 		}
+	}
+
+	@Test
+	void acquisitionTokenFencesAStaleFileProcessWithTheSameOwnerId() throws Exception {
+		final var first = new FileBulkMigrationJobLeaseStore(directory);
+		final var second = new FileBulkMigrationJobLeaseStore(directory);
+		final Instant now = Instant.parse("2026-08-31T12:00:00Z");
+		final var stale = new BulkMigrationJobLease("job", "plan", "shared", "old-token", now);
+		final var replacement = new BulkMigrationJobLease("job", "plan", "shared", "new-token",
+				now.plusSeconds(30));
+		assertTrue(first.tryAcquire(stale, now.minusSeconds(1)));
+		assertTrue(second.tryAcquire(replacement, now));
+		assertFalse(first.renew(new BulkMigrationJobLease("job", "plan", "shared", "old-token",
+				now.plusSeconds(60)), now));
+		first.release(stale);
+		assertEquals("new-token", second.load("job").orElseThrow().acquisitionId());
 	}
 }

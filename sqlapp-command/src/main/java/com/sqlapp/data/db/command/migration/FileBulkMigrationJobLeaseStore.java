@@ -59,11 +59,24 @@ public final class FileBulkMigrationJobLeaseStore implements BulkMigrationJobLea
 		return locked(lease.jobId(), () -> {
 			final BulkMigrationJobLease current = loadFile(lease.jobId()).orElse(null);
 			if (current == null || current.isExpiredAt(now) || !current.ownerId().equals(lease.ownerId())
+					|| !current.acquisitionId().equals(lease.acquisitionId())
 					|| !current.planFingerprint().equals(lease.planFingerprint())) {
 				return false;
 			}
 			write(lease);
 			return true;
+		});
+	}
+
+	@Override
+	public void release(final BulkMigrationJobLease lease) throws SQLException {
+		Objects.requireNonNull(lease, "lease");
+		locked(lease.jobId(), () -> {
+			final BulkMigrationJobLease current = loadFile(lease.jobId()).orElse(null);
+			if (current != null && current.acquisitionId().equals(lease.acquisitionId())) {
+				Files.deleteIfExists(stateFile(lease.jobId()));
+			}
+			return null;
 		});
 	}
 
@@ -91,7 +104,8 @@ public final class FileBulkMigrationJobLeaseStore implements BulkMigrationJobLea
 				throw new IllegalArgumentException("lease jobId does not match its file");
 			}
 			return Optional.of(new BulkMigrationJobLease(jobId, required(values, "planFingerprint"),
-					required(values, "ownerId"), Instant.parse(required(values, "expiresAt"))));
+					required(values, "ownerId"), required(values, "acquisitionId"),
+					Instant.parse(required(values, "expiresAt"))));
 		} catch (IOException | IllegalArgumentException e) {
 			throw new SQLException("Failed to read migration job lease: " + file, e);
 		}
@@ -104,6 +118,7 @@ public final class FileBulkMigrationJobLeaseStore implements BulkMigrationJobLea
 			values.setProperty("jobId", lease.jobId());
 			values.setProperty("planFingerprint", lease.planFingerprint());
 			values.setProperty("ownerId", lease.ownerId());
+			values.setProperty("acquisitionId", lease.acquisitionId());
 			values.setProperty("expiresAt", lease.expiresAt().toString());
 			AtomicMigrationFile.writeProperties(file, values, "sqlapp bulk migration job lease");
 		} catch (IOException e) {
