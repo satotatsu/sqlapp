@@ -35,6 +35,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	private volatile RuntimeException lastFailure;
 	private volatile BulkMigrationOperationalReport.Execution latestExecution;
 	private volatile String leaseAcquisitionId;
+	private volatile boolean leaseAcquiredForAttempt;
 
 	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile) {
 		this(plan, targetFile, () -> null, () -> null);
@@ -89,40 +90,57 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	@Override
 	public void onLeaseAcquired(final BulkMigrationJobLease lease) {
 		leaseAcquisitionId = Objects.requireNonNull(lease, "lease").acquisitionId();
+		leaseAcquiredForAttempt = true;
 	}
 
 	@Override
 	public void onLeaseAcquisitionFailed(final String planFingerprint, final Throwable cause) {
 		leaseAcquisitionId = null;
+		leaseAcquiredForAttempt = false;
 	}
 
 	@Override
 	public void onJobStarted(final String planFingerprint, final int taskCount) {
+		if (!leaseAcquiredForAttempt) {
+			leaseAcquisitionId = null;
+		}
 		publishBoundary(execution("JOB_STARTED", null, null, null));
 	}
 
 	@Override
 	public void onJobRejected(final String planFingerprint, final Throwable cause) {
-		publishBoundary(execution("JOB_REJECTED", null, null, cause));
+		if (!leaseAcquiredForAttempt) {
+			leaseAcquisitionId = null;
+		}
+		terminalBoundary(execution("JOB_REJECTED", null, null, cause));
 	}
 
 	@Override
 	public void onJobCompleted(final BulkMigrationJobResult result) {
-		publishBoundary(execution("JOB_COMPLETED", null, result == null ? null : result.getProcessedRows(), null));
+		terminalBoundary(execution("JOB_COMPLETED", null, result == null ? null : result.getProcessedRows(), null));
 	}
 
 	@Override
 	public void onJobFailed(final String planFingerprint, final Throwable cause) {
 		final String taskId = cause instanceof BulkMigrationJobException jobFailure ? jobFailure.getFailedTaskId()
 				: null;
-		publishBoundary(execution("JOB_FAILED", taskId, null, cause));
+		terminalBoundary(execution("JOB_FAILED", taskId, null, cause));
 	}
 
 	@Override
 	public void onJobPaused(final String planFingerprint, final String taskId,
 			final ChunkedBulkMigrationProgress progress) {
-		publishBoundary(
+		terminalBoundary(
 				execution("JOB_PAUSED", taskId, progress == null ? null : progress.getProcessedRowsAfter(), null));
+	}
+
+	private void terminalBoundary(final BulkMigrationOperationalReport.Execution execution) {
+		try {
+			publishBoundary(execution);
+		} finally {
+			leaseAcquiredForAttempt = false;
+			leaseAcquisitionId = null;
+		}
 	}
 
 	@Override

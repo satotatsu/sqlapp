@@ -547,6 +547,23 @@ class BulkMigrationOperationalReportTest {
 	}
 
 	@Test
+	void reusedJobListenerDoesNotCarryLeaseIntoAnUnleasedAttempt() {
+		final BulkMigrationJobPlan plan = plan(new InMemoryBulkMigrationCheckpointStore());
+		final Path target = directory.resolve("unleased-reuse.json");
+		final var listener = new BulkMigrationOperationalReportJobListener(plan, target);
+		listener.onLeaseAcquired(new BulkMigrationJobLease(plan.getJobId(), plan.getFingerprint(), "worker",
+				"leased-attempt", Instant.now().plusSeconds(60)));
+		listener.onJobStarted(plan.getFingerprint(), 1);
+		listener.onJobCompleted(new BulkMigrationJobResult(plan.getFingerprint(), List.of()));
+
+		listener.onJobStarted(plan.getFingerprint(), 1);
+
+		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
+		assertEquals("JOB_STARTED", execution.event());
+		assertNull(execution.leaseAcquisitionId());
+	}
+
+	@Test
 	@SuppressWarnings("unchecked")
 	void jobListenerCanContinueAfterObservableReportFailure() {
 		final var delegate = new InMemoryBulkMigrationCheckpointStore();

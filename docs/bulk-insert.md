@@ -1074,7 +1074,10 @@ Operational-report events then retain the unique acquisition ID, so two runs
 using the same configured owner remain distinguishable in audit data. A lease
 acquisition failure first invokes `onLeaseAcquisitionFailed` and is then
 published as `JOB_REJECTED` without an acquisition ID;
-it is not silently omitted from the operational report.
+it is not silently omitted from the operational report. The report listener
+clears attempt-local lease state after every terminal job event, so reusing the
+listener for a later unleased or rejected attempt cannot copy an earlier
+acquisition ID into that attempt.
 Failure to renew stops the job with `BulkMigrationJobLeaseLostException`; a
 durably completed chunk is never replayed merely because its post-chunk renewal
 failed. Configure the lease duration above the maximum expected duration of a
