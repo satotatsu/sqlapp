@@ -3,7 +3,6 @@ package com.sqlapp.data.db.command.migration;
 
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Set;
 
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
@@ -11,9 +10,6 @@ import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReport.Execu
 
 /** Makes a conservative, read-only resume decision from a validated report. */
 public final class BulkMigrationOperationalReportResumeAssessor {
-	private static final Set<ExecutionEvent> ACTIVE_EVENTS = Set.of(ExecutionEvent.JOB_STARTED,
-			ExecutionEvent.TASK_STARTED, ExecutionEvent.TASK_COMPLETED);
-
 	private BulkMigrationOperationalReportResumeAssessor() {
 	}
 
@@ -69,7 +65,7 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 	}
 
 	private static boolean activeEvent(final BulkMigrationOperationalReport report) {
-		return report.execution() != null && ACTIVE_EVENTS.contains(report.execution().event());
+		return report.execution() != null && report.execution().event().indicatesPossibleRunning();
 	}
 
 	private static boolean completionConfirmed(final BulkMigrationOperationalReport report) {

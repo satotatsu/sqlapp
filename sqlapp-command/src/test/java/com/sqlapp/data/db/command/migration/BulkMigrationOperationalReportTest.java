@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -133,6 +135,36 @@ class BulkMigrationOperationalReportTest {
 		final Path inconsistentFile = directory.resolve("inconsistent.json");
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(inconsistentFile, inconsistent));
+	}
+
+	@Test
+	void reportIoRejectsUnknownEnumNamesFromJson() throws Exception {
+		final Instant generatedAt = Instant.parse("2026-08-31T10:00:00Z");
+		final BulkMigrationJobPlan plan = plan();
+		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers", BulkMigrationJobTaskState.NOT_STARTED, null)));
+		final var maintenance = new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
+				BulkMigrationMaintenanceStatus.PREPARED, generatedAt.minusSeconds(1), null);
+		final var execution = new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_STARTED, null,
+				generatedAt.minusSeconds(1), null, null, null, null);
+		final var report = new BulkMigrationOperationalReportBuilder(Clock.fixed(generatedAt, ZoneOffset.UTC))
+				.build(plan, status, maintenance, null, execution);
+		final var io = new BulkMigrationOperationalReportIO();
+		final Path valid = directory.resolve("valid-enums.json");
+		io.write(valid, report);
+		final String json = Files.readString(valid, StandardCharsets.UTF_8);
+
+		assertUnknownEnumRejected(io, json, report.tasks().get(0).mode().name(), "UNKNOWN_MODE", "mode");
+		assertUnknownEnumRejected(io, json, report.tasks().get(0).checkpointMode().name(),
+				"UNKNOWN_CHECKPOINT", "checkpoint-mode");
+		assertUnknownEnumRejected(io, json, BulkMigrationJobTaskState.NOT_STARTED.name(),
+				"UNKNOWN_STATE", "task-state");
+		assertUnknownEnumRejected(io, json, BulkMigrationJobOperationPhase.BEFORE.name(),
+				"UNKNOWN_PHASE", "operation-phase");
+		assertUnknownEnumRejected(io, json, BulkMigrationMaintenanceStatus.PREPARED.name(),
+				"UNKNOWN_STATUS", "maintenance-status");
+		assertUnknownEnumRejected(io, json, ExecutionEvent.JOB_STARTED.name(),
+				"UNKNOWN_EVENT", "execution-event");
 	}
 
 	@Test
@@ -897,6 +929,16 @@ class BulkMigrationOperationalReportTest {
 				source.processedRows(), source.completedTasks(), source.totalTasks(),
 				source.tasks(), source.operations(), source.maintenance(), source.progress(),
 				source.progressByMigration(), execution);
+	}
+
+	private void assertUnknownEnumRejected(final BulkMigrationOperationalReportIO io, final String validJson,
+			final String knownValue, final String unknownValue, final String fileStem) throws Exception {
+		final String token = "\"" + knownValue + "\"";
+		assertTrue(validJson.contains(token));
+		final Path file = directory.resolve(fileStem + ".json");
+		Files.writeString(file, validJson.replace(token, "\"" + unknownValue + "\""),
+				StandardCharsets.UTF_8);
+		assertThrows(com.sqlapp.exceptions.CommandException.class, () -> io.read(file));
 	}
 
 	private static BulkMigrationJobPlan plan(

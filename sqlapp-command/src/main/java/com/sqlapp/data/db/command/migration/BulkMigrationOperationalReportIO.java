@@ -234,17 +234,41 @@ public final class BulkMigrationOperationalReportIO {
 		if (execution == null) {
 			return;
 		}
-		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED) {
+		switch (execution.event()) {
+		case JOB_COMPLETED -> validateCompletedJob(report, execution);
+		case TASK_COMPLETED -> validateCompletedTask(report, execution);
+		case TASK_PAUSED, JOB_PAUSED -> validatePausedTask(report, execution);
+		case TASK_FAILED -> validateFailedTask(report, execution);
+		case JOB_FAILED -> {
+			if (execution.taskId() != null) {
+				validateFailedTask(report, execution);
+			}
+		}
+		case TASK_STARTED -> {
+			final BulkMigrationOperationalReport.Task task = task(report, execution.taskId());
+			if (task.state() == BulkMigrationJobTaskState.INCOMPATIBLE) {
+				throw new CommandException("Bulk migration report TASK_STARTED refers to an incompatible task");
+			}
+		}
+		case JOB_STARTED, JOB_REJECTED -> {
+			// No additional state transition evidence is required.
+		}
+		}
+	}
+
+	private static void validateCompletedJob(final BulkMigrationOperationalReport report,
+			final BulkMigrationOperationalReport.Execution execution) {
 			if (report.completedTasks() != report.totalTasks()) {
 				throw new CommandException("Bulk migration report JOB_COMPLETED requires every task to be complete");
 			}
 			if (execution.processedRows() != null && execution.processedRows() != report.processedRows()) {
 				throw new CommandException("Bulk migration report JOB_COMPLETED processedRows mismatch");
 			}
-		}
-		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_COMPLETED) {
-			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
-					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+	}
+
+	private static void validateCompletedTask(final BulkMigrationOperationalReport report,
+			final BulkMigrationOperationalReport.Execution execution) {
+			final BulkMigrationOperationalReport.Task task = task(report, execution.taskId());
 			if (task.state() != BulkMigrationJobTaskState.COMPLETE) {
 				throw new CommandException("Bulk migration report TASK_COMPLETED requires a complete task");
 			}
@@ -252,11 +276,11 @@ public final class BulkMigrationOperationalReportIO {
 					&& execution.processedRows() != task.checkpoint().processedRows()) {
 				throw new CommandException("Bulk migration report TASK_COMPLETED processedRows mismatch");
 			}
-		}
-		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_PAUSED
-				|| execution.event() == BulkMigrationOperationalReport.ExecutionEvent.JOB_PAUSED) {
-			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
-					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+	}
+
+	private static void validatePausedTask(final BulkMigrationOperationalReport report,
+			final BulkMigrationOperationalReport.Execution execution) {
+			final BulkMigrationOperationalReport.Task task = task(report, execution.taskId());
 			if (task.state() != BulkMigrationJobTaskState.IN_PROGRESS) {
 				throw new CommandException("Bulk migration report paused event requires an IN_PROGRESS task");
 			}
@@ -264,24 +288,20 @@ public final class BulkMigrationOperationalReportIO {
 					|| execution.processedRows() != task.checkpoint().processedRows())) {
 				throw new CommandException("Bulk migration report paused processedRows mismatch");
 			}
-		}
-		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_FAILED
-				|| execution.event() == BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED
-						&& execution.taskId() != null) {
-			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
-					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+	}
+
+	private static void validateFailedTask(final BulkMigrationOperationalReport report,
+			final BulkMigrationOperationalReport.Execution execution) {
+			final BulkMigrationOperationalReport.Task task = task(report, execution.taskId());
 			if (task.state() == BulkMigrationJobTaskState.COMPLETE
 					|| task.state() == BulkMigrationJobTaskState.INCOMPATIBLE) {
 				throw new CommandException("Bulk migration report failed event refers to a non-runnable task");
 			}
-		}
-		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_STARTED) {
-			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
-					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
-			if (task.state() == BulkMigrationJobTaskState.INCOMPATIBLE) {
-				throw new CommandException("Bulk migration report TASK_STARTED refers to an incompatible task");
-			}
-		}
+	}
+
+	private static BulkMigrationOperationalReport.Task task(final BulkMigrationOperationalReport report,
+			final String taskId) {
+		return report.tasks().stream().filter(value -> value.taskId().equals(taskId)).findFirst().orElseThrow();
 	}
 
 	private static void validateProgressCheckpoint(final BulkMigrationOperationalReport report,

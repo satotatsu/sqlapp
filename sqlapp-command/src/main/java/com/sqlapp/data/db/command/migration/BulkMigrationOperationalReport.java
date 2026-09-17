@@ -46,24 +46,43 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	}
 
 	public enum ExecutionEvent {
-		JOB_STARTED(false, false, false),
-		JOB_COMPLETED(false, true, false),
-		JOB_REJECTED(false, false, true),
-		JOB_FAILED(false, false, true),
-		JOB_PAUSED(true, true, false),
-		TASK_STARTED(true, false, false),
-		TASK_COMPLETED(true, true, false),
-		TASK_FAILED(true, false, true),
-		TASK_PAUSED(true, true, false);
+		JOB_STARTED(false, false, false, true),
+		JOB_COMPLETED(false, true, false, false),
+		JOB_REJECTED(false, false, true, false),
+		JOB_FAILED(false, false, true, false),
+		JOB_PAUSED(true, true, false, false),
+		TASK_STARTED(true, false, false, true),
+		TASK_COMPLETED(true, true, false, true),
+		TASK_FAILED(true, false, true, false),
+		TASK_PAUSED(true, true, false, false);
 
 		private final boolean taskRequired;
 		private final boolean processedRowsRequired;
 		private final boolean failed;
+		private final boolean possiblyRunning;
 
-		ExecutionEvent(final boolean taskRequired, final boolean processedRowsRequired, final boolean failed) {
+		ExecutionEvent(final boolean taskRequired, final boolean processedRowsRequired, final boolean failed,
+				final boolean possiblyRunning) {
 			this.taskRequired = taskRequired;
 			this.processedRowsRequired = processedRowsRequired;
 			this.failed = failed;
+			this.possiblyRunning = possiblyRunning;
+		}
+
+		public boolean requiresTask() {
+			return taskRequired;
+		}
+
+		public boolean requiresProcessedRows() {
+			return processedRowsRequired;
+		}
+
+		public boolean isFailure() {
+			return failed;
+		}
+
+		public boolean indicatesPossibleRunning() {
+			return possiblyRunning;
 		}
 	}
 
@@ -75,20 +94,20 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			if (event == null) {
 				throw new IllegalArgumentException("execution event must not be null");
 			}
-			if (event.taskRequired && (taskId == null || taskId.isBlank())) {
+			if (event.requiresTask() && (taskId == null || taskId.isBlank())) {
 				throw new IllegalArgumentException("execution taskId must not be empty");
 			}
-			if (!event.taskRequired && event != ExecutionEvent.JOB_FAILED && taskId != null) {
+			if (!event.requiresTask() && event != ExecutionEvent.JOB_FAILED && taskId != null) {
 				throw new IllegalArgumentException("execution taskId is not valid for " + event);
 			}
 			java.util.Objects.requireNonNull(occurredAt, "occurredAt");
 			if (processedRows != null && processedRows < 0) {
 				throw new IllegalArgumentException("execution processedRows must not be negative");
 			}
-			if (processedRows != null && !event.processedRowsRequired) {
+			if (processedRows != null && !event.requiresProcessedRows()) {
 				throw new IllegalArgumentException("execution processedRows is not valid for " + event);
 			}
-			if (event.processedRowsRequired && processedRows == null) {
+			if (event.requiresProcessedRows() && processedRows == null) {
 				throw new IllegalArgumentException("execution processedRows is required for " + event);
 			}
 			if (leaseAcquisitionId != null && (leaseAcquisitionId.isBlank()
@@ -98,13 +117,13 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			if (event == ExecutionEvent.JOB_REJECTED && leaseAcquisitionId != null) {
 				throw new IllegalArgumentException("execution leaseAcquisitionId is not valid for JOB_REJECTED");
 			}
-			if (event.failed != (failureType != null)) {
+			if (event.isFailure() != (failureType != null)) {
 				throw new IllegalArgumentException("failureType is required only for failed execution events");
 			}
 			if (failureType != null && failureType.isBlank()) {
 				throw new IllegalArgumentException("failureType must not be blank");
 			}
-			if (!event.failed && failureMessage != null) {
+			if (!event.isFailure() && failureMessage != null) {
 				throw new IllegalArgumentException("failureMessage is valid only for failed execution events");
 			}
 			if (failureMessage != null && failureMessage.isBlank()) {
