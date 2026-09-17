@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.migration.BulkMigration;
 import com.sqlapp.data.db.command.migration.BulkMigrationJobRepairPlanReportIO;
+import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReport;
 import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReportIO;
 import com.sqlapp.data.db.command.migration.BulkMigrationPostExecutionException;
 import com.sqlapp.data.db.command.migration.BulkMigrationResumeReadiness;
@@ -87,7 +88,8 @@ class BulkMigrationFacadeIntegrationTest {
 		assertTrue(failure.getCause() instanceof CommandException);
 		final var operationalReport = new BulkMigrationOperationalReportIO()
 				.read(operational);
-		assertEquals("JOB_FAILED", operationalReport.execution().event());
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
+				operationalReport.execution().event());
 		assertEquals(BulkMigrationPostExecutionException.class.getName(),
 				operationalReport.execution().failureType());
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
@@ -252,7 +254,8 @@ class BulkMigrationFacadeIntegrationTest {
 			assertTrue(files.anyMatch(path -> path.getFileName().toString().endsWith(".lock")));
 		}
 		final var report = new BulkMigrationOperationalReportIO().read(reportFile);
-		assertEquals("JOB_COMPLETED", report.execution().event());
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED,
+				report.execution().event());
 		assertEquals(1, report.processedRows());
 		assertEquals(1, report.completedTasks());
 		final var approvedReport = migration.dryRun();
@@ -360,7 +363,8 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(1, repair.mismatchChunks());
 		final var operationalReport = new BulkMigrationOperationalReportIO()
 				.read(operational);
-		assertEquals("JOB_FAILED", operationalReport.execution().event());
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
+				operationalReport.execution().event());
 		assertEquals(BulkMigrationVerificationMismatchException.class.getName(),
 				operationalReport.execution().failureType());
 		assertFalse(new BulkMigrationVerificationReportIO().read(verification).match());
