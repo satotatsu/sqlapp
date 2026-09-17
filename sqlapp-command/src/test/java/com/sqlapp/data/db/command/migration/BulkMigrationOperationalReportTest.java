@@ -246,6 +246,18 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("future-maintenance.json"),
 						copyWithMaintenance(report, futureMaintenance)));
+		final var missingRestoreFailure = new BulkMigrationOperationalReport.Maintenance(
+				report.planFingerprint(), BulkMigrationMaintenanceStatus.RESTORE_FAILED.name(),
+				report.generatedAt(), null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("restore-failed-without-message.json"),
+						copyWithMaintenance(report, missingRestoreFailure)));
+		final var unexpectedMaintenanceFailure = new BulkMigrationOperationalReport.Maintenance(
+				report.planFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.generatedAt(), "unexpected");
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("complete-with-failure-message.json"),
+						copyWithMaintenance(report, unexpectedMaintenanceFailure)));
 		final var futureExecution = new BulkMigrationOperationalReport.Execution(
 				"JOB_STARTED", null, report.generatedAt().plusSeconds(1), null, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
@@ -282,6 +294,33 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationOperationalReport.Execution("TASK_FAILED", "customers", report.generatedAt(),
 						1L, null, java.sql.SQLException.class.getName(), "failed"));
+		final var pausedRowsMismatch = new BulkMigrationOperationalReport.Execution(
+				"TASK_PAUSED", task.taskId(), report.generatedAt(), 1L, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("paused-row-mismatch.json"),
+						copyWithExecution(report, pausedRowsMismatch)));
+
+		final var durableTask = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(), task.tableName(),
+				task.mode(), task.chunkSize(), task.checkpointMode(), BulkMigrationJobTaskState.IN_PROGRESS.name(),
+				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
+						5, 1, task.chunkSize(), false, "hash", null));
+		final var aheadProgress = new BulkMigrationOperationalReport.Progress(task.migrationId(),
+				6, 10L, 1_000, 1, 0.6, 4_000L);
+		final var durableReport = copyWithProcessedRows(
+				copyWithContent(report, List.of(durableTask), List.of()), 5);
+		final var progressReport = copyWithProgress(durableReport,
+				aheadProgress, List.of(aheadProgress));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("progress-ahead-of-checkpoint.json"), progressReport));
+		final var durableProgress = new BulkMigrationOperationalReport.Progress(task.migrationId(),
+				5, 10L, 1_000, 1, 0.5, 5_000L);
+		final var disagreeingCurrent = new BulkMigrationOperationalReport.Progress(task.migrationId(),
+				4, 10L, 900, 1, 0.4, 6_000L);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("disagreeing-progress.json"),
+						copyWithProgress(durableReport,
+								disagreeingCurrent, List.of(durableProgress))));
 	}
 
 	@Test
@@ -809,6 +848,16 @@ class BulkMigrationOperationalReportTest {
 				source.processedRows(), source.completedTasks(), source.totalTasks(),
 				source.tasks(), source.operations(), maintenance, source.progress(),
 				source.progressByMigration(), source.execution());
+	}
+
+	private static BulkMigrationOperationalReport copyWithProgress(
+			final BulkMigrationOperationalReport source,
+			final BulkMigrationOperationalReport.Progress progress,
+			final List<BulkMigrationOperationalReport.Progress> progressByMigration) {
+		return new BulkMigrationOperationalReport(source.formatVersion(), source.generatedAt(),
+				source.jobId(), source.planFingerprint(), source.compatible(), source.processedRows(),
+				source.completedTasks(), source.totalTasks(), source.tasks(), source.operations(),
+				source.maintenance(), progress, progressByMigration, source.execution());
 	}
 
 	private static BulkMigrationOperationalReport copyWithExecution(

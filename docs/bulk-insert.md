@@ -1067,6 +1067,13 @@ incomplete status snapshot into apparent success. Execution and maintenance
 timestamps may not postdate report generation, and failed events require a
 nonblank exception type; malformed future or anonymous failure evidence is
 rejected.
+Maintenance failure text follows the durable state contract: it is required
+for `RESTORE_FAILED` and forbidden for every other maintenance status. Reported
+progress may never run ahead of its durable checkpoint, and the current
+progress entry must agree with the same migration entry in
+`progressByMigration`. Pause-event row counts must likewise match the paused
+task's checkpoint. These checks keep monitoring hints from being mistaken for
+durable resume evidence.
 `assessResume` converts a validated report into a conservative operational
 decision: `COMPLETE`, `RESUMABLE`, `POSSIBLY_RUNNING`, `RECOVERY_REQUIRED`, or
 `INCOMPATIBLE`. Started or mid-task reports are deliberately not declared safe

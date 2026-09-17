@@ -164,12 +164,20 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException("Bulk migration report contains invalid progress identities");
 			}
 			validateProgress(progress);
+			validateProgressCheckpoint(report, progress);
 		}
 		if (report.progress() != null && !migrationIds.contains(report.progress().migrationId())) {
 			throw new CommandException("Bulk migration report current progress migrationId mismatch");
 		}
 		if (report.progress() != null) {
 			validateProgress(report.progress());
+			validateProgressCheckpoint(report, report.progress());
+			final BulkMigrationOperationalReport.Progress listed = report.progressByMigration().stream()
+					.filter(value -> value.migrationId().equals(report.progress().migrationId()))
+					.findFirst().orElse(null);
+			if (listed != null && !listed.equals(report.progress())) {
+				throw new CommandException("Bulk migration report current progress disagrees with progressByMigration");
+			}
 		}
 		if (report.maintenance() != null) {
 			if (report.maintenance().planFingerprint() == null || report.maintenance().planFingerprint().isBlank()) {
@@ -184,6 +192,14 @@ public final class BulkMigrationOperationalReportIO {
 			}
 			if (report.maintenance().updatedAt().isAfter(report.generatedAt())) {
 				throw new CommandException("Bulk migration report maintenance postdates report generation");
+			}
+			try {
+				new com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState(report.jobId(),
+						report.maintenance().planFingerprint(),
+						BulkMigrationMaintenanceStatus.valueOf(report.maintenance().status()),
+						report.maintenance().updatedAt(), report.maintenance().failureMessage());
+			} catch (IllegalArgumentException | NullPointerException e) {
+				throw new CommandException("Bulk migration report maintenance is invalid", e);
 			}
 		}
 		if (report.execution() != null && report.execution().taskId() != null
@@ -242,6 +258,23 @@ public final class BulkMigrationOperationalReportIO {
 					&& execution.processedRows() != task.checkpoint().processedRows()) {
 				throw new CommandException("Bulk migration report TASK_COMPLETED processedRows mismatch");
 			}
+		}
+		if ("TASK_PAUSED".equals(execution.event()) || "JOB_PAUSED".equals(execution.event())) {
+			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
+					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+			if (execution.processedRows() != null && (task.checkpoint() == null
+					|| execution.processedRows() != task.checkpoint().processedRows())) {
+				throw new CommandException("Bulk migration report paused processedRows mismatch");
+			}
+		}
+	}
+
+	private static void validateProgressCheckpoint(final BulkMigrationOperationalReport report,
+			final BulkMigrationOperationalReport.Progress progress) {
+		final BulkMigrationOperationalReport.Task task = report.tasks().stream()
+				.filter(value -> value.migrationId().equals(progress.migrationId())).findFirst().orElseThrow();
+		if (task.checkpoint() == null || progress.processedRows() > task.checkpoint().processedRows()) {
+			throw new CommandException("Bulk migration report progress exceeds durable checkpoint state");
 		}
 	}
 
