@@ -1055,7 +1055,10 @@ Execution events are also checked against durable task state:
 `JOB_COMPLETED` requires every task to be complete and matching aggregate row
 counts, while `TASK_COMPLETED` requires the named task and its checkpoint row
 count to agree with the event. A terminal label cannot therefore turn an
-incomplete status snapshot into apparent success.
+incomplete status snapshot into apparent success. Execution and maintenance
+timestamps may not postdate report generation, and failed events require a
+nonblank exception type; malformed future or anonymous failure evidence is
+rejected.
 `assessResume` converts a validated report into a conservative operational
 decision: `COMPLETE`, `RESUMABLE`, `POSSIBLY_RUNNING`, `RECOVERY_REQUIRED`, or
 `INCOMPATIBLE`. Started or mid-task reports are deliberately not declared safe

@@ -67,8 +67,14 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			if (failed != (failureType != null)) {
 				throw new IllegalArgumentException("failureType is required only for failed execution events");
 			}
+			if (failureType != null && failureType.isBlank()) {
+				throw new IllegalArgumentException("failureType must not be blank");
+			}
 			if (!failed && failureMessage != null) {
 				throw new IllegalArgumentException("failureMessage is valid only for failed execution events");
+			}
+			if (failureMessage != null && failureMessage.isBlank()) {
+				throw new IllegalArgumentException("failureMessage must not be blank");
 			}
 			if (failureMessage != null && failureMessage.length() > FAILURE_MESSAGE_MAX_LENGTH) {
 				throw new IllegalArgumentException("failureMessage is too long");

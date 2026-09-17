@@ -181,6 +181,9 @@ public final class BulkMigrationOperationalReportIO {
 					|| report.maintenance().updatedAt() == null) {
 				throw new CommandException("Bulk migration report maintenance does not match the report plan");
 			}
+			if (report.maintenance().updatedAt().isAfter(report.generatedAt())) {
+				throw new CommandException("Bulk migration report maintenance postdates report generation");
+			}
 		}
 		if (report.execution() != null && report.execution().taskId() != null
 				&& !taskIds.contains(report.execution().taskId())) {
@@ -190,6 +193,9 @@ public final class BulkMigrationOperationalReportIO {
 				&& (report.execution().leaseAcquisitionId().isBlank()
 						|| report.execution().leaseAcquisitionId().length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
 			throw new CommandException("Bulk migration report execution leaseAcquisitionId is invalid");
+		}
+		if (report.execution() != null && report.execution().occurredAt().isAfter(report.generatedAt())) {
+			throw new CommandException("Bulk migration report execution postdates report generation");
 		}
 		validateExecution(report);
 		return report;

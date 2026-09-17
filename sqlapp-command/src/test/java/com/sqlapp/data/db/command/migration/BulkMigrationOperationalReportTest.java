@@ -202,6 +202,17 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("foreign-maintenance.json"),
 						copyWithMaintenance(report, foreignMaintenance)));
+		final var futureMaintenance = new BulkMigrationOperationalReport.Maintenance(
+				report.planFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.generatedAt().plusSeconds(1), null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("future-maintenance.json"),
+						copyWithMaintenance(report, futureMaintenance)));
+		final var futureExecution = new BulkMigrationOperationalReport.Execution(
+				"JOB_STARTED", null, report.generatedAt().plusSeconds(1), null, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("future-execution.json"),
+						copyWithExecution(report, futureExecution)));
 		final var falseJobCompletion = new BulkMigrationOperationalReport.Execution(
 				"JOB_COMPLETED", null, report.generatedAt(), 0L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
@@ -220,6 +231,12 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("wrong-completed-rows.json"),
 						copyWithExecution(completeReport, wrongCompletedRows)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("JOB_FAILED", null, report.generatedAt(), null,
+						null, " ", "failure"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("JOB_FAILED", null, report.generatedAt(), null,
+						null, "java.lang.Exception", " "));
 	}
 
 	@Test
