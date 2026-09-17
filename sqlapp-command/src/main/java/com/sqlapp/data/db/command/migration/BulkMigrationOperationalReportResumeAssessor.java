@@ -7,11 +7,12 @@ import java.util.Set;
 
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
-import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
+import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReport.ExecutionEvent;
 
 /** Makes a conservative, read-only resume decision from a validated report. */
 public final class BulkMigrationOperationalReportResumeAssessor {
-	private static final Set<String> ACTIVE_EVENTS = Set.of("JOB_STARTED", "TASK_STARTED", "TASK_COMPLETED");
+	private static final Set<ExecutionEvent> ACTIVE_EVENTS = Set.of(ExecutionEvent.JOB_STARTED,
+			ExecutionEvent.TASK_STARTED, ExecutionEvent.TASK_COMPLETED);
 
 	private BulkMigrationOperationalReportResumeAssessor() {
 	}
@@ -61,7 +62,7 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 			return BulkMigrationResumeReadiness.INCOMPATIBLE;
 		}
 		if (report.maintenance() != null
-				&& BulkMigrationMaintenanceStatus.valueOf(report.maintenance().status()).requiresRecovery()) {
+				&& report.maintenance().status().requiresRecovery()) {
 			return BulkMigrationResumeReadiness.RECOVERY_REQUIRED;
 		}
 		return null;
@@ -73,6 +74,7 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 
 	private static boolean completionConfirmed(final BulkMigrationOperationalReport report) {
 		return report.completedTasks() == report.totalTasks()
-				&& (report.execution() == null || "JOB_COMPLETED".equals(report.execution().event()));
+				&& (report.execution() == null
+						|| report.execution().event() == ExecutionEvent.JOB_COMPLETED);
 	}
 }

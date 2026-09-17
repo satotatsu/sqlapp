@@ -225,7 +225,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			});
 			assertThrows(RuntimeException.class, mismatchCommand::run);
 			assertEquals(false, mismatchCommand.getVerificationResult().isMatch());
-			assertEquals("JOB_FAILED", new BulkMigrationOperationalReportIO().read(
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
+					new BulkMigrationOperationalReportIO().read(
 					temporaryDirectory.resolve("reports/mismatch-status.json"))
 						.execution().event());
 			final var mismatchArtifact = new BulkMigrationVerificationReportIO().read(
@@ -310,7 +311,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					.resolve("reports/verification-file-lease.json")));
 			final Path statusFile = temporaryDirectory.resolve("reports/status.json");
 			final var fileSuccess = new BulkMigrationOperationalReportIO().read(statusFile);
-			assertEquals("JOB_COMPLETED", fileSuccess.execution().event());
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED,
+					fileSuccess.execution().event());
 			assertNotNull(fileSuccess.execution().leaseAcquisitionId());
 
 			final BulkMigrationJobPlan emptyPlan;
@@ -330,7 +332,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertThrows(RuntimeException.class, rejectedCommand::run);
 			}
 			final var fileRejected = new BulkMigrationOperationalReportIO().read(statusFile);
-			assertEquals("JOB_REJECTED", fileRejected.execution().event());
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
+					fileRejected.execution().event());
 			assertNull(fileRejected.execution().leaseAcquisitionId());
 
 			final var databaseLease = new BulkMigrationJobConfiguration.Lease();
@@ -357,7 +360,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				}
 			}
 			final var databaseRejected = new BulkMigrationOperationalReportIO().read(statusFile);
-			assertEquals("JOB_REJECTED", databaseRejected.execution().event());
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
+					databaseRejected.execution().event());
 			assertNull(databaseRejected.execution().leaseAcquisitionId());
 		}
 	}

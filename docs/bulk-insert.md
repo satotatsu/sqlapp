@@ -1052,8 +1052,10 @@ and `COMPLETE` has a complete checkpoint. This prevents a hand-edited or
 partially written report from claiming completion without durable resume state.
 The same invariant is enforced by the shared `BulkMigrationJobTaskStatus`
 model, so programmatic status producers cannot bypass it before report creation.
-The typed report model also exposes task state as `BulkMigrationJobTaskState`;
-JSON continues to use the stable enum names such as `IN_PROGRESS`.
+The typed report model exposes task mode, checkpoint mode, task state,
+operation phase, maintenance status, and execution event as enums rather than
+open-ended strings. JSON continues to use their stable names such as
+`IN_PROGRESS`, `PREPARED`, and `TASK_COMPLETED`.
 Execution row counts are accepted only for completion and pause events; start,
 failure, and rejection events cannot carry ambiguous row-count evidence.
 This makes a

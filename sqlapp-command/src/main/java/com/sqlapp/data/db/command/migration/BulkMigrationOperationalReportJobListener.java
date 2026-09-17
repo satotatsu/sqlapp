@@ -20,6 +20,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
 import com.sqlapp.jdbc.bulk.BulkMigrationProgressSnapshot;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
+import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReport.ExecutionEvent;
 
 /** Publishes a fresh read-only JSON report at job task boundaries. */
 public final class BulkMigrationOperationalReportJobListener implements BulkMigrationJobListener {
@@ -110,7 +111,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		if (!leaseAcquiredForAttempt) {
 			leaseAcquisitionId = null;
 		}
-		publishBoundary(execution("JOB_STARTED", null, null, null));
+		publishBoundary(execution(ExecutionEvent.JOB_STARTED, null, null, null));
 	}
 
 	@Override
@@ -120,7 +121,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		// from an earlier or partially observed attempt.
 		leaseAcquisitionId = null;
 		leaseAcquiredForAttempt = false;
-		terminalBoundary(execution("JOB_REJECTED", null, null, cause));
+		terminalBoundary(execution(ExecutionEvent.JOB_REJECTED, null, null, cause));
 	}
 
 	@Override
@@ -128,7 +129,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		if (result != null) {
 			result.validateAgainst(plan);
 		}
-		terminalBoundary(execution("JOB_COMPLETED", null, result == null ? null : result.getProcessedRows(), null));
+		terminalBoundary(execution(ExecutionEvent.JOB_COMPLETED, null,
+				result == null ? null : result.getProcessedRows(), null));
 	}
 
 	@Override
@@ -139,7 +141,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		if (taskId != null) {
 			requireTask(taskId);
 		}
-		terminalBoundary(execution("JOB_FAILED", taskId, null, cause));
+		terminalBoundary(execution(ExecutionEvent.JOB_FAILED, taskId, null, cause));
 	}
 
 	@Override
@@ -148,7 +150,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		requirePlanFingerprint(planFingerprint);
 		requireTask(taskId);
 		terminalBoundary(
-				execution("JOB_PAUSED", taskId, progress == null ? null : progress.getProcessedRowsAfter(), null));
+				execution(ExecutionEvent.JOB_PAUSED, taskId,
+						progress == null ? null : progress.getProcessedRowsAfter(), null));
 	}
 
 	private void terminalBoundary(final BulkMigrationOperationalReport.Execution execution) {
@@ -163,21 +166,21 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	@Override
 	public void onTaskStarted(final String taskId, final int taskIndex, final int taskCount) {
 		requireTaskPosition(taskId, taskIndex, taskCount);
-		publishBoundary(execution("TASK_STARTED", taskId, null, null));
+		publishBoundary(execution(ExecutionEvent.TASK_STARTED, taskId, null, null));
 	}
 
 	@Override
 	public void onTaskCompleted(final String taskId, final ChunkedBulkMigrationResult result, final int taskIndex,
 			final int taskCount) {
 		requireTaskPosition(taskId, taskIndex, taskCount);
-		publishBoundary(execution("TASK_COMPLETED", taskId,
+		publishBoundary(execution(ExecutionEvent.TASK_COMPLETED, taskId,
 				result == null ? null : result.getPreviouslyProcessedRows() + result.getProcessedRows(), null));
 	}
 
 	@Override
 	public void onTaskFailed(final String taskId, final SQLException cause, final int taskIndex, final int taskCount) {
 		requireTaskPosition(taskId, taskIndex, taskCount);
-		publishBoundary(execution("TASK_FAILED", taskId, null, cause));
+		publishBoundary(execution(ExecutionEvent.TASK_FAILED, taskId, null, cause));
 	}
 
 	@Override
@@ -185,7 +188,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final int taskCount) {
 		requireTaskPosition(taskId, taskIndex, taskCount);
 		publishBoundary(
-				execution("TASK_PAUSED", taskId, progress == null ? null : progress.getProcessedRowsAfter(), null));
+				execution(ExecutionEvent.TASK_PAUSED, taskId,
+						progress == null ? null : progress.getProcessedRowsAfter(), null));
 	}
 
 	private synchronized void publishBoundary(final BulkMigrationOperationalReport.Execution execution) {
@@ -242,7 +246,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		}
 	}
 
-	private BulkMigrationOperationalReport.Execution execution(final String event, final String taskId,
+	private BulkMigrationOperationalReport.Execution execution(final ExecutionEvent event, final String taskId,
 			final Long processedRows, final Throwable failure) {
 		return new BulkMigrationOperationalReport.Execution(event, taskId, Instant.now(), processedRows,
 				leaseAcquisitionId,

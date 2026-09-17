@@ -373,15 +373,16 @@ class BulkMigrationTest {
 		assertEquals(null, migration.dryRun().maintenance());
 		assertEquals(0, migration.execute().getProcessedRows());
 		final var report = migration.dryRun();
-		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.COMPLETE.name(),
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.COMPLETE,
 				report.maintenance().status());
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.status().getTasks().get(0).getState());
 		final var published = new BulkMigrationOperationalReportIO()
 				.read(directory.resolve("running.json"));
-		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE.name(),
+		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE,
 				published.maintenance().status());
-		assertEquals("JOB_COMPLETED", published.execution().event());
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED,
+				published.execution().event());
 	}
 
 	@Test
@@ -410,7 +411,7 @@ class BulkMigrationTest {
 			assertFalse(tableExists(connection, "SQLAPP_FACADE_MAINTENANCE"));
 		}
 		assertEquals(0, migration.execute().getProcessedRows());
-		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.COMPLETE.name(),
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.COMPLETE,
 				migration.dryRun().maintenance().status());
 		try (var connection = target.getConnection()) {
 			assertTrue(tableExists(connection, "SQLAPP_FACADE_MAINTENANCE"));
@@ -457,13 +458,14 @@ class BulkMigrationTest {
 				.databaseMaintenance("SQLAPP_FACADE_MAINTENANCE")
 				.operationalReport(directory.resolve("database-failed.json")).build();
 		assertThrows(SQLException.class, failing::execute);
-		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.RESTORED.name(),
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus.RESTORED,
 				failing.dryRun().maintenance().status());
 		final var failedReport = new BulkMigrationOperationalReportIO()
 				.read(directory.resolve("database-failed.json"));
-		assertEquals(BulkMigrationMaintenanceStatus.RESTORED.name(),
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED,
 				failedReport.maintenance().status());
-		assertEquals("JOB_FAILED", failedReport.execution().event());
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
+				failedReport.execution().event());
 	}
 
 	@Test
@@ -511,8 +513,9 @@ class BulkMigrationTest {
 		assertTrue(assertThrows(IllegalStateException.class, migration::execute)
 				.getMessage().contains("explicit recovery"));
 		final var rejected = new BulkMigrationOperationalReportIO().read(executionReport);
-		assertEquals("JOB_REJECTED", rejected.execution().event());
-		assertEquals(BulkMigrationMaintenanceStatus.PREPARED.name(),
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
+				rejected.execution().event());
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED,
 				rejected.maintenance().status());
 		assertThrows(IllegalArgumentException.class,
 				() -> migration.recoverMaintenanceWithFingerprint("wrong"));
@@ -569,8 +572,9 @@ class BulkMigrationTest {
 
 		assertThrows(BulkMigrationVerificationMismatchException.class, migration::run);
 		final var report = new BulkMigrationOperationalReportIO().read(reportFile);
-		assertEquals("JOB_FAILED", report.execution().event());
-		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE.name(),
+		assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
+				report.execution().event());
+		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE,
 				report.maintenance().status());
 	}
 

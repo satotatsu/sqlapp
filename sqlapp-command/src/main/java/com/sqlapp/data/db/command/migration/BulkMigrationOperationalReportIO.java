@@ -13,12 +13,8 @@ import java.util.Set;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
-import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseStore;
-import com.sqlapp.jdbc.bulk.BulkMigrationJobOperationPhase;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
-import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
-import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationProgressSnapshot;
 import com.sqlapp.util.JsonConverter;
 
@@ -120,8 +116,7 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException("Bulk migration report contains an unknown task state");
 			}
 			if (task.tableName() == null || task.tableName().isBlank() || task.chunkSize() <= 0
-					|| !known(BulkMigrationMode.class, task.mode())
-					|| !known(BulkMigrationCheckpointMode.class, task.checkpointMode())) {
+					|| task.mode() == null || task.checkpointMode() == null) {
 				throw new CommandException("Bulk migration report contains invalid task configuration");
 			}
 			if (!taskIds.add(task.taskId()) || !migrationIds.add(task.migrationId())) {
@@ -152,8 +147,7 @@ public final class BulkMigrationOperationalReportIO {
 		for (final BulkMigrationOperationalReport.Operation operation : report.operations()) {
 			if (operation == null || operation.id() == null || operation.id().isBlank()
 					|| !operationIds.add(operation.id()) || operation.description() == null
-					|| operation.description().isBlank()
-					|| !known(BulkMigrationJobOperationPhase.class, operation.phase())) {
+					|| operation.description().isBlank() || operation.phase() == null) {
 				throw new CommandException("Bulk migration report contains an invalid operation");
 			}
 		}
@@ -183,7 +177,7 @@ public final class BulkMigrationOperationalReportIO {
 			if (report.maintenance().planFingerprint() == null || report.maintenance().planFingerprint().isBlank()) {
 				throw new CommandException("Bulk migration report maintenance requires planFingerprint");
 			}
-			if (!knownMaintenanceStatus(report.maintenance().status())) {
+			if (report.maintenance().status() == null) {
 				throw new CommandException("Bulk migration report contains an unknown maintenance status");
 			}
 			if (!report.planFingerprint().equals(report.maintenance().planFingerprint())
@@ -196,7 +190,7 @@ public final class BulkMigrationOperationalReportIO {
 			try {
 				new com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState(report.jobId(),
 						report.maintenance().planFingerprint(),
-						BulkMigrationMaintenanceStatus.valueOf(report.maintenance().status()),
+						report.maintenance().status(),
 						report.maintenance().updatedAt(), report.maintenance().failureMessage());
 			} catch (IllegalArgumentException | NullPointerException e) {
 				throw new CommandException("Bulk migration report maintenance is invalid", e);
@@ -240,7 +234,7 @@ public final class BulkMigrationOperationalReportIO {
 		if (execution == null) {
 			return;
 		}
-		if ("JOB_COMPLETED".equals(execution.event())) {
+		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED) {
 			if (report.completedTasks() != report.totalTasks()) {
 				throw new CommandException("Bulk migration report JOB_COMPLETED requires every task to be complete");
 			}
@@ -248,7 +242,7 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException("Bulk migration report JOB_COMPLETED processedRows mismatch");
 			}
 		}
-		if ("TASK_COMPLETED".equals(execution.event())) {
+		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_COMPLETED) {
 			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
 					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
 			if (task.state() != BulkMigrationJobTaskState.COMPLETE) {
@@ -259,7 +253,8 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException("Bulk migration report TASK_COMPLETED processedRows mismatch");
 			}
 		}
-		if ("TASK_PAUSED".equals(execution.event()) || "JOB_PAUSED".equals(execution.event())) {
+		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_PAUSED
+				|| execution.event() == BulkMigrationOperationalReport.ExecutionEvent.JOB_PAUSED) {
 			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
 					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
 			if (task.state() != BulkMigrationJobTaskState.IN_PROGRESS) {
@@ -270,8 +265,9 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException("Bulk migration report paused processedRows mismatch");
 			}
 		}
-		if ("TASK_FAILED".equals(execution.event())
-				|| "JOB_FAILED".equals(execution.event()) && execution.taskId() != null) {
+		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_FAILED
+				|| execution.event() == BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED
+						&& execution.taskId() != null) {
 			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
 					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
 			if (task.state() == BulkMigrationJobTaskState.COMPLETE
@@ -279,7 +275,7 @@ public final class BulkMigrationOperationalReportIO {
 				throw new CommandException("Bulk migration report failed event refers to a non-runnable task");
 			}
 		}
-		if ("TASK_STARTED".equals(execution.event())) {
+		if (execution.event() == BulkMigrationOperationalReport.ExecutionEvent.TASK_STARTED) {
 			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
 					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
 			if (task.state() == BulkMigrationJobTaskState.INCOMPATIBLE) {
@@ -320,21 +316,4 @@ public final class BulkMigrationOperationalReportIO {
 		}
 	}
 
-	private static <E extends Enum<E>> boolean known(final Class<E> type, final String value) {
-		try {
-			Enum.valueOf(type, value);
-			return true;
-		} catch (IllegalArgumentException | NullPointerException e) {
-			return false;
-		}
-	}
-
-	private static boolean knownMaintenanceStatus(final String status) {
-		try {
-			BulkMigrationMaintenanceStatus.valueOf(status);
-			return true;
-		} catch (IllegalArgumentException | NullPointerException e) {
-			return false;
-		}
-	}
 }

@@ -46,6 +46,7 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationResult;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationJobLeaseStore;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.data.db.command.migration.BulkMigrationOperationalReport.ExecutionEvent;
 
 class BulkMigrationOperationalReportTest {
 	@TempDir
@@ -172,7 +173,7 @@ class BulkMigrationOperationalReportTest {
 
 		final var invalidConfiguration = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
-				task.tableName(), "UNKNOWN", 0, task.checkpointMode(), task.state(), null);
+				task.tableName(), null, 0, task.checkpointMode(), task.state(), null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("invalid-task.json"),
 						copyWithContent(report, List.of(invalidConfiguration), List.of())));
@@ -235,41 +236,41 @@ class BulkMigrationOperationalReportTest {
 				() -> io.write(directory.resolve("invalid-progress.json"),
 						copyWithContent(report, report.tasks(), List.of(invalidProgress))));
 		final var foreignMaintenance = new BulkMigrationOperationalReport.Maintenance(
-				"other-plan", BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				"other-plan", BulkMigrationMaintenanceStatus.COMPLETE,
 				report.generatedAt(), null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("foreign-maintenance.json"),
 						copyWithMaintenance(report, foreignMaintenance)));
 		final var futureMaintenance = new BulkMigrationOperationalReport.Maintenance(
-				report.planFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.planFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE,
 				report.generatedAt().plusSeconds(1), null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("future-maintenance.json"),
 						copyWithMaintenance(report, futureMaintenance)));
 		final var missingRestoreFailure = new BulkMigrationOperationalReport.Maintenance(
-				report.planFingerprint(), BulkMigrationMaintenanceStatus.RESTORE_FAILED.name(),
+				report.planFingerprint(), BulkMigrationMaintenanceStatus.RESTORE_FAILED,
 				report.generatedAt(), null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("restore-failed-without-message.json"),
 						copyWithMaintenance(report, missingRestoreFailure)));
 		final var unexpectedMaintenanceFailure = new BulkMigrationOperationalReport.Maintenance(
-				report.planFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE.name(),
+				report.planFingerprint(), BulkMigrationMaintenanceStatus.COMPLETE,
 				report.generatedAt(), "unexpected");
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("complete-with-failure-message.json"),
 						copyWithMaintenance(report, unexpectedMaintenanceFailure)));
 		final var futureExecution = new BulkMigrationOperationalReport.Execution(
-				"JOB_STARTED", null, report.generatedAt().plusSeconds(1), null, null, null, null);
+				ExecutionEvent.JOB_STARTED, null, report.generatedAt().plusSeconds(1), null, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("future-execution.json"),
 						copyWithExecution(report, futureExecution)));
 		final var falseJobCompletion = new BulkMigrationOperationalReport.Execution(
-				"JOB_COMPLETED", null, report.generatedAt(), 0L, null, null, null);
+				ExecutionEvent.JOB_COMPLETED, null, report.generatedAt(), 0L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("false-job-completion.json"),
 						copyWithExecution(report, falseJobCompletion)));
 		final var falseTaskCompletion = new BulkMigrationOperationalReport.Execution(
-				"TASK_COMPLETED", task.taskId(), report.generatedAt(), 0L, null, null, null);
+				ExecutionEvent.TASK_COMPLETED, task.taskId(), report.generatedAt(), 0L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("false-task-completion.json"),
 						copyWithExecution(report, falseTaskCompletion)));
@@ -278,12 +279,12 @@ class BulkMigrationOperationalReportTest {
 						checkpoint(true, "source"))));
 		final var completeReport = new BulkMigrationOperationalReportBuilder().build(plan, completeStatus, null, null);
 		final var wrongCompletedRows = new BulkMigrationOperationalReport.Execution(
-				"JOB_COMPLETED", null, completeReport.generatedAt(), 1L, null, null, null);
+				ExecutionEvent.JOB_COMPLETED, null, completeReport.generatedAt(), 1L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("wrong-completed-rows.json"),
 						copyWithExecution(completeReport, wrongCompletedRows)));
 		final var failureAgainstComplete = new BulkMigrationOperationalReport.Execution(
-				"TASK_FAILED", "customers", completeReport.generatedAt(), null, null,
+				ExecutionEvent.TASK_FAILED, "customers", completeReport.generatedAt(), null, null,
 				java.sql.SQLException.class.getName(), "failed after completion");
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("failure-against-complete.json"),
@@ -294,35 +295,35 @@ class BulkMigrationOperationalReportTest {
 		final var incompatibleReport = new BulkMigrationOperationalReportBuilder().build(
 				plan, incompatibleStatus, null, null);
 		final var startAgainstIncompatible = new BulkMigrationOperationalReport.Execution(
-				"TASK_STARTED", "customers", incompatibleReport.generatedAt(), null, null, null, null);
+				ExecutionEvent.TASK_STARTED, "customers", incompatibleReport.generatedAt(), null, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("start-against-incompatible.json"),
 						copyWithExecution(incompatibleReport, startAgainstIncompatible)));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("JOB_FAILED", null, report.generatedAt(), null,
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_FAILED, null, report.generatedAt(), null,
 						null, " ", "failure"));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("JOB_FAILED", null, report.generatedAt(), null,
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_FAILED, null, report.generatedAt(), null,
 						null, "java.lang.Exception", " "));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("JOB_STARTED", null, report.generatedAt(), 1L,
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_STARTED, null, report.generatedAt(), 1L,
 						null, null, null));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("TASK_FAILED", "customers", report.generatedAt(),
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.TASK_FAILED, "customers", report.generatedAt(),
 						1L, null, java.sql.SQLException.class.getName(), "failed"));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("JOB_COMPLETED", null, report.generatedAt(), null,
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_COMPLETED, null, report.generatedAt(), null,
 						null, null, null));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("TASK_PAUSED", "customers", report.generatedAt(),
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.TASK_PAUSED, "customers", report.generatedAt(),
 						null, null, null, null));
 		final var pausedRowsMismatch = new BulkMigrationOperationalReport.Execution(
-				"TASK_PAUSED", task.taskId(), report.generatedAt(), 1L, null, null, null);
+				ExecutionEvent.TASK_PAUSED, task.taskId(), report.generatedAt(), 1L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("paused-row-mismatch.json"),
 						copyWithExecution(report, pausedRowsMismatch)));
 		final var pausedNotInProgress = new BulkMigrationOperationalReport.Execution(
-				"TASK_PAUSED", task.taskId(), report.generatedAt(), 0L, null, null, null);
+				ExecutionEvent.TASK_PAUSED, task.taskId(), report.generatedAt(), 0L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("paused-not-in-progress.json"),
 						copyWithExecution(report, pausedNotInProgress)));
@@ -381,7 +382,7 @@ class BulkMigrationOperationalReportTest {
 				BulkMigrationOperationalReportResumeAssessor.assess(report));
 
 		final var started = copyWithExecution(report,
-				new BulkMigrationOperationalReport.Execution("JOB_STARTED", null,
+				new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_STARTED, null,
 						report.generatedAt(), null, null, null, null));
 		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 				BulkMigrationOperationalReportResumeAssessor.assess(started));
@@ -407,7 +408,7 @@ class BulkMigrationOperationalReportTest {
 		assertEquals(BulkMigrationResumeReadiness.COMPLETE,
 				BulkMigrationOperationalReportResumeAssessor.assess(completeReport));
 		final var completedTaskOnly = copyWithExecution(completeReport,
-				new BulkMigrationOperationalReport.Execution("TASK_COMPLETED", "customers",
+				new BulkMigrationOperationalReport.Execution(ExecutionEvent.TASK_COMPLETED, "customers",
 						completeReport.generatedAt(), 0L, null, null, null));
 		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 				BulkMigrationOperationalReportResumeAssessor.assess(completedTaskOnly));
@@ -433,7 +434,7 @@ class BulkMigrationOperationalReportTest {
 				new BulkMigrationJobTaskStatus("customers",
 						BulkMigrationJobTaskState.IN_PROGRESS, checkpoint)));
 		final var execution = new BulkMigrationOperationalReport.Execution(
-				"TASK_STARTED", "customers", now.minusSeconds(10), null,
+				ExecutionEvent.TASK_STARTED, "customers", now.minusSeconds(10), null,
 				null, null, null);
 		final var report = new BulkMigrationOperationalReportBuilder(
 				Clock.fixed(now, ZoneOffset.UTC)).build(plan, status, null, null,
@@ -544,13 +545,13 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, foreignProgress));
 		final var foreignExecution = new BulkMigrationOperationalReport.Execution(
-				"TASK_STARTED", "other", Instant.now(), null, null, null, null);
+				ExecutionEvent.TASK_STARTED, "other", Instant.now(), null, null, null, null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, null, foreignExecution));
 		assertThrows(IllegalArgumentException.class, () -> builder.build(plan,
 				correctStatus, null, null, Map.of("other", foreignProgress), null));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("UNKNOWN", "customers",
+				() -> new BulkMigrationOperationalReport.Execution(null, "customers",
 						Instant.now(), null, null, null, null));
 	}
 
@@ -655,7 +656,8 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(IllegalArgumentException.class, () -> chunkListener.onChunkCompleted(
 				new com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress("foreign", 0, 1, 0, 1)));
 		assertThrows(NullPointerException.class, () -> chunkListener.onChunkCompleted(null));
-		assertEquals("JOB_STARTED", new BulkMigrationOperationalReportIO().read(target).execution().event());
+		assertEquals(ExecutionEvent.JOB_STARTED,
+				new BulkMigrationOperationalReportIO().read(target).execution().event());
 	}
 
 	@Test
@@ -695,7 +697,7 @@ class BulkMigrationOperationalReportTest {
 		listener.onJobRejected(plan.getFingerprint(), conflict);
 
 		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
-		assertEquals("JOB_REJECTED", execution.event());
+		assertEquals(ExecutionEvent.JOB_REJECTED, execution.event());
 		assertNull(execution.leaseAcquisitionId());
 	}
 
@@ -710,10 +712,10 @@ class BulkMigrationOperationalReportTest {
 		listener.onJobRejected(plan.getFingerprint(), new IllegalStateException("pre-execution rejection"));
 
 		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
-		assertEquals("JOB_REJECTED", execution.event());
+		assertEquals(ExecutionEvent.JOB_REJECTED, execution.event());
 		assertNull(execution.leaseAcquisitionId());
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationOperationalReport.Execution("JOB_REJECTED", null, Instant.now(), null,
+				() -> new BulkMigrationOperationalReport.Execution(ExecutionEvent.JOB_REJECTED, null, Instant.now(), null,
 						"invalid-acquisition", IllegalStateException.class.getName(), "rejected"));
 	}
 
@@ -730,7 +732,7 @@ class BulkMigrationOperationalReportTest {
 		listener.onJobStarted(plan.getFingerprint(), 1);
 
 		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
-		assertEquals("JOB_STARTED", execution.event());
+		assertEquals(ExecutionEvent.JOB_STARTED, execution.event());
 		assertNull(execution.leaseAcquisitionId());
 	}
 

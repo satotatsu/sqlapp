@@ -4,9 +4,12 @@ package com.sqlapp.data.db.command.migration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobOperationPhase;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 
 /** Stable, read-only operational snapshot for a bulk migration job. */
 public record BulkMigrationOperationalReport(int formatVersion, Instant generatedAt, String jobId,
@@ -22,68 +25,86 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	}
 
 	public record Task(String taskId, String migrationId, String catalogName, String schemaName, String tableName,
-			String mode, int chunkSize, String checkpointMode, BulkMigrationJobTaskState state, Checkpoint checkpoint) {
+			BulkMigrationMode mode, int chunkSize, BulkMigrationCheckpointMode checkpointMode,
+			BulkMigrationJobTaskState state, Checkpoint checkpoint) {
 	}
 
 	public record Checkpoint(String migrationId, String sourceFingerprint, String targetFingerprint, long processedRows,
 			long completedChunks, int chunkSize, boolean complete, String lastChunkHash, String resumeToken) {
 	}
 
-	public record Operation(String id, String phase, String description, boolean transactionBreaking) {
+	public record Operation(String id, BulkMigrationJobOperationPhase phase, String description,
+			boolean transactionBreaking) {
 	}
 
-	public record Maintenance(String planFingerprint, String status, Instant updatedAt, String failureMessage) {
+	public record Maintenance(String planFingerprint, BulkMigrationMaintenanceStatus status, Instant updatedAt,
+			String failureMessage) {
 	}
 
 	public record Progress(String migrationId, long processedRows, Long totalRows, long elapsedMillis,
 			double rowsPerSecond, Double completionRatio, Long estimatedRemainingMillis) {
 	}
 
-	public record Execution(String event, String taskId, Instant occurredAt, Long processedRows,
+	public enum ExecutionEvent {
+		JOB_STARTED(false, false, false),
+		JOB_COMPLETED(false, true, false),
+		JOB_REJECTED(false, false, true),
+		JOB_FAILED(false, false, true),
+		JOB_PAUSED(true, true, false),
+		TASK_STARTED(true, false, false),
+		TASK_COMPLETED(true, true, false),
+		TASK_FAILED(true, false, true),
+		TASK_PAUSED(true, true, false);
+
+		private final boolean taskRequired;
+		private final boolean processedRowsRequired;
+		private final boolean failed;
+
+		ExecutionEvent(final boolean taskRequired, final boolean processedRowsRequired, final boolean failed) {
+			this.taskRequired = taskRequired;
+			this.processedRowsRequired = processedRowsRequired;
+			this.failed = failed;
+		}
+	}
+
+	public record Execution(ExecutionEvent event, String taskId, Instant occurredAt, Long processedRows,
 			String leaseAcquisitionId, String failureType, String failureMessage) {
-		private static final Set<String> EVENTS = Set.of("JOB_STARTED", "JOB_COMPLETED", "JOB_REJECTED", "JOB_FAILED",
-				"JOB_PAUSED", "TASK_STARTED", "TASK_COMPLETED", "TASK_FAILED", "TASK_PAUSED");
 		public static final int FAILURE_MESSAGE_MAX_LENGTH = 1_000;
 
 		public Execution {
-			if (!EVENTS.contains(event)) {
-				throw new IllegalArgumentException("Unknown migration execution event: " + event);
+			if (event == null) {
+				throw new IllegalArgumentException("execution event must not be null");
 			}
-			final boolean taskRequired = event.startsWith("TASK_") || "JOB_PAUSED".equals(event);
-			if (taskRequired && (taskId == null || taskId.isBlank())) {
+			if (event.taskRequired && (taskId == null || taskId.isBlank())) {
 				throw new IllegalArgumentException("execution taskId must not be empty");
 			}
-			if (!taskRequired && !"JOB_FAILED".equals(event) && taskId != null) {
+			if (!event.taskRequired && event != ExecutionEvent.JOB_FAILED && taskId != null) {
 				throw new IllegalArgumentException("execution taskId is not valid for " + event);
 			}
 			java.util.Objects.requireNonNull(occurredAt, "occurredAt");
 			if (processedRows != null && processedRows < 0) {
 				throw new IllegalArgumentException("execution processedRows must not be negative");
 			}
-			final boolean rowsAllowed = "JOB_COMPLETED".equals(event) || "JOB_PAUSED".equals(event)
-					|| "TASK_COMPLETED".equals(event) || "TASK_PAUSED".equals(event);
-			if (processedRows != null && !rowsAllowed) {
+			if (processedRows != null && !event.processedRowsRequired) {
 				throw new IllegalArgumentException("execution processedRows is not valid for " + event);
 			}
-			if (rowsAllowed && processedRows == null) {
+			if (event.processedRowsRequired && processedRows == null) {
 				throw new IllegalArgumentException("execution processedRows is required for " + event);
 			}
 			if (leaseAcquisitionId != null && (leaseAcquisitionId.isBlank()
 					|| leaseAcquisitionId.length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
 				throw new IllegalArgumentException("execution leaseAcquisitionId is invalid");
 			}
-			if ("JOB_REJECTED".equals(event) && leaseAcquisitionId != null) {
+			if (event == ExecutionEvent.JOB_REJECTED && leaseAcquisitionId != null) {
 				throw new IllegalArgumentException("execution leaseAcquisitionId is not valid for JOB_REJECTED");
 			}
-			final boolean failed = "TASK_FAILED".equals(event) || "JOB_FAILED".equals(event)
-					|| "JOB_REJECTED".equals(event);
-			if (failed != (failureType != null)) {
+			if (event.failed != (failureType != null)) {
 				throw new IllegalArgumentException("failureType is required only for failed execution events");
 			}
 			if (failureType != null && failureType.isBlank()) {
 				throw new IllegalArgumentException("failureType must not be blank");
 			}
-			if (!failed && failureMessage != null) {
+			if (!event.failed && failureMessage != null) {
 				throw new IllegalArgumentException("failureMessage is valid only for failed execution events");
 			}
 			if (failureMessage != null && failureMessage.isBlank()) {

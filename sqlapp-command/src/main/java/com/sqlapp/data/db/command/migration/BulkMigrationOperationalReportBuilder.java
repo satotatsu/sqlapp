@@ -67,12 +67,12 @@ public final class BulkMigrationOperationalReportBuilder {
 					: planned.getKeysetSource().getTable();
 			return new BulkMigrationOperationalReport.Task(planned.getTaskId(), planned.getOptions().getMigrationId(),
 					table.getCatalogName(), table.getSchemaName(), table.getName(),
-					planned.getOptions().getMode().name(), planned.getOptions().getChunkSize(),
-					planned.getOptions().getCheckpointMode().name(), current.getState(),
+					planned.getOptions().getMode(), planned.getOptions().getChunkSize(),
+					planned.getOptions().getCheckpointMode(), current.getState(),
 					checkpoint(current.getCheckpoint()));
 		}).toList();
 		final var operations = plan.getOperations().stream()
-				.map(operation -> new BulkMigrationOperationalReport.Operation(operation.id(), operation.phase().name(),
+				.map(operation -> new BulkMigrationOperationalReport.Operation(operation.id(), operation.phase(),
 						operation.description(), operation.transactionBreaking()))
 				.toList();
 		final var allProgress = plan.getTasks().stream()
@@ -100,7 +100,7 @@ public final class BulkMigrationOperationalReportBuilder {
 
 	private static BulkMigrationOperationalReport.Maintenance maintenance(final BulkMigrationMaintenanceState state) {
 		return state == null ? null
-				: new BulkMigrationOperationalReport.Maintenance(state.planFingerprint(), state.status().name(),
+				: new BulkMigrationOperationalReport.Maintenance(state.planFingerprint(), state.status(),
 						state.updatedAt(), state.failureMessage());
 	}
 
