@@ -303,8 +303,8 @@ class BulkMigrationOperationalReportTest {
 				io.assessResume(file, plan.getFingerprint(), store, now));
 		final var changedPlanLease = new BulkMigrationJobLease(plan.getJobId(),
 				"changed-plan", "worker", now.plusSeconds(30));
-		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
-				BulkMigrationOperationalReportResumeAssessor.assess(report,
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationOperationalReportResumeAssessor.assess(report,
 						changedPlanLease, now));
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
 				io.assessResume(file, plan.getFingerprint(), store,
@@ -526,6 +526,24 @@ class BulkMigrationOperationalReportTest {
 				execution.get("failureType"));
 		assertEquals("explicit recovery is required",
 				execution.get("failureMessage"));
+	}
+
+	@Test
+	void reusedJobListenerClearsStaleAcquisitionAfterLeaseConflict() {
+		final BulkMigrationJobPlan plan = plan(new InMemoryBulkMigrationCheckpointStore());
+		final Path target = directory.resolve("lease-conflict.json");
+		final var listener = new BulkMigrationOperationalReportJobListener(plan, target);
+		listener.onLeaseAcquired(new BulkMigrationJobLease(plan.getJobId(), plan.getFingerprint(), "worker",
+				"previous-acquisition", Instant.now().plusSeconds(60)));
+		listener.onJobStarted(plan.getFingerprint(), 1);
+
+		final var conflict = new com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseUnavailableException(plan.getJobId());
+		listener.onLeaseAcquisitionFailed(plan.getFingerprint(), conflict);
+		listener.onJobRejected(plan.getFingerprint(), conflict);
+
+		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
+		assertEquals("JOB_REJECTED", execution.event());
+		assertNull(execution.leaseAcquisitionId());
 	}
 
 	@Test

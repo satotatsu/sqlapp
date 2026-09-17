@@ -1072,7 +1072,8 @@ plan lease before publishing `JOB_STARTED`, notifies job listeners through
 chunk, and owner-conditionally releases it after success, failure, or pause.
 Operational-report events then retain the unique acquisition ID, so two runs
 using the same configured owner remain distinguishable in audit data. A lease
-acquisition conflict is published as `JOB_REJECTED` without an acquisition ID;
+acquisition failure first invokes `onLeaseAcquisitionFailed` and is then
+published as `JOB_REJECTED` without an acquisition ID;
 it is not silently omitted from the operational report.
 Failure to renew stops the job with `BulkMigrationJobLeaseLostException`; a
 durably completed chunk is never replayed merely because its post-chunk renewal
@@ -1120,7 +1121,8 @@ store and resolves a stale started report against a caller-supplied current
 time. A matching unexpired lease remains `POSSIBLY_RUNNING`; no lease or an
 expired lease becomes `RESUMABLE`. Incompatibility and unfinished maintenance
 still take precedence. The overload rejects a lease belonging to another plan,
-so a state-file mix-up cannot authorize resume.
+including a matching job ID with a different plan fingerprint, so a state-file
+mix-up cannot authorize resume.
 All task checkpoints being complete is not sufficient when the latest event is
 task-level: lifecycle post-processing may still be pending. With execution
 history present, only `JOB_COMPLETED` confirms `COMPLETE`; an expired lease

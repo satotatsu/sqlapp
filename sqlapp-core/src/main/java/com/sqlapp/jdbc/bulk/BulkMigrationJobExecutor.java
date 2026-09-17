@@ -111,6 +111,11 @@ public final class BulkMigrationJobExecutor {
 			acquired = leaseManager.acquire(plan);
 		} catch (SQLException | RuntimeException | Error rejection) {
 			try {
+				listener.onLeaseAcquisitionFailed(plan.getFingerprint(), rejection);
+			} catch (RuntimeException listenerFailure) {
+				rejection.addSuppressed(listenerFailure);
+			}
+			try {
 				listener.onJobRejected(plan.getFingerprint(), rejection);
 			} catch (RuntimeException listenerFailure) {
 				rejection.addSuppressed(listenerFailure);

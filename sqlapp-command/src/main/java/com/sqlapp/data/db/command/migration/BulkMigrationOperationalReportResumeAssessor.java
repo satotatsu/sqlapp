@@ -37,6 +37,9 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 		if (currentLease != null && !report.jobId().equals(currentLease.jobId())) {
 			throw new IllegalArgumentException("Lease jobId does not match the operational report");
 		}
+		if (currentLease != null && !report.planFingerprint().equals(currentLease.planFingerprint())) {
+			throw new IllegalArgumentException("Lease planFingerprint does not match the operational report");
+		}
 		final BulkMigrationResumeReadiness terminal = terminal(report);
 		if (terminal != null) {
 			return terminal;

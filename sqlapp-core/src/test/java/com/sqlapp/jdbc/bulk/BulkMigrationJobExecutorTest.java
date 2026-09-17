@@ -346,7 +346,14 @@ class BulkMigrationJobExecutorTest {
 		final var second = new BulkMigrationJobLeaseManager(store, "owner-2", Duration.ofMinutes(1));
 		final var plan = BulkMigrationJobPlanner.plan(List.of());
 		final var rejected = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+		final var acquisitionFailed = new java.util.concurrent.atomic.AtomicReference<Throwable>();
 		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onLeaseAcquisitionFailed(String planFingerprint, Throwable cause) {
+				assertEquals(plan.getFingerprint(), planFingerprint);
+				acquisitionFailed.set(cause);
+			}
+
 			@Override
 			public void onJobRejected(String planFingerprint, Throwable cause) {
 				assertEquals(plan.getFingerprint(), planFingerprint);
@@ -358,6 +365,7 @@ class BulkMigrationJobExecutorTest {
 					() -> BulkMigrationJobExecutor.executePlan(connection(), plan, listener,
 							ChunkedBulkMigrationListener.NO_OP, second));
 			assertEquals(failure, rejected.get());
+			assertEquals(failure, acquisitionFailed.get());
 		}
 	}
 

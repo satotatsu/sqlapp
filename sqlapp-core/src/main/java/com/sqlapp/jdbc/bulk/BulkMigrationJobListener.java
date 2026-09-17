@@ -12,6 +12,10 @@ public interface BulkMigrationJobListener {
 	default void onLeaseAcquired(final BulkMigrationJobLease lease) {
 	}
 
+	/** Called when the execution fence could not be acquired for this attempt. */
+	default void onLeaseAcquisitionFailed(final String planFingerprint, final Throwable cause) {
+	}
+
 	default void onJobStarted(final String planFingerprint, final int taskCount) {
 	}
 

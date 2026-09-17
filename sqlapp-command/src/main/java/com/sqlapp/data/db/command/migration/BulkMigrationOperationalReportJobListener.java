@@ -92,6 +92,11 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	}
 
 	@Override
+	public void onLeaseAcquisitionFailed(final String planFingerprint, final Throwable cause) {
+		leaseAcquisitionId = null;
+	}
+
+	@Override
 	public void onJobStarted(final String planFingerprint, final int taskCount) {
 		publishBoundary(execution("JOB_STARTED", null, null, null));
 	}

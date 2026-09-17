@@ -22,6 +22,7 @@ class CompositeBulkMigrationJobListenerTest {
 
 		composite.onLeaseAcquired(new BulkMigrationJobLease("job", "fingerprint", "worker",
 				"acquisition", java.time.Instant.now().plusSeconds(60)));
+		composite.onLeaseAcquisitionFailed("fingerprint", new SQLException("conflict"));
 		composite.onJobStarted("fingerprint", 1);
 		composite.onJobRejected("fingerprint", new IllegalStateException("rejected"));
 		composite.onTaskStarted("task", 0, 1);
@@ -32,7 +33,8 @@ class CompositeBulkMigrationJobListenerTest {
 		composite.onJobFailed("fingerprint", new SQLException("failed"));
 		composite.onJobPaused("fingerprint", "task", progress);
 
-		assertEquals(List.of("lease-first", "lease-second", "job-start-first", "job-start-second",
+		assertEquals(List.of("lease-first", "lease-second", "lease-failed-first", "lease-failed-second",
+				"job-start-first", "job-start-second",
 				"job-reject-first", "job-reject-second",
 				"task-start-first", "task-start-second", "task-complete-first", "task-complete-second",
 				"task-fail-first", "task-fail-second", "task-pause-first", "task-pause-second", "job-complete-first",
@@ -46,6 +48,11 @@ class CompositeBulkMigrationJobListenerTest {
 			@Override
 			public void onLeaseAcquired(BulkMigrationJobLease lease) {
 				events.add("lease-" + name);
+			}
+
+			@Override
+			public void onLeaseAcquisitionFailed(String fingerprint, Throwable cause) {
+				events.add("lease-failed-" + name);
 			}
 
 			@Override
