@@ -23,6 +23,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.MigrationSnapshotExecutionResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseUnavailableException;
 
 class ExecuteMigrationSnapshotCommandTest {
 	@TempDir Path directory;
@@ -60,6 +61,7 @@ class ExecuteMigrationSnapshotCommandTest {
 				MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(approval))),
 				report.approvalArtifactFingerprint());
 		assertEquals(report, command.getReport());
+		assertFalse(Files.exists(directory.resolve("snapshot-failure.json")));
 		assertEquals("PUBLIC.CUSTOMER_HISTORY", report.targetTable());
 		assertEquals(2, report.expiredRows());
 		assertEquals(2, report.insertedRows());
@@ -106,6 +108,10 @@ class ExecuteMigrationSnapshotCommandTest {
 		assertNull(command.getResult());
 		assertNull(command.getReport());
 		assertFalse(Files.exists(directory.resolve("snapshot-result.json")));
+		final var failure = new MigrationSnapshotFailureReportIO().read(directory.resolve("snapshot-failure.json"));
+		assertEquals(MigrationSnapshotFailurePhase.DATABASE_EXECUTION, failure.phase());
+		assertEquals("CUSTOMER", failure.snapshotId());
+		assertTrue(failure.failureType().contains("Exception"));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rs = statement.executeQuery(
 						"SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
@@ -113,6 +119,69 @@ class ExecuteMigrationSnapshotCommandTest {
 			assertEquals("old", rs.getString(1));
 			assertNull(rs.getTimestamp(2));
 			assertTrue(rs.getBoolean(3));
+			assertFalse(rs.next());
+		}
+	}
+
+	@Test
+	void distinguishesACommittedSnapshotFromSuccessReportWriteFailure() throws Exception {
+		final JDBCDataSource source = dataSource("snapshot_command_report_failure_source");
+		final JDBCDataSource target = dataSource("snapshot_command_report_failure_target");
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CUSTOMER(ID INTEGER, NAME VARCHAR(20))");
+			statement.execute("INSERT INTO CUSTOMER VALUES(1,'new')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CUSTOMER_HISTORY(ID INTEGER, NAME VARCHAR(20), VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+		}
+		final Path yaml = configuration();
+		Files.writeString(yaml, Files.readString(yaml).replace("reportFile: snapshot-result.json", "reportFile: ."));
+		final var command = new ExecuteMigrationSnapshotCommand();
+		command.setSourceDataSource(source);
+		command.setDataSource(target);
+		command.setConfigurationFile(yaml.toFile());
+
+		assertThrows(CommandException.class, command::run);
+		final var failure = new MigrationSnapshotFailureReportIO().read(directory.resolve("snapshot-failure.json"));
+		assertEquals(MigrationSnapshotFailurePhase.SUCCESS_REPORT_WRITE, failure.phase());
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var resultSet = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE IS_CURRENT")) {
+			resultSet.next();
+			assertEquals(1, resultSet.getInt(1));
+		}
+	}
+
+	@Test
+	void rejectsAConcurrentSnapshotBeforeMutatingTheTarget() throws Exception {
+		final JDBCDataSource source = dataSource("snapshot_command_lease_source");
+		final JDBCDataSource target = dataSource("snapshot_command_lease_target");
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CUSTOMER(ID INTEGER, NAME VARCHAR(20))");
+			statement.execute("INSERT INTO CUSTOMER VALUES(1,'new')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CUSTOMER_HISTORY(ID INTEGER, NAME VARCHAR(20), VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+			statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES(1,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
+		}
+		final Path yaml = configuration();
+		final var resolved = new MigrationSnapshotConfigurationResolver().resolve(yaml.toFile());
+		final var blocking = BulkMigrationJobLeaseConfiguration.file("blocking-worker", directory.resolve("leases"));
+		final var manager = BulkMigrationJobLeaseManagerFactory.create(null, blocking);
+		try (var ignored = manager.acquire(resolved.definition().id(), resolved.configurationFingerprint())) {
+			final var command = new ExecuteMigrationSnapshotCommand();
+			command.setSourceDataSource(source);
+			command.setDataSource(target);
+			command.setConfigurationFile(yaml.toFile());
+
+			final var error = assertThrows(RuntimeException.class, command::run);
+			assertTrue(error.getCause() instanceof BulkMigrationJobLeaseUnavailableException
+					|| error.getMessage().contains("lease"));
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement();
+				var rs = statement.executeQuery("SELECT NAME, VALID_TO FROM CUSTOMER_HISTORY")) {
+			assertTrue(rs.next());
+			assertEquals("old", rs.getString(1));
+			assertNull(rs.getTimestamp(2));
 			assertFalse(rs.next());
 		}
 	}
@@ -135,7 +204,9 @@ class ExecuteMigrationSnapshotCommandTest {
 				+ "keyColumns: [ID]\ntrackedColumns: [NAME]\nvalidFromColumn: VALID_FROM\n"
 				+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\nexpireMissingRows: true\n"
 				+ "effectiveAt: 2026-09-16T00:00:00Z\nfetchSize: 2\nbatchSize: 2\n"
-				+ "reportFile: snapshot-result.json\n");
+				+ "reportFile: snapshot-result.json\nfailureReportFile: snapshot-failure.json\n"
+				+ "lease:\n  mode: FILE\n  ownerId: command-test\n  durationSeconds: 60\n"
+				+ "  directory: leases\n");
 		return yaml;
 	}
 

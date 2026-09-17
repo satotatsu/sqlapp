@@ -108,6 +108,13 @@ batchSize: 10000
 approvalValidFor: PT24H
 approvalReportFile: approvals/customer-snapshot.json
 reportFile: reports/customer-snapshot.json
+failureReportFile: reports/customer-snapshot-failure.json
+lease:
+  mode: DATABASE
+  ownerId: nightly-migration-1
+  durationSeconds: 300
+  # Optional; defaults to SQLAPP_BULK_MIGRATION_LEASE.
+  tableName: SQLAPP_BULK_MIGRATION_LEASE
 ```
 
 `effectiveAt` is required so retries and reviewed runs retain the same business
@@ -121,6 +128,13 @@ database execution and contains the resolved snapshot identity, source and
 target tables, effective timestamp, selected executor and affected-row counts.
 It also carries a deterministic configuration fingerprint covering the
 snapshot definition, execution sizes and resolved source/target table shapes.
+The optional `lease` block prevents concurrent execution of the same snapshot
+identity. `DATABASE` mode uses a separate auto-commit target connection so its
+heartbeat is independent of the snapshot transaction. `FILE` mode instead
+requires `directory`, resolved relative to this YAML file. Lease loss is checked
+after target validation and immediately before commit; a detected loss rolls
+back all snapshot changes. Lease owner, storage location and duration are
+operational coordination settings and do not change the approval fingerprint.
 
 Generate the approval artifact without opening a database, review it, and then
 reference it from the YAML shown above:
@@ -150,6 +164,20 @@ verifyMigrationSnapshotReport {
 
 Verification checks the exact file digest, approval generation time,
 configuration fingerprint, tables, columns, timestamp and execution sizes.
+If execution produced the separately configured failure artifact, verify its
+exact approval binding in the same way:
+
+```groovy
+verifyMigrationSnapshotFailureReport {
+    reportFile = layout.buildDirectory.file('reports/customer-snapshot-failure.json')
+    approvalFile = layout.buildDirectory.file('migration-approvals/customer.json')
+}
+```
+
+The failure verifier also checks the recorded phase and chronology.
+`POST_COMMIT_FINALIZATION` and `SUCCESS_REPORT_WRITE` both mean the target
+database work committed; the latter specifically means the normal success
+artifact could not be published.
 
 ### `executeBulkMigrationJob`
 

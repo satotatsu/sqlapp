@@ -31,12 +31,21 @@ public final class JdbcStreamingMigrationSnapshotExecutor {
 			final Connection targetConnection, final Table sourceTable, final Table targetTable,
 			final MigrationSnapshotDefinition definition, final Instant effectiveAt, final int fetchSize,
 			final int batchSize) throws SQLException {
+		return execute(sourceConnection, targetConnection, sourceTable, targetTable, definition, effectiveAt,
+				fetchSize, batchSize, MigrationSnapshotExecutionGuard.NO_OP);
+	}
+
+	public static MigrationSnapshotExecutionResult execute(final Connection sourceConnection,
+			final Connection targetConnection, final Table sourceTable, final Table targetTable,
+			final MigrationSnapshotDefinition definition, final Instant effectiveAt, final int fetchSize,
+			final int batchSize, final MigrationSnapshotExecutionGuard guard) throws SQLException {
 		if (sourceConnection == null || targetConnection == null || sourceTable == null || targetTable == null) {
 			throw new IllegalArgumentException("Source/target connections and tables are required");
 		}
 		if (fetchSize <= 0) {
 			throw new IllegalArgumentException("fetchSize must be greater than zero");
 		}
+		java.util.Objects.requireNonNull(guard, "guard");
 		final List<String> columns = new ArrayList<>(definition.keyColumns());
 		columns.addAll(definition.trackedColumns());
 		validateColumns(sourceTable, columns, "source");
@@ -48,12 +57,13 @@ public final class JdbcStreamingMigrationSnapshotExecutor {
 			try {
 				final var setBased = SetBasedMigrationSnapshotResolver.find(targetDialect);
 				if (setBased.isPresent()) {
-					return setBased.get().execute(targetConnection, targetTable, definition, effectiveAt, source, batchSize);
+					return setBased.get().execute(targetConnection, targetTable, definition, effectiveAt, source, batchSize,
+							guard);
 				}
 				try (var current = new RowStream(targetConnection,
 						selectSql(targetDialect, targetTable, definition, columns, true), columns, fetchSize)) {
 					return JdbcBatchMigrationSnapshotExecutor.executeStreaming(targetConnection, targetTable, definition,
-							effectiveAt, source, current, batchSize);
+							effectiveAt, source, current, batchSize, guard);
 				}
 			} catch (CursorFailure e) {
 				throw e.sqlException;

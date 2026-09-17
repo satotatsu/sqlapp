@@ -1264,6 +1264,15 @@ For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration
 chunks, because per-chunk missing-row expiry would be incorrect.
+An optional `lease` block prevents concurrent processes from applying the same
+snapshot ID and configuration fingerprint. `FILE` mode coordinates processes
+sharing a filesystem directory; `DATABASE` mode uses a dedicated auto-commit
+connection to the target and the configured lease table. A background
+heartbeat renews the lease during source streaming and target DML. Every shared
+executor checks the heartbeat after post-DML invariant validation and
+immediately before commit, so detected lease loss rolls back the complete
+snapshot. Custom set-based executors that have not implemented this commit-time
+guard reject guarded execution instead of silently weakening the fence.
 Configuration resolution verifies from the Schema model that both validity
 columns are date/time values and that an optional current-marker column is
 boolean or numeric. This validation occurs before database connections are
@@ -1290,6 +1299,17 @@ also compared with the resolved plan, preventing a retained fingerprint from
 masking altered table names, columns, timestamps, or execution sizes. The
 approval path is resolved relative to the YAML file, like `schemaFile` and
 `reportFile`. Failed executions do not replace the report file.
+Set optional `failureReportFile` to atomically write a separate, bounded JSON
+failure artifact. It records the resolved configuration fingerprint, approval
+evidence, start/failure timestamps, exception type and message, and a failure
+phase. `DATABASE_EXECUTION` means target execution failed and the executor
+rolled its transaction back. `POST_COMMIT_FINALIZATION` means target execution
+committed but later command finalization failed. `SUCCESS_REPORT_WRITE` means
+database execution completed and committed, but publication of the success
+artifact failed. Operators must not mistake either post-commit phase for a
+database rollback. Failure-report publication errors are attached to the
+original exception and never replace it. Success and failure artifacts never
+overwrite one another.
 Set optional `approvalValidFor` to a positive ISO-8601 duration such as `PT24H`
 to prevent indefinite replay. The policy is included in the configuration
 fingerprint and both artifacts. Expired approvals and approvals dated in the

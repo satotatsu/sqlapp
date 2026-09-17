@@ -23,12 +23,19 @@ public final class JdbcBatchMigrationSnapshotExecutor {
 
 	public static MigrationSnapshotExecutionResult execute(final Connection connection, final Table table,
 			final MigrationSnapshotPlan plan, final int batchSize) throws SQLException {
+		return execute(connection, table, plan, batchSize, MigrationSnapshotExecutionGuard.NO_OP);
+	}
+
+	public static MigrationSnapshotExecutionResult execute(final Connection connection, final Table table,
+			final MigrationSnapshotPlan plan, final int batchSize,
+			final MigrationSnapshotExecutionGuard guard) throws SQLException {
 		if (connection == null || table == null || plan == null) {
 			throw new IllegalArgumentException("Connection, table, and snapshot plan are required");
 		}
 		if (batchSize <= 0) {
 			throw new IllegalArgumentException("batchSize must be greater than zero");
 		}
+		java.util.Objects.requireNonNull(guard, "guard");
 		final MigrationSnapshotDefinition definition = plan.definition();
 		validateColumns(table, definition);
 		final var dialect = DialectResolver.getInstance().getDialect(connection);
@@ -44,6 +51,7 @@ public final class JdbcBatchMigrationSnapshotExecutor {
 				final long expired = close(connection, closeSql, definition, plan, batchSize);
 				final long inserted = insert(connection, insertSql, definition, dataColumns, plan, batchSize);
 				MigrationSnapshotTargetValidator.afterMutation(connection, dialect, tableName, definition);
+				guard.check();
 				scope.commit();
 				return new MigrationSnapshotExecutionResult(expired, inserted, plan.unchangedRows());
 			} catch (SQLException | RuntimeException e) {
@@ -61,12 +69,22 @@ public final class JdbcBatchMigrationSnapshotExecutor {
 			final MigrationSnapshotDefinition definition, final java.time.Instant effectiveAt,
 			final Iterable<? extends java.util.Map<String, Object>> sourceRows,
 			final Iterable<? extends java.util.Map<String, Object>> currentRows, final int batchSize) throws SQLException {
+		return executeStreaming(connection, table, definition, effectiveAt, sourceRows, currentRows, batchSize,
+				MigrationSnapshotExecutionGuard.NO_OP);
+	}
+
+	public static MigrationSnapshotExecutionResult executeStreaming(final Connection connection, final Table table,
+			final MigrationSnapshotDefinition definition, final java.time.Instant effectiveAt,
+			final Iterable<? extends java.util.Map<String, Object>> sourceRows,
+			final Iterable<? extends java.util.Map<String, Object>> currentRows, final int batchSize,
+			final MigrationSnapshotExecutionGuard guard) throws SQLException {
 		if (connection == null || table == null || definition == null || effectiveAt == null) {
 			throw new IllegalArgumentException("Connection, table, definition, and effectiveAt are required");
 		}
 		if (batchSize <= 0) {
 			throw new IllegalArgumentException("batchSize must be greater than zero");
 		}
+		java.util.Objects.requireNonNull(guard, "guard");
 		validateColumns(table, definition);
 		final var dialect = DialectResolver.getInstance().getDialect(connection);
 		final String tableName = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
@@ -82,6 +100,7 @@ public final class JdbcBatchMigrationSnapshotExecutor {
 				final var summary = MigrationSnapshotStreamingPlanner.plan(definition, sourceRows, currentRows, batch::add);
 				batch.flush();
 				MigrationSnapshotTargetValidator.afterMutation(connection, dialect, tableName, definition);
+				guard.check();
 				scope.commit();
 				return new MigrationSnapshotExecutionResult(summary.updatedRows() + summary.expiredRows(),
 						summary.insertedRows() + summary.updatedRows(), summary.unchangedRows());

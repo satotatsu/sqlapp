@@ -112,6 +112,36 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 	}
 
 	@Test
+	void rollsBackPlannedBatchWhenCommitGuardFails() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_guard_plan", "SA", "")) {
+			createSingleCurrentRow(connection);
+			final var plan = MigrationSnapshotPlanner.plan(definition(), Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(1, "new")), List.of(row(1, "old")));
+
+			final var error = assertThrows(SQLException.class, () -> JdbcBatchMigrationSnapshotExecutor.execute(
+					connection, table(), plan, 100, () -> { throw new SQLException("lease lost"); }));
+
+			assertEquals("lease lost", error.getMessage());
+			assertOriginalRow(connection);
+		}
+	}
+
+	@Test
+	void rollsBackStreamingBatchWhenCommitGuardFails() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_guard_stream", "SA", "")) {
+			createSingleCurrentRow(connection);
+
+			final var error = assertThrows(SQLException.class, () -> JdbcBatchMigrationSnapshotExecutor.executeStreaming(
+					connection, table(), definition(), Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(1, "new")), List.of(row(1, "old")), 100,
+					() -> { throw new SQLException("lease lost"); }));
+
+			assertEquals("lease lost", error.getMessage());
+			assertOriginalRow(connection);
+		}
+	}
+
+	@Test
 	void rejectsAnEffectiveTimestampThatCannotCloseTheCurrentInterval() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_invalid_effective_at", "SA", "")) {
 			try (var statement = connection.createStatement()) {
@@ -213,6 +243,21 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 			resultSet.next();
 			return resultSet.getInt(1);
 		}
+	}
+
+	private static void createSingleCurrentRow(final java.sql.Connection connection) throws SQLException {
+		try (var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
+					+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+			statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+					+ "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+		}
+	}
+
+	private static void assertOriginalRow(final java.sql.Connection connection) throws SQLException {
+		assertEquals(1, count(connection,
+				"SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE ID=1 AND NAME='old' AND VALID_TO IS NULL AND IS_CURRENT"));
+		assertEquals(0, count(connection, "SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE NAME='new'"));
 	}
 
 	private static Table table() {

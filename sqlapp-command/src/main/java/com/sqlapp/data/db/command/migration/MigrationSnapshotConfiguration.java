@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -28,4 +30,17 @@ public class MigrationSnapshotConfiguration {
 	private Duration approvalValidFor;
 	private String approvalReportFile;
 	private String reportFile;
+	private String failureReportFile;
+	private Lease lease;
+
+	/** Optional cross-process fence for one snapshot ID and configuration fingerprint. */
+	@Getter
+	@Setter
+	public static class Lease {
+		private BulkMigrationJobLeaseMode mode;
+		private String ownerId;
+		private long durationSeconds = BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION.toSeconds();
+		private String tableName;
+		private String directory;
+	}
 }

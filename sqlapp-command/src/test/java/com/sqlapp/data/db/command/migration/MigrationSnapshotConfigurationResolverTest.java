@@ -27,7 +27,8 @@ class MigrationSnapshotConfigurationResolverTest {
 
 	@Test
 	void resolvesConciseYamlAgainstSchemaModel() throws Exception {
-		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\nreportFile: reports/result.json\n");
+		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\nreportFile: reports/result.json\n"
+				+ "failureReportFile: reports/failure.json\n");
 		final var resolved = new MigrationSnapshotConfigurationResolver().resolve(files.yaml().toFile());
 		assertEquals("CUSTOMER", resolved.sourceTable().getName());
 		assertEquals("CUSTOMER_HISTORY", resolved.targetTable().getName());
@@ -37,6 +38,8 @@ class MigrationSnapshotConfigurationResolverTest {
 		assertEquals(71, resolved.configurationFingerprint().length());
 		assertTrue(resolved.configurationFingerprint().startsWith("sha256:"));
 		assertEquals(directory.resolve("reports/result.json").toAbsolutePath().normalize(), resolved.reportFile());
+		assertEquals(directory.resolve("reports/failure.json").toAbsolutePath().normalize(),
+				resolved.failureReportFile());
 	}
 
 	@Test

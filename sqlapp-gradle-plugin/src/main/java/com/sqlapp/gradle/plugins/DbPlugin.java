@@ -45,6 +45,7 @@ public class DbPlugin implements Plugin<Project> {
 				GenerateMigrationSnapshotApprovalReportTask.class);
 		registerTask(project, "executeMigrationSnapshot", ExecuteMigrationSnapshotTask.class);
 		registerTask(project, "verifyMigrationSnapshotReport", VerifyMigrationSnapshotReportTask.class);
+		registerTask(project, "verifyMigrationSnapshotFailureReport", VerifyMigrationSnapshotFailureReportTask.class);
 		//
 		registerTask(project, "exportSchemaXml", ExportSchemaXmlTask.class);
 		registerTask(project, "exportAccessSchemaXml", ExportAccessSchemaXmlTask.class);

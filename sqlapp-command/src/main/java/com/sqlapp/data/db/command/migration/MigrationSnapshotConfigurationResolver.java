@@ -17,6 +17,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableCollection;
 import com.sqlapp.data.schemas.migration.MigrationSnapshotDefinition;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 import com.sqlapp.util.YamlConverter;
 
 /** Resolves snapshot YAML names against the canonical Schema model. */
@@ -34,7 +36,8 @@ public final class MigrationSnapshotConfigurationResolver {
 	public record Resolution(Table sourceTable, Table targetTable, MigrationSnapshotDefinition definition,
 			java.time.Instant effectiveAt, int fetchSize, int batchSize, String configurationFingerprint,
 			Duration approvalValidFor, java.nio.file.Path approvalReportFile, java.time.Instant approvalGeneratedAt,
-			String approvalArtifactFingerprint, java.nio.file.Path reportFile) { }
+			String approvalArtifactFingerprint, java.nio.file.Path reportFile,
+			java.nio.file.Path failureReportFile, BulkMigrationJobLeaseConfiguration leaseConfiguration) { }
 
 	public Resolution resolve(final File configurationFile) {
 		return resolve(configurationFile, true);
@@ -93,22 +96,55 @@ public final class MigrationSnapshotConfigurationResolver {
 		}
 		final java.nio.file.Path reportFile = value.getReportFile() == null || value.getReportFile().isBlank() ? null
 				: resolve(configurationFile, value.getReportFile()).toPath().toAbsolutePath().normalize();
+		final java.nio.file.Path failureReportFile = value.getFailureReportFile() == null
+				|| value.getFailureReportFile().isBlank() ? null
+						: resolve(configurationFile, value.getFailureReportFile()).toPath().toAbsolutePath().normalize();
 		final String fingerprint = MigrationSnapshotConfigurationFingerprint.calculate(source, target, definition,
 				value.getEffectiveAt(), value.getFetchSize(), value.getBatchSize(), value.getApprovalValidFor());
+		final BulkMigrationJobLeaseConfiguration leaseConfiguration = lease(configurationFile, value.getLease());
 		final java.nio.file.Path approvalReportFile = value.getApprovalReportFile() == null
 				|| value.getApprovalReportFile().isBlank() ? null
 						: resolve(configurationFile, value.getApprovalReportFile()).toPath().toAbsolutePath().normalize();
 		Resolution resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
-				value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile, null, null, reportFile);
+				value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile, null, null, reportFile,
+				failureReportFile, leaseConfiguration);
 		if (validateApproval && approvalReportFile != null) {
 			final var artifact = new MigrationSnapshotApprovalReportIO().readApproved(approvalReportFile, resolution);
 			validateApprovalTime(artifact.report(), value.getApprovalValidFor());
 			resolution = new Resolution(source, target, definition, value.getEffectiveAt(), value.getFetchSize(),
 					value.getBatchSize(), fingerprint, value.getApprovalValidFor(), approvalReportFile,
 					artifact.report().generatedAt(),
-					artifact.artifactFingerprint(), reportFile);
+					artifact.artifactFingerprint(), reportFile, failureReportFile, leaseConfiguration);
 		}
 		return resolution;
+	}
+
+	private static BulkMigrationJobLeaseConfiguration lease(final File configurationFile,
+			final MigrationSnapshotConfiguration.Lease value) {
+		if (value == null) return null;
+		if (value.getMode() == null) {
+			throw new CommandException("lease.mode is required in migration snapshot configuration.");
+		}
+		final Duration duration;
+		try {
+			duration = Duration.ofSeconds(value.getDurationSeconds());
+		} catch (ArithmeticException e) {
+			throw new CommandException("lease.durationSeconds is out of range.", e);
+		}
+		try {
+			if (value.getMode() == BulkMigrationJobLeaseMode.DATABASE) {
+				final String table = value.getTableName() == null || value.getTableName().isBlank()
+						? JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME : value.getTableName();
+				return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(), duration, table, null);
+			}
+			if (value.getDirectory() == null || value.getDirectory().isBlank()) {
+				throw new CommandException("lease.directory is required for FILE lease mode.");
+			}
+			return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(), duration, null,
+					resolve(configurationFile, value.getDirectory()).toPath());
+		} catch (IllegalArgumentException e) {
+			throw new CommandException("Invalid migration snapshot lease: " + e.getMessage(), e);
+		}
 	}
 
 	private void validateApprovalTime(final MigrationSnapshotApprovalReport report, final Duration validFor) {

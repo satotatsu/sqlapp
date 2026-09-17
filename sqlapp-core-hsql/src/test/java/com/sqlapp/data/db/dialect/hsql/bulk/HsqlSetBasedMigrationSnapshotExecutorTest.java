@@ -92,6 +92,26 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 	}
 
 	@Test
+	void rollsBackSetBasedChangesWhenCommitGuardFails() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_set_scd2_guard", "SA", "")) {
+			createHistory(connection, "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+
+			final var error = assertThrows(java.sql.SQLException.class,
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition(),
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "new")), 100,
+							() -> { throw new java.sql.SQLException("lease lost"); }));
+
+			assertEquals("lease lost", error.getMessage());
+			assertCurrentRows(connection, 1, "old");
+			try (var statement = connection.createStatement();
+					var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE NAME='new'")) {
+				rs.next();
+				assertEquals(0, rs.getInt(1));
+			}
+		}
+	}
+
+	@Test
 	void doesNotCommitACallerOwnedTransactionDuringStageCleanup() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_set_scd2_caller_tx", "SA", "")) {
 			try (var statement = connection.createStatement()) {

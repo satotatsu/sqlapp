@@ -38,7 +38,17 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 	public final MigrationSnapshotExecutionResult execute(final Connection connection, final Table table,
 			final MigrationSnapshotDefinition definition, final Instant effectiveAt,
 			final Iterable<? extends Map<String, Object>> sourceRows, final int batchSize) throws SQLException {
+		return execute(connection, table, definition, effectiveAt, sourceRows, batchSize,
+				MigrationSnapshotExecutionGuard.NO_OP);
+	}
+
+	@Override
+	public final MigrationSnapshotExecutionResult execute(final Connection connection, final Table table,
+			final MigrationSnapshotDefinition definition, final Instant effectiveAt,
+			final Iterable<? extends Map<String, Object>> sourceRows, final int batchSize,
+			final MigrationSnapshotExecutionGuard guard) throws SQLException {
 		if (batchSize <= 0) throw new IllegalArgumentException("batchSize must be greater than zero");
+		java.util.Objects.requireNonNull(guard, "guard");
 		if (!connection.getAutoCommit() && !supportsCallerTransactionAtomicity()) {
 			throw new SQLException("The " + dialect.getProductName()
 					+ " set-based snapshot staging DDL cannot preserve a caller-owned transaction; "
@@ -63,6 +73,7 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 				final long expired = close(connection, target, stage, definition, effectiveAt);
 				final long inserted = insert(connection, target, stage, definition, data, effectiveAt);
 				MigrationSnapshotTargetValidator.afterMutation(connection, dialect, target, definition);
+				guard.check();
 				scope.commit();
 				return new MigrationSnapshotExecutionResult(expired, inserted, unchanged);
 			} catch (SQLException | RuntimeException e) { scope.rollback(e); throw e; }
