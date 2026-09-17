@@ -586,6 +586,24 @@ class BulkMigrationOperationalReportTest {
 	}
 
 	@Test
+	void rejectedEventCannotRetainAnAcquiredLeaseToken() {
+		final BulkMigrationJobPlan plan = plan(new InMemoryBulkMigrationCheckpointStore());
+		final Path target = directory.resolve("rejected-after-acquisition.json");
+		final var listener = new BulkMigrationOperationalReportJobListener(plan, target);
+		listener.onLeaseAcquired(new BulkMigrationJobLease(plan.getJobId(), plan.getFingerprint(), "worker",
+				"partial-acquisition", Instant.now().plusSeconds(60)));
+
+		listener.onJobRejected(plan.getFingerprint(), new IllegalStateException("pre-execution rejection"));
+
+		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
+		assertEquals("JOB_REJECTED", execution.event());
+		assertNull(execution.leaseAcquisitionId());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("JOB_REJECTED", null, Instant.now(), null,
+						"invalid-acquisition", IllegalStateException.class.getName(), "rejected"));
+	}
+
+	@Test
 	void reusedJobListenerDoesNotCarryLeaseIntoAnUnleasedAttempt() {
 		final BulkMigrationJobPlan plan = plan(new InMemoryBulkMigrationCheckpointStore());
 		final Path target = directory.resolve("unleased-reuse.json");

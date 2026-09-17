@@ -62,6 +62,9 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 					|| leaseAcquisitionId.length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
 				throw new IllegalArgumentException("execution leaseAcquisitionId is invalid");
 			}
+			if ("JOB_REJECTED".equals(event) && leaseAcquisitionId != null) {
+				throw new IllegalArgumentException("execution leaseAcquisitionId is not valid for JOB_REJECTED");
+			}
 			final boolean failed = "TASK_FAILED".equals(event) || "JOB_FAILED".equals(event)
 					|| "JOB_REJECTED".equals(event);
 			if (failed != (failureType != null)) {

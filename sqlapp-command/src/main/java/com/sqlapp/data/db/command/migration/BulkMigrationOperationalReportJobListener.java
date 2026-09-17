@@ -116,9 +116,10 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	@Override
 	public void onJobRejected(final String planFingerprint, final Throwable cause) {
 		requirePlanFingerprint(planFingerprint);
-		if (!leaseAcquiredForAttempt) {
-			leaseAcquisitionId = null;
-		}
+		// Rejection is a pre-execution event and must never inherit fencing evidence
+		// from an earlier or partially observed attempt.
+		leaseAcquisitionId = null;
+		leaseAcquiredForAttempt = false;
 		terminalBoundary(execution("JOB_REJECTED", null, null, cause));
 	}
 
