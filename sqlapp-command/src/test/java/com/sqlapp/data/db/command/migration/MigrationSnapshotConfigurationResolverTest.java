@@ -131,6 +131,25 @@ class MigrationSnapshotConfigurationResolverTest {
 		assertEquals("Unknown column 'UNKNOWN' in sourceTable: CUSTOMER", error.getMessage());
 	}
 
+	@Test
+	void rejectsInvalidSnapshotSystemColumnTypesBeforeOpeningDatabaseConnections() throws Exception {
+		final FileSet files = files("effectiveAt: 2026-09-16T00:00:00Z\n");
+		Schema schema = (Schema) com.sqlapp.data.schemas.SchemaUtils.readXml(files.xml().toFile());
+		schema.getTables().get("CUSTOMER_HISTORY").getColumns().get("VALID_FROM").setDataType(DataType.VARCHAR);
+		schema.writeXml(files.xml().toFile());
+		var error = assertThrows(CommandException.class,
+				() -> new MigrationSnapshotConfigurationResolver().resolve(files.yaml().toFile()));
+		assertEquals("Snapshot validity column must be a date/time type: VALID_FROM", error.getMessage());
+
+		schema = (Schema) com.sqlapp.data.schemas.SchemaUtils.readXml(files.xml().toFile());
+		schema.getTables().get("CUSTOMER_HISTORY").getColumns().get("VALID_FROM").setDataType(DataType.TIMESTAMP);
+		schema.getTables().get("CUSTOMER_HISTORY").getColumns().get("IS_CURRENT").setDataType(DataType.VARCHAR);
+		schema.writeXml(files.xml().toFile());
+		error = assertThrows(CommandException.class,
+				() -> new MigrationSnapshotConfigurationResolver().resolve(files.yaml().toFile()));
+		assertEquals("Snapshot currentColumn must be boolean or numeric: IS_CURRENT", error.getMessage());
+	}
+
 	private FileSet files(final String tail) throws Exception {
 		return files(tail, true);
 	}

@@ -1264,6 +1264,12 @@ For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration
 chunks, because per-chunk missing-row expiry would be incorrect.
+Configuration resolution verifies from the Schema model that both validity
+columns are date/time values and that an optional current-marker column is
+boolean or numeric. This validation occurs before database connections are
+opened. Source and target business-column types are not required to be
+identical because heterogeneous migrations commonly use equivalent vendor
+types; JDBC conversion remains the owning dialect/driver's responsibility.
 Set optional `reportFile` in YAML to atomically write a versioned JSON success
 artifact after both database execution scopes complete. The report records the
 resolved tables, business and tracked columns, effective timestamp, selected

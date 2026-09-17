@@ -80,8 +80,16 @@ public final class MigrationSnapshotConfigurationResolver {
 		validateColumns(target, definition.trackedColumns(), "targetTable", value.getTargetTable());
 		validateColumns(target, List.of(definition.validFromColumn(), definition.validToColumn()), "targetTable",
 				value.getTargetTable());
+		validateTemporalColumn(target, definition.validFromColumn());
+		validateTemporalColumn(target, definition.validToColumn());
 		if (definition.currentColumn() != null) {
 			validateColumns(target, List.of(definition.currentColumn()), "targetTable", value.getTargetTable());
+			final var current = target.getColumns().get(definition.currentColumn());
+			if (current.getDataType() == null
+					|| !(current.getDataType().isBoolean() || current.getDataType().isNumeric())) {
+				throw new CommandException("Snapshot currentColumn must be boolean or numeric: "
+						+ definition.currentColumn());
+			}
 		}
 		final java.nio.file.Path reportFile = value.getReportFile() == null || value.getReportFile().isBlank() ? null
 				: resolve(configurationFile, value.getReportFile()).toPath().toAbsolutePath().normalize();
@@ -119,6 +127,13 @@ public final class MigrationSnapshotConfigurationResolver {
 			if (table.getColumns().get(name) == null) {
 				throw new CommandException("Unknown column '" + name + "' in " + property + ": " + configuredName);
 			}
+		}
+	}
+
+	private static void validateTemporalColumn(final Table table, final String name) {
+		final var column = table.getColumns().get(name);
+		if (column.getDataType() == null || !column.getDataType().isDateTime()) {
+			throw new CommandException("Snapshot validity column must be a date/time type: " + name);
 		}
 	}
 

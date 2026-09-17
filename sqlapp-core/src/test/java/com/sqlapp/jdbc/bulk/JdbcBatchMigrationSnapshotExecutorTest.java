@@ -151,6 +151,58 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 		}
 	}
 
+	@Test
+	void supportsDefinitionsWithoutACurrentMarker() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_without_marker", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
+						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP)");
+				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+						+ "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL)");
+			}
+			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
+					List.of("NAME"), "VALID_FROM", "VALID_TO", null, true);
+			final var target = new Table("CUSTOMER_HISTORY").setSchemaName("PUBLIC");
+			target.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			target.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
+			target.getColumns().add(new Column("VALID_FROM").setDataType(DataType.TIMESTAMP));
+			target.getColumns().add(new Column("VALID_TO").setDataType(DataType.TIMESTAMP));
+			final var plan = MigrationSnapshotPlanner.plan(definition, Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(1, "new")), List.of(row(1, "old")));
+
+			assertEquals(new MigrationSnapshotExecutionResult(1, 1, 0),
+					JdbcBatchMigrationSnapshotExecutor.execute(connection, target, plan, 100));
+			assertEquals(1, count(connection, "SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE VALID_TO IS NULL"));
+		}
+	}
+
+	@Test
+	void rejectsPartiallyNullCompositeCurrentKeys() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_composite_null", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER, REGION VARCHAR(10), NAME VARCHAR(20), "
+						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+						+ "(1, NULL, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+			}
+			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY",
+					List.of("ID", "REGION"), List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
+			final var target = new Table("CUSTOMER_HISTORY").setSchemaName("PUBLIC");
+			target.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			target.getColumns().add(new Column("REGION").setDataType(DataType.VARCHAR));
+			target.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
+			target.getColumns().add(new Column("VALID_FROM").setDataType(DataType.TIMESTAMP));
+			target.getColumns().add(new Column("VALID_TO").setDataType(DataType.TIMESTAMP));
+			target.getColumns().add(new Column("IS_CURRENT").setDataType(DataType.BOOLEAN));
+			final var plan = MigrationSnapshotPlanner.plan(definition, Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(), List.of());
+
+			final var error = assertThrows(SQLException.class,
+					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, target, plan, 100));
+			assertEquals("current target snapshot contains duplicate or null snapshot keys", error.getMessage());
+		}
+	}
+
 	private static MigrationSnapshotDefinition definition() {
 		return new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
 				List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
