@@ -15,6 +15,7 @@ import lombok.Setter;
 public class VerifyMigrationSnapshotReportCommand extends AbstractCommand {
 	private File reportFile;
 	private File approvalFile;
+	private File configurationFile;
 	private MigrationSnapshotExecutionReport report;
 	private MigrationSnapshotApprovalReport approval;
 
@@ -27,6 +28,10 @@ public class VerifyMigrationSnapshotReportCommand extends AbstractCommand {
 		final var io = new MigrationSnapshotExecutionReportIO();
 		report = io.read(reportFile.toPath());
 		approval = io.verifyApproval(report, approvalFile.toPath());
+		if (configurationFile != null) {
+			io.verifyConfiguration(report,
+					new MigrationSnapshotConfigurationResolver().resolveForApproval(configurationFile));
+		}
 		info("Migration snapshot approval evidence verified: ", reportFile.getAbsolutePath());
 	}
 }

@@ -6,6 +6,7 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.migration.VerifyMigrationSnapshotReportCommand;
 
@@ -23,10 +24,18 @@ public abstract class VerifyMigrationSnapshotReportTask extends AbstractTask<Ver
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getApprovalFile();
 
+	@Optional
+	@InputFile
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getConfigurationFile();
+
 	@Override
 	protected void beforeRun(final VerifyMigrationSnapshotReportCommand command) {
 		command.setReportFile(getReportFile().get().getAsFile());
 		command.setApprovalFile(getApprovalFile().get().getAsFile());
+		if (getConfigurationFile().isPresent()) {
+			command.setConfigurationFile(getConfigurationFile().get().getAsFile());
+		}
 	}
 
 	@Override

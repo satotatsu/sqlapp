@@ -45,7 +45,7 @@ class MigrationSnapshotFailureReportIOTest {
 				Instant.parse("2026-09-16T01:00:00Z"), Instant.parse("2026-09-16T00:59:00Z"),
 				MigrationSnapshotFailurePhase.DATABASE_EXECUTION, "customer", approval.configurationFingerprint(),
 				approval.generatedAt(), artifactFingerprint, approval.sourceTable(), approval.targetTable(),
-				approval.effectiveAt(), "java.sql.SQLException", "failure");
+				approval.effectiveAt(), null, "java.sql.SQLException", "failure");
 		final Path failureFile = directory.resolve("failure.json");
 		final var failureIo = new MigrationSnapshotFailureReportIO();
 		failureIo.write(failureFile, failure);
@@ -63,6 +63,8 @@ class MigrationSnapshotFailureReportIOTest {
 				Instant.parse("2026-09-16T01:00:00Z"), Instant.parse("2026-09-16T00:59:00Z"),
 				MigrationSnapshotFailurePhase.DATABASE_EXECUTION, "customer", "sha256:" + "0".repeat(64), null, null,
 				"PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", Instant.parse("2026-09-16T00:00:00Z"),
+				new MigrationSnapshotLeaseEvidence(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.DATABASE, "worker-1",
+						java.time.Duration.ofMinutes(5), "SQLAPP_BULK_MIGRATION_LEASE", null),
 				"java.sql.SQLException", message);
 	}
 }

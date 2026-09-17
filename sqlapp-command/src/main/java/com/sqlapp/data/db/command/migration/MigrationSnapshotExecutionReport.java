@@ -10,6 +10,7 @@ public record MigrationSnapshotExecutionReport(int formatVersion, Instant genera
 		String configurationFingerprint, Instant approvalGeneratedAt, String approvalArtifactFingerprint,
 		String sourceTable, String targetTable, List<String> keyColumns, List<String> trackedColumns,
 		boolean expireMissingRows, Instant effectiveAt, int fetchSize, int batchSize, Duration approvalValidFor,
+		MigrationSnapshotLeaseEvidence lease,
 		String databaseProductName,
 		String databaseProductVersion, String executorClassName, boolean callerTransactionAtomicity,
 		long expiredRows, long insertedRows, long unchangedRows) {

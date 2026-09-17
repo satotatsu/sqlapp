@@ -7,6 +7,6 @@ import java.time.Instant;
 public record MigrationSnapshotFailureReport(int formatVersion, Instant generatedAt, Instant startedAt,
 		MigrationSnapshotFailurePhase phase, String snapshotId, String configurationFingerprint, Instant approvalGeneratedAt,
 		String approvalArtifactFingerprint, String sourceTable, String targetTable, Instant effectiveAt,
-		String failureType, String failureMessage) {
+		MigrationSnapshotLeaseEvidence lease, String failureType, String failureMessage) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
 }

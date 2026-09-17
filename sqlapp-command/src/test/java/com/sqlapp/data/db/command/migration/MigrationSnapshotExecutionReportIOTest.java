@@ -40,7 +40,7 @@ class MigrationSnapshotExecutionReportIOTest {
 				valid.startedAt(), valid.snapshotId(), "invalid", valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(),
 				valid.sourceTable(), valid.targetTable(), valid.keyColumns(),
 				valid.trackedColumns(), valid.expireMissingRows(), valid.effectiveAt(), valid.fetchSize(),
-				valid.batchSize(), valid.approvalValidFor(), valid.databaseProductName(), valid.databaseProductVersion(),
+				valid.batchSize(), valid.approvalValidFor(), valid.lease(), valid.databaseProductName(), valid.databaseProductVersion(),
 				valid.executorClassName(), valid.callerTransactionAtomicity(), valid.expiredRows(),
 				valid.insertedRows(), valid.unchangedRows());
 		assertThrows(CommandException.class,
@@ -78,7 +78,9 @@ class MigrationSnapshotExecutionReportIOTest {
 		return new MigrationSnapshotExecutionReport(version, Instant.parse("2026-09-16T01:00:00Z"),
 				Instant.parse("2026-09-16T00:59:00Z"), "customer",
 				"sha256:" + "0".repeat(64), null, null, "PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true,
-				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500, null, "HSQL Database Engine", "2.7",
+				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500, null,
+				new MigrationSnapshotLeaseEvidence(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.FILE, "worker-1",
+						java.time.Duration.ofMinutes(5), null, "C:\\leases"), "HSQL Database Engine", "2.7",
 				"example.Executor", true, 2, 2, 1);
 	}
 
@@ -88,7 +90,7 @@ class MigrationSnapshotExecutionReportIOTest {
 		return new MigrationSnapshotExecutionReport(value.formatVersion(), generatedAt, startedAt, value.snapshotId(),
 				value.configurationFingerprint(), approvalGeneratedAt, approvalArtifactFingerprint, value.sourceTable(),
 				value.targetTable(), value.keyColumns(), value.trackedColumns(), value.expireMissingRows(),
-				value.effectiveAt(), value.fetchSize(), value.batchSize(), approvalValidFor,
+				value.effectiveAt(), value.fetchSize(), value.batchSize(), approvalValidFor, value.lease(),
 				value.databaseProductName(), value.databaseProductVersion(), value.executorClassName(),
 				value.callerTransactionAtomicity(), value.expiredRows(), value.insertedRows(), value.unchangedRows());
 	}

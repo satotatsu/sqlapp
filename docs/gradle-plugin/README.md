@@ -159,6 +159,8 @@ Audit the saved pair later without opening either database:
 verifyMigrationSnapshotReport {
     reportFile = layout.buildDirectory.file('reports/customer-snapshot.json')
     approvalFile = layout.buildDirectory.file('migration-approvals/customer.json')
+    // Optional: also verify the current resolved lease and configuration.
+    configurationFile = layout.projectDirectory.file('snapshot.yaml')
 }
 ```
 

@@ -59,6 +59,18 @@ public final class MigrationSnapshotFailureReportIO {
 		return approval;
 	}
 
+	public void verifyConfiguration(final MigrationSnapshotFailureReport report,
+			final MigrationSnapshotConfigurationResolver.Resolution expected) {
+		validate(report);
+		Objects.requireNonNull(expected, "expected");
+		if (!Objects.equals(expected.configurationFingerprint(), report.configurationFingerprint())) {
+			throw new CommandException("Migration snapshot failure report configuration fingerprint mismatch");
+		}
+		if (!Objects.equals(MigrationSnapshotLeaseEvidence.from(expected.leaseConfiguration()), report.lease())) {
+			throw new CommandException("Migration snapshot failure report lease mismatch");
+		}
+	}
+
 	static MigrationSnapshotFailureReport validate(final MigrationSnapshotFailureReport report) {
 		if (report == null || report.formatVersion() != MigrationSnapshotFailureReport.CURRENT_FORMAT_VERSION) {
 			throw new CommandException("Unsupported or missing migration snapshot failure report formatVersion");

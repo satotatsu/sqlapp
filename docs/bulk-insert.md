@@ -1282,7 +1282,8 @@ types; JDBC conversion remains the owning dialect/driver's responsibility.
 Set optional `reportFile` in YAML to atomically write a versioned JSON success
 artifact after both database execution scopes complete. The report records the
 resolved tables, business and tracked columns, effective timestamp, selected
-executor, transaction capability, configured fetch/batch sizes, and affected
+executor, transaction capability, configured fetch/batch sizes, resolved lease
+mode/owner/duration/storage, and affected
 row counts. It also contains a deterministic SHA-256 configuration fingerprint
 covering the snapshot definition, effective timestamp, fetch/batch sizes and
 resolved source/target table shapes. Consumers can call
@@ -1301,7 +1302,7 @@ approval path is resolved relative to the YAML file, like `schemaFile` and
 `reportFile`. Failed executions do not replace the report file.
 Set optional `failureReportFile` to atomically write a separate, bounded JSON
 failure artifact. It records the resolved configuration fingerprint, approval
-evidence, start/failure timestamps, exception type and message, and a failure
+evidence, lease settings, start/failure timestamps, exception type and message, and a failure
 phase. `DATABASE_EXECUTION` means target execution failed and the executor
 rolled its transaction back. `POST_COMMIT_FINALIZATION` means target execution
 committed but later command finalization failed. `SUCCESS_REPORT_WRITE` means
@@ -1326,7 +1327,9 @@ The approval window is half-open: execution must start strictly before its
 expiration timestamp; starting exactly at expiration is rejected.
 Use `VerifyMigrationSnapshotReportCommand` or the
 `verifyMigrationSnapshotReport` Gradle task to validate the saved pair without
-database access. Even a whitespace-only change to the approval JSON is detected.
+database access. Supply the optional snapshot YAML to the verifier to also
+require its current configuration fingerprint and resolved lease settings to
+match the report. Even a whitespace-only change to the approval JSON is detected.
 When the executor owns an auto-commit target connection, a staging, expiry, or
 history-row insert failure rolls back the complete snapshot, restores the
 connection's auto-commit state, and removes the connection-local staging

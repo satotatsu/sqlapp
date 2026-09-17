@@ -52,6 +52,18 @@ public final class MigrationSnapshotExecutionReportIO {
 		return report;
 	}
 
+	public void verifyConfiguration(final MigrationSnapshotExecutionReport report,
+			final MigrationSnapshotConfigurationResolver.Resolution expected) {
+		validate(report);
+		Objects.requireNonNull(expected, "expected");
+		if (!Objects.equals(expected.configurationFingerprint(), report.configurationFingerprint())) {
+			throw new CommandException("Migration snapshot report configuration fingerprint mismatch");
+		}
+		if (!Objects.equals(MigrationSnapshotLeaseEvidence.from(expected.leaseConfiguration()), report.lease())) {
+			throw new CommandException("Migration snapshot report lease mismatch");
+		}
+	}
+
 	public MigrationSnapshotApprovalReport verifyApproval(final MigrationSnapshotExecutionReport report,
 			final Path approvalFile) {
 		validate(report);

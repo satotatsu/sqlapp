@@ -66,6 +66,8 @@ class ExecuteMigrationSnapshotCommandTest {
 		assertEquals(2, report.expiredRows());
 		assertEquals(2, report.insertedRows());
 		assertEquals(1, report.unchangedRows());
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.FILE, report.lease().mode());
+		assertEquals("command-test", report.lease().ownerId());
 		assertTrue(report.executorClassName().endsWith("HsqlSetBasedMigrationSnapshotExecutor"));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE IS_CURRENT")) {
@@ -75,9 +77,14 @@ class ExecuteMigrationSnapshotCommandTest {
 		final var verify = new VerifyMigrationSnapshotReportCommand();
 		verify.setReportFile(directory.resolve("snapshot-result.json").toFile());
 		verify.setApprovalFile(approval.toFile());
+		verify.setConfigurationFile(yaml.toFile());
 		verify.run();
 		assertEquals(report, verify.getReport());
 		assertEquals(approvalCommand.getReport(), verify.getApproval());
+
+		Files.writeString(yaml, Files.readString(yaml).replace("ownerId: command-test", "ownerId: changed-worker"));
+		final var leaseMismatch = assertThrows(CommandException.class, verify::run);
+		assertEquals("Migration snapshot report lease mismatch", leaseMismatch.getMessage());
 
 		Files.writeString(approval, System.lineSeparator(), StandardOpenOption.APPEND);
 		final var error = assertThrows(CommandException.class, verify::run);
@@ -110,6 +117,7 @@ class ExecuteMigrationSnapshotCommandTest {
 		assertFalse(Files.exists(directory.resolve("snapshot-result.json")));
 		final var failure = new MigrationSnapshotFailureReportIO().read(directory.resolve("snapshot-failure.json"));
 		assertEquals(MigrationSnapshotFailurePhase.DATABASE_EXECUTION, failure.phase());
+		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.FILE, failure.lease().mode());
 		assertEquals("CUSTOMER", failure.snapshotId());
 		assertTrue(failure.failureType().contains("Exception"));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
