@@ -47,24 +47,41 @@ class BulkMigrationJobStatusInspectorTest {
 
 	@Test
 	void jobStatusesAreImmutableValidatedAndOverflowSafe() {
-		final var maxCheckpoint = BulkMigrationCheckpoint.builder().migrationId("max").processedRows(Long.MAX_VALUE)
-				.build();
-		final var oneCheckpoint = BulkMigrationCheckpoint.builder().migrationId("one").processedRows(1).build();
-		final var max = new BulkMigrationJobTaskStatus("max", BulkMigrationJobTaskState.IN_PROGRESS, maxCheckpoint);
-		final var one = new BulkMigrationJobTaskStatus("one", BulkMigrationJobTaskState.IN_PROGRESS, oneCheckpoint);
-		final var tasks = new ArrayList<>(List.of(max));
+		final long largeRows = Long.MAX_VALUE / 2 + 1;
+		final int chunkSize = Integer.MAX_VALUE;
+		final long completedChunks = (largeRows - 1) / chunkSize + 1;
+		final var firstCheckpoint = BulkMigrationCheckpoint.builder().migrationId("first").processedRows(largeRows)
+				.completedChunks(completedChunks).chunkSize(chunkSize).lastChunkHash("first-hash").build();
+		final var secondCheckpoint = BulkMigrationCheckpoint.builder().migrationId("second").processedRows(largeRows)
+				.completedChunks(completedChunks).chunkSize(chunkSize).lastChunkHash("second-hash").build();
+		final var first = new BulkMigrationJobTaskStatus("first", BulkMigrationJobTaskState.IN_PROGRESS,
+				firstCheckpoint);
+		final var second = new BulkMigrationJobTaskStatus("second", BulkMigrationJobTaskState.IN_PROGRESS,
+				secondCheckpoint);
+		final var tasks = new ArrayList<>(List.of(first));
 		final var status = new BulkMigrationJobStatus("plan", tasks);
 		tasks.clear();
 
-		assertEquals(List.of(max), status.getTasks());
+		assertEquals(List.of(first), status.getTasks());
 		assertThrows(UnsupportedOperationException.class, () -> status.getTasks().clear());
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobTaskStatus(" ", BulkMigrationJobTaskState.NOT_STARTED, null));
 		assertThrows(NullPointerException.class, () -> new BulkMigrationJobTaskStatus("task", null, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.IN_PROGRESS, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.COMPLETE,
+						checkpoint("task", "source", false, 1)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.IN_PROGRESS,
+						checkpoint("task", "source", true, 1)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.NOT_STARTED,
+						checkpoint("task", "source", false, 1)));
 		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus(" ", List.of()));
-		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus("plan", List.of(max, max)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus("plan", List.of(first, first)));
 		assertThrows(ArithmeticException.class,
-				() -> new BulkMigrationJobStatus("plan", List.of(max, one)).getProcessedRows());
+				() -> new BulkMigrationJobStatus("plan", List.of(first, second)).getProcessedRows());
 	}
 
 	@Test

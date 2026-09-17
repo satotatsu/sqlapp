@@ -58,6 +58,11 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			if (processedRows != null && processedRows < 0) {
 				throw new IllegalArgumentException("execution processedRows must not be negative");
 			}
+			final boolean rowsAllowed = "JOB_COMPLETED".equals(event) || "JOB_PAUSED".equals(event)
+					|| "TASK_COMPLETED".equals(event) || "TASK_PAUSED".equals(event);
+			if (processedRows != null && !rowsAllowed) {
+				throw new IllegalArgumentException("execution processedRows is not valid for " + event);
+			}
 			if (leaseAcquisitionId != null && (leaseAcquisitionId.isBlank()
 					|| leaseAcquisitionId.length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
 				throw new IllegalArgumentException("execution leaseAcquisitionId is invalid");

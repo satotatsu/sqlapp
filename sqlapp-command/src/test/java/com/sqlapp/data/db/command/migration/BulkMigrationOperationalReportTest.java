@@ -262,7 +262,8 @@ class BulkMigrationOperationalReportTest {
 				() -> io.write(directory.resolve("false-task-completion.json"),
 						copyWithExecution(report, falseTaskCompletion)));
 		final var completeStatus = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
-				new BulkMigrationJobTaskStatus("customers", BulkMigrationJobTaskState.COMPLETE, null)));
+				new BulkMigrationJobTaskStatus("customers", BulkMigrationJobTaskState.COMPLETE,
+						checkpoint(true, "source"))));
 		final var completeReport = new BulkMigrationOperationalReportBuilder().build(plan, completeStatus, null, null);
 		final var wrongCompletedRows = new BulkMigrationOperationalReport.Execution(
 				"JOB_COMPLETED", null, completeReport.generatedAt(), 1L, null, null, null);
@@ -275,6 +276,12 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationOperationalReport.Execution("JOB_FAILED", null, report.generatedAt(), null,
 						null, "java.lang.Exception", " "));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("JOB_STARTED", null, report.generatedAt(), 1L,
+						null, null, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("TASK_FAILED", "customers", report.generatedAt(),
+						1L, null, java.sql.SQLException.class.getName(), "failed"));
 	}
 
 	@Test
@@ -322,14 +329,14 @@ class BulkMigrationOperationalReportTest {
 
 		final var incompatible = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
 				new BulkMigrationJobTaskStatus("customers",
-						BulkMigrationJobTaskState.INCOMPATIBLE, null)));
+						BulkMigrationJobTaskState.INCOMPATIBLE, checkpoint(false, "previous-source"))));
 		assertEquals(BulkMigrationResumeReadiness.INCOMPATIBLE,
 				BulkMigrationOperationalReportResumeAssessor.assess(
 						builder.build(plan, incompatible, null, null)));
 
 		final var complete = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
 				new BulkMigrationJobTaskStatus("customers",
-						BulkMigrationJobTaskState.COMPLETE, null)));
+						BulkMigrationJobTaskState.COMPLETE, checkpoint(true, "source"))));
 		final var completeReport = builder.build(plan, complete, null, null);
 		assertEquals(BulkMigrationResumeReadiness.COMPLETE,
 				BulkMigrationOperationalReportResumeAssessor.assess(completeReport));
@@ -360,7 +367,7 @@ class BulkMigrationOperationalReportTest {
 				new BulkMigrationJobTaskStatus("customers",
 						BulkMigrationJobTaskState.IN_PROGRESS, checkpoint)));
 		final var execution = new BulkMigrationOperationalReport.Execution(
-				"TASK_STARTED", "customers", now.minusSeconds(10), 0L,
+				"TASK_STARTED", "customers", now.minusSeconds(10), null,
 				null, null, null);
 		final var report = new BulkMigrationOperationalReportBuilder(
 				Clock.fixed(now, ZoneOffset.UTC)).build(plan, status, null, null,
@@ -459,7 +466,7 @@ class BulkMigrationOperationalReportTest {
 				.migrationId("other").processedRows(0).build();
 		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
 				new BulkMigrationJobTaskStatus("customers",
-						BulkMigrationJobTaskState.NOT_STARTED, foreignCheckpoint)));
+						BulkMigrationJobTaskState.INCOMPATIBLE, foreignCheckpoint)));
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, status, null, null));
 
@@ -755,6 +762,13 @@ class BulkMigrationOperationalReportTest {
 
 	private static BulkMigrationJobPlan plan() {
 		return plan(null);
+	}
+
+	private static BulkMigrationCheckpoint checkpoint(final boolean complete,
+			final String sourceFingerprint) {
+		return BulkMigrationCheckpoint.builder().migrationId("顧客移行")
+				.sourceFingerprint(sourceFingerprint).targetFingerprint("target")
+				.processedRows(0).completedChunks(0).chunkSize(10_000).complete(complete).build();
 	}
 
 	private static BulkMigrationOperationalReport copyWith(

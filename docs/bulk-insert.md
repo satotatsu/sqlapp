@@ -1050,6 +1050,10 @@ task counts. Task state must also agree with durable checkpoint evidence:
 `NOT_STARTED` has no checkpoint, `IN_PROGRESS` has an incomplete checkpoint,
 and `COMPLETE` has a complete checkpoint. This prevents a hand-edited or
 partially written report from claiming completion without durable resume state.
+The same invariant is enforced by the shared `BulkMigrationJobTaskStatus`
+model, so programmatic status producers cannot bypass it before report creation.
+Execution row counts are accepted only for completion and pause events; start,
+failure, and rejection events cannot carry ambiguous row-count evidence.
 This makes a
 successfully read report safe to use for monitoring and resume decisions;
 invalid or newer reports must be handled explicitly rather than interpreted
