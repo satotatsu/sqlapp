@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -25,6 +26,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
@@ -306,6 +308,57 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertNotNull(fileLeaseCommand.getVerificationResult());
 			assertEquals(true, Files.isRegularFile(temporaryDirectory
 					.resolve("reports/verification-file-lease.json")));
+			final Path statusFile = temporaryDirectory.resolve("reports/status.json");
+			final var fileSuccess = new BulkMigrationOperationalReportIO().read(statusFile);
+			assertEquals("JOB_COMPLETED", fileSuccess.execution().event());
+			assertNotNull(fileSuccess.execution().leaseAcquisitionId());
+
+			final BulkMigrationJobPlan emptyPlan;
+			try (var sourceConnection = source.getConnection()) {
+				emptyPlan = new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, sourceConnection).plan();
+			}
+			final var fileBlocker = BulkMigrationJobLeaseManagerFactory.create(null,
+					BulkMigrationJobLeaseConfiguration.file("blocking-file-worker",
+							temporaryDirectory.resolve("leases")));
+			try (var ignored = fileBlocker.acquire(emptyPlan)) {
+				final var rejectedCommand = new ExecuteBulkMigrationJobCommand();
+				rejectedCommand.setDataSource(target);
+				rejectedCommand.setSourceDataSource(source);
+				rejectedCommand.setCloseDataSource(false);
+				rejectedCommand.setConfigurationFile(configurationFile);
+				assertThrows(RuntimeException.class, rejectedCommand::run);
+			}
+			final var fileRejected = new BulkMigrationOperationalReportIO().read(statusFile);
+			assertEquals("JOB_REJECTED", fileRejected.execution().event());
+			assertNull(fileRejected.execution().leaseAcquisitionId());
+
+			final var databaseLease = new BulkMigrationJobConfiguration.Lease();
+			databaseLease.setMode(BulkMigrationJobLeaseMode.DATABASE);
+			databaseLease.setOwnerId("database-worker");
+			configuration.setLease(databaseLease);
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			final BulkMigrationJobPlan databasePlan;
+			try (var sourceConnection = source.getConnection()) {
+				databasePlan = new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, sourceConnection).plan();
+			}
+			try (var leaseConnection = target.getConnection()) {
+				leaseConnection.setAutoCommit(true);
+				final var databaseBlocker = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+						BulkMigrationJobLeaseConfiguration.database("blocking-database-worker"));
+				try (var ignored = databaseBlocker.acquire(databasePlan)) {
+					final var rejectedCommand = new ExecuteBulkMigrationJobCommand();
+					rejectedCommand.setDataSource(target);
+					rejectedCommand.setSourceDataSource(source);
+					rejectedCommand.setCloseDataSource(false);
+					rejectedCommand.setConfigurationFile(configurationFile);
+					assertThrows(RuntimeException.class, rejectedCommand::run);
+				}
+			}
+			final var databaseRejected = new BulkMigrationOperationalReportIO().read(statusFile);
+			assertEquals("JOB_REJECTED", databaseRejected.execution().event());
+			assertNull(databaseRejected.execution().leaseAcquisitionId());
 		}
 	}
 
