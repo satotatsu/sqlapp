@@ -45,7 +45,7 @@ class MigrationSnapshotFailureReportIOTest {
 				Instant.parse("2026-09-16T01:00:00Z"), Instant.parse("2026-09-16T00:59:00Z"),
 				MigrationSnapshotFailurePhase.DATABASE_EXECUTION, "customer", approval.configurationFingerprint(),
 				approval.generatedAt(), artifactFingerprint, approval.sourceTable(), approval.targetTable(),
-				approval.effectiveAt(), null, "java.sql.SQLException", "failure");
+				approval.effectiveAt(), null, null, "java.sql.SQLException", "failure");
 		final Path failureFile = directory.resolve("failure.json");
 		final var failureIo = new MigrationSnapshotFailureReportIO();
 		failureIo.write(failureFile, failure);
@@ -58,6 +58,17 @@ class MigrationSnapshotFailureReportIOTest {
 		assertEquals(approval, command.getApproval());
 	}
 
+	@Test
+	void rejectsAcquisitionEvidenceWithoutLeaseConfiguration() {
+		final MigrationSnapshotFailureReport valid = report("failure");
+		final var invalid = new MigrationSnapshotFailureReport(valid.formatVersion(), valid.generatedAt(),
+				valid.startedAt(), valid.phase(), valid.snapshotId(), valid.configurationFingerprint(),
+				valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(), valid.sourceTable(), valid.targetTable(),
+				valid.effectiveAt(), null, valid.leaseAcquisitionId(), valid.failureType(), valid.failureMessage());
+		assertThrows(CommandException.class,
+				() -> new MigrationSnapshotFailureReportIO().write(directory.resolve("invalid-acquisition.json"), invalid));
+	}
+
 	private static MigrationSnapshotFailureReport report(final String message) {
 		return new MigrationSnapshotFailureReport(MigrationSnapshotFailureReport.CURRENT_FORMAT_VERSION,
 				Instant.parse("2026-09-16T01:00:00Z"), Instant.parse("2026-09-16T00:59:00Z"),
@@ -65,6 +76,7 @@ class MigrationSnapshotFailureReportIOTest {
 				"PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", Instant.parse("2026-09-16T00:00:00Z"),
 				new MigrationSnapshotLeaseEvidence(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.DATABASE, "worker-1",
 						java.time.Duration.ofMinutes(5), "SQLAPP_BULK_MIGRATION_LEASE", null),
+				"acquisition-1",
 				"java.sql.SQLException", message);
 	}
 }

@@ -68,6 +68,8 @@ class ExecuteMigrationSnapshotCommandTest {
 		assertEquals(1, report.unchangedRows());
 		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.FILE, report.lease().mode());
 		assertEquals("command-test", report.lease().ownerId());
+		assertFalse(report.leaseAcquisitionId().isBlank());
+		assertEquals(command.getLeaseAcquisitionId(), report.leaseAcquisitionId());
 		assertTrue(report.executorClassName().endsWith("HsqlSetBasedMigrationSnapshotExecutor"));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE IS_CURRENT")) {
@@ -118,6 +120,8 @@ class ExecuteMigrationSnapshotCommandTest {
 		final var failure = new MigrationSnapshotFailureReportIO().read(directory.resolve("snapshot-failure.json"));
 		assertEquals(MigrationSnapshotFailurePhase.DATABASE_EXECUTION, failure.phase());
 		assertEquals(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.FILE, failure.lease().mode());
+		assertFalse(failure.leaseAcquisitionId().isBlank());
+		assertEquals(command.getLeaseAcquisitionId(), failure.leaseAcquisitionId());
 		assertEquals("CUSTOMER", failure.snapshotId());
 		assertTrue(failure.failureType().contains("Exception"));
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
@@ -152,6 +156,7 @@ class ExecuteMigrationSnapshotCommandTest {
 		assertThrows(CommandException.class, command::run);
 		final var failure = new MigrationSnapshotFailureReportIO().read(directory.resolve("snapshot-failure.json"));
 		assertEquals(MigrationSnapshotFailurePhase.SUCCESS_REPORT_WRITE, failure.phase());
+		assertEquals(command.getLeaseAcquisitionId(), failure.leaseAcquisitionId());
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var resultSet = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE IS_CURRENT")) {
 			resultSet.next();
@@ -184,6 +189,10 @@ class ExecuteMigrationSnapshotCommandTest {
 			final var error = assertThrows(RuntimeException.class, command::run);
 			assertTrue(error.getCause() instanceof BulkMigrationJobLeaseUnavailableException
 					|| error.getMessage().contains("lease"));
+			assertNull(command.getLeaseAcquisitionId());
+			final var failure = new MigrationSnapshotFailureReportIO()
+					.read(directory.resolve("snapshot-failure.json"));
+			assertNull(failure.leaseAcquisitionId());
 		}
 		try (var connection = target.getConnection(); var statement = connection.createStatement();
 				var rs = statement.executeQuery("SELECT NAME, VALID_TO FROM CUSTOMER_HISTORY")) {

@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Objects;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.util.JsonConverter;
 
 /** Reads and atomically writes completed SCD2 execution reports. */
@@ -127,6 +128,15 @@ public final class MigrationSnapshotExecutionReportIO {
 			if (report.approvalValidFor() != null
 					&& !report.approvalGeneratedAt().plus(report.approvalValidFor()).isAfter(report.startedAt())) {
 				throw new CommandException("Migration snapshot report approval was expired at execution start");
+			}
+		}
+		if ((report.lease() == null) != (report.leaseAcquisitionId() == null)) {
+			throw new CommandException("Migration snapshot report contains inconsistent lease acquisition evidence");
+		}
+		if (report.leaseAcquisitionId() != null) {
+			nonBlank(report.leaseAcquisitionId(), "leaseAcquisitionId");
+			if (report.leaseAcquisitionId().length() > BulkMigrationJobLease.ID_MAX_LENGTH) {
+				throw new CommandException("Migration snapshot report leaseAcquisitionId is too long");
 			}
 		}
 		nonBlank(report.sourceTable(), "sourceTable");

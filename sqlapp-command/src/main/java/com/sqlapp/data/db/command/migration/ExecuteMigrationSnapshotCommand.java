@@ -30,6 +30,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 	private DataSource sourceDataSource;
 	private MigrationSnapshotExecutionResult result;
 	private MigrationSnapshotExecutionReport report;
+	private String leaseAcquisitionId;
 
 	public ExecuteMigrationSnapshotCommand() {
 		this(Clock.systemUTC());
@@ -43,6 +44,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 	protected void doRun() {
 		result = null;
 		report = null;
+		leaseAcquisitionId = null;
 		if (getDataSource() == null)
 			throw new CommandException("Migration snapshot target data source is required.");
 		if (sourceDataSource == null)
@@ -63,6 +65,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 						resolved.definition().trackedColumns(), resolved.definition().expireMissingRows(),
 						resolved.effectiveAt(), resolved.fetchSize(), resolved.batchSize(), resolved.approvalValidFor(),
 						MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()),
+						leaseAcquisitionId,
 						metadata.getDatabaseProductName(), metadata.getDatabaseProductVersion(),
 						setBased.<String>map(x -> x.getClass().getName())
 								.orElse(JdbcBatchMigrationSnapshotExecutor.class.getName()),
@@ -112,6 +115,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 			final com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseManager manager) throws java.sql.SQLException {
 		try (var handle = manager.acquire(resolved.definition().id(), resolved.configurationFingerprint());
 				var heartbeat = handle.startHeartbeat()) {
+			leaseAcquisitionId = handle.getLease().acquisitionId();
 			// Record the committed result before heartbeat shutdown or lease release.
 			// A later cleanup failure is post-commit finalization, never a rollback.
 			result = executeSnapshot(source, target, resolved, heartbeat::renewAndCheck);
@@ -142,6 +146,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 				resolved.definition().id(), resolved.configurationFingerprint(), resolved.approvalGeneratedAt(),
 				resolved.approvalArtifactFingerprint(), name(resolved.sourceTable()), name(resolved.targetTable()),
 				resolved.effectiveAt(), MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()),
+				leaseAcquisitionId,
 				failure.getClass().getName(), bounded);
 		try {
 			new MigrationSnapshotFailureReportIO().write(resolved.failureReportFile(), failureReport);

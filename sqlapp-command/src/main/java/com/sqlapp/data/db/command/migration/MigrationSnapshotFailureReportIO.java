@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.util.JsonConverter;
 
 /** Reads and atomically writes bounded SCD2 failure reports. */
@@ -103,6 +104,15 @@ public final class MigrationSnapshotFailureReportIO {
 		}
 		if (report.approvalGeneratedAt() != null && report.approvalGeneratedAt().isAfter(report.startedAt())) {
 			throw new CommandException("Migration snapshot failure report approval postdates execution start");
+		}
+		if (report.leaseAcquisitionId() != null) {
+			if (report.lease() == null) {
+				throw new CommandException("Migration snapshot failure report contains lease acquisition without lease evidence");
+			}
+			nonBlank(report.leaseAcquisitionId(), "leaseAcquisitionId");
+			if (report.leaseAcquisitionId().length() > BulkMigrationJobLease.ID_MAX_LENGTH) {
+				throw new CommandException("Migration snapshot failure report leaseAcquisitionId is too long");
+			}
 		}
 		return report;
 	}

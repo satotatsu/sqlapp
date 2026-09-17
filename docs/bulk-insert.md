@@ -1295,7 +1295,10 @@ executor, transaction capability, configured fetch/batch sizes, resolved lease
 mode/owner/duration/storage, and affected
 row counts. It also contains a deterministic SHA-256 configuration fingerprint
 covering the snapshot definition, effective timestamp, fetch/batch sizes and
-resolved source/target table shapes. Consumers can call
+resolved source/target table shapes. When a lease is configured, a successful
+report also records the unique acquisition ID of the lease instance that
+fenced that execution. The acquisition ID is runtime audit evidence: it is not
+part of the YAML configuration fingerprint or approval comparison. Consumers can call
 `MigrationSnapshotExecutionReportIO.read(reportFile, expectedFingerprint)` to
 reject a success artifact produced from different configuration or Schema
 metadata. To make this a declarative execution gate, set `approvalReportFile`
@@ -1311,7 +1314,8 @@ approval path is resolved relative to the YAML file, like `schemaFile` and
 `reportFile`. Failed executions do not replace the report file.
 Set optional `failureReportFile` to atomically write a separate, bounded JSON
 failure artifact. It records the resolved configuration fingerprint, approval
-evidence, lease settings, start/failure timestamps, exception type and message, and a failure
+evidence, lease settings, the acquisition ID when lease acquisition completed,
+start/failure timestamps, exception type and message, and a failure
 phase. `DATABASE_EXECUTION` means target execution failed and the executor
 rolled its transaction back. `POST_COMMIT_FINALIZATION` means target execution
 committed but later command finalization failed. `SUCCESS_REPORT_WRITE` means
@@ -1319,7 +1323,9 @@ database execution completed and committed, but publication of the success
 artifact failed. Operators must not mistake either post-commit phase for a
 database rollback. Failure-report publication errors are attached to the
 original exception and never replace it. Success and failure artifacts never
-overwrite one another.
+overwrite one another. A lease-configured failure with no acquisition ID failed
+before the command acquired its fence; a populated acquisition ID proves that
+the reported execution owned that specific lease generation.
 Set optional `approvalValidFor` to a positive ISO-8601 duration such as `PT24H`
 to prevent indefinite replay. The policy is included in the configuration
 fingerprint and both artifacts. Expired approvals and approvals dated in the
