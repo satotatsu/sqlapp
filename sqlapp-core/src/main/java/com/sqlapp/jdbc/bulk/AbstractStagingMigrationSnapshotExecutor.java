@@ -50,6 +50,7 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 		final String stage = stageIdentifier(stageName());
 		try (var scope = BulkUpsertExecutionScope.begin(connection, true)) {
 			try {
+				MigrationSnapshotTargetValidator.beforeMutation(connection, dialect, target, definition, effectiveAt);
 				try (var statement = connection.createStatement()) { statement.execute(createStageSql(stage, target, data)); }
 				final String cleanupSql = cleanupStageSql(stage);
 				// A DROP may implicitly commit on databases such as HSQLDB. When the
@@ -58,11 +59,10 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 				if (cleanupSql != null && scope.isTransactionManaged()) scope.addCleanupSql(cleanupSql);
 				stage(connection, stage, data, definition.keyColumns(), sourceRows, batchSize);
 				requireValidKeys(connection, stage, definition.keyColumns(), null, false, "source snapshot");
-				requireValidKeys(connection, target, definition.keyColumns(),
-						q("t", definition.validToColumn()) + " IS NULL", true, "current target snapshot");
 				final long unchanged = unchanged(connection, target, stage, definition);
 				final long expired = close(connection, target, stage, definition, effectiveAt);
 				final long inserted = insert(connection, target, stage, definition, data, effectiveAt);
+				MigrationSnapshotTargetValidator.afterMutation(connection, dialect, target, definition);
 				scope.commit();
 				return new MigrationSnapshotExecutionResult(expired, inserted, unchanged);
 			} catch (SQLException | RuntimeException e) { scope.rollback(e); throw e; }

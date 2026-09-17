@@ -39,8 +39,11 @@ public final class JdbcBatchMigrationSnapshotExecutor {
 		final String insertSql = insertSql(dialect::quote, tableName, definition, dataColumns);
 		try (var scope = BulkUpsertExecutionScope.begin(connection, true)) {
 			try {
+				MigrationSnapshotTargetValidator.beforeMutation(connection, dialect, tableName, definition,
+						plan.effectiveAt());
 				final long expired = close(connection, closeSql, definition, plan, batchSize);
 				final long inserted = insert(connection, insertSql, definition, dataColumns, plan, batchSize);
+				MigrationSnapshotTargetValidator.afterMutation(connection, dialect, tableName, definition);
 				scope.commit();
 				return new MigrationSnapshotExecutionResult(expired, inserted, plan.unchangedRows());
 			} catch (SQLException | RuntimeException e) {
@@ -73,10 +76,12 @@ public final class JdbcBatchMigrationSnapshotExecutor {
 				var insertStatement = connection.prepareStatement(insertSql(dialect::quote, tableName, definition, dataColumns));
 				var scope = BulkUpsertExecutionScope.begin(connection, true)) {
 			try {
+				MigrationSnapshotTargetValidator.beforeMutation(connection, dialect, tableName, definition, effectiveAt);
 				final StreamingBatch batch = new StreamingBatch(closeStatement, insertStatement, definition, dataColumns,
 						effectiveAt, batchSize);
 				final var summary = MigrationSnapshotStreamingPlanner.plan(definition, sourceRows, currentRows, batch::add);
 				batch.flush();
+				MigrationSnapshotTargetValidator.afterMutation(connection, dialect, tableName, definition);
 				scope.commit();
 				return new MigrationSnapshotExecutionResult(summary.updatedRows() + summary.expiredRows(),
 						summary.insertedRows() + summary.updatedRows(), summary.unchangedRows());

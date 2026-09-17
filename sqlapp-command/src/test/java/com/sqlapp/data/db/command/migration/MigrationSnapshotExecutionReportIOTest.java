@@ -34,7 +34,7 @@ class MigrationSnapshotExecutionReportIOTest {
 	@Test
 	void rejectsUnsupportedAndCorruptReports() throws Exception {
 		final var io = new MigrationSnapshotExecutionReportIO();
-		assertThrows(CommandException.class, () -> io.write(directory.resolve("unsupported.json"), report(1)));
+		assertThrows(CommandException.class, () -> io.write(directory.resolve("unsupported.json"), report(2)));
 		final MigrationSnapshotExecutionReport valid = report(MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION);
 		final var invalidFingerprint = new MigrationSnapshotExecutionReport(valid.formatVersion(), valid.generatedAt(),
 				valid.startedAt(), valid.snapshotId(), "invalid", valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(),

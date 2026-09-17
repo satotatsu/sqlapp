@@ -1255,6 +1255,11 @@ streamed. Before mutating history, two bounded-result set-based checks reject
 duplicate source keys and duplicate or null keys among current target rows.
 These checks retain bounded JVM memory; indexes beginning with the configured
 business-key columns keep the grouped validation and subsequent joins fast.
+The shared executors also reject a snapshot timestamp that is not later than
+every current row's validity start, inconsistent current-marker values, and
+pre-existing zero-length or negative validity intervals. The same invariants
+are checked again after the set-based or batched DML and before commit. These
+are bounded-result SQL checks rather than per-row JDBC operations.
 For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration
@@ -1287,7 +1292,7 @@ long-lived approvals.
 When approval is required, the success report also records the approval's
 generation timestamp and a SHA-256 digest of the exact validated JSON bytes.
 This binds the database result to the reviewed artifact for later audit.
-Execution-report format version 2 separately records execution start and completion timestamps.
+The execution report separately records execution start and completion timestamps.
 Validation enforces approval generation <= execution start <= completion and
 checks approval expiry at the recorded start, so a long-running valid execution
 does not become invalid merely because it finishes after the approval window.

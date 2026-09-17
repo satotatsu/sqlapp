@@ -13,8 +13,7 @@ public record MigrationSnapshotExecutionReport(int formatVersion, Instant genera
 		String databaseProductName,
 		String databaseProductVersion, String executorClassName, boolean callerTransactionAtomicity,
 		long expiredRows, long insertedRows, long unchangedRows) {
-	/** Version 2 adds the execution start timestamp used by approval-window validation. */
-	public static final int CURRENT_FORMAT_VERSION = 2;
+	public static final int CURRENT_FORMAT_VERSION = 1;
 
 	public MigrationSnapshotExecutionReport {
 		keyColumns = keyColumns == null ? null : List.copyOf(keyColumns);

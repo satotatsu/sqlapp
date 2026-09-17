@@ -2,8 +2,10 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -106,6 +108,77 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 				rs.next();
 				assertEquals(2, rs.getInt(1));
 			}
+		}
+	}
+
+	@Test
+	void rejectsAnEffectiveTimestampThatCannotCloseTheCurrentInterval() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_invalid_effective_at", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
+						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+						+ "(1, 'old', TIMESTAMP '2026-09-16 00:00:00', NULL, TRUE)");
+			}
+			final var definition = definition();
+			final var plan = MigrationSnapshotPlanner.plan(definition, Instant.parse("2025-09-16T00:00:00Z"),
+					List.of(row(1, "new")), List.of(row(1, "old")));
+
+			final var error = assertThrows(SQLException.class,
+					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, table(), plan, 100));
+			assertEquals("Snapshot target violates temporal or current-marker invariants", error.getMessage());
+			assertEquals(1, count(connection, "SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE VALID_TO IS NULL"));
+		}
+	}
+
+	@Test
+	void rejectsInconsistentCurrentMarkersBeforeMutation() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_invalid_marker", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
+						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN)");
+				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+						+ "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, FALSE)");
+			}
+			final var definition = definition();
+			final var plan = MigrationSnapshotPlanner.plan(definition, Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(1, "new")), List.of(row(1, "old")));
+
+			final var error = assertThrows(SQLException.class,
+					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, table(), plan, 100));
+			assertEquals("Snapshot target violates temporal or current-marker invariants", error.getMessage());
+			assertEquals(1, count(connection, "SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE NAME='old'"));
+		}
+	}
+
+	@Test
+	void rejectsInvalidExistingValidityIntervalsBeforeMutation() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_invalid_interval", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
+						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
+						+ "(1, 'broken', TIMESTAMP '2026-02-01 00:00:00', TIMESTAMP '2026-01-01 00:00:00', FALSE)");
+			}
+			final var plan = MigrationSnapshotPlanner.plan(definition(), Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(2, "new")), List.of());
+
+			final var error = assertThrows(SQLException.class,
+					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, table(), plan, 100));
+			assertEquals("Snapshot target violates temporal or current-marker invariants", error.getMessage());
+			assertEquals(1, count(connection, "SELECT COUNT(*) FROM CUSTOMER_HISTORY"));
+		}
+	}
+
+	private static MigrationSnapshotDefinition definition() {
+		return new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
+				List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
+	}
+
+	private static int count(final java.sql.Connection connection, final String sql) throws SQLException {
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
+			resultSet.next();
+			return resultSet.getInt(1);
 		}
 	}
 
