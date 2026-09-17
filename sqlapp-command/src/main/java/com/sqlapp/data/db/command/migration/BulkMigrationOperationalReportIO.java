@@ -191,7 +191,34 @@ public final class BulkMigrationOperationalReportIO {
 						|| report.execution().leaseAcquisitionId().length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
 			throw new CommandException("Bulk migration report execution leaseAcquisitionId is invalid");
 		}
+		validateExecution(report);
 		return report;
+	}
+
+	private static void validateExecution(final BulkMigrationOperationalReport report) {
+		final BulkMigrationOperationalReport.Execution execution = report.execution();
+		if (execution == null) {
+			return;
+		}
+		if ("JOB_COMPLETED".equals(execution.event())) {
+			if (report.completedTasks() != report.totalTasks()) {
+				throw new CommandException("Bulk migration report JOB_COMPLETED requires every task to be complete");
+			}
+			if (execution.processedRows() != null && execution.processedRows() != report.processedRows()) {
+				throw new CommandException("Bulk migration report JOB_COMPLETED processedRows mismatch");
+			}
+		}
+		if ("TASK_COMPLETED".equals(execution.event())) {
+			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
+					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+			if (!"COMPLETE".equals(task.state())) {
+				throw new CommandException("Bulk migration report TASK_COMPLETED requires a complete task");
+			}
+			if (execution.processedRows() != null && task.checkpoint() != null
+					&& execution.processedRows() != task.checkpoint().processedRows()) {
+				throw new CommandException("Bulk migration report TASK_COMPLETED processedRows mismatch");
+			}
+		}
 	}
 
 	private static void validateCheckpoint(final BulkMigrationOperationalReport.Checkpoint checkpoint) {

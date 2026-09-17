@@ -16,6 +16,6 @@ public final class BulkMigrationOperationalReportChunkListener implements Chunke
 
 	@Override
 	public void onChunkCompleted(final ChunkedBulkMigrationProgress progress) {
-		reportListener.refresh();
+		reportListener.refreshAfterChunk(progress);
 	}
 }

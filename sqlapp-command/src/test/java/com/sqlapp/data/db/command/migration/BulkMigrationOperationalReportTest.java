@@ -202,6 +202,24 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("foreign-maintenance.json"),
 						copyWithMaintenance(report, foreignMaintenance)));
+		final var falseJobCompletion = new BulkMigrationOperationalReport.Execution(
+				"JOB_COMPLETED", null, report.generatedAt(), 0L, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("false-job-completion.json"),
+						copyWithExecution(report, falseJobCompletion)));
+		final var falseTaskCompletion = new BulkMigrationOperationalReport.Execution(
+				"TASK_COMPLETED", task.taskId(), report.generatedAt(), 0L, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("false-task-completion.json"),
+						copyWithExecution(report, falseTaskCompletion)));
+		final var completeStatus = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers", BulkMigrationJobTaskState.COMPLETE, null)));
+		final var completeReport = new BulkMigrationOperationalReportBuilder().build(plan, completeStatus, null, null);
+		final var wrongCompletedRows = new BulkMigrationOperationalReport.Execution(
+				"JOB_COMPLETED", null, completeReport.generatedAt(), 1L, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("wrong-completed-rows.json"),
+						copyWithExecution(completeReport, wrongCompletedRows)));
 	}
 
 	@Test
@@ -503,6 +521,10 @@ class BulkMigrationOperationalReportTest {
 		final Map<String, Object> execution =
 				(Map<String, Object>) json.get("execution");
 		assertEquals("JOB_STARTED", execution.get("event"));
+		assertThrows(IllegalArgumentException.class, () -> chunkListener.onChunkCompleted(
+				new com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress("foreign", 0, 1, 0, 1)));
+		assertThrows(NullPointerException.class, () -> chunkListener.onChunkCompleted(null));
+		assertEquals("JOB_STARTED", new BulkMigrationOperationalReportIO().read(target).execution().event());
 	}
 
 	@Test
@@ -554,13 +576,51 @@ class BulkMigrationOperationalReportTest {
 		listener.onLeaseAcquired(new BulkMigrationJobLease(plan.getJobId(), plan.getFingerprint(), "worker",
 				"leased-attempt", Instant.now().plusSeconds(60)));
 		listener.onJobStarted(plan.getFingerprint(), 1);
-		listener.onJobCompleted(new BulkMigrationJobResult(plan.getFingerprint(), List.of()));
+		listener.onJobFailed(plan.getFingerprint(), new IllegalStateException("first attempt ended"));
 
 		listener.onJobStarted(plan.getFingerprint(), 1);
 
 		final var execution = new BulkMigrationOperationalReportIO().read(target).execution();
 		assertEquals("JOB_STARTED", execution.event());
 		assertNull(execution.leaseAcquisitionId());
+	}
+
+	@Test
+	void jobListenerRejectsLeaseAndJobEventsFromAnotherPlan() {
+		final BulkMigrationJobPlan plan = plan(new InMemoryBulkMigrationCheckpointStore());
+		final var listener = new BulkMigrationOperationalReportJobListener(plan,
+				directory.resolve("foreign-event.json"));
+		final Instant expiry = Instant.now().plusSeconds(60);
+
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onLeaseAcquired(new BulkMigrationJobLease("other-job", plan.getFingerprint(),
+						"worker", "foreign-job", expiry)));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onLeaseAcquired(new BulkMigrationJobLease(plan.getJobId(), "other-plan",
+						"worker", "foreign-plan", expiry)));
+		assertThrows(IllegalArgumentException.class, () -> listener.onJobStarted("other-plan", 1));
+		assertThrows(IllegalArgumentException.class, () -> listener.onJobStarted(plan.getFingerprint(), 2));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onLeaseAcquisitionFailed("other-plan", new IllegalStateException("failure")));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onJobRejected("other-plan", new IllegalStateException("rejected")));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onJobFailed("other-plan", new IllegalStateException("failed")));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onJobPaused("other-plan", "customers", null));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onJobCompleted(new BulkMigrationJobResult("other-plan", List.of())));
+		assertThrows(IllegalArgumentException.class, () -> listener.onTaskStarted("other-task", 0, 1));
+		assertThrows(IllegalArgumentException.class, () -> listener.onTaskStarted("customers", 1, 1));
+		assertThrows(IllegalArgumentException.class, () -> listener.onTaskCompleted("customers",
+				new ChunkedBulkMigrationResult(0, 0, 0, false), 0, 2));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onTaskFailed("customers", new java.sql.SQLException("failed"), -1, 1));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onTaskPaused("customers", null, 0, 2));
+		assertThrows(IllegalArgumentException.class,
+				() -> listener.onJobPaused(plan.getFingerprint(), "other-task", null));
+		assertNull(listener.getLatestExecution());
 	}
 
 	@Test

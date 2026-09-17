@@ -999,6 +999,10 @@ task-level event in registration order and exposes an immutable listener list.
 As with the synchronous listener contract, a listener exception stops dispatch
 to later listeners for that event; use the report listener's `CONTINUE_JOB`
 policy when report availability must not block other job observers.
+The operational report listener validates every lease and job boundary against
+its immutable plan before changing report state. It also checks task IDs,
+indices, task counts, and completed job results, preventing callbacks wired to
+another plan from being published under the current job identity.
 
 The four-argument `BulkMigrationJobExecutor.executePlan` overload accepts a
 common chunk listener in addition to the job listener. It combines that
@@ -1006,7 +1010,9 @@ listener with each task-specific listener without changing the validated plan;
 task-specific callbacks run first. Use
 `BulkMigrationOperationalReportChunkListener` as the common listener to
 atomically refresh JSON after every checkpoint-durable chunk, rather than only
-at task boundaries. `BulkMigrationJobProgressTracker` can be used as another
+at task boundaries. It validates the chunk migration ID against the report's
+immutable plan before refreshing, so a foreign chunk notification cannot
+overwrite an otherwise valid report. `BulkMigrationJobProgressTracker` can be used as another
 common listener: configure total rows by migration ID, then place it before the
 report chunk listener in a `CompositeChunkedBulkMigrationListener` and supply
 `getLatest` to the report job listener. It maintains an independent elapsed
@@ -1045,6 +1051,11 @@ successfully read report safe to use for monitoring and resume decisions;
 invalid or newer reports must be handled explicitly rather than interpreted
 partially. The overload accepting an expected plan fingerprint additionally
 rejects a valid report produced for a different migration plan.
+Execution events are also checked against durable task state:
+`JOB_COMPLETED` requires every task to be complete and matching aggregate row
+counts, while `TASK_COMPLETED` requires the named task and its checkpoint row
+count to agree with the event. A terminal label cannot therefore turn an
+incomplete status snapshot into apparent success.
 `assessResume` converts a validated report into a conservative operational
 decision: `COMPLETE`, `RESUMABLE`, `POSSIBLY_RUNNING`, `RECOVERY_REQUIRED`, or
 `INCOMPATIBLE`. Started or mid-task reports are deliberately not declared safe
