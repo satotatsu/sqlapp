@@ -37,8 +37,8 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			double rowsPerSecond, Double completionRatio, Long estimatedRemainingMillis) {
 	}
 
-	public record Execution(String event, String taskId, Instant occurredAt, Long processedRows, String failureType,
-			String failureMessage) {
+	public record Execution(String event, String taskId, Instant occurredAt, Long processedRows,
+			String leaseAcquisitionId, String failureType, String failureMessage) {
 		private static final Set<String> EVENTS = Set.of("JOB_STARTED", "JOB_COMPLETED", "JOB_REJECTED", "JOB_FAILED",
 				"JOB_PAUSED", "TASK_STARTED", "TASK_COMPLETED", "TASK_FAILED", "TASK_PAUSED");
 		public static final int FAILURE_MESSAGE_MAX_LENGTH = 1_000;
@@ -57,6 +57,10 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 			java.util.Objects.requireNonNull(occurredAt, "occurredAt");
 			if (processedRows != null && processedRows < 0) {
 				throw new IllegalArgumentException("execution processedRows must not be negative");
+			}
+			if (leaseAcquisitionId != null && (leaseAcquisitionId.isBlank()
+					|| leaseAcquisitionId.length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
+				throw new IllegalArgumentException("execution leaseAcquisitionId is invalid");
 			}
 			final boolean failed = "TASK_FAILED".equals(event) || "JOB_FAILED".equals(event)
 					|| "JOB_REJECTED".equals(event);

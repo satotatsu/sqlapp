@@ -236,7 +236,7 @@ class BulkMigrationOperationalReportTest {
 
 		final var started = copyWithExecution(report,
 				new BulkMigrationOperationalReport.Execution("JOB_STARTED", null,
-						report.generatedAt(), null, null, null));
+						report.generatedAt(), null, null, null, null));
 		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 				BulkMigrationOperationalReportResumeAssessor.assess(started));
 
@@ -262,7 +262,7 @@ class BulkMigrationOperationalReportTest {
 				BulkMigrationOperationalReportResumeAssessor.assess(completeReport));
 		final var completedTaskOnly = copyWithExecution(completeReport,
 				new BulkMigrationOperationalReport.Execution("TASK_COMPLETED", "customers",
-						completeReport.generatedAt(), 0L, null, null));
+						completeReport.generatedAt(), 0L, null, null, null));
 		assertEquals(BulkMigrationResumeReadiness.POSSIBLY_RUNNING,
 				BulkMigrationOperationalReportResumeAssessor.assess(completedTaskOnly));
 		assertEquals(BulkMigrationResumeReadiness.RESUMABLE,
@@ -285,7 +285,7 @@ class BulkMigrationOperationalReportTest {
 						BulkMigrationJobTaskState.IN_PROGRESS, null)));
 		final var execution = new BulkMigrationOperationalReport.Execution(
 				"TASK_STARTED", "customers", now.minusSeconds(10), 0L,
-				null, null);
+				null, null, null);
 		final var report = new BulkMigrationOperationalReportBuilder(
 				Clock.fixed(now, ZoneOffset.UTC)).build(plan, status, null, null,
 				execution);
@@ -395,14 +395,14 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, foreignProgress));
 		final var foreignExecution = new BulkMigrationOperationalReport.Execution(
-				"TASK_STARTED", "other", Instant.now(), null, null, null);
+				"TASK_STARTED", "other", Instant.now(), null, null, null, null);
 		assertThrows(IllegalArgumentException.class,
 				() -> builder.build(plan, correctStatus, null, null, foreignExecution));
 		assertThrows(IllegalArgumentException.class, () -> builder.build(plan,
 				correctStatus, null, null, Map.of("other", foreignProgress), null));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationOperationalReport.Execution("UNKNOWN", "customers",
-						Instant.now(), null, null, null));
+						Instant.now(), null, null, null, null));
 	}
 
 	@Test
@@ -433,6 +433,9 @@ class BulkMigrationOperationalReportTest {
 		final BulkMigrationJobPlan plan = plan(store);
 		final Path target = directory.resolve("live-status.json");
 		final var listener = new BulkMigrationOperationalReportJobListener(plan, target);
+		final var lease = new BulkMigrationJobLease(plan.getJobId(), plan.getFingerprint(), "worker-1",
+				"acquisition-1", Instant.now().plusSeconds(60));
+		listener.onLeaseAcquired(lease);
 
 		listener.onTaskStarted("customers", 0, 1);
 		Map<String, Object> json = new JsonConverter().fromJsonString(target.toFile(), Map.class);
@@ -454,6 +457,7 @@ class BulkMigrationOperationalReportTest {
 				(Map<String, Object>) json.get("execution");
 		assertEquals("TASK_COMPLETED", execution.get("event"));
 		assertEquals(25, ((Number) execution.get("processedRows")).longValue());
+		assertEquals("acquisition-1", execution.get("leaseAcquisitionId"));
 
 		listener.onJobCompleted(new BulkMigrationJobResult(plan.getFingerprint(), List.of(
 				new BulkMigrationJobTaskResult("customers",

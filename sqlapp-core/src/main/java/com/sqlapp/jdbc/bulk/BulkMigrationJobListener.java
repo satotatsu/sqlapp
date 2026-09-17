@@ -8,6 +8,10 @@ public interface BulkMigrationJobListener {
 	BulkMigrationJobListener NO_OP = new BulkMigrationJobListener() {
 	};
 
+	/** Called after the execution fence is acquired and before job start. */
+	default void onLeaseAcquired(final BulkMigrationJobLease lease) {
+	}
+
 	default void onJobStarted(final String planFingerprint, final int taskCount) {
 	}
 

@@ -11,6 +11,7 @@ import java.util.Map;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
@@ -33,6 +34,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	private final Consumer<RuntimeException> failureConsumer;
 	private volatile RuntimeException lastFailure;
 	private volatile BulkMigrationOperationalReport.Execution latestExecution;
+	private volatile String leaseAcquisitionId;
 
 	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile) {
 		this(plan, targetFile, () -> null, () -> null);
@@ -82,6 +84,11 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		} : failureConsumer;
 		this.builder = Objects.requireNonNull(builder, "builder");
 		this.reportIO = Objects.requireNonNull(reportIO, "reportIO");
+	}
+
+	@Override
+	public void onLeaseAcquired(final BulkMigrationJobLease lease) {
+		leaseAcquisitionId = Objects.requireNonNull(lease, "lease").acquisitionId();
 	}
 
 	@Override
@@ -181,9 +188,10 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		}
 	}
 
-	private static BulkMigrationOperationalReport.Execution execution(final String event, final String taskId,
+	private BulkMigrationOperationalReport.Execution execution(final String event, final String taskId,
 			final Long processedRows, final Throwable failure) {
 		return new BulkMigrationOperationalReport.Execution(event, taskId, Instant.now(), processedRows,
+				leaseAcquisitionId,
 				failure == null ? null : failure.getClass().getName(),
 				failure == null ? null : failureMessage(failure));
 	}

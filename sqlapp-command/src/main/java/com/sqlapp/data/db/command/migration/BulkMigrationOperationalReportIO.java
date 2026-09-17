@@ -186,6 +186,11 @@ public final class BulkMigrationOperationalReportIO {
 				&& !taskIds.contains(report.execution().taskId())) {
 			throw new CommandException("Bulk migration report execution taskId does not belong to the report");
 		}
+		if (report.execution() != null && report.execution().leaseAcquisitionId() != null
+				&& (report.execution().leaseAcquisitionId().isBlank()
+						|| report.execution().leaseAcquisitionId().length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {
+			throw new CommandException("Bulk migration report execution leaseAcquisitionId is invalid");
+		}
 		return report;
 	}
 

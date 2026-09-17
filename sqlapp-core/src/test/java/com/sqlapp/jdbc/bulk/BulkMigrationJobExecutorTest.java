@@ -314,9 +314,17 @@ class BulkMigrationJobExecutorTest {
 		final var manager = new BulkMigrationJobLeaseManager(store, "owner-1", Duration.ofMinutes(1));
 		final var competitor = new BulkMigrationJobLeaseManager(store, "owner-2", Duration.ofMinutes(1));
 		final var plan = BulkMigrationJobPlanner.plan(List.of());
+		final var acquired = new java.util.concurrent.atomic.AtomicReference<BulkMigrationJobLease>();
 		final var listener = new BulkMigrationJobListener() {
 			@Override
+			public void onLeaseAcquired(BulkMigrationJobLease lease) {
+				acquired.set(lease);
+			}
+
+			@Override
 			public void onJobStarted(String planFingerprint, int taskCount) {
+				assertEquals(acquired.get().acquisitionId(),
+						store.load(plan.getJobId()).orElseThrow().acquisitionId());
 				assertThrows(BulkMigrationJobLeaseUnavailableException.class,
 						() -> competitor.acquire(plan.getJobId(), planFingerprint));
 			}
@@ -324,9 +332,32 @@ class BulkMigrationJobExecutorTest {
 
 		BulkMigrationJobExecutor.executePlan(connection(), plan, listener, ChunkedBulkMigrationListener.NO_OP, manager);
 
+		assertEquals("owner-1", acquired.get().ownerId());
 		assertTrue(store.load(plan.getJobId()).isEmpty());
 		try (var lease = competitor.acquire(plan.getJobId(), plan.getFingerprint())) {
 			assertEquals("owner-2", lease.getLease().ownerId());
+		}
+	}
+
+	@Test
+	void leaseAcquisitionConflictIsReportedAsJobRejection() throws Exception {
+		final var store = new InMemoryBulkMigrationJobLeaseStore();
+		final var first = new BulkMigrationJobLeaseManager(store, "owner-1", Duration.ofMinutes(1));
+		final var second = new BulkMigrationJobLeaseManager(store, "owner-2", Duration.ofMinutes(1));
+		final var plan = BulkMigrationJobPlanner.plan(List.of());
+		final var rejected = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+		final var listener = new BulkMigrationJobListener() {
+			@Override
+			public void onJobRejected(String planFingerprint, Throwable cause) {
+				assertEquals(plan.getFingerprint(), planFingerprint);
+				rejected.set(cause);
+			}
+		};
+		try (var ignored = first.acquire(plan)) {
+			final var failure = assertThrows(BulkMigrationJobLeaseUnavailableException.class,
+					() -> BulkMigrationJobExecutor.executePlan(connection(), plan, listener,
+							ChunkedBulkMigrationListener.NO_OP, second));
+			assertEquals(failure, rejected.get());
 		}
 	}
 

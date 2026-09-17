@@ -20,6 +20,8 @@ class CompositeBulkMigrationJobListenerTest {
 		final var chunkResult = new ChunkedBulkMigrationResult(0, 1, 1, false);
 		final var jobResult = new BulkMigrationJobResult("fingerprint", List.of());
 
+		composite.onLeaseAcquired(new BulkMigrationJobLease("job", "fingerprint", "worker",
+				"acquisition", java.time.Instant.now().plusSeconds(60)));
 		composite.onJobStarted("fingerprint", 1);
 		composite.onJobRejected("fingerprint", new IllegalStateException("rejected"));
 		composite.onTaskStarted("task", 0, 1);
@@ -30,7 +32,8 @@ class CompositeBulkMigrationJobListenerTest {
 		composite.onJobFailed("fingerprint", new SQLException("failed"));
 		composite.onJobPaused("fingerprint", "task", progress);
 
-		assertEquals(List.of("job-start-first", "job-start-second", "job-reject-first", "job-reject-second",
+		assertEquals(List.of("lease-first", "lease-second", "job-start-first", "job-start-second",
+				"job-reject-first", "job-reject-second",
 				"task-start-first", "task-start-second", "task-complete-first", "task-complete-second",
 				"task-fail-first", "task-fail-second", "task-pause-first", "task-pause-second", "job-complete-first",
 				"job-complete-second", "job-fail-first", "job-fail-second", "job-pause-first", "job-pause-second"),
@@ -40,6 +43,11 @@ class CompositeBulkMigrationJobListenerTest {
 
 	private static BulkMigrationJobListener listener(final String name, final List<String> events) {
 		return new BulkMigrationJobListener() {
+			@Override
+			public void onLeaseAcquired(BulkMigrationJobLease lease) {
+				events.add("lease-" + name);
+			}
+
 			@Override
 			public void onJobStarted(String fingerprint, int count) {
 				events.add("job-start-" + name);

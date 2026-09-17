@@ -106,7 +106,19 @@ public final class BulkMigrationJobExecutor {
 			final BulkMigrationJobLeaseManager leaseManager) throws SQLException {
 		Objects.requireNonNull(leaseManager, "leaseManager");
 		Objects.requireNonNull(plan, "plan").validateUnchanged();
-		try (var lease = leaseManager.acquire(plan)) {
+		final BulkMigrationJobLeaseManager.LeaseHandle acquired;
+		try {
+			acquired = leaseManager.acquire(plan);
+		} catch (SQLException | RuntimeException | Error rejection) {
+			try {
+				listener.onJobRejected(plan.getFingerprint(), rejection);
+			} catch (RuntimeException listenerFailure) {
+				rejection.addSuppressed(listenerFailure);
+			}
+			throw rejection;
+		}
+		try (var lease = acquired) {
+			listener.onLeaseAcquired(lease.getLease());
 			try (var heartbeat = lease.startHeartbeat()) {
 				final BulkMigrationJobListener leaseListener =
 						new BulkMigrationJobLeaseJobListener(heartbeat, listener);

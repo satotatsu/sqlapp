@@ -1067,8 +1067,13 @@ Custom `BulkMigrationJobLeaseStore` implementations must override
 The compatibility default fails closed with `SQLFeatureNotSupportedException`;
 it never emulates fencing with a racy load followed by owner-only release.
 The lease-aware `BulkMigrationJobExecutor.executePlan` overload acquires the
-plan lease before publishing `JOB_STARTED`, renews it before and after every
+plan lease before publishing `JOB_STARTED`, notifies job listeners through
+`onLeaseAcquired`, renews it before and after every
 chunk, and owner-conditionally releases it after success, failure, or pause.
+Operational-report events then retain the unique acquisition ID, so two runs
+using the same configured owner remain distinguishable in audit data. A lease
+acquisition conflict is published as `JOB_REJECTED` without an acquisition ID;
+it is not silently omitted from the operational report.
 Failure to renew stops the job with `BulkMigrationJobLeaseLostException`; a
 durably completed chunk is never replayed merely because its post-chunk renewal
 failed. Configure the lease duration above the maximum expected duration of a

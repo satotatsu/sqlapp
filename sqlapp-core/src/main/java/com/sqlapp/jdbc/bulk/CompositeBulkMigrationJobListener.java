@@ -26,6 +26,11 @@ public final class CompositeBulkMigrationJobListener implements BulkMigrationJob
 	}
 
 	@Override
+	public void onLeaseAcquired(final BulkMigrationJobLease lease) {
+		listeners.forEach(listener -> listener.onLeaseAcquired(lease));
+	}
+
+	@Override
 	public void onJobStarted(final String planFingerprint, final int taskCount) {
 		listeners.forEach(listener -> listener.onJobStarted(planFingerprint, taskCount));
 	}
