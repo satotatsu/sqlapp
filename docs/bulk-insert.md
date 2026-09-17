@@ -1256,10 +1256,10 @@ duplicate source keys and duplicate or null keys among current target rows.
 These checks retain bounded JVM memory; indexes beginning with the configured
 business-key columns keep the grouped validation and subsequent joins fast.
 The shared executors also reject a snapshot timestamp that is not later than
-every current row's validity start, inconsistent current-marker values, and
-pre-existing zero-length or negative validity intervals. The same invariants
-are checked again after the set-based or batched DML and before commit. These
-are bounded-result SQL checks rather than per-row JDBC operations.
+every current row's validity start and reject inconsistent current-marker
+values. Marker consistency and current-key uniqueness are checked again after
+the set-based or batched DML and before commit. These are scalar or
+bounded-result SQL checks rather than per-row JDBC operations.
 For declarative execution, use the Gradle `executeMigrationSnapshot` task or
 `ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
 execution is atomic and intentionally not split into resumable migration

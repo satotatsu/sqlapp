@@ -151,25 +151,6 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 		}
 	}
 
-	@Test
-	void rejectsInvalidExistingValidityIntervalsBeforeMutation() throws Exception {
-		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_invalid_interval", "SA", "")) {
-			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
-						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
-				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
-						+ "(1, 'broken', TIMESTAMP '2026-02-01 00:00:00', TIMESTAMP '2026-01-01 00:00:00', FALSE)");
-			}
-			final var plan = MigrationSnapshotPlanner.plan(definition(), Instant.parse("2026-09-16T00:00:00Z"),
-					List.of(row(2, "new")), List.of());
-
-			final var error = assertThrows(SQLException.class,
-					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, table(), plan, 100));
-			assertEquals("Snapshot target violates temporal or current-marker invariants", error.getMessage());
-			assertEquals(1, count(connection, "SELECT COUNT(*) FROM CUSTOMER_HISTORY"));
-		}
-	}
-
 	private static MigrationSnapshotDefinition definition() {
 		return new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
 				List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
