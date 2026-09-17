@@ -173,7 +173,7 @@ public class LegacyMigrationMappingValidator {
 		for (var transformation : mapping.getTransformations()) {
 			if (transformation == null || transformation.getSequence() <= 0
 					|| !sequences.add(transformation.getSequence()) || blank(transformation.getCommand())
-					|| blank(transformation.getStatus()) || transformation.getConfiguration() == null
+					|| transformation.getStatus() == null || transformation.getConfiguration() == null
 					|| transformation.getChanges() == null) {
 				throw new CommandException("Legacy migration transformation is invalid.");
 			}

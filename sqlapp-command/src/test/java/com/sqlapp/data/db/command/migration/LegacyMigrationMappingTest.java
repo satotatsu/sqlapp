@@ -29,7 +29,7 @@ class LegacyMigrationMappingTest {
 	File temporaryDirectory;
 
 	@Test
-	void testYamlRoundTripAndValidation() {
+	void testYamlRoundTripAndValidation() throws Exception {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		mapping.getMigration().setId("sample-v1");
 		TableMapping parent = table("table-parent", "PARENT");
@@ -44,6 +44,7 @@ class LegacyMigrationMappingTest {
 		relationship.setChildMappingId(child.getId());
 		relationship.setParentIdPropagation(true);
 		mapping.getRelationships().add(relationship);
+		mapping.getTransformations().add(transformation(10, "Normalize", "source", "target"));
 
 		File yaml = new File(temporaryDirectory, "mapping.yaml");
 		LegacyMigrationMappingIO io = new LegacyMigrationMappingIO();
@@ -54,6 +55,12 @@ class LegacyMigrationMappingTest {
 		assertEquals("sample-v1", restored.getMigration().getId());
 		assertEquals(2, restored.getTables().size());
 		assertTrue(restored.getRelationships().getFirst().isParentIdPropagation());
+		assertEquals(LegacyMigrationMapping.TransformationStatus.SUCCESS,
+				restored.getTransformations().getFirst().getStatus());
+		final String serialized = Files.readString(yaml.toPath());
+		assertTrue(serialized.contains("status: \"SUCCESS\"") || serialized.contains("status: SUCCESS"));
+		Files.writeString(yaml.toPath(), serialized.replace("SUCCESS", "UNKNOWN"));
+		assertThrows(CommandException.class, () -> io.read(yaml));
 	}
 
 	@Test
@@ -207,7 +214,7 @@ class LegacyMigrationMappingTest {
 		TransformationRecord record = new TransformationRecord();
 		record.setSequence(sequence);
 		record.setCommand(command);
-		record.setStatus("SUCCESS");
+		record.setStatus(LegacyMigrationMapping.TransformationStatus.SUCCESS);
 		record.setInputFingerprint(input);
 		record.setOutputFingerprint(output);
 		return record;

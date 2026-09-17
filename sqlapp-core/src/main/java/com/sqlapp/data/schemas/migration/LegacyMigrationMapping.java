@@ -216,7 +216,7 @@ public class LegacyMigrationMapping {
 	public static class TransformationRecord {
 		private int sequence;
 		private String command;
-		private String status;
+		private TransformationStatus status;
 		private String inputFingerprint;
 		private String outputFingerprint;
 		private Map<String, Object> configuration = new LinkedHashMap<>();
@@ -267,6 +267,10 @@ public class LegacyMigrationMapping {
 
 	public enum RelationshipType {
 		HIERARCHICAL, REFERENCE
+	}
+
+	public enum TransformationStatus {
+		SUCCESS
 	}
 
 	public enum DiagnosticSeverity {

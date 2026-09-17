@@ -76,7 +76,7 @@ public class LegacyMigrationMappingBuilder {
 		TransformationRecord record = new TransformationRecord();
 		record.setSequence(10);
 		record.setCommand("ColumnRuleTransformCommand");
-		record.setStatus("SUCCESS");
+		record.setStatus(LegacyMigrationMapping.TransformationStatus.SUCCESS);
 		mapping.getTransformations().add(record);
 		List<String> transformedColumns = new ArrayList<>();
 		for (Map<String, Object> match : listOfMaps(transformLog.get("matches"))) {
@@ -228,7 +228,7 @@ public class LegacyMigrationMappingBuilder {
 		TransformationRecord record = new TransformationRecord();
 		record.setSequence(10);
 		record.setCommand("PliSchemaImportCommand");
-		record.setStatus("SUCCESS");
+		record.setStatus(LegacyMigrationMapping.TransformationStatus.SUCCESS);
 		record.setInputFingerprint(mapping.getSource().getSchemaFingerprint());
 		record.setOutputFingerprint(mapping.getTarget().getSchemaFingerprint());
 		record.getConfiguration().put("encoding", encoding);
@@ -300,7 +300,7 @@ public class LegacyMigrationMappingBuilder {
 		TransformationRecord record = new TransformationRecord();
 		record.setSequence(10);
 		record.setCommand("FirstNormalFormCommand");
-		record.setStatus("SUCCESS");
+		record.setStatus(LegacyMigrationMapping.TransformationStatus.SUCCESS);
 		record.getConfiguration().putAll(map(log.get("configuration")));
 		mapping.getTransformations().add(record);
 		for (Map<String, Object> tableLog : listOfMaps(log.get("tables"))) {
@@ -418,7 +418,7 @@ public class LegacyMigrationMappingBuilder {
 		TransformationRecord record = new TransformationRecord();
 		record.setSequence(20);
 		record.setCommand("CompositePrimaryKeyToSurrogateKeyCommand");
-		record.setStatus("SUCCESS");
+		record.setStatus(LegacyMigrationMapping.TransformationStatus.SUCCESS);
 		record.getConfiguration().put("generationType", surrogate.get("generationType"));
 		mapping.getTransformations().add(record);
 		List<String> converted = new ArrayList<>();
