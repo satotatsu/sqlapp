@@ -1074,6 +1074,10 @@ progress entry must agree with the same migration entry in
 `progressByMigration`. Pause-event row counts must likewise match the paused
 task's checkpoint. These checks keep monitoring hints from being mistaken for
 durable resume evidence.
+The shared progress snapshot also validates derived metrics: completion ratio
+requires a total and must equal processed rows divided by that total; ETA
+requires both a total and a positive measured rate. Unknown totals therefore
+leave both ratio and ETA unknown instead of publishing contradictory estimates.
 `assessResume` converts a validated report into a conservative operational
 decision: `COMPLETE`, `RESUMABLE`, `POSSIBLY_RUNNING`, `RECOVERY_REQUIRED`, or
 `INCOMPATIBLE`. Started or mid-task reports are deliberately not declared safe

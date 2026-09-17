@@ -65,6 +65,27 @@ class BulkMigrationProgressTrackerTest {
 				() -> new ChunkedBulkMigrationProgress("migration", 0, 1, Long.MAX_VALUE, Long.MAX_VALUE));
 	}
 
+	@Test
+	void progressSnapshotsRejectContradictoryDerivedValues() {
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationProgressSnapshot("migration", 5, null, Duration.ZERO,
+						1, 0.5, Duration.ofSeconds(5)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationProgressSnapshot("migration", 5, 10L, Duration.ZERO,
+						1, null, Duration.ofSeconds(5)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationProgressSnapshot("migration", 5, 10L, Duration.ZERO,
+						1, 0.4, Duration.ofSeconds(5)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationProgressSnapshot("migration", 5, 10L, Duration.ZERO,
+						0, 0.5, Duration.ofSeconds(5)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationProgressSnapshot("migration", 5, 10L, Duration.ZERO,
+						1, 0.5, null));
+		assertEquals(1d, new BulkMigrationProgressSnapshot("migration", 0, 0L, Duration.ZERO,
+				0, 1d, null).completionRatio());
+	}
+
 	private static ChunkedBulkMigrationProgress progress(final long before, final long after) {
 		return new ChunkedBulkMigrationProgress("migration", 0, (int) (after - before), before, after);
 	}
