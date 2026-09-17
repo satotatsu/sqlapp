@@ -73,12 +73,12 @@ class BulkMigrationTest {
 		assertEquals(List.of("PUBLIC.ITEMS"),
 				dryRun.tasks().stream().map(BulkMigrationOperationalReport.Task::taskId)
 						.toList());
-		assertEquals("NOT_STARTED", dryRun.tasks().get(0).state());
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED, dryRun.tasks().get(0).state());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.status().getTasks().get(0).getState());
 		final Path statusFile = directory.resolve("status/initial.json");
 		final var statusReport = migration.dryRun(statusFile);
-		assertEquals("NOT_STARTED", statusReport.tasks().get(0).state());
+		assertEquals(BulkMigrationJobTaskState.NOT_STARTED, statusReport.tasks().get(0).state());
 		assertEquals(statusReport, new BulkMigrationOperationalReportIO().read(statusFile));
 		assertThrows(IllegalArgumentException.class,
 				() -> migration.resetCheckpointsWithFingerprint("wrong-fingerprint"));

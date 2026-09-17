@@ -183,7 +183,7 @@ class BulkMigrationOperationalReportTest {
 		final var checkpointTask = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
 				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
-				BulkMigrationJobTaskState.IN_PROGRESS.name(), invalidCheckpoint);
+				BulkMigrationJobTaskState.IN_PROGRESS, invalidCheckpoint);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("invalid-checkpoint.json"),
 						copyWithContent(report, List.of(checkpointTask), List.of())));
@@ -191,7 +191,7 @@ class BulkMigrationOperationalReportTest {
 		final var checkpointOnNotStarted = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
 				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
-				BulkMigrationJobTaskState.NOT_STARTED.name(),
+				BulkMigrationJobTaskState.NOT_STARTED,
 				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
 						0, 0, task.chunkSize(), false, null, null));
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
@@ -201,7 +201,7 @@ class BulkMigrationOperationalReportTest {
 		final var completeWithoutCheckpoint = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
 				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
-				BulkMigrationJobTaskState.COMPLETE.name(), null);
+				BulkMigrationJobTaskState.COMPLETE, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("complete-without-checkpoint.json"),
 						copyWithContent(report, List.of(completeWithoutCheckpoint), List.of())));
@@ -209,7 +209,7 @@ class BulkMigrationOperationalReportTest {
 		final var incompleteCompleteTask = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
 				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
-				BulkMigrationJobTaskState.COMPLETE.name(),
+				BulkMigrationJobTaskState.COMPLETE,
 				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
 						0, 0, task.chunkSize(), false, null, null));
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
@@ -219,7 +219,7 @@ class BulkMigrationOperationalReportTest {
 		final var completeInProgressTask = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
 				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
-				BulkMigrationJobTaskState.IN_PROGRESS.name(),
+				BulkMigrationJobTaskState.IN_PROGRESS,
 				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
 						0, 0, task.chunkSize(), true, null, null));
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
@@ -282,6 +282,22 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("wrong-completed-rows.json"),
 						copyWithExecution(completeReport, wrongCompletedRows)));
+		final var failureAgainstComplete = new BulkMigrationOperationalReport.Execution(
+				"TASK_FAILED", "customers", completeReport.generatedAt(), null, null,
+				java.sql.SQLException.class.getName(), "failed after completion");
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("failure-against-complete.json"),
+						copyWithExecution(completeReport, failureAgainstComplete)));
+		final var incompatibleStatus = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
+				new BulkMigrationJobTaskStatus("customers", BulkMigrationJobTaskState.INCOMPATIBLE,
+						checkpoint(false, "previous-source"))));
+		final var incompatibleReport = new BulkMigrationOperationalReportBuilder().build(
+				plan, incompatibleStatus, null, null);
+		final var startAgainstIncompatible = new BulkMigrationOperationalReport.Execution(
+				"TASK_STARTED", "customers", incompatibleReport.generatedAt(), null, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("start-against-incompatible.json"),
+						copyWithExecution(incompatibleReport, startAgainstIncompatible)));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationOperationalReport.Execution("JOB_FAILED", null, report.generatedAt(), null,
 						null, " ", "failure"));
@@ -294,15 +310,26 @@ class BulkMigrationOperationalReportTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationOperationalReport.Execution("TASK_FAILED", "customers", report.generatedAt(),
 						1L, null, java.sql.SQLException.class.getName(), "failed"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("JOB_COMPLETED", null, report.generatedAt(), null,
+						null, null, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationOperationalReport.Execution("TASK_PAUSED", "customers", report.generatedAt(),
+						null, null, null, null));
 		final var pausedRowsMismatch = new BulkMigrationOperationalReport.Execution(
 				"TASK_PAUSED", task.taskId(), report.generatedAt(), 1L, null, null, null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("paused-row-mismatch.json"),
 						copyWithExecution(report, pausedRowsMismatch)));
+		final var pausedNotInProgress = new BulkMigrationOperationalReport.Execution(
+				"TASK_PAUSED", task.taskId(), report.generatedAt(), 0L, null, null, null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("paused-not-in-progress.json"),
+						copyWithExecution(report, pausedNotInProgress)));
 
 		final var durableTask = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(), task.tableName(),
-				task.mode(), task.chunkSize(), task.checkpointMode(), BulkMigrationJobTaskState.IN_PROGRESS.name(),
+				task.mode(), task.chunkSize(), task.checkpointMode(), BulkMigrationJobTaskState.IN_PROGRESS,
 				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
 						5, 1, task.chunkSize(), false, "hash", null));
 		final var aheadProgress = new BulkMigrationOperationalReport.Progress(task.migrationId(),

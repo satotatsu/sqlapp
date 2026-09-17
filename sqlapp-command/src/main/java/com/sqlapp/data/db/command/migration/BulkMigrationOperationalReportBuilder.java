@@ -68,7 +68,7 @@ public final class BulkMigrationOperationalReportBuilder {
 			return new BulkMigrationOperationalReport.Task(planned.getTaskId(), planned.getOptions().getMigrationId(),
 					table.getCatalogName(), table.getSchemaName(), table.getName(),
 					planned.getOptions().getMode().name(), planned.getOptions().getChunkSize(),
-					planned.getOptions().getCheckpointMode().name(), current.getState().name(),
+					planned.getOptions().getCheckpointMode().name(), current.getState(),
 					checkpoint(current.getCheckpoint()));
 		}).toList();
 		final var operations = plan.getOperations().stream()

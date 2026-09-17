@@ -1052,6 +1052,8 @@ and `COMPLETE` has a complete checkpoint. This prevents a hand-edited or
 partially written report from claiming completion without durable resume state.
 The same invariant is enforced by the shared `BulkMigrationJobTaskStatus`
 model, so programmatic status producers cannot bypass it before report creation.
+The typed report model also exposes task state as `BulkMigrationJobTaskState`;
+JSON continues to use the stable enum names such as `IN_PROGRESS`.
 Execution row counts are accepted only for completion and pause events; start,
 failure, and rejection events cannot carry ambiguous row-count evidence.
 This makes a
@@ -1074,6 +1076,10 @@ progress entry must agree with the same migration entry in
 `progressByMigration`. Pause-event row counts must likewise match the paused
 task's checkpoint. These checks keep monitoring hints from being mistaken for
 durable resume evidence.
+Completion and pause events always include their processed-row boundary.
+Paused events must refer to an `IN_PROGRESS` task, while task-scoped failures
+cannot refer to a `COMPLETE` or `INCOMPATIBLE` task. A task-start event also
+cannot bypass an incompatible checkpoint.
 The shared progress snapshot also validates derived metrics: completion ratio
 requires a total and must equal processed rows divided by that total; ETA
 requires both a total and a positive measured rate. Unknown totals therefore

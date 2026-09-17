@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskState;
+
 /** Stable, read-only operational snapshot for a bulk migration job. */
 public record BulkMigrationOperationalReport(int formatVersion, Instant generatedAt, String jobId,
 		String planFingerprint, boolean compatible, long processedRows, long completedTasks, int totalTasks,
@@ -20,7 +22,7 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	}
 
 	public record Task(String taskId, String migrationId, String catalogName, String schemaName, String tableName,
-			String mode, int chunkSize, String checkpointMode, String state, Checkpoint checkpoint) {
+			String mode, int chunkSize, String checkpointMode, BulkMigrationJobTaskState state, Checkpoint checkpoint) {
 	}
 
 	public record Checkpoint(String migrationId, String sourceFingerprint, String targetFingerprint, long processedRows,
@@ -62,6 +64,9 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 					|| "TASK_COMPLETED".equals(event) || "TASK_PAUSED".equals(event);
 			if (processedRows != null && !rowsAllowed) {
 				throw new IllegalArgumentException("execution processedRows is not valid for " + event);
+			}
+			if (rowsAllowed && processedRows == null) {
+				throw new IllegalArgumentException("execution processedRows is required for " + event);
 			}
 			if (leaseAcquisitionId != null && (leaseAcquisitionId.isBlank()
 					|| leaseAcquisitionId.length() > com.sqlapp.jdbc.bulk.BulkMigrationJobLease.ID_MAX_LENGTH)) {

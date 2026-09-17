@@ -115,7 +115,7 @@ public final class BulkMigrationOperationalReportIO {
 		long completedTasks = 0;
 		boolean compatible = true;
 		for (BulkMigrationOperationalReport.Task task : report.tasks()) {
-			final BulkMigrationJobTaskState state = taskState(task.state());
+			final BulkMigrationJobTaskState state = task.state();
 			if (state == null) {
 				throw new CommandException("Bulk migration report contains an unknown task state");
 			}
@@ -251,7 +251,7 @@ public final class BulkMigrationOperationalReportIO {
 		if ("TASK_COMPLETED".equals(execution.event())) {
 			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
 					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
-			if (!"COMPLETE".equals(task.state())) {
+			if (task.state() != BulkMigrationJobTaskState.COMPLETE) {
 				throw new CommandException("Bulk migration report TASK_COMPLETED requires a complete task");
 			}
 			if (execution.processedRows() != null && task.checkpoint() != null
@@ -262,9 +262,28 @@ public final class BulkMigrationOperationalReportIO {
 		if ("TASK_PAUSED".equals(execution.event()) || "JOB_PAUSED".equals(execution.event())) {
 			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
 					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+			if (task.state() != BulkMigrationJobTaskState.IN_PROGRESS) {
+				throw new CommandException("Bulk migration report paused event requires an IN_PROGRESS task");
+			}
 			if (execution.processedRows() != null && (task.checkpoint() == null
 					|| execution.processedRows() != task.checkpoint().processedRows())) {
 				throw new CommandException("Bulk migration report paused processedRows mismatch");
+			}
+		}
+		if ("TASK_FAILED".equals(execution.event())
+				|| "JOB_FAILED".equals(execution.event()) && execution.taskId() != null) {
+			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
+					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+			if (task.state() == BulkMigrationJobTaskState.COMPLETE
+					|| task.state() == BulkMigrationJobTaskState.INCOMPATIBLE) {
+				throw new CommandException("Bulk migration report failed event refers to a non-runnable task");
+			}
+		}
+		if ("TASK_STARTED".equals(execution.event())) {
+			final BulkMigrationOperationalReport.Task task = report.tasks().stream()
+					.filter(value -> value.taskId().equals(execution.taskId())).findFirst().orElseThrow();
+			if (task.state() == BulkMigrationJobTaskState.INCOMPATIBLE) {
+				throw new CommandException("Bulk migration report TASK_STARTED refers to an incompatible task");
 			}
 		}
 	}
@@ -307,14 +326,6 @@ public final class BulkMigrationOperationalReportIO {
 			return true;
 		} catch (IllegalArgumentException | NullPointerException e) {
 			return false;
-		}
-	}
-
-	private static BulkMigrationJobTaskState taskState(final String state) {
-		try {
-			return BulkMigrationJobTaskState.valueOf(state);
-		} catch (IllegalArgumentException | NullPointerException e) {
-			return null;
 		}
 	}
 
