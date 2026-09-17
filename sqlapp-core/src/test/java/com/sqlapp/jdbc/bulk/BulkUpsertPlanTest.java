@@ -15,21 +15,19 @@ import com.sqlapp.data.schemas.Table;
 class BulkUpsertPlanTest {
 	@Test
 	void validatesContextFreeOptionsWhileBuildingThem() {
-		assertThrows(IllegalArgumentException.class, () -> BulkUpsertOption.builder()
-				.updateWhenMatched(false).insertWhenNotMatched(false).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertOption.builder().updateWhenMatched(false).insertWhenNotMatched(false).build());
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkUpsertOption.builder().keyColumns(List.of("id", "id")).build());
-		assertThrows(IllegalArgumentException.class,
-				() -> BulkUpsertOption.builder().updateColumn(" ").build());
-		assertThrows(NullPointerException.class,
-				() -> BulkUpsertOption.builder().bulkOption(null).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertOption.builder().updateColumn(" ").build());
+		assertThrows(NullPointerException.class, () -> BulkUpsertOption.builder().bulkOption(null).build());
 	}
 
 	@Test
 	void rejectsDuplicateSourceKeysByDefault() {
 		final Table table = tableWithDuplicateKeys();
-		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.defaults())
-				.createStagingTable("stage").getRows().iterator();
+		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.defaults()).createStagingTable("stage")
+				.getRows().iterator();
 		rows.next();
 		final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, rows::next);
 		assertEquals("Duplicate bulk upsert key at source rows 1 and 2", ex.getMessage());
@@ -38,9 +36,13 @@ class BulkUpsertPlanTest {
 	@Test
 	void canKeepFirstDuplicateSourceKeyWhileStreaming() {
 		final Table table = tableWithDuplicateKeys();
-		table.getRows().add(row -> { row.put("id", 2); row.put("name", "two"); });
-		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.builder()
-				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST).build())
+		table.getRows().add(row -> {
+			row.put("id", 2);
+			row.put("name", "two");
+		});
+		final var rows = BulkUpsertPlan
+				.resolve(table, BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST).build())
 				.createStagingTable("stage").getRows().iterator();
 		assertEquals("first", rows.next().get("name"));
 		assertEquals(2, (Integer) rows.next().get("id"));
@@ -49,8 +51,9 @@ class BulkUpsertPlanTest {
 
 	@Test
 	void canKeepLastDuplicateSourceKey() {
-		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
-				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_LAST).build())
+		final var rows = BulkUpsertPlan
+				.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_LAST).build())
 				.createStagingTable("stage").getRows().iterator();
 		assertEquals("second", rows.next().get("name"));
 		assertEquals(false, rows.hasNext());
@@ -58,13 +61,14 @@ class BulkUpsertPlanTest {
 
 	@Test
 	void canSelectDuplicateSourceRowWithCustomCondition() {
-		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
-				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
-				.duplicateRowSelectorFingerprint("lexical-name-v1")
-				.duplicateRowSelector((retained, candidate) ->
-						((String) retained.get("name")).compareTo((String) candidate.get("name")) <= 0
-								? retained : candidate)
-				.build()).createStagingTable("stage").getRows().iterator();
+		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(),
+				BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelectorFingerprint("lexical-name-v1")
+						.duplicateRowSelector((retained,
+								candidate) -> ((String) retained.get("name"))
+										.compareTo((String) candidate.get("name")) <= 0 ? retained : candidate)
+						.build())
+				.createStagingTable("stage").getRows().iterator();
 		assertEquals("first", rows.next().get("name"));
 		assertEquals(false, rows.hasNext());
 	}
@@ -72,26 +76,26 @@ class BulkUpsertPlanTest {
 	@Test
 	void customSelectorCannotReplaceTheKeyedRow() {
 		final Table table = tableWithDuplicateKeys();
-		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.builder()
-				.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
-				.duplicateRowSelectorFingerprint("invalid-selector-v1")
-				.duplicateRowSelector((retained, candidate) -> new com.sqlapp.data.schemas.Row())
-				.build()).createStagingTable("stage").getRows().iterator();
+		final var rows = BulkUpsertPlan
+				.resolve(table, BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelectorFingerprint("invalid-selector-v1")
+						.duplicateRowSelector((retained, candidate) -> new com.sqlapp.data.schemas.Row()).build())
+				.createStagingTable("stage").getRows().iterator();
 		assertThrows(IllegalArgumentException.class, rows::hasNext);
 	}
 
 	@Test
 	void customSelectorRequiresAStableFingerprint() {
 		final Table table = tableWithDuplicateKeys();
-		assertThrows(IllegalArgumentException.class, () -> BulkUpsertPlan.resolve(table,
-				BulkUpsertOption.builder()
-						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
-						.duplicateRowSelector((retained, candidate) -> retained).build()));
-		assertThrows(IllegalArgumentException.class, () -> BulkUpsertPlan.resolve(table,
-				BulkUpsertOption.builder()
-						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
-						.duplicateRowSelector((retained, candidate) -> retained)
-						.duplicateRowSelectorFingerprint("ignored-selector").build()));
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertPlan.resolve(table,
+						BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+								.duplicateRowSelector((retained, candidate) -> retained).build()));
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertPlan.resolve(table,
+						BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
+								.duplicateRowSelector((retained, candidate) -> retained)
+								.duplicateRowSelectorFingerprint("ignored-selector").build()));
 	}
 
 	private static Table tableWithDuplicateKeys() {
@@ -100,8 +104,14 @@ class BulkUpsertPlanTest {
 		table.getColumns().add(id);
 		table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR));
 		table.setPrimaryKey("pk_target", id);
-		table.getRows().add(row -> { row.put("id", 1); row.put("name", "first"); });
-		table.getRows().add(row -> { row.put("id", 1); row.put("name", "second"); });
+		table.getRows().add(row -> {
+			row.put("id", 1);
+			row.put("name", "first");
+		});
+		table.getRows().add(row -> {
+			row.put("id", 1);
+			row.put("name", "second");
+		});
 		return table;
 	}
 }

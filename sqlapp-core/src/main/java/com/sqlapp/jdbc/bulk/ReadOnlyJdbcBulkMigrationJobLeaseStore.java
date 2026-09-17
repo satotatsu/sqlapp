@@ -63,4 +63,9 @@ final class ReadOnlyJdbcBulkMigrationJobLeaseStore
 		throw new UnsupportedOperationException("Read-only lease store");
 	}
 
+	@Override
+	public void release(final BulkMigrationJobLease lease) {
+		throw new UnsupportedOperationException("Read-only lease store");
+	}
+
 }

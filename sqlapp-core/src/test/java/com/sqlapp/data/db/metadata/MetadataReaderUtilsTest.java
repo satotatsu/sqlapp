@@ -36,24 +36,15 @@ public class MetadataReaderUtilsTest {
 	@Test
 	public void testGetMetaClass() {
 
-		System.out.println(MetadataReaderUtils.getTypeParameterClass(dialect
-				.getCatalogReader().getClass()));
-		System.out.println(MetadataReaderUtils.getMetaClass(dialect
-				.getCatalogReader().getClass()));
-		assertEquals(Catalog.class, MetadataReaderUtils.getMetaClass(dialect
-				.getCatalogReader().getClass()));
-		assertEquals(
-				Schema.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getClass()));
-		assertEquals(
-				Table.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getTableReader().getClass()));
-		assertEquals(
-				View.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getViewReader().getClass()));
+		System.out.println(MetadataReaderUtils.getTypeParameterClass(dialect.getCatalogReader().getClass()));
+		System.out.println(MetadataReaderUtils.getMetaClass(dialect.getCatalogReader().getClass()));
+		assertEquals(Catalog.class, MetadataReaderUtils.getMetaClass(dialect.getCatalogReader().getClass()));
+		assertEquals(Schema.class,
+				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader().getSchemaReader().getClass()));
+		assertEquals(Table.class, MetadataReaderUtils
+				.getMetaClass(dialect.getCatalogReader().getSchemaReader().getTableReader().getClass()));
+		assertEquals(View.class, MetadataReaderUtils
+				.getMetaClass(dialect.getCatalogReader().getSchemaReader().getViewReader().getClass()));
 	}
 
 }

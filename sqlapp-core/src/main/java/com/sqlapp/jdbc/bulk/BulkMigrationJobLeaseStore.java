@@ -23,9 +23,7 @@ public interface BulkMigrationJobLeaseStore {
 
 	/** Releases only this exact acquisition. Built-in stores override atomically. */
 	default void release(final BulkMigrationJobLease lease) throws SQLException {
-		final Optional<BulkMigrationJobLease> current = load(lease.jobId());
-		if (current.isPresent() && current.get().acquisitionId().equals(lease.acquisitionId())) {
-			release(lease.jobId(), lease.ownerId());
-		}
+		throw new java.sql.SQLFeatureNotSupportedException(
+				"Lease store must implement atomic acquisition-token release");
 	}
 }

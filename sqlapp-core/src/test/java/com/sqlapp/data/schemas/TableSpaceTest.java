@@ -33,8 +33,7 @@ public class TableSpaceTest extends AbstractDbObjectTest<TableSpace> {
 
 	public static TableSpace getTableSpace() {
 		TableSpace tableSpace = new TableSpace("spaceA");
-		TableSpaceFile tableSpaceFile = new TableSpaceFile("ddd",
-				"/aaa/ccc/ddd.dat");
+		TableSpaceFile tableSpaceFile = new TableSpaceFile("ddd", "/aaa/ccc/ddd.dat");
 		tableSpace.getTableSpaceFiles().add(tableSpaceFile);
 		tableSpaceFile = new TableSpaceFile("ddd", "/aaa/bbb/EEE.dat");
 		tableSpace.getTableSpaceFiles().add(tableSpaceFile);

@@ -15,13 +15,12 @@ class TableInsertOrderSorterTest {
 	void mapperSortsWrapperObjectsInForeignKeyOrder() {
 		final Table parent = table("PARENT");
 		final Table child = table("CHILD");
-		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
-				child.getColumns().get("PARENT_ID"), parent.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", child.getColumns().get("PARENT_ID"),
+				parent.getColumns().get("ID"));
 		final Entry childEntry = new Entry("child", child);
 		final Entry parentEntry = new Entry("parent", parent);
 
-		final List<Entry> sorted = TableOrder.CREATE.sort(
-				List.of(childEntry, parentEntry), Entry::table);
+		final List<Entry> sorted = TableOrder.CREATE.sort(List.of(childEntry, parentEntry), Entry::table);
 
 		assertEquals(List.of(parentEntry, childEntry), sorted);
 	}
@@ -31,8 +30,8 @@ class TableInsertOrderSorterTest {
 		final Table parent = table("PARENT");
 		final Table equivalentParent = table("parent");
 		final Table child = table("CHILD");
-		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
-				child.getColumns().get("PARENT_ID"), equivalentParent.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", child.getColumns().get("PARENT_ID"),
+				equivalentParent.getColumns().get("ID"));
 
 		final List<Table> sorted = TableInsertOrderSorter.sort(List.of(child, parent), table -> table);
 
@@ -58,8 +57,8 @@ class TableInsertOrderSorterTest {
 	void ignoresASelfReferenceToAnEquivalentTableInstance() {
 		final Table table = table("MEMBER");
 		final Table equivalentTable = table("member");
-		table.getConstraints().addForeignKeyConstraint("FK_MEMBER_PARENT",
-				table.getColumns().get("PARENT_ID"), equivalentTable.getColumns().get("ID"));
+		table.getConstraints().addForeignKeyConstraint("FK_MEMBER_PARENT", table.getColumns().get("PARENT_ID"),
+				equivalentTable.getColumns().get("ID"));
 
 		final List<Table> sorted = TableInsertOrderSorter.sort(List.of(table), value -> value);
 
@@ -84,11 +83,11 @@ class TableInsertOrderSorterTest {
 
 		final Table child = table("CHILD");
 		secondSchema.getTables().add(child);
-		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
-				child.getColumns().get("PARENT_ID"), equivalentSecondParent.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", child.getColumns().get("PARENT_ID"),
+				equivalentSecondParent.getColumns().get("ID"));
 
-		final List<Table> sorted = TableInsertOrderSorter.sort(
-				List.of(child, firstParent, secondParent), table -> table);
+		final List<Table> sorted = TableInsertOrderSorter.sort(List.of(child, firstParent, secondParent),
+				table -> table);
 
 		assertTrue(sorted.indexOf(secondParent) < sorted.indexOf(child));
 	}

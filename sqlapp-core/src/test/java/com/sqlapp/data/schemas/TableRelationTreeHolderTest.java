@@ -89,8 +89,8 @@ class TableRelationTreeHolderTest {
 		table.setPrimaryKey(table.getColumns().get("ID"));
 		Table equivalent = new Table("TABA");
 		equivalent.getColumns().add(new Column("ID").setDataType(DataType.INT));
-		table.getConstraints().addForeignKeyConstraint("fk_self",
-				table.getColumns().get("PARENT_ID"), equivalent.getColumns().get("ID"));
+		table.getConstraints().addForeignKeyConstraint("fk_self", table.getColumns().get("PARENT_ID"),
+				equivalent.getColumns().get("ID"));
 
 		TableRelationTreeHolder holder = new TableRelationTreeHolder(table);
 
@@ -130,8 +130,7 @@ class TableRelationTreeHolderTest {
 		Table second = new Table("MEMBER");
 		secondSchema.getTables().add(second);
 
-		assertThrows(MultipleRootTablesException.class,
-				() -> new TableRelationTreeHolder(first, second));
+		assertThrows(MultipleRootTablesException.class, () -> new TableRelationTreeHolder(first, second));
 	}
 
 	@Test
@@ -145,8 +144,8 @@ class TableRelationTreeHolderTest {
 		child.getColumns().add(new Column("ID").setDataType(DataType.INT));
 		child.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
 		child.setPrimaryKey(child.getColumns().get("ID"));
-		child.getConstraints().addForeignKeyConstraint("fk_parent",
-				child.getColumns().get("PARENT_ID"), equivalentParent.getColumns().get("id"));
+		child.getConstraints().addForeignKeyConstraint("fk_parent", child.getColumns().get("PARENT_ID"),
+				equivalentParent.getColumns().get("id"));
 
 		TableRelationTreeHolder holder = new TableRelationTreeHolder(parent, child);
 
@@ -169,8 +168,7 @@ class TableRelationTreeHolderTest {
 		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
 				() -> new TableRelationTreeHolder(first, second));
 
-		assertEquals("Duplicate table identity in relation tree: catalog.public.member",
-				exception.getMessage());
+		assertEquals("Duplicate table identity in relation tree: catalog.public.member", exception.getMessage());
 	}
 
 	@Test
@@ -191,10 +189,10 @@ class TableRelationTreeHolderTest {
 		second.getColumns().add(new Column("ID").setDataType(DataType.INT));
 		second.getColumns().add(new Column("FIRST_ID").setDataType(DataType.INT));
 		second.setPrimaryKey(second.getColumns().get("ID"));
-		first.getConstraints().addForeignKeyConstraint("fk_second",
-				first.getColumns().get("SECOND_ID"), second.getColumns().get("ID"));
-		second.getConstraints().addForeignKeyConstraint("fk_first",
-				second.getColumns().get("FIRST_ID"), first.getColumns().get("ID"));
+		first.getConstraints().addForeignKeyConstraint("fk_second", first.getColumns().get("SECOND_ID"),
+				second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("fk_first", second.getColumns().get("FIRST_ID"),
+				first.getColumns().get("ID"));
 
 		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
 				() -> new TableRelationTreeHolder(first, second));
@@ -208,10 +206,10 @@ class TableRelationTreeHolderTest {
 		Table root = table("ROOT", "ID", null);
 		Table first = table("FIRST", "ID", "SECOND_ID");
 		Table second = table("SECOND", "ID", "FIRST_ID");
-		first.getConstraints().addForeignKeyConstraint("fk_second",
-				first.getColumns().get("SECOND_ID"), second.getColumns().get("ID"));
-		second.getConstraints().addForeignKeyConstraint("fk_first",
-				second.getColumns().get("FIRST_ID"), first.getColumns().get("ID"));
+		first.getConstraints().addForeignKeyConstraint("fk_second", first.getColumns().get("SECOND_ID"),
+				second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("fk_first", second.getColumns().get("FIRST_ID"),
+				first.getColumns().get("ID"));
 
 		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
 				() -> new TableRelationTreeHolder(root, first, second));

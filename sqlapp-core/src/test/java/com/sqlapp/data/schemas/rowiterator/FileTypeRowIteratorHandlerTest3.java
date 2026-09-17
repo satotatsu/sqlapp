@@ -25,7 +25,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
 
-public class FileTypeRowIteratorHandlerTest3 extends AbstractRowIteratorHandlerTest{
+public class FileTypeRowIteratorHandlerTest3 extends AbstractRowIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {
@@ -33,41 +33,41 @@ public class FileTypeRowIteratorHandlerTest3 extends AbstractRowIteratorHandlerT
 	}
 
 	@Override
-	protected void initializeTable(final Table table){
+	protected void initializeTable(final Table table) {
 		initializeTableColumn(table);
 		table.setRowIteratorHandler(getRowIteratorHandler());
 	}
 
-	protected void initializeTableColumn(final Table table){
-		table.getColumns().add(c->{
+	protected void initializeTableColumn(final Table table) {
+		table.getColumns().add(c -> {
 			c.setName("id");
 			c.setDataType(DataType.INT);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("created_at");
 			c.setDataType(DataType.DATETIME);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("updated_at");
 			c.setDataType(DataType.DATETIME);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("version_no");
 			c.setDataType(DataType.INT);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("name");
 			c.setDataType(DataType.VARCHAR);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("description");
 			c.setDataType(DataType.VARCHAR);
 		});
 	}
 
 	@Override
-	protected Table getTable(){
-		final Table table= new Table();
+	protected Table getTable() {
+		final Table table = new Table();
 		initializeTableColumn(table);
 		return table;
 	}

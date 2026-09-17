@@ -30,19 +30,19 @@ public class IntervalYearToMonthTest {
 
 	@Test
 	public void testToYearToMonthType() {
-		IntervalYearToMonth interval1=IntervalYearToMonth.parse("Interval '10' year");
-		Interval interval2=interval1.toInterval();
+		IntervalYearToMonth interval1 = IntervalYearToMonth.parse("Interval '10' year");
+		Interval interval2 = interval1.toInterval();
 		assertTrue(interval2.equals(interval1));
 	}
 
 	@Test
 	public void testParseString() {
-		IntervalYearToMonth interval1=IntervalYearToMonth.parse("Interval '10' year");
-		IntervalYearToMonth interval2=new IntervalYearToMonth(10, 0);
+		IntervalYearToMonth interval1 = IntervalYearToMonth.parse("Interval '10' year");
+		IntervalYearToMonth interval2 = new IntervalYearToMonth(10, 0);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalYearToMonth.parse("'10 2'");
-		interval2=new IntervalYearToMonth(10, 2);
+		interval1 = IntervalYearToMonth.parse("'10 2'");
+		interval2 = new IntervalYearToMonth(10, 2);
 		assertTrue(interval1.equals(interval2));
 	}
 

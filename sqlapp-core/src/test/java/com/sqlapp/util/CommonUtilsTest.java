@@ -42,8 +42,7 @@ public class CommonUtilsTest {
 	}
 
 	/**
-	 * Test method for
-	 * {@link com.sqlapp.util.StringUtils#trim(java.lang.String)}.
+	 * Test method for {@link com.sqlapp.util.StringUtils#trim(java.lang.String)}.
 	 */
 	@Test
 	public void testEq() {
@@ -59,8 +58,7 @@ public class CommonUtilsTest {
 	}
 
 	/**
-	 * Test method for
-	 * {@link com.sqlapp.util.StringUtils#trim(java.lang.String)}.
+	 * Test method for {@link com.sqlapp.util.StringUtils#trim(java.lang.String)}.
 	 */
 	@Test
 	public void testTrim() {
@@ -69,8 +67,7 @@ public class CommonUtilsTest {
 		assertEquals(CommonUtils.trim("  \t    "), "");
 		assertEquals(CommonUtils.trim("  \t \n   "), "");
 		assertEquals(CommonUtils.trim("  \t \n   ", ' ', '\t', '\n'), "");
-		assertEquals(CommonUtils.trim("  \t \n a  ", ' ', '\t', '\n'),
-				"a");
+		assertEquals(CommonUtils.trim("  \t \n a  ", ' ', '\t', '\n'), "a");
 		assertEquals(CommonUtils.trim(null), null);
 	}
 
@@ -97,8 +94,7 @@ public class CommonUtilsTest {
 	}
 
 	/**
-	 * Test method for
-	 * {@link com.sqlapp.util.CommonUtils#rtrim(java.lang.String)}.
+	 * Test method for {@link com.sqlapp.util.CommonUtils#rtrim(java.lang.String)}.
 	 */
 	@Test
 	public void testRtrimString() {
@@ -115,8 +111,7 @@ public class CommonUtilsTest {
 	}
 
 	/**
-	 * Test method for
-	 * {@link com.sqlapp.util.CommonUtils#ltrim(java.lang.String)}.
+	 * Test method for {@link com.sqlapp.util.CommonUtils#ltrim(java.lang.String)}.
 	 */
 	@Test
 	public void testLtrimString() {
@@ -237,8 +232,7 @@ public class CommonUtilsTest {
 
 	@Test
 	public void testParseKeyValue() {
-		Map<String, String> map = CommonUtils
-				.parseKeyValue("a;key1= val1 ; key2=val2;");
+		Map<String, String> map = CommonUtils.parseKeyValue("a;key1= val1 ; key2=val2;");
 		assertEquals(2, map.size());
 		assertEquals("val1", map.get("key1"));
 		assertEquals("val2", map.get("key2"));

@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class RolePrivilegeTest extends AbstractDbObjectTest<RolePrivilege> {
 
-public class RolePrivilegeTest extends AbstractDbObjectTest<RolePrivilege>{
-
-	public static RolePrivilege getPrivilege(){
-		RolePrivilege privilege=new RolePrivilege();
+	public static RolePrivilege getPrivilege() {
+		RolePrivilege privilege = new RolePrivilege();
 		privilege.setGranteeName("grantee").setGrantorName("dbo").setPrivilege("SELECT").setAdmin(true);
 		return privilege;
 	}

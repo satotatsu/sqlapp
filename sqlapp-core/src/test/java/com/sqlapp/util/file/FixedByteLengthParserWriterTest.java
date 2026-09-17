@@ -39,33 +39,33 @@ class FixedByteLengthParserWriterTest {
 
 	@Test
 	void test() throws IOException {
-		final File file=File.createTempFile("text", ".dat");
-		final Charset charset=Charset.forName("UTF-8");
-		final Table table=createTable();
-		try(FixedByteLengthWriter writer=new FixedByteLengthWriter(file, charset, table, setting->{
-		}, fieldSetting->{
+		final File file = File.createTempFile("text", ".dat");
+		final Charset charset = Charset.forName("UTF-8");
+		final Table table = createTable();
+		try (FixedByteLengthWriter writer = new FixedByteLengthWriter(file, charset, table, setting -> {
+		}, fieldSetting -> {
 			if ("a2".equalsIgnoreCase(fieldSetting.getName())) {
 				fieldSetting.setPaddingType(PaddingType.LEFT);
 			}
-		})){
+		})) {
 			writer.write(table);
 		}
-		final String text=FileUtils.readText(file, charset);
+		final String text = FileUtils.readText(file, charset);
 		System.out.println(text);
 		System.out.println("===========================");
-		try(FixedByteLengthParser parser=new FixedByteLengthParser(file, charset, table, setting->{
-		}, fieldSetting->{
+		try (FixedByteLengthParser parser = new FixedByteLengthParser(file, charset, table, setting -> {
+		}, fieldSetting -> {
 			if ("a2".equalsIgnoreCase(fieldSetting.getName())) {
 				fieldSetting.setPaddingType(PaddingType.LEFT);
 			}
-		})){
-			final long[] counter=new long[1];
-			parser.readAllRecord((r,i)->{
-				if (i==0) {
+		})) {
+			final long[] counter = new long[1];
+			parser.readAllRecord((r, i) -> {
+				if (i == 0) {
 					assertEquals("a1_1_val  ", r.get("a1"));
 					assertEquals("a2_1_value", r.get("a2"));
 					assertEquals(Integer.valueOf(1), r.get("a3"));
-				}else if (i==1) {
+				} else if (i == 1) {
 					assertEquals("a1_2_val  ", r.get("a1"));
 					assertEquals("a2_2_あ", r.get("a2"));
 					assertEquals(Integer.valueOf(2), r.get("a3"));
@@ -77,32 +77,32 @@ class FixedByteLengthParserWriterTest {
 	}
 
 	Table createTable() {
-		final Table table=new Table();
-		table.getColumns().add(c->{
+		final Table table = new Table();
+		table.getColumns().add(c -> {
 			c.setName("a1");
 			c.setDataType(DataType.VARCHAR);
 			c.setLength(10);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("a2");
 			c.setDataType(DataType.VARCHAR);
 			c.setLength(15);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("a3");
 			c.setDataType(DataType.INT);
 		});
-		table.getRows().add(row->{
+		table.getRows().add(row -> {
 			row.put("a1", "a1_1_val");
 			row.put("a2", "a2_1_value");
 			row.put("a3", 1);
 		});
-		table.getRows().add(row->{
+		table.getRows().add(row -> {
 			row.put("a1", "a1_2_val");
 			row.put("a2", "a2_2_あ");
 			row.put("a3", 2);
 		});
 		return table;
 	}
-	
+
 }

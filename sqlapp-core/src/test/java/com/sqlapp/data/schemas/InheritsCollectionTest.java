@@ -27,11 +27,11 @@ public class InheritsCollectionTest {
 
 	@Test
 	public void test() {
-		Schema schema1=new Schema("schema1");
-		Table table1=new Table("table1");
+		Schema schema1 = new Schema("schema1");
+		Table table1 = new Table("table1");
 		schema1.getTables().add(table1);
-		Schema schema2=new Schema("schema2");
-		Table table2=new Table("table2");
+		Schema schema2 = new Schema("schema2");
+		Table table2 = new Table("table2");
 		schema2.getTables().add(table2);
 		table1.getInherits().add(table2);
 		assertEquals("schema1", table1.getSchemaName());

@@ -27,7 +27,7 @@ public class FlexListTest {
 
 	@Test
 	public void testGetST1() {
-		FlexList<String> list=new FlexList<String>();
+		FlexList<String> list = new FlexList<String>();
 		list.get(2);
 		assertEquals(null, list.get(2));
 		list.add(5, "b");
@@ -36,7 +36,7 @@ public class FlexListTest {
 
 	@Test
 	public void testGetST2() {
-		FlexList<String> list=new FlexList<String>();
+		FlexList<String> list = new FlexList<String>();
 		list.get(2);
 		assertEquals(null, list.get(2));
 		list.set(5, "b");

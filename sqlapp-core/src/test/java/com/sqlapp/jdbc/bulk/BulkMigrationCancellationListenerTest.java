@@ -32,8 +32,7 @@ class BulkMigrationCancellationListenerTest {
 	@Test
 	void rejectsInvalidReasonAndNullProgress() {
 		final var token = new BulkMigrationCancellationToken();
-		assertThrows(IllegalArgumentException.class,
-				() -> token.requestCancellation(" "));
+		assertThrows(IllegalArgumentException.class, () -> token.requestCancellation(" "));
 		assertThrows(NullPointerException.class,
 				() -> new BulkMigrationCancellationListener(token).pauseAfterChunk(null));
 	}

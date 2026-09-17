@@ -22,16 +22,20 @@ class MigrationSnapshotStreamingPlannerTest {
 				List.of(row(1, "same"), row(2, "old"), row(3, "removed")), changes::add);
 
 		assertEquals(new MigrationSnapshotSummary(1, 1, 1, 1), summary);
-		assertEquals(List.of(MigrationSnapshotChange.Type.UPDATE_VERSION, MigrationSnapshotChange.Type.EXPIRE,
-				MigrationSnapshotChange.Type.INSERT), changes.stream().map(MigrationSnapshotChange::type).toList());
+		assertEquals(
+				List.of(MigrationSnapshotChange.Type.UPDATE_VERSION, MigrationSnapshotChange.Type.EXPIRE,
+						MigrationSnapshotChange.Type.INSERT),
+				changes.stream().map(MigrationSnapshotChange::type).toList());
 	}
 
 	@Test
 	void rejectsUnsortedOrDuplicateInput() {
 		assertThrows(IllegalArgumentException.class, () -> MigrationSnapshotStreamingPlanner.plan(definition(),
-				List.of(row(2, "a"), row(1, "b")), List.of(), ignored -> { }));
+				List.of(row(2, "a"), row(1, "b")), List.of(), ignored -> {
+				}));
 		assertThrows(IllegalArgumentException.class, () -> MigrationSnapshotStreamingPlanner.plan(definition(),
-				List.of(row(1, "a"), row(1, "b")), List.of(), ignored -> { }));
+				List.of(row(1, "a"), row(1, "b")), List.of(), ignored -> {
+				}));
 	}
 
 	private static MigrationSnapshotDefinition definition() {

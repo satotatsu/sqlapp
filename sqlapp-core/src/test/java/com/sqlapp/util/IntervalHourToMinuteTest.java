@@ -28,23 +28,21 @@ import com.sqlapp.data.interval.IntervalHourToMinute;
 
 public class IntervalHourToMinuteTest {
 
-
-
 	@Test
 	public void testToDayToSecondType() {
-		IntervalHourToMinute interval1=IntervalHourToMinute.parse("Interval '10' hour");
-		Interval interval2=interval1.toInterval();
+		IntervalHourToMinute interval1 = IntervalHourToMinute.parse("Interval '10' hour");
+		Interval interval2 = interval1.toInterval();
 		assertTrue(interval2.equals(interval1));
 	}
 
 	@Test
 	public void testParse() {
-		IntervalHourToMinute interval1=IntervalHourToMinute.parse("Interval '10' hour");
-		IntervalHourToMinute interval2=new IntervalHourToMinute(10, 0);
+		IntervalHourToMinute interval1 = IntervalHourToMinute.parse("Interval '10' hour");
+		IntervalHourToMinute interval2 = new IntervalHourToMinute(10, 0);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalHourToMinute.parse("'11:2:0'");
-		interval2=new IntervalHourToMinute(11,2);
+		interval1 = IntervalHourToMinute.parse("'11:2:0'");
+		interval2 = new IntervalHourToMinute(11, 2);
 		assertTrue(interval1.equals(interval2));
 	}
 

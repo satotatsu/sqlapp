@@ -17,8 +17,7 @@ class BulkMigrationProgressTrackerTest {
 	void calculatesDurableProgressRateAndEtaAcrossResumeBoundary() {
 		final AtomicLong nanos = new AtomicLong();
 		final List<BulkMigrationProgressSnapshot> snapshots = new ArrayList<>();
-		final var tracker = new BulkMigrationProgressTracker(100L, snapshots::add,
-				nanos::get);
+		final var tracker = new BulkMigrationProgressTracker(100L, snapshots::add, nanos::get);
 		tracker.onChunkStarted(progress(40, 50));
 		nanos.set(Duration.ofSeconds(2).toNanos());
 		tracker.onChunkCompleted(progress(40, 50));
@@ -53,28 +52,20 @@ class BulkMigrationProgressTrackerTest {
 	@Test
 	void rejectsProgressBeyondTheDeclaredTotal() {
 		final var tracker = new BulkMigrationProgressTracker(5L, null, () -> 1L);
-		assertThrows(IllegalArgumentException.class,
-				() -> tracker.onChunkCompleted(progress(0, 10)));
+		assertThrows(IllegalArgumentException.class, () -> tracker.onChunkCompleted(progress(0, 10)));
 	}
 
 	@Test
 	void rejectsStructurallyInvalidChunkProgress() {
+		assertThrows(IllegalArgumentException.class, () -> new ChunkedBulkMigrationProgress(" ", 0, 1, 0, 1));
+		assertThrows(IllegalArgumentException.class, () -> new ChunkedBulkMigrationProgress("migration", -1, 1, 0, 1));
+		assertThrows(IllegalArgumentException.class, () -> new ChunkedBulkMigrationProgress("migration", 0, 0, 0, 0));
+		assertThrows(IllegalArgumentException.class, () -> new ChunkedBulkMigrationProgress("migration", 0, 2, 0, 1));
 		assertThrows(IllegalArgumentException.class,
-				() -> new ChunkedBulkMigrationProgress(" ", 0, 1, 0, 1));
-		assertThrows(IllegalArgumentException.class,
-				() -> new ChunkedBulkMigrationProgress("migration", -1, 1, 0, 1));
-		assertThrows(IllegalArgumentException.class,
-				() -> new ChunkedBulkMigrationProgress("migration", 0, 0, 0, 0));
-		assertThrows(IllegalArgumentException.class,
-				() -> new ChunkedBulkMigrationProgress("migration", 0, 2, 0, 1));
-		assertThrows(IllegalArgumentException.class,
-				() -> new ChunkedBulkMigrationProgress("migration", 0, 1,
-						Long.MAX_VALUE, Long.MAX_VALUE));
+				() -> new ChunkedBulkMigrationProgress("migration", 0, 1, Long.MAX_VALUE, Long.MAX_VALUE));
 	}
 
-	private static ChunkedBulkMigrationProgress progress(final long before,
-			final long after) {
-		return new ChunkedBulkMigrationProgress("migration", 0,
-				(int) (after - before), before, after);
+	private static ChunkedBulkMigrationProgress progress(final long before, final long after) {
+		return new ChunkedBulkMigrationProgress("migration", 0, (int) (after - before), before, after);
 	}
 }

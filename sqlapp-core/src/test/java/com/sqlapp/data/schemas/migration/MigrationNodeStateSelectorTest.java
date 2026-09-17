@@ -18,8 +18,8 @@ class MigrationNodeStateSelectorTest {
 
 	@Test
 	void selectsModifiedNodesAndTransitiveDownstream() {
-		final var previous = manifest(Map.of("A", node("A", "a1"), "B", node("B", "b1", "A"), "C",
-				node("C", "c1", "B"), "REMOVED", node("REMOVED", "r1")));
+		final var previous = manifest(Map.of("A", node("A", "a1"), "B", node("B", "b1", "A"), "C", node("C", "c1", "B"),
+				"REMOVED", node("REMOVED", "r1")));
 		final Map<String, MigrationNodeManifest.Node> currentNodes = new LinkedHashMap<>();
 		currentNodes.put("A", node("A", "a2"));
 		currentNodes.put("B", node("B", "b1", "A"));

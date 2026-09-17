@@ -1062,6 +1062,10 @@ cannot be renewed or released by its former process, even when a replacement
 process intentionally reuses the same configured owner ID. The process-local
 `InMemoryBulkMigrationJobLeaseStore` is intended for tests and single-process
 execution, not coordination between application instances.
+Custom `BulkMigrationJobLeaseStore` implementations must override
+`release(BulkMigrationJobLease)` with an atomic acquisition-token comparison.
+The compatibility default fails closed with `SQLFeatureNotSupportedException`;
+it never emulates fencing with a racy load followed by owner-only release.
 The lease-aware `BulkMigrationJobExecutor.executePlan` overload acquires the
 plan lease before publishing `JOB_STARTED`, renews it before and after every
 chunk, and owner-conditionally releases it after success, failure, or pause.

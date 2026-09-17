@@ -29,9 +29,10 @@ class IndexedConvertIterableTest {
 
 	@Test
 	void testZero() {
-		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(0L), (index, val) -> {
-			return "a" + val;
-		});
+		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(0L),
+				(index, val) -> {
+					return "a" + val;
+				});
 		long i = 0;
 		for (String val : iterable) {
 			assertEquals("a" + i, val);
@@ -42,9 +43,10 @@ class IndexedConvertIterableTest {
 
 	@Test
 	void test() {
-		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(10L), (index, val) -> {
-			return "a" + val;
-		});
+		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(10L),
+				(index, val) -> {
+					return "a" + val;
+				});
 		long i = 0;
 		for (String val : iterable) {
 			assertEquals("a" + i, val);

@@ -38,24 +38,24 @@ public class JapaneseEraConverterTest extends TestCaseBase {
 	public void setUpTestCaseBase() {
 		setTimeZoneJST();
 	}
-	
+
 	@Test
 	public void testDateTime() {
-		final JapaneseEraConverter converter=JapaneseEraConverter.newInstance();
-		String dateText="明治";
-		JapaneseEra dateTime=converter.convertObject(dateText);
+		final JapaneseEraConverter converter = JapaneseEraConverter.newInstance();
+		String dateText = "明治";
+		JapaneseEra dateTime = converter.convertObject(dateText);
 		assertEquals(JapaneseEra.MEIJI, dateTime);
-		dateText="大正";
-		dateTime=converter.convertObject(dateText);
+		dateText = "大正";
+		dateTime = converter.convertObject(dateText);
 		assertEquals(JapaneseEra.TAISHO, dateTime);
-		dateText="昭和";
-		dateTime=converter.convertObject(dateText);
+		dateText = "昭和";
+		dateTime = converter.convertObject(dateText);
 		assertEquals(JapaneseEra.SHOWA, dateTime);
-		dateText="平成";
-		dateTime=converter.convertObject(dateText);
+		dateText = "平成";
+		dateTime = converter.convertObject(dateText);
 		assertEquals(JapaneseEra.HEISEI, dateTime);
-		dateText="令和";
-		dateTime=converter.convertObject(dateText);
+		dateText = "令和";
+		dateTime = converter.convertObject(dateText);
 		assertEquals(JapaneseEra.values()[4], dateTime);
 	}
 }

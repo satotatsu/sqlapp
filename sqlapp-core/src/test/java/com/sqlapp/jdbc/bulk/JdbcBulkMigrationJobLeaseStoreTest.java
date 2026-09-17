@@ -22,13 +22,11 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 				statement.execute("CREATE SCHEMA \"LEASE_%\" AUTHORIZATION DBA");
 			}
 			connection.setSchema("LEASE_%");
-			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
-					"SQLAPP_BML_WILDCARD");
+			final var writer = new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_WILDCARD");
 			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
 			final var lease = new BulkMigrationJobLease("job", "plan", "owner", now.plusSeconds(30));
 			assertTrue(writer.tryAcquire(lease, now));
-			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-					"SQLAPP_BML_WILDCARD");
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection, "SQLAPP_BML_WILDCARD");
 			assertEquals(lease, reader.load("job").orElseThrow());
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
@@ -49,11 +47,9 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 					() -> new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_AMBIGUOUS"));
 			assertTrue(failure.getMessage().contains("Ambiguous"));
 			assertThrows(SQLException.class,
-					() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-							"SQLAPP_BML_AMBIGUOUS").load("plan"));
+					() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection, "SQLAPP_BML_AMBIGUOUS").load("plan"));
 			assertThrows(SQLException.class,
-					() -> JdbcBulkMigrationJobLeaseTable.validateStructure(connection,
-							"SQLAPP_BML_AMBIGUOUS"));
+					() -> JdbcBulkMigrationJobLeaseTable.validateStructure(connection, "SQLAPP_BML_AMBIGUOUS"));
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
 				closeable.close();
@@ -72,15 +68,13 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 							+ " (JOB_ID VARCHAR(256) NOT NULL, PLAN_FINGERPRINT VARCHAR(256) NOT NULL,"
 							+ " OWNER_ID VARCHAR(256) NOT NULL, ACQUISITION_ID VARCHAR(256) NOT NULL,"
 							+ " EXPIRES_AT VARCHAR(40) NOT NULL"
-							+ ("COMPOSITE".equals(suffix)
-									? ", PRIMARY KEY (JOB_ID, OWNER_ID)" : "") + ")");
+							+ ("COMPOSITE".equals(suffix) ? ", PRIMARY KEY (JOB_ID, OWNER_ID)" : "") + ")");
 				}
 				final var failure = assertThrows(SQLException.class,
 						() -> new JdbcBulkMigrationJobLeaseStore(connection, table));
 				assertTrue(failure.getMessage().contains("JOB_ID alone"));
 				assertThrows(SQLException.class,
-						() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection, table)
-								.load("plan"));
+						() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection, table).load("plan"));
 			}
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
@@ -93,14 +87,10 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	void rejectsCorruptLeaseDataInBothStores() throws Exception {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {
-			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
-					"SQLAPP_BML_CORRUPT");
-			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-					"SQLAPP_BML_CORRUPT");
-			try (var statement = connection.prepareStatement(
-					"INSERT INTO SQLAPP_BML_CORRUPT VALUES (?, ?, ?, ?, ?)")) {
-				for (String[] values : new String[][] {
-						{ "bad-time", "owner", "not-an-instant" },
+			final var writer = new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_CORRUPT");
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection, "SQLAPP_BML_CORRUPT");
+			try (var statement = connection.prepareStatement("INSERT INTO SQLAPP_BML_CORRUPT VALUES (?, ?, ?, ?, ?)")) {
+				for (String[] values : new String[][] { { "bad-time", "owner", "not-an-instant" },
 						{ "bad-owner", " ", "2026-08-31T12:00:00Z" } }) {
 					statement.setString(1, values[0]);
 					statement.setString(2, "plan");
@@ -125,14 +115,11 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 		try (var connection = dataSource.getConnection()) {
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE SCHEMA OTHER_LEASE AUTHORIZATION DBA");
-				statement.execute("CREATE TABLE OTHER_LEASE.SQLAPP_BML_SCOPED ("
-						+ "JOB_ID VARCHAR(256) PRIMARY KEY)");
+				statement.execute("CREATE TABLE OTHER_LEASE.SQLAPP_BML_SCOPED (" + "JOB_ID VARCHAR(256) PRIMARY KEY)");
 			}
-			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-					"SQLAPP_BML_SCOPED");
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(connection, "SQLAPP_BML_SCOPED");
 			assertTrue(reader.load("plan").isEmpty());
-			final var writer = new JdbcBulkMigrationJobLeaseStore(connection,
-					"SQLAPP_BML_SCOPED");
+			final var writer = new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_SCOPED");
 			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
 			final var lease = new BulkMigrationJobLease("job", "plan", "owner", now.plusSeconds(30));
 			assertTrue(writer.tryAcquire(lease, now));
@@ -149,15 +136,12 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 		final var dataSource = createDataSource();
 		try (var connection = dataSource.getConnection()) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE SQLAPP_BML_INVALID ("
-						+ "PLAN_FINGERPRINT VARCHAR(256) PRIMARY KEY)");
+				statement.execute("CREATE TABLE SQLAPP_BML_INVALID (" + "PLAN_FINGERPRINT VARCHAR(256) PRIMARY KEY)");
 			}
 			assertThrows(SQLException.class,
-					() -> new JdbcBulkMigrationJobLeaseStore(connection,
-							"SQLAPP_BML_INVALID"));
+					() -> new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_INVALID"));
 			assertThrows(SQLException.class,
-					() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection,
-							"SQLAPP_BML_INVALID").load("plan"));
+					() -> JdbcBulkMigrationJobLeaseStore.readOnly(connection, "SQLAPP_BML_INVALID").load("plan"));
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
 				closeable.close();
@@ -168,30 +152,22 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
 	void readsWithoutCreatingOrChangingTheLeaseTable() throws Exception {
 		final var dataSource = createDataSource();
-		try (var readerConnection = dataSource.getConnection();
-				var writerConnection = dataSource.getConnection()) {
-			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(
-					readerConnection, "SQLAPP_BML_READ_TEST");
+		try (var readerConnection = dataSource.getConnection(); var writerConnection = dataSource.getConnection()) {
+			final var reader = JdbcBulkMigrationJobLeaseStore.readOnly(readerConnection, "SQLAPP_BML_READ_TEST");
 			assertTrue(reader.load("plan").isEmpty());
-			try (var tables = readerConnection.getMetaData().getTables(
-					readerConnection.getCatalog(), null, "SQLAPP_BML_READ_TEST",
-					new String[] { "TABLE" })) {
+			try (var tables = readerConnection.getMetaData().getTables(readerConnection.getCatalog(), null,
+					"SQLAPP_BML_READ_TEST", new String[] { "TABLE" })) {
 				assertFalse(tables.next());
 			}
 
-			final var writer = new JdbcBulkMigrationJobLeaseStore(writerConnection,
-					"SQLAPP_BML_READ_TEST");
+			final var writer = new JdbcBulkMigrationJobLeaseStore(writerConnection, "SQLAPP_BML_READ_TEST");
 			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
-			final var lease = new BulkMigrationJobLease("job", "plan", "owner",
-					now.plusSeconds(30));
+			final var lease = new BulkMigrationJobLease("job", "plan", "owner", now.plusSeconds(30));
 			assertTrue(writer.tryAcquire(lease, now));
 			assertEquals(lease, reader.load("job").orElseThrow());
-			assertThrows(UnsupportedOperationException.class,
-					() -> reader.tryAcquire(lease, now));
-			assertThrows(UnsupportedOperationException.class,
-					() -> reader.renew(lease, now));
-			assertThrows(UnsupportedOperationException.class,
-					() -> reader.release("job", "owner"));
+			assertThrows(UnsupportedOperationException.class, () -> reader.tryAcquire(lease, now));
+			assertThrows(UnsupportedOperationException.class, () -> reader.renew(lease, now));
+			assertThrows(UnsupportedOperationException.class, () -> reader.release("job", "owner"));
 		} finally {
 			if (dataSource instanceof AutoCloseable closeable) {
 				closeable.close();
@@ -202,17 +178,12 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 	@Test
 	void coordinatesOwnersAcrossDedicatedConnections() throws Exception {
 		final var dataSource = createDataSource();
-		try (var firstConnection = dataSource.getConnection();
-				var secondConnection = dataSource.getConnection()) {
-			final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection,
-					"SQLAPP_BML_TEST");
-			final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection,
-					"SQLAPP_BML_TEST");
+		try (var firstConnection = dataSource.getConnection(); var secondConnection = dataSource.getConnection()) {
+			final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection, "SQLAPP_BML_TEST");
+			final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection, "SQLAPP_BML_TEST");
 			final Instant now = Instant.parse("2026-08-31T12:00:00Z");
-			final var owner1 = new BulkMigrationJobLease("job", "plan", "owner-1",
-					now.plusSeconds(30));
-			final var owner2 = new BulkMigrationJobLease("job", "changed-plan", "owner-2",
-					now.plusSeconds(60));
+			final var owner1 = new BulkMigrationJobLease("job", "plan", "owner-1", now.plusSeconds(30));
+			final var owner2 = new BulkMigrationJobLease("job", "changed-plan", "owner-2", now.plusSeconds(60));
 
 			assertTrue(first.tryAcquire(owner1, now));
 			assertFalse(second.tryAcquire(owner2, now));
@@ -222,8 +193,8 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 			assertTrue(second.tryAcquire(owner2, now.plusSeconds(30)));
 			first.release("job", "owner-1");
 			assertEquals("owner-2", first.load("job").orElseThrow().ownerId());
-			assertTrue(second.renew(new BulkMigrationJobLease("job", "changed-plan", "owner-2",
-					owner2.acquisitionId(), now.plusSeconds(90)), now.plusSeconds(31)));
+			assertTrue(second.renew(new BulkMigrationJobLease("job", "changed-plan", "owner-2", owner2.acquisitionId(),
+					now.plusSeconds(90)), now.plusSeconds(31)));
 			second.release(owner2);
 			assertTrue(first.load("job").isEmpty());
 		} finally {
@@ -245,12 +216,13 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 					now.plusSeconds(30));
 			assertTrue(first.tryAcquire(stale, now.minusSeconds(1)));
 			assertTrue(second.tryAcquire(replacement, now));
-			assertFalse(first.renew(new BulkMigrationJobLease("job", "plan", "shared", "old-token",
-					now.plusSeconds(60)), now));
+			assertFalse(first
+					.renew(new BulkMigrationJobLease("job", "plan", "shared", "old-token", now.plusSeconds(60)), now));
 			first.release(stale);
 			assertEquals("new-token", second.load("job").orElseThrow().acquisitionId());
 		} finally {
-			if (dataSource instanceof AutoCloseable closeable) closeable.close();
+			if (dataSource instanceof AutoCloseable closeable)
+				closeable.close();
 		}
 	}
 }

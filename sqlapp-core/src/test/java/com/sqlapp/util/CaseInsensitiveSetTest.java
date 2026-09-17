@@ -67,8 +67,7 @@ public class CaseInsensitiveSetTest {
 	 */
 	@Test
 	public void testEntrySet() {
-		CaseInsensitiveSet set = new CaseInsensitiveSet(
-				new LinkedHashSet<String>());
+		CaseInsensitiveSet set = new CaseInsensitiveSet(new LinkedHashSet<String>());
 		set.add("aB");
 		set.add("Ab");
 		set.add("Bc");

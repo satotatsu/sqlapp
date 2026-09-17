@@ -32,15 +32,18 @@ public class DimensionHierarchyTest extends AbstractDbObjectTest<DimensionHierar
 		obj.getLevels().add(DimensionHierarchyLevelTest.getDimensionHierarchyLevel("customer"));
 		obj.getLevels().add(DimensionHierarchyLevelTest.getDimensionHierarchyLevel("city"));
 		//
-		obj.getJoinKeys().add(DimensionHierarchyJoinKeyTest.getDimensionHierarchyJoinKey("customer", "country_id", "customers"));
-		obj.getJoinKeys().add(DimensionHierarchyJoinKeyTest.getDimensionHierarchyJoinKey("city", "country_id2", "customers2"));
+		obj.getJoinKeys()
+				.add(DimensionHierarchyJoinKeyTest.getDimensionHierarchyJoinKey("customer", "country_id", "customers"));
+		obj.getJoinKeys()
+				.add(DimensionHierarchyJoinKeyTest.getDimensionHierarchyJoinKey("city", "country_id2", "customers2"));
 		return obj;
 	}
 
 	@Override
 	protected void testDiffString(DimensionHierarchy obj1, DimensionHierarchy obj2) {
 		obj2.getLevels().add(DimensionHierarchyLevelTest.getDimensionHierarchyLevel("state"));
-		obj2.getJoinKeys().add(DimensionHierarchyJoinKeyTest.getDimensionHierarchyJoinKey("state", "country_id3", "customers3"));
+		obj2.getJoinKeys()
+				.add(DimensionHierarchyJoinKeyTest.getDimensionHierarchyJoinKey("state", "country_id3", "customers3"));
 		DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}

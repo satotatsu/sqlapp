@@ -9,7 +9,8 @@ import java.util.Objects;
  *
  * @param jobId stable identifier of the logical migration job
  * @param planFingerprint fingerprint identifying the exact migration plan
- * @param ownerId unique identifier of the process or worker holding the lease
+ * @param ownerId configured identifier of the process or worker holding the lease
+ * @param acquisitionId unique fencing token generated for this acquisition
  * @param expiresAt instant at which another owner may acquire the lease
  */
 public record BulkMigrationJobLease(String jobId, String planFingerprint,

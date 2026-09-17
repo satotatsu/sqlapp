@@ -27,10 +27,10 @@ public class SqlComparisonOperatorTest {
 
 	@Test
 	public void test() {
-		for(SqlComparisonOperator enm:SqlComparisonOperator.values()){
-			if (enm.reverse()!=null){
+		for (SqlComparisonOperator enm : SqlComparisonOperator.values()) {
+			if (enm.reverse() != null) {
 				assertEquals(enm, enm.reverse().reverse());
-				if (enm.getParameterCount()!=null){
+				if (enm.getParameterCount() != null) {
 					assertEquals(enm.getParameterCount(), enm.reverse().reverse().getParameterCount());
 				}
 			}

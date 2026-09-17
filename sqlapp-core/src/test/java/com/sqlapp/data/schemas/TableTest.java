@@ -33,10 +33,7 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 
 	@Test
 	public void testIdentityCacheSizeDoesNotOverwriteStartValue() {
-		final Column column = new Column("ID")
-				.setIdentity(true)
-				.setIdentityStartValue(100)
-				.setIdentityStep(10)
+		final Column column = new Column("ID").setIdentity(true).setIdentityStartValue(100).setIdentityStep(10)
 				.setIdentityCacheSize(1000);
 		assertEquals(100L, column.getIdentityStartValue());
 		assertEquals(10L, column.getIdentityStep());

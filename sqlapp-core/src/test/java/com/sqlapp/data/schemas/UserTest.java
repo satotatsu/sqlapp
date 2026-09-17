@@ -23,8 +23,7 @@ public class UserTest extends AbstractDbObjectTest<User> {
 
 	public static User getUser() {
 		User obj = new User();
-		obj.setName("userA").setDefaultSchemaName("SchemaA")
-				.setPassword("pass1");
+		obj.setName("userA").setDefaultSchemaName("SchemaA").setPassword("pass1");
 		return obj;
 	}
 

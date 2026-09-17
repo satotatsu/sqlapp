@@ -19,12 +19,11 @@
 
 package com.sqlapp.data.schemas;
 
-
-public class ExcludeConstraintTest extends AbstractDbObjectTest<ExcludeConstraint>{
+public class ExcludeConstraintTest extends AbstractDbObjectTest<ExcludeConstraint> {
 
 	@Override
 	protected ExcludeConstraint getObject() {
-		ExcludeConstraint cc=new ExcludeConstraint();
+		ExcludeConstraint cc = new ExcludeConstraint();
 		cc.setName("EKNAME");
 		cc.addColumn("aaaa");
 		cc.addColumn("bbbb");

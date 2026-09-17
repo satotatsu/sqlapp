@@ -26,15 +26,15 @@ import org.junit.jupiter.api.Test;
 public class ConstraintCollectionTest {
 
 	@Test
-	public void testFind(){
-		ConstraintCollection cc=new ConstraintCollection();
-		CheckConstraintTest ccTest=new CheckConstraintTest();
+	public void testFind() {
+		ConstraintCollection cc = new ConstraintCollection();
+		CheckConstraintTest ccTest = new CheckConstraintTest();
 		cc.add(ccTest.getObject());
 		//
-		UniqueConstraintTest ucTest=new UniqueConstraintTest();
+		UniqueConstraintTest ucTest = new UniqueConstraintTest();
 		cc.add(ucTest.getObject());
 		//
-		ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
+		ForeignKeyConstraintTest fcTest = new ForeignKeyConstraintTest();
 		cc.add(fcTest.getObject());
 		//
 		assertEquals(ccTest.getObject(), cc.find(ccTest.getObject()));
@@ -43,10 +43,10 @@ public class ConstraintCollectionTest {
 	}
 
 	@Test
-	public void test2(){
-		ConstraintCollection cc1=createConstraintCollection1();
-		ConstraintCollection cc2=createConstraintCollection2();
-		DbObjectDifferenceCollection diff=cc1.diff(cc2);
+	public void test2() {
+		ConstraintCollection cc1 = createConstraintCollection1();
+		ConstraintCollection cc2 = createConstraintCollection2();
+		DbObjectDifferenceCollection diff = cc1.diff(cc2);
 		System.out.println(diff);
 	}
 
@@ -70,43 +70,40 @@ public class ConstraintCollectionTest {
 		table.getColumns().add(columnA);
 		table.getColumns().add(columnB);
 		table.getColumns().add(columnC);
-		UniqueConstraint constraint = table.getConstraints()
-				.addUniqueConstraint("UK_tableA", columnA, columnB);
+		UniqueConstraint constraint = table.getConstraints().addUniqueConstraint("UK_tableA", columnA, columnB);
 
-		assertEquals(java.util.List.of(constraint), table.getConstraints()
-				.getUniqueConstraints(columnA, columnB));
+		assertEquals(java.util.List.of(constraint), table.getConstraints().getUniqueConstraints(columnA, columnB));
 		assertTrue(table.getConstraints().getUniqueConstraints(columnA).isEmpty());
 		assertTrue(table.getConstraints().getUniqueConstraints(columnC).isEmpty());
 	}
 
-	protected ConstraintCollection createConstraintCollection1(){
-		ConstraintCollection cc=new ConstraintCollection();
-		CheckConstraintTest ccTest=new CheckConstraintTest();
+	protected ConstraintCollection createConstraintCollection1() {
+		ConstraintCollection cc = new ConstraintCollection();
+		CheckConstraintTest ccTest = new CheckConstraintTest();
 		cc.add(ccTest.getObject().setName("cc0"));
 		cc.add(ccTest.getObject().setName("cc1"));
 		//
-		UniqueConstraintTest ucTest=new UniqueConstraintTest();
+		UniqueConstraintTest ucTest = new UniqueConstraintTest();
 		cc.add(ucTest.getObject());
 		//
-		ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
+		ForeignKeyConstraintTest fcTest = new ForeignKeyConstraintTest();
 		cc.add(fcTest.getObject());
 		return cc;
 	}
 
-	protected ConstraintCollection createConstraintCollection2(){
-		ConstraintCollection cc=new ConstraintCollection();
-		CheckConstraintTest ccTest=new CheckConstraintTest();
+	protected ConstraintCollection createConstraintCollection2() {
+		ConstraintCollection cc = new ConstraintCollection();
+		CheckConstraintTest ccTest = new CheckConstraintTest();
 		cc.add(ccTest.getObject().setName("cc1"));
 		cc.add(ccTest.getObject().setName("cc2"));
 		cc.add(ccTest.getObject().setName("cc3"));
 		//
-		UniqueConstraintTest ucTest=new UniqueConstraintTest();
+		UniqueConstraintTest ucTest = new UniqueConstraintTest();
 		cc.add(ucTest.getObject());
 		//
-		ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
+		ForeignKeyConstraintTest fcTest = new ForeignKeyConstraintTest();
 		cc.add(fcTest.getObject());
 		return cc;
 	}
-
 
 }

@@ -19,12 +19,11 @@
 
 package com.sqlapp.data.schemas;
 
-
-public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint>{
+public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint> {
 
 	@Override
 	protected UniqueConstraint getObject() {
-		UniqueConstraint cc=new UniqueConstraint();
+		UniqueConstraint cc = new UniqueConstraint();
 		cc.setName("UKNAME");
 		cc.addColumn("aaaa");
 		cc.addColumn("bbbb");

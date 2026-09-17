@@ -246,8 +246,7 @@ public class ValuesBindVariableNodeTest {
 
 	@Test
 	public void testEvalWithoutValuesUsesEvaluatedColumns() {
-		Node node = SqlParser.getInstance().parse(dialect,
-				"/*VALUES*/VALUES(/*colB*/'',/*colC*/'')/*END*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*VALUES*/VALUES(/*colB*/'',/*colC*/'')/*END*/");
 		SqlParameterCollection parameters = node.eval(getTable());
 		String expected = """
 				SELECT ?,? FROM (VALUES(0))

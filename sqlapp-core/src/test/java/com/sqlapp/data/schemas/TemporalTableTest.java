@@ -27,15 +27,11 @@ class TemporalTableTest {
 		schema.getTables().add(historyTable);
 		table.getColumns().add("VALID_FROM");
 		table.getColumns().add("VALID_TO");
-		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
-				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
-				.setStartColumnName("VALID_FROM")
-				.setEndColumnName("VALID_TO"));
-		table.setSystemVersioning(new SystemVersioning()
-				.setPeriodName("SYSTEM_TIME")
-				.setHistoryTableSchemaName("ARCHIVE")
-				.setHistoryTableName("ORDERS_HISTORY")
-				.setTransactionIdColumnName("VALID_TO"));
+		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME").setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+				.setStartColumnName("VALID_FROM").setEndColumnName("VALID_TO"));
+		table.setSystemVersioning(
+				new SystemVersioning().setPeriodName("SYSTEM_TIME").setHistoryTableSchemaName("ARCHIVE")
+						.setHistoryTableName("ORDERS_HISTORY").setTransactionIdColumnName("VALID_TO"));
 		Table cloned = table.clone();
 		assertEquals(table, cloned);
 		cloned.getTemporalPeriods().get(0).setEndColumnName("CHANGED_VALID_TO");

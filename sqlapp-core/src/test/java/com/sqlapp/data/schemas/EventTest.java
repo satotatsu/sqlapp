@@ -23,10 +23,10 @@ import java.text.ParseException;
 
 import com.sqlapp.util.DateUtils;
 
-public class EventTest extends AbstractDbObjectTest<Event>{
+public class EventTest extends AbstractDbObjectTest<Event> {
 
-	public static Event getEvent(){
-		Event obj=new Event();
+	public static Event getEvent() {
+		Event obj = new Event();
 		obj.setName("A");
 		obj.setIntervalField("YEAR");
 		obj.setRemarks("コメント");

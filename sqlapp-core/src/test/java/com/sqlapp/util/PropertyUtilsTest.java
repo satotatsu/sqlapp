@@ -30,11 +30,9 @@ import com.sqlapp.data.schemas.Schema;
 public class PropertyUtilsTest {
 	@Test
 	public void testEquals() {
-		assertEquals("スキーマ", PropertyUtils.getPropertyValue(Schema.class,
-				"messages", "Schema", Locale.JAPANESE));
-		assertEquals("Package Body", PropertyUtils.getPropertyValue(
-				Schema.class, "messages", "PackageBody", Locale.ENGLISH));
-		assertEquals("Dummy", PropertyUtils.getPropertyValue(Schema.class,
-				"messages", "Dummy", Locale.JAPANESE));
+		assertEquals("スキーマ", PropertyUtils.getPropertyValue(Schema.class, "messages", "Schema", Locale.JAPANESE));
+		assertEquals("Package Body",
+				PropertyUtils.getPropertyValue(Schema.class, "messages", "PackageBody", Locale.ENGLISH));
+		assertEquals("Dummy", PropertyUtils.getPropertyValue(Schema.class, "messages", "Dummy", Locale.JAPANESE));
 	}
 }

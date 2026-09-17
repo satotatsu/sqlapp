@@ -29,10 +29,8 @@ public class CharacterSemanticsTest {
 
 	@Test
 	public void testGetDisplayValueLocale() {
-		assertEquals("バイト",
-				CharacterSemantics.Byte.getDisplayName(Locale.JAPANESE));
-		assertEquals("Byte",
-				CharacterSemantics.Byte.getDisplayName(Locale.CANADA));
+		assertEquals("バイト", CharacterSemantics.Byte.getDisplayName(Locale.JAPANESE));
+		assertEquals("Byte", CharacterSemantics.Byte.getDisplayName(Locale.CANADA));
 	}
 
 }

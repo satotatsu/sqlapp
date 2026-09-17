@@ -37,13 +37,11 @@ public class DropViewFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard",
-				0, 0);
+		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard", 0, 0);
 		final Schema schema = new Schema();
 		final View view = new View("viewA");
 		schema.getViews().add(view);
-		command = dialect.createSqlFactoryRegistry().getSqlFactory(view,
-				State.Deleted);
+		command = dialect.createSqlFactoryRegistry().getSqlFactory(view, State.Deleted);
 	}
 
 	@Test

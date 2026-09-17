@@ -29,8 +29,7 @@ public class SimpleBeanWrapperTest {
 
 	@Test
 	public void testSimpleBeanWrapper1() {
-		SimpleBeanWrapper utils = new SimpleBeanWrapper(
-				com.sqlapp.data.interval.Interval.class.getName());
+		SimpleBeanWrapper utils = new SimpleBeanWrapper(com.sqlapp.data.interval.Interval.class.getName());
 		Interval interval1 = new Interval(2011, 2, 23, 0, 0, 0, 0);
 		Interval interval2 = new Interval(0, 0, 0, 0, 0, 0, 0);
 		utils.setValue(interval2, "years", 2011);
@@ -41,8 +40,7 @@ public class SimpleBeanWrapperTest {
 
 	@Test
 	public void testSimpleBeanWrapper2() {
-		SimpleBeanWrapper utils = new SimpleBeanWrapper(
-				com.sqlapp.data.interval.Interval.class.getName());
+		SimpleBeanWrapper utils = new SimpleBeanWrapper(com.sqlapp.data.interval.Interval.class.getName());
 		Interval interval1 = new Interval(2011, 2, 23, 0, 0, 0, 0);
 		Interval interval2 = new Interval(0, 0, 0, 0, 0, 0, 0);
 		utils.invoke(interval2, "setYears", 2011);
@@ -53,8 +51,7 @@ public class SimpleBeanWrapperTest {
 
 	@Test
 	public void testSimpleBeanWrapper3() {
-		SimpleBeanWrapper utils = new SimpleBeanWrapper(
-				com.sqlapp.data.interval.Interval.class.getName());
+		SimpleBeanWrapper utils = new SimpleBeanWrapper(com.sqlapp.data.interval.Interval.class.getName());
 		Interval interval1 = new Interval(2011, 2, 23, 0, 0, 0, 0);
 		Interval interval2 = new Interval(0, 0, 0, 0, 0, 0, 0);
 		utils.invoke(interval2, "setYears", "2011");

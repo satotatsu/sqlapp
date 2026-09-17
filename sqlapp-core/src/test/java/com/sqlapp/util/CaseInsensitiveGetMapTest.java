@@ -33,11 +33,12 @@ import org.junit.jupiter.api.Test;
 public class CaseInsensitiveGetMapTest {
 
 	/**
-	 * Test method for {@link com.sqlapp.util.CaseInsensitiveMap#put(java.lang.String, java.lang.Object)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.CaseInsensitiveMap#put(java.lang.String, java.lang.Object)}.
 	 */
 	@Test
 	public void testPut() {
-		CaseInsensitiveGetMap<String> map=new CaseInsensitiveGetMap<String>();
+		CaseInsensitiveGetMap<String> map = new CaseInsensitiveGetMap<String>();
 		map.put("aB", "b");
 		map.put("Ab", "c");
 		assertEquals("b", map.get("aB"));
@@ -50,10 +51,10 @@ public class CaseInsensitiveGetMapTest {
 	 */
 	@Test
 	public void testClear() {
-		CaseInsensitiveGetMap<String> map=new CaseInsensitiveGetMap<String>();
+		CaseInsensitiveGetMap<String> map = new CaseInsensitiveGetMap<String>();
 		map.put("aaaaa", "b");
 		map.clear();
-		assertTrue(map.size()==0);
+		assertTrue(map.size() == 0);
 	}
 
 	/**
@@ -61,7 +62,7 @@ public class CaseInsensitiveGetMapTest {
 	 */
 	@Test
 	public void testEntrySet() {
-		CaseInsensitiveGetMap<String> map=new CaseInsensitiveGetMap<String>();
+		CaseInsensitiveGetMap<String> map = new CaseInsensitiveGetMap<String>();
 		map.put("aB", "a");
 		map.put("Ab", "b");
 		map.put("Bc", "c");

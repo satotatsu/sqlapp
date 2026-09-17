@@ -36,34 +36,34 @@ public class AbstractIteratorTest {
 
 	@Test
 	public void testExecute1() throws Exception {
-		final StringBuilder builder=new StringBuilder();
-		AbstractIterator<String> itr=new AbstractIterator<String>(){
+		final StringBuilder builder = new StringBuilder();
+		AbstractIterator<String> itr = new AbstractIterator<String>() {
 			@Override
 			protected void handle(String obj, int index) {
 				builder.append(obj);
 			}
 		};
-		itr.execute(new String[]{"a", "b", "c"});
+		itr.execute(new String[] { "a", "b", "c" });
 		assertEquals(builder.toString(), "abc");
 	}
 
 	@Test
 	public void testExecute2() throws Exception {
-		final StringBuilder builder=new StringBuilder();
-		AbstractIterator<String> itr=new AbstractIterator<String>(){
+		final StringBuilder builder = new StringBuilder();
+		AbstractIterator<String> itr = new AbstractIterator<String>() {
 			@Override
 			protected void handle(String obj, int index) {
 				builder.append(obj);
 			}
 		};
-		itr.execute(new Object[]{"a", "b", "c"});
+		itr.execute(new Object[] { "a", "b", "c" });
 		assertEquals("abc", builder.toString());
 	}
 
 	@Test
 	public void testExecute3() throws Exception {
-		final StringBuilder builder=new StringBuilder();
-		AbstractIterator<String> itr=new AbstractIterator<String>(){
+		final StringBuilder builder = new StringBuilder();
+		AbstractIterator<String> itr = new AbstractIterator<String>() {
 			@Override
 			protected void handle(String obj, int index) {
 				builder.append(obj);
@@ -75,29 +75,31 @@ public class AbstractIteratorTest {
 
 	@Test
 	public void testExecute4() throws Exception {
-		final StringBuilder builder=new StringBuilder();
-		AbstractIterator<Integer> itr=new AbstractIterator<Integer>(2){
+		final StringBuilder builder = new StringBuilder();
+		AbstractIterator<Integer> itr = new AbstractIterator<Integer>(2) {
 			@Override
 			protected void handle(Integer obj, int index) {
 			}
+
 			@Override
-			protected void stepHandle(int index, int stepSize){
+			protected void stepHandle(int index, int stepSize) {
 				builder.append(index);
 			}
 		};
 		itr.execute(Iterators.range(10));
 		assertEquals("01234", builder.toString());
 	}
-	
+
 	@Test
 	public void testExecute5() throws Exception {
-		final StringBuilder builder=new StringBuilder();
-		final StringBuilder stepBuilder=new StringBuilder();
-		AbstractIterator<Integer> itr=new AbstractIterator<Integer>(3){
+		final StringBuilder builder = new StringBuilder();
+		final StringBuilder stepBuilder = new StringBuilder();
+		AbstractIterator<Integer> itr = new AbstractIterator<Integer>(3) {
 			@Override
 			protected void handle(Integer obj, int index) {
 			}
-			protected void stepHandle(int index, int stepSize){
+
+			protected void stepHandle(int index, int stepSize) {
 				builder.append(index);
 				stepBuilder.append(stepSize);
 			}
@@ -105,5 +107,5 @@ public class AbstractIteratorTest {
 		itr.execute(Iterators.range(10));
 		assertEquals("0123", builder.toString());
 		assertEquals("3331", stepBuilder.toString());
-	}	
+	}
 }

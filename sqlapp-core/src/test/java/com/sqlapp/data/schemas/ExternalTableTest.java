@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class ExternalTableTest extends AbstractDbObjectTest<ExternalTable> {
 
-public class ExternalTableTest extends AbstractDbObjectTest<ExternalTable>{
-
-	public static ExternalTable getExternalTable(String name){
-		ExternalTable obj=new ExternalTable(name);
+	public static ExternalTable getExternalTable(String name) {
+		ExternalTable obj = new ExternalTable(name);
 		obj.setTypeName("ORACLE_LOADER");
 		obj.setSchemaName("SYS");
 		obj.setLocation("sample.csv");
@@ -31,7 +30,8 @@ public class ExternalTableTest extends AbstractDbObjectTest<ExternalTable>{
 		obj.setDirectoryName("EXTERNAL_DATA");
 		obj.setRejectLimit("0");
 		obj.setProperty("ALL");
-		obj.setAccessParameters("RECORDS DELIMITED BY NEWLINE \n FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (KAZU, MOJI, HIZUKE CHAR DATE_FORMAT DATE MASK 'yyyy/mm/dd') \n");
+		obj.setAccessParameters(
+				"RECORDS DELIMITED BY NEWLINE \n FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (KAZU, MOJI, HIZUKE CHAR DATE_FORMAT DATE MASK 'yyyy/mm/dd') \n");
 		obj.setAccessType("CLOB");
 		obj.setRemarks("コメント");
 		return obj;

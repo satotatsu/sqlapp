@@ -39,8 +39,8 @@ public class XmlRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest {
 	void repeatedlyCombinesXmlProducersWithoutConcurrentSchemaMutation() {
 		for (int attempt = 0; attempt < 20; attempt++) {
 			final Table table = getTable();
-			table.setRowIteratorHandler(new CombinedRowIteratorHandler(
-					getRowIteratorHandler(), getRowIteratorHandler()));
+			table.setRowIteratorHandler(
+					new CombinedRowIteratorHandler(getRowIteratorHandler(), getRowIteratorHandler()));
 			int rows = 0;
 			for (var ignored : table.getRows()) {
 				rows++;

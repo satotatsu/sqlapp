@@ -23,8 +23,10 @@ class MigrationSnapshotPlannerTest {
 				current);
 
 		assertEquals(1, plan.unchangedRows());
-		assertEquals(List.of(MigrationSnapshotChange.Type.UPDATE_VERSION, MigrationSnapshotChange.Type.INSERT,
-				MigrationSnapshotChange.Type.EXPIRE), plan.changes().stream().map(MigrationSnapshotChange::type).toList());
+		assertEquals(
+				List.of(MigrationSnapshotChange.Type.UPDATE_VERSION, MigrationSnapshotChange.Type.INSERT,
+						MigrationSnapshotChange.Type.EXPIRE),
+				plan.changes().stream().map(MigrationSnapshotChange::type).toList());
 		assertEquals(Map.of("ID", 2), plan.changes().get(0).key());
 		assertEquals(1, plan.count(MigrationSnapshotChange.Type.INSERT));
 		assertEquals(1, plan.count(MigrationSnapshotChange.Type.UPDATE_VERSION));

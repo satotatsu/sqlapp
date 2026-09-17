@@ -21,6 +21,7 @@ package com.sqlapp.data.schemas;
 
 import com.sqlapp.data.db.datatype.DataType;
 import static org.junit.jupiter.api.Assertions.*;
+
 public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyConstraint> {
 
 	@Override
@@ -68,8 +69,7 @@ public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyCon
 	}
 
 	@Override
-	protected void testDiffString(ForeignKeyConstraint obj1,
-			ForeignKeyConstraint obj2) {
+	protected void testDiffString(ForeignKeyConstraint obj1, ForeignKeyConstraint obj2) {
 		obj2.setName("b");
 		Column column = new Column("C");
 		obj2.addColumns(column);

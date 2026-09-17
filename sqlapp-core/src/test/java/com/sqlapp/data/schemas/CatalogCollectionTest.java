@@ -50,12 +50,13 @@ public class CatalogCollectionTest {
 		System.out.println(writer.toString());
 		StringReader reader = new StringReader(writer.toString());
 		StaxReader staxReader = new StaxReader(reader);
-		AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = new CatalogCollection().getDbObjectXmlReaderHandler();
+		AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = new CatalogCollection()
+				.getDbObjectXmlReaderHandler();
 		ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, null);
 		List<Object> list = resultHandler.getResult();
-		Object obj=first(list);
+		Object obj = first(list);
 		assertTrue(cc.equals(obj, new TestEqualsHansler()));
 		System.out.println(writer.toString());
 	}

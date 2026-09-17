@@ -34,11 +34,11 @@ public class DbObjectsTest {
 	@Test
 	public void test() {
 		System.out.println("********************************************************************");
-		for(DbObjects enm:DbObjects.values()){
-			if(enm.isCollection()){
+		for (DbObjects enm : DbObjects.values()) {
+			if (enm.isCollection()) {
 				assertTrue(List.class.isAssignableFrom(enm.getType()));
-			} else{
-				if (enm.getParentType()!=null&&!enm.getCamelCase().contains("Constraint")){
+			} else {
+				if (enm.getParentType() != null && !enm.getCamelCase().contains("Constraint")) {
 					assertEquals(SchemaUtils.getPluralName(enm.getCamelCase()), enm.getParentType().getCamelCase());
 				}
 			}
@@ -47,69 +47,69 @@ public class DbObjectsTest {
 
 	@Test
 	public void testCatalog() {
-		Set<ISchemaProperty> props=SchemaUtils.getSchemaObjectProperties(Catalog.class);
-		for(ISchemaProperty prop:props){
-			boolean find=false;
-			for(DbObjects enm:DbObjects.values()){
-				if (prop.getValueClass().equals(enm.getType())){
-					find=true;
+		Set<ISchemaProperty> props = SchemaUtils.getSchemaObjectProperties(Catalog.class);
+		for (ISchemaProperty prop : props) {
+			boolean find = false;
+			for (DbObjects enm : DbObjects.values()) {
+				if (prop.getValueClass().equals(enm.getType())) {
+					find = true;
 					break;
 				}
 			}
-			assertTrue(find, "prop="+prop.getLabel());
-		}
-	}
-	
-	@Test
-	public void testSchema() {
-		Set<ISchemaProperty> props=SchemaUtils.getSchemaObjectProperties(Schema.class);
-		for(ISchemaProperty prop:props){
-			boolean find=false;
-			for(DbObjects enm:DbObjects.values()){
-				if (prop.getValueClass().equals(enm.getType())){
-					find=true;
-					break;
-				}
-			}
-			assertTrue(find, "prop="+prop.getLabel());
+			assertTrue(find, "prop=" + prop.getLabel());
 		}
 	}
 
-	private void print(DbObjects enm){
-		ToStringBuilder builder=new ToStringBuilder();
+	@Test
+	public void testSchema() {
+		Set<ISchemaProperty> props = SchemaUtils.getSchemaObjectProperties(Schema.class);
+		for (ISchemaProperty prop : props) {
+			boolean find = false;
+			for (DbObjects enm : DbObjects.values()) {
+				if (prop.getValueClass().equals(enm.getType())) {
+					find = true;
+					break;
+				}
+			}
+			assertTrue(find, "prop=" + prop.getLabel());
+		}
+	}
+
+	private void print(DbObjects enm) {
+		ToStringBuilder builder = new ToStringBuilder();
 		builder.add("text", enm.toString());
 		builder.add("camelCase", enm.getCamelCase());
 		builder.add("snakeCase", enm.getSnakeCase());
 		builder.add("depends", enm.getDepends());
 		System.out.println(builder.toString());
 	}
-	
+
 	@Test
 	public void testCreateOrder() {
 		System.out.println("********************************************************************");
 		System.out.println("********************************create order************************************");
-		List<DbObjects> createOrders=DbObjects.getCreateOrders();
-		for(DbObjects enm:createOrders){
+		List<DbObjects> createOrders = DbObjects.getCreateOrders();
+		for (DbObjects enm : createOrders) {
 			print(enm);
 		}
 	}
-	
+
 	@Test
 	public void testDropOrder() {
 		System.out.println("********************************************************************");
 		System.out.println("********************************drop order************************************");
-		List<DbObjects> createOrders=DbObjects.getDropOrders();
-		for(DbObjects enm:createOrders){
+		List<DbObjects> createOrders = DbObjects.getDropOrders();
+		for (DbObjects enm : createOrders) {
 			print(enm);
 		}
 	}
-	
+
 	@Test
 	public void testNewInstance() {
-		for(DbObjects enm:DbObjects.values()){
-			DbCommonObject<?> obj=enm.newInstance();
+		for (DbObjects enm : DbObjects.values()) {
+			DbCommonObject<?> obj = enm.newInstance();
 			assertNotNull(obj);
-			assertTrue(obj.getClass()==enm.getType());
+			assertTrue(obj.getClass() == enm.getType());
 		}
 	}
 }

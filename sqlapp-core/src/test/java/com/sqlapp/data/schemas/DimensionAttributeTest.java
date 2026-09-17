@@ -19,8 +19,7 @@
 
 package com.sqlapp.data.schemas;
 
-public class DimensionAttributeTest extends
-		AbstractDbObjectTest<DimensionAttribute> {
+public class DimensionAttributeTest extends AbstractDbObjectTest<DimensionAttribute> {
 
 	@Override
 	protected DimensionAttribute getObject() {

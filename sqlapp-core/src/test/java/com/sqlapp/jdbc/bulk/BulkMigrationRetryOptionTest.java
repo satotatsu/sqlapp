@@ -14,21 +14,18 @@ import org.junit.jupiter.api.Test;
 class BulkMigrationRetryOptionTest {
 	@Test
 	void rejectsInvalidRetryPolicyWhileBuildingIt() {
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationRetryOption.builder().maxRetries(-1).build());
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationRetryOption.builder().maxRetries(-1).build());
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationRetryOption.builder()
-				.initialBackoffMillis(2).maxBackoffMillis(1).build());
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationRetryOption.builder()
-				.backoffMultiplier(Double.NaN).build());
+				() -> BulkMigrationRetryOption.builder().initialBackoffMillis(2).maxBackoffMillis(1).build());
 		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationRetryOption.builder().sqlState(" ").build());
+				() -> BulkMigrationRetryOption.builder().backoffMultiplier(Double.NaN).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationRetryOption.builder().sqlState(" ").build());
 	}
 
 	@Test
 	void selectsOnlyConfiguredRetryableFailuresAndHonorsTheLimit() {
-		final var retry = BulkMigrationRetryOption.builder().maxRetries(2)
-				.initialBackoffMillis(10).backoffMultiplier(3).maxBackoffMillis(50)
-				.sqlState("40001").errorCode(1205).build();
+		final var retry = BulkMigrationRetryOption.builder().maxRetries(2).initialBackoffMillis(10).backoffMultiplier(3)
+				.maxBackoffMillis(50).sqlState("40001").errorCode(1205).build();
 		retry.validate();
 
 		assertTrue(retry.shouldRetry(new SQLTransientException("transient"), 0));

@@ -28,23 +28,21 @@ import com.sqlapp.data.interval.IntervalDayToSecond;
 
 public class IntervalDayToSecondTest {
 
-
-
 	@Test
 	public void testToDayToSecondType() {
-		IntervalDayToSecond interval1=IntervalDayToSecond.parse("Interval '10' day");
-		Interval interval2=interval1.toInterval();
+		IntervalDayToSecond interval1 = IntervalDayToSecond.parse("Interval '10' day");
+		Interval interval2 = interval1.toInterval();
 		assertTrue(interval2.equals(interval1));
 	}
 
 	@Test
 	public void testParse() {
-		IntervalDayToSecond interval1=IntervalDayToSecond.parse("Interval '10' day");
-		IntervalDayToSecond interval2=new IntervalDayToSecond(10, 0, 0, 0);
+		IntervalDayToSecond interval1 = IntervalDayToSecond.parse("Interval '10' day");
+		IntervalDayToSecond interval2 = new IntervalDayToSecond(10, 0, 0, 0);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalDayToSecond.parse("'10 11:2:0'");
-		interval2=new IntervalDayToSecond(10, 11,2,0);
+		interval1 = IntervalDayToSecond.parse("'10 11:2:0'");
+		interval2 = new IntervalDayToSecond(10, 11, 2, 0);
 		assertTrue(interval1.equals(interval2));
 	}
 

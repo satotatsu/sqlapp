@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class OperatorFamilyTest extends AbstractDbObjectTest<OperatorFamily> {
 
-public class OperatorFamilyTest extends AbstractDbObjectTest<OperatorFamily>{
-
-	public static OperatorFamily getOperatorFamily(String name){
-		OperatorFamily obj=new OperatorFamily();
+	public static OperatorFamily getOperatorFamily(String name) {
+		OperatorFamily obj = new OperatorFamily();
 		obj.setOperatorName(name);
 		return obj;
 	}

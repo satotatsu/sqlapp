@@ -28,7 +28,7 @@ public class TypeTest extends AbstractDbObjectTest<Type> {
 		column.setDataType(types);
 		return column;
 	}
-	
+
 	public static Type getType(String name) {
 		Type obj = new Type(name);
 		TypeColumn column = getColumn("A", DataType.VARCHAR);
@@ -71,7 +71,7 @@ public class TypeTest extends AbstractDbObjectTest<Type> {
 
 	@Override
 	protected void testDiffString(Type obj1, Type obj2) {
-		TypeColumn column2=obj2.getColumns().get(0);
+		TypeColumn column2 = obj2.getColumns().get(0);
 		column2.setDataType(DataType.NVARCHAR);
 		column2.setSequenceName("seqA");
 		DbObjectDifference diff = obj1.diff(obj2);

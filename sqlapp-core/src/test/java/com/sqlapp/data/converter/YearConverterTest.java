@@ -32,11 +32,12 @@ class YearConverterTest {
 
 	@Test
 	void test() {
-		final YearConverter converter=new YearConverter().setParseFormats("yyyy-MM-dd'T'HH:mm:ss", "yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ", "yyyy")
+		final YearConverter converter = new YearConverter()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ss", "yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ", "yyyy")
 				.setFormat("yyyy");
-		final Year p=Year.of(2021);
+		final Year p = Year.of(2021);
 		assertEquals("2021", p.toString());
-		final Year p2=converter.convertObject(p.toString());
+		final Year p2 = converter.convertObject(p.toString());
 		assertEquals(p, p2);
 	}
 

@@ -27,7 +27,7 @@ public class DiffStringBuilderTest {
 
 	@Test
 	public void testSimple() {
-		DiffStringBuilder builder1=new DiffStringBuilder(this.getClass());
+		DiffStringBuilder builder1 = new DiffStringBuilder(this.getClass());
 		builder1.setDiff("a", 1, 2);
 		assertEquals("DiffStringBuilderTest[a=1]", builder1.toString());
 		builder1.setDiff("b", 2, 3);
@@ -35,7 +35,7 @@ public class DiffStringBuilderTest {
 		builder1.setDiff("d", "d1", "d2");
 		assertEquals("DiffStringBuilderTest[a=1, b=2, d=d1]", builder1.toString());
 		//
-		DiffStringBuilder builder2=new DiffStringBuilder(String.class);
+		DiffStringBuilder builder2 = new DiffStringBuilder(String.class);
 		builder2.setDiff("e", 1, 2);
 		builder1.add(builder2);
 		assertEquals("DiffStringBuilderTest[a=1, b=2, d=d1, e=1]", builder1.toString());

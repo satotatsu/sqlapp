@@ -22,10 +22,8 @@ class VectorColumnTest {
 		final Catalog catalog = new Catalog("CAT");
 		final Schema schema = new Schema("PUBLIC");
 		final Table table = new Table("DOCUMENTS");
-		final Column vector = new Column("EMBEDDING")
-				.setDataType(DataType.VECTOR)
-				.setVectorElementDataType(DataType.REAL)
-				.setVectorDimension(768);
+		final Column vector = new Column("EMBEDDING").setDataType(DataType.VECTOR)
+				.setVectorElementDataType(DataType.REAL).setVectorDimension(768);
 		catalog.getSchemas().add(schema);
 		schema.getTables().add(table);
 		table.getColumns().add(vector);
@@ -39,8 +37,8 @@ class VectorColumnTest {
 		catalog.writeXml(writer);
 		final Catalog restored = new Catalog();
 		restored.loadXml(new StringReader(writer.toString()));
-		final Column restoredVector = restored.getSchemas().get("PUBLIC")
-				.getTables().get("DOCUMENTS").getColumns().get("EMBEDDING");
+		final Column restoredVector = restored.getSchemas().get("PUBLIC").getTables().get("DOCUMENTS").getColumns()
+				.get("EMBEDDING");
 		assertEquals(DataType.VECTOR, restoredVector.getDataType());
 		assertEquals(DataType.REAL, restoredVector.getVectorElementDataType());
 		assertEquals(768, restoredVector.getVectorDimension());

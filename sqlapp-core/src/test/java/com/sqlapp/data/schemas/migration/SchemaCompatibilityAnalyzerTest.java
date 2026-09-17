@@ -55,12 +55,13 @@ class SchemaCompatibilityAnalyzerTest {
 
 	@Test
 	void acceptsGeneratedMandatoryColumnButRejectsIdentityAndPrimaryKeyDrift() {
-		final Schema expected = schema(column("ID", null, true).setIdentity(true)
-				.setIdentityGenerationType(IdentityGenerationType.ByDefault), column("NAME", 20L, false));
+		final Schema expected = schema(
+				column("ID", null, true).setIdentity(true).setIdentityGenerationType(IdentityGenerationType.ByDefault),
+				column("NAME", 20L, false));
 		expected.getTables().get("CUSTOMER").setPrimaryKey(expected.getTables().get("CUSTOMER").getColumns().get("ID"));
-		final Schema actual = schema(column("ID", null, true).setIdentity(true)
-				.setIdentityGenerationType(IdentityGenerationType.Always), column("NAME", 20L, false),
-				column("CREATED_BY", 20L, true).setDefaultValue("'system'"));
+		final Schema actual = schema(
+				column("ID", null, true).setIdentity(true).setIdentityGenerationType(IdentityGenerationType.Always),
+				column("NAME", 20L, false), column("CREATED_BY", 20L, true).setDefaultValue("'system'"));
 
 		final SchemaCompatibilityReport report = SchemaCompatibilityAnalyzer.compare(expected, actual);
 

@@ -33,8 +33,7 @@ class BulkMigrationJobProgressTrackerTest {
 		assertEquals(125, tracker.getSnapshots().get("orders").processedRows());
 		assertEquals("orders", tracker.getLatest().migrationId());
 		assertEquals(0.5, tracker.getLatest().completionRatio());
-		assertThrows(UnsupportedOperationException.class,
-				() -> tracker.getSnapshots().clear());
+		assertThrows(UnsupportedOperationException.class, () -> tracker.getSnapshots().clear());
 	}
 
 	@Test
@@ -47,14 +46,14 @@ class BulkMigrationJobProgressTrackerTest {
 		tracker.onChunkCompleted(known);
 		assertTrue(tracker.getLatest().totalRows() == null);
 
-		assertThrows(IllegalArgumentException.class, () -> tracker.onChunkStarted(
-				new ChunkedBulkMigrationProgress("other", 0, 1, 0, 1)));
+		assertThrows(IllegalArgumentException.class,
+				() -> tracker.onChunkStarted(new ChunkedBulkMigrationProgress("other", 0, 1, 0, 1)));
 	}
 
 	@Test
 	void validatesTotalConfigurationAgainstThePlanBeforeExecution() {
-		final var plan = BulkMigrationJobPlanner.plan(java.util.List.of(
-				task("customers", "customers-copy"), task("orders", "orders-copy")));
+		final var plan = BulkMigrationJobPlanner
+				.plan(java.util.List.of(task("customers", "customers-copy"), task("orders", "orders-copy")));
 		final Map<String, Long> totals = new LinkedHashMap<>();
 		totals.put("orders-copy", 20L);
 		totals.put("customers-copy", 10L);
@@ -62,23 +61,19 @@ class BulkMigrationJobProgressTrackerTest {
 		assertEquals(java.util.List.of("customers-copy", "orders-copy"),
 				tracker.getTotalRowsByMigration().keySet().stream().toList());
 
-		assertThrows(IllegalArgumentException.class, () ->
-				new BulkMigrationJobProgressTracker(plan,
-						Map.of("customers-copy", 10L), null));
-		assertThrows(IllegalArgumentException.class, () ->
-				new BulkMigrationJobProgressTracker(plan,
-						Map.of("customers-copy", 10L, "orders-copy", 20L,
-								"other", 1L), null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobProgressTracker(plan, Map.of("customers-copy", 10L), null));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobProgressTracker(plan,
+				Map.of("customers-copy", 10L, "orders-copy", 20L, "other", 1L), null));
 	}
 
-	private static BulkMigrationJobTask task(final String taskId,
-			final String migrationId) {
+	private static BulkMigrationJobTask task(final String taskId, final String migrationId) {
 		final Table table = new Table(taskId.toUpperCase());
 		table.getColumns().add(new Column("ID"));
 		table.setPrimaryKey("PK_" + table.getName(), table.getColumns().get("ID"));
-		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table)
-				.options(ChunkedBulkMigrationOption.builder().migrationId(migrationId)
-						.sourceFingerprint("source").targetFingerprint("target").build())
+		return BulkMigrationJobTask
+				.builder().taskId(taskId).sourceTable(table).options(ChunkedBulkMigrationOption.builder()
+						.migrationId(migrationId).sourceFingerprint("source").targetFingerprint("target").build())
 				.build();
 	}
 }

@@ -33,7 +33,7 @@ public class DbObjectDifferenceTest {
 		DbObjectDifference diff = new DbObjectDifference(table1, table2);
 		Map<String, Difference<?>> modifiedMap = diff.getProperties(State.Modified);
 		for (Map.Entry<String, Difference<?>> entry : modifiedMap.entrySet()) {
-			Difference<?> difference=entry.getValue();
+			Difference<?> difference = entry.getValue();
 			System.out.println(difference);
 		}
 		System.out.println(diff);

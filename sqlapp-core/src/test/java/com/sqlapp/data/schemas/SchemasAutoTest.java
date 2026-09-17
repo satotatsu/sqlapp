@@ -26,6 +26,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.util.SimpleBeanUtils;
+
 /**
  *
  */
@@ -33,13 +34,13 @@ public class SchemasAutoTest {
 
 	@Test
 	public void testAll() throws ParseException {
-		final Set<Class<?>> classes=SchemaUtils.getDbObjectClasses();
-		for(final Class<?> clazz:classes){
-			final DbObject<?> obj=SchemaUtils.createInstance(clazz.getSimpleName());
+		final Set<Class<?>> classes = SchemaUtils.getDbObjectClasses();
+		for (final Class<?> clazz : classes) {
+			final DbObject<?> obj = SchemaUtils.createInstance(clazz.getSimpleName());
 			System.out.println(clazz.getSimpleName());
-			final Map<String,Object> map=SimpleBeanUtils.toMap(obj);
+			final Map<String, Object> map = SimpleBeanUtils.toMap(obj);
 			System.out.println(map);
 		}
 	}
-	
+
 }

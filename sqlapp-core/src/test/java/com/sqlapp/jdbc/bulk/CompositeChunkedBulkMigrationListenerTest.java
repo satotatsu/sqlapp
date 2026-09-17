@@ -21,17 +21,15 @@ class CompositeChunkedBulkMigrationListenerTest {
 
 		composite.onChunkStarted(progress);
 		composite.onChunkCompleted(progress);
-		composite.onCompletionCheckpointRetry("migration", new SQLException("transient"),
-				1, 10);
+		composite.onCompletionCheckpointRetry("migration", new SQLException("transient"), 1, 10);
 		assertTrue(composite.pauseAfterChunk(progress));
 
-		assertEquals(List.of("start-first", "start-second", "complete-first",
-				"complete-second", "completion-retry-first", "completion-retry-second",
-				"pause-first", "pause-second"), events);
+		assertEquals(List.of("start-first", "start-second", "complete-first", "complete-second",
+				"completion-retry-first", "completion-retry-second", "pause-first", "pause-second"), events);
 	}
 
-	private static ChunkedBulkMigrationListener listener(final String name,
-			final boolean pause, final List<String> events) {
+	private static ChunkedBulkMigrationListener listener(final String name, final boolean pause,
+			final List<String> events) {
 		return new ChunkedBulkMigrationListener() {
 			@Override
 			public void onChunkStarted(ChunkedBulkMigrationProgress progress) {
@@ -44,8 +42,8 @@ class CompositeChunkedBulkMigrationListenerTest {
 			}
 
 			@Override
-			public void onCompletionCheckpointRetry(String migrationId,
-					SQLException cause, int retryNumber, long backoffMillis) {
+			public void onCompletionCheckpointRetry(String migrationId, SQLException cause, int retryNumber,
+					long backoffMillis) {
 				events.add("completion-retry-" + name);
 			}
 

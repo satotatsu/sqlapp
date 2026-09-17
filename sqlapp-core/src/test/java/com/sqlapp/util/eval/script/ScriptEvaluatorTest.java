@@ -30,7 +30,8 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.parameter.ParametersContext;
 
 public class ScriptEvaluatorTest {
-	private ScriptEngine engine=null;
+	private ScriptEngine engine = null;
+
 	@BeforeEach
 	public void setUp() throws Exception {
 		ScriptEngineManager manager = new ScriptEngineManager();
@@ -39,27 +40,25 @@ public class ScriptEvaluatorTest {
 
 	@Test
 	public void testDoEvalParametersContext() {
-		if (engine==null) {
+		if (engine == null) {
 			return;
 		}
-		ScriptEvaluator scriptEvaluator
-			=new ScriptEvaluator("a+1", engine);
-		ParametersContext context=new ParametersContext();
+		ScriptEvaluator scriptEvaluator = new ScriptEvaluator("a+1", engine);
+		ParametersContext context = new ParametersContext();
 		context.put("a", 1);
-		Object val=scriptEvaluator.eval(context);
+		Object val = scriptEvaluator.eval(context);
 		assertEquals(val, Double.valueOf(2));
 	}
 
 	@Test
 	public void testDoEvalBooleanParametersContext() {
-		if (engine==null) {
+		if (engine == null) {
 			return;
 		}
-		ScriptEvaluator scriptEvaluator
-			=new ScriptEvaluator("!a", engine);
-		ParametersContext context=new ParametersContext();
+		ScriptEvaluator scriptEvaluator = new ScriptEvaluator("!a", engine);
+		ParametersContext context = new ParametersContext();
 		context.put("a", true);
-		Object val=scriptEvaluator.eval(context);
+		Object val = scriptEvaluator.eval(context);
 		assertEquals(val, Boolean.FALSE);
 	}
 

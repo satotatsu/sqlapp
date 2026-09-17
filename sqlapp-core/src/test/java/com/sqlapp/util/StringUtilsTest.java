@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+
 /**
  * @author satoh
  *
@@ -34,7 +35,8 @@ import org.junit.jupiter.api.Test;
 public class StringUtilsTest {
 
 	/**
-	 * Test method for {@link com.sqlapp.util.StringUtils#camelToSnakeCase(java.lang.String)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.StringUtils#camelToSnakeCase(java.lang.String)}.
 	 */
 	@Test
 	public void camelToSnake() {
@@ -43,7 +45,8 @@ public class StringUtilsTest {
 	}
 
 	/**
-	 * Test method for {@link com.sqlapp.util.StringUtils#snakeToPascal(java.lang.String)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.StringUtils#snakeToPascal(java.lang.String)}.
 	 */
 	@Test
 	public void testUnderscoreToPascal() {
@@ -52,7 +55,8 @@ public class StringUtilsTest {
 	}
 
 	/**
-	 * Test method for {@link com.sqlapp.util.StringUtils#camelToSnakeCase(java.lang.String)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.StringUtils#camelToSnakeCase(java.lang.String)}.
 	 */
 	@Test
 	public void testCamelToSnake() {
@@ -60,33 +64,35 @@ public class StringUtilsTest {
 	}
 
 	/**
-	 * Test method for {@link com.sqlapp.util.StringUtils#containsUpperCase(java.lang.String)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.StringUtils#containsUpperCase(java.lang.String)}.
 	 */
 	@Test
-	public void testContainsUpperCase(){
+	public void testContainsUpperCase() {
 		assertTrue(StringUtils.containsUpperCase("AaaaBbbb"));
 		assertTrue(StringUtils.containsUpperCase("AAABBB"));
 		assertFalse(StringUtils.containsUpperCase("aaabbbb"));
 	}
 
 	/**
-	 * Test method for {@link com.sqlapp.util.StringUtils#containsUpperCase(java.lang.String)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.StringUtils#containsUpperCase(java.lang.String)}.
 	 */
 	@Test
-	public void testContainsLowerCase(){
+	public void testContainsLowerCase() {
 		assertTrue(StringUtils.containsLowerCase("AaaaBbbb"));
 		assertFalse(StringUtils.containsLowerCase("AAABBB"));
 		assertTrue(StringUtils.containsLowerCase("aaabbbb"));
 	}
 
 	@Test
-	public void testCapitalize(){
+	public void testCapitalize() {
 		assertEquals("AaaaBbbb", StringUtils.capitalize("aaaaBbbb"));
 		assertEquals("aaaaBbbb", StringUtils.uncapitalize("AaaaBbbb"));
 	}
 
 	@Test
-	public void testTransposition(){
+	public void testTransposition() {
 		assertEquals("a\na\na", StringUtils.transposition("aaa", " "));
 		assertEquals("aB\nab\nab\n b", StringUtils.transposition("aaa\nBbbb", " "));
 	}

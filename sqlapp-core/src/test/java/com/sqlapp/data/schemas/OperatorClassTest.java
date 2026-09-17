@@ -19,16 +19,13 @@
 
 package com.sqlapp.data.schemas;
 
-public class OperatorClassTest extends
-		AbstractDbObjectTest<OperatorClass> {
+public class OperatorClassTest extends AbstractDbObjectTest<OperatorClass> {
 
 	public static OperatorClass getOperatorClass(String name) {
 		OperatorClass obj = new OperatorClass(name);
 		obj.setDataTypeName("varchar");
-		obj.getFunctionFamilies().add(
-				FunctionFamilyTest.getFunctionFamily("functionA").setSupportNumber(1));
-		obj.getFunctionFamilies().add(
-				FunctionFamilyTest.getFunctionFamily("functionB").setSupportNumber(2));
+		obj.getFunctionFamilies().add(FunctionFamilyTest.getFunctionFamily("functionA").setSupportNumber(1));
+		obj.getFunctionFamilies().add(FunctionFamilyTest.getFunctionFamily("functionB").setSupportNumber(2));
 		//
 		obj.getOperatorFamilies().add(OperatorFamilyTest.getOperatorFamily("operatorA").setStrategyNumber(10));
 		obj.getOperatorFamilies().add(OperatorFamilyTest.getOperatorFamily("operatorB").setStrategyNumber(20));

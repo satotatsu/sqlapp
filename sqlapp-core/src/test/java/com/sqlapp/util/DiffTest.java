@@ -25,8 +25,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+
 /**
  * Diffクラステスト
+ * 
  * @author 竜夫
  *
  */
@@ -34,13 +36,13 @@ public class DiffTest {
 
 	@Test
 	public void testGetLcs1() {
-		Diff<String> diff=new Diff<String>(getList("axbybczxc"), getList("afbgbcf"));
+		Diff<String> diff = new Diff<String>(getList("axbybczxc"), getList("afbgbcf"));
 		assertEquals("abbc", getString(diff.getLcs()));
-		for(Map.Entry<Integer, String> entry:diff.getLcs1().entrySet()){
-			if (CommonUtils.eq(Integer.valueOf(0), entry.getKey())){
+		for (Map.Entry<Integer, String> entry : diff.getLcs1().entrySet()) {
+			if (CommonUtils.eq(Integer.valueOf(0), entry.getKey())) {
 				assertEquals("a", entry.getValue());
 			}
-			if (CommonUtils.eq(Integer.valueOf(2), entry.getKey())){
+			if (CommonUtils.eq(Integer.valueOf(2), entry.getKey())) {
 				assertEquals("b", entry.getValue());
 			}
 		}
@@ -48,49 +50,48 @@ public class DiffTest {
 
 	@Test
 	public void testGetLcs2() {
-		Diff<String> diff=new Diff<String>(getList("abc"), getList("fbca"));
+		Diff<String> diff = new Diff<String>(getList("abc"), getList("fbca"));
 		assertEquals("bc", getString(diff.getLcs()));
 	}
 
 	@Test
 	public void testGetLcs3() {
-		Diff<String> diff=new Diff<String>(getList("abc"), getList("bca"));
+		Diff<String> diff = new Diff<String>(getList("abc"), getList("bca"));
 		assertEquals("bc", getString(diff.getLcs()));
 	}
 
 	@Test
 	public void testGetLcs4() {
-		Diff<String> diff=new Diff<String>(getList("bca"), getList("abc"));
+		Diff<String> diff = new Diff<String>(getList("bca"), getList("abc"));
 		assertEquals("bc", getString(diff.getLcs()));
 	}
 
 	@Test
 	public void testGetLcs5() {
-		Diff<String> diff=new Diff<String>(getList("fbd"), getList("abe"));
+		Diff<String> diff = new Diff<String>(getList("fbd"), getList("abe"));
 		assertEquals("b", getString(diff.getLcs()));
 	}
-	
+
 	@Test
 	public void testGetLcs6() {
-		Diff<String> diff=new Diff<String>(getList("abc"), getList("abc"));
+		Diff<String> diff = new Diff<String>(getList("abc"), getList("abc"));
 		assertEquals("abc", getString(diff.getLcs()));
 	}
 
-	private List<String> getList(String val){
-		List<String> list=CommonUtils.list();
-		for(int i=0;i<val.length();i++){
-			list.add(val.substring(i, i+1));
+	private List<String> getList(String val) {
+		List<String> list = CommonUtils.list();
+		for (int i = 0; i < val.length(); i++) {
+			list.add(val.substring(i, i + 1));
 		}
 		return list;
 	}
 
-	private String getString(List<String> val){
-		StringBuilder builder=new StringBuilder();
-		for(int i=0;i<val.size();i++){
+	private String getString(List<String> val) {
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < val.size(); i++) {
 			builder.append(val.get(i));
 		}
 		return builder.toString();
 	}
 
-	
 }

@@ -31,15 +31,11 @@ public class StaxWriterTest {
 	public void testStaxWriterWriter() throws XMLStreamException {
 		StringWriter writer = new StringWriter();
 		StaxWriter stax = new StaxWriter(writer);
-		stax.setLineSeparator("\n").writeStartDocument()
-				.writeStartElement("html").newLine().addIndentLevel(+1)
-				.indent().writeStartElement("body").newLine()
-				.addIndentLevel(+1).indent().writeStartElement("span")
-				.writeAttribute("id", "spanId").writeEndElement().newLine()
-				.indent().writeStartElement("div").writeEmptyElement("text")
-				.writeEndElement().newLine().addIndentLevel(-1).indent()
-				.writeEndElement().newLine().writeEndElement()
-				.writeEndDocument();
+		stax.setLineSeparator("\n").writeStartDocument().writeStartElement("html").newLine().addIndentLevel(+1).indent()
+				.writeStartElement("body").newLine().addIndentLevel(+1).indent().writeStartElement("span")
+				.writeAttribute("id", "spanId").writeEndElement().newLine().indent().writeStartElement("div")
+				.writeEmptyElement("text").writeEndElement().newLine().addIndentLevel(-1).indent().writeEndElement()
+				.newLine().writeEndElement().writeEndDocument();
 		System.out.println(writer.toString());
 	}
 

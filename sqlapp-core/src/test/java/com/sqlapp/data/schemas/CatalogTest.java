@@ -46,8 +46,7 @@ public class CatalogTest extends AbstractDbObjectTest<Catalog> {
 		catalog.getRoles().add(RoleTest.getRole());
 		catalog.getColumnPrivileges().add(ColumnPrivilegeTest.getColumnPrivilege("colA"));
 		catalog.getUsers().add(UserTest.getUser());
-		catalog.getPublicSynonyms().add(
-				PublicSynonymTest.getSynonym("publicSynonymA"));
+		catalog.getPublicSynonyms().add(PublicSynonymTest.getSynonym("publicSynonymA"));
 		catalog.getSettings().add(SettingTest.getSetting());
 		catalog.getPartitionSchemes().add(PartitionSchemeTest.getPartitionScheme("PartitionSchemaA"));
 		catalog.getDirectories().add(DirectoryTest.getDirectory("DirecotryA"));
@@ -64,9 +63,9 @@ public class CatalogTest extends AbstractDbObjectTest<Catalog> {
 	@Test
 	public void testApply() {
 		Catalog catalog = getCatalog("CatalogA");
-		List<DbObject<?>> objects=CommonUtils.list();
-		catalog.applyAll(c->objects.add(c));
-		assertTrue(objects.size()>80);
+		List<DbObject<?>> objects = CommonUtils.list();
+		catalog.applyAll(c -> objects.add(c));
+		assertTrue(objects.size() > 80);
 	}
 
 }

@@ -68,8 +68,7 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 					List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
 
 			final var result = JdbcBatchMigrationSnapshotExecutor.executeStreaming(connection, table(), definition,
-					Instant.parse("2026-09-16T00:00:00Z"),
-					List.of(row(1, "same"), row(2, "new"), row(4, "added")),
+					Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "same"), row(2, "new"), row(4, "added")),
 					List.of(row(1, "same"), row(2, "old"), row(3, "removed")), 1);
 
 			assertEquals(new MigrationSnapshotExecutionResult(2, 2, 1), result);
@@ -118,8 +117,10 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 			final var plan = MigrationSnapshotPlanner.plan(definition(), Instant.parse("2026-09-16T00:00:00Z"),
 					List.of(row(1, "new")), List.of(row(1, "old")));
 
-			final var error = assertThrows(SQLException.class, () -> JdbcBatchMigrationSnapshotExecutor.execute(
-					connection, table(), plan, 100, () -> { throw new SQLException("lease lost"); }));
+			final var error = assertThrows(SQLException.class,
+					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, table(), plan, 100, () -> {
+						throw new SQLException("lease lost");
+					}));
 
 			assertEquals("lease lost", error.getMessage());
 			assertOriginalRow(connection);
@@ -131,10 +132,12 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:scd2_guard_stream", "SA", "")) {
 			createSingleCurrentRow(connection);
 
-			final var error = assertThrows(SQLException.class, () -> JdbcBatchMigrationSnapshotExecutor.executeStreaming(
-					connection, table(), definition(), Instant.parse("2026-09-16T00:00:00Z"),
-					List.of(row(1, "new")), List.of(row(1, "old")), 100,
-					() -> { throw new SQLException("lease lost"); }));
+			final var error = assertThrows(SQLException.class,
+					() -> JdbcBatchMigrationSnapshotExecutor.executeStreaming(connection, table(), definition(),
+							Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "new")), List.of(row(1, "old")), 100,
+							() -> {
+								throw new SQLException("lease lost");
+							}));
 
 			assertEquals("lease lost", error.getMessage());
 			assertOriginalRow(connection);
@@ -187,8 +190,8 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
 						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP)");
-				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
-						+ "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL)");
+				statement.execute(
+						"INSERT INTO CUSTOMER_HISTORY VALUES " + "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL)");
 			}
 			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
 					List.of("NAME"), "VALID_FROM", "VALID_TO", null, true);
@@ -224,8 +227,8 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 			target.getColumns().add(new Column("VALID_FROM").setDataType(DataType.TIMESTAMP));
 			target.getColumns().add(new Column("VALID_TO").setDataType(DataType.TIMESTAMP));
 			target.getColumns().add(new Column("IS_CURRENT").setDataType(DataType.BOOLEAN));
-			final var plan = MigrationSnapshotPlanner.plan(definition, Instant.parse("2026-09-16T00:00:00Z"),
-					List.of(), List.of());
+			final var plan = MigrationSnapshotPlanner.plan(definition, Instant.parse("2026-09-16T00:00:00Z"), List.of(),
+					List.of());
 
 			final var error = assertThrows(SQLException.class,
 					() -> JdbcBatchMigrationSnapshotExecutor.execute(connection, target, plan, 100));
@@ -234,8 +237,8 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 	}
 
 	private static MigrationSnapshotDefinition definition() {
-		return new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
-				List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
+		return new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"),
+				"VALID_FROM", "VALID_TO", "IS_CURRENT", true);
 	}
 
 	private static int count(final java.sql.Connection connection, final String sql) throws SQLException {
@@ -249,8 +252,8 @@ class JdbcBatchMigrationSnapshotExecutorTest {
 		try (var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE CUSTOMER_HISTORY (ID INTEGER NOT NULL, NAME VARCHAR(20), "
 					+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
-			statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES "
-					+ "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
+			statement.execute(
+					"INSERT INTO CUSTOMER_HISTORY VALUES " + "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
 		}
 	}
 

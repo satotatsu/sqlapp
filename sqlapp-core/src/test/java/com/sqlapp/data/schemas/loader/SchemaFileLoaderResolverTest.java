@@ -17,18 +17,14 @@ class SchemaFileLoaderResolverTest {
 	@Test
 	void rejectsUnsupportedFileClearly() {
 		final var exception = assertThrows(IllegalArgumentException.class,
-				() -> SchemaFileLoaderResolver.resolve(
-						Path.of("unsupported.schema-file")));
-		assertTrue(exception.getMessage().contains("No schema file loader"),
-				exception.getMessage());
+				() -> SchemaFileLoaderResolver.resolve(Path.of("unsupported.schema-file")));
+		assertTrue(exception.getMessage().contains("No schema file loader"), exception.getMessage());
 	}
 
 	@Test
 	void rejectsNullArgumentsClearly() {
+		assertThrows(NullPointerException.class, () -> SchemaFileLoaderResolver.resolve(null));
 		assertThrows(NullPointerException.class,
-				() -> SchemaFileLoaderResolver.resolve(null));
-		assertThrows(NullPointerException.class,
-				() -> SchemaFileLoaderResolver.loadTable(
-						Path.of("unsupported.schema-file"), null));
+				() -> SchemaFileLoaderResolver.loadTable(Path.of("unsupported.schema-file"), null));
 	}
 }

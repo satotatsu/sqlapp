@@ -88,9 +88,8 @@ public class JdbcHandlerTest extends AbstractDbTest {
 
 	@Test
 	void fallsBackWhenLargeUpdateCountIsNotSupported() throws Exception {
-		final Statement statement = (Statement) Proxy.newProxyInstance(
-				getClass().getClassLoader(), new Class<?>[] { Statement.class },
-				(proxy, method, args) -> {
+		final Statement statement = (Statement) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Statement.class }, (proxy, method, args) -> {
 					if (method.getName().equals("getLargeUpdateCount")) {
 						throw new SQLFeatureNotSupportedException("not supported");
 					}
