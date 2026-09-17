@@ -188,6 +188,44 @@ class BulkMigrationOperationalReportTest {
 				() -> io.write(directory.resolve("invalid-checkpoint.json"),
 						copyWithContent(report, List.of(checkpointTask), List.of())));
 
+		final var checkpointOnNotStarted = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
+				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
+				BulkMigrationJobTaskState.NOT_STARTED.name(),
+				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
+						0, 0, task.chunkSize(), false, null, null));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("not-started-with-checkpoint.json"),
+						copyWithContent(report, List.of(checkpointOnNotStarted), List.of())));
+
+		final var completeWithoutCheckpoint = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
+				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
+				BulkMigrationJobTaskState.COMPLETE.name(), null);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("complete-without-checkpoint.json"),
+						copyWithContent(report, List.of(completeWithoutCheckpoint), List.of())));
+
+		final var incompleteCompleteTask = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
+				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
+				BulkMigrationJobTaskState.COMPLETE.name(),
+				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
+						0, 0, task.chunkSize(), false, null, null));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("complete-with-incomplete-checkpoint.json"),
+						copyWithContent(report, List.of(incompleteCompleteTask), List.of())));
+
+		final var completeInProgressTask = new BulkMigrationOperationalReport.Task(
+				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
+				task.tableName(), task.mode(), task.chunkSize(), task.checkpointMode(),
+				BulkMigrationJobTaskState.IN_PROGRESS.name(),
+				new BulkMigrationOperationalReport.Checkpoint(task.migrationId(), "source", "target",
+						0, 0, task.chunkSize(), true, null, null));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> io.write(directory.resolve("in-progress-with-complete-checkpoint.json"),
+						copyWithContent(report, List.of(completeInProgressTask), List.of())));
+
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("invalid-aggregate.json"),
 						copyWithProcessedRows(report, 1)));
@@ -315,9 +353,12 @@ class BulkMigrationOperationalReportTest {
 	void currentLeaseResolvesPossiblyRunningReport() throws Exception {
 		final Instant now = Instant.parse("2026-08-31T12:00:00Z");
 		final BulkMigrationJobPlan plan = plan();
+		final BulkMigrationCheckpoint checkpoint = BulkMigrationCheckpoint.builder()
+				.migrationId("顧客移行").sourceFingerprint("source").targetFingerprint("target")
+				.processedRows(0).completedChunks(0).chunkSize(10_000).complete(false).build();
 		final var status = new BulkMigrationJobStatus(plan.getFingerprint(), List.of(
 				new BulkMigrationJobTaskStatus("customers",
-						BulkMigrationJobTaskState.IN_PROGRESS, null)));
+						BulkMigrationJobTaskState.IN_PROGRESS, checkpoint)));
 		final var execution = new BulkMigrationOperationalReport.Execution(
 				"TASK_STARTED", "customers", now.minusSeconds(10), 0L,
 				null, null, null);

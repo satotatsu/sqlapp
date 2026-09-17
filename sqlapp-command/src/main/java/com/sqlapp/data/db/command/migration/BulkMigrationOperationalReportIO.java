@@ -138,6 +138,7 @@ public final class BulkMigrationOperationalReportIO {
 					throw new CommandException("Bulk migration report processed row count overflow", e);
 				}
 			}
+			validateTaskState(task, state);
 			if (state == BulkMigrationJobTaskState.COMPLETE) {
 				completedTasks++;
 			}
@@ -199,6 +200,23 @@ public final class BulkMigrationOperationalReportIO {
 		}
 		validateExecution(report);
 		return report;
+	}
+
+	private static void validateTaskState(final BulkMigrationOperationalReport.Task task,
+			final BulkMigrationJobTaskState state) {
+		final BulkMigrationOperationalReport.Checkpoint checkpoint = task.checkpoint();
+		if (state == BulkMigrationJobTaskState.NOT_STARTED && checkpoint != null) {
+			throw new CommandException("Bulk migration report NOT_STARTED task must not have a checkpoint");
+		}
+		if (state != BulkMigrationJobTaskState.NOT_STARTED && checkpoint == null) {
+			throw new CommandException("Bulk migration report " + state + " task requires a checkpoint");
+		}
+		if (state == BulkMigrationJobTaskState.COMPLETE && !checkpoint.complete()) {
+			throw new CommandException("Bulk migration report COMPLETE task requires a complete checkpoint");
+		}
+		if (state == BulkMigrationJobTaskState.IN_PROGRESS && checkpoint.complete()) {
+			throw new CommandException("Bulk migration report IN_PROGRESS task cannot have a complete checkpoint");
+		}
 	}
 
 	private static void validateExecution(final BulkMigrationOperationalReport report) {

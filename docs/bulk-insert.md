@@ -1046,7 +1046,11 @@ maintenance. Its `read` operation provides the matching typed reader and
 strictly rejects missing files, unknown `formatVersion` values, absent required
 identity/list fields, duplicate task or migration identities, nested checkpoint
 or progress identities outside their task plan, and inconsistent aggregate
-task counts. This makes a
+task counts. Task state must also agree with durable checkpoint evidence:
+`NOT_STARTED` has no checkpoint, `IN_PROGRESS` has an incomplete checkpoint,
+and `COMPLETE` has a complete checkpoint. This prevents a hand-edited or
+partially written report from claiming completion without durable resume state.
+This makes a
 successfully read report safe to use for monitoring and resume decisions;
 invalid or newer reports must be handled explicitly rather than interpreted
 partially. The overload accepting an expected plan fingerprint additionally
