@@ -27,6 +27,11 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	public record Task(String taskId, String migrationId, String catalogName, String schemaName, String tableName,
 			BulkMigrationMode mode, int chunkSize, BulkMigrationCheckpointMode checkpointMode,
 			BulkMigrationJobTaskState state, Checkpoint checkpoint) {
+		public Task {
+			Objects.requireNonNull(mode, "mode");
+			Objects.requireNonNull(checkpointMode, "checkpointMode");
+			Objects.requireNonNull(state, "state");
+		}
 	}
 
 	public record Checkpoint(String migrationId, String sourceFingerprint, String targetFingerprint, long processedRows,
@@ -35,10 +40,16 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 
 	public record Operation(String id, BulkMigrationJobOperationPhase phase, String description,
 			boolean transactionBreaking) {
+		public Operation {
+			Objects.requireNonNull(phase, "phase");
+		}
 	}
 
 	public record Maintenance(String planFingerprint, BulkMigrationMaintenanceStatus status, Instant updatedAt,
 			String failureMessage) {
+		public Maintenance {
+			Objects.requireNonNull(status, "status");
+		}
 	}
 
 	public record Progress(String migrationId, long processedRows, Long totalRows, long elapsedMillis,

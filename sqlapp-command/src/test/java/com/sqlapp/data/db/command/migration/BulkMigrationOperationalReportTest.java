@@ -205,10 +205,27 @@ class BulkMigrationOperationalReportTest {
 
 		final var invalidConfiguration = new BulkMigrationOperationalReport.Task(
 				task.taskId(), task.migrationId(), task.catalogName(), task.schemaName(),
-				task.tableName(), null, 0, task.checkpointMode(), task.state(), null);
+				task.tableName(), task.mode(), 0, task.checkpointMode(), task.state(), null);
 		assertThrows(com.sqlapp.exceptions.CommandException.class,
 				() -> io.write(directory.resolve("invalid-task.json"),
 						copyWithContent(report, List.of(invalidConfiguration), List.of())));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationOperationalReport.Task(task.taskId(), task.migrationId(),
+						task.catalogName(), task.schemaName(), task.tableName(), null, task.chunkSize(),
+						task.checkpointMode(), task.state(), null));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationOperationalReport.Task(task.taskId(), task.migrationId(),
+						task.catalogName(), task.schemaName(), task.tableName(), task.mode(), task.chunkSize(),
+						null, task.state(), null));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationOperationalReport.Task(task.taskId(), task.migrationId(),
+						task.catalogName(), task.schemaName(), task.tableName(), task.mode(), task.chunkSize(),
+						task.checkpointMode(), null, null));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationOperationalReport.Operation("operation", null, "description", false));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationOperationalReport.Maintenance(report.planFingerprint(), null,
+						report.generatedAt(), null));
 
 		final var invalidCheckpoint = new BulkMigrationOperationalReport.Checkpoint(
 				task.migrationId(), "source", "target", 1, 0, task.chunkSize(), false,
