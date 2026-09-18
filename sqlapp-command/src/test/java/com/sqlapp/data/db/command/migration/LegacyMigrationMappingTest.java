@@ -41,6 +41,12 @@ class LegacyMigrationMappingTest {
 		generatedKey.setGenerationType(GeneratedKeyGenerationType.SEQUENCE);
 		generatedKey.setSequence("PARENT_SEQ");
 		parent.getKeys().setGeneratedKey(generatedKey);
+		parent.getKeys().getTargetPrimaryKey().add("ID");
+		ColumnMapping generatedColumn = new ColumnMapping();
+		generatedColumn.setTarget("ID");
+		generatedColumn.setAction(ColumnAction.GENERATE);
+		generatedColumn.getConversion().put("type", "SEQUENCE");
+		parent.getColumns().add(generatedColumn);
 		TableMapping child = table("table-child", "CHILD");
 		child.setParent(new LegacyMigrationMapping.ParentMapping());
 		child.getParent().setMappingId(parent.getId());
@@ -86,6 +92,28 @@ class LegacyMigrationMappingTest {
 		mapping.getTables().add(child);
 
 		assertThrows(CommandException.class, () -> new LegacyMigrationMappingValidator().validate(mapping));
+	}
+
+	@Test
+	void testRejectInconsistentGeneratedKeyMapping() {
+		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		TableMapping table = generatedKeyTable();
+		mapping.getTables().add(table);
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		validator.validate(mapping);
+
+		table.getKeys().getGeneratedKey().setSequence(null);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getKeys().getGeneratedKey().setSequence("ITEM_SEQ");
+		table.getKeys().getTargetPrimaryKey().clear();
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getKeys().getTargetPrimaryKey().add("ID");
+		table.getColumns().getFirst().getConversion().put("type", "IDENTITY");
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getKeys().getGeneratedKey().setGenerationType(GeneratedKeyGenerationType.IDENTITY);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getKeys().getGeneratedKey().setSequence(null);
+		validator.validate(mapping);
 	}
 
 	@Test
@@ -210,6 +238,23 @@ class LegacyMigrationMappingTest {
 		TableMapping table = new TableMapping();
 		table.setId(id);
 		table.getTarget().setTable(name);
+		return table;
+	}
+
+	private TableMapping generatedKeyTable() {
+		TableMapping table = table("table-item", "ITEM");
+		table.getKeys().getTargetPrimaryKey().add("ID");
+		GeneratedKey key = new GeneratedKey();
+		key.setColumn("ID");
+		key.setDataType("BIGINT");
+		key.setGenerationType(GeneratedKeyGenerationType.SEQUENCE);
+		key.setSequence("ITEM_SEQ");
+		table.getKeys().setGeneratedKey(key);
+		ColumnMapping column = new ColumnMapping();
+		column.setTarget("ID");
+		column.setAction(ColumnAction.GENERATE);
+		column.getConversion().put("type", "SEQUENCE");
+		table.getColumns().add(column);
 		return table;
 	}
 

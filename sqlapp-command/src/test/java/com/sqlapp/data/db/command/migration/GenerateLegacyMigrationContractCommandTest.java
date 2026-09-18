@@ -100,6 +100,17 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertThrows(CommandException.class, command::run);
 	}
 
+	@Test
+	void testRejectUnknownRecordSeparatorAtCommandBoundary() {
+		File mappingFile = new File(temporaryDirectory, "company-legacy-migration.yaml");
+		new LegacyMigrationMappingIO().write(mappingFile, mapping());
+		GenerateLegacyMigrationContractCommand command = new GenerateLegacyMigrationContractCommand();
+		command.setMappingFile(mappingFile);
+		command.setOutputDirectory(new File(temporaryDirectory, "contract"));
+		command.setRecordSeparator("CR");
+		assertThrows(CommandException.class, command::run);
+	}
+
 	private LegacyMigrationMapping mapping() {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		mapping.getMigration().setId("company-migration");

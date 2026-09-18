@@ -16,6 +16,8 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKeyGenerationType;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
 import com.sqlapp.exceptions.CommandException;
@@ -66,12 +68,7 @@ public class LegacyMigrationMappingValidator {
 			validateNames(table.getKeys().getTargetPrimaryKey(), "targetPrimaryKey", table.getId());
 			validateNames(table.getKeys().getBusinessKey(), "businessKey", table.getId());
 			validateNames(table.getKeys().getTargetUniqueKey(), "targetUniqueKey", table.getId());
-			if (table.getKeys().getGeneratedKey() != null
-					&& (blank(table.getKeys().getGeneratedKey().getColumn())
-							|| blank(table.getKeys().getGeneratedKey().getDataType())
-							|| table.getKeys().getGeneratedKey().getGenerationType() == null)) {
-				throw new CommandException("Generated key mapping is incomplete: " + table.getId());
-			}
+			validateGeneratedKey(table);
 			for (ColumnMapping column : table.getColumns()) {
 				validateColumn(column, table.getId());
 			}
@@ -119,6 +116,27 @@ public class LegacyMigrationMappingValidator {
 			}
 		}
 		validateTransformations(mapping);
+	}
+
+	private void validateGeneratedKey(TableMapping table) {
+		GeneratedKey key = table.getKeys().getGeneratedKey();
+		if (key == null) {
+			return;
+		}
+		if (blank(key.getColumn()) || blank(key.getDataType()) || key.getGenerationType() == null
+				|| key.getGenerationType() == GeneratedKeyGenerationType.SEQUENCE && blank(key.getSequence())
+				|| key.getGenerationType() == GeneratedKeyGenerationType.IDENTITY && !blank(key.getSequence())) {
+			throw new CommandException("Generated key mapping is incomplete or inconsistent: " + table.getId());
+		}
+		if (table.getKeys().getTargetPrimaryKey().stream().noneMatch(name -> equalsName(name, key.getColumn()))) {
+			throw new CommandException("Generated key must belong to targetPrimaryKey: " + table.getId());
+		}
+		ColumnMapping generatedColumn = table.getColumns().stream()
+				.filter(column -> equalsName(column.getTarget(), key.getColumn())).findFirst().orElse(null);
+		if (generatedColumn == null || generatedColumn.getAction() != ColumnAction.GENERATE
+				|| !key.getGenerationType().name().equals(generatedColumn.getConversion().get("type"))) {
+			throw new CommandException("Generated key column mapping is inconsistent: " + table.getId());
+		}
 	}
 
 	private void validateColumn(ColumnMapping column, String tableId) {
@@ -188,6 +206,10 @@ public class LegacyMigrationMappingValidator {
 
 	private boolean blank(String value) {
 		return value == null || value.isBlank();
+	}
+
+	private boolean equalsName(String left, String right) {
+		return left != null && right != null && left.equalsIgnoreCase(right);
 	}
 
 	private boolean blankValue(Object value) {
