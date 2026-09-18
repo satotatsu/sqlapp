@@ -195,9 +195,10 @@ The source and resolved parent-reference pairs must match the relationship's
 source and target key pairs in the same order, preventing a structurally valid
 but semantically different join from reaching contract generation.
 When a contract records `mappingFile` and `mappingFingerprint`, validation also
-checks every non-skipped data-set ID, source path, target table qualifier, and
-parent ID against that exact mapping. A contract cannot retain valid provenance
-while redirecting a data set to a different table or hierarchy.
+checks every non-skipped data set and its source/target identity, hierarchy,
+keys, occurrence settings, fields, and ancestor joins against that exact
+mapping. CSV file names and staging table names remain operational overrides;
+lineage semantics cannot be changed while retaining the mapping provenance.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

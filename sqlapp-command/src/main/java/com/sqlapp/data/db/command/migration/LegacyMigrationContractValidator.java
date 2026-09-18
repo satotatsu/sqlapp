@@ -11,6 +11,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,6 +23,7 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.util.YamlConverter;
 
 /**
  * Validates the portable extraction and load contract.
@@ -332,32 +334,44 @@ public class LegacyMigrationContractValidator {
 		if (!Objects.equals(contract.getMigrationId(), mapping.getMigration().getId())) {
 			throw new CommandException("Migration mapping migrationId does not match the contract.");
 		}
-		validateMappingDataSets(contract, mapping);
+		validateMappingDataSets(contract, mappingFile, mapping);
 	}
 
-	private void validateMappingDataSets(LegacyMigrationContract contract, LegacyMigrationMapping mapping) {
-		Map<String, LegacyMigrationMapping.TableMapping> mappingTables = new HashMap<>();
-		mapping.getTables().stream().filter(table -> table.getOperation() != LegacyMigrationMapping.TableOperation.SKIP)
-				.forEach(table -> mappingTables.put(table.getId(), table));
-		if (mappingTables.size() != contract.getDataSets().size()) {
+	private void validateMappingDataSets(LegacyMigrationContract contract, File mappingFile,
+			LegacyMigrationMapping mapping) {
+		LegacyMigrationContract expected = new LegacyMigrationContractBuilder().build(mappingFile, mapping);
+		Map<String, DataSet> expectedDataSets = new HashMap<>();
+		expected.getDataSets().forEach(dataSet -> expectedDataSets.put(dataSet.getId(), dataSet));
+		if (expectedDataSets.size() != contract.getDataSets().size()) {
 			throw new CommandException("Migration contract data sets do not match the referenced mapping.");
 		}
 		for (DataSet dataSet : contract.getDataSets()) {
-			var table = mappingTables.get(dataSet.getId());
-			String parentId = table == null || table.getParent() == null ? null : table.getParent().getMappingId();
-			if (table == null || !Objects.equals(dataSet.getSourcePath(), table.getSource().getPath())
-					|| !equalsOptionalName(dataSet.getTargetCatalog(), table.getTarget().getCatalog())
-					|| !equalsOptionalName(dataSet.getTargetSchema(), table.getTarget().getSchema())
-					|| !equalsName(dataSet.getTargetTable(), table.getTarget().getTable())
-					|| !Objects.equals(dataSet.getParentDataSetId(), parentId)) {
+			DataSet expectedDataSet = expectedDataSets.get(dataSet.getId());
+			if (expectedDataSet == null || !provenanceSignature(dataSet).equals(provenanceSignature(expectedDataSet))) {
 				throw new CommandException(
 						"Migration contract data set disagrees with the referenced mapping: " + dataSet.getId());
 			}
 		}
 	}
 
-	private boolean equalsOptionalName(String left, String right) {
-		return left == null ? right == null : right != null && left.equalsIgnoreCase(right);
+	private String provenanceSignature(DataSet dataSet) {
+		Map<String, Object> values = new LinkedHashMap<>();
+		values.put("id", dataSet.getId());
+		values.put("sourcePath", dataSet.getSourcePath());
+		values.put("targetCatalog", dataSet.getTargetCatalog());
+		values.put("targetSchema", dataSet.getTargetSchema());
+		values.put("targetTable", dataSet.getTargetTable());
+		values.put("hierarchyDepth", dataSet.getHierarchyDepth());
+		values.put("loadOrder", dataSet.getLoadOrder());
+		values.put("parentDataSetId", dataSet.getParentDataSetId());
+		values.put("maximumOccurrences", dataSet.getMaximumOccurrences());
+		values.put("occurrenceColumn", dataSet.getOccurrenceColumn());
+		values.put("occurrenceSourceMode", dataSet.getOccurrenceSourceMode());
+		values.put("sourceBusinessKey", dataSet.getSourceBusinessKey());
+		values.put("targetPrimaryKey", dataSet.getTargetPrimaryKey());
+		values.put("fields", dataSet.getFields());
+		values.put("ancestorKeys", dataSet.getAncestorKeys());
+		return new YamlConverter().toJsonString(values);
 	}
 
 	private File resolve(File owner, String value) {

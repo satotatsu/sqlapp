@@ -74,6 +74,13 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile));
 		contract.getDataSets().getLast().setTargetTable("EMPLOYEE_LIST");
+		contract.getDataSets().getLast().getTargetPrimaryKey().set(0, "OTHER_ID");
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile));
+		contract.getDataSets().getLast().getTargetPrimaryKey().set(0, "ID");
+		contract.getDataSets().getLast().setFileName("custom-employee.csv");
+		contract.getDataSets().getLast().setStagingTable("CUSTOM_EMPLOYEE_STAGE");
+		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
 		String yaml = Files.readString(contractFile.toPath());
 		assertTrue(yaml.contains("action: \"COPY\"") || yaml.contains("action: COPY"));
 		assertTrue(yaml.contains("occurrenceSourceMode: \"NUMBERED_COLUMNS\"")
