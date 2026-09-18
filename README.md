@@ -22,14 +22,17 @@ through Java APIs, command classes, and the `com.sqlapp.db` Gradle plugin.
 ## Requirements
 
 - Java 21
-- A JDBC driver for the database being accessed
+- A JDBC driver for the database being accessed; declare it explicitly in the
+  application so its version remains under application control
 - A matching `sqlapp-core-{db}` dialect module for database-specific metadata
   and SQL behavior
 - Gradle, preferably through a Gradle Wrapper, when using the Gradle plugin
 
 The JDBC driver and the sqlapp dialect have different roles and are both
-needed for JDBC workflows. The Gradle plugin does not select a driver for the
-target database.
+needed for JDBC workflows. Some dialect artifacts currently carry a driver as
+a runtime dependency, but applications should not rely on that as a stable
+driver-version policy. The Gradle plugin does not select a general target
+database driver.
 
 ## Gradle plugin quick start
 
@@ -135,9 +138,14 @@ and Vertica. Module presence does not by itself guarantee every feature on
 every server version; check the relevant dialect documentation and release
 notes before production use.
 
+See [Published artifacts and dependency selection](docs/artifacts.md) for the
+complete artifact list, common dependency combinations, dialect artifact
+names, and current JDBC dependency behavior.
+
 ## Documentation
 
 - [Gradle plugin task guide](docs/gradle-plugin/README.md)
+- [Published artifacts and dependency selection](docs/artifacts.md)
 - [Runnable Gradle example map](docs/gradle-plugin/example-project.md)
 - [Schema XML, SQL, and HTML workflows](docs/gradle-plugin/schema-sql-and-html.md)
 - [Custom tasks and versioned migrations](docs/gradle-plugin/custom-tasks-and-migrations.md)
