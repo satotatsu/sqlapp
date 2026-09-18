@@ -1,0 +1,505 @@
+plugins {
+	id 'com.sqlapp.db' version '0.72.snapshot'
+	id 'java'
+	id 'java-library'
+	id 'eclipse'
+}
+apply plugin: 'com.sqlapp.db'
+
+group = 'com.sqlapp'
+
+java {
+	withJavadocJar();
+	withSourcesJar();
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21);
+	}
+}
+	
+// Encoding
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = defaultEncoding
+}
+
+tasks.withType(AbstractCompile).configureEach {
+	it.options.encoding = defaultEncoding
+}
+
+tasks.withType(GroovyCompile).configureEach {
+	groovyOptions.encoding = defaultEncoding
+}
+
+
+//def masterSchemaName="app_master${schemaNameSuffix}"
+//def commonSchemaName="app_common${schemaNameSuffix}"
+//def tranSchemaName="app_tran${schemaNameSuffix}"
+//String[] targetSchemas=[masterSchemaName, commonSchemaName, tranSchemaName]
+def targetSchemas=["PUBLIC"]
+
+def changeLogTableName="changelog"
+
+def exportDataTargetTables=["WAREHOUSES"] as String[]
+def exportXmlWithRowDumpTables=[] as String[]
+
+// add Repository
+repositories {
+	mavenLocal()
+	mavenCentral()
+}
+
+configurations.configureEach {
+	exclude group: 'log4j', module: 'log4j'
+}
+
+// search dependencies by http://mvnrepository.com/
+dependencies {
+	File libsFile=file('libs');
+	if (libsFile.exists()&&libsFile.list()!=null&&libsFile.list().length>0) {
+		implementation fileTree(dir: 'libs', include: '*.jar')
+	} else {
+		implementation("org.codehaus.janino:janino:3.1.12")
+		//DB
+		if ("${jdbc_driver}"!="") {
+			implementation "${jdbc_driver}"
+		}
+
+		//sqlapp
+		[
+//			'sqlapp-core',
+//			'sqlapp-command',
+//			'sqlapp-gradle-plugin',
+			"sqlapp-core-${db}"
+		].each { name -> implementation "com.sqlapp:${name}:+" }
+	}
+}
+
+wrapper {
+	gradleVersion = '9.6.1'
+}
+
+//copy library
+tasks.register('copyLib', Copy) {
+	from configurations.implementation
+	into 'libs'
+}
+
+//cleanup library
+tasks.register('cleanLib') {
+	doLast {
+		delete layout.projectDirectory.dir('libs')
+		mkdir layout.projectDirectory.dir('libs').asFile
+	}
+}
+
+//cleanup and copy library
+tasks.register('deploy') {
+	dependsOn 'cleanLib', 'copyLib'
+}
+
+//HSQL TEST DIR 
+tasks.register('mkdirTest') {
+	doLast {
+		File file=file("hsqltestdb");
+		if (!file.exists()) {
+			file.mkdirs()
+		}
+	}
+}
+
+
+//Export Schema XML
+exportSchemaXml {
+	debug = false
+	dataSource {
+//		driverClassName=driverClassName
+//		jdbcUrl=jdbcUrl
+//		username=username
+//		password=password
+		properties "${dataSourceProperties}"
+	}
+//	target="catalog" or "schema" or "tables" or...
+	target = "${schema_level}"
+	outputDirectory = file("schemas/latest")
+	outputFileName = "${schema_level}.xml"
+	dumpRows = false
+	includeSchemas.addAll(targetSchemas)
+	includeRowDumpTables.addAll(exportXmlWithRowDumpTables)
+}
+
+//Drop all tables
+/*
+tasks.register('dropObjects', com.sqlapp.gradle.plugins.DropObjectsTask) {
+	debug = false
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	includeSchemas.addAll(targetSchemas)
+//	preDropTableSql="SET SESSION FOREIGN_KEY_CHECKS=0"
+//	afterDropTableSql="SET SESSION FOREIGN_KEY_CHECKS=1"
+	dropObjects = false
+	dropTables = true
+}
+*/
+
+//Output Table rows count
+countAllTables {
+	debug = false
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	includeSchemas.addAll(targetSchemas)
+	outputFormatType="TABLE" //TSV or CSV or TABLE
+}
+
+//Execute DB schema migration
+migration {
+	debug = true
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+//	parameters = ['schemaNameSuffix':"${schemaNameSuffix}"]
+	sqlDirectory     = file("src/main/sql/migration/up")
+	downSqlDirectory = file("src/main/sql/migration/down")
+	fileDirectory    = file("src/main/resources")
+	encoding = "UTF8"
+	lastChangeNumber = "${lastChangeToApply}"
+	showVersionOnly = false
+	withSeriesNumber = true
+	placeholderPrefix = '${'
+	placeholderSuffix = '}'
+	placeholders = true
+	changeTable {
+//		name = "${masterSchemaName}.${changeLogTableName}"
+//		idColumnName="id"
+//		appliedByColumnName="applied_by"
+//		appliedAtColumnName="complete_dt"
+//		descriptionColumnName="description"
+//		seriesNumberColumnName="seriesNumber"
+	}
+}
+
+//Repair DB schema version up
+/*
+tasks.register('migrationRepair', com.sqlapp.gradle.plugins.MigrationRepairTask) {
+}
+*/
+
+//Execute DB schema version down
+tasks.register('migrationDown', com.sqlapp.gradle.plugins.MigrationDownTask) {
+}
+
+//Import to DB
+tasks.register('importData', com.sqlapp.gradle.plugins.ImportDataTask) {
+	debug = true
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	parameters = [:]
+	useSchemaNameDirectory = false
+	directory = file("src/main/export")
+//	includes.add("**.csv")
+	fileDirectory = file("src/main/resources")
+	csvEncoding = "UTF8"
+	sqlType = "MERGE_ROW"
+	placeholderPrefix = '${'
+	placeholderSuffix = '}'
+	placeholders = true
+	includeSchemas.addAll(targetSchemas)
+//	includeTables "a", "b"
+	tableOptions {
+		commitPerTable = true
+		dmlBatchSize = { table -> 500 }
+//		withCoalesceAtUpdate={c->(c.name=='sub_service_class')}
+		optimisticLockColumn={c->(c.name=='lock_version'||c.name=='version_no')}
+	}
+}
+
+//Export from DB
+tasks.register('exportData', com.sqlapp.gradle.plugins.ExportDataTask) {
+	debug = true
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	parameters=[:]
+	useSchemaNameDirectory=false
+	outputDirectory=file("src/main/export")
+	csvEncoding="UTF8"
+	//xls,xlsx,ods,csv,tsv,xml,json
+	outputFileType="CSV" //EXCEL OR CSV OR TSV OR YAML OR JSONL
+//	fileFilter={f->true}
+	includeSchemas.addAll(targetSchemas)
+	includeTables.addAll(exportDataTargetTables)
+	tableOptions {
+		
+	}
+}
+
+//Convert data file to Excel format.
+tasks.register('toExcel', com.sqlapp.gradle.plugins.ConvertDataTask) {
+	debug = false
+	directory=file("src/main/export")
+	fileFilter = { f->true }
+//	csvEncoding = "UTF8"
+//	recursive = false
+//	sheetName = "TABLE"
+	outputFileType="xlsx"
+//	removeOriginalFile = true
+//	outputDirectory = file("src/main/export2")
+}
+
+//Convert data file to JSON format.
+tasks.register('toJson', com.sqlapp.gradle.plugins.ConvertDataTask) {
+	debug = false
+	directory=file("src/main/export")
+	fileFilter = { f->true }
+	recursive = false
+	sheetName = "TABLE"
+	outputFileType = "json"
+	removeOriginalFile = true
+//	outputDirectory=file("src/main/export2")
+}
+
+tasks.register('toYaml', com.sqlapp.gradle.plugins.ConvertDataTask) {
+	debug = false
+	directory=file("src/main/export")
+	fileFilter = { f-> true }
+	recursive = false
+	sheetName = "TABLE"
+	outputFileType = "yaml"
+	removeOriginalFile = true
+//	outputDirectory=file("src/main/export2")
+}
+
+tasks.register('toToml', com.sqlapp.gradle.plugins.ConvertDataTask) {
+	debug = false
+	directory=file("src/main/export")
+	fileFilter = { f-> true }
+	recursive = false
+	sheetName = "TABLE"
+	outputFileType = "toml"
+	removeOriginalFile = true
+//	outputDirectory=file("src/main/export2")
+}
+
+//Convert data file to CSV format.
+tasks.register('toCsv', com.sqlapp.gradle.plugins.ConvertDataTask) {
+	debug = false
+	directory = file("src/main/export")
+	fileFilter = { f-> true }
+	csvEncoding = "UTF8"
+	recursive = false
+	sheetName = "TABLE"
+	outputFileType = "csv"
+	removeOriginalFile=true
+//	outputDirectory=file("src/main/export2")
+}
+
+//Output Diff of XML
+diffSchemaXml {
+	originalFile = file("schemas/baseline/${schema_level}.xml")
+	targetFile = file("schemas/current/${schema_level}.xml")
+	equalsHandler {
+//		referenceEqualsPredicate={(a,b)->a==null&&b==null||a!=null&&a.is(b)||b!=null&&b.is()}
+//		valueEqualsPredicate={(propertyName,eq, obj1, obj2, val1, val2)->eq}
+//		equalsLastPredicate={(a,b)->true}
+	}
+}
+
+//zip HTML
+tasks.register('zipHtml', Zip) {
+	from 'html'
+	archiveAppendix = 'html'
+	destinationDirectory = file('./')
+}
+
+//move XML
+tasks.register('mvSchemaXml') {
+	doLast {
+		File schemaFile=file("schemas/baseline/${schema_level}.xml");
+		if (schemaFile.exists()) {
+			schemaFile.delete();
+		} else {
+			File parent=schemaFile.getParentFile();
+			parent.mkdirs();
+		}
+		file("schemas/latest/${schema_level}.xml").renameTo(file("schemas/baseline/${schema_level}.xml"))
+	}
+}
+
+//Generate ALTER SQL by Schema XML Diff 
+generateDiffSql {
+	originalFile = file("schemas/baseline/${schema_level}.xml")
+	targetFile = file("schemas/latest/${schema_level}.xml")
+	encoding = "UTF8"
+	outputAsMultiFiles = false
+	withVersionDown = true
+	outputDirectory = file("src/main/sql/generated")
+	outputFileExtension = "sql"
+//	lastChangeNumber="${lastChangeToApply}"
+	changeNumberStep = 10
+	numberOfDigits = 19
+	equalsHandler {
+//		referenceEqualsPredicate={(a,b)->a==null&&b==null||a!=null&&a.is(b)||b!=null&&b.is()}
+//		valueEqualsPredicate={(propertyName,eq, obj1, obj2, val1, val2)->eq}
+//		equalsLastPredicate={(a,b)->true}
+	}
+	schemaOptions {
+		outputCommit = false
+		dropIfExists = true
+		createIfNotExists = true
+		decorateSchemaName = false
+		setSearchPathToSchema = true
+		tableOptions {
+			
+		}
+	}
+}
+
+//Generate SQL by schema XML
+generateSql {
+	targetFile = file("schemas/baseline/${schema_level}.xml")
+	encoding = "UTF8"
+	outputAsMultiFiles = true
+	outputDirectory = file("src/main/sql/generated")
+	outputFileExtension = "sql"
+//	lastChangeNumber="${lastChangeToApply}"
+	changeNumberStep = 10
+	numberOfDigits = 19
+	excludeTables.addAll([changeLogTableName])
+	schemaOptions {
+		outputCommit = false
+		dropIfExists = true
+		createIfNotExists = true
+		decorateSchemaName = false
+		setSearchPathToSchema = true
+		tableOptions {
+			
+		}
+	}
+}
+
+//Generate or Update Dictionaries for HTML
+tasks.register('updateDictionaries', com.sqlapp.gradle.plugins.UpdateDictionariesTask){
+	withSchema = { menuName -> true } //menuName=schemas or tables or columns or etc
+	targetFile = file("schemas/baseline/${schema_level}.xml")
+	directory = file("src/main/dictionaries")
+	removeOriginalFile = true
+//	outputDirectory = file("src/main/dictionaries/xlsx")
+	fileType = "xlsx"
+}
+
+tasks.register('dictionariesToCsv', com.sqlapp.gradle.plugins.UpdateDictionariesTask){
+	withSchema = { menuName -> true } //menuName=schemas or tables or columns or etc
+	targetFile = file("schemas/baseline/${schema_level}.xml")
+	directory = file("src/main/dictionaries")
+//	outputDirectory = file("src/main/dictionaries/csv")
+	removeOriginalFile = true
+	fileType = "csv"  //csv or tsv or yaml
+}
+
+//Generate HTML Document
+generateHtmlDocs {
+	targetFile = file("schemas/baseline/${schema_level}.xml")
+	dictionaryFileDirectory = file("src/main/dictionaries")
+	dictionaryFileType = "xml"
+	outputDirectory = file("html/")
+	multiThread = true
+	//
+	useSchemaNameDirectory = false
+	directory = file("src/main/export")
+	directory = file("src/main/export")
+	viewpointsFile = file("src/main/viewpoint/viewpoint.yaml")
+	placeholderPrefix = '${';
+	placeholderSuffix = '}';
+	placeholders = false;
+	//
+	foreignKeyDefinitionDirectory = file("src/main/foreignkey")
+}
+
+tasks.register('generateDataConfig', com.sqlapp.gradle.plugins.GenerateDataConfigTask){
+	debug = false
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	outputDirectory=file("src/main/generator")
+	foreignKeyDefinitionDirectory=file("src/main/foreignkey")
+	sqlType='INSERT'  //INSERT Only
+	fileType="EXCEL" //EXCEL or YAML or JSON or TOML
+	includeSchemas.addAll(targetSchemas)
+//	excludeSchemas.addAll(targetSchemas)
+//	includeTables.addAll(targetTables)
+	excludeTables.addAll([changeLogTableName])
+	onlyCurrentSchema=true
+}
+
+tasks.register('generateData', com.sqlapp.gradle.plugins.GenerateDataTask){
+	debug = false
+	directory=file("src/main/generator")
+    includes.add("**/*.*")
+	foreignKeyDefinitionDirectory=file("src/main/foreignkey")
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	evaluator.addPackageImports("functions")
+	queryCommitInterval = 500
+	onlyCurrentSchema = true
+}
+
+tasks.register('generatorToYaml', com.sqlapp.gradle.plugins.ConvertGeneratorConfigTask){
+	debug = false
+	directory=file("src/main/generator")
+	includes.add("**/*.*")
+    excludes.add("**/*.yaml")
+	//	directory=file("src/main/generator")
+//	outputDirectory=file("src/main/generator/excel")
+	fileType="YAML" //EXCEL JSON YAML
+	recursive = true
+	removeOriginalFile = true
+}
+
+tasks.register('generatorToExcel', com.sqlapp.gradle.plugins.ConvertGeneratorConfigTask){
+	debug = false
+	directory=file("src/main/generator")
+	includes.add("**/*.*")
+    excludes.add("**/*.xlsx")
+//	outputDirectory=file("src/main/generator/excel")
+	fileType="EXCEL" //EXCEL JSON YAML
+	recursive = true
+	removeOriginalFile = true
+}
+
+//Display MySQL connection info
+tasks.register('showConnections', com.sqlapp.gradle.plugins.SqlQueryTask) {
+	debug = false
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	sql = "SHOW PROCESSLIST"
+	outputFormatType = "TABLE"
+}
+
+//Display MySQL Errors
+tasks.register('showErrors', com.sqlapp.gradle.plugins.SqlQueryTask) {
+	debug = false
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	sql = "SHOW ERRORS"
+	outputFormatType = "TABLE"
+}
+
+//Display MySQL Warnings
+tasks.register('showWarnings', com.sqlapp.gradle.plugins.SqlQueryTask) {
+	debug=false
+	dataSource {
+		properties "${dataSourceProperties}"
+	}
+	sql="SHOW WARNINGS"
+	outputFormatType="TABLE"
+}
+
+//Available fonts for Graphviz
+tasks.register('availableFonts', com.sqlapp.gradle.plugins.AvailableFontsTask) {
+}

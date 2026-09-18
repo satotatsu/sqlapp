@@ -5,6 +5,22 @@ document is the index and authoritative task-name reference. Runnable project
 configurations are maintained in
 [`sqlapp-gradle-example`](https://github.com/satotatsu/sqlapp-gradle-example).
 
+## Documentation map
+
+Start with [Getting started](getting-started.md) for dependencies, connection
+configuration, and a complete Schema XML to HTML workflow. Examples use the
+Groovy DSL (`build.gradle`) and describe the implementation in this checkout;
+use a plugin release that contains the tasks you need.
+
+| Guide | Contents |
+|---|---|
+| [Getting started](getting-started.md) | Plugin setup, JDBC runtime, credentials, task dependencies, troubleshooting |
+| [Schema, SQL and HTML](schema-sql-and-html.md) | XML export, comparison, SQL generation, documentation properties and outputs |
+| [Custom tasks and versioned migrations](custom-tasks-and-migrations.md) | Data export, file conversion, SQL execution, migration extension and task types |
+| [Normalization and legacy migration](normalization-and-legacy-migration.md) | Normalization, PL/I import, extraction contracts and hierarchy loading |
+
+Bulk migration and SCD2 snapshot configuration are covered below.
+
 ## Applying the plugin
 
 ```groovy
@@ -33,6 +49,9 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
 | Migration | `executeMigrationSnapshot` | Apply one atomic SCD2 snapshot from YAML |
+| Migration | `generateMigrationSnapshotApprovalReport` | Generate a snapshot approval artifact without database access |
+| Migration | `verifyMigrationSnapshotReport` | Verify a saved snapshot success report against its approval |
+| Migration | `verifyMigrationSnapshotFailureReport` | Verify a saved snapshot failure report against its approval |
 | Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
 | Migration | `generateBulkMigrationJobRepairPlanReport` | Write a review-only repair plan as JSON |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
@@ -47,7 +66,8 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 Some public task classes, such as data import/export, data generation, format
 conversion, SQL execution, and migration-down tasks, are not registered under
 a fixed name. A build may register those task types with a project-specific
-name. See the runnable examples for their configuration.
+name. See [Custom tasks and versioned migrations](custom-tasks-and-migrations.md)
+for registration and configuration examples.
 
 ### `generateBulkMigrationOperationalReport`
 
@@ -194,7 +214,7 @@ is not build-cacheable because it mutates an external database.
 ```groovy
 executeBulkMigrationJob {
     dataSource {
-        url = 'jdbc:postgresql://localhost/app'
+        jdbcUrl = 'jdbc:postgresql://localhost/app'
         username = providers.gradleProperty('dbUser')
         password = providers.gradleProperty('dbPassword')
     }
