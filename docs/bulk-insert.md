@@ -1437,8 +1437,8 @@ Phoenix, HiRDB, Symfoware, and Access intentionally use the fallback:
   path; its portable JDBC fallback remains the supported route.
 
 Informix uses `WITH NO LOG` only for the disposable session temporary table;
-the target history-table updates remain transaction controlled. Provider SQL
-has module coverage, but SAP HANA, DB2, Oracle, Vertica, SAP ASE, and Informix
-still require validation against supported real server and JDBC-driver
-versions. In particular, a future JDBC driver may remove current generated-key
-or temporary-table limitations without requiring a public API change.
+the target history-table updates remain transaction controlled. The providers
+have real-engine integration coverage with SAP HANA Express 2.0, DB2 Community
+12.1.5, Oracle Database Free 23ai, Vertica CE 25.1, SAP ASE 16, and Informix
+14.10. A future JDBC driver may still remove current generated-key or
+temporary-table limitations without requiring a public API change.

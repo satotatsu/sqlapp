@@ -165,12 +165,12 @@ the JDBC driver cannot return every generated key in input order.
 - H2 2.x exposes linked-table identity through `INFORMATION_SCHEMA.TABLES`,
   but not its connection definition. The Reader recovers the TableLink object;
   driver, URL, credentials, and remote table name remain unavailable.
-- SAP HANA, Cloud Spanner, and Vertica metadata queries have unit/module
-  coverage but have not been executed against real database catalogs in this
-  workspace.
-- Set-based SCD2 providers for SAP HANA, DB2, Oracle, Vertica, SAP ASE, and
-  Informix have compile/module coverage but have not been executed against real
-  servers in this workspace. `SetBasedMigrationSnapshotResolver.find` returns
+- SAP HANA 2.0, Cloud Spanner emulator, and Vertica CE 25.1 metadata queries
+  have been executed against their database engines in addition to module
+  coverage.
+- Set-based SCD2 providers for SAP HANA 2.0, DB2 12.1.5, Oracle Database Free
+  23ai, Vertica CE 25.1, SAP ASE 16, and Informix 14.10 have real-engine
+  integration coverage. `SetBasedMigrationSnapshotResolver.find` returns
   an empty result for unsupported dialect/version combinations so callers can
   retain the prepared-statement streaming fallback. See `docs/bulk-insert.md`
   for the provider matrix and temporary-table restrictions.
