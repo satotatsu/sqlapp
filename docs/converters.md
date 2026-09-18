@@ -44,7 +44,24 @@ Number number = converters.convertObject("12.50", Number.class); // BigDecimal
 
 - 一部の `equals` は `super.equals(this)` を呼んでおり、相手側の既定値や数値書式を比較していません（例: BooleanConverter、IntegerConverter）。等価性全体の統一は今回の変更には含めていません。
 - Convertersの継承型検索キャッシュは登録変更時に全面無効化されません。型を一度検索した後で基底型のコンバーターを追加・置換する動的な使い方には別途検証が必要です。
-- 新たなjava.time型やファイルシステム型の追加は、具体的な入出力用途が確定してから行うのが適切です。今回は基本型の明確な欠落に限定しました。
+- ファイルシステム型や追加の暦型は、具体的な入出力用途が確定してから検討します。java.timeのMonthDay・Month・DayOfWeek対応は以下に記載します。
+
+## java.timeの月日・月・曜日
+
+```java
+Converters converters = new Converters();
+MonthDay anniversary = converters.convertObject("--02-29", MonthDay.class);
+Month month = converters.convertObject(12, Month.class); // DECEMBER
+DayOfWeek day = converters.convertObject(1, DayOfWeek.class); // MONDAY
+MonthDay[] dates = converters.convertObject(List.of("--01-01", "--12-31"), MonthDay[].class);
+```
+
+- `MonthDay` はISO形式 `--MM-dd` を読み書きします。`--02-29` は有効、`--02-30` や `--04-31` は例外です。null・空白のみの文字列は既定値（初期値null）を返します。
+- `MonthDay`、`Month`、`DayOfWeek` は、必要な日付フィールドを持つ `TemporalAccessor` と `java.sql.Date` から抽出できます。OffsetDateTime/ZonedDateTimeの現地の日付を維持します。Instantや不完全な日付からタイムゾーン・不足フィールドを推測せず、例外にします。
+- `Month` は1〜12、`DayOfWeek` はISOの1〜7（月曜〜日曜）の数値と整数文字列を受け付けます。小数部分のある数値・範囲外・整数オーバーフローは切り捨てずに例外にします。
+- 既存の `JANUARY`、`MONDAY` などの列挙名による変換と出力を維持します。Enumの空文字設定も従来どおりで、必要なら初回利用前に `setEnumEmptyToNull(true)` を指定します。
+- いずれもOptional/Supplier入力に対応します。`MonthDay[]` を追加し、既存の `Month[]` / `DayOfWeek[]` にも数値・日付の要素変換が適用されます。
+- 共通の入口は `Converters` です。独立利用には `MonthDayConverter`、`MonthConverter`、`DayOfWeekConverter` を利用できます。既存の公開メソッド、Schema XML、設定形式、依存ライブラリの変更はありません。
 
 回帰テストは `ConverterRegressionTest` にあり、JDBC Arrayはスタブを使って解放と例外経路を検証します。外部データベースを必要としません。
 
@@ -65,3 +82,9 @@ Java 21とリポジトリのGradle Wrapperを使用しました。
 - 外部DB接続なし。coreテストでは既存の組み込みHSQLDBテストを含む。
 - その他のモジュール全体テスト、実DBとの結合テストは未実行。
 - ソース管理対象の生成ファイル変更なし。テストによるbuild出力のみ生成。
+
+java.time追加後は、以下の専用テスト9件と `:sqlapp-core:test` 全1,041件を実行し、失敗・スキップともに0件でした。
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests '*JavaTimeValueConverterTest' --console=plain --offline
+```

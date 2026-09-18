@@ -410,6 +410,8 @@ public class Converters implements Serializable {
 	}
 
 	private ZonedDateTimeConverter setJava8DateConverter(final Converters converters) {
+		puts(new MonthDayConverter(), java.time.MonthDay.class);
+		puts(new MonthDayArrayConverter(this.getConverter(java.time.MonthDay.class)), java.time.MonthDay[].class);
 		// ZonedDateTime
 		final ZonedDateTimeConverter zonedDateTimeConverter = createDefaultZonedDateTimeConverter();
 		put(java.time.ZonedDateTime.class, zonedDateTimeConverter);
@@ -607,14 +609,14 @@ public class Converters implements Serializable {
 			if (clazz.isArray()) {
 				final Class<?> componentType = clazz.getComponentType();
 				if (componentType.isEnum()) {
-					final EnumConverter enumConverter = new EnumConverter(componentType);
+					final EnumConverter enumConverter = createEnumConverter(componentType);
 					enumConverter.setEmptyToNull(this.isEnumEmptyToNull());
 					final EnumArrayConverter arrayConverter = new EnumArrayConverter(clazz, enumConverter);
 					this.put(clazz, arrayConverter);
 					return (S) arrayConverter;
 				}
 			} else if (clazz.isEnum()) {
-				final EnumConverter enumConverter = new EnumConverter(clazz);
+				final EnumConverter enumConverter = createEnumConverter(clazz);
 				enumConverter.setEmptyToNull(this.isEnumEmptyToNull());
 				this.put(clazz, enumConverter);
 				return (S) enumConverter;
@@ -626,6 +628,16 @@ public class Converters implements Serializable {
 	}
 
 	private final Set<Class<?>> unsupportedClasses = CommonUtils.set();
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private EnumConverter<?> createEnumConverter(final Class<?> clazz) {
+		if (clazz == java.time.Month.class) {
+			return new MonthConverter();
+		} else if (clazz == java.time.DayOfWeek.class) {
+			return new DayOfWeekConverter();
+		}
+		return new EnumConverter(clazz);
+	}
 
 	@SuppressWarnings("unchecked")
 	protected <T> Converter<T> findConverter(final Class<T> clazz) {
