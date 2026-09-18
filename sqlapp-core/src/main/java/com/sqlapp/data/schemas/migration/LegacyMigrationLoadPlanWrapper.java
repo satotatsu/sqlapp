@@ -84,7 +84,7 @@ public class LegacyMigrationLoadPlanWrapper {
 		return this.inner.getResolvedDataSetIds();
 	}
 
-	public String getTableOperationMode() {
+	public LegacyMigrationLoadPlan.TableOperationMode getTableOperationMode() {
 		return this.inner.getTableOperationMode();
 	}
 
@@ -104,7 +104,7 @@ public class LegacyMigrationLoadPlanWrapper {
 		return this.inner.getStagingTablePrefix();
 	}
 
-	public String getRootCursorStrategy() {
+	public LegacyMigrationLoadPlan.RootCursorStrategy getRootCursorStrategy() {
 		return this.inner.getRootCursorStrategy();
 	}
 

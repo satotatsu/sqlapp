@@ -118,7 +118,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 	@Test
 	void testValidateSchemaAllowsKeylessPlainInsert() {
 		LegacyMigrationLoadPlan plan = plan();
-		plan.setTableOperationMode("INSERT");
+		plan.setTableOperationMode(LegacyMigrationLoadPlan.TableOperationMode.INSERT);
 		java.util.List<Table> tables = targetTables();
 		tables.forEach(table -> table.getConstraints().removeIf(constraint ->
 				!(constraint instanceof com.sqlapp.data.schemas.ForeignKeyConstraint)));
@@ -146,7 +146,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			connection.setAutoCommit(false);
 			LegacyMigrationLoadPlan plan = plan();
-			plan.setRootCursorStrategy("HOLD");
+			plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.HOLD);
 			JdbcTreeStagingLoader loader = new JdbcTreeStagingLoader(connection, schema, plan);
 
 			assertEquals(2, loader.load());
@@ -440,7 +440,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			LegacyMigrationLoadPlan plan = plan();
 			plan.setDeleteCommittedRoots(false);
-			plan.setRootCursorStrategy("REOPEN");
+			plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.REOPEN);
 			connection.setAutoCommit(false);
 
 			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, plan).load());
@@ -472,7 +472,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			plan.setDeleteCommittedRoots(false);
 			plan.setRootBatchSize(1);
 			plan.setCommitEveryRootBatches(1);
-			plan.setRootCursorStrategy("REOPEN");
+			plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.REOPEN);
 			connection.setAutoCommit(false);
 
 			assertThrows(java.sql.SQLException.class,
@@ -871,7 +871,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 
 	private LegacyMigrationLoadPlan plan() {
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		plan.setTableOperationMode("INSERT_IGNORE");
+		plan.setTableOperationMode(LegacyMigrationLoadPlan.TableOperationMode.INSERT_IGNORE);
 		plan.setRootBatchSize(1);
 		plan.setCommitEveryRootBatches(2);
 		LoadDataSet company = dataSet("company", "COMPANY_MASTER", "TMP_COMPANY_MASTER", null, 0);
@@ -895,7 +895,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 
 	private LegacyMigrationLoadPlan quotedPlan() {
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		plan.setTableOperationMode("INSERT_IGNORE");
+		plan.setTableOperationMode(LegacyMigrationLoadPlan.TableOperationMode.INSERT_IGNORE);
 		LoadDataSet root = dataSet("quoted", "Order", "Select", null, 0);
 		root.getSourceBusinessKey().add("Key");
 		root.getFields().add(field(1, "Key", "Id", true, false, "COPY"));

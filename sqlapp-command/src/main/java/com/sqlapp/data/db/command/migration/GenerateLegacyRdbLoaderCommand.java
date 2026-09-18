@@ -28,6 +28,8 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.RootCursorStrategy;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.TableOperationMode;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpointResolver;
 import com.sqlapp.exceptions.CommandException;
 
@@ -91,8 +93,9 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 				&& (runnerClassName == null || !runnerClassName.matches("[A-Za-z_$][A-Za-z0-9_$]*"))) {
 			throw new CommandException("Invalid Java runner class name: " + runnerClassName);
 		}
-		String mode = tableOperationMode == null ? null : tableOperationMode.toUpperCase(Locale.ROOT);
-		String cursorStrategy = rootCursorStrategy == null ? null : rootCursorStrategy.toUpperCase(Locale.ROOT);
+		TableOperationMode mode = enumValue(TableOperationMode.class, tableOperationMode, "table operation mode");
+		RootCursorStrategy cursorStrategy = enumValue(RootCursorStrategy.class, rootCursorStrategy,
+				"root cursor strategy");
 		var contract = new LegacyMigrationContractIO().read(contractFile);
 		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
 		var generator = new LegacyRdbLoaderGenerator();
@@ -115,6 +118,14 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 					generator.runnerTemplate(plan, runnerClassName));
 		}
 		info("Legacy RDB loader artifacts: ", outputDirectory.getAbsolutePath());
+	}
+
+	private static <E extends Enum<E>> E enumValue(final Class<E> type, final String value, final String label) {
+		try {
+			return Enum.valueOf(type, value == null ? null : value.toUpperCase(Locale.ROOT));
+		} catch (IllegalArgumentException | NullPointerException e) {
+			throw new CommandException("Unsupported " + label + ": " + value, e);
+		}
 	}
 
 	private void relativizeReferences(LegacyMigrationLoadPlan plan, File loadPlanFile) {

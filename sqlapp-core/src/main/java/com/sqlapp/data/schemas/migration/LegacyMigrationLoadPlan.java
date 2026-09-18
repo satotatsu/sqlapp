@@ -47,7 +47,7 @@ public class LegacyMigrationLoadPlan {
 
 	private List<String> resolvedDataSetIds = new ArrayList<>();
 
-	private String tableOperationMode = "INSERT_IGNORE";
+	private TableOperationMode tableOperationMode = TableOperationMode.INSERT_IGNORE;
 
 	private String stagingTablePrefix;
 
@@ -63,11 +63,19 @@ public class LegacyMigrationLoadPlan {
 
 	private boolean deleteCommittedRoots = true;
 
-	private String rootCursorStrategy = "DIALECT";
+	private RootCursorStrategy rootCursorStrategy = RootCursorStrategy.DIALECT;
 
 	private TransactionPolicy transaction = new TransactionPolicy();
 
 	private List<LoadDataSet> dataSets = new ArrayList<>();
+
+	public enum TableOperationMode {
+		INSERT, INSERT_IGNORE, MERGE, REPLACE
+	}
+
+	public enum RootCursorStrategy {
+		DIALECT, HOLD, REOPEN
+	}
 
 	@Getter
 	@Setter

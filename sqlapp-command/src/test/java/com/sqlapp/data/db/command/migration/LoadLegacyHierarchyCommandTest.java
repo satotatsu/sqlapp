@@ -344,7 +344,7 @@ class LoadLegacyHierarchyCommandTest {
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
 		initialize(plan, schemaFile,
 				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
-		plan.setTableOperationMode("INSERT");
+		plan.setTableOperationMode(LegacyMigrationLoadPlan.TableOperationMode.INSERT);
 		plan.getDataSets().getFirst().setTargetCatalog("CATALOG_A");
 		Table expected = table("CATALOG_A");
 		Table other = table("CATALOG_B");

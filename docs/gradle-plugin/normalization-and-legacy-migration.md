@@ -157,6 +157,12 @@ uses sqlapp's schema model, SQL generation, dialect handling, and
 | `deleteCommittedRoots` | `Property<Boolean>` | yes | `true` | Delete committed staging roots; otherwise mark them loaded |
 | `stagingTablePrefix` | `Property<String>` | yes | `TMP_` | Staging-table prefix |
 | `rootCursorStrategy` | `Property<String>` | yes | `DIALECT` | Cursor strategy selection |
+
+The Gradle properties remain strings for concise build-script configuration,
+but they are parsed at the command boundary into the typed load-plan enums.
+`tableOperationMode` accepts `INSERT`, `INSERT_IGNORE`, `MERGE`, or `REPLACE`;
+`rootCursorStrategy` accepts `DIALECT`, `HOLD`, or `REOPEN`. Generated YAML
+stores those stable enum names and rejects unknown values when read.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

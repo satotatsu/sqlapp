@@ -75,10 +75,10 @@ public class LegacyMigrationLoadPlanIO {
 		if (plan.getVersion() != LegacyMigrationLoadPlan.CURRENT_VERSION) {
 			throw new CommandException("Unsupported legacy RDB load plan version: " + plan.getVersion());
 		}
-		if (!Set.of("INSERT", "INSERT_IGNORE", "MERGE", "REPLACE").contains(plan.getTableOperationMode())) {
+		if (plan.getTableOperationMode() == null) {
 			throw new CommandException("Unsupported table operation mode: " + plan.getTableOperationMode());
 		}
-		if (!Set.of("DIALECT", "HOLD", "REOPEN").contains(plan.getRootCursorStrategy())) {
+		if (plan.getRootCursorStrategy() == null) {
 			throw new CommandException("Unsupported root cursor strategy: " + plan.getRootCursorStrategy());
 		}
 		if (plan.getRootBatchSize() <= 0 || plan.getCommitEveryRootBatches() <= 0) {
@@ -280,7 +280,7 @@ public class LegacyMigrationLoadPlanIO {
 				throw new CommandException("Target primary key disagrees with schema: " + dataSet.getId());
 			}
 		}
-		if (!"INSERT".equals(plan.getTableOperationMode())) {
+		if (plan.getTableOperationMode() != LegacyMigrationLoadPlan.TableOperationMode.INSERT) {
 			SqlSignature signature = new SqlSignature(table, List.of());
 			if (!signature.hasPrimaryKey() && !signature.hasUniqueKey() && !signature.hasNotNullUniqueIndex()) {
 				throw new CommandException("Target table requires a primary key, unique key, or "

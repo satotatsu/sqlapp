@@ -121,7 +121,7 @@ public class JdbcTreeStagingLoader {
 		JdbcTreeDataCopySession copySession = new JdbcTreeDataCopySession(reader, writer);
 		copySession.setRootBatchSize(plan.getRootBatchSize());
 		copySession.setCommitEveryRootBatches(plan.getCommitEveryRootBatches());
-		copySession.setHoldCursorStrategy(HoldCursorStrategy.valueOf(plan.getRootCursorStrategy()));
+		copySession.setHoldCursorStrategy(HoldCursorStrategy.valueOf(plan.getRootCursorStrategy().name()));
 		copySession.setProcessedRootHandler(
 				rows -> completeStagingRoots(root, rows.stream().map(row -> keyValues(root, row)).toList()));
 		return copySession;
@@ -165,7 +165,7 @@ public class JdbcTreeStagingLoader {
 		JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
 				hierarchy.stream().map(dataSet -> targetTables.get(dataSet.getId())).toList(),
 				selectedForeignKeys::contains);
-		session.setTableOperationMode(TableOperationMode.valueOf(plan.getTableOperationMode()));
+		session.setTableOperationMode(TableOperationMode.valueOf(plan.getTableOperationMode().name()));
 		return session;
 	}
 

@@ -17,6 +17,8 @@ import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
+
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.AncestorKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
@@ -56,12 +58,23 @@ class GenerateLegacyRdbLoaderCommandTest {
 		File planFile = new File(output, "company-load-plan.yaml");
 		assertTrue(planFile.isFile());
 		var plan = new LegacyMigrationLoadPlanIO().read(planFile);
-		assertEquals("MERGE", plan.getTableOperationMode());
+		assertEquals(LegacyMigrationLoadPlan.TableOperationMode.MERGE, plan.getTableOperationMode());
 		assertEquals("STG_", plan.getStagingTablePrefix());
 		assertEquals(100, plan.getRootBatchSize());
 		assertEquals(200, plan.getCommitEveryRootBatches());
 		assertEquals("ROOT_BATCH", plan.getTransaction().getCommitUnit());
-		assertEquals("DIALECT", plan.getRootCursorStrategy());
+		assertEquals(LegacyMigrationLoadPlan.RootCursorStrategy.DIALECT, plan.getRootCursorStrategy());
+		final String planYaml = Files.readString(planFile.toPath());
+		assertTrue(planYaml.contains("tableOperationMode: \"MERGE\"")
+				|| planYaml.contains("tableOperationMode: MERGE"));
+		assertTrue(planYaml.contains("rootCursorStrategy: \"DIALECT\"")
+				|| planYaml.contains("rootCursorStrategy: DIALECT"));
+		final File unknownMode = new File(output, "unknown-mode.yaml");
+		Files.writeString(unknownMode.toPath(), planYaml.replace("MERGE", "UNKNOWN_MODE"));
+		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().read(unknownMode));
+		final File unknownCursor = new File(output, "unknown-cursor.yaml");
+		Files.writeString(unknownCursor.toPath(), planYaml.replace("DIALECT", "UNKNOWN_CURSOR"));
+		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().read(unknownCursor));
 		assertEquals(new File("..", contractFile.getName()).getPath(), plan.getContractFile());
 		assertEquals(new File("..", schemaFile.getName()).getPath(), plan.getSchemaFile());
 		assertTrue(plan.getTransaction().isTargetAndStagingDeleteAtomic());

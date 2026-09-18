@@ -30,6 +30,8 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.JoinKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadField;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.RootCursorStrategy;
+import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.TableOperationMode;
 import com.sqlapp.exceptions.CommandException;
 
 /**
@@ -39,16 +41,16 @@ import com.sqlapp.exceptions.CommandException;
 public class LegacyRdbLoaderGenerator {
 
 	public LegacyMigrationLoadPlan plan(File contractFile, File schemaFile, LegacyMigrationContract contract,
-			String operationMode, int rootBatchSize, long commitEveryRootBatches, boolean deleteCommittedRoots,
-			String stagingTablePrefix, String rootCursorStrategy) {
+			TableOperationMode operationMode, int rootBatchSize, long commitEveryRootBatches, boolean deleteCommittedRoots,
+			String stagingTablePrefix, RootCursorStrategy rootCursorStrategy) {
 		new LegacyMigrationContractValidator().validate(contract);
 		if (rootBatchSize <= 0 || commitEveryRootBatches <= 0) {
 			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");
 		}
-		if (operationMode == null || !Set.of("INSERT", "INSERT_IGNORE", "MERGE", "REPLACE").contains(operationMode)) {
+		if (operationMode == null) {
 			throw new CommandException("Unsupported table operation mode: " + operationMode);
 		}
-		if (rootCursorStrategy == null || !Set.of("DIALECT", "HOLD", "REOPEN").contains(rootCursorStrategy)) {
+		if (rootCursorStrategy == null) {
 			throw new CommandException("Unsupported root cursor strategy: " + rootCursorStrategy);
 		}
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
