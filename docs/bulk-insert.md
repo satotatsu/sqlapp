@@ -715,7 +715,7 @@ and the aggregate fingerprint. A no-replay task does not require provider
 resolution, which keeps an otherwise empty repair plan usable for reporting.
 
 The explicit-target repair path is covered against PostgreSQL 18, SQL Server
-2022, MySQL 8.4, MariaDB 11.8, Firebird 5, Oracle 23ai, DB2 12.1.5,
+2022, MySQL 8.4, MariaDB 11.8, Firebird 5, Oracle 23ai/26ai, DB2 12.1.5,
 Informix 14.10, Vertica 25.1, Sybase ASE 16, and SAP HANA Express 2.0,
 including JDBC keyset verification, boundary-only rereading, vendor bulk
 UPSERT, and post-repair verification. Oracle, Vertica, Sybase, and SAP HANA
@@ -1439,6 +1439,6 @@ Phoenix, HiRDB, Symfoware, and Access intentionally use the fallback:
 Informix uses `WITH NO LOG` only for the disposable session temporary table;
 the target history-table updates remain transaction controlled. The providers
 have real-engine integration coverage with SAP HANA Express 2.0, DB2 Community
-12.1.5, Oracle Database Free 23ai, Vertica CE 25.1, SAP ASE 16, and Informix
+12.1.5, Oracle Database Free 23ai/26ai, Vertica CE 25.1, SAP ASE 16, and Informix
 14.10. A future JDBC driver may still remove current generated-key or
 temporary-table limitations without requiring a public API change.

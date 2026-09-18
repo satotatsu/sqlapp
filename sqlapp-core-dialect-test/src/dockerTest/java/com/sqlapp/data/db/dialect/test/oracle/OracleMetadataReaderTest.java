@@ -24,7 +24,6 @@ import org.testcontainers.oracle.OracleContainer;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.dialect.oracle.Oracle23ai;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
@@ -35,11 +34,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
-/** Oracle Database 23ai integration coverage for the metadata reader tree. */
+/** Oracle Database integration coverage for the metadata reader tree. */
 class OracleMetadataReaderTest {
-	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
-
-	private static final OracleContainer ORACLE = ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+	private static final OracleContainer ORACLE = ReusableTestcontainers
+			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
 	@BeforeAll
 	static void startContainer() {
@@ -58,7 +56,7 @@ class OracleMetadataReaderTest {
 			createSchemaObjects(connection);
 
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-			assertInstanceOf(Oracle23ai.class, dialect);
+			OracleTestEnvironment.assertExpectedDialect(dialect);
 
 			String schemaName = ORACLE.getUsername().toUpperCase(Locale.ROOT);
 			var schemaReader = dialect.getCatalogReader().getSchemaReader();

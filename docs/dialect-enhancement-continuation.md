@@ -148,6 +148,13 @@ Run the disposable real-engine integration suites from
 .\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.spanner.*"
 ```
 
+Oracle 26ai uses the `23.26.x` product version. Run the same Oracle suite with
+the pinned 26ai image and an explicit resolver expectation:
+
+```bat
+.\gradlew.bat -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.oracle.*"
+```
+
 When Codex runs Gradle, use the repository-local `.gradle-user-home` cache.
 The interactive user can run the commands with their normal Gradle cache.
 

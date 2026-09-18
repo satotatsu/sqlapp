@@ -148,7 +148,9 @@ with references surviving object and column renames.
 ## Oracle AI Database 26ai
 
 `Oracle26ai` has a separate dialect and resolver boundary and currently
-inherits the compatible Oracle 23ai behavior.
+inherits the compatible Oracle 23ai behavior. Oracle reports 26ai releases as
+product version `23.26.x`; the resolver treats `23.26` and later release updates
+as `Oracle26ai` while preserving `Oracle23ai` for earlier `23.x` releases.
 
 Before adding 26ai-only SQL:
 
@@ -178,8 +180,7 @@ The following work is intentionally deferred:
   exact database-version boundary and syntax have been verified
 - remaining advanced data use case domain forms listed above
 - broader DDL, metadata-permission, and Schema XML/DDL round-trip integration
-  coverage against Oracle 23ai, plus initial integration coverage against a real
-  Oracle 26ai instance. Oracle Database Free 23ai already covers the current
+  coverage. Oracle Database Free 23ai and 26ai (`23.26.3`) cover the current
   bulk insert, generated-key, cursor/commit, set-based migration, and core
   metadata-reader paths.
 

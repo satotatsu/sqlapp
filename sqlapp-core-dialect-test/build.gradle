@@ -42,6 +42,11 @@ tasks.register('dockerTest', Test) {
 	def testcontainersReuse = providers.gradleProperty('testcontainersReuse')
 		.map { it.toBoolean() }.orElse(false)
 	systemProperty 'sqlapp.testcontainers.reuse', testcontainersReuse.get()
+	def oracleTestImage = providers.gradleProperty('oracleTestImage')
+		.orElse('gvenzl/oracle-free:23-slim-faststart')
+	def oracleExpectedDialect = providers.gradleProperty('oracleExpectedDialect').orElse('23ai')
+	systemProperty 'sqlapp.test.oracle.image', oracleTestImage.get()
+	systemProperty 'sqlapp.test.oracle.expectedDialect', oracleExpectedDialect.get()
 	if (testcontainersReuse.get()) {
 		environment 'TESTCONTAINERS_REUSE_ENABLE', 'true'
 	}

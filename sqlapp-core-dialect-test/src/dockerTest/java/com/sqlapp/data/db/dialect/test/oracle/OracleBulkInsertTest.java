@@ -19,10 +19,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 
-/** Exercises Oracle JDBC batching against Oracle Database 23ai Free. */
+/** Exercises Oracle JDBC batching against the configured Oracle Database Free image. */
 class OracleBulkInsertTest {
 	private static final OracleContainer ORACLE = ReusableTestcontainers
-			.configure(new OracleContainer("gvenzl/oracle-free:23-slim-faststart"));
+			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
 	@BeforeAll
 	static void startContainer() {

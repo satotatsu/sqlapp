@@ -35,9 +35,8 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** Oracle Database Free integration coverage for hierarchical JDBC writes. */
 class OracleJdbcTreeDataSessionTest {
-	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
-
-	private static final OracleContainer ORACLE = ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+	private static final OracleContainer ORACLE = ReusableTestcontainers
+			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
 	@BeforeAll
 	static void startContainer() {

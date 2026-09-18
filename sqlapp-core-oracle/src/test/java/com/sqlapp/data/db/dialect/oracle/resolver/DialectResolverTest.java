@@ -53,6 +53,8 @@ public class DialectResolverTest {
 		assertTrue(DialectResolver.getInstance().getDialect("Oracle", 18, 0, 0) instanceof Oracle18c);
 		assertTrue(DialectResolver.getInstance().getDialect("Oracle", 19, 0, 0) instanceof Oracle19c);
 		assertTrue(DialectResolver.getInstance().getDialect("Oracle", 21, 0, 0) instanceof Oracle21c);
+		assertTrue(DialectResolver.getInstance().getDialect("Oracle", 23, 25, 0) instanceof Oracle23ai);
+		assertTrue(DialectResolver.getInstance().getDialect("Oracle", 23, 26, 0) instanceof Oracle26ai);
 		assertTrue(DialectResolver.getInstance().getDialect("Oracle", 26, 0, 0) instanceof Oracle26ai);
 		dialect = DialectResolver.getInstance().getDialect("TimesTen", 23, 0, 0);
 		System.out.println(dialect);

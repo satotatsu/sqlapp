@@ -30,10 +30,10 @@ import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
-/** Exercises JDBC staging and MERGE against Oracle Database 23ai Free. */
+/** Exercises JDBC staging and MERGE against the configured Oracle Database Free image. */
 class OracleBulkUpsertTest {
 	private static final OracleContainer ORACLE = ReusableTestcontainers
-			.configure(new OracleContainer("gvenzl/oracle-free:23-slim-faststart"));
+			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
 	@BeforeAll
 	static void startContainer() {
