@@ -130,8 +130,12 @@ public class LegacyMigrationMapping {
 	public static class GeneratedKey {
 		private String column;
 		private String dataType;
-		private String generationType;
+		private GeneratedKeyGenerationType generationType;
 		private String sequence;
+	}
+
+	public enum GeneratedKeyGenerationType {
+		IDENTITY, SEQUENCE
 	}
 
 	@Getter

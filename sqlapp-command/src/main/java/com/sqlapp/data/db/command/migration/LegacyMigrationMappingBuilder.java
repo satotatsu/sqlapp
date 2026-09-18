@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.Diagnostic;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.DiagnosticSeverity;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKeyGenerationType;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.IndexedSourceColumn;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ParentMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
@@ -440,7 +441,7 @@ public class LegacyMigrationMappingBuilder {
 			GeneratedKey generatedKey = new GeneratedKey();
 			generatedKey.setColumn(idColumn);
 			generatedKey.setDataType(string(newPrimaryKey.get("dataType")));
-			generatedKey.setGenerationType(string(surrogate.get("generationType")));
+			generatedKey.setGenerationType(GeneratedKeyGenerationType.valueOf(string(surrogate.get("generationType"))));
 			Column actual = table.getColumns().get(idColumn);
 			if (actual != null && actual.getSequence() != null) {
 				generatedKey.setSequence(actual.getSequence().getName());
@@ -450,7 +451,7 @@ public class LegacyMigrationMappingBuilder {
 			idMapping.setTarget(idColumn);
 			idMapping.setAction(ColumnAction.GENERATE);
 			idMapping.setTargetDefinition(definition(actual));
-			idMapping.getConversion().put("type", generatedKey.getGenerationType());
+			idMapping.getConversion().put("type", generatedKey.getGenerationType().name());
 			tableMapping.getColumns().add(0, idMapping);
 			for (Map<String, Object> foreignKey : listOfMaps(tableLog.get("foreignKeyReplacements"))) {
 				String parentName = string(foreignKey.get("referencedTable"));

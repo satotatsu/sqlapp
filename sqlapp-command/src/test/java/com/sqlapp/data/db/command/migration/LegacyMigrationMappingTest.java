@@ -18,6 +18,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKeyGenerationType;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TransformationRecord;
@@ -33,6 +35,12 @@ class LegacyMigrationMappingTest {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		mapping.getMigration().setId("sample-v1");
 		TableMapping parent = table("table-parent", "PARENT");
+		GeneratedKey generatedKey = new GeneratedKey();
+		generatedKey.setColumn("ID");
+		generatedKey.setDataType("BIGINT");
+		generatedKey.setGenerationType(GeneratedKeyGenerationType.SEQUENCE);
+		generatedKey.setSequence("PARENT_SEQ");
+		parent.getKeys().setGeneratedKey(generatedKey);
 		TableMapping child = table("table-child", "CHILD");
 		child.setParent(new LegacyMigrationMapping.ParentMapping());
 		child.getParent().setMappingId(parent.getId());
@@ -59,8 +67,14 @@ class LegacyMigrationMappingTest {
 				restored.getTransformations().getFirst().getStatus());
 		final String serialized = Files.readString(yaml.toPath());
 		assertTrue(serialized.contains("status: \"SUCCESS\"") || serialized.contains("status: SUCCESS"));
-		Files.writeString(yaml.toPath(), serialized.replace("SUCCESS", "UNKNOWN"));
-		assertThrows(CommandException.class, () -> io.read(yaml));
+		assertTrue(serialized.contains("generationType: \"SEQUENCE\"")
+				|| serialized.contains("generationType: SEQUENCE"));
+		File unknownStatus = new File(temporaryDirectory, "unknown-status.yaml");
+		Files.writeString(unknownStatus.toPath(), serialized.replace("SUCCESS", "UNKNOWN"));
+		assertThrows(CommandException.class, () -> io.read(unknownStatus));
+		File unknownGenerationType = new File(temporaryDirectory, "unknown-generation-type.yaml");
+		Files.writeString(unknownGenerationType.toPath(), serialized.replace("SEQUENCE", "UNKNOWN"));
+		assertThrows(CommandException.class, () -> io.read(unknownGenerationType));
 	}
 
 	@Test

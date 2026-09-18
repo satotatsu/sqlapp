@@ -39,7 +39,7 @@ public class PliCsvExtractorGenerator {
 		line(builder, "- Quote: `" + visible(contract.getCsv().getQuote()) + "`");
 		line(builder, "- NULL representation: `" + visible(contract.getCsv().getNullValue()) + "`");
 		line(builder, "- Header row: `" + contract.getCsv().isHeader() + "`");
-		line(builder, "- Record separator: `" + value(contract.getCsv().getRecordSeparator()) + "`");
+		line(builder, "- Record separator: `" + value(contract.getCsv().getRecordSeparator().name()) + "`");
 		line(builder, "");
 		line(builder, "## Required CSV behavior");
 		line(builder, "");

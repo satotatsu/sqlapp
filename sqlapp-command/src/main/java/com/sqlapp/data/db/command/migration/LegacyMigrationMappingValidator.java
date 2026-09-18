@@ -66,6 +66,12 @@ public class LegacyMigrationMappingValidator {
 			validateNames(table.getKeys().getTargetPrimaryKey(), "targetPrimaryKey", table.getId());
 			validateNames(table.getKeys().getBusinessKey(), "businessKey", table.getId());
 			validateNames(table.getKeys().getTargetUniqueKey(), "targetUniqueKey", table.getId());
+			if (table.getKeys().getGeneratedKey() != null
+					&& (blank(table.getKeys().getGeneratedKey().getColumn())
+							|| blank(table.getKeys().getGeneratedKey().getDataType())
+							|| table.getKeys().getGeneratedKey().getGenerationType() == null)) {
+				throw new CommandException("Generated key mapping is incomplete: " + table.getId());
+			}
 			for (ColumnMapping column : table.getColumns()) {
 				validateColumn(column, table.getId());
 			}

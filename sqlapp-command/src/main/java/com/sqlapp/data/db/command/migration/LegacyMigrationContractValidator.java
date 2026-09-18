@@ -202,11 +202,10 @@ public class LegacyMigrationContractValidator {
 	private void validateCsv(LegacyMigrationContract contract) {
 		var csv = contract.getCsv();
 		if (csv == null || blank(csv.getEncoding()) || csv.getDelimiter() == null || csv.getQuote() == null
-				|| csv.getNullValue() == null || blank(csv.getRecordSeparator())
+				|| csv.getNullValue() == null || csv.getRecordSeparator() == null
 				|| csv.getDelimiter().codePointCount(0, csv.getDelimiter().length()) != 1
 				|| csv.getQuote().codePointCount(0, csv.getQuote().length()) != 1
-				|| csv.getDelimiter().equals(csv.getQuote())
-				|| !Set.of("CRLF", "LF").contains(csv.getRecordSeparator())) {
+				|| csv.getDelimiter().equals(csv.getQuote())) {
 			throw new CommandException("The legacy migration contract CSV format is invalid.");
 		}
 		try {

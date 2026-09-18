@@ -173,6 +173,11 @@ Contract and load-plan field `action` values likewise use the shared
 Repeated-column extraction uses the typed `occurrenceSourceMode` value
 `NUMBERED_COLUMNS`, which is serialized by that stable name and also rejects
 unknown names during contract loading.
+The contract CSV `recordSeparator` is also typed and accepts only `CRLF` or
+`LF`; the Gradle and command properties remain strings at their configuration
+boundary and are converted before the contract is written.
+Generated-key lineage records use the typed `generationType` values `IDENTITY`
+and `SEQUENCE`; mappings retain these names in YAML and reject unknown values.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

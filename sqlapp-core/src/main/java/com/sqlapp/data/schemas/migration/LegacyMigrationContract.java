@@ -45,7 +45,11 @@ public class LegacyMigrationContract {
 		private String quote = "\"";
 		private String nullValue = "";
 		private boolean header = true;
-		private String recordSeparator = "CRLF";
+		private RecordSeparator recordSeparator = RecordSeparator.CRLF;
+	}
+
+	public enum RecordSeparator {
+		CRLF, LF
 	}
 
 	@Getter

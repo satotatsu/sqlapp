@@ -73,6 +73,7 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertTrue(yaml.contains("action: \"COPY\"") || yaml.contains("action: COPY"));
 		assertTrue(yaml.contains("occurrenceSourceMode: \"NUMBERED_COLUMNS\"")
 				|| yaml.contains("occurrenceSourceMode: NUMBERED_COLUMNS"));
+		assertTrue(yaml.contains("recordSeparator: \"CRLF\"") || yaml.contains("recordSeparator: CRLF"));
 		File unknownAction = new File(output, "unknown-action.yaml");
 		Files.writeString(unknownAction.toPath(), yaml.replace("action: \"COPY\"", "action: \"UNKNOWN_ACTION\"")
 				.replace("action: COPY", "action: \"UNKNOWN_ACTION\""));
@@ -84,6 +85,11 @@ class GenerateLegacyMigrationContractCommandTest {
 						.replace("occurrenceSourceMode: NUMBERED_COLUMNS",
 								"occurrenceSourceMode: \"UNKNOWN_MODE\""));
 		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownOccurrenceMode));
+		File unknownRecordSeparator = new File(output, "unknown-record-separator.yaml");
+		Files.writeString(unknownRecordSeparator.toPath(),
+				yaml.replace("recordSeparator: \"CRLF\"", "recordSeparator: \"CR\"")
+						.replace("recordSeparator: CRLF", "recordSeparator: \"CR\""));
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownRecordSeparator));
 	}
 
 	@Test

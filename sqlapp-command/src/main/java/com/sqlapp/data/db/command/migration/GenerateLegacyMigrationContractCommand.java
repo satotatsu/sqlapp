@@ -8,6 +8,7 @@ package com.sqlapp.data.db.command.migration;
 import java.io.File;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.sqlapp.exceptions.CommandException;
 
 import lombok.Getter;
@@ -56,12 +57,20 @@ public class GenerateLegacyMigrationContractCommand extends AbstractCommand {
 		contract.getCsv().setQuote(quote);
 		contract.getCsv().setNullValue(nullValue);
 		contract.getCsv().setHeader(header);
-		contract.getCsv().setRecordSeparator(recordSeparator);
+		contract.getCsv().setRecordSeparator(recordSeparator(recordSeparator));
 		File outputFile = new File(outputDirectory,
 				outputFileName == null || outputFileName.isBlank() ? baseName(mappingFile.getName()) + "-contract.yaml"
 						: outputFileName);
 		new LegacyMigrationContractIO().write(outputFile, contract);
 		info("Legacy migration contract: ", outputFile.getAbsolutePath());
+	}
+
+	private LegacyMigrationContract.RecordSeparator recordSeparator(String value) {
+		try {
+			return LegacyMigrationContract.RecordSeparator.valueOf(value);
+		} catch (NullPointerException | IllegalArgumentException e) {
+			throw new CommandException("CSV recordSeparator must be CRLF or LF: " + value, e);
+		}
 	}
 
 	private String baseName(String name) {
