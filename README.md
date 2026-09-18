@@ -149,6 +149,8 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 - [Gradle plugin task guide](docs/gradle-plugin/README.md)
 - [Published artifacts and dependency selection](docs/artifacts.md)
 - [Compatibility and database verification matrix](docs/compatibility.md)
+- [Architecture](docs/architecture.md)
+- [Building and testing](docs/build-and-test.md)
 - [Runnable Gradle example map](docs/gradle-plugin/example-project.md)
 - [Schema XML, SQL, and HTML workflows](docs/gradle-plugin/schema-sql-and-html.md)
 - [Custom tasks and versioned migrations](docs/gradle-plugin/custom-tasks-and-migrations.md)
