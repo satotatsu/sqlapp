@@ -85,10 +85,10 @@ public class LegacyMigrationLoadPlanIO {
 			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");
 		}
 		if (plan.getTransaction() == null || plan.getTransaction().isAutoCommit()
-				|| !"ROOT_BATCH".equals(plan.getTransaction().getCommitUnit())
-				|| !"BEFORE_COMMIT".equals(plan.getTransaction().getStagingDeleteTiming())
+				|| plan.getTransaction().getCommitUnit() != LegacyMigrationLoadPlan.CommitUnit.ROOT_BATCH
+				|| plan.getTransaction().getStagingDeleteTiming() != LegacyMigrationLoadPlan.StagingDeleteTiming.BEFORE_COMMIT
 				|| !plan.getTransaction().isTargetAndStagingDeleteAtomic()
-				|| !"ROOT".equals(plan.getTransaction().getRestartUnit())) {
+				|| plan.getTransaction().getRestartUnit() != LegacyMigrationLoadPlan.RestartUnit.ROOT) {
 			throw new CommandException("Legacy RDB load plan transaction policy is unsupported.");
 		}
 		if (plan.getDataSets() == null || plan.getDataSets().isEmpty()) {

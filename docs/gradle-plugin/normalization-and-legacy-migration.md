@@ -163,6 +163,10 @@ but they are parsed at the command boundary into the typed load-plan enums.
 `tableOperationMode` accepts `INSERT`, `INSERT_IGNORE`, `MERGE`, or `REPLACE`;
 `rootCursorStrategy` accepts `DIALECT`, `HOLD`, or `REOPEN`. Generated YAML
 stores those stable enum names and rejects unknown values when read.
+The generated transaction policy is typed in the same way: `commitUnit` is
+`ROOT_BATCH`, `stagingDeleteTiming` is `BEFORE_COMMIT`, and `restartUnit` is
+`ROOT`. These values describe the loader's atomic restart contract and unknown
+policy names are rejected rather than interpreted loosely.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

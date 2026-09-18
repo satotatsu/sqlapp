@@ -62,19 +62,31 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertEquals("STG_", plan.getStagingTablePrefix());
 		assertEquals(100, plan.getRootBatchSize());
 		assertEquals(200, plan.getCommitEveryRootBatches());
-		assertEquals("ROOT_BATCH", plan.getTransaction().getCommitUnit());
+		assertEquals(LegacyMigrationLoadPlan.CommitUnit.ROOT_BATCH, plan.getTransaction().getCommitUnit());
 		assertEquals(LegacyMigrationLoadPlan.RootCursorStrategy.DIALECT, plan.getRootCursorStrategy());
 		final String planYaml = Files.readString(planFile.toPath());
 		assertTrue(planYaml.contains("tableOperationMode: \"MERGE\"")
 				|| planYaml.contains("tableOperationMode: MERGE"));
 		assertTrue(planYaml.contains("rootCursorStrategy: \"DIALECT\"")
 				|| planYaml.contains("rootCursorStrategy: DIALECT"));
+		assertTrue(planYaml.contains("commitUnit: \"ROOT_BATCH\"")
+				|| planYaml.contains("commitUnit: ROOT_BATCH"));
+		assertTrue(planYaml.contains("stagingDeleteTiming: \"BEFORE_COMMIT\"")
+				|| planYaml.contains("stagingDeleteTiming: BEFORE_COMMIT"));
+		assertTrue(planYaml.contains("restartUnit: \"ROOT\"")
+				|| planYaml.contains("restartUnit: ROOT"));
 		final File unknownMode = new File(output, "unknown-mode.yaml");
 		Files.writeString(unknownMode.toPath(), planYaml.replace("MERGE", "UNKNOWN_MODE"));
 		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().read(unknownMode));
 		final File unknownCursor = new File(output, "unknown-cursor.yaml");
 		Files.writeString(unknownCursor.toPath(), planYaml.replace("DIALECT", "UNKNOWN_CURSOR"));
 		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().read(unknownCursor));
+		assertUnknownLoadPlanEnum(planYaml, "commitUnit", "ROOT_BATCH", "UNKNOWN_COMMIT_UNIT",
+				"unknown-commit-unit.yaml");
+		assertUnknownLoadPlanEnum(planYaml, "stagingDeleteTiming", "BEFORE_COMMIT", "UNKNOWN_DELETE_TIMING",
+				"unknown-delete-timing.yaml");
+		assertUnknownLoadPlanEnum(planYaml, "restartUnit", "ROOT", "UNKNOWN_RESTART_UNIT",
+				"unknown-restart-unit.yaml");
 		assertEquals(new File("..", contractFile.getName()).getPath(), plan.getContractFile());
 		assertEquals(new File("..", schemaFile.getName()).getPath(), plan.getSchemaFile());
 		assertTrue(plan.getTransaction().isTargetAndStagingDeleteAtomic());
@@ -103,6 +115,16 @@ class GenerateLegacyRdbLoaderCommandTest {
 		plan.getDataSets().getLast().setParentDataSetId("missing-parent");
 		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().write(
 				new File(output, "invalid-plan.yaml"), plan));
+	}
+
+	private void assertUnknownLoadPlanEnum(final String yaml, final String property, final String knownValue,
+			final String unknownValue, final String fileName) throws Exception {
+		final File file = new File(temporaryDirectory, fileName);
+		final String quoted = property + ": \"" + knownValue + "\"";
+		final String plain = property + ": " + knownValue;
+		final String replacement = property + ": \"" + unknownValue + "\"";
+		Files.writeString(file.toPath(), yaml.replace(quoted, replacement).replace(plain, replacement));
+		assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO().read(file));
 	}
 
 	@Test

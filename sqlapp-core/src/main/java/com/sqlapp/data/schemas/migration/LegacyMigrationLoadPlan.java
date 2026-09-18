@@ -77,14 +77,26 @@ public class LegacyMigrationLoadPlan {
 		DIALECT, HOLD, REOPEN
 	}
 
+	public enum CommitUnit {
+		ROOT_BATCH
+	}
+
+	public enum StagingDeleteTiming {
+		BEFORE_COMMIT
+	}
+
+	public enum RestartUnit {
+		ROOT
+	}
+
 	@Getter
 	@Setter
 	public static class TransactionPolicy {
 		private boolean autoCommit = false;
-		private String commitUnit = "ROOT_BATCH";
-		private String stagingDeleteTiming = "BEFORE_COMMIT";
+		private CommitUnit commitUnit = CommitUnit.ROOT_BATCH;
+		private StagingDeleteTiming stagingDeleteTiming = StagingDeleteTiming.BEFORE_COMMIT;
 		private boolean targetAndStagingDeleteAtomic = true;
-		private String restartUnit = "ROOT";
+		private RestartUnit restartUnit = RestartUnit.ROOT;
 	}
 
 	@Getter
