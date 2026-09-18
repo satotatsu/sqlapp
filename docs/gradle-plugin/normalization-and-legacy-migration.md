@@ -173,6 +173,12 @@ Contract and load-plan field `action` values likewise use the shared
 Repeated-column extraction uses the typed `occurrenceSourceMode` value
 `NUMBERED_COLUMNS`, which is serialized by that stable name and also rejects
 unknown names during contract loading.
+Occurrence lineage is validated as one unit: the mapping must contain exactly
+one `GENERATE` column with the `OCCURRENCE_NUMBER` conversion, the occurrence
+configuration must name that same staging and target column and declare a
+positive maximum, and every numbered source-column index must be within that
+maximum. The same rules apply when a generated contract is read, so incomplete
+or contradictory occurrence metadata is rejected before extraction or loading.
 The contract CSV `recordSeparator` is also typed and accepts only `CRLF` or
 `LF`; the Gradle and command properties remain strings at their configuration
 boundary and are converted before the contract is written.

@@ -200,6 +200,16 @@ class LegacyMigrationMappingTest {
 		source.setIndex(2);
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
 		source.setIndex(1);
+		occurrenceDetails.put("column", "OTHER_ROW_NO");
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		occurrenceDetails.put("column", "ROW_NO");
+		ColumnMapping duplicateOccurrence = new ColumnMapping();
+		duplicateOccurrence.setTarget("OTHER_ROW_NO");
+		duplicateOccurrence.setAction(ColumnAction.GENERATE);
+		duplicateOccurrence.getConversion().put("type", "OCCURRENCE_NUMBER");
+		table.getColumns().add(duplicateOccurrence);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getColumns().remove(duplicateOccurrence);
 		table.getDetails().clear();
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
 	}

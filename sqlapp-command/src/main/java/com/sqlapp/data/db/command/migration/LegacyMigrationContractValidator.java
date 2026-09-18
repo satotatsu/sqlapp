@@ -232,12 +232,19 @@ public class LegacyMigrationContractValidator {
 		}
 		Field occurrence = occurrenceFields.getFirst();
 		if (!occurrence.isExtracted() || !occurrence.isGenerated()
-				|| !equalsName(dataSet.getOccurrenceColumn(), occurrence.getStagingColumn())) {
+				|| !equalsName(dataSet.getOccurrenceColumn(), occurrence.getStagingColumn())
+				|| !equalsName(dataSet.getOccurrenceColumn(), occurrence.getTargetColumn())) {
 			throw new CommandException("Data set occurrence field is invalid: " + dataSet.getId());
 		}
 		if ((dataSet
 				.getOccurrenceSourceMode() == LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS) != hasIndexedSources) {
 			throw new CommandException("Data set occurrence source mode is inconsistent: " + dataSet.getId());
+		}
+		for (Field field : dataSet.getFields()) {
+			if (field.getIndexedSources().stream()
+					.anyMatch(source -> source.getIndex() > dataSet.getMaximumOccurrences())) {
+				throw new CommandException("Indexed source exceeds occurrence maximum: " + dataSet.getId());
+			}
 		}
 	}
 

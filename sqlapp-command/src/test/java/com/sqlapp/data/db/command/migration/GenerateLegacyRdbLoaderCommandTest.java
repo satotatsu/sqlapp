@@ -179,6 +179,25 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validate(invalidOccurrence)).getMessage()
 				.contains("occurrence configuration is invalid"));
+
+		var inconsistentOccurrenceTarget = contract();
+		inconsistentOccurrenceTarget.getDataSets().getLast().getFields().stream()
+				.filter(Field::isOccurrenceIndex).findFirst().orElseThrow().setTargetColumn("OTHER_NO");
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(inconsistentOccurrenceTarget)).getMessage()
+				.contains("occurrence field is invalid"));
+
+		var excessiveIndexedSource = contract();
+		DataSet repeatedDataSet = excessiveIndexedSource.getDataSets().getLast();
+		repeatedDataSet.setOccurrenceSourceMode(LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS);
+		var indexed = new LegacyMigrationContract.IndexedSource();
+		indexed.setIndex(repeatedDataSet.getMaximumOccurrences() + 1);
+		indexed.setSourceColumn("EMP_ID_51");
+		indexed.setSourcePath("COMPANY_MASTER.EMPLOYEE_LIST.EMP_ID_51");
+		repeatedDataSet.getFields().get(1).getIndexedSources().add(indexed);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(excessiveIndexedSource)).getMessage()
+				.contains("exceeds occurrence maximum"));
 	}
 
 	@Test
@@ -237,6 +256,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validate(invalidDepth)).getMessage()
 				.contains("hierarchy is inconsistent"));
+
 	}
 
 	@Test
