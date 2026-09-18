@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.virtica;
 
-
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;

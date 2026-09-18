@@ -25,8 +25,7 @@ class VirticaTableReaderTest {
 	}
 
 	private void assertIndexReader(int major, int minor, int revision) {
-		var dialect = DialectResolver.getInstance().getDialect(
-				"Vertica", major, minor, revision);
+		var dialect = DialectResolver.getInstance().getDialect("Vertica", major, minor, revision);
 		var tableReader = new VirticaTableReader(dialect);
 		assertInstanceOf(VirticaIndexReader.class, tableReader.newIndexReader());
 	}

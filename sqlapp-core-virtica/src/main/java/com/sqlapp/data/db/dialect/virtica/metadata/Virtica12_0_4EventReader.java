@@ -21,7 +21,9 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-/** Reads scheduled stored-procedure triggers, available since Vertica 12.0.4. */
+/**
+ * Reads scheduled stored-procedure triggers, available since Vertica 12.0.4.
+ */
 public class Virtica12_0_4EventReader extends EventReader {
 
 	protected Virtica12_0_4EventReader(Dialect dialect) {
@@ -46,10 +48,9 @@ public class Virtica12_0_4EventReader extends EventReader {
 		Event event = new Event(getString(rs, "TRIGGER_NAME"));
 		event.setSchemaName(getString(rs, SCHEMA_NAME));
 		event.setDefiner(getString(rs, "OWNER"));
-		event.setEnable(rs.getBoolean("TRIGGER_ENABLED")
-				&& rs.getBoolean("SCHEDULE_ENABLED"));
-		event.setEventType("CRON".equalsIgnoreCase(getString(rs, "DATE_TIME_TYPE"))
-				? EventType.Recurring : EventType.OneTime);
+		event.setEnable(rs.getBoolean("TRIGGER_ENABLED") && rs.getBoolean("SCHEDULE_ENABLED"));
+		event.setEventType(
+				"CRON".equalsIgnoreCase(getString(rs, "DATE_TIME_TYPE")) ? EventType.Recurring : EventType.OneTime);
 		setSpecifics(rs, "PROCEDURE_NAME", event);
 		setSpecifics(rs, "PROCEDURE_ARGS", event);
 		setSpecifics(rs, "SCHEDULE_NAME", event);

@@ -12,14 +12,11 @@ import com.sqlapp.data.schemas.Domain;
 /**
  * Drops an H2 domain idempotently.
  */
-public class H2DropDomainFactory
-		extends AbstractDropNamedObjectFactory<Domain, H2SqlBuilder> {
+public class H2DropDomainFactory extends AbstractDropNamedObjectFactory<Domain, H2SqlBuilder> {
 
 	@Override
-	protected void addDropObject(final Domain obj,
-			final H2SqlBuilder builder) {
-		builder.drop().domain()
-				.ifExists(this.getOptions().isDropIfExists())
-				.name(obj, this.getOptions().isDecorateSchemaName());
+	protected void addDropObject(final Domain obj, final H2SqlBuilder builder) {
+		builder.drop().domain().ifExists(this.getOptions().isDropIfExists()).name(obj,
+				this.getOptions().isDecorateSchemaName());
 	}
 }

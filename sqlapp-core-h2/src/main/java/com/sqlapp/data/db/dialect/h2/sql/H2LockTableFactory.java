@@ -24,5 +24,4 @@ import com.sqlapp.data.db.sql.AbstractSelectTableForUpdateFactory;
 
 public class H2LockTableFactory extends AbstractSelectTableForUpdateFactory<H2SqlBuilder> {
 
-
 }

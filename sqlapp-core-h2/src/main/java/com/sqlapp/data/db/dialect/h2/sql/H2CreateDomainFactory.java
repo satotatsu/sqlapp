@@ -13,18 +13,13 @@ import com.sqlapp.util.CommonUtils;
 /**
  * Creates an H2 domain.
  */
-public class H2CreateDomainFactory
-		extends AbstractCreateDomainFactory<H2SqlBuilder> {
+public class H2CreateDomainFactory extends AbstractCreateDomainFactory<H2SqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Domain obj,
-			final H2SqlBuilder builder) {
-		builder.create().domain()
-				.ifNotExists(this.getOptions().isCreateIfNotExists())
-				.name(obj, this.getOptions().isDecorateSchemaName())
-				.as().space()
-				.typeDefinition(obj.getDataType(), obj.getDataTypeName(),
-						obj.getLength(), obj.getScale());
+	protected void addCreateObject(final Domain obj, final H2SqlBuilder builder) {
+		builder.create().domain().ifNotExists(this.getOptions().isCreateIfNotExists())
+				.name(obj, this.getOptions().isDecorateSchemaName()).as().space()
+				.typeDefinition(obj.getDataType(), obj.getDataTypeName(), obj.getLength(), obj.getScale());
 		if (!CommonUtils.isEmpty(obj.getDefaultValue())) {
 			builder.default_().space()._add(obj.getDefaultValue());
 		}
@@ -32,8 +27,7 @@ public class H2CreateDomainFactory
 			builder.on().update().space()._add(obj.getOnUpdate());
 		}
 		if (!CommonUtils.isEmpty(obj.getCheck())) {
-			builder.check().space()._add('(')
-					._add(obj.getCheck())._add(')');
+			builder.check().space()._add('(')._add(obj.getCheck())._add(')');
 		}
 	}
 }

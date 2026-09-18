@@ -42,8 +42,7 @@ public class Db2RoleMemberReader extends RoleMemberReader {
 	}
 
 	@Override
-	protected List<RoleMember> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<RoleMember> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<RoleMember> result = list();

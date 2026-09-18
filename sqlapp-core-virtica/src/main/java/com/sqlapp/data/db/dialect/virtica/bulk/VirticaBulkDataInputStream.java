@@ -26,11 +26,9 @@ public class VirticaBulkDataInputStream extends InputStream {
 	private long rowCount;
 	private boolean closed;
 
-	public VirticaBulkDataInputStream(final Table table,
-			final BulkOption options) {
+	public VirticaBulkDataInputStream(final Table table, final BulkOption options) {
 		java.util.Objects.requireNonNull(table, "table");
-		final BulkOption effective = options == null ? BulkOption.defaults()
-				: options;
+		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		for (final Column column : table.getColumns()) {
 			if (column.isHidden() || !CommonUtils.isEmpty(column.getFormula())
 					|| (column.isIdentity() && !effective.isKeepIdentity())) {
@@ -39,8 +37,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 			columns.add(column);
 		}
 		if (columns.isEmpty()) {
-			throw new IllegalArgumentException(
-					"No writable Vertica COPY columns: " + table.getName());
+			throw new IllegalArgumentException("No writable Vertica COPY columns: " + table.getName());
 		}
 		rows = table.getRows().iterator();
 	}
@@ -60,8 +57,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 	}
 
 	@Override
-	public int read(final byte[] buffer, final int offset, final int length)
-			throws IOException {
+	public int read(final byte[] buffer, final int offset, final int length) throws IOException {
 		java.util.Objects.checkFromIndexSize(offset, length, buffer.length);
 		if (closed) {
 			throw new IOException("Stream is closed");
@@ -79,8 +75,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 				position = 0;
 				rowCount++;
 			}
-			final int count = Math.min(length - written,
-					current.length - position);
+			final int count = Math.min(length - written, current.length - position);
 			System.arraycopy(current, position, buffer, offset + written, count);
 			position += count;
 			written += count;
@@ -98,8 +93,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 			if (value == null) {
 				builder.append(NULL_MARKER);
 			} else {
-				final String text = value instanceof byte[] bytes
-						? java.util.HexFormat.of().formatHex(bytes)
+				final String text = value instanceof byte[] bytes ? java.util.HexFormat.of().formatHex(bytes)
 						: value.toString();
 				appendEscaped(builder, text);
 			}
@@ -110,8 +104,7 @@ public class VirticaBulkDataInputStream extends InputStream {
 	private void appendEscaped(final StringBuilder builder, final String text) {
 		for (int i = 0; i < text.length(); i++) {
 			final char character = text.charAt(i);
-			if (character == '\\' || character == DELIMITER
-					|| character == RECORD_TERMINATOR
+			if (character == '\\' || character == DELIMITER || character == RECORD_TERMINATOR
 					|| character == NULL_MARKER) {
 				builder.append('\\');
 			}

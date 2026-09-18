@@ -57,8 +57,8 @@ public class PhoenixDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
-			if (majorVersion > 5 || (majorVersion == 5 && (minorVersion > 3
-					|| (minorVersion == 3 && revision != null && revision >= 1)))) {
+			if (majorVersion > 5 || (majorVersion == 5
+					&& (minorVersion > 3 || (minorVersion == 3 && revision != null && revision >= 1)))) {
 				return DialectHolder.defaultDialect5_3_1;
 			}
 			return DialectHolder.defaultDialect;

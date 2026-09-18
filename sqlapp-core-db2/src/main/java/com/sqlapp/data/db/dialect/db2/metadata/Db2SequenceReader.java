@@ -50,8 +50,7 @@ public class Db2SequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Sequence> result = list();

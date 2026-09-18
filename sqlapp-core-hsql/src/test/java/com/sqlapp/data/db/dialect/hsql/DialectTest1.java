@@ -31,24 +31,23 @@ import com.sqlapp.data.schemas.Column;
 
 public class DialectTest1 {
 
-	Dialect dialect = DialectResolver.getInstance().getDialect("hsql",
-			2, 1);
-	
+	Dialect dialect = DialectResolver.getInstance().getDialect("hsql", 2, 1);
+
 	@Test
 	public void testNvarchar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDataType(DataType.NVARCHAR);
 		column.setLength(255);
-		DbDataType<?> dbDataType=dialect.getDbDataType(column);
+		DbDataType<?> dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.VARCHAR, dbDataType.getDataType());
 	}
 
 	@Test
 	public void testNchar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDataType(DataType.NCHAR);
 		column.setLength(255);
-		DbDataType<?> dbDataType=dialect.getDbDataType(column);
+		DbDataType<?> dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.CHAR, dbDataType.getDataType());
 	}
 

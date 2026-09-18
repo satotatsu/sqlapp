@@ -11,7 +11,6 @@ import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 class FirebirdBulkInsertProviderTest {
 	@Test
 	void resolvesProvider() {
-		assertInstanceOf(FirebirdBulkInsertExecutor.class,
-				BulkInsertResolver.resolve(DialectHolder.defaultDialect50));
+		assertInstanceOf(FirebirdBulkInsertExecutor.class, BulkInsertResolver.resolve(DialectHolder.defaultDialect50));
 	}
 }

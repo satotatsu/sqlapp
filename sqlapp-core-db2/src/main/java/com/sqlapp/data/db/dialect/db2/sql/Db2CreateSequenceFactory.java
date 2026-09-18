@@ -23,12 +23,11 @@ import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class Db2CreateSequenceFactory extends
-		AbstractCreateSequenceFactory<Db2SqlBuilder> {
+public class Db2CreateSequenceFactory extends AbstractCreateSequenceFactory<Db2SqlBuilder> {
 
 	@Override
-	protected void addCreateSequence(final Sequence obj, Db2SqlBuilder builder){
+	protected void addCreateSequence(final Sequence obj, Db2SqlBuilder builder) {
 		builder.create().or().replace().sequence();
 	}
-	
+
 }

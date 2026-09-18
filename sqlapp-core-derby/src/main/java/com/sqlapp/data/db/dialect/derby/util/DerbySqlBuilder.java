@@ -39,19 +39,20 @@ public class DerbySqlBuilder extends AbstractSqlBuilder<DerbySqlBuilder> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.util.AbstractSqlBuilder#count()
 	 */
 	@Override
-	public DerbySqlBuilder count(){
+	public DerbySqlBuilder count() {
 		appendElement("COUNT_BIG");
 		return instance();
 	}
-	
-	
+
 	@Override
-	public DerbySqlBuilder clone(){
-		return (DerbySqlBuilder)super.clone();
+	public DerbySqlBuilder clone() {
+		return (DerbySqlBuilder) super.clone();
 	}
 
 }

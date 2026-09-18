@@ -31,28 +31,24 @@ public class SpannerSequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Sequence> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final SqlNode node = getSqlNode(productVersionInfo);
 		final List<Sequence> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(final ExResultSet rs)
-					throws SQLException {
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 				result.add(createSequence(rs));
 			}
 		});
 		return result;
 	}
 
-	protected SqlNode getSqlNode(
-			final ProductVersionInfo productVersionInfo) {
+	protected SqlNode getSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("sequences.sql");
 	}
 
-	protected Sequence createSequence(final ExResultSet rs)
-			throws SQLException {
+	protected Sequence createSequence(final ExResultSet rs) throws SQLException {
 		final Sequence sequence = new Sequence(getString(rs, "NAME"));
 		sequence.setDialect(getDialect());
 		sequence.setCatalogName(getString(rs, "CATALOG"));
@@ -65,14 +61,10 @@ public class SpannerSequenceReader extends SequenceReader {
 		final Long skipMin = getLong(rs, "SKIP_RANGE_MIN");
 		final Long skipMax = getLong(rs, "SKIP_RANGE_MAX");
 		if (skipMin != null) {
-			sequence.getSpecifics().put(
-					SpannerCreateSequenceFactory.SKIP_RANGE_MIN,
-					skipMin);
+			sequence.getSpecifics().put(SpannerCreateSequenceFactory.SKIP_RANGE_MIN, skipMin);
 		}
 		if (skipMax != null) {
-			sequence.getSpecifics().put(
-					SpannerCreateSequenceFactory.SKIP_RANGE_MAX,
-					skipMax);
+			sequence.getSpecifics().put(SpannerCreateSequenceFactory.SKIP_RANGE_MAX, skipMax);
 		}
 		return sequence;
 	}

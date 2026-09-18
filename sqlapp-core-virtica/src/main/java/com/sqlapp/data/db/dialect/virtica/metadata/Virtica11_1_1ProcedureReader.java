@@ -27,8 +27,8 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 /** Reads USER_PROCEDURES, available in Vertica 11.1.1 and later. */
 public class Virtica11_1_1ProcedureReader extends ProcedureReader {
 
-	private static final Pattern ARGUMENT_PATTERN = Pattern.compile(
-			"\\s*(?:(INOUT|IN|OUT)\\s+)?(\\S+)\\s+(.+)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern ARGUMENT_PATTERN = Pattern.compile("\\s*(?:(INOUT|IN|OUT)\\s+)?(\\S+)\\s+(.+)",
+			Pattern.CASE_INSENSITIVE);
 
 	protected Virtica11_1_1ProcedureReader(Dialect dialect) {
 		super(dialect);

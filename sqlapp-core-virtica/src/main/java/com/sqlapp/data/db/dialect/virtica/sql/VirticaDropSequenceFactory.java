@@ -12,14 +12,11 @@ import com.sqlapp.data.schemas.Sequence;
 /**
  * Drops a Vertica named sequence idempotently.
  */
-public class VirticaDropSequenceFactory
-		extends AbstractDropSequenceFactory<VirticaSqlBuilder> {
+public class VirticaDropSequenceFactory extends AbstractDropSequenceFactory<VirticaSqlBuilder> {
 
 	@Override
-	protected void addDropObject(final Sequence obj,
-			final VirticaSqlBuilder builder) {
-		builder.drop().sequence().ifExists(
-				this.getOptions().isDropIfExists());
+	protected void addDropObject(final Sequence obj, final VirticaSqlBuilder builder) {
+		builder.drop().sequence().ifExists(this.getOptions().isDropIfExists());
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 }

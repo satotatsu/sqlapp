@@ -30,8 +30,7 @@ public class InformixFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("functions.sql");
 		Map<Integer, RoutineText> routines = new LinkedHashMap<>();
@@ -57,8 +56,7 @@ public class InformixFunctionReader extends FunctionReader {
 		List<Function> result = list();
 		routines.values().forEach(routineText -> {
 			String text = routineText.text.toString();
-			if (getReaderOptions().isReadDefinition()
-					|| getReaderOptions().isReadStatement()) {
+			if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
 				routineText.function.setDefinition(text);
 			}
 			InformixRoutineUtils.setArguments(routineText.function, text);

@@ -105,15 +105,12 @@ public class FirebirdUtils {
 	 * Firebirdのデータ型をTYPEとSUBTYPEから設定する
 	 * 
 	 * @param column
-	 * @param type
-	 *            Firebirdのデータ型を表す整数
-	 * @param subType
-	 *            Firebirdのデータ型の詳細を表す整数
+	 * @param type          Firebirdのデータ型を表す整数
+	 * @param subType       Firebirdのデータ型の詳細を表す整数
 	 * @param length
 	 * @param precision
 	 * @param scale
-	 * @param segmentLength
-	 *            BLOBでSEGMENT_SIZEを指定した場合の値
+	 * @param segmentLength BLOBでSEGMENT_SIZEを指定した場合の値
 	 */
 	public static void setDbType(AbstractColumn<?> column, int type, int subType, int length, int precision, int scale,
 			int segmentLength) {

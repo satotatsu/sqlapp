@@ -15,14 +15,12 @@ import com.sqlapp.util.CommonUtils;
 /**
  * GoogleSQL Cloud Spanner CREATE VIEW.
  */
-public class SpannerCreateViewFactory
-		extends AbstractCreateViewFactory<SpannerSqlBuilder> {
+public class SpannerCreateViewFactory extends AbstractCreateViewFactory<SpannerSqlBuilder> {
 
 	public static final String SECURITY_TYPE = "SECURITY_TYPE";
 
 	@Override
-	protected void addCreateObject(final View view,
-			final SpannerSqlBuilder builder) {
+	protected void addCreateObject(final View view, final SpannerSqlBuilder builder) {
 		if (!isEmpty(view.getDefinition())) {
 			builder._add(view.getDefinition());
 			return;
@@ -31,15 +29,10 @@ public class SpannerCreateViewFactory
 			return;
 		}
 		String securityType = view.getSpecifics().get(SECURITY_TYPE);
-		if (!"DEFINER".equalsIgnoreCase(securityType)
-				&& !"INVOKER".equalsIgnoreCase(securityType)) {
+		if (!"DEFINER".equalsIgnoreCase(securityType) && !"INVOKER".equalsIgnoreCase(securityType)) {
 			securityType = "INVOKER";
 		}
-		builder.create().view().space()
-				.name(view, getOptions().isDecorateSchemaName())
-				.space()._add("SQL SECURITY").space()
-				._add(securityType.toUpperCase())
-				.lineBreak().as().lineBreak()
-				._add(view.getStatement());
+		builder.create().view().space().name(view, getOptions().isDecorateSchemaName()).space()._add("SQL SECURITY")
+				.space()._add(securityType.toUpperCase()).lineBreak().as().lineBreak()._add(view.getStatement());
 	}
 }

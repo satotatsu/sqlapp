@@ -42,8 +42,7 @@ public class VirticaTableSpaceFileReader extends TableSpaceFileReader {
 	}
 
 	protected TableSpaceFile createFile(ExResultSet rs) throws SQLException {
-		TableSpaceFile file = new TableSpaceFile(getString(rs, "LOCATION_ID"),
-				getString(rs, "LOCATION_PATH"));
+		TableSpaceFile file = new TableSpaceFile(getString(rs, "LOCATION_ID"), getString(rs, "LOCATION_PATH"));
 		file.setTableSpaceName(getString(rs, "LOCATION_LABEL"));
 		setSpecifics(rs, "NODE_NAME", file);
 		setSpecifics(rs, "LOCATION_USAGE", file);

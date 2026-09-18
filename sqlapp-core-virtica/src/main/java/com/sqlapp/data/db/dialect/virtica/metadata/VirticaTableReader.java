@@ -56,8 +56,7 @@ public class VirticaTableReader extends TableReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -77,10 +76,10 @@ public class VirticaTableReader extends TableReader {
 		obj.setSchemaName(getString(rs, "TABLE_SCHEMA"));
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		obj.setId(rs.getString("TABLE_ID"));
-		if (rs.getBoolean("IS_TEMP_TABLE")){
+		if (rs.getBoolean("IS_TEMP_TABLE")) {
 			obj.setTableType(TableType.Temporary);
 		}
-		if (rs.getBoolean("IS_FLEXTABLE")){
+		if (rs.getBoolean("IS_FLEXTABLE")) {
 			obj.setTableType(TableType.Flex);
 		}
 		obj.setTableDataStoreType(TableDataStoreType.Column);
@@ -129,8 +128,7 @@ public class VirticaTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

@@ -7,11 +7,13 @@ import com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 
 /** SAP HANA local-table MERGE provider. */
 public class SapHanaBulkUpsertProvider implements BulkUpsertProvider {
-	@Override public boolean supports(final Dialect dialect) {
-		return dialect != null && "SAP HANA".equalsIgnoreCase(dialect.getProductName())
-				&& dialect.supportsMerge();
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect != null && "SAP HANA".equalsIgnoreCase(dialect.getProductName()) && dialect.supportsMerge();
 	}
-	@Override public BulkUpsertExecutor create(final Dialect dialect) {
+
+	@Override
+	public BulkUpsertExecutor create(final Dialect dialect) {
 		return new SapHanaBulkUpsertExecutor(dialect);
 	}
 }

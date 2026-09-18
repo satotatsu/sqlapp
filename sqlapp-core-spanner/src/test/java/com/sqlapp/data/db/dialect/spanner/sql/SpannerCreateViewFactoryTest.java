@@ -20,12 +20,10 @@ class SpannerCreateViewFactoryTest extends SpannerSqlFactoryTest {
 		view.setDialect(dialect);
 		view.setStatement("SELECT ID AS ID FROM USERS WHERE ACTIVE");
 
-		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
 		assertTrue(sql.contains(
-				"CREATE VIEW ACTIVE_USERS SQL SECURITY INVOKER AS "
-						+ "SELECT ID AS ID FROM USERS WHERE ACTIVE"),
-				sql);
+				"CREATE VIEW ACTIVE_USERS SQL SECURITY INVOKER AS " + "SELECT ID AS ID FROM USERS WHERE ACTIVE"), sql);
 	}
 
 	@Test
@@ -33,11 +31,10 @@ class SpannerCreateViewFactoryTest extends SpannerSqlFactoryTest {
 		final View view = new View("ACTIVE_USERS");
 		view.setDialect(dialect);
 		view.setStatement("SELECT ID AS ID FROM USERS");
-		view.getSpecifics().put(
-				SpannerCreateViewFactory.SECURITY_TYPE, "DEFINER");
+		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, "DEFINER");
 
-		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
 		assertTrue(sql.contains("SQL SECURITY DEFINER"), sql);
 	}
 
@@ -46,11 +43,10 @@ class SpannerCreateViewFactoryTest extends SpannerSqlFactoryTest {
 		final View view = new View("ACTIVE_USERS");
 		view.setDialect(dialect);
 		view.setStatement("SELECT ID AS ID FROM USERS");
-		view.getSpecifics().put(
-				SpannerCreateViewFactory.SECURITY_TYPE, "UNSUPPORTED");
+		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, "UNSUPPORTED");
 
-		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
 		assertTrue(sql.contains("SQL SECURITY INVOKER"), sql);
 	}
 
@@ -59,8 +55,7 @@ class SpannerCreateViewFactoryTest extends SpannerSqlFactoryTest {
 		final View view = new View("ACTIVE_USERS");
 		view.setDialect(dialect);
 
-		final String sql = sqlFactoryRegistry.createSql(view, SqlType.DROP)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(view, SqlType.DROP).get(0).getSqlText().replaceAll("\\s+", " ");
 		assertTrue(sql.contains("DROP VIEW IF EXISTS ACTIVE_USERS"), sql);
 	}
 }

@@ -48,8 +48,7 @@ public class DerbyIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
@@ -61,8 +60,7 @@ public class DerbyIndexReader extends IndexReader {
 					return;
 				}
 				Index index = createIndex(connection, rs);
-				map.put(index.getCatalogName(), index.getSchemaName(),
-						index.getName(), index);
+				map.put(index.getCatalogName(), index.getSchemaName(), index.getName(), index);
 			}
 		});
 		return map.toList();
@@ -72,15 +70,14 @@ public class DerbyIndexReader extends IndexReader {
 		return getSqlNodeCache().getString("indexes.sql");
 	}
 
-	protected Index createIndex(final Connection connection, ExResultSet rs)
-			throws SQLException {
+	protected Index createIndex(final Connection connection, ExResultSet rs) throws SQLException {
 		String catalogName = "";
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String name = getString(rs, INDEX_NAME);
 		String columnInfo = getString(rs, "index_info");
 		String tableName = getString(rs, TABLE_NAME);
-		Index index = DerbyUtils.parseIndexDescriptor(connection, getDialect(),
-				schemaName, tableName, name, columnInfo);
+		Index index = DerbyUtils.parseIndexDescriptor(connection, getDialect(), schemaName, tableName, name,
+				columnInfo);
 		index.setCatalogName(catalogName);
 		index.setSchemaName(schemaName);
 		return index;

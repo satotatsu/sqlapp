@@ -30,8 +30,7 @@ public class InformixProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("procedures.sql");
 		Map<Integer, RoutineText> routines = new LinkedHashMap<>();
@@ -57,8 +56,7 @@ public class InformixProcedureReader extends ProcedureReader {
 		List<Procedure> result = list();
 		routines.values().forEach(routineText -> {
 			String text = routineText.text.toString();
-			if (getReaderOptions().isReadDefinition()
-					|| getReaderOptions().isReadStatement()) {
+			if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
 				routineText.procedure.setDefinition(text);
 			}
 			InformixRoutineUtils.setArguments(routineText.procedure, text);

@@ -39,15 +39,12 @@ public class H2MetadataRoundTripTest {
 	public static class MetadataTrigger implements Trigger {
 
 		@Override
-		public void init(final Connection connection,
-				final String schemaName, final String triggerName,
-				final String tableName, final boolean before,
-				final int type) {
+		public void init(final Connection connection, final String schemaName, final String triggerName,
+				final String tableName, final boolean before, final int type) {
 		}
 
 		@Override
-		public void fire(final Connection connection,
-				final Object[] oldRow, final Object[] newRow)
+		public void fire(final Connection connection, final Object[] oldRow, final Object[] newRow)
 				throws SQLException {
 		}
 
@@ -62,16 +59,13 @@ public class H2MetadataRoundTripTest {
 
 	@Test
 	void testDomainTableAndColumnRoundTrip() throws Exception {
-		try (Connection linkedConnection = DriverManager.getConnection(
-				"jdbc:h2:mem:metadata-link-target;DB_CLOSE_DELAY=-1",
-				"sa", "");
-				Statement linkedStatement =
-						linkedConnection.createStatement();
-				Connection connection = DriverManager.getConnection(
-				"jdbc:h2:mem:metadata-round-trip;DB_CLOSE_DELAY=-1");
+		try (Connection linkedConnection = DriverManager
+				.getConnection("jdbc:h2:mem:metadata-link-target;DB_CLOSE_DELAY=-1", "sa", "");
+				Statement linkedStatement = linkedConnection.createStatement();
+				Connection connection = DriverManager
+						.getConnection("jdbc:h2:mem:metadata-round-trip;DB_CLOSE_DELAY=-1");
 				Statement statement = connection.createStatement()) {
-			linkedStatement.execute(
-					"CREATE TABLE REMOTE_TABLE (ID BIGINT PRIMARY KEY)");
+			linkedStatement.execute("CREATE TABLE REMOTE_TABLE (ID BIGINT PRIMARY KEY)");
 			statement.execute("""
 					CREATE LINKED TABLE LINKED_REMOTE
 					('org.h2.Driver',
@@ -82,19 +76,15 @@ public class H2MetadataRoundTripTest {
 					CREATE DOMAIN POSITIVE_AMOUNT AS DECIMAL(18,2)
 					DEFAULT 0 CHECK (VALUE >= 0)
 					""");
-			statement.execute(
-					"COMMENT ON DOMAIN POSITIVE_AMOUNT IS 'Positive amount'");
-			statement.execute(
-					"CREATE CONSTANT APP_VERSION VALUE '1.0'");
+			statement.execute("COMMENT ON DOMAIN POSITIVE_AMOUNT IS 'Positive amount'");
+			statement.execute("CREATE CONSTANT APP_VERSION VALUE '1.0'");
 			statement.execute("""
 					CREATE SEQUENCE ORDER_SEQ START WITH 50
 					INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000
 					CYCLE CACHE 20
 					""");
-			statement.execute(
-					"CREATE TABLE PARENT_TABLE (ID BIGINT PRIMARY KEY)");
-			statement.execute("CREATE TABLE ALWAYS_IDENTITY "
-					+ "(ID BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY)");
+			statement.execute("CREATE TABLE PARENT_TABLE (ID BIGINT PRIMARY KEY)");
+			statement.execute("CREATE TABLE ALWAYS_IDENTITY " + "(ID BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY)");
 			statement.execute("""
 					CREATE TABLE METADATA_ROUND_TRIP
 					(
@@ -130,31 +120,23 @@ public class H2MetadataRoundTripTest {
 					ON METADATA_ROUND_TRIP FOR EACH ROW
 					CALL 'com.sqlapp.data.db.dialect.h2.metadata.H2MetadataRoundTripTest$MetadataTrigger'
 					""");
-			statement.execute(
-					"COMMENT ON TABLE METADATA_ROUND_TRIP IS 'Round trip table'");
-			statement.execute(
-					"COMMENT ON COLUMN METADATA_ROUND_TRIP.NAME IS 'Display name'");
+			statement.execute("COMMENT ON TABLE METADATA_ROUND_TRIP IS 'Round trip table'");
+			statement.execute("COMMENT ON COLUMN METADATA_ROUND_TRIP.NAME IS 'Display name'");
 
-			final var dialect = DialectResolver.getInstance()
-					.getDialect(connection);
-			final var reader = dialect.getCatalogReader()
-					.getSchemaReader();
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var reader = dialect.getCatalogReader().getSchemaReader();
 			reader.setSchemaName("PUBLIC");
-			final Schema schema = CommonUtils.first(
-					reader.getAllFull(connection));
+			final Schema schema = CommonUtils.first(reader.getAllFull(connection));
 
-			final Domain domain = schema.getDomains()
-					.get("POSITIVE_AMOUNT");
+			final Domain domain = schema.getDomains().get("POSITIVE_AMOUNT");
 			assertNotNull(domain);
 			assertEquals("Positive amount", domain.getRemarks());
 			assertEquals("0", domain.getDefaultValue());
-			assertTrue(domain.getCheck().contains("VALUE >= 0"),
-					domain.getCheck());
+			assertTrue(domain.getCheck().contains("VALUE >= 0"), domain.getCheck());
 			assertNotNull(schema.getConstants().get("APP_VERSION"));
 			assertNotNull(schema.getTableLinks().get("LINKED_REMOTE"));
 
-			final Sequence sequence = schema.getSequences()
-					.get("ORDER_SEQ");
+			final Sequence sequence = schema.getSequences().get("ORDER_SEQ");
 			assertNotNull(sequence);
 			assertEquals(50, sequence.getStartValue().intValue());
 			assertEquals(5, sequence.getIncrementBy().intValue());
@@ -163,33 +145,26 @@ public class H2MetadataRoundTripTest {
 			assertEquals(20, sequence.getCacheSize());
 			assertTrue(sequence.isCycle());
 
-			final Table table = schema.getTables()
-					.get("METADATA_ROUND_TRIP");
+			final Table table = schema.getTables().get("METADATA_ROUND_TRIP");
 			assertNotNull(table);
 			assertEquals("Round trip table", table.getRemarks());
 			assertNotNull(table.getIndexes().get("IDX_METADATA_NAME"));
-			assertNotNull(table.getConstraints()
-					.get("UK_METADATA_NAME"));
-			assertNotNull(table.getConstraints()
-					.get("CK_METADATA_NAME"));
-			assertNotNull(table.getConstraints()
-					.get("FK_METADATA_PARENT"));
+			assertNotNull(table.getConstraints().get("UK_METADATA_NAME"));
+			assertNotNull(table.getConstraints().get("CK_METADATA_NAME"));
+			assertNotNull(table.getConstraints().get("FK_METADATA_PARENT"));
 			assertNotNull(schema.getViews().get("METADATA_VIEW"));
-			final var function = schema.getFunctions()
-					.get("DOUBLE_VALUE");
+			final var function = schema.getFunctions().get("DOUBLE_VALUE");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertNotNull(schema.getTriggers().get("METADATA_TRIGGER"));
 
 			final Column id = table.getColumns().get("ID");
 			assertTrue(id.isIdentity());
-			assertEquals(IdentityGenerationType.ByDefault,
-					id.getIdentityGenerationType());
+			assertEquals(IdentityGenerationType.ByDefault, id.getIdentityGenerationType());
 			assertEquals(100L, id.getIdentityStartValue());
 			assertEquals(10L, id.getIdentityStep());
-			assertEquals(IdentityGenerationType.Always, schema.getTables()
-					.get("ALWAYS_IDENTITY").getColumns().get("ID")
-					.getIdentityGenerationType());
+			assertEquals(IdentityGenerationType.Always,
+					schema.getTables().get("ALWAYS_IDENTITY").getColumns().get("ID").getIdentityGenerationType());
 
 			final Column name = table.getColumns().get("NAME");
 			assertTrue(name.isNotNull());
@@ -199,27 +174,18 @@ public class H2MetadataRoundTripTest {
 			final Column amount = table.getColumns().get("AMOUNT");
 			assertNotNull(amount.getDataTypeName());
 
-			final Column generated = table.getColumns()
-					.get("DOUBLE_AMOUNT");
+			final Column generated = table.getColumns().get("DOUBLE_AMOUNT");
 			assertNotNull(generated.getFormula());
-			assertTrue(generated.getFormula().contains("AMOUNT"),
-					generated.getFormula());
+			assertTrue(generated.getFormula().contains("AMOUNT"), generated.getFormula());
 
-			final Column updatedAt = table.getColumns()
-					.get("UPDATED_AT");
+			final Column updatedAt = table.getColumns().get("UPDATED_AT");
 			assertNotNull(updatedAt.getOnUpdate());
-			assertTrue(updatedAt.getOnUpdate()
-					.contains("CURRENT_TIMESTAMP"),
-					updatedAt.getOnUpdate());
+			assertTrue(updatedAt.getOnUpdate().contains("CURRENT_TIMESTAMP"), updatedAt.getOnUpdate());
 
-			final String regenerated = dialect
-					.createSqlFactoryRegistry()
-					.createSql(table, SqlType.CREATE).get(0)
+			final String regenerated = dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE).get(0)
 					.getSqlText();
-			assertTrue(regenerated.contains("METADATA_ROUND_TRIP"),
-					regenerated);
-			assertTrue(regenerated.contains("DOUBLE_AMOUNT"),
-					regenerated);
+			assertTrue(regenerated.contains("METADATA_ROUND_TRIP"), regenerated);
+			assertTrue(regenerated.contains("DOUBLE_AMOUNT"), regenerated);
 		}
 	}
 }

@@ -9,8 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 public class Db2BulkUpsertProvider implements BulkUpsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect != null && "DB2".equalsIgnoreCase(dialect.getProductName())
-				&& dialect.supportsMerge();
+		return dialect != null && "DB2".equalsIgnoreCase(dialect.getProductName()) && dialect.supportsMerge();
 	}
 
 	@Override

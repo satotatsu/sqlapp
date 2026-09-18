@@ -73,8 +73,8 @@ public class DialectResolverTest {
 
 	private void assertTableReader(String className, int major, int minor, int revision) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Firebird", major, minor, revision);
-		assertEquals(className, dialect.getCatalogReader().getSchemaReader()
-				.getTableReader().getClass().getSimpleName());
+		assertEquals(className,
+				dialect.getCatalogReader().getSchemaReader().getTableReader().getClass().getSimpleName());
 	}
 
 	@Test

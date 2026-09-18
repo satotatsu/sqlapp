@@ -16,14 +16,12 @@ class InformixCreateTableFactoryTest {
 	@Test
 	void placesConstraintNameAfterPrimaryKeyDefinition() {
 		final Table table = new Table("CHECKPOINT");
-		final Column id = new Column("ID").setDataType(DataType.VARCHAR)
-				.setLength(255).setNotNull(true);
+		final Column id = new Column("ID").setDataType(DataType.VARCHAR).setLength(255).setNotNull(true);
 		table.getColumns().add(id);
 		table.setPrimaryKey("PK_CHECKPOINT", id);
 
-		final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry()
-				.createSql(table, SqlType.CREATE).get(0).getSqlText()
-				.replaceAll("\\s+", " ").toUpperCase();
+		final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE)
+				.get(0).getSqlText().replaceAll("\\s+", " ").toUpperCase();
 
 		assertTrue(sql.contains("PRIMARY KEY ( ID ) CONSTRAINT PK_CHECKPOINT"), sql);
 		assertFalse(sql.contains("CONSTRAINT PK_CHECKPOINT PRIMARY KEY"), sql);

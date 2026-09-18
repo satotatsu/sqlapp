@@ -27,8 +27,7 @@ public class VirticaRoleMemberReader extends RoleMemberReader {
 	}
 
 	@Override
-	protected List<RoleMember> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<RoleMember> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("roleMembers.sql");
 		List<RoleMember> result = list();

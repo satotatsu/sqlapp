@@ -8,6 +8,13 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 
 /** SAP HANA local-temporary-table SCD2 provider. */
 public class SapHanaSetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(final Dialect dialect) { return dialect instanceof SapHana; }
-	@Override public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) { return new SapHanaSetBasedMigrationSnapshotExecutor(dialect); }
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect instanceof SapHana;
+	}
+
+	@Override
+	public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
+		return new SapHanaSetBasedMigrationSnapshotExecutor(dialect);
+	}
 }

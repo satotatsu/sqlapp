@@ -30,8 +30,7 @@ public class InformixViewReader extends JdbcViewReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("views.sql");
 		List<Table> result = list();
@@ -42,8 +41,7 @@ public class InformixViewReader extends JdbcViewReader {
 				String name = getString(rs, TABLE_NAME);
 				String schemaName = getString(rs, SCHEMA_NAME);
 				Table view = result.isEmpty() ? null : result.get(result.size() - 1);
-				if (view == null || !name.equals(view.getName())
-						|| !schemaName.equals(view.getSchemaName())) {
+				if (view == null || !name.equals(view.getName()) || !schemaName.equals(view.getSchemaName())) {
 					view = createTable(name);
 					view.setCatalogName(getString(rs, CATALOG_NAME));
 					view.setSchemaName(schemaName);
@@ -54,8 +52,7 @@ public class InformixViewReader extends JdbcViewReader {
 			}
 		});
 		definitions.forEach((view, definition) -> {
-			if (getReaderOptions().isReadDefinition()
-					|| getReaderOptions().isReadStatement()) {
+			if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
 				view.setDefinition(definition.toString());
 			}
 		});

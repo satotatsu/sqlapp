@@ -21,12 +21,14 @@ package com.sqlapp.data.db.dialect.h2.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.ISObjectPrivilegeReader;
+
 /**
  * INFORMATION_SCHEMAの権限読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class H2ObjectPrivilegeReader extends ISObjectPrivilegeReader{
+public class H2ObjectPrivilegeReader extends ISObjectPrivilegeReader {
 
 	protected H2ObjectPrivilegeReader(Dialect dialect) {
 		super(dialect);

@@ -43,8 +43,8 @@ class DerbyJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 			assertTrue(parent.getColumns().get("ID").isIdentity());
-			child.getConstraints().addForeignKeyConstraint("MODEL_FK_CHILD_PARENT",
-					child.getColumns().get("PARENT_ID"), parent.getColumns().get("ID"));
+			child.getConstraints().addForeignKeyConstraint("MODEL_FK_CHILD_PARENT", child.getColumns().get("PARENT_ID"),
+					parent.getColumns().get("ID"));
 			schema.getSequences().add(new Sequence("PARENT_SEQ"));
 			parent.getColumns().get("ID").setSequenceName("PARENT_SEQ");
 			schema.getSequences().add(new Sequence("CHILD_SEQ"));
@@ -69,13 +69,12 @@ class DerbyJdbcTreeDataSessionTest {
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, p.txt, c.parent_id, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, p.txt, c.parent_id, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (long i = 1; i <= 6; i++) {
 					assertTrue(resultSet.next());
 					assertEquals(1000L + i, resultSet.getLong(1));

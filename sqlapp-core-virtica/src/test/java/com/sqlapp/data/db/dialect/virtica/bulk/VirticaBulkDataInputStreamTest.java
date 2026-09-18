@@ -20,8 +20,7 @@ class VirticaBulkDataInputStreamTest {
 	@Test
 	void streamsUtf8CsvAndOmitsGeneratedColumns() throws Exception {
 		final Table table = createTable();
-		try (VirticaBulkDataInputStream input = new VirticaBulkDataInputStream(
-				table, BulkOption.defaults())) {
+		try (VirticaBulkDataInputStream input = new VirticaBulkDataInputStream(table, BulkOption.defaults())) {
 			assertEquals(4, input.getColumns().size());
 			assertEquals("name", input.getColumns().get(0).getName());
 			assertEquals("山田,\"太郎\"\nline\u001f\u001d\u001f\u001f00ff\u001e",
@@ -31,33 +30,26 @@ class VirticaBulkDataInputStreamTest {
 	}
 
 	@Test
-	void includesIdentityOnlyWhenRequestedAndResolvesProvider()
-			throws Exception {
+	void includesIdentityOnlyWhenRequestedAndResolvesProvider() throws Exception {
 		final Table table = createTable();
-		try (VirticaBulkDataInputStream omitted = new VirticaBulkDataInputStream(
-				table, BulkOption.defaults());
-				VirticaBulkDataInputStream included = new VirticaBulkDataInputStream(
-						table, BulkOption.builder().keepIdentity(true).build())) {
-			assertFalse(omitted.getColumns().stream()
-					.anyMatch(column -> "id".equals(column.getName())));
-			assertTrue(included.getColumns().stream()
-					.anyMatch(column -> "id".equals(column.getName())));
+		try (VirticaBulkDataInputStream omitted = new VirticaBulkDataInputStream(table, BulkOption.defaults());
+				VirticaBulkDataInputStream included = new VirticaBulkDataInputStream(table,
+						BulkOption.builder().keepIdentity(true).build())) {
+			assertFalse(omitted.getColumns().stream().anyMatch(column -> "id".equals(column.getName())));
+			assertTrue(included.getColumns().stream().anyMatch(column -> "id".equals(column.getName())));
 		}
-		assertTrue(BulkInsertResolver.resolve(DialectHolder.defaultDialect12_0_4)
-				instanceof VirticaBulkInsertExecutor);
+		assertTrue(BulkInsertResolver.resolve(DialectHolder.defaultDialect12_0_4) instanceof VirticaBulkInsertExecutor);
 	}
 
 	private Table createTable() {
 		final Table table = new Table("copy_target");
 		table.setDialect(DialectHolder.defaultDialect12_0_4);
-		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT)
-				.setIdentity(true));
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT).setIdentity(true));
 		table.getColumns().add(new Column("name").setDataType(DataType.NVARCHAR));
 		table.getColumns().add(new Column("nullable_value").setDataType(DataType.NVARCHAR));
 		table.getColumns().add(new Column("empty_value").setDataType(DataType.NVARCHAR));
 		table.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY));
-		table.getColumns().add(new Column("calculated").setDataType(DataType.INT)
-				.setFormula("id + 1"));
+		table.getColumns().add(new Column("calculated").setDataType(DataType.INT).setFormula("id + 1"));
 		table.getRows().add(row -> {
 			row.put("id", 10L);
 			row.put("name", "山田,\"太郎\"\nline");

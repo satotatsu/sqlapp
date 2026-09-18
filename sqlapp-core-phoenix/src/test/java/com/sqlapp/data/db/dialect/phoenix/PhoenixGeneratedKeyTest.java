@@ -33,17 +33,16 @@ class PhoenixGeneratedKeyTest {
 		assertNull(dialect.getSelectDummyTableName());
 		final Sequence sequence = new Sequence("ORDER_SEQ").setIncrementBy(BigInteger.TEN);
 		sequence.setDialect(dialect);
-		final String sequenceSql = dialect.createSqlFactoryRegistry()
-				.createSql(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0).getSqlText().replaceAll("\\s+", " ");
+		final String sequenceSql = dialect.createSqlFactoryRegistry().createSql(sequence, SqlType.SEQUENCE_NEXT_VALUES)
+				.get(0).getSqlText().replaceAll("\\s+", " ");
 		assertTrue(sequenceSql.contains("SELECT NEXT /*context*/1 VALUES FOR ORDER_SEQ"), sequenceSql);
-		assertEquals(List.of(100L, 110L, 120L),
-				dialect.expandSequenceValues(sequence, List.of(100L), 3));
+		assertEquals(List.of(100L, 110L, 120L), dialect.expandSequenceValues(sequence, List.of(100L), 3));
 
 		final Table table = new Table("ORDERS");
 		table.setDialect(dialect);
 		table.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
-		final String insertSql = dialect.createSqlFactoryRegistry()
-				.createSql(table, SqlType.INSERT_ROWS).get(0).getSqlText().replaceAll("\\s+", " ");
+		final String insertSql = dialect.createSqlFactoryRegistry().createSql(table, SqlType.INSERT_ROWS).get(0)
+				.getSqlText().replaceAll("\\s+", " ");
 		assertTrue(insertSql.startsWith("UPSERT INTO ORDERS"), insertSql);
 	}
 

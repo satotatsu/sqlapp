@@ -29,19 +29,19 @@ public abstract class AbstractConveterTest<U> {
 
 	@Test
 	public void testToConvert() {
-		Converter<?> toConverter=createToConverter();
-		Converter<?> fromConverter=createFromConverter();
-		Object obj1=newInstance();
-		Object toObj=toConverter.convertObject(obj1);
+		Converter<?> toConverter = createToConverter();
+		Converter<?> fromConverter = createFromConverter();
+		Object obj1 = newInstance();
+		Object toObj = toConverter.convertObject(obj1);
 		assertFalse(obj1.getClass().equals(toObj.getClass()));
-		Object obj2=fromConverter.convertObject(toObj);
+		Object obj2 = fromConverter.convertObject(toObj);
 		assertEquals(obj1, obj2);
 	}
 
-	protected abstract U newInstance(); 
+	protected abstract U newInstance();
 
-	protected abstract Converter<?> createFromConverter(); 
+	protected abstract Converter<?> createFromConverter();
 
-	protected abstract Converter<?> createToConverter(); 
+	protected abstract Converter<?> createToConverter();
 
 }

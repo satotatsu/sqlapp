@@ -52,8 +52,7 @@ public class VirticaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -71,11 +70,9 @@ public class VirticaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 				String fk_table_name = getString(rs, TABLE_NAME);
 				String fk_columnName = getString(rs, COLUMN_NAME);
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				//String pk_name = getString(rs, "PK_NAME");
-				ForeignKeyConstraint c = tCMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
+				// String pk_name = getString(rs, "PK_NAME");
+				ForeignKeyConstraint c = tCMap.get(fk_table_catalog, fk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog, fk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setCatalogName(fk_table_catalog);
@@ -84,8 +81,7 @@ public class VirticaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 					c.setRemarks(getString(rs, "REMARKS"));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
-					tColMap.put(fk_table_catalog, fk_table_schema, fk_name,
-							colList);
+					tColMap.put(fk_table_catalog, fk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

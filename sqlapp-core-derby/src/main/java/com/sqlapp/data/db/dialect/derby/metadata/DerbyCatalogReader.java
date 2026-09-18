@@ -54,8 +54,7 @@ public class DerbyCatalogReader extends AbstractJdbcCatalogReader {
 	}
 
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		List<Catalog> result = CommonUtils.list();
 		result.add(new Catalog());

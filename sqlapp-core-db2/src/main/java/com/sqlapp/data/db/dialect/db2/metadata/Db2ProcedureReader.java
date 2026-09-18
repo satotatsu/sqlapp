@@ -49,8 +49,7 @@ public class Db2ProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Procedure> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Procedure> result = list();

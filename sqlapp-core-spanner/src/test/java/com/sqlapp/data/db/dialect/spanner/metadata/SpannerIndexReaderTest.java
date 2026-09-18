@@ -17,22 +17,16 @@ class SpannerIndexReaderTest {
 
 	@Test
 	void testProductIndexTypeMapping() {
-		assertEquals(IndexType.BTree,
-				SpannerIndexReader.toIndexType("INDEX"));
-		assertEquals(IndexType.FullText,
-				SpannerIndexReader.toIndexType("SEARCH"));
-		assertEquals(IndexType.Vector,
-				SpannerIndexReader.toIndexType("VECTOR"));
+		assertEquals(IndexType.BTree, SpannerIndexReader.toIndexType("INDEX"));
+		assertEquals(IndexType.FullText, SpannerIndexReader.toIndexType("SEARCH"));
+		assertEquals(IndexType.Vector, SpannerIndexReader.toIndexType("VECTOR"));
 	}
 
 	@Test
 	void testVectorDistanceMapping() {
-		assertEquals(VectorDistanceType.Cosine,
-				SpannerIndexReader.toVectorDistanceType("COSINE"));
-		assertEquals(VectorDistanceType.DotProduct,
-				SpannerIndexReader.toVectorDistanceType("DOT_PRODUCT"));
-		assertEquals(VectorDistanceType.Euclidean,
-				SpannerIndexReader.toVectorDistanceType("EUCLIDEAN"));
+		assertEquals(VectorDistanceType.Cosine, SpannerIndexReader.toVectorDistanceType("COSINE"));
+		assertEquals(VectorDistanceType.DotProduct, SpannerIndexReader.toVectorDistanceType("DOT_PRODUCT"));
+		assertEquals(VectorDistanceType.Euclidean, SpannerIndexReader.toVectorDistanceType("EUCLIDEAN"));
 		assertNull(SpannerIndexReader.toVectorDistanceType(null));
 	}
 }

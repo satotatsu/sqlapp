@@ -49,8 +49,7 @@ public class VirticaUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = CommonUtils.quadKeyMap();
@@ -62,10 +61,8 @@ public class VirticaUniqueConstraintReader extends UniqueConstraintReader {
 				String tableName = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				// String expression=getString(rs, "filter_condition");
-				boolean primary = !"u".equalsIgnoreCase(getString(rs,
-						"constraint_type"));
-				UniqueConstraint c = map.get(catalogName, schemaName, tableName,
-						constraint_name);
+				boolean primary = !"u".equalsIgnoreCase(getString(rs, "constraint_type"));
+				UniqueConstraint c = map.get(catalogName, schemaName, tableName, constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setCatalogName(catalogName);

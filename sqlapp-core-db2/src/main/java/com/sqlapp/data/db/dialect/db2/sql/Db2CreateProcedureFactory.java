@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 
-public class Db2CreateProcedureFactory extends
-		AbstractCreateProcedureFactory<Db2SqlBuilder> {
+public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db2SqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Procedure obj, Db2SqlBuilder builder) {

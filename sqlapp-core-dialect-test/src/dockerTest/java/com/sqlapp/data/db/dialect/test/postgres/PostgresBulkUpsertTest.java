@@ -257,8 +257,8 @@ class PostgresBulkUpsertTest {
 			assertEquals(3, scalar(statement, "SELECT COUNT(*) FROM public.chunk_migration_target"));
 			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName())
 					.load(migrationId).orElseThrow().getProcessedRows());
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointPauseAndResume(connection, table,
-					"code", "name", "SELECT COUNT(*) FROM public.chunk_migration_target", 3);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointPauseAndResume(connection, table, "code", "name",
+					"SELECT COUNT(*) FROM public.chunk_migration_target", 3);
 		}
 	}
 

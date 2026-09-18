@@ -38,28 +38,26 @@ public class InformixTableReader extends JdbcTableReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> tableList) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> tableList) throws SQLException {
 		super.setMetadataDetail(connection, context, tableList);
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setUniqueConstraints(connection, tables);
 		setFragmentation(connection, tables);
 	}
 
-	protected void setUniqueConstraints(final Connection connection,
-			final DoubleKeyMap<String, String, Table> tables) throws SQLException {
+	protected void setUniqueConstraints(final Connection connection, final DoubleKeyMap<String, String, Table> tables)
+			throws SQLException {
 		final ParametersContext context = defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
 		context.put(TABLE_NAME, tables.secondKeySet());
 		final List<UniqueDescriptor> descriptors = new java.util.ArrayList<>();
-		execute(connection, getSqlNodeCache().getString("uniqueConstraints.sql"), context,
-				new ResultSetNextHandler() {
+		execute(connection, getSqlNodeCache().getString("uniqueConstraints.sql"), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 				final Table table = tables.get(rs.getString(2), rs.getString(4));
 				if (table != null) {
-					descriptors.add(new UniqueDescriptor(table, rs.getString(3),
-							rs.getInt(6), rs.getString(7)));
+					descriptors.add(new UniqueDescriptor(table, rs.getString(3), rs.getInt(6), rs.getString(7)));
 				}
 			}
 		});
@@ -68,14 +66,13 @@ public class InformixTableReader extends JdbcTableReader {
 		}
 	}
 
-	private void loadUniqueConstraint(final Connection connection,
-			final UniqueDescriptor descriptor) throws SQLException {
+	private void loadUniqueConstraint(final Connection connection, final UniqueDescriptor descriptor)
+			throws SQLException {
 		if (descriptor.table().getConstraints().get(descriptor.name()) != null) {
 			return;
 		}
 		final Map<Integer, String> columns = new HashMap<>();
-		try (var statement = connection.prepareStatement(
-				"SELECT colno, colname FROM syscolumns WHERE tabid=?")) {
+		try (var statement = connection.prepareStatement("SELECT colno, colname FROM syscolumns WHERE tabid=?")) {
 			statement.setInt(1, descriptor.tableId());
 			try (var resultSet = statement.executeQuery()) {
 				while (resultSet.next()) {
@@ -119,16 +116,14 @@ public class InformixTableReader extends JdbcTableReader {
 	private record UniqueDescriptor(Table table, String name, int tableId, String indexName) {
 	}
 
-	protected void setFragmentation(final Connection connection,
-			final DoubleKeyMap<String, String, Table> tables) {
+	protected void setFragmentation(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
 		final ParametersContext context = defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
 		context.put(TABLE_NAME, tables.secondKeySet());
 		execute(connection, getFragmentsSqlNode(), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-				final Table table = tables.get(getString(rs, SCHEMA_NAME),
-						getString(rs, TABLE_NAME));
+				final Table table = tables.get(getString(rs, SCHEMA_NAME), getString(rs, TABLE_NAME));
 				if (table == null) {
 					return;
 				}
@@ -152,8 +147,7 @@ public class InformixTableReader extends JdbcTableReader {
 		}
 		final Partition partition = new Partition(rs.getString(5));
 		partition.setTableSpaceName(rs.getString(7));
-		partition.getSpecifics().put(INFORMIX_FRAGMENT_EXPRESSION,
-				rs.getString(6));
+		partition.getSpecifics().put(INFORMIX_FRAGMENT_EXPRESSION, rs.getString(6));
 		partitioning.getPartitions().add(partition);
 		return partition;
 	}

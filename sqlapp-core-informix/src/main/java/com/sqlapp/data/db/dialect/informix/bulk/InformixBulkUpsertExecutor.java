@@ -39,25 +39,24 @@ public class InformixBulkUpsertExecutor implements BulkUpsertExecutor {
 		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stageName(option);
 		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
-		try (var scope = BulkUpsertExecutionScope.begin(connection,
-				option.isUseTransaction())) {
+		try (var scope = BulkUpsertExecutionScope.begin(connection, option.isUseTransaction())) {
 			try {
-			try (var statement = connection.createStatement()) {
-				statement.execute("SELECT " + list(staged, null) + " FROM " + target + " WHERE 1 = 0 INTO TEMP "
-						+ quote(stage) + " WITH NO LOG");
-			}
-			scope.addCleanupSql("DROP TABLE " + quote(stage));
-			BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
-					bulkOption(option.getBulkOption()));
-			final long affected;
-			try (var statement = connection.createStatement()) {
-				affected = statement.executeUpdate(mergeSql(target, quote(stage), keys, staged, updates, option));
-			}
-			scope.commit();
-			return affected;
-		} catch (SQLException | RuntimeException e) {
-			scope.rollback(e);
-			throw e;
+				try (var statement = connection.createStatement()) {
+					statement.execute("SELECT " + list(staged, null) + " FROM " + target + " WHERE 1 = 0 INTO TEMP "
+							+ quote(stage) + " WITH NO LOG");
+				}
+				scope.addCleanupSql("DROP TABLE " + quote(stage));
+				BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
+						bulkOption(option.getBulkOption()));
+				final long affected;
+				try (var statement = connection.createStatement()) {
+					affected = statement.executeUpdate(mergeSql(target, quote(stage), keys, staged, updates, option));
+				}
+				scope.commit();
+				return affected;
+			} catch (SQLException | RuntimeException e) {
+				scope.rollback(e);
+				throw e;
 			}
 		}
 	}

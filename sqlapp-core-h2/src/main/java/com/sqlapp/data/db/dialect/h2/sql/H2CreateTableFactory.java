@@ -15,10 +15,8 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class H2CreateTableFactory extends CreateTableFactory {
 
 	@Override
-	protected void addCreateObject(final Table table,
-			final AbstractSqlBuilder<?> builder) {
-		builder.create().table()
-				.ifNotExists(getOptions().isCreateIfNotExists()).space()
-				.name(table, getOptions().isDecorateSchemaName());
+	protected void addCreateObject(final Table table, final AbstractSqlBuilder<?> builder) {
+		builder.create().table().ifNotExists(getOptions().isCreateIfNotExists()).space().name(table,
+				getOptions().isDecorateSchemaName());
 	}
 }

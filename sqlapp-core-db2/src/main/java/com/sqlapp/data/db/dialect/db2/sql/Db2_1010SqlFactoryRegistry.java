@@ -26,7 +26,6 @@ import com.sqlapp.data.schemas.Table;
 
 public class Db2_1010SqlFactoryRegistry extends Db2_980SqlFactoryRegistry {
 
-
 	public Db2_1010SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
@@ -34,13 +33,10 @@ public class Db2_1010SqlFactoryRegistry extends Db2_980SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Mask
-		registerSqlFactory(Mask.class, SqlType.CREATE,
-				Db2_1010CreateMaskFactory.class);
-		registerSqlFactory(Mask.class, SqlType.ALTER,
-				Db2_1010CreateMaskFactory.class);
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				Db2_1010CreateTableFactory.class);
+		// Mask
+		registerSqlFactory(Mask.class, SqlType.CREATE, Db2_1010CreateMaskFactory.class);
+		registerSqlFactory(Mask.class, SqlType.ALTER, Db2_1010CreateMaskFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, Db2_1010CreateTableFactory.class);
 	}
-	
+
 }

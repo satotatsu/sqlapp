@@ -51,8 +51,7 @@ public class SpannerForeignKeyConstraintReader extends ForeignKeyConstraintReade
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -65,18 +64,12 @@ public class SpannerForeignKeyConstraintReader extends ForeignKeyConstraintReade
 				String fk_schema = getString(rs, "constraint_schema");
 				String fk_name = getString(rs, CONSTRAINT_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
-				String referenced_table_catalog = getString(rs,
-						"referenced_table_catalog");
-				String referenced_table_schema = getString(rs,
-						"referenced_table_schema");
-				String referenced_table_name = getString(rs,
-						"referenced_table_name");
-				String referenced_column_name = getString(rs,
-						"referenced_column_name");
-				ForeignKeyConstraint c = tCMap.get(fk_catalog, fk_schema,
-						fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_catalog,
-						fk_schema, fk_name);
+				String referenced_table_catalog = getString(rs, "referenced_table_catalog");
+				String referenced_table_schema = getString(rs, "referenced_table_schema");
+				String referenced_table_name = getString(rs, "referenced_table_name");
+				String referenced_column_name = getString(rs, "referenced_column_name");
+				ForeignKeyConstraint c = tCMap.get(fk_catalog, fk_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(fk_catalog, fk_schema, fk_name);
 				if (c == null) {
 					c = createConstraint(rs);
 					// unique_constraint_name
@@ -103,8 +96,7 @@ public class SpannerForeignKeyConstraintReader extends ForeignKeyConstraintReade
 		return getSqlNodeCache().getString("foreignKeyConstraints.sql");
 	}
 
-	protected ForeignKeyConstraint createConstraint(ExResultSet rs)
-			throws SQLException {
+	protected ForeignKeyConstraint createConstraint(ExResultSet rs) throws SQLException {
 		ForeignKeyConstraint c = new ForeignKeyConstraint();
 		c = new ForeignKeyConstraint(getString(rs, CONSTRAINT_NAME));
 		c.setCatalogName(getString(rs, "constraint_catalog"));

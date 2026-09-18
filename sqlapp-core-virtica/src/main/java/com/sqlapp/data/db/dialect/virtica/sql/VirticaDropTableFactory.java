@@ -15,10 +15,8 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class VirticaDropTableFactory extends DropTableFactory {
 
 	@Override
-	protected void addDropObject(final Table table,
-			final AbstractSqlBuilder<?> builder) {
-		builder.drop().table()
-				.ifExists(getOptions().isDropIfExists()).space()
-				.name(table, getOptions().isDecorateSchemaName());
+	protected void addDropObject(final Table table, final AbstractSqlBuilder<?> builder) {
+		builder.drop().table().ifExists(getOptions().isDropIfExists()).space().name(table,
+				getOptions().isDecorateSchemaName());
 	}
 }

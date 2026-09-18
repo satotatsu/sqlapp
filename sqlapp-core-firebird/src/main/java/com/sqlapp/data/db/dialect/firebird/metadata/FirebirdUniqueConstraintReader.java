@@ -63,8 +63,7 @@ public class FirebirdUniqueConstraintReader extends UniqueConstraintReader {
 				String table_name = trim(getString(rs, TABLE_NAME));
 				String constraint_name = trim(getString(rs, CONSTRAINT_NAME));
 				// String expression=getString(rs, "SEARCH_CONDITION");
-				boolean primary = !"unique".equalsIgnoreCase(
-						trim(getString(rs, "CONSTRAINT_TYPE")));
+				boolean primary = !"unique".equalsIgnoreCase(trim(getString(rs, "CONSTRAINT_TYPE")));
 				UniqueConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, primary);

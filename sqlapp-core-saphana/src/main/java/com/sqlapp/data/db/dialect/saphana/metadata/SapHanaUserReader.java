@@ -47,8 +47,7 @@ public class SapHanaUserReader extends UserReader {
 	}
 
 	@Override
-	protected List<User> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<User> result = list();
@@ -75,8 +74,7 @@ public class SapHanaUserReader extends UserReader {
 		return obj;
 	}
 
-	protected void setDbSpecificInfo(ExResultSet rs, User obj)
-			throws SQLException {
+	protected void setDbSpecificInfo(ExResultSet rs, User obj) throws SQLException {
 	}
 
 	protected void setDbDynamicInfo(ExResultSet rs, User obj) throws SQLException {

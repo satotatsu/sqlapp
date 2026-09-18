@@ -52,8 +52,7 @@ public class SpannerIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
@@ -72,8 +71,7 @@ public class SpannerIndexReader extends IndexReader {
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(rs.getBoolean("is_unique"));
-					index.setIndexType(toIndexType(
-							getString(rs, "index_type")));
+					index.setIndexType(toIndexType(getString(rs, "index_type")));
 					setSpecifics(rs, "is_null_filtered", index);
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
@@ -90,39 +88,29 @@ public class SpannerIndexReader extends IndexReader {
 		return result;
 	}
 
-	private void setIndexOptions(final Connection connection,
-			final ParametersContext context,
-			final ProductVersionInfo productVersionInfo,
-			final TripleKeyMap<String, String, String, Index> map) {
+	private void setIndexOptions(final Connection connection, final ParametersContext context,
+			final ProductVersionInfo productVersionInfo, final TripleKeyMap<String, String, String, Index> map) {
 		final boolean[] supported = new boolean[1];
-		execute(connection, getSqlNodeCache().getString(
-				"indexOptionsAvailability.sql"), context,
+		execute(connection, getSqlNodeCache().getString("indexOptionsAvailability.sql"), context,
 				new ResultSetNextHandler() {
 					@Override
-					public void handleResultSetNext(final ExResultSet rs)
-							throws SQLException {
+					public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 						supported[0] = rs.getLong("option_table_count") > 0;
 					}
 				});
 		if (!supported[0]) {
 			return;
 		}
-		execute(connection, getSqlNodeCache().getString("indexOptions.sql"),
-				context, new ResultSetNextHandler() {
-					@Override
-					public void handleResultSetNext(final ExResultSet rs)
-							throws SQLException {
-						final Index index = map.get(
-								getString(rs, TABLE_CATALOG),
-								getString(rs, TABLE_SCHEMA),
-								getString(rs, INDEX_NAME));
-						if (index != null && "distance_type".equalsIgnoreCase(
-								getString(rs, "option_name"))) {
-							index.setVectorDistanceType(toVectorDistanceType(
-									getString(rs, "option_value")));
-						}
-					}
-				});
+		execute(connection, getSqlNodeCache().getString("indexOptions.sql"), context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final Index index = map.get(getString(rs, TABLE_CATALOG), getString(rs, TABLE_SCHEMA),
+						getString(rs, INDEX_NAME));
+				if (index != null && "distance_type".equalsIgnoreCase(getString(rs, "option_name"))) {
+					index.setVectorDistanceType(toVectorDistanceType(getString(rs, "option_value")));
+				}
+			}
+		});
 	}
 
 	static IndexType toIndexType(final String productIndexType) {
@@ -135,8 +123,7 @@ public class SpannerIndexReader extends IndexReader {
 		return IndexType.BTree;
 	}
 
-	static VectorDistanceType toVectorDistanceType(
-			final String distanceType) {
+	static VectorDistanceType toVectorDistanceType(final String distanceType) {
 		if ("COSINE".equalsIgnoreCase(distanceType)) {
 			return VectorDistanceType.Cosine;
 		}

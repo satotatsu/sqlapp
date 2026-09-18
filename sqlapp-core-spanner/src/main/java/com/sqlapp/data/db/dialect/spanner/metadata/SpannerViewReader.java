@@ -34,8 +34,7 @@ public class SpannerViewReader extends AbstractISViewReader {
 		view.setCatalogName(getString(rs, TABLE_CATALOG));
 		view.setSchemaName(getString(rs, TABLE_SCHEMA));
 		view.setStatement(getString(rs, "view_definition"));
-		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE,
-				getString(rs, "security_type"));
+		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, getString(rs, "security_type"));
 		return view;
 	}
 

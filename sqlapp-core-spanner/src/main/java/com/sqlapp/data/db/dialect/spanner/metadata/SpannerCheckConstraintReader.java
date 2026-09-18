@@ -27,26 +27,22 @@ public class SpannerCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<CheckConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<CheckConstraint> result = list();
-		execute(connection, getSqlNode(productVersionInfo), context,
-				new ResultSetNextHandler() {
-					@Override
-					public void handleResultSetNext(final ExResultSet rs)
-							throws SQLException {
-						final CheckConstraint constraint = new CheckConstraint(
-								getString(rs, CONSTRAINT_NAME),
-								getString(rs, "check_clause"));
-						constraint.setDialect(getDialect());
-						constraint.setCatalogName(getString(rs, TABLE_CATALOG));
-						constraint.setSchemaName(getString(rs, TABLE_SCHEMA));
-						constraint.setTableName(getString(rs, TABLE_NAME));
-						setSpecifics(rs, "spanner_state", constraint);
-						result.add(constraint);
-					}
-				});
+		execute(connection, getSqlNode(productVersionInfo), context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final CheckConstraint constraint = new CheckConstraint(getString(rs, CONSTRAINT_NAME),
+						getString(rs, "check_clause"));
+				constraint.setDialect(getDialect());
+				constraint.setCatalogName(getString(rs, TABLE_CATALOG));
+				constraint.setSchemaName(getString(rs, TABLE_SCHEMA));
+				constraint.setTableName(getString(rs, TABLE_NAME));
+				setSpecifics(rs, "spanner_state", constraint);
+				result.add(constraint);
+			}
+		});
 		return result;
 	}
 

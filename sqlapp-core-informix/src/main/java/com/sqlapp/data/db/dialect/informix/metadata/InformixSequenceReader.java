@@ -27,8 +27,7 @@ public class InformixSequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Sequence> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("sequences.sql");
 		List<Sequence> result = list();

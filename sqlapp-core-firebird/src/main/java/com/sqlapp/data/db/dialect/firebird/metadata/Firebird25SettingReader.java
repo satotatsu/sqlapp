@@ -34,6 +34,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import static com.sqlapp.util.CommonUtils.trim;
+
 /**
  * Firebird SettingReader
  * 
@@ -47,8 +48,7 @@ public class Firebird25SettingReader extends SettingReader {
 	}
 
 	@Override
-	protected List<Setting> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Setting> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Setting> result = list();
@@ -71,6 +71,5 @@ public class Firebird25SettingReader extends SettingReader {
 		obj.setValue(trim(getString(rs, "MON$VARIABLE_VALUE")));
 		return obj;
 	}
-	
-	
+
 }

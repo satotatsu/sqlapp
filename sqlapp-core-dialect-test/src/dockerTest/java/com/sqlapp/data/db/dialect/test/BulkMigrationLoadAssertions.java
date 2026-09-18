@@ -33,18 +33,17 @@ public final class BulkMigrationLoadAssertions {
 	}
 
 	public static void assertChunkedLobAndDuplicateLoad(final Connection connection, final Table table,
-			final String codeColumn, final String textColumn, final String binaryColumn,
-			final String countSql, final String sampleSql) throws SQLException {
-		assertChunkedLobAndDuplicateLoad(connection, table, codeColumn, textColumn, binaryColumn,
-				countSql, sampleSql, BulkMigrationCheckpointMode.DATABASE, null);
+			final String codeColumn, final String textColumn, final String binaryColumn, final String countSql,
+			final String sampleSql) throws SQLException {
+		assertChunkedLobAndDuplicateLoad(connection, table, codeColumn, textColumn, binaryColumn, countSql, sampleSql,
+				BulkMigrationCheckpointMode.DATABASE, null);
 	}
 
 	public static void assertChunkedLobAndDuplicateLoad(final Connection connection, final Table table,
-			final String codeColumn, final String textColumn, final String binaryColumn,
-			final String countSql, final String sampleSql, final Path checkpointDirectory) throws SQLException {
-		assertChunkedLobAndDuplicateLoad(connection, table, codeColumn, textColumn, binaryColumn,
-				countSql, sampleSql, BulkMigrationCheckpointMode.FILE,
-				new FileBulkMigrationCheckpointStore(checkpointDirectory));
+			final String codeColumn, final String textColumn, final String binaryColumn, final String countSql,
+			final String sampleSql, final Path checkpointDirectory) throws SQLException {
+		assertChunkedLobAndDuplicateLoad(connection, table, codeColumn, textColumn, binaryColumn, countSql, sampleSql,
+				BulkMigrationCheckpointMode.FILE, new FileBulkMigrationCheckpointStore(checkpointDirectory));
 	}
 
 	public static Table table(final String schemaName, final String tableName, final String codeColumn,
@@ -63,8 +62,8 @@ public final class BulkMigrationLoadAssertions {
 	}
 
 	private static void assertChunkedLobAndDuplicateLoad(final Connection connection, final Table table,
-			final String codeColumn, final String textColumn, final String binaryColumn,
-			final String countSql, final String sampleSql, final BulkMigrationCheckpointMode checkpointMode,
+			final String codeColumn, final String textColumn, final String binaryColumn, final String countSql,
+			final String sampleSql, final BulkMigrationCheckpointMode checkpointMode,
 			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
 		loadInitialRows(table, codeColumn, textColumn, binaryColumn);
 		final long initialStarted = System.nanoTime();
@@ -75,8 +74,7 @@ public final class BulkMigrationLoadAssertions {
 		assertEquals((ROW_COUNT + CHUNK_SIZE - 1) / CHUNK_SIZE, initial.getCompletedChunks());
 		assertFalse(initial.isAlreadyComplete());
 		assertEquals(ROW_COUNT, scalar(connection, countSql));
-		assertSample(connection, sampleSql, code(ROW_COUNT - 1), initialText(ROW_COUNT - 1),
-				binary(ROW_COUNT - 1, 0));
+		assertSample(connection, sampleSql, code(ROW_COUNT - 1), initialText(ROW_COUNT - 1), binary(ROW_COUNT - 1, 0));
 
 		loadDuplicateRows(table, codeColumn, textColumn, binaryColumn);
 		final long duplicateStarted = System.nanoTime();
@@ -87,9 +85,8 @@ public final class BulkMigrationLoadAssertions {
 		assertEquals(ROW_COUNT, scalar(connection, countSql));
 		assertSample(connection, sampleSql, code(0), duplicateText(0, DUPLICATE_ROUNDS - 1),
 				binary(0, DUPLICATE_ROUNDS - 1));
-		System.out.printf("bulk-load rows=%d chunks=%d initialMs=%d duplicateRows=%d duplicateMs=%d%n",
-				ROW_COUNT, initial.getCompletedChunks(), initialMillis,
-				DUPLICATE_KEYS * DUPLICATE_ROUNDS, duplicateMillis);
+		System.out.printf("bulk-load rows=%d chunks=%d initialMs=%d duplicateRows=%d duplicateMs=%d%n", ROW_COUNT,
+				initial.getCompletedChunks(), initialMillis, DUPLICATE_KEYS * DUPLICATE_ROUNDS, duplicateMillis);
 		table.getRows().clear();
 	}
 
@@ -103,15 +100,14 @@ public final class BulkMigrationLoadAssertions {
 	private static ChunkedBulkMigrationOption options(final String migrationId,
 			final BulkMigrationCheckpointMode checkpointMode) {
 		return ChunkedBulkMigrationOption.builder().migrationId(migrationId).chunkSize(CHUNK_SIZE)
-				.checkpointMode(checkpointMode)
-				.sourceFingerprint("load-source-v1").targetFingerprint("load-target-v1")
+				.checkpointMode(checkpointMode).sourceFingerprint("load-source-v1").targetFingerprint("load-target-v1")
 				.bulkUpsertOption(BulkUpsertOption.builder()
 						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_LAST).build())
 				.build();
 	}
 
-	private static void loadInitialRows(final Table table, final String codeColumn,
-			final String textColumn, final String binaryColumn) {
+	private static void loadInitialRows(final Table table, final String codeColumn, final String textColumn,
+			final String binaryColumn) {
 		table.getRows().clear();
 		for (int i = 0; i < ROW_COUNT; i++) {
 			final int value = i;
@@ -123,8 +119,8 @@ public final class BulkMigrationLoadAssertions {
 		}
 	}
 
-	private static void loadDuplicateRows(final Table table, final String codeColumn,
-			final String textColumn, final String binaryColumn) {
+	private static void loadDuplicateRows(final Table table, final String codeColumn, final String textColumn,
+			final String binaryColumn) {
 		table.getRows().clear();
 		for (int round = 0; round < DUPLICATE_ROUNDS; round++) {
 			for (int i = 0; i < DUPLICATE_KEYS; i++) {

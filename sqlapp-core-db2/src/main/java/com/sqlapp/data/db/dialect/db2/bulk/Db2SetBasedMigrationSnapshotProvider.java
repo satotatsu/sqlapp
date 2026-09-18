@@ -8,8 +8,13 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 
 /** DB2 staging-table SCD2 provider. */
 public class Db2SetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(final Dialect dialect) { return dialect instanceof Db2; }
-	@Override public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect instanceof Db2;
+	}
+
+	@Override
+	public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
 		return new Db2SetBasedMigrationSnapshotExecutor(dialect);
 	}
 }

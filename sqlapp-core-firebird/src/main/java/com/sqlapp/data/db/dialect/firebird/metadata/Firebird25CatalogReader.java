@@ -44,5 +44,5 @@ public class Firebird25CatalogReader extends Firebird20CatalogReader {
 	protected SettingReader newSettingReader() {
 		return new Firebird25SettingReader(this.getDialect());
 	}
-	
+
 }

@@ -12,8 +12,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class InformixCreateUniqueConstraintFactory
 		extends AbstractCreateUniqueConstraintFactory<AbstractSqlBuilder<?>> {
 	@Override
-	public void addObjectDetail(final UniqueConstraint obj, final Table table,
-			final AbstractSqlBuilder<?> builder) {
+	public void addObjectDetail(final UniqueConstraint obj, final Table table, final AbstractSqlBuilder<?> builder) {
 		if (obj.isPrimaryKey()) {
 			builder.primaryKey();
 		} else {

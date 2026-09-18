@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.hsql.sql;
 
-public abstract class AbstractHsql2_3_4SqlFactoryTest extends AbstractHsqlSqlFactoryTest{
+public abstract class AbstractHsql2_3_4SqlFactoryTest extends AbstractHsqlSqlFactoryTest {
 
 	@Override
 	protected int getMinorVersion() {

@@ -27,8 +27,7 @@ public class VirticaSettingReader extends SettingReader {
 	}
 
 	@Override
-	protected List<Setting> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Setting> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("settings.sql");
 		List<Setting> result = list();

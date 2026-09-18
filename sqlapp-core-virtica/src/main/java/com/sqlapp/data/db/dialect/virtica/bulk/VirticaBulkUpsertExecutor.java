@@ -43,18 +43,18 @@ public class VirticaBulkUpsertExecutor implements BulkUpsertExecutor {
 				target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
 		try (var scope = BulkUpsertExecutionScope.begin(c, o.isUseTransaction())) {
 			try {
-			try (var s = c.createStatement()) {
-				s.execute("CREATE LOCAL TEMPORARY TABLE " + stageSql + " ON COMMIT PRESERVE ROWS AS SELECT "
-						+ list(staged, null) + " FROM " + target + " WHERE 1 = 0");
-			}
-			scope.addCleanupSql("DROP TABLE " + stageSql);
-			BulkInsertResolver.resolve(dialect).execute(c, plan.createStagingTable(stage), o.getBulkOption());
-			final long affected = apply(c, target, stageSql, keys, staged, updates, o);
-			scope.commit();
-			return affected;
-		} catch (SQLException | RuntimeException e) {
-			scope.rollback(e);
-			throw e;
+				try (var s = c.createStatement()) {
+					s.execute("CREATE LOCAL TEMPORARY TABLE " + stageSql + " ON COMMIT PRESERVE ROWS AS SELECT "
+							+ list(staged, null) + " FROM " + target + " WHERE 1 = 0");
+				}
+				scope.addCleanupSql("DROP TABLE " + stageSql);
+				BulkInsertResolver.resolve(dialect).execute(c, plan.createStagingTable(stage), o.getBulkOption());
+				final long affected = apply(c, target, stageSql, keys, staged, updates, o);
+				scope.commit();
+				return affected;
+			} catch (SQLException | RuntimeException e) {
+				scope.rollback(e);
+				throw e;
 			}
 		}
 	}

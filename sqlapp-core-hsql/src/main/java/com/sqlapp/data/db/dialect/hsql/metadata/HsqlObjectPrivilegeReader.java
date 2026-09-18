@@ -41,8 +41,7 @@ public class HsqlObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected List<ObjectPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ObjectPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<ObjectPrivilege> result = list();

@@ -28,8 +28,7 @@ public class VirticaCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<CheckConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("checkConstraints.sql");
 		QuadKeyMap<String, String, String, String, CheckConstraint> map = CommonUtils.quadKeyMap();

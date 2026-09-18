@@ -20,10 +20,9 @@ class H2ModernSchemaSqlTest extends AbstractH2SqlFactoryTest {
 	void testCreateTableIfNotExists() {
 		final Table table = new Table("EVENTS");
 		table.setDialect(dialect);
-		table.getColumns().add(
-				new Column("PAYLOAD").setDataType(DataType.JSON));
-		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.JSON));
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
 		assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS EVENTS"), sql);
 		assertTrue(sql.contains("PAYLOAD JSON"), sql);
 	}

@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.spanner.util;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 
-public class SpannerSqlSplitter extends SqlSplitter{
+public class SpannerSqlSplitter extends SqlSplitter {
 
 	public SpannerSqlSplitter(Dialect dialect) {
 		super(dialect);

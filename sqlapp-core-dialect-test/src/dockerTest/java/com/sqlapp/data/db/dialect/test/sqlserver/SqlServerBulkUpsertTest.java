@@ -297,8 +297,8 @@ class SqlServerBulkUpsertTest {
 			}
 			assertEquals(3, new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName())
 					.load(migrationId).orElseThrow().getProcessedRows());
-			BulkMigrationTransactionAssertions.assertDatabaseCheckpointPauseAndResume(connection, table,
-					"CODE", "NAME", "SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET", 3);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointPauseAndResume(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM dbo.SQLAPP_CHUNK_MIGRATION_TARGET", 3);
 		}
 	}
 

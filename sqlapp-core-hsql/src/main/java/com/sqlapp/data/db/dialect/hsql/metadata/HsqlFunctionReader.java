@@ -56,8 +56,7 @@ public class HsqlFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Function> map = new TripleKeyMap<String, String, String, Function>();
@@ -65,8 +64,7 @@ public class HsqlFunctionReader extends FunctionReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Function function = createFunction(rs);
-				map.put(function.getSchemaName(), function.getSchemaName(),
-						function.getSpecificName(), function);
+				map.put(function.getSchemaName(), function.getSchemaName(), function.getSpecificName(), function);
 			}
 		});
 		return map.toList();
@@ -83,12 +81,12 @@ public class HsqlFunctionReader extends FunctionReader {
 		}
 		setReturning(rs, obj);
 		String routine_definition = HsqlUtils.normalizeStatement(obj, getString(rs, "ROUTINE_DEFINITION"));
-		if (this.getReaderOptions().isReadDefinition()){
+		if (this.getReaderOptions().isReadDefinition()) {
 			obj.setDefinition(routine_definition);
 		}
-		if (this.getReaderOptions().isReadStatement()&&"SQL".equals(obj.getLanguage())){
-			Pattern pattern = Pattern.compile("CREATE\\s*(.*)\\s*FUNCTION.*"
-					+ obj.getOnNullCall().getSqlValue() + "\\s*(.*)",
+		if (this.getReaderOptions().isReadStatement() && "SQL".equals(obj.getLanguage())) {
+			Pattern pattern = Pattern.compile(
+					"CREATE\\s*(.*)\\s*FUNCTION.*" + obj.getOnNullCall().getSqlValue() + "\\s*(.*)",
 					Pattern.CASE_INSENSITIVE);
 			Matcher matcher = pattern.matcher(routine_definition);
 			if (matcher.matches()) {
@@ -123,11 +121,11 @@ public class HsqlFunctionReader extends FunctionReader {
 		} else if (!isEmpty(interval_type)) {
 			Long interval_precision = this.getLong(rs, "INTERVAL_PRECISION");
 			String productDataType = data_type + " " + interval_type;
-			this.getDialect().setDbType(productDataType, interval_precision
-					, CommonUtils.coalesce(numeric_scale, datetime_scale), ret);
+			this.getDialect().setDbType(productDataType, interval_precision,
+					CommonUtils.coalesce(numeric_scale, datetime_scale), ret);
 		} else {
-			this.getDialect().setDbType(data_type, max(char_maxlength, numeric_precision)
-					, CommonUtils.coalesce(numeric_scale, datetime_scale), ret);
+			this.getDialect().setDbType(data_type, max(char_maxlength, numeric_precision),
+					CommonUtils.coalesce(numeric_scale, datetime_scale), ret);
 		}
 	}
 

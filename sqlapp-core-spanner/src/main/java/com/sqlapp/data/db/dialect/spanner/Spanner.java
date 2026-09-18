@@ -100,8 +100,7 @@ public class Spanner extends Dialect {
 		});
 		// UUID
 		getDbDataTypes().addUUID("UUID", type -> {
-			type.setLiteral("'", "'")
-					.setDefaultValueLiteral("NEW_UUID()");
+			type.setLiteral("'", "'").setDefaultValueLiteral("NEW_UUID()");
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Date
@@ -125,8 +124,7 @@ public class Spanner extends Dialect {
 		});
 		// NUMERIC
 		getDbDataTypes().addNumeric("NUMERIC", type -> {
-			type.setDefaultPrecision(38).setDefaultScale(9)
-					.setMaxPrecision(38).setMaxScale(9);
+			type.setDefaultPrecision(38).setDefaultScale(9).setMaxPrecision(38).setMaxScale(9);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 	}

@@ -23,8 +23,7 @@ public class InformixIndexReader extends JdbcIndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Index> indexes = super.doGetAll(connection, context, productVersionInfo);
 		try {
@@ -37,8 +36,7 @@ public class InformixIndexReader extends JdbcIndexReader {
 		}
 	}
 
-	private void loadOrdering(final Connection connection, final Index index)
-			throws SQLException {
+	private void loadOrdering(final Connection connection, final Index index) throws SQLException {
 		final StringBuilder sql = new StringBuilder("SELECT ");
 		for (int i = 1; i <= 16; i++) {
 			if (i > 1) {
@@ -46,8 +44,7 @@ public class InformixIndexReader extends JdbcIndexReader {
 			}
 			sql.append("part").append(i);
 		}
-		sql.append(" FROM sysindexes WHERE idxname=? AND tabid IN "
-				+ "(SELECT tabid FROM systables WHERE tabname=?)");
+		sql.append(" FROM sysindexes WHERE idxname=? AND tabid IN " + "(SELECT tabid FROM systables WHERE tabname=?)");
 		try (var statement = connection.prepareStatement(sql.toString())) {
 			statement.setString(1, index.getName());
 			statement.setString(2, index.getTableName());

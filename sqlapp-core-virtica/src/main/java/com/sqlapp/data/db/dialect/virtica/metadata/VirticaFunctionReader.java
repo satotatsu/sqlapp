@@ -53,8 +53,7 @@ public class VirticaFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Function> map = new TripleKeyMap<String, String, String, Function>();
@@ -62,8 +61,7 @@ public class VirticaFunctionReader extends FunctionReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Function function = createFunction(rs);
-				map.put(function.getCatalogName(), function.getSchemaName(),
-						function.getSpecificName(), function);
+				map.put(function.getCatalogName(), function.getSchemaName(), function.getSpecificName(), function);
 			}
 		});
 		return map.toList();
@@ -75,10 +73,10 @@ public class VirticaFunctionReader extends FunctionReader {
 		obj.setDefinition(getString(rs, "FUNCTION_DEFINITION"));
 		obj.setRemarks(getString(rs, "COMMENT"));
 		setReturning(rs, obj);
-		String args=getString(rs, "FUNCTION_ARGUMENT_TYPE");
+		String args = getString(rs, "FUNCTION_ARGUMENT_TYPE");
 		obj.setSpecificName(createSpecificName(obj.getName(), args));
-		for(String split:splitArguments(args)){
-			NamedArgument argument=createNamedArgument(split);
+		for (String split : splitArguments(args)) {
+			NamedArgument argument = createNamedArgument(split);
 			obj.getArguments().add(argument);
 		}
 		this.setSpecifics(rs, "VOLATILITY", obj);
@@ -98,11 +96,10 @@ public class VirticaFunctionReader extends FunctionReader {
 		this.getDialect().setDbType(data_type, null, null, ret);
 	}
 
-	protected NamedArgument createNamedArgument(String parameter)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(String parameter) throws SQLException {
 		NamedArgument obj = new NamedArgument();
-		Matcher matcher=NAMED_ARGUMENT_PATTERN.matcher(parameter);
-		if (matcher.matches()){
+		Matcher matcher = NAMED_ARGUMENT_PATTERN.matcher(parameter);
+		if (matcher.matches()) {
 			obj.setName(matcher.group(1));
 			this.getDialect().setDbType(matcher.group(2), null, null, obj);
 		} else {
@@ -133,8 +130,8 @@ public class VirticaFunctionReader extends FunctionReader {
 		return result;
 	}
 
-	private static final Pattern NAMED_ARGUMENT_PATTERN=Pattern.compile("\\s*(\\S+)\\s+(.+)");
-	
+	private static final Pattern NAMED_ARGUMENT_PATTERN = Pattern.compile("\\s*(\\S+)\\s+(.+)");
+
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("functions.sql");
 	}

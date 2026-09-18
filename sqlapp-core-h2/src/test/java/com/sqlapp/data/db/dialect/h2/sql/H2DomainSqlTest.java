@@ -24,16 +24,14 @@ class H2DomainSqlTest extends AbstractH2SqlFactoryTest {
 		domain.setScale(2);
 		domain.setDefaultValue("0");
 		domain.setCheck("VALUE >= 0");
-		final String createSql = sqlFactoryRegistry
-				.createSql(domain, SqlType.CREATE).get(0).getSqlText()
+		final String createSql = sqlFactoryRegistry.createSql(domain, SqlType.CREATE).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(createSql.contains(
-				"CREATE DOMAIN IF NOT EXISTS POSITIVE_AMOUNT AS DECIMAL(18,2) DEFAULT 0 CHECK (VALUE >= 0)"),
+		assertTrue(
+				createSql.contains(
+						"CREATE DOMAIN IF NOT EXISTS POSITIVE_AMOUNT AS DECIMAL(18,2) DEFAULT 0 CHECK (VALUE >= 0)"),
 				createSql);
-		final String dropSql = sqlFactoryRegistry
-				.createSql(domain, SqlType.DROP).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
-		assertTrue(dropSql.contains(
-				"DROP DOMAIN IF EXISTS POSITIVE_AMOUNT"), dropSql);
+		final String dropSql = sqlFactoryRegistry.createSql(domain, SqlType.DROP).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(dropSql.contains("DROP DOMAIN IF EXISTS POSITIVE_AMOUNT"), dropSql);
 	}
 }

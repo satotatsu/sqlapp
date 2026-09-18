@@ -26,16 +26,13 @@ public class VirticaBulkInsertExecutor implements BulkInsertExecutor {
 	}
 
 	@Override
-	public long execute(final Connection connection, final Table table,
-			final BulkOption options) throws SQLException {
+	public long execute(final Connection connection, final Table table, final BulkOption options) throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		validateOptions(options);
-		try (VirticaBulkDataInputStream input =
-				new VirticaBulkDataInputStream(table, options)) {
+		try (VirticaBulkDataInputStream input = new VirticaBulkDataInputStream(table, options)) {
 			final StringBuilder sql = new StringBuilder("COPY ")
-					.append(dialect.getObjectFullName(table.getSchemaName(),
-							table.getName())).append(" (");
+					.append(dialect.getObjectFullName(table.getSchemaName(), table.getName())).append(" (");
 			for (int i = 0; i < input.getColumns().size(); i++) {
 				if (i > 0) {
 					sql.append(", ");
@@ -44,24 +41,20 @@ public class VirticaBulkInsertExecutor implements BulkInsertExecutor {
 			}
 			// Separate non-printing markers preserve embedded line feeds and also
 			// distinguish NULL from an empty string.
-			sql.append(") FROM STDIN DELIMITER E'\\037' "
-					+ "RECORD TERMINATOR E'\\036' NULL AS E'\\035' "
+			sql.append(") FROM STDIN DELIMITER E'\\037' " + "RECORD TERMINATOR E'\\036' NULL AS E'\\035' "
 					+ "ESCAPE AS E'\\\\'");
-			final VerticaCopyStream stream = new VerticaCopyStream(
-					connection.unwrap(VerticaConnection.class), sql.toString(), input);
+			final VerticaCopyStream stream = new VerticaCopyStream(connection.unwrap(VerticaConnection.class),
+					sql.toString(), input);
 			stream.start();
 			return stream.finish();
 		} catch (IOException e) {
-			throw new SQLException("Failed to stream Vertica COPY rows for "
-					+ table.getName(), e);
+			throw new SQLException("Failed to stream Vertica COPY rows for " + table.getName(), e);
 		}
 	}
 
 	private void validateOptions(final BulkOption options) {
-		if (options != null && (options.getBatchSize() != null
-				|| options.getBulkCopyTimeout() != null
-				|| options.isAllowEncryptedValueModifications()
-				|| options.isFireTriggers() || options.isTableLock()
+		if (options != null && (options.getBatchSize() != null || options.getBulkCopyTimeout() != null
+				|| options.isAllowEncryptedValueModifications() || options.isFireTriggers() || options.isTableLock()
 				|| options.isUseTransaction())) {
 			throw new IllegalArgumentException(
 					"Vertica COPY does not support the requested SQL Server-style bulk options");

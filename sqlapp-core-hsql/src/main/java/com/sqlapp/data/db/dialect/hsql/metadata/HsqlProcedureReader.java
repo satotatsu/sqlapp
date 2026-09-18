@@ -52,8 +52,7 @@ public class HsqlProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Procedure> result = list();
@@ -83,14 +82,12 @@ public class HsqlProcedureReader extends ProcedureReader {
 			}
 		}
 		String routine_definition = HsqlUtils.normalizeStatement(obj, getString(rs, "ROUTINE_DEFINITION"));
-		if (this.getReaderOptions().isReadDefinition()){
+		if (this.getReaderOptions().isReadDefinition()) {
 			obj.setDefinition(routine_definition);
 		}
-		if (this.getReaderOptions().isReadStatement()){
-			Pattern pattern = Pattern.compile("CREATE\\s*PROCEDURE.*"
-					+ obj.getSavepointLevel().getSqlValue()
-					+ "\\s*(DYNAMIC\\s+RESULT\\s+SETS\\s+[0-9]+){0,1}\\s*(.*)",
-					Pattern.CASE_INSENSITIVE);
+		if (this.getReaderOptions().isReadStatement()) {
+			Pattern pattern = Pattern.compile("CREATE\\s*PROCEDURE.*" + obj.getSavepointLevel().getSqlValue()
+					+ "\\s*(DYNAMIC\\s+RESULT\\s+SETS\\s+[0-9]+){0,1}\\s*(.*)", Pattern.CASE_INSENSITIVE);
 			Matcher matcher = pattern.matcher(routine_definition);
 			if (matcher.matches()) {
 				String dynamic = matcher.group(1);
@@ -106,8 +103,7 @@ public class HsqlProcedureReader extends ProcedureReader {
 		return obj;
 	}
 
-	private static final Pattern DYNAMIC_RESULTSET = Pattern
-			.compile("DYNAMIC\\s+RESULT\\s+SETS\\s+([0-9]+)");
+	private static final Pattern DYNAMIC_RESULTSET = Pattern.compile("DYNAMIC\\s+RESULT\\s+SETS\\s+([0-9]+)");
 
 	private Integer getDynamicResultSet(String dynamic) {
 		if (dynamic == null) {
@@ -115,8 +111,7 @@ public class HsqlProcedureReader extends ProcedureReader {
 		}
 		Matcher matcher = DYNAMIC_RESULTSET.matcher(dynamic);
 		if (matcher.matches()) {
-			return Converters.getDefault().convertObject(matcher.group(1),
-					Integer.class);
+			return Converters.getDefault().convertObject(matcher.group(1), Integer.class);
 		}
 		return null;
 	}

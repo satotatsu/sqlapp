@@ -48,8 +48,7 @@ public class HsqlSequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Sequence> result = list();
@@ -80,8 +79,7 @@ public class HsqlSequenceReader extends SequenceReader {
 		sequence.setStartValue(rs.getBigDecimal("START_WITH"));
 		sequence.setLastValue(rs.getBigDecimal("NEXT_VALUE"));
 		sequence.setDataTypeName(getString(rs, "DATA_TYPE"));
-		if (sequence.getDataType() == DataType.DECIMAL
-				|| sequence.getDataType() == DataType.NUMERIC) {
+		if (sequence.getDataType() == DataType.DECIMAL || sequence.getDataType() == DataType.NUMERIC) {
 			sequence.setPrecision(rs.getInt("NUMERIC_PRECISION"));
 		}
 		String cycle = getString(rs, "CYCLE_OPTION");// Y,N

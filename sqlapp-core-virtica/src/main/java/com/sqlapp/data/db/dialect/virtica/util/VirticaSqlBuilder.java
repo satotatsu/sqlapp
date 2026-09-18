@@ -41,16 +41,13 @@ public class VirticaSqlBuilder extends AbstractSqlBuilder<VirticaSqlBuilder> {
 	private static final long serialVersionUID = 1L;
 
 	@Override
-	protected VirticaSqlBuilder autoIncrement(
-			final AbstractColumn<?> column) {
+	protected VirticaSqlBuilder autoIncrement(final AbstractColumn<?> column) {
 		identity();
 		final Long start = column.getIdentityStartValue();
 		final Long step = column.getIdentityStep();
 		final Integer cache = column.getIdentityCacheSize();
 		if (start != null || step != null) {
-			space()._add('(')._add(start != null ? start : 1L)
-					.comma().space()
-					._add(step != null ? step : 1L);
+			space()._add('(')._add(start != null ? start : 1L).comma().space()._add(step != null ? step : 1L);
 			if (cache != null) {
 				comma().space()._add(cache);
 			}
@@ -61,10 +58,9 @@ public class VirticaSqlBuilder extends AbstractSqlBuilder<VirticaSqlBuilder> {
 		return this;
 	}
 
-	
 	@Override
-	public VirticaSqlBuilder clone(){
-		return (VirticaSqlBuilder)super.clone();
+	public VirticaSqlBuilder clone() {
+		return (VirticaSqlBuilder) super.clone();
 	}
-	
+
 }

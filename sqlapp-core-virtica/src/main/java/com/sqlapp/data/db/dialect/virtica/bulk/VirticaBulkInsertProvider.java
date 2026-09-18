@@ -9,8 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertProvider;
 public class VirticaBulkInsertProvider implements BulkInsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect != null
-				&& "Vertica".equalsIgnoreCase(dialect.getProductName());
+		return dialect != null && "Vertica".equalsIgnoreCase(dialect.getProductName());
 	}
 
 	@Override

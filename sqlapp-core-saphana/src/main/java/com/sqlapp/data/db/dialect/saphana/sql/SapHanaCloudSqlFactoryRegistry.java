@@ -12,8 +12,7 @@ import com.sqlapp.data.schemas.Index;
 /**
  * SAP HANA Cloud SQL factory registry.
  */
-public class SapHanaCloudSqlFactoryRegistry
-		extends SapHanaSqlFactoryRegistry {
+public class SapHanaCloudSqlFactoryRegistry extends SapHanaSqlFactoryRegistry {
 
 	public SapHanaCloudSqlFactoryRegistry(final Dialect dialect) {
 		super(dialect);
@@ -22,7 +21,6 @@ public class SapHanaCloudSqlFactoryRegistry
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SapHanaCloudCreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE, SapHanaCloudCreateIndexFactory.class);
 	}
 }

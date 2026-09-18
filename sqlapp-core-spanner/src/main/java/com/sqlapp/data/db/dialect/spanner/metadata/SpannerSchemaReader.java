@@ -73,8 +73,7 @@ public class SpannerSchemaReader extends SchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Schema> result = list();
@@ -87,8 +86,8 @@ public class SpannerSchemaReader extends SchemaReader {
 		});
 		return result;
 	}
-	
-	protected Schema createSchema(ExResultSet rs) throws SQLException{
+
+	protected Schema createSchema(ExResultSet rs) throws SQLException {
 		Schema obj = new Schema(getString(rs, SCHEMA_NAME));
 		return obj;
 	}

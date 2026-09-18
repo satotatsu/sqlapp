@@ -51,8 +51,7 @@ public class VirticaViewReader extends ViewReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -73,14 +72,13 @@ public class VirticaViewReader extends ViewReader {
 		view.setSchemaName(getString(rs, TABLE_SCHEMA));
 		view.setId(getString(rs, "TABLE_ID"));
 		view.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
-		String statement=getString(rs, "VIEW_DEFINITION");
+		String statement = getString(rs, "VIEW_DEFINITION");
 		view.setStatement(statement);
 		view.setRemarks(comment);
 		setSpecifics(rs, "IS_LOCAL_TEMP_VIEW", view);
 		setSpecifics(rs, "INHERIT_PRIVILEGES", view);
 		return view;
 	}
-	
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("views.sql");
@@ -100,8 +98,7 @@ public class VirticaViewReader extends ViewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

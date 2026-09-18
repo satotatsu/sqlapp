@@ -29,8 +29,7 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 
-public class Db2TruncateTableFactory extends
-		AbstractTruncateTableFactory<Db2SqlBuilder> {
+public class Db2TruncateTableFactory extends AbstractTruncateTableFactory<Db2SqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(Table obj) {

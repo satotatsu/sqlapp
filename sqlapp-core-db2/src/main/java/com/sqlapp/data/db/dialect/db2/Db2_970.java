@@ -42,6 +42,7 @@ public class Db2_970 extends Db2_950 {
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param nextVersionDialectSupplier
 	 */
 	public Db2_970(final Supplier<Dialect> nextVersionDialectSupplier) {
@@ -68,7 +69,7 @@ public class Db2_970 extends Db2_950 {
 		}
 		return true;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -83,9 +84,9 @@ public class Db2_970 extends Db2_950 {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Db2_970SqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public Db2SqlBuilder createSqlBuilder(){
+	public Db2SqlBuilder createSqlBuilder() {
 		return super.createSqlBuilder();
 	}
 }

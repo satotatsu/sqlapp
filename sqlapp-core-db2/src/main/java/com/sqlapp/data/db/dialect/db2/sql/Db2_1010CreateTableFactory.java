@@ -29,7 +29,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TemporalPeriod;
 import com.sqlapp.util.CommonUtils;
 
-public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
+public class Db2_1010CreateTableFactory extends Db2CreateTableFactory {
 
 	@Override
 	protected void addCreateObject(final Table table, final Db2SqlBuilder builder) {
@@ -49,8 +49,7 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 		addCompress(table, builder);
 	}
 
-	protected void addCompress(final Table table,
-			final Db2SqlBuilder builder) {
+	protected void addCompress(final Table table, final Db2SqlBuilder builder) {
 		if (table.isCompression()) {
 			builder.compress().yes();
 			if ("VALUE".equalsIgnoreCase(table.getCompressionType())) {
@@ -75,8 +74,7 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
 		super.addOtherDefinitions(table, result);
 		final SystemVersioning versioning = table.getSystemVersioning();
-		if (versioning == null || !versioning.isEnable()
-				|| CommonUtils.isEmpty(versioning.getHistoryTableName())) {
+		if (versioning == null || !versioning.isEnable() || CommonUtils.isEmpty(versioning.getHistoryTableName())) {
 			return;
 		}
 		final Db2SqlBuilder builder = createSqlBuilder();
@@ -88,5 +86,4 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory{
 		add(result, createOperation(builder.toString(), SqlType.ALTER, table));
 	}
 
-	
 }

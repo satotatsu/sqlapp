@@ -12,24 +12,20 @@ import com.sqlapp.data.schemas.Sequence;
 /**
  * Creates a Vertica named sequence.
  */
-public class VirticaCreateSequenceFactory
-		extends AbstractCreateSequenceFactory<VirticaSqlBuilder> {
+public class VirticaCreateSequenceFactory extends AbstractCreateSequenceFactory<VirticaSqlBuilder> {
 
 	@Override
-	protected void addIfNotExists(final Sequence obj,
-			final VirticaSqlBuilder builder) {
+	protected void addIfNotExists(final Sequence obj, final VirticaSqlBuilder builder) {
 		builder.ifNotExists(this.getOptions().isCreateIfNotExists());
 	}
 
 	@Override
-	protected void addDataType(final Sequence obj,
-			final VirticaSqlBuilder builder) {
+	protected void addDataType(final Sequence obj, final VirticaSqlBuilder builder) {
 		// Vertica named sequences do not have an AS data-type clause.
 	}
 
 	@Override
-	protected void addOrder(final Sequence obj,
-			final VirticaSqlBuilder builder) {
+	protected void addOrder(final Sequence obj, final VirticaSqlBuilder builder) {
 		// ORDER/NO ORDER is not part of Vertica CREATE SEQUENCE.
 	}
 }

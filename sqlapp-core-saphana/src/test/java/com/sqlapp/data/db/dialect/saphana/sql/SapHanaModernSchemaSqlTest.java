@@ -5,8 +5,8 @@
  */
 package com.sqlapp.data.db.dialect.saphana.sql;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,21 +29,16 @@ class SapHanaModernSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 	void testBooleanJsonAndRealVector() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
-		table.getColumns().add(
-				new Column("ENABLED").setDataType(DataType.BOOLEAN));
-		table.getColumns().add(
-				new Column("PAYLOAD").setDataType(DataType.JSON));
-		table.getColumns().add(new Column("EMBEDDING")
-				.setDataType(DataType.VECTOR)
-				.setVectorElementDataType(DataType.REAL)
-				.setVectorDimension(768));
+		table.getColumns().add(new Column("ENABLED").setDataType(DataType.BOOLEAN));
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.JSON));
+		table.getColumns().add(new Column("EMBEDDING").setDataType(DataType.VECTOR)
+				.setVectorElementDataType(DataType.REAL).setVectorDimension(768));
 
-		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
 		assertTrue(sql.contains("ENABLED BOOLEAN"), sql);
 		assertTrue(sql.contains("PAYLOAD JSON"), sql);
-		assertTrue(sql.matches(
-				".*EMBEDDING REAL_VECTOR\\(\\s*768\\s*\\).*"), sql);
+		assertTrue(sql.matches(".*EMBEDDING REAL_VECTOR\\(\\s*768\\s*\\).*"), sql);
 
 		final Column metadataColumn = new Column();
 		metadataColumn.setDialect(dialect);
@@ -55,59 +50,42 @@ class SapHanaModernSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 	void testCreateHnswVectorIndex() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
-		final Column embedding = new Column("EMBEDDING")
-				.setDataType(DataType.VECTOR)
-				.setVectorElementDataType(DataType.REAL)
-				.setVectorDimension(768);
+		final Column embedding = new Column("EMBEDDING").setDataType(DataType.VECTOR)
+				.setVectorElementDataType(DataType.REAL).setVectorDimension(768);
 		table.getColumns().add(embedding);
-		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", embedding)
-				.setIndexType(IndexType.Vector)
+		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", embedding).setIndexType(IndexType.Vector)
 				.setVectorDistanceType(VectorDistanceType.Cosine);
-		index.getSpecifics().put(
-				SapHanaCreateIndexFactory.BUILD_CONFIGURATION,
-				"{\"M\":64,\"efConstruction\":128}");
-		index.getSpecifics().put(
-				SapHanaCreateIndexFactory.SEARCH_CONFIGURATION,
-				"{\"efSearch\":64}");
+		index.getSpecifics().put(SapHanaCreateIndexFactory.BUILD_CONFIGURATION, "{\"M\":64,\"efConstruction\":128}");
+		index.getSpecifics().put(SapHanaCreateIndexFactory.SEARCH_CONFIGURATION, "{\"efSearch\":64}");
 		index.getSpecifics().put(SapHanaCreateIndexFactory.ONLINE, true);
 		table.getIndexes().add(index);
 
-		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
-		assertTrue(sql.contains("CREATE HNSW VECTOR INDEX "
-				+ "IDX_DOCUMENTS_EMBEDDING ON DOCUMENTS"), sql);
-		assertTrue(sql.contains("SIMILARITY FUNCTION COSINE_SIMILARITY"),
-				sql);
-		assertTrue(sql.contains("BUILD CONFIGURATION "
-				+ "'{\"M\":64,\"efConstruction\":128}'"), sql);
-		assertTrue(sql.contains("SEARCH CONFIGURATION "
-				+ "'{\"efSearch\":64}' ONLINE"), sql);
+		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(sql.contains("CREATE HNSW VECTOR INDEX " + "IDX_DOCUMENTS_EMBEDDING ON DOCUMENTS"), sql);
+		assertTrue(sql.contains("SIMILARITY FUNCTION COSINE_SIMILARITY"), sql);
+		assertTrue(sql.contains("BUILD CONFIGURATION " + "'{\"M\":64,\"efConstruction\":128}'"), sql);
+		assertTrue(sql.contains("SEARCH CONFIGURATION " + "'{\"efSearch\":64}' ONLINE"), sql);
 	}
 
 	@Test
 	void testCreateCloudFuzzyTextIndex() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
-		final Column content = new Column("CONTENT")
-				.setDataType(DataType.NCLOB);
+		final Column content = new Column("CONTENT").setDataType(DataType.NCLOB);
 		table.getColumns().add(content);
-		final Index index = new Index("IDX_DOCUMENTS_TEXT", content)
-				.setIndexType(IndexType.FullText);
-		index.getSpecifics().put(
-				SapHanaCloudCreateIndexFactory.SEARCH_MODE, "TEXT");
-		index.getSpecifics().put(
-				SapHanaCloudCreateIndexFactory.TOKEN_SEPARATORS,
-				"/,.-");
+		final Index index = new Index("IDX_DOCUMENTS_TEXT", content).setIndexType(IndexType.FullText);
+		index.getSpecifics().put(SapHanaCloudCreateIndexFactory.SEARCH_MODE, "TEXT");
+		index.getSpecifics().put(SapHanaCloudCreateIndexFactory.TOKEN_SEPARATORS, "/,.-");
 		index.getSpecifics().put(SapHanaCreateIndexFactory.ONLINE, true);
-		index.getSpecifics().put(
-				SapHanaCloudCreateIndexFactory.ONLINE_PREFERRED, true);
+		index.getSpecifics().put(SapHanaCloudCreateIndexFactory.ONLINE_PREFERRED, true);
 		table.getIndexes().add(index);
 
-		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE)
-				.get(0).getSqlText().replaceAll("\\s+", " ");
-		assertTrue(sql.contains(
-				"CREATE FUZZY SEARCH INDEX IDX_DOCUMENTS_TEXT "
-						+ "ON DOCUMENTS ( CONTENT) SEARCH MODE TEXT"),
+		final String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(
+				sql.contains(
+						"CREATE FUZZY SEARCH INDEX IDX_DOCUMENTS_TEXT " + "ON DOCUMENTS ( CONTENT) SEARCH MODE TEXT"),
 				sql);
 		assertTrue(sql.contains("TOKEN SEPARATORS '/,.-'"), sql);
 		assertTrue(sql.contains("ONLINE PREFERRED"), sql);

@@ -8,6 +8,13 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 
 /** H2 temporary-table SCD2 provider. */
 public class H2SetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(final Dialect dialect) { return dialect instanceof H2; }
-	@Override public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) { return new H2SetBasedMigrationSnapshotExecutor(dialect); }
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect instanceof H2;
+	}
+
+	@Override
+	public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
+		return new H2SetBasedMigrationSnapshotExecutor(dialect);
+	}
 }

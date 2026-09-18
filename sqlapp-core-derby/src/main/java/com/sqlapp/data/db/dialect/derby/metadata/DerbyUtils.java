@@ -53,11 +53,9 @@ public class DerbyUtils {
 	 * @param tableName
 	 * @param columnIndexes
 	 */
-	protected static List<ReferenceColumn> getKeyColumns(Connection connection,
-			Dialect dialect, String schemaName, String tableName,
-			String[] colIds) {
-		ColumnReader reader = dialect.getCatalogReader().getSchemaReader()
-				.getTableReader().getColumnReader();
+	protected static List<ReferenceColumn> getKeyColumns(Connection connection, Dialect dialect, String schemaName,
+			String tableName, String[] colIds) {
+		ColumnReader reader = dialect.getCatalogReader().getSchemaReader().getTableReader().getColumnReader();
 		reader.setSchemaName(schemaName);
 		reader.setObjectName(tableName);
 		List<Column> columns = reader.getAllFull(connection);
@@ -81,10 +79,8 @@ public class DerbyUtils {
 		return result;
 	}
 
-	private static final Pattern INDEX_INFO_PATTERN = Pattern
-			.compile(
-					"(UNIQUE|UNIQUE WITH DUPLICATE NULLS){0,1}[\\s]*([^\\s]+){0,1}[\\s]*\\((.*)\\)",
-					Pattern.CASE_INSENSITIVE);
+	private static final Pattern INDEX_INFO_PATTERN = Pattern.compile(
+			"(UNIQUE|UNIQUE WITH DUPLICATE NULLS){0,1}[\\s]*([^\\s]+){0,1}[\\s]*\\((.*)\\)", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * Derbyのインデックス定義を解析してインデックスを返します
@@ -96,9 +92,8 @@ public class DerbyUtils {
 	 * @param indexName
 	 * @param definition
 	 */
-	protected static Index parseIndexDescriptor(Connection connection,
-			Dialect dialect, String schemaName, String tableName,
-			String indexName, String definition) {
+	protected static Index parseIndexDescriptor(Connection connection, Dialect dialect, String schemaName,
+			String tableName, String indexName, String definition) {
 		Index index = new Index(indexName);
 		index.setSchemaName(schemaName);
 		index.setTableName(tableName);
@@ -112,8 +107,8 @@ public class DerbyUtils {
 			index.setIndexType(IndexType.parse(val));
 			val = matcher.group(3);
 			String[] colIds = trim(val).split("[\\s]*,[\\s]*");
-			List<ReferenceColumn> columns = getKeyColumns(connection, dialect,
-					index.getSchemaName(), index.getTableName(), colIds);
+			List<ReferenceColumn> columns = getKeyColumns(connection, dialect, index.getSchemaName(),
+					index.getTableName(), colIds);
 			index.getColumns().addAll(columns);
 		}
 		return index;

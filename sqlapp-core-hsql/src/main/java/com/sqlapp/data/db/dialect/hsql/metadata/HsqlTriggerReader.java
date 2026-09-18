@@ -19,15 +19,16 @@
 
 package com.sqlapp.data.db.dialect.hsql.metadata;
 
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.ISTriggerReader;
+
 /**
  * HSQLのトリガー読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class HsqlTriggerReader extends ISTriggerReader{
+public class HsqlTriggerReader extends ISTriggerReader {
 
 	protected HsqlTriggerReader(Dialect dialect) {
 		super(dialect);

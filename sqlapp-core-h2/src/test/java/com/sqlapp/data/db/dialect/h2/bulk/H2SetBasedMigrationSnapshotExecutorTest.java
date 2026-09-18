@@ -20,27 +20,35 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 import com.sqlapp.jdbc.bulk.JdbcStreamingMigrationSnapshotExecutor;
 
 class H2SetBasedMigrationSnapshotExecutorTest {
-	@Test void appliesSetBasedSnapshot() throws Exception {
+	@Test
+	void appliesSetBasedSnapshot() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:h2:mem:scd2")) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE CUSTOMER_HISTORY(ID INT, NAME VARCHAR(20), VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
-				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES(1,'same',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(2,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(3,'removed',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
+				statement.execute(
+						"CREATE TABLE CUSTOMER_HISTORY(ID INT, NAME VARCHAR(20), VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute(
+						"INSERT INTO CUSTOMER_HISTORY VALUES(1,'same',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(2,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(3,'removed',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
 			}
-			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
-			final var result = SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
-					Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1,"same"),row(2,"new"),row(4,"added")), 2);
+			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
+					List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
+			final var result = SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(),
+					definition, Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(1, "same"), row(2, "new"), row(4, "added")), 2);
 			assertEquals(new MigrationSnapshotExecutionResult(2, 2, 1), result);
 		}
 	}
 
-	@Test void jdbcEntryPointSelectsSetBasedProvider() throws Exception {
+	@Test
+	void jdbcEntryPointSelectsSetBasedProvider() throws Exception {
 		final String url = "jdbc:h2:mem:scd2_jdbc_entry;DB_CLOSE_DELAY=-1";
 		try (var source = DriverManager.getConnection(url); var target = DriverManager.getConnection(url)) {
 			try (var statement = source.createStatement()) {
 				statement.execute("CREATE TABLE CUSTOMER(ID INT, NAME VARCHAR(20))");
 				statement.execute("INSERT INTO CUSTOMER VALUES(1,'same'),(2,'new'),(4,'added')");
-				statement.execute("CREATE TABLE CUSTOMER_HISTORY(ID INT, NAME VARCHAR(20), VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
-				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES(1,'same',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(2,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(3,'removed',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
+				statement.execute(
+						"CREATE TABLE CUSTOMER_HISTORY(ID INT, NAME VARCHAR(20), VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute(
+						"INSERT INTO CUSTOMER_HISTORY VALUES(1,'same',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(2,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE),(3,'removed',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
 			}
 			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
 					List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
@@ -50,14 +58,15 @@ class H2SetBasedMigrationSnapshotExecutorTest {
 		}
 	}
 
-	@Test void preservesCallerOwnedTransactionBoundary() throws Exception {
+	@Test
+	void preservesCallerOwnedTransactionBoundary() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:h2:mem:scd2_caller_tx")) {
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE TABLE CALLER_WORK(ID INT)");
 				statement.execute("CREATE TABLE CUSTOMER_HISTORY(ID INT, NAME VARCHAR(20), "
 						+ "VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
-				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES"
-						+ "(1,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
+				statement.execute(
+						"INSERT INTO CUSTOMER_HISTORY VALUES" + "(1,'old',TIMESTAMP '2026-01-01 00:00:00',NULL,TRUE)");
 			}
 			connection.setAutoCommit(false);
 			try (var statement = connection.createStatement()) {
@@ -72,8 +81,8 @@ class H2SetBasedMigrationSnapshotExecutorTest {
 			assertFalse(connection.getAutoCommit());
 			connection.rollback();
 			try (var statement = connection.createStatement();
-					var rs = statement.executeQuery(
-							"SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
+					var rs = statement
+							.executeQuery("SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
 				assertTrue(rs.next());
 				assertEquals("old", rs.getString(1));
 				assertNull(rs.getTimestamp(2));
@@ -87,17 +96,28 @@ class H2SetBasedMigrationSnapshotExecutorTest {
 			}
 		}
 	}
+
 	private static Table table() {
-		final Table t=new Table("CUSTOMER_HISTORY").setSchemaName("PUBLIC");
-		t.getColumns().add(new Column("ID").setDataType(DataType.INT)); t.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
-		t.getColumns().add(new Column("VALID_FROM").setDataType(DataType.TIMESTAMP)); t.getColumns().add(new Column("VALID_TO").setDataType(DataType.TIMESTAMP));
-		t.getColumns().add(new Column("IS_CURRENT").setDataType(DataType.BOOLEAN)); return t;
+		final Table t = new Table("CUSTOMER_HISTORY").setSchemaName("PUBLIC");
+		t.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		t.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
+		t.getColumns().add(new Column("VALID_FROM").setDataType(DataType.TIMESTAMP));
+		t.getColumns().add(new Column("VALID_TO").setDataType(DataType.TIMESTAMP));
+		t.getColumns().add(new Column("IS_CURRENT").setDataType(DataType.BOOLEAN));
+		return t;
 	}
+
 	private static Table sourceTable() {
-		final Table t=new Table("CUSTOMER").setSchemaName("PUBLIC");
+		final Table t = new Table("CUSTOMER").setSchemaName("PUBLIC");
 		t.getColumns().add(new Column("ID").setDataType(DataType.INT));
 		t.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
 		return t;
 	}
-	private static Map<String,Object> row(int id,String name){final Map<String,Object> r=new LinkedHashMap<>();r.put("ID",id);r.put("NAME",name);return r;}
+
+	private static Map<String, Object> row(int id, String name) {
+		final Map<String, Object> r = new LinkedHashMap<>();
+		r.put("ID", id);
+		r.put("NAME", name);
+		return r;
+	}
 }

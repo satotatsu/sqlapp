@@ -25,7 +25,6 @@ import com.sqlapp.data.schemas.Table;
 
 public class Db2_970SqlFactoryRegistry extends Db2_950SqlFactoryRegistry {
 
-
 	public Db2_970SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
@@ -33,7 +32,6 @@ public class Db2_970SqlFactoryRegistry extends Db2_950SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.TRUNCATE,
-				Db2_970TruncateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE, Db2_970TruncateTableFactory.class);
 	}
 }

@@ -36,8 +36,7 @@ class HsqlJdbcTreeDataSessionTest {
 		try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:mem:tree-data-session", "SA", "")) {
 			connection.setAutoCommit(false);
 			createTables(connection);
-			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC", "PARENT_TABLE", "CHILD_TABLE")
-					.orElseThrow();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC", "PARENT_TABLE", "CHILD_TABLE").orElseThrow();
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -60,13 +59,12 @@ class HsqlJdbcTreeDataSessionTest {
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, p.txt, c.parent_id, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, p.txt, c.parent_id, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (long i = 0; i < 5; i++) {
 					assertTrue(resultSet.next());
 					assertEquals(i, resultSet.getLong(1));

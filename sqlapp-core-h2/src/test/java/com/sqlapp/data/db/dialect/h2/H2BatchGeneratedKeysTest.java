@@ -29,8 +29,8 @@ class H2BatchGeneratedKeysTest {
 						txt VARCHAR(30)
 					)
 					""");
-			try (PreparedStatement statement = connection.prepareStatement(
-					"INSERT INTO test_table(txt) VALUES(?)", Statement.RETURN_GENERATED_KEYS)) {
+			try (PreparedStatement statement = connection.prepareStatement("INSERT INTO test_table(txt) VALUES(?)",
+					Statement.RETURN_GENERATED_KEYS)) {
 				for (int i = 0; i < 5; i++) {
 					statement.setString(1, "row-" + i);
 					statement.addBatch();

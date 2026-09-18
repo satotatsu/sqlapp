@@ -13,14 +13,12 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 class InformixBulkInsertProviderTest {
 	@Test
 	void resolvesProvider() {
-		assertInstanceOf(InformixBulkInsertExecutor.class,
-				BulkInsertResolver.resolve(DialectHolder.defaultDialect));
+		assertInstanceOf(InformixBulkInsertExecutor.class, BulkInsertResolver.resolve(DialectHolder.defaultDialect));
 	}
 
 	@Test
 	void resolvesUpsertProvider() {
-		assertInstanceOf(InformixBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
+		assertInstanceOf(InformixBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
 	}
 
 	@Test

@@ -18,7 +18,7 @@ public class FirebirdInsertRowsFactory extends InsertRowsFactory {
 		if (expression == null) {
 			return null;
 		}
-		return "CAST(" + expression + " AS TYPE OF COLUMN " + column.getTable().getName() + "."
-				+ getQuoteName(column) + ")";
+		return "CAST(" + expression + " AS TYPE OF COLUMN " + column.getTable().getName() + "." + getQuoteName(column)
+				+ ")";
 	}
 }

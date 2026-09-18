@@ -35,16 +35,14 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class HsqlProcedureArgumentReader extends
-		RoutineArgumentReader<Procedure> {
+public class HsqlProcedureArgumentReader extends RoutineArgumentReader<Procedure> {
 
 	protected HsqlProcedureArgumentReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -62,8 +60,7 @@ public class HsqlProcedureArgumentReader extends
 		return getSqlNodeCache().getString("procedureArguments.sql");
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		Procedure routine = new Procedure();
 		routine.setDialect(this.getDialect());
 		NamedArgument obj = createObject(this.getString(rs, "PARAMETER_NAME"));

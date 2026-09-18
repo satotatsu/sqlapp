@@ -49,8 +49,7 @@ public class Db2TableSpaceReader extends TableSpaceReader {
 	}
 
 	@Override
-	protected List<TableSpace> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpace> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableSpace> result = list();
@@ -71,9 +70,9 @@ public class Db2TableSpaceReader extends TableSpaceReader {
 	protected TableSpace createTableSpace(ExResultSet rs) throws SQLException {
 		String name = getString(rs, TABLESPACE_NAME);
 		TableSpace tableSpace = new TableSpace(name);
-		String ownerType=this.getString(rs, "OWNERTYPE");
-		if ("U".equalsIgnoreCase(ownerType)){
-			String owner=this.getString(rs, "OWNER");
+		String ownerType = this.getString(rs, "OWNERTYPE");
+		if ("U".equalsIgnoreCase(ownerType)) {
+			String owner = this.getString(rs, "OWNER");
 			tableSpace.setOwnerName(owner);
 		}
 		tableSpace.setRemarks(this.getString(rs, "REMARKS"));

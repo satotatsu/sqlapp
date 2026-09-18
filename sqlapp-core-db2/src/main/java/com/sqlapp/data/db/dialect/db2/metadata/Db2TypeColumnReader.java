@@ -50,8 +50,7 @@ public class Db2TypeColumnReader extends TypeColumnReader {
 	}
 
 	@Override
-	protected List<TypeColumn> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TypeColumn> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<TypeColumn> result = list();

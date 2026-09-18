@@ -18,8 +18,7 @@ import com.sqlapp.data.schemas.Sequence;
 /**
  * Generates multiple values from a Vertica named sequence.
  */
-public class VirticaSequenceNextValuesFactory
-		extends SimpleSqlFactory<Sequence, VirticaSqlBuilder> {
+public class VirticaSequenceNextValuesFactory extends SimpleSqlFactory<Sequence, VirticaSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(final Sequence obj) {

@@ -37,16 +37,14 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SapHanaFunctionArgumentReader extends
-		RoutineArgumentReader<Function> {
+public class SapHanaFunctionArgumentReader extends RoutineArgumentReader<Function> {
 
 	protected SapHanaFunctionArgumentReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -64,8 +62,7 @@ public class SapHanaFunctionArgumentReader extends
 		return getSqlNodeCache().getString("functionArguments.sql");
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		Function routine = new Function(getString(rs, FUNCTION_NAME));
 		routine.setDialect(this.getDialect());
 		routine.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -75,12 +72,10 @@ public class SapHanaFunctionArgumentReader extends
 		String productDataType = getString(rs, "DATA_TYPE_NAME");
 		Long maxLength = getLong(rs, "LENGTH");
 		Integer numericScale = getInteger(rs, "SCALE");
-		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE"))
-				.booleanValue();
+		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE")).booleanValue();
 		obj.setNullable(nullable);
 		getDialect().setDbType(productDataType, maxLength, numericScale, obj);
-		obj.setDirection(ParameterDirection.parse(getString(rs,
-				"PARAMETER_TYPE")));
+		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_TYPE")));
 		return obj;
 	}
 

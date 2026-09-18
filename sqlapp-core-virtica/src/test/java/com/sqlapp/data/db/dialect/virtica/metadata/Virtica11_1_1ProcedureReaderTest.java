@@ -15,8 +15,8 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 
 class Virtica11_1_1ProcedureReaderTest {
 
-	private final Virtica11_1_1ProcedureReader reader =
-			new Virtica11_1_1ProcedureReader(DialectHolder.defaultDialect11_1_1);
+	private final Virtica11_1_1ProcedureReader reader = new Virtica11_1_1ProcedureReader(
+			DialectHolder.defaultDialect11_1_1);
 
 	@Test
 	void parsesDefaultInputArgument() {

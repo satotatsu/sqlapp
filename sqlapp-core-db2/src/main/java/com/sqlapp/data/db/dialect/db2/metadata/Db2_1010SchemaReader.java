@@ -33,10 +33,10 @@ public class Db2_1010SchemaReader extends Db2_980SchemaReader {
 	protected TableReader newTableReader() {
 		return new Db2_1010TableReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected MaskReader newMaskReader() {
 		return new Db2_1010MaskReader(this.getDialect());
 	}
-	
+
 }

@@ -18,6 +18,7 @@
  */
 
 package com.sqlapp.data.db.dialect.hsql.sql;
+
 import com.sqlapp.data.db.dialect.hsql.util.HsqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 
@@ -27,7 +28,6 @@ import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
  * @author 竜夫
  * 
  */
-public class HsqlCreateTableFactory extends
-		AbstractCreateTableFactory<HsqlSqlBuilder> {
+public class HsqlCreateTableFactory extends AbstractCreateTableFactory<HsqlSqlBuilder> {
 
 }

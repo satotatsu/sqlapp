@@ -28,7 +28,7 @@ public class Hsql2LockTableFactory extends AbstractLockTableFactory<HsqlSqlBuild
 
 	@Override
 	protected void addLockMode(Table obj, TableLockMode tableLockMode, HsqlSqlBuilder builder) {
-		builder.$if(tableLockMode!=null, ()->{
+		builder.$if(tableLockMode != null, () -> {
 			builder.lockMode(tableLockMode);
 		});
 	}

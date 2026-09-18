@@ -27,7 +27,7 @@ public class Db2_950SchemaReader extends Db2SchemaReader {
 	protected Db2_950SchemaReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected TableReader newTableReader() {
 		return new Db2_950TableReader(this.getDialect());

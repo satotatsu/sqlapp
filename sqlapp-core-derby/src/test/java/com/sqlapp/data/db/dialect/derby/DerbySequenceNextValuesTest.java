@@ -26,12 +26,13 @@ class DerbySequenceNextValuesTest {
 
 	@Test
 	void testSequenceValuesAreAllocatedInOneQuery() throws Exception {
-		try (Connection connection = DriverManager.getConnection("jdbc:derby:memory:sequence-next-values;create=true")) {
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:derby:memory:sequence-next-values;create=true")) {
 			connection.createStatement().execute("CREATE SEQUENCE seq1 AS BIGINT START WITH 3 INCREMENT BY 4");
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			Sequence sequence = new Sequence("SEQ1");
-			SqlNode node = dialect.createSqlFactoryRegistry()
-					.createSqlNodes(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0);
+			SqlNode node = dialect.createSqlFactoryRegistry().createSqlNodes(sequence, SqlType.SEQUENCE_NEXT_VALUES)
+					.get(0);
 			SqlParameterCollection parameters = node.eval(5);
 			try (PreparedStatement statement = parameters.createStatement(connection)) {
 				parameters.setBind(statement);

@@ -26,19 +26,19 @@ import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcProcedureReader;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.jdbc.ExResultSet;
 
-public class DerbyProcedureReader extends JdbcProcedureReader{
+public class DerbyProcedureReader extends JdbcProcedureReader {
 
 	public DerbyProcedureReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected Procedure createProcedure(ExResultSet rs) throws SQLException{
-		String name=getString(rs, PROCEDURE_NAME);
-		String specificName=getString(rs, SPECIFIC_NAME);
-		String remarks=getString(rs, "REMARKS");
-		int pos=remarks.lastIndexOf('.');
-		Procedure procedure=new Procedure(name, specificName);
+	protected Procedure createProcedure(ExResultSet rs) throws SQLException {
+		String name = getString(rs, PROCEDURE_NAME);
+		String specificName = getString(rs, SPECIFIC_NAME);
+		String remarks = getString(rs, "REMARKS");
+		int pos = remarks.lastIndexOf('.');
+		Procedure procedure = new Procedure(name, specificName);
 		procedure.setCatalogName(getString(rs, "PROCEDURE_CAT"));
 		procedure.setSchemaName(getString(rs, "PROCEDURE_SCHEM"));
 		procedure.setClassName(remarks.substring(0, pos));

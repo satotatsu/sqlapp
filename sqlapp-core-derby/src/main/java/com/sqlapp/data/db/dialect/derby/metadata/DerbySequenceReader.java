@@ -28,8 +28,7 @@ public class DerbySequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("sequences.sql");
 		List<Sequence> result = list();
@@ -44,8 +43,7 @@ public class DerbySequenceReader extends SequenceReader {
 				sequence.setMaxValue(rs.getBigDecimal("MAXIMUMVALUE"));
 				sequence.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 				sequence.setLastValue(rs.getBigDecimal("CURRENTVALUE"));
-				sequence.setCycle("Y".equalsIgnoreCase(
-						getString(rs, "CYCLEOPTION")));
+				sequence.setCycle("Y".equalsIgnoreCase(getString(rs, "CYCLEOPTION")));
 				result.add(sequence);
 			}
 		});

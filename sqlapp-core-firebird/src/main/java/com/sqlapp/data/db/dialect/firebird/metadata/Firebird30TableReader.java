@@ -44,12 +44,12 @@ public class Firebird30TableReader extends FirebirdTableReader {
 	protected ColumnReader newColumnReader() {
 		return new Firebird30ColumnReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables30.sql");
 	}
-	
+
 	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table obj = super.createTable(rs);

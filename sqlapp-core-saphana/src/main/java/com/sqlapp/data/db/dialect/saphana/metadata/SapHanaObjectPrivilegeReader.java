@@ -41,8 +41,7 @@ public class SapHanaObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected List<ObjectPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ObjectPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ObjectPrivilege> result = list();
@@ -62,11 +61,9 @@ public class SapHanaObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected ParametersContext defaultParametersContext(
-			final Connection connection) {
+	protected ParametersContext defaultParametersContext(final Connection connection) {
 		final ParametersContext context = super.defaultParametersContext(connection);
-		context.put(SCHEMA_NAME,
-				nativeCaseString(connection, this.getSchemaName()));
+		context.put(SCHEMA_NAME, nativeCaseString(connection, this.getSchemaName()));
 		return context;
 	}
 
@@ -81,8 +78,7 @@ public class SapHanaObjectPrivilegeReader extends ObjectPrivilegeReader {
 		return obj;
 	}
 
-	protected void setDbSpecificInfo(ExResultSet rs, ObjectPrivilege obj)
-			throws SQLException {
+	protected void setDbSpecificInfo(ExResultSet rs, ObjectPrivilege obj) throws SQLException {
 		setSpecifics(rs, "IS_VALID", obj);
 	}
 }

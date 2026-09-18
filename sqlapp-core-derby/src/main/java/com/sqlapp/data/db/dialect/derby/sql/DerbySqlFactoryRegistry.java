@@ -27,7 +27,6 @@ import com.sqlapp.data.schemas.Sequence;
 
 public class DerbySqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
-
 	public DerbySqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
@@ -35,10 +34,8 @@ public class DerbySqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				DerbyLockTableFactory.class);
-		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
-				DerbySequenceNextValuesFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, DerbyLockTableFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, DerbySequenceNextValuesFactory.class);
 	}
-	
+
 }

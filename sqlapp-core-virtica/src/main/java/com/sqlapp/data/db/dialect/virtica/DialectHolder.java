@@ -25,8 +25,7 @@ public class DialectHolder {
 	public final static Dialect defaultDialect12_0_4 = new Virtica12_0_4(() -> null);
 	public final static Dialect defaultDialect11_1_1 = new Virtica11_1_1(() -> defaultDialect12_0_4);
 	public final static Dialect defaultDialect90 = new Virtica90(() -> defaultDialect11_1_1);
-	public final static Dialect defaultDialect80 =
-			new Virtica80(() -> defaultDialect90);
+	public final static Dialect defaultDialect80 = new Virtica80(() -> defaultDialect90);
 	public final static Dialect defaultDialect72 = new Virtica72(() -> defaultDialect80);
 	public final static Dialect defaultDialect = new Virtica(() -> defaultDialect72);
 }

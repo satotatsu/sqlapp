@@ -41,8 +41,7 @@ public class SapHanaColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ColumnPrivilege> result = list();
@@ -61,8 +60,7 @@ public class SapHanaColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return getSqlNodeCache().getString("columnPrivileges.sql");
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs) throws SQLException {
 		ColumnPrivilege obj = new ColumnPrivilege();
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setObjectName(getString(rs, OBJECT_NAME));
@@ -74,8 +72,7 @@ public class SapHanaColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return obj;
 	}
 
-	protected void setDbSpecificInfo(ExResultSet rs, ColumnPrivilege obj)
-			throws SQLException {
+	protected void setDbSpecificInfo(ExResultSet rs, ColumnPrivilege obj) throws SQLException {
 		setSpecifics(rs, "IS_VALID", obj);
 	}
 }

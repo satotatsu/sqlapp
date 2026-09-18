@@ -58,15 +58,13 @@ public class SapHanaIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		sapHanaFulltextIndexReader.setReaderOptions(this.getReaderOptions());
 		sapHanaFulltextIndexReader.setReadDbObjectPredicate(this.getReadDbObjectPredicate());
 		if (sapHanaVectorIndexReader != null) {
 			sapHanaVectorIndexReader.setReaderOptions(this.getReaderOptions());
-			sapHanaVectorIndexReader.setReadDbObjectPredicate(
-					this.getReadDbObjectPredicate());
+			sapHanaVectorIndexReader.setReadDbObjectPredicate(this.getReadDbObjectPredicate());
 		}
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
@@ -79,8 +77,7 @@ public class SapHanaIndexReader extends IndexReader {
 				Index index = map.get(schemaName, tableName, name);
 				if (index == null) {
 					index = createIndex(connection, rs);
-					map.put(index.getSchemaName(), index.getTableName(),
-							index.getName(), index);
+					map.put(index.getSchemaName(), index.getTableName(), index.getName(), index);
 				}
 				String asc = getString(rs, "ASCENDING_ORDER");
 				Order order = null;
@@ -89,13 +86,11 @@ public class SapHanaIndexReader extends IndexReader {
 				} else {
 					order = Order.Desc;
 				}
-				index.getColumns().add(new Column(getString(rs, COLUMN_NAME)),
-						order);
+				index.getColumns().add(new Column(getString(rs, COLUMN_NAME)), order);
 			}
 		});
 		List<Index> list = map.toList();
-		List<Index> ftList = sapHanaFulltextIndexReader.getAll(connection,
-				context);
+		List<Index> ftList = sapHanaFulltextIndexReader.getAll(connection, context);
 		list.addAll(ftList);
 		if (sapHanaVectorIndexReader != null) {
 			list.addAll(sapHanaVectorIndexReader.getAll(connection, context));
@@ -125,10 +120,8 @@ public class SapHanaIndexReader extends IndexReader {
 		}
 	}
 
-	protected Index createIndex(final Connection connection, ExResultSet rs)
-			throws SQLException {
-		Index index = SapHanaUtils.createIndex(this.getDialect(), connection,
-				rs);
+	protected Index createIndex(final Connection connection, ExResultSet rs) throws SQLException {
+		Index index = SapHanaUtils.createIndex(this.getDialect(), connection, rs);
 		return index;
 	}
 }

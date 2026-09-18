@@ -8,6 +8,13 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 
 /** Vertica staging-table SCD2 provider (legacy module spelling retained). */
 public class VirticaSetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(final Dialect dialect) { return dialect instanceof Virtica; }
-	@Override public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) { return new VirticaSetBasedMigrationSnapshotExecutor(dialect); }
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect instanceof Virtica;
+	}
+
+	@Override
+	public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
+		return new VirticaSetBasedMigrationSnapshotExecutor(dialect);
+	}
 }

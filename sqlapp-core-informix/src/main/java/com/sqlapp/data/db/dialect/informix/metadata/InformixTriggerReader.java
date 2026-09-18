@@ -27,18 +27,17 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** Reads Informix triggers and their catalog-stored SQL text. */
 public class InformixTriggerReader extends TriggerReader {
-	private static final Pattern TIMING_PATTERN = Pattern.compile(
-			"\\b(BEFORE|AFTER|INSTEAD\\s+OF)\\b", Pattern.CASE_INSENSITIVE);
-	private static final Pattern ORIENTATION_PATTERN = Pattern.compile(
-			"\\bFOR\\s+EACH\\s+(ROW|STATEMENT)\\b", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TIMING_PATTERN = Pattern.compile("\\b(BEFORE|AFTER|INSTEAD\\s+OF)\\b",
+			Pattern.CASE_INSENSITIVE);
+	private static final Pattern ORIENTATION_PATTERN = Pattern.compile("\\bFOR\\s+EACH\\s+(ROW|STATEMENT)\\b",
+			Pattern.CASE_INSENSITIVE);
 
 	public InformixTriggerReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Trigger> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("triggers.sql");
 		Map<Integer, TriggerText> triggers = new LinkedHashMap<>();
@@ -91,7 +90,8 @@ public class InformixTriggerReader extends TriggerReader {
 		case "U" -> trigger.getEventManipulation().add("UPDATE");
 		case "D" -> trigger.getEventManipulation().add("DELETE");
 		case "S" -> trigger.getEventManipulation().add("SELECT");
-		default -> { }
+		default -> {
+		}
 		}
 		if (!event.equals(normalized)) {
 			trigger.setActionTiming("INSTEAD OF");
@@ -103,8 +103,7 @@ public class InformixTriggerReader extends TriggerReader {
 	private static void setHeaderAttributes(final Trigger trigger, final String definition) {
 		Matcher timing = TIMING_PATTERN.matcher(definition);
 		if (timing.find()) {
-			trigger.setActionTiming(timing.group(1).toUpperCase(Locale.ROOT)
-					.replaceAll("\\s+", " "));
+			trigger.setActionTiming(timing.group(1).toUpperCase(Locale.ROOT).replaceAll("\\s+", " "));
 		}
 		Matcher orientation = ORIENTATION_PATTERN.matcher(definition);
 		if (orientation.find()) {

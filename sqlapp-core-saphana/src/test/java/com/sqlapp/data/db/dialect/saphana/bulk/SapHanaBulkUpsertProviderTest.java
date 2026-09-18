@@ -9,8 +9,8 @@ import com.sqlapp.data.db.dialect.saphana.DialectHolder;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 class SapHanaBulkUpsertProviderTest {
-	@Test void resolvesProvider() {
-		assertInstanceOf(SapHanaBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
+	@Test
+	void resolvesProvider() {
+		assertInstanceOf(SapHanaBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
 	}
 }

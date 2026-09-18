@@ -121,8 +121,8 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(3, count(connection, countSql));
 		assertEquals(3, JdbcBulkMigrationCheckpointStore.readOnly(connection, option.getCheckpointTableName())
 				.load(migrationId).orElseThrow().getProcessedRows());
-		assertPauseAndResumeExactlyOnce(connection, table, codeColumn, nameColumn, countSql,
-				checkpointStore, BulkMigrationCheckpointMode.DATABASE, BulkMigrationMode.INSERT, 3);
+		assertPauseAndResumeExactlyOnce(connection, table, codeColumn, nameColumn, countSql, checkpointStore,
+				BulkMigrationCheckpointMode.DATABASE, BulkMigrationMode.INSERT, 3);
 	}
 
 	public static void assertDatabaseCheckpointInsertRejected(final Connection connection, final Table table,
@@ -163,23 +163,22 @@ public final class BulkMigrationTransactionAssertions {
 		assertEquals(3, count(connection, countSql));
 		assertTrue(store.load(migrationId).orElseThrow().isComplete());
 		assertTrue(ChunkedBulkMigrationExecutor.execute(connection, table, option, store).isAlreadyComplete());
-		assertPauseAndResumeExactlyOnce(connection, table, codeColumn, nameColumn, countSql,
-				store, BulkMigrationCheckpointMode.FILE, BulkMigrationMode.UPSERT, 3);
+		assertPauseAndResumeExactlyOnce(connection, table, codeColumn, nameColumn, countSql, store,
+				BulkMigrationCheckpointMode.FILE, BulkMigrationMode.UPSERT, 3);
 	}
 
 	public static void assertDatabaseCheckpointPauseAndResume(final Connection connection, final Table table,
-			final String codeColumn, final String nameColumn, final String countSql,
-			final int existingRows) throws SQLException {
+			final String codeColumn, final String nameColumn, final String countSql, final int existingRows)
+			throws SQLException {
 		final var store = new JdbcBulkMigrationCheckpointStore(connection, checkpointTableName());
-		assertPauseAndResumeExactlyOnce(connection, table, codeColumn, nameColumn, countSql,
-				store, BulkMigrationCheckpointMode.DATABASE, BulkMigrationMode.UPSERT, existingRows);
+		assertPauseAndResumeExactlyOnce(connection, table, codeColumn, nameColumn, countSql, store,
+				BulkMigrationCheckpointMode.DATABASE, BulkMigrationMode.UPSERT, existingRows);
 	}
 
 	private static void assertPauseAndResumeExactlyOnce(final Connection connection, final Table table,
 			final String codeColumn, final String nameColumn, final String countSql,
-			final BulkMigrationCheckpointStore store,
-			final BulkMigrationCheckpointMode checkpointMode, final BulkMigrationMode mode,
-			final int existingRows) throws SQLException {
+			final BulkMigrationCheckpointStore store, final BulkMigrationCheckpointMode checkpointMode,
+			final BulkMigrationMode mode, final int existingRows) throws SQLException {
 		table.getRows().clear();
 		for (int i = 1; i <= 3; i++) {
 			final int value = i;
@@ -190,8 +189,8 @@ public final class BulkMigrationTransactionAssertions {
 		}
 		final String migrationId = "docker-resume-" + java.util.UUID.randomUUID();
 		final var option = ChunkedBulkMigrationOption.builder().migrationId(migrationId).chunkSize(2)
-				.sourceFingerprint("source-v1").targetFingerprint("target-v1")
-				.checkpointMode(checkpointMode).mode(mode).build();
+				.sourceFingerprint("source-v1").targetFingerprint("target-v1").checkpointMode(checkpointMode).mode(mode)
+				.build();
 		final var pauseAfterFirstCommit = new ChunkedBulkMigrationListener() {
 			@Override
 			public boolean pauseAfterChunk(final com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress progress) {
@@ -199,8 +198,7 @@ public final class BulkMigrationTransactionAssertions {
 			}
 		};
 		assertThrows(ChunkedBulkMigrationPausedException.class,
-				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option, store,
-						pauseAfterFirstCommit));
+				() -> ChunkedBulkMigrationExecutor.execute(connection, table, option, store, pauseAfterFirstCommit));
 		assertEquals(existingRows + 2, count(connection, countSql));
 		final var paused = store.load(migrationId).orElseThrow();
 		assertEquals(2, paused.getProcessedRows());

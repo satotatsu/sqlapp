@@ -48,8 +48,7 @@ final class InformixRoutineUtils {
 		boolean quoted = false;
 		for (int i = open; i < text.length(); i++) {
 			char ch = text.charAt(i);
-			if (ch == '\'' && quoted && i + 1 < text.length()
-					&& text.charAt(i + 1) == '\'') {
+			if (ch == '\'' && quoted && i + 1 < text.length() && text.charAt(i + 1) == '\'') {
 				i++;
 			} else if (ch == '\'') {
 				quoted = !quoted;
@@ -69,8 +68,7 @@ final class InformixRoutineUtils {
 		boolean quoted = false;
 		for (int i = 0; i < text.length(); i++) {
 			char ch = text.charAt(i);
-			if (ch == '\'' && quoted && i + 1 < text.length()
-					&& text.charAt(i + 1) == '\'') {
+			if (ch == '\'' && quoted && i + 1 < text.length() && text.charAt(i + 1) == '\'') {
 				i++;
 			} else if (ch == '\'') {
 				quoted = !quoted;

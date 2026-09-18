@@ -47,7 +47,7 @@ public class SapHanaTruncatePartitionFactoryTest extends AbstractSapHanaSqlFacto
 	@Test
 	public void testGetDdlTable() {
 		final Table table = createTable();
-		Partition partition=table.getPartitioning().getPartitions().get(0); 
+		Partition partition = table.getPartitioning().getPartitions().get(0);
 		List<SqlOperation> list = operationfactory.createSql(partition);
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
@@ -58,7 +58,7 @@ public class SapHanaTruncatePartitionFactoryTest extends AbstractSapHanaSqlFacto
 	@Test
 	public void testGetDdlTable2() {
 		final Table table = createTable();
-		Partition partition=table.getPartitioning().getPartitions().get(1); 
+		Partition partition = table.getPartitioning().getPartitions().get(1);
 		List<SqlOperation> list = operationfactory.createSql(partition);
 		assertEquals(2, list.size());
 		SqlOperation commandText = list.get(0);
@@ -71,28 +71,23 @@ public class SapHanaTruncatePartitionFactoryTest extends AbstractSapHanaSqlFacto
 		assertEquals(expected, commandText.getSqlText());
 	}
 
-	protected Table createTable(){
+	protected Table createTable() {
 		final Table table = new Table("tableB");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
 		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		table.toPartitioning();
-		table.getPartitioning().getPartitions().add(p->{
+		table.getPartitioning().getPartitions().add(p -> {
 			p.setId("123");
 		});
-		table.getPartitioning().getPartitions().add(p->{
+		table.getPartitioning().getPartitions().add(p -> {
 			p.setId("124");
-			p.getSubPartitions().add(s->{
+			p.getSubPartitions().add(s -> {
 				s.setId("1241");
 			});
-			p.getSubPartitions().add(s->{
+			p.getSubPartitions().add(s -> {
 				s.setId("1242");
 			});
 			assertEquals(2, p.getSubPartitions().size());

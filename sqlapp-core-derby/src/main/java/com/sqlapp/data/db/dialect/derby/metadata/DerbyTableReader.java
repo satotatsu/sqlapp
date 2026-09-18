@@ -27,33 +27,32 @@ import com.sqlapp.data.db.metadata.ForeignKeyConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 
-public class DerbyTableReader extends JdbcTableReader{
+public class DerbyTableReader extends JdbcTableReader {
 
 	public DerbyTableReader(Dialect dialect) {
 		super(dialect);
 	}
 
-	
 	@Override
 	protected ColumnReader newColumnReader() {
 		return new DerbyJdbcColumnReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected UniqueConstraintReader newUniqueConstraintReader() {
 		return new DerbyUniqueConstraintReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
 		return new DerbyCheckConstraintReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected ForeignKeyConstraintReader newForeignKeyConstraintReader() {
 		return new DerbyForeignKeyConstraintReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected IndexReader newIndexReader() {
 		return new DerbyIndexReader(this.getDialect());

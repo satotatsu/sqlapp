@@ -41,6 +41,7 @@ import com.sqlapp.data.schemas.FunctionType;
 import com.sqlapp.data.schemas.OnNullCall;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SqlDataAccess;
+
 /**
  * DB2の関数読み込みクラス
  * 
@@ -54,8 +55,7 @@ public class Db2FunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Function> result = list();
@@ -74,127 +74,129 @@ public class Db2FunctionReader extends FunctionReader {
 		Db2Utils.setRutine(this.getDialect(), rs, this.getReaderOptions(), obj);
 		obj.setDeterministic("Y".equalsIgnoreCase(this.getString(rs, "DETERMINISTIC")));
 		obj.setParallel("Y".equalsIgnoreCase(this.getString(rs, "PARALLEL")));
-		String type=this.getString(rs, "FUNCTIONTYPE");
+		String type = this.getString(rs, "FUNCTIONTYPE");
 		String definition = getString(rs, "ROUTINE_DEFINITION");
-		if ("R".equalsIgnoreCase(type)){
+		if ("R".equalsIgnoreCase(type)) {
 			obj.setFunctionType(FunctionType.Row);
 			setRowTableDefinition(obj, definition);
-		} else if ("T".equalsIgnoreCase(type)){
+		} else if ("T".equalsIgnoreCase(type)) {
 			// テーブル
 			obj.setFunctionType(FunctionType.Table);
 			setRowTableDefinition(obj, definition);
-		} else if ("C".equalsIgnoreCase(type)){
+		} else if ("C".equalsIgnoreCase(type)) {
 			// 列または集約
 			obj.setFunctionType(FunctionType.Aggregate);
-		} else if ("S".equalsIgnoreCase(type)){
+		} else if ("S".equalsIgnoreCase(type)) {
 			// スカラー
 			obj.setFunctionType(FunctionType.Scalar);
 		}
-		String nullCall=this.getString(rs, "NULLCALL");
-		if ("N".equalsIgnoreCase(nullCall)){
+		String nullCall = this.getString(rs, "NULLCALL");
+		if ("N".equalsIgnoreCase(nullCall)) {
 			obj.setOnNullCall(OnNullCall.ReturnsNullOnNullInput);
-		}else if ("Y".equalsIgnoreCase(nullCall)){
+		} else if ("Y".equalsIgnoreCase(nullCall)) {
 			obj.setOnNullCall(OnNullCall.CalledOnNullInput);
 		}
-		String sqlDataAccess=getString(rs, "SQL_DATA_ACCESS");
-		if ("C".equalsIgnoreCase(sqlDataAccess)){
+		String sqlDataAccess = getString(rs, "SQL_DATA_ACCESS");
+		if ("C".equalsIgnoreCase(sqlDataAccess)) {
 			obj.setSqlDataAccess(SqlDataAccess.ContainsSql);
-		}else if ("M".equalsIgnoreCase(sqlDataAccess)){
+		} else if ("M".equalsIgnoreCase(sqlDataAccess)) {
 			obj.setSqlDataAccess(SqlDataAccess.ModifiesSqlData);
-		}else if ("N".equalsIgnoreCase(sqlDataAccess)){
+		} else if ("N".equalsIgnoreCase(sqlDataAccess)) {
 			obj.setSqlDataAccess(SqlDataAccess.NoSql);
-		}else if ("R".equalsIgnoreCase(sqlDataAccess)){
+		} else if ("R".equalsIgnoreCase(sqlDataAccess)) {
 			obj.setSqlDataAccess(SqlDataAccess.ReadsSqlData);
 		}
 		setSpecifics(rs, "DIALECT", obj);
 		return obj;
 	}
 
-	private static final Pattern TABLE_PATTERN=Pattern.compile(".*\\s+RETURNS\\s+table\\s+\\((?<columnDef>.*)\\).*", Pattern.CASE_INSENSITIVE+Pattern.MULTILINE+Pattern.DOTALL);
+	private static final Pattern TABLE_PATTERN = Pattern.compile(".*\\s+RETURNS\\s+table\\s+\\((?<columnDef>.*)\\).*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern ROW_PATTERN=Pattern.compile(".*\\s+RETURNS\\s+row\\s+\\((?<columnDef>.*)\\).*", Pattern.CASE_INSENSITIVE+Pattern.MULTILINE+Pattern.DOTALL);
+	private static final Pattern ROW_PATTERN = Pattern.compile(".*\\s+RETURNS\\s+row\\s+\\((?<columnDef>.*)\\).*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	protected void setRowTableDefinition(Function obj, String definition){
-		Matcher matcher=null;
-		if (obj.getFunctionType().isTable()){
-			matcher=TABLE_PATTERN.matcher(definition);
-		}else if (obj.getFunctionType().isRow()){
-			matcher=ROW_PATTERN.matcher(definition);
+	protected void setRowTableDefinition(Function obj, String definition) {
+		Matcher matcher = null;
+		if (obj.getFunctionType().isTable()) {
+			matcher = TABLE_PATTERN.matcher(definition);
+		} else if (obj.getFunctionType().isRow()) {
+			matcher = ROW_PATTERN.matcher(definition);
 		}
-		if (matcher!=null&&matcher.matches()){
+		if (matcher != null && matcher.matches()) {
 			obj.getReturning().toTable();
-			String columnDef=matcher.group("columnDef");
+			String columnDef = matcher.group("columnDef");
 			setColumnDefinitions(obj, CommonUtils.trim(columnDef));
 		}
 	}
 
-	protected void setColumnDefinitions(Function obj, String columnDefs){
-		int end=searchEndOfColumns(columnDefs);
-		columnDefs=columnDefs.substring(0, end);
-		String[] splits=columnDefs.split(",");
-		StringBuilder builder=new StringBuilder();
-		int i=0;
-		boolean needsNext=false;
-		while(i<splits.length){
-			String value=splits[i++];
-			int startBracketPos=value.indexOf('(');
-			while(startBracketPos<value.length()){
-				if (startBracketPos<0){
-					needsNext=false;
+	protected void setColumnDefinitions(Function obj, String columnDefs) {
+		int end = searchEndOfColumns(columnDefs);
+		columnDefs = columnDefs.substring(0, end);
+		String[] splits = columnDefs.split(",");
+		StringBuilder builder = new StringBuilder();
+		int i = 0;
+		boolean needsNext = false;
+		while (i < splits.length) {
+			String value = splits[i++];
+			int startBracketPos = value.indexOf('(');
+			while (startBracketPos < value.length()) {
+				if (startBracketPos < 0) {
+					needsNext = false;
 					break;
 				}
-				int endBracketPos=value.indexOf(')', startBracketPos+1);
-				if (endBracketPos<0){
-					needsNext=true;
+				int endBracketPos = value.indexOf(')', startBracketPos + 1);
+				if (endBracketPos < 0) {
+					needsNext = true;
 					break;
-				} else{
-					startBracketPos=value.indexOf('(', endBracketPos+1);
-					int endBracketNextPos=value.indexOf(')', endBracketPos+1);
-					if (endBracketNextPos>=0&&(endBracketNextPos<startBracketPos)){
-						value=value.substring(0, endBracketNextPos);
-						needsNext=false;
+				} else {
+					startBracketPos = value.indexOf('(', endBracketPos + 1);
+					int endBracketNextPos = value.indexOf(')', endBracketPos + 1);
+					if (endBracketNextPos >= 0 && (endBracketNextPos < startBracketPos)) {
+						value = value.substring(0, endBracketNextPos);
+						needsNext = false;
 						break;
 					}
 				}
 			}
-			if (builder.length()>0){
+			if (builder.length() > 0) {
 				builder.append(",");
 			}
 			builder.append(value);
-			if (!needsNext){
+			if (!needsNext) {
 				setColumnDefinition(obj, builder.toString().trim());
-				builder=new StringBuilder();
-				needsNext=false;
+				builder = new StringBuilder();
+				needsNext = false;
 			}
 		}
 	}
 
-	private static final Pattern COLUMN_PATTERN=Pattern.compile("^(?<name>[\\S]+)\\s+(?<def>.*)", Pattern.CASE_INSENSITIVE+Pattern.MULTILINE+Pattern.DOTALL);
+	private static final Pattern COLUMN_PATTERN = Pattern.compile("^(?<name>[\\S]+)\\s+(?<def>.*)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	protected int searchEndOfColumns(String columnDefs){
-		int i=0;
-		int count=0;
-		for(i=0;i<columnDefs.length();i++){
-			char c=columnDefs.charAt(i);
-			if (c=='('){
+	protected int searchEndOfColumns(String columnDefs) {
+		int i = 0;
+		int count = 0;
+		for (i = 0; i < columnDefs.length(); i++) {
+			char c = columnDefs.charAt(i);
+			if (c == '(') {
 				count++;
-			}else if (c==')'){
+			} else if (c == ')') {
 				count--;
 			}
-			if (count<0){
+			if (count < 0) {
 				return i;
 			}
 		}
 		return i;
 	}
 
-	
-	protected void setColumnDefinition(Function obj, String columnDef){
-		Matcher mathcer=COLUMN_PATTERN.matcher(columnDef);
-		if (mathcer.matches()){
-			String name=CommonUtils.unwrap(mathcer.group("name"), this.getDialect().getOpenQuote());
-			final String def=mathcer.group("def");
-			obj.getReturning().getTable().getColumns().add(name, c->{
+	protected void setColumnDefinition(Function obj, String columnDef) {
+		Matcher mathcer = COLUMN_PATTERN.matcher(columnDef);
+		if (mathcer.matches()) {
+			String name = CommonUtils.unwrap(mathcer.group("name"), this.getDialect().getOpenQuote());
+			final String def = mathcer.group("def");
+			obj.getReturning().getTable().getColumns().add(name, c -> {
 				c.setDataTypeName(def);
 			});
 		}

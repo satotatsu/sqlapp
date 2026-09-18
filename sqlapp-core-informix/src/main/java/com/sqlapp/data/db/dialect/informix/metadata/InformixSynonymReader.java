@@ -31,8 +31,8 @@ public class InformixSynonymReader extends SynonymReader {
 	}
 
 	@Override
-	protected List<Synonym> doGetAll(final Connection connection,
-			final ParametersContext context, final ProductVersionInfo productVersionInfo) {
+	protected List<Synonym> doGetAll(final Connection connection, final ParametersContext context,
+			final ProductVersionInfo productVersionInfo) {
 		final List<Synonym> result = list();
 		execute(connection, getSqlNode(productVersionInfo), context, new ResultSetNextHandler() {
 			@Override

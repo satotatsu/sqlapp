@@ -15,7 +15,6 @@ public class InformixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE,
-				InformixCreateUniqueConstraintFactory.class);
+		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, InformixCreateUniqueConstraintFactory.class);
 	}
 }

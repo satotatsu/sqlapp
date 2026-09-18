@@ -17,7 +17,9 @@ import java.sql.Statement;
 
 import org.junit.jupiter.api.Test;
 
-/** Verifies HSQLDB's ordered batch generated-key contract used by tree inserts. */
+/**
+ * Verifies HSQLDB's ordered batch generated-key contract used by tree inserts.
+ */
 class HsqlBatchGeneratedKeysTest {
 
 	@Test
@@ -29,8 +31,8 @@ class HsqlBatchGeneratedKeysTest {
 						txt VARCHAR(30)
 					)
 					""");
-			try (PreparedStatement statement = connection.prepareStatement(
-					"INSERT INTO test_table(txt) VALUES(?)", Statement.RETURN_GENERATED_KEYS)) {
+			try (PreparedStatement statement = connection.prepareStatement("INSERT INTO test_table(txt) VALUES(?)",
+					Statement.RETURN_GENERATED_KEYS)) {
 				for (int i = 0; i < 5; i++) {
 					statement.setString(1, "row-" + i);
 					statement.addBatch();

@@ -49,8 +49,7 @@ public class VirticaColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -75,22 +74,17 @@ public class VirticaColumnReader extends ColumnReader {
 		Integer datetime_precision = getInteger(rs, "DATETIME_PRECISION");
 		obj.setNullable(nullable);
 		obj.setIdentity(identity);
-		if (identity){
+		if (identity) {
 			obj.setSequenceName(getString(rs, "SEQUENCE_NAME"));
 			obj.setIdentityStep(getLong(rs, "INCREMENT_BY"));
-			obj.setIdentityCacheSize(getInteger(rs,
-					"SESSION_CACHE_COUNT"));
+			obj.setIdentityCacheSize(getInteger(rs, "SESSION_CACHE_COUNT"));
 			obj.setIdentityMinValue(getLong(rs, "MINIMUM"));
 			obj.setIdentityMaxValue(getLong(rs, "MAXIMUM"));
 			obj.setIdentityLastValue(getLong(rs, "CURRENT_VALUE"));
-			obj.setIdentityCycle(toBoolean(getString(rs,
-					"ALLOW_CYCLE")));
+			obj.setIdentityCycle(toBoolean(getString(rs, "ALLOW_CYCLE")));
 		}
-		this.getDialect().setDbType(data_type,
-				maxNullable(char_maxlength, numeric_precision,
-						datetime_precision == null ? null
-								: datetime_precision.longValue()),
-				numeric_scale, obj);
+		this.getDialect().setDbType(data_type, maxNullable(char_maxlength, numeric_precision,
+				datetime_precision == null ? null : datetime_precision.longValue()), numeric_scale, obj);
 		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));

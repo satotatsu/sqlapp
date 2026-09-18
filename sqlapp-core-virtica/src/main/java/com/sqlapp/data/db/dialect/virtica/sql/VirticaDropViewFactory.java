@@ -12,14 +12,11 @@ import com.sqlapp.data.schemas.View;
 /**
  * Drops a Vertica view idempotently.
  */
-public class VirticaDropViewFactory
-		extends AbstractDropViewFactory<VirticaSqlBuilder> {
+public class VirticaDropViewFactory extends AbstractDropViewFactory<VirticaSqlBuilder> {
 
 	@Override
-	protected void addDropObject(final View obj,
-			final VirticaSqlBuilder builder) {
-		builder.drop().view().ifExists(
-				this.getOptions().isDropIfExists());
+	protected void addDropObject(final View obj, final VirticaSqlBuilder builder) {
+		builder.drop().view().ifExists(this.getOptions().isDropIfExists());
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 }

@@ -14,8 +14,7 @@ public final class InformixSetBasedMigrationSnapshotExecutor extends AbstractSta
 
 	@Override
 	protected String createStageSql(final String stage, final String target, final List<String> columns) {
-		return "SELECT " + list(columns, "t") + " FROM " + target + " t WHERE 1=0 INTO TEMP " + stage
-				+ " WITH NO LOG";
+		return "SELECT " + list(columns, "t") + " FROM " + target + " t WHERE 1=0 INTO TEMP " + stage + " WITH NO LOG";
 	}
 
 	@Override
@@ -35,7 +34,7 @@ public final class InformixSetBasedMigrationSnapshotExecutor extends AbstractSta
 
 	@Override
 	protected String valuesDifferent(final String left, final String right) {
-		return "(" + left + " <> " + right + " OR (" + left + " IS NULL AND " + right + " IS NOT NULL) OR ("
-				+ left + " IS NOT NULL AND " + right + " IS NULL))";
+		return "(" + left + " <> " + right + " OR (" + left + " IS NULL AND " + right + " IS NOT NULL) OR (" + left
+				+ " IS NOT NULL AND " + right + " IS NULL))";
 	}
 }

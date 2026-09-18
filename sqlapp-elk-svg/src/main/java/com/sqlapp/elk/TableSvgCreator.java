@@ -450,16 +450,15 @@ public class TableSvgCreator {
 
 			double startX = getAbsoluteX(relation.referencedSchema, relation.referencedTable)
 					+ (referencedIsLeft ? referencedNode.getWidth() : 0.0);
-			double startY = getAbsoluteY(relation.referencedSchema, relation.referencedTable)
-					+ EdgeUtils.calulucateY(relation.referencedTable,
-							relation.foreignKeyConstraint.getRelatedColumns());
+			double startY = getAbsoluteY(relation.referencedSchema, relation.referencedTable) + EdgeUtils
+					.calulucateY(relation.referencedTable, relation.foreignKeyConstraint.getRelatedColumns());
 			double endX = getAbsoluteX(relation.referencingSchema, relation.referencingTable)
 					+ (referencedIsLeft ? 0.0 : referencingNode.getWidth());
 			double endY = getAbsoluteY(relation.referencingSchema, relation.referencingTable)
 					+ EdgeUtils.calulucateY(relation.referencingTable, relation.foreignKeyConstraint.getColumns());
 			double middleX = (startX + endX) / 2.0;
-			String pathData = String.format("M%f,%f L%f,%f L%f,%f L%f,%f", startX, startY, middleX, startY,
-					middleX, endY, endX, endY);
+			String pathData = String.format("M%f,%f L%f,%f L%f,%f L%f,%f", startX, startY, middleX, startY, middleX,
+					endY, endX, endY);
 			String constraintName = EscapeUtils.escapeXml(relation.foreignKeyConstraint.getName());
 			svg.appendLine(String.format(
 					"<path class='relation cross-schema' data-constraint='%s' d='%s' fill='none' "
@@ -570,8 +569,8 @@ public class TableSvgCreator {
 				if (relatedTableNode != null) {
 					portPositionAllocator.add(relatedTableNode,
 							EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns()), PortSide.EAST);
-					portPositionAllocator.add(tableNode,
-							EdgeUtils.calulucateY(tableNode, fk.getColumns()), PortSide.WEST);
+					portPositionAllocator.add(tableNode, EdgeUtils.calulucateY(tableNode, fk.getColumns()),
+							PortSide.WEST);
 				}
 			}
 		}
@@ -734,15 +733,13 @@ public class TableSvgCreator {
 		for (ElkEdge edge : tableNode.getInheritanceEdges()) {
 			for (ElkEdgeSection section : edge.getSections()) {
 				StringBuilder pathData = new StringBuilder();
-				pathData.append(String.format("M%f,%f ", section.getStartX() + offsetX,
-						section.getStartY() + offsetY));
+				pathData.append(String.format("M%f,%f ", section.getStartX() + offsetX, section.getStartY() + offsetY));
 				if (section.getBendPoints() != null) {
 					for (ElkBendPoint bp : section.getBendPoints()) {
 						pathData.append(String.format("L%f,%f ", bp.getX() + offsetX, bp.getY() + offsetY));
 					}
 				}
-				pathData.append(String.format("L%f,%f", section.getEndX() + offsetX,
-						section.getEndY() + offsetY));
+				pathData.append(String.format("L%f,%f", section.getEndX() + offsetX, section.getEndY() + offsetY));
 				svg.appendLine(String.format(
 						"<path class='relation inherits' d='%s' fill='none' stroke='#555' "
 								+ "stroke-width='1.5' stroke-dasharray='4' marker-end='url(#inherits)' />",
@@ -763,8 +760,8 @@ public class TableSvgCreator {
 				double startX = section.getStartX() + offsetX;
 				double startY = section.getStartY() + offsetY;
 				if (srcPosition != null && srcPosition.isCrowded()) {
-					pathData.append(String.format("M%f,%f L%f,%f ", startX, startY,
-							startX + PORT_FANOUT_LENGTH, startY));
+					pathData.append(
+							String.format("M%f,%f L%f,%f ", startX, startY, startX + PORT_FANOUT_LENGTH, startY));
 				} else {
 					pathData.append(String.format("M%f,%f ", startX, startY));
 				}
@@ -786,20 +783,15 @@ public class TableSvgCreator {
 					}
 				}
 				if (tgtPosition != null && tgtPosition.isCrowded()) {
-					pathData.append(String.format("L%f,%f L%f,%f",
-							approachX, endY,
-							endX - MANY_COMPACT_MARKER_LENGTH, endY));
+					pathData.append(
+							String.format("L%f,%f L%f,%f", approachX, endY, endX - MANY_COMPACT_MARKER_LENGTH, endY));
 				} else {
-					pathData.append(String.format("L%f,%f L%f,%f",
-							approachX, endY,
-							endX - MANY_MARKER_LENGTH, endY));
+					pathData.append(String.format("L%f,%f L%f,%f", approachX, endY, endX - MANY_MARKER_LENGTH, endY));
 				}
 
-				String markerStart = srcPosition != null && srcPosition.isCrowded()
-						? " marker-start='url(#oneCompact)'"
+				String markerStart = srcPosition != null && srcPosition.isCrowded() ? " marker-start='url(#oneCompact)'"
 						: " marker-start='url(#one)'";
-				String markerEnd = tgtPosition != null && tgtPosition.isCrowded()
-						? " marker-end='url(#manyCompact)'"
+				String markerEnd = tgtPosition != null && tgtPosition.isCrowded() ? " marker-end='url(#manyCompact)'"
 						: " marker-end='url(#many)'";
 
 				if (isInheritance) {
@@ -807,8 +799,7 @@ public class TableSvgCreator {
 							"<path d='%s' fill='none' stroke='#555' stroke-width='1.5' stroke-dasharray='4' marker-end='url(#inherits)' />",
 							pathData.toString()));
 				} else if (isIdentifying) {
-					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5'%s%s />",
+					svg.appendLine(String.format("<path d='%s' fill='none' stroke='#333' stroke-width='1.5'%s%s />",
 							pathData.toString(), markerStart, markerEnd));
 				} else {
 					svg.appendLine(String.format(
@@ -897,12 +888,10 @@ public class TableSvgCreator {
 //				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
 //						nameColumnWidth, typeColumnWidth));
 //			}
-			svg.appendLine(String.format(
-					"<div class='table-row' style='grid-template-columns: %fpx %fpx %fpx %fpx;'>",
+			svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx %fpx %fpx;'>",
 					COLUMN_PREFIX_WIDTH, nameColumnWidth, typeColumnWidth, COLUMN_SUFFIX_WIDTH));
 			svg.addIndentLevel(1);
-			svg.appendLine(
-					String.format("<div class='table-cell key-icons'>%s</div>", tableNode.getKeyIcons(col)));
+			svg.appendLine(String.format("<div class='table-cell key-icons'>%s</div>", tableNode.getKeyIcons(col)));
 			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
 			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.build(col)));
 			svg.appendLine(String.format("<div class='table-cell related-key-icon'>%s</div>",

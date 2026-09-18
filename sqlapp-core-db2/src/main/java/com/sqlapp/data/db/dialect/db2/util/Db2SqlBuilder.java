@@ -48,33 +48,33 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.util.AbstractSqlBuilder#count()
 	 */
 	@Override
-	public Db2SqlBuilder count(){
+	public Db2SqlBuilder count() {
 		appendElement("COUNT_BIG");
 		return instance();
 	}
-	
-	
-	public Db2SqlBuilder starting(){
+
+	public Db2SqlBuilder starting() {
 		appendElement("STARTING");
 		return instance();
 	}
-	
-	public Db2SqlBuilder ending(){
+
+	public Db2SqlBuilder ending() {
 		appendElement("ENDING");
 		return instance();
 	}
-	
-	
-	public Db2SqlBuilder _long(){
+
+	public Db2SqlBuilder _long() {
 		appendElement("LONG");
 		return instance();
 	}
-	
-	public Db2SqlBuilder mask(){
+
+	public Db2SqlBuilder mask() {
 		appendElement("MASK");
 		return instance();
 	}
@@ -85,8 +85,7 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 			this._add(obj.getName());
 			this.space();
 		}
-		if (obj.getDirection() != null
-				&& obj.getDirection() != ParameterDirection.Input) {
+		if (obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
 			this._add(obj.getDirection());
 			this.space();
 		}
@@ -115,8 +114,8 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 		} else if (column.getVectorElementDataType() == DataType.TINYINT) {
 			elementType = "INT8";
 		} else {
-			throw new IllegalArgumentException("Unsupported Db2 VECTOR element data type: "
-					+ column.getVectorElementDataType());
+			throw new IllegalArgumentException(
+					"Unsupported Db2 VECTOR element data type: " + column.getVectorElementDataType());
 		}
 		_add("VECTOR").brackets(() -> {
 			_add(column.getVectorDimension());
@@ -143,18 +142,17 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 			}
 		}
 		final SystemVersioning versioning = table.getSystemVersioning();
-		if (versioning != null
-				&& CommonUtils.eqIgnoreCase(versioning.getTransactionIdColumnName(), column.getName())) {
+		if (versioning != null && CommonUtils.eqIgnoreCase(versioning.getTransactionIdColumnName(), column.getName())) {
 			generated().always().as().transaction().space()._add("START ID");
 		}
 		return instance();
 	}
-	
+
 	protected void argumentBefore(NamedArgument obj) {
 	}
-	
+
 	@Override
-	public Db2SqlBuilder clone(){
-		return (Db2SqlBuilder)super.clone();
+	public Db2SqlBuilder clone() {
+		return (Db2SqlBuilder) super.clone();
 	}
 }

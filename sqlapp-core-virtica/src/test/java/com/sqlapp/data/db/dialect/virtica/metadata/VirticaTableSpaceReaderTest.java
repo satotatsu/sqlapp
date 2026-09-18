@@ -23,10 +23,8 @@ class VirticaTableSpaceReaderTest {
 	}
 
 	private void assertFileReader(int major, int minor, int revision) {
-		var dialect = DialectResolver.getInstance().getDialect(
-				"Vertica", major, minor, revision);
+		var dialect = DialectResolver.getInstance().getDialect("Vertica", major, minor, revision);
 		var reader = new VirticaTableSpaceReader(dialect);
-		assertInstanceOf(VirticaTableSpaceFileReader.class,
-				reader.newTableSpaceFileReader());
+		assertInstanceOf(VirticaTableSpaceFileReader.class, reader.newTableSpaceFileReader());
 	}
 }

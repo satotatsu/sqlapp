@@ -36,23 +36,25 @@ import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.ExResultSet;
+
 /**
  * Derby用のカラム読み込み
+ * 
  * @author satoh
  *
  */
-public class DerbyJdbcColumnReader extends JdbcColumnReader{
+public class DerbyJdbcColumnReader extends JdbcColumnReader {
 
 	protected DerbyJdbcColumnReader(Dialect dialect) {
 		super(dialect);
 	}
-	
 
-	//AUTOINCREMENT: start 1 increment 1
+	// AUTOINCREMENT: start 1 increment 1
 	/**
 	 * AUTOINCREMENTの場合のデフォルトパターン
 	 */
-	private static final Pattern AUTOINCREMENT_PETTERN=Pattern.compile("AUTOINCREMENT:[\\s]+(start\\s+[0-9]+)[\\s]*(increment\\s+[0-9]+)[\\s]*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern AUTOINCREMENT_PETTERN = Pattern.compile(
+			"AUTOINCREMENT:[\\s]+(start\\s+[0-9]+)[\\s]*(increment\\s+[0-9]+)[\\s]*", Pattern.CASE_INSENSITIVE);
 
 	@Override
 	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
@@ -68,13 +70,16 @@ public class DerbyJdbcColumnReader extends JdbcColumnReader{
 				""";
 		try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
-				Column column = columns.stream().filter(c -> resultSetStringEquals(resultSet, 1, c.getSchemaName())
-						&& resultSetStringEquals(resultSet, 2, c.getTableName())
-						&& resultSetStringEquals(resultSet, 3, c.getName())).findFirst().orElse(null);
+				Column column = columns.stream()
+						.filter(c -> resultSetStringEquals(resultSet, 1, c.getSchemaName())
+								&& resultSetStringEquals(resultSet, 2, c.getTableName())
+								&& resultSetStringEquals(resultSet, 3, c.getName()))
+						.findFirst().orElse(null);
 				if (column != null) {
 					column.setIdentity(true);
 					column.setIdentityGenerationType("GENERATED_BY_DEFAULT".equalsIgnoreCase(resultSet.getString(4))
-							? IdentityGenerationType.ByDefault : IdentityGenerationType.Always);
+							? IdentityGenerationType.ByDefault
+							: IdentityGenerationType.Always);
 					column.setIdentityStartValue(resultSet.getLong(5));
 					column.setIdentityStep(resultSet.getLong(6));
 					column.setDefaultValue(null);
@@ -93,24 +98,25 @@ public class DerbyJdbcColumnReader extends JdbcColumnReader{
 			throw new com.sqlapp.exceptions.SqlappException(e);
 		}
 	}
-	
+
 	@Override
-	protected Column createColumn(ExResultSet rs) throws SQLException{
-		Column column=super.createColumn(rs);
-		if (column.getDefaultValue()!=null){
-			Matcher matcher=AUTOINCREMENT_PETTERN.matcher(column.getDefaultValue());
-			if (matcher.matches()){
-				int i=1;
-				String st=matcher.group(i++);
-				String ic=matcher.group(i++);
+	protected Column createColumn(ExResultSet rs) throws SQLException {
+		Column column = super.createColumn(rs);
+		if (column.getDefaultValue() != null) {
+			Matcher matcher = AUTOINCREMENT_PETTERN.matcher(column.getDefaultValue());
+			if (matcher.matches()) {
+				int i = 1;
+				String st = matcher.group(i++);
+				String ic = matcher.group(i++);
 				Converters.getDefault().convertObject(st.replace("start", ""), BigInteger.class);
-				column.setIdentity(true).setIdentityStartValue(Converters.getDefault().convertObject(st.replace("start", ""), BigInteger.class));
-				column.setIdentityStep(Converters.getDefault().convertObject(ic.replace("increment", ""), BigInteger.class));
+				column.setIdentity(true).setIdentityStartValue(
+						Converters.getDefault().convertObject(st.replace("start", ""), BigInteger.class));
+				column.setIdentityStep(
+						Converters.getDefault().convertObject(ic.replace("increment", ""), BigInteger.class));
 				column.setDefaultValue(null);
 			}
 		}
 		return column;
 	}
-			
 
 }

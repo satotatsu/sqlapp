@@ -48,8 +48,7 @@ public class VirticaRoleReader extends RoleReader {
 	}
 
 	@Override
-	protected List<Role> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Role> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Role> result = list();
@@ -71,7 +70,7 @@ public class VirticaRoleReader extends RoleReader {
 		String name = getString(rs, "NAME");
 		Role obj = new Role(name);
 		obj.setId(getString(rs, "ROLE_ID"));
-		//TODO ASSIGNED_ROLES
+		// TODO ASSIGNED_ROLES
 		setSpecifics(rs, "ASSIGNED_ROLES", obj);
 		return obj;
 	}

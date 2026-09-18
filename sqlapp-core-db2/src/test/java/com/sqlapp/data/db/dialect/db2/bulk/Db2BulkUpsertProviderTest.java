@@ -11,7 +11,6 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 class Db2BulkUpsertProviderTest {
 	@Test
 	void resolvesProvider() {
-		assertInstanceOf(Db2BulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.Db2_1215Dialect));
+		assertInstanceOf(Db2BulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.Db2_1215Dialect));
 	}
 }

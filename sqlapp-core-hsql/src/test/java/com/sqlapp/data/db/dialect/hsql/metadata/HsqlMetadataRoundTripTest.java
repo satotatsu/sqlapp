@@ -22,8 +22,7 @@ class HsqlMetadataRoundTripTest {
 
 	@Test
 	void testSchemaObjectsRoundTrip() throws Exception {
-		try (var connection = DriverManager.getConnection(
-				"jdbc:hsqldb:mem:metadata-round-trip", "SA", "");
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:metadata-round-trip", "SA", "");
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE SEQUENCE ORDER_SEQ START WITH 50 INCREMENT BY 5");
 			statement.execute("CREATE TABLE PARENT_TABLE (ID BIGINT PRIMARY KEY)");

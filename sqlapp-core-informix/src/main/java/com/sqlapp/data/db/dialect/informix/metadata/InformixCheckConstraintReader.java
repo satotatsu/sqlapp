@@ -28,8 +28,7 @@ public class InformixCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<CheckConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("checkConstraints.sql");
 		TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
@@ -42,8 +41,7 @@ public class InformixCheckConstraintReader extends CheckConstraintReader {
 		return map.toList();
 	}
 
-	private void readConstraint(final ExResultSet rs,
-			final TripleKeyMap<String, String, String, CheckConstraint> map)
+	private void readConstraint(final ExResultSet rs, final TripleKeyMap<String, String, String, CheckConstraint> map)
 			throws SQLException {
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String tableName = getString(rs, TABLE_NAME);

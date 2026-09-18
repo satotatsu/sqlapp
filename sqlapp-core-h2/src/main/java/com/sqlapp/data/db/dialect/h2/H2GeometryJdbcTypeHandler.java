@@ -18,6 +18,7 @@
  */
 
 package com.sqlapp.data.db.dialect.h2;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,33 +33,30 @@ import org.geolatte.geom.codec.WkbEncoder;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 
-public class H2GeometryJdbcTypeHandler  implements JdbcTypeHandler {
+public class H2GeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	public H2GeometryJdbcTypeHandler() {
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, int columnIndex)
-			throws SQLException {
-		byte[] bytes=rs.getBytes(columnIndex);
+	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
+		byte[] bytes = rs.getBytes(columnIndex);
 		WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
 		return decoder.decode(ByteBuffer.from(bytes));
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, String columnLabel)
-			throws SQLException {
-		byte[] bytes=rs.getBytes(columnLabel);
+	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
+		byte[] bytes = rs.getBytes(columnLabel);
 		WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
 		return decoder.decode(ByteBuffer.from(bytes));
 	}
 
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex,
-			Object x) throws SQLException {
-		Geometry<?> geometry=Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+		Geometry<?> geometry = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
 		WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.POSTGIS_EWKB_1);
-	    ByteBuffer buffer = encoder.encode(geometry, ByteOrder.NDR);
-	    stmt.setBytes(parameterIndex, buffer.toByteArray());
+		ByteBuffer buffer = encoder.encode(geometry, ByteOrder.NDR);
+		stmt.setBytes(parameterIndex, buffer.toByteArray());
 	}
 }

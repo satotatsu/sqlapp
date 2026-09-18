@@ -63,9 +63,10 @@ public class FirebirdBulkUpsertExecutor implements BulkUpsertExecutor {
 		};
 		try (var transaction = BulkUpsertTransaction.begin(connection, o.isUseTransaction())) {
 			try {
-			final long affected = batch.execute(connection, plan.createStagingTable(table.getName()), o.getBulkOption());
-			transaction.commit();
-			return affected;
+				final long affected = batch.execute(connection, plan.createStagingTable(table.getName()),
+						o.getBulkOption());
+				transaction.commit();
+				return affected;
 			} catch (SQLException | RuntimeException e) {
 				transaction.rollback(e);
 				throw e;

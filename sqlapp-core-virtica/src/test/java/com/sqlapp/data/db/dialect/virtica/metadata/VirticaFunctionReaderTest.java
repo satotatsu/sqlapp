@@ -53,7 +53,6 @@ class VirticaFunctionReaderTest {
 	@Test
 	void createsOverloadSpecificNameFromArguments() {
 		assertEquals("calculate(amount Numeric(10,2), label Varchar(100))",
-				reader.createSpecificName("calculate",
-						"amount Numeric(10,2), label Varchar(100)"));
+				reader.createSpecificName("calculate", "amount Numeric(10,2), label Varchar(100)"));
 	}
 }

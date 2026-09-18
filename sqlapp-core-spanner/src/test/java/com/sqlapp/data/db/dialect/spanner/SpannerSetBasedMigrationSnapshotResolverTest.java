@@ -6,7 +6,8 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class SpannerSetBasedMigrationSnapshotResolverTest {
-	@Test void usesStreamingFallback() {
+	@Test
+	void usesStreamingFallback() {
 		assertTrue(SetBasedMigrationSnapshotResolver.find(DialectHolder.defaultDialect).isEmpty());
 	}
 }

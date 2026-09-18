@@ -43,8 +43,7 @@ public class Db2_1010CreateMaskFactoryTest extends AbstractDb2SqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Mask(), SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Mask(), SqlType.CREATE);
 	}
 
 	@Test

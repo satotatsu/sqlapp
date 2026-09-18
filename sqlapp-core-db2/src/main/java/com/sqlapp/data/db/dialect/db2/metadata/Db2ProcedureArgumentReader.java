@@ -40,7 +40,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 
 /**
  * DB2 Procedure Argument Reader
- *  
+ * 
  * @author satoh
  * 
  */
@@ -51,8 +51,7 @@ public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Procedure>
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -84,12 +83,12 @@ public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Procedure>
 		obj.setCollation(getString(rs, "COLLATIONNAME"));
 		obj.setDefaultValue(getString(rs, "DEFAULT"));
 		obj.setRemarks(getString(rs, REMARKS));
-		String rowType=getString(rs, "ROWTYPE");
-		if ("B".equalsIgnoreCase(rowType)){
+		String rowType = getString(rs, "ROWTYPE");
+		if ("B".equalsIgnoreCase(rowType)) {
 			obj.setDirection(ParameterDirection.Inout);
-		}else if ("O".equalsIgnoreCase(rowType)){
+		} else if ("O".equalsIgnoreCase(rowType)) {
 			obj.setDirection(ParameterDirection.Output);
-		}else if ("P".equalsIgnoreCase(rowType)){
+		} else if ("P".equalsIgnoreCase(rowType)) {
 			obj.setDirection(ParameterDirection.Input);
 		}
 		String productDataType = getString(rs, "TYPENAME");

@@ -40,10 +40,10 @@ import com.sqlapp.util.CommonUtils;
 
 public class HsqlUtils extends ReaderUtils {
 
-	private static final Pattern EXTERNAL_PATTERN=Pattern.compile(".*\\s+EXTERNAL\\s+NAME\\s*'(.*)'.*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern EXTERNAL_PATTERN = Pattern.compile(".*\\s+EXTERNAL\\s+NAME\\s*'(.*)'.*",
+			Pattern.CASE_INSENSITIVE);
 
-	protected static void setRoutineInfo(ResultSet rs, ArgumentRoutine<?> obj)
-			throws SQLException {
+	protected static void setRoutineInfo(ResultSet rs, ArgumentRoutine<?> obj) throws SQLException {
 		obj.setCatalogName(getString(rs, "ROUTINE_CATALOG"));
 		obj.setSchemaName(getString(rs, "ROUTINE_SCHEMA"));
 		obj.setSpecificName(getString(rs, MetadataReader.SPECIFIC_NAME));
@@ -51,40 +51,39 @@ public class HsqlUtils extends ReaderUtils {
 		obj.setDeterministic(toBoolean(getString(rs, "IS_DETERMINISTIC")));
 		obj.setSqlDataAccess(getString(rs, MetadataReader.SQL_DATA_ACCESS));
 		obj.setSqlSecurity(getString(rs, MetadataReader.SECURITY_TYPE));
-		obj.setMaxDynamicResultSets(getInteger(rs,
-				MetadataReader.MAX_DYNAMIC_RESULT_SETS));
+		obj.setMaxDynamicResultSets(getInteger(rs, MetadataReader.MAX_DYNAMIC_RESULT_SETS));
 		String externalName = getString(rs, "EXTERNAL_NAME");
 		if (!CommonUtils.isEmpty(externalName)) {
 			String routine_definition = getString(rs, "ROUTINE_DEFINITION");
-			Matcher matcher=EXTERNAL_PATTERN.matcher(routine_definition);
+			Matcher matcher = EXTERNAL_PATTERN.matcher(routine_definition);
 			matcher.matches();
-			String fullExternal=matcher.group(1);
+			String fullExternal = matcher.group(1);
 			int pos = fullExternal.indexOf(":");
-			String prefix=null;
-			if (pos>0){
-				prefix=fullExternal.substring(0, pos);
+			String prefix = null;
+			if (pos > 0) {
+				prefix = fullExternal.substring(0, pos);
 				obj.setClassNamePrefix(prefix);
-				fullExternal=fullExternal.replace(prefix+":", "");
+				fullExternal = fullExternal.replace(prefix + ":", "");
 			}
 			pos = fullExternal.lastIndexOf(".");
-			if (pos>0){
+			if (pos > 0) {
 				obj.setClassName(fullExternal.substring(0, pos));
 				obj.setMethodName(fullExternal.substring(pos + 1));
-			} else{
+			} else {
 				obj.setMethodName(fullExternal);
 			}
 			obj.setLanguage(getString(rs, "EXTERNAL_LANGUAGE"));
 		}
 	}
 
-	protected static String normalizeStatement(AbstractSchemaObject<?> obj, String statement){
-		if (statement==null){
+	protected static String normalizeStatement(AbstractSchemaObject<?> obj, String statement) {
+		if (statement == null) {
 			return null;
 		}
-		statement= statement.replace(obj.getSchemaName()+".", "");
+		statement = statement.replace(obj.getSchemaName() + ".", "");
 		return statement;
 	}
-	
+
 	/**
 	 * ResultSetから指定したカラムの文字列を取得します
 	 * 
@@ -92,13 +91,11 @@ public class HsqlUtils extends ReaderUtils {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected static String getString(ResultSet rs, String name)
-			throws SQLException {
+	protected static String getString(ResultSet rs, String name) throws SQLException {
 		return rtrim(rs.getString(name));
 	}
 
-	protected static void setNamedArgument(ResultSet rs,
-			NamedArgument obj, Routine<?> routine) throws SQLException {
+	protected static void setNamedArgument(ResultSet rs, NamedArgument obj, Routine<?> routine) throws SQLException {
 		routine.setCatalogName(getString(rs, MetadataReader.SPECIFIC_CATALOG));
 		routine.setSchemaName(getString(rs, MetadataReader.SPECIFIC_SCHEMA));
 		routine.setName(getString(rs, MetadataReader.ROUTINE_NAME));
@@ -120,12 +117,10 @@ public class HsqlUtils extends ReaderUtils {
 			obj.setDataType(DataType.DOMAIN);
 		} else if (!isEmpty(interval_type)) {
 			Long interval_precision = getLong(rs, "INTERVAL_PRECISION");
-			obj.getDialect().setDbType(productDataType,
-					interval_precision, datetime_scale, obj);
+			obj.getDialect().setDbType(productDataType, interval_precision, datetime_scale, obj);
 			obj.setLength(interval_precision);
 		} else {
-			obj.getDialect().setDbType(productDataType,
-					max(char_maxlength, numeric_precision), numeric_scale, obj);
+			obj.getDialect().setDbType(productDataType, max(char_maxlength, numeric_precision), numeric_scale, obj);
 		}
 	}
 

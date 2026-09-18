@@ -98,7 +98,6 @@ public class SpannerTest {
 		assertTrue(dialect.supportsInsertReturningResultSet());
 		assertEquals(950, dialect.getMaxStatementParameterCount());
 		assertEquals("INSERT INTO parent_table(txt) VALUES (?)\nTHEN RETURN `id`",
-				dialect.handleInsertReturningSql(table, identity,
-						"INSERT INTO parent_table(txt) VALUES (?)"));
+				dialect.handleInsertReturningSql(table, identity, "INSERT INTO parent_table(txt) VALUES (?)"));
 	}
 }

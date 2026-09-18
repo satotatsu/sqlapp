@@ -12,8 +12,7 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 class Db2BulkInsertProviderTest {
 	@Test
 	void resolvesDb2Provider() {
-		assertInstanceOf(Db2BulkInsertExecutor.class,
-				BulkInsertResolver.resolve(DialectHolder.Db2_1215Dialect));
+		assertInstanceOf(Db2BulkInsertExecutor.class, BulkInsertResolver.resolve(DialectHolder.Db2_1215Dialect));
 	}
 
 	@Test

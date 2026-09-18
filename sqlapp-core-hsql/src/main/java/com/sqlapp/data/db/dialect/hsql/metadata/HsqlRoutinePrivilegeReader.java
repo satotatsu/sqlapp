@@ -41,8 +41,7 @@ public class HsqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
 	}
 
 	@Override
-	protected List<RoutinePrivilege> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<RoutinePrivilege> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<RoutinePrivilege> result = list();
@@ -60,8 +59,7 @@ public class HsqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
 		return getSqlNodeCache().getString("routinePrivileges.sql");
 	}
 
-	protected RoutinePrivilege createPrivilege(Connection connection,
-			ExResultSet rs) throws SQLException {
+	protected RoutinePrivilege createPrivilege(Connection connection, ExResultSet rs) throws SQLException {
 		RoutinePrivilege obj = new RoutinePrivilege();
 		obj.setCatalogName(getString(rs, "ROUTINE_CATALOG"));
 		obj.setSchemaName(getString(rs, "ROUTINE_SCHEMA"));

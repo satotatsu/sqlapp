@@ -29,32 +29,32 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.FunctionType;
 
-
-public class Db2FunctionReaderTest extends AbstractDb2SqlFactoryTest{
+public class Db2FunctionReaderTest extends AbstractDb2SqlFactoryTest {
 
 	@Test
 	public void testReturningType() {
-		final Db2FunctionReader functionReader=(Db2FunctionReader)dialect.getCatalogReader().getSchemaReader().getFunctionReader();
+		final Db2FunctionReader functionReader = (Db2FunctionReader) dialect.getCatalogReader().getSchemaReader()
+				.getFunctionReader();
 		final Function obj = new Function("func");
 		obj.setDialect(dialect);
 		obj.setFunctionType(FunctionType.Table);
 		functionReader.setRowTableDefinition(obj, this.getResource("create_function1.sql"));
-		int i=0;
-		Column column=obj.getReturning().getTable().getColumns().get(i++);
+		int i = 0;
+		Column column = obj.getReturning().getTable().getColumns().get(i++);
 		assertEquals("EMPNO", column.getName());
 		assertEquals(DataType.CHAR, column.getDataType());
 		assertEquals(Long.valueOf(6), column.getLength());
 		//
-		column=obj.getReturning().getTable().getColumns().get(i++);
+		column = obj.getReturning().getTable().getColumns().get(i++);
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(15), column.getLength());
 		//
 		//
-		column=obj.getReturning().getTable().getColumns().get(i++);
+		column = obj.getReturning().getTable().getColumns().get(i++);
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(12), column.getLength());
 		//
-		column=obj.getReturning().getTable().getColumns().get(i++);
+		column = obj.getReturning().getTable().getColumns().get(i++);
 		assertEquals(DataType.DECIMAL, column.getDataType());
 		assertEquals(Long.valueOf(10), column.getLength());
 		assertEquals(Integer.valueOf(6), column.getScale());

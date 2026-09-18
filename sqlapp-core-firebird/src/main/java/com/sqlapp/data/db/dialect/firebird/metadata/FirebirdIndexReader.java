@@ -75,16 +75,14 @@ public class FirebirdIndexReader extends IndexReader {
 					index.setUnique(uniqueness);
 					index.setEnable(!rs.getBoolean("INDEX_INACTIVE"));
 					index.setRemarks(getString(rs, "DESCRIPTION"));
-					index.setWhere(normalizeCondition(
-							trim(getString(rs, "CONDITION_SOURCE"))));
+					index.setWhere(normalizeCondition(trim(getString(rs, "CONDITION_SOURCE"))));
 					//
 					map.put(catalog_name, schema_name, name, index);
 					result.add(index);
 				}
 				boolean isDesc = rs.getBoolean("IS_DESC");
 				if (columnName == null && expression != null) {
-					index.getColumns().add(expression,
-							isDesc ? Order.Desc : Order.Asc);
+					index.getColumns().add(expression, isDesc ? Order.Desc : Order.Asc);
 				} else if (isDesc) {
 					index.getColumns().add(new Column(columnName), Order.Desc);
 				} else if (columnName != null) {
@@ -100,7 +98,6 @@ public class FirebirdIndexReader extends IndexReader {
 	}
 
 	private String normalizeCondition(final String condition) {
-		return condition == null ? null
-				: condition.replaceFirst("(?is)^\\s*WHERE\\s+", "").trim();
+		return condition == null ? null : condition.replaceFirst("(?is)^\\s*WHERE\\s+", "").trim();
 	}
 }

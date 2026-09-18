@@ -26,19 +26,19 @@ import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcFunctionReader;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.jdbc.ExResultSet;
 
-public class DerbyFunctionReader extends JdbcFunctionReader{
+public class DerbyFunctionReader extends JdbcFunctionReader {
 
 	public DerbyFunctionReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected Function createFunction(ExResultSet rs) throws SQLException{
-		String name=getString(rs, FUNCTION_NAME);
-		String specificName=getString(rs, SPECIFIC_NAME);
-		String remarks=getString(rs, "REMARKS");
-		int pos=remarks.lastIndexOf('.');
-		Function function=new Function(name, specificName);
+	protected Function createFunction(ExResultSet rs) throws SQLException {
+		String name = getString(rs, FUNCTION_NAME);
+		String specificName = getString(rs, SPECIFIC_NAME);
+		String remarks = getString(rs, "REMARKS");
+		int pos = remarks.lastIndexOf('.');
+		Function function = new Function(name, specificName);
 		function.setCatalogName(getString(rs, "FUNCTION_CAT"));
 		function.setSchemaName(getString(rs, "FUNCTION_SCHEM"));
 		function.setClassName(remarks.substring(0, pos));

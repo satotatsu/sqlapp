@@ -16,7 +16,7 @@ public class DerbySequenceNextValuesFactory extends AbstractSequenceNextValuesFa
 	protected void addSequenceNextValues(final Sequence obj, final DerbySqlBuilder builder) {
 		builder.select().next().value().for_().name(obj);
 		builder.lineBreak().from()._add(" SYS.SYSTABLES T1, SYS.SYSCOLUMNS T2, SYS.SYSTABLES T3");
-		builder.lineBreak().fetch().first().space()
-				._add(getColumnParameterExpression(getCountParameterName(obj), "1")).rows().only();
+		builder.lineBreak().fetch().first().space()._add(getColumnParameterExpression(getCountParameterName(obj), "1"))
+				.rows().only();
 	}
 }

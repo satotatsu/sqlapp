@@ -24,7 +24,6 @@ import java.util.Locale;
 import com.sqlapp.data.db.metadata.ReaderUtils;
 import com.sqlapp.data.schemas.Order;
 
-
 public class SpannerUtils extends ReaderUtils {
 
 	static Order parseOrder(final String value) {

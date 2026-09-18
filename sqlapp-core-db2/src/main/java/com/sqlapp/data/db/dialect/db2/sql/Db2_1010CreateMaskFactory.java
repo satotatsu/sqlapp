@@ -24,8 +24,7 @@ import com.sqlapp.data.db.sql.AbstractCreateMaskFactory;
 import com.sqlapp.data.schemas.Mask;
 import com.sqlapp.util.CommonUtils;
 
-public class Db2_1010CreateMaskFactory extends
-		AbstractCreateMaskFactory<Db2SqlBuilder> {
+public class Db2_1010CreateMaskFactory extends AbstractCreateMaskFactory<Db2SqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Mask obj, Db2SqlBuilder builder) {

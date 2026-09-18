@@ -38,8 +38,8 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
 					List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
 
-			final var result = SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
-					Instant.parse("2026-09-16T00:00:00Z"),
+			final var result = SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(),
+					definition, Instant.parse("2026-09-16T00:00:00Z"),
 					List.of(row(1, "same"), row(2, "new"), row(4, "added")), 100);
 
 			assertEquals(new MigrationSnapshotExecutionResult(2, 2, 1), result);
@@ -49,7 +49,8 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 				assertEquals(3, rs.getInt(1));
 			}
 			try (var statement = connection.createStatement();
-					var rs = statement.executeQuery("SELECT NAME FROM CUSTOMER_HISTORY WHERE ID=2 AND VALID_TO IS NULL")) {
+					var rs = statement
+							.executeQuery("SELECT NAME FROM CUSTOMER_HISTORY WHERE ID=2 AND VALID_TO IS NULL")) {
 				rs.next();
 				assertEquals("new", rs.getString(1));
 			}
@@ -75,7 +76,8 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 
 			assertTrue(connection.getAutoCommit());
 			try (var statement = connection.createStatement();
-					var rs = statement.executeQuery("SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
+					var rs = statement
+							.executeQuery("SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
 				assertTrue(rs.next());
 				assertEquals("old", rs.getString(1));
 				assertNull(rs.getTimestamp(2));
@@ -97,9 +99,10 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 			createHistory(connection, "(1, 'old', TIMESTAMP '2026-01-01 00:00:00', NULL, TRUE)");
 
 			final var error = assertThrows(java.sql.SQLException.class,
-					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition(),
-							Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "new")), 100,
-							() -> { throw new java.sql.SQLException("lease lost"); }));
+					() -> SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(),
+							definition(), Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, "new")), 100, () -> {
+								throw new java.sql.SQLException("lease lost");
+							}));
 
 			assertEquals("lease lost", error.getMessage());
 			assertCurrentRows(connection, 1, "old");
@@ -134,8 +137,8 @@ class HsqlSetBasedMigrationSnapshotExecutorTest {
 			assertFalse(connection.getAutoCommit());
 			connection.rollback();
 			try (var statement = connection.createStatement();
-					var rs = statement.executeQuery(
-							"SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
+					var rs = statement
+							.executeQuery("SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
 				assertTrue(rs.next());
 				assertEquals("old", rs.getString(1));
 				assertNull(rs.getTimestamp(2));

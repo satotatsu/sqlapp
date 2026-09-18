@@ -23,28 +23,27 @@ import com.sqlapp.data.db.dialect.h2.util.H2SqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class H2CreateSequenceFactory extends
-		AbstractCreateSequenceFactory<H2SqlBuilder> {
+public class H2CreateSequenceFactory extends AbstractCreateSequenceFactory<H2SqlBuilder> {
 
 	@Override
-	protected void addIfNotExists(final Sequence obj, H2SqlBuilder builder){
+	protected void addIfNotExists(final Sequence obj, H2SqlBuilder builder) {
 		builder.ifNotExists(this.getOptions().isCreateIfNotExists());
 	}
 
 	@Override
-	protected void addMaxValue(final Sequence obj, H2SqlBuilder builder){
+	protected void addMaxValue(final Sequence obj, H2SqlBuilder builder) {
 	}
 
 	@Override
-	protected void addMinValue(final Sequence obj, H2SqlBuilder builder){
+	protected void addMinValue(final Sequence obj, H2SqlBuilder builder) {
 	}
 
 	@Override
-	protected void addCycle(final Sequence obj, H2SqlBuilder builder){
+	protected void addCycle(final Sequence obj, H2SqlBuilder builder) {
 	}
-	
+
 	@Override
-	protected void addOrder(final Sequence obj, H2SqlBuilder builder){
+	protected void addOrder(final Sequence obj, H2SqlBuilder builder) {
 	}
-	
+
 }

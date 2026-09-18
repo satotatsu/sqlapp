@@ -62,8 +62,8 @@ class SapHanaBulkInsertTest {
 	}
 
 	@Test
-	void sustainsChunkedLobAndDuplicateLoad(
-			@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory) throws Exception {
+	void sustainsChunkedLobAndDuplicateLoad(@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory)
+			throws Exception {
 		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
 			try {
 				statement.execute("DROP TABLE SQLAPP_BULK_LOAD_HANA");

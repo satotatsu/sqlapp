@@ -21,8 +21,7 @@ import com.sqlapp.util.CommonUtils;
 class DerbyMetadataRoundTripTest {
 	@Test
 	void testSchemaObjectsRoundTrip() throws Exception {
-		try (var connection = DriverManager.getConnection(
-				"jdbc:derby:memory:metadata-round-trip;create=true");
+		try (var connection = DriverManager.getConnection("jdbc:derby:memory:metadata-round-trip;create=true");
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE SEQUENCE ORDER_SEQ AS BIGINT START WITH 50 INCREMENT BY 5");
 			statement.execute("CREATE TABLE PARENT_TABLE (ID BIGINT PRIMARY KEY)");
@@ -52,39 +51,29 @@ class DerbyMetadataRoundTripTest {
 			var tableReader = reader.getTableReader();
 			tableReader.setSchemaName("APP");
 			tableReader.setObjectName("METADATA_TABLE");
-			var uniqueConstraints = tableReader.getUniqueConstraintReader()
-					.getAllFull(connection);
-			assertTrue(uniqueConstraints.stream().anyMatch(
-					constraint -> "UK_METADATA_NAME".equals(constraint.getName())),
+			var uniqueConstraints = tableReader.getUniqueConstraintReader().getAllFull(connection);
+			assertTrue(
+					uniqueConstraints.stream().anyMatch(constraint -> "UK_METADATA_NAME".equals(constraint.getName())),
 					uniqueConstraints.toString());
-			var uniqueConstraint = uniqueConstraints.stream().filter(
-					constraint -> "UK_METADATA_NAME".equals(constraint.getName()))
-					.findFirst().orElseThrow();
+			var uniqueConstraint = uniqueConstraints.stream()
+					.filter(constraint -> "UK_METADATA_NAME".equals(constraint.getName())).findFirst().orElseThrow();
 			assertEquals("APP", uniqueConstraint.getSchemaName());
 			assertEquals("METADATA_TABLE", uniqueConstraint.getTableName());
-			assertEquals(1, uniqueConstraint.getColumns().size(),
-					uniqueConstraint.toString());
-			var checkConstraints = tableReader.getCheckConstraintReader()
-					.getAllFull(connection);
-			assertTrue(checkConstraints.stream().anyMatch(
-					constraint -> "CK_METADATA_NAME".equals(constraint.getName())),
+			assertEquals(1, uniqueConstraint.getColumns().size(), uniqueConstraint.toString());
+			var checkConstraints = tableReader.getCheckConstraintReader().getAllFull(connection);
+			assertTrue(
+					checkConstraints.stream().anyMatch(constraint -> "CK_METADATA_NAME".equals(constraint.getName())),
 					checkConstraints.toString());
-			var foreignKeys = tableReader.getForeignKeyConstraintReader()
-					.getAllFull(connection);
-			var foreignKey = foreignKeys.stream().filter(
-					constraint -> "FK_METADATA_PARENT".equals(constraint.getName()))
-					.findFirst().orElseThrow();
+			var foreignKeys = tableReader.getForeignKeyConstraintReader().getAllFull(connection);
+			var foreignKey = foreignKeys.stream()
+					.filter(constraint -> "FK_METADATA_PARENT".equals(constraint.getName())).findFirst().orElseThrow();
 			assertEquals("APP", foreignKey.getSchemaName());
 			assertEquals("METADATA_TABLE", foreignKey.getTableName());
 			assertEquals(1, foreignKey.getColumns().size(), foreignKey.toString());
-			assertEquals(1, foreignKey.getRelatedColumns().size(),
-					foreignKey.toString());
-			var detailedTable = CommonUtils.first(
-					tableReader.getAllFull(connection));
-			assertEquals(uniqueConstraint.getCatalogName(),
-					detailedTable.getCatalogName());
-			assertEquals(uniqueConstraint.getSchemaName(),
-					detailedTable.getSchemaName());
+			assertEquals(1, foreignKey.getRelatedColumns().size(), foreignKey.toString());
+			var detailedTable = CommonUtils.first(tableReader.getAllFull(connection));
+			assertEquals(uniqueConstraint.getCatalogName(), detailedTable.getCatalogName());
+			assertEquals(uniqueConstraint.getSchemaName(), detailedTable.getSchemaName());
 			assertEquals(uniqueConstraint.getTableName(), detailedTable.getName());
 			assertNotNull(detailedTable.getIndexes().get("IDX_METADATA_NAME"));
 			assertNotNull(detailedTable.getConstraints().get("UK_METADATA_NAME"));

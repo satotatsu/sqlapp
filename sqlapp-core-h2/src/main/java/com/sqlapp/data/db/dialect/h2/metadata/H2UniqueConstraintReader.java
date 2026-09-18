@@ -74,8 +74,7 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 					c.setRemarks(getString(rs, REMARKS));
 					// String index_name = getString(rs, "unique_index_name");
 					// boolean isGenerated = rs.getBoolean("is_generated");
-					map.put(catalog_name, schema_name,
-							constraint_name, c);
+					map.put(catalog_name, schema_name, constraint_name, c);
 					result.add(c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
@@ -88,11 +87,9 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
-			return getSqlNodeCache().getString(
-					"uniqueConstraints_200.sql");
+			return getSqlNodeCache().getString("uniqueConstraints_200.sql");
 		}
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}

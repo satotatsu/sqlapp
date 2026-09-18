@@ -47,8 +47,7 @@ public class HsqlCreateProcedureFactoryTest extends AbstractHsqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Procedure(),
-				SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Procedure(), SqlType.CREATE);
 	}
 
 	@Test

@@ -27,8 +27,7 @@ public class VirticaObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected List<ObjectPrivilege> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<ObjectPrivilege> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("objectPrivileges.sql");
 		List<ObjectPrivilege> result = list();
