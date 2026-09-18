@@ -229,6 +229,33 @@ class LegacyMigrationMappingTest {
 	}
 
 	@Test
+	void testMergePreservesParentWhenNextStepOmitsUnchangedHierarchy() {
+		LegacyMigrationMapping existing = mapping("source", "middle");
+		TableMapping parent = table("parent", "PARENT_MIDDLE");
+		TableMapping child = table("child", "CHILD_MIDDLE");
+		child.setParent(new LegacyMigrationMapping.ParentMapping());
+		child.getParent().setMappingId(parent.getId());
+		existing.getTables().addAll(java.util.List.of(parent, child));
+		existing.getRelationships().add(relationship("parent-child", parent, child));
+		existing.getTransformations().add(transformation(10, "First", "source", "middle"));
+
+		LegacyMigrationMapping step = mapping("middle", "target");
+		TableMapping nextParent = table("next-parent", "PARENT_TARGET");
+		nextParent.getSource().setTable("PARENT_MIDDLE");
+		TableMapping nextChild = table("next-child", "CHILD_TARGET");
+		nextChild.getSource().setTable("CHILD_MIDDLE");
+		step.getTables().addAll(java.util.List.of(nextParent, nextChild));
+		step.getTransformations().add(transformation(10, "Second", "middle", "target"));
+
+		LegacyMigrationMapping merged = new LegacyMigrationMappingMerger().merge(existing, step);
+
+		TableMapping mergedChild = merged.getTables().stream()
+				.filter(table -> "CHILD_TARGET".equals(table.getTarget().getTable())).findFirst().orElseThrow();
+		assertEquals(parent.getId(), mergedChild.getParent().getMappingId());
+		new LegacyMigrationMappingValidator().validate(merged);
+	}
+
+	@Test
 	void testRejectDiscontinuousMapping() {
 		LegacyMigrationMapping existing = mapping("sha256:source", "sha256:middle");
 		LegacyMigrationMapping step = mapping("sha256:other", "sha256:target");
@@ -287,6 +314,25 @@ class LegacyMigrationMappingTest {
 		referenced.getColumns().add(reference);
 		incompleteReference.getTables().add(referenced);
 		assertThrows(CommandException.class, () -> new LegacyMigrationMappingValidator().validate(incompleteReference));
+	}
+
+	@Test
+	void testRejectOneSidedHierarchyDefinitions() {
+		LegacyMigrationMapping missingRelationship = new LegacyMigrationMapping();
+		TableMapping parent = table("parent", "PARENT");
+		TableMapping child = table("child", "CHILD");
+		child.setParent(new LegacyMigrationMapping.ParentMapping());
+		child.getParent().setMappingId(parent.getId());
+		missingRelationship.getTables().addAll(java.util.List.of(parent, child));
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		assertThrows(CommandException.class, () -> validator.validate(missingRelationship));
+
+		LegacyMigrationMapping missingParent = new LegacyMigrationMapping();
+		parent = table("parent", "PARENT");
+		child = table("child", "CHILD");
+		missingParent.getTables().addAll(java.util.List.of(parent, child));
+		missingParent.getRelationships().add(relationship("parent-child", parent, child));
+		assertThrows(CommandException.class, () -> validator.validate(missingParent));
 	}
 
 	private RelationshipMapping relationship(String id, TableMapping parent, TableMapping child) {

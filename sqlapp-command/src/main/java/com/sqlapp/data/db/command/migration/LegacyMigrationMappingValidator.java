@@ -118,8 +118,33 @@ public class LegacyMigrationMappingValidator {
 				throw new CommandException("Relationship disagrees with child parent mapping: " + relationship.getId());
 			}
 		}
+		validateHierarchyConsistency(mapping, byId);
 		validateDiagnostics(mapping, ids);
 		validateTransformations(mapping);
+	}
+
+	private void validateHierarchyConsistency(LegacyMigrationMapping mapping, Map<String, TableMapping> byId) {
+		for (TableMapping table : mapping.getTables()) {
+			List<RelationshipMapping> parents = mapping.getRelationships().stream()
+					.filter(relationship -> relationship.getType() == LegacyMigrationMapping.RelationshipType.HIERARCHICAL
+							&& table.getId().equals(relationship.getChildMappingId()))
+					.toList();
+			if (table.getParent() == null) {
+				if (!parents.isEmpty()) {
+					throw new CommandException("Hierarchical relationship requires child parent mapping: " + table.getId());
+				}
+				continue;
+			}
+			if (parents.size() != 1 || !table.getParent().getMappingId().equals(parents.getFirst().getParentMappingId())) {
+				throw new CommandException("Child parent mapping requires one matching hierarchical relationship: "
+						+ table.getId());
+			}
+			if (!byId.containsKey(table.getParent().getMappingId())) {
+				throw new CommandException("Unknown parent mapping id: " + table.getParent().getMappingId());
+			}
+			validatePairs(table.getParent().getSourceReference(), "parent.sourceReference", table.getId());
+			validatePairs(table.getParent().getResolvedReference(), "parent.resolvedReference", table.getId());
+		}
 	}
 
 	private void validateDiagnostics(LegacyMigrationMapping mapping, Set<String> tableIds) {

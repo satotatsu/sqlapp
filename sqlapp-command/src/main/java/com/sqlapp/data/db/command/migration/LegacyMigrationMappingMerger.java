@@ -120,7 +120,9 @@ public class LegacyMigrationMappingMerger {
 		}
 		current.setTarget(step.getTarget());
 		current.setKeys(step.getKeys());
-		current.setParent(step.getParent());
+		if (step.getParent() != null) {
+			current.setParent(step.getParent());
+		}
 		current.setConstraints(step.getConstraints());
 		current.getDetails().putAll(step.getDetails());
 		if (step.getOperation() != TableOperation.COPY) {

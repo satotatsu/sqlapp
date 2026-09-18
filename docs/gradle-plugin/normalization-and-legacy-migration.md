@@ -187,6 +187,10 @@ counts are checked against the actual warning, skipped, and error collections.
 Transformation history must be in strictly increasing sequence order. Its first
 and last fingerprints must match the mapping source and target, and adjacent
 steps with recorded boundary fingerprints must form a continuous chain.
+Hierarchical relationships are validated bidirectionally: every child
+`parent` declaration must have exactly one matching hierarchical relationship,
+and every hierarchical relationship must have the corresponding child parent
+declaration. Parent reference pairs are validated with the relationship data.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |
