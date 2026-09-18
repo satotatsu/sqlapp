@@ -47,8 +47,9 @@ public class LegacyMigrationContractValidator {
 		Map<String, DataSet> byId = new HashMap<>();
 		for (DataSet dataSet : contract.getDataSets()) {
 			if (dataSet == null || blank(dataSet.getId()) || blank(dataSet.getSourcePath())
-					|| blank(dataSet.getFileName()) || blank(dataSet.getTargetTable()) || dataSet.getFields() == null) {
-				throw new CommandException("Data set id, sourcePath and fileName are required.");
+					|| blank(dataSet.getFileName()) || blank(dataSet.getTargetTable()) || dataSet.getFields() == null
+					|| dataSet.getAncestorKeys() == null) {
+				throw new CommandException("Data set identity and collection structure are required.");
 			}
 			if (!ids.add(dataSet.getId())) {
 				throw new CommandException("Duplicate data set id: " + dataSet.getId());
@@ -253,7 +254,11 @@ public class LegacyMigrationContractValidator {
 	}
 
 	private void validateIndexedSources(DataSet dataSet, Field field, int fieldIndex) {
-		if (field.getIndexedSources() == null || field.getIndexedSources().isEmpty()) {
+		if (field.getIndexedSources() == null) {
+			throw new CommandException(
+					"Indexed source collection is required: " + dataSet.getId() + "[" + fieldIndex + "]");
+		}
+		if (field.getIndexedSources().isEmpty()) {
 			return;
 		}
 		if (!field.isExtracted()) {

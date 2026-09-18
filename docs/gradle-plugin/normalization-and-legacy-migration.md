@@ -170,6 +170,10 @@ policy names are rejected rather than interpreted loosely.
 Contract and load-plan field `action` values likewise use the shared
 `ColumnAction` enum. Their YAML representation remains the stable names such as
 `COPY`, `GENERATE`, and `DROP`; an unknown name is rejected during loading.
+Contract collection properties such as `ancestorKeys` and field
+`indexedSources` must be present even when empty. Explicit `null` values are
+rejected at the contract boundary instead of failing later during planning or
+provenance comparison.
 Repeated-column extraction uses the typed `occurrenceSourceMode` value
 `NUMBERED_COLUMNS`, which is serialized by that stable name and also rejects
 unknown names during contract loading.

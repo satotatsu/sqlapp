@@ -213,6 +213,18 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertTrue(assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validate(missingTarget)).getMessage()
 				.contains("requires targetColumn"));
+
+		var missingIndexedSources = contract();
+		missingIndexedSources.getDataSets().getFirst().getFields().getFirst().setIndexedSources(null);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(missingIndexedSources)).getMessage()
+				.contains("Indexed source collection is required"));
+
+		var missingAncestorKeys = contract();
+		missingAncestorKeys.getDataSets().getFirst().setAncestorKeys(null);
+		assertTrue(assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validate(missingAncestorKeys)).getMessage()
+				.contains("collection structure are required"));
 	}
 
 	@Test
