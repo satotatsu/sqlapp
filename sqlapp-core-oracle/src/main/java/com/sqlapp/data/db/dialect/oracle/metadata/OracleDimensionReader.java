@@ -55,8 +55,7 @@ public class OracleDimensionReader extends DimensionReader {
 	}
 
 	@Override
-	protected List<Dimension> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Dimension> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String, String, Dimension> dimensions = doubleKeyMap();
@@ -73,15 +72,12 @@ public class OracleDimensionReader extends DimensionReader {
 		return dimensions.toList();
 	}
 
-	private void setLevels(final Connection connection,
-			final ParametersContext context,
+	private void setLevels(final Connection connection, final ParametersContext context,
 			final DoubleKeyMap<String, String, Dimension> dimensions) {
-		execute(connection, getSqlNodeCache().getString("dimensionLevels.sql"),
-				context, new ResultSetNextHandler() {
+		execute(connection, getSqlNodeCache().getString("dimensionLevels.sql"), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Dimension dimension = dimensions.get(getString(rs, "OWNER"),
-						getString(rs, DIMENSION_NAME));
+				Dimension dimension = dimensions.get(getString(rs, "OWNER"), getString(rs, DIMENSION_NAME));
 				if (dimension == null) {
 					return;
 				}
@@ -89,12 +85,10 @@ public class OracleDimensionReader extends DimensionReader {
 				DimensionLevel level = dimension.getLevels().get(levelName);
 				if (level == null) {
 					level = new DimensionLevel(levelName);
-					level.setSkipWhenNull("Y".equalsIgnoreCase(
-							getString(rs, "SKIP_WHEN_NULL")));
+					level.setSkipWhenNull("Y".equalsIgnoreCase(getString(rs, "SKIP_WHEN_NULL")));
 					dimension.getLevels().add(level);
 				}
-				DimensionLevelColumn levelColumn = new DimensionLevelColumn(
-						getString(rs, "COLUMN_NAME"));
+				DimensionLevelColumn levelColumn = new DimensionLevelColumn(getString(rs, "COLUMN_NAME"));
 				level.getColumns().add(levelColumn);
 				Column column = levelColumn.getColumn();
 				column.setSchemaName(getString(rs, "DETAILOBJ_OWNER"));
@@ -103,65 +97,58 @@ public class OracleDimensionReader extends DimensionReader {
 		});
 	}
 
-	private void setHierarchies(final Connection connection,
-			final ParametersContext context,
+	private void setHierarchies(final Connection connection, final ParametersContext context,
 			final DoubleKeyMap<String, String, Dimension> dimensions) {
-		execute(connection, getSqlNodeCache().getString("dimensionHierarchies.sql"),
-				context, new ResultSetNextHandler() {
-			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Dimension dimension = dimensions.get(getString(rs, "OWNER"),
-						getString(rs, DIMENSION_NAME));
-				if (dimension == null) {
-					return;
-				}
-				String hierarchyName = getString(rs, "HIERARCHY_NAME");
-				DimensionHierarchy hierarchy = dimension.getHierarchies()
-						.get(hierarchyName);
-				if (hierarchy == null) {
-					hierarchy = new DimensionHierarchy(hierarchyName);
-					dimension.getHierarchies().add(hierarchy);
-				}
-				addHierarchyLevel(hierarchy, getString(rs, "CHILD_LEVEL_NAME"));
-				addHierarchyLevel(hierarchy, getString(rs, "PARENT_LEVEL_NAME"));
-			}
-		});
+		execute(connection, getSqlNodeCache().getString("dimensionHierarchies.sql"), context,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(ExResultSet rs) throws SQLException {
+						Dimension dimension = dimensions.get(getString(rs, "OWNER"), getString(rs, DIMENSION_NAME));
+						if (dimension == null) {
+							return;
+						}
+						String hierarchyName = getString(rs, "HIERARCHY_NAME");
+						DimensionHierarchy hierarchy = dimension.getHierarchies().get(hierarchyName);
+						if (hierarchy == null) {
+							hierarchy = new DimensionHierarchy(hierarchyName);
+							dimension.getHierarchies().add(hierarchy);
+						}
+						addHierarchyLevel(hierarchy, getString(rs, "CHILD_LEVEL_NAME"));
+						addHierarchyLevel(hierarchy, getString(rs, "PARENT_LEVEL_NAME"));
+					}
+				});
 	}
 
-	private void addHierarchyLevel(final DimensionHierarchy hierarchy,
-			final String levelName) {
+	private void addHierarchyLevel(final DimensionHierarchy hierarchy, final String levelName) {
 		if (levelName != null && hierarchy.getLevels().get(levelName) == null) {
 			hierarchy.getLevels().add(new DimensionHierarchyLevel(levelName));
 		}
 	}
 
-	private void setAttributes(final Connection connection,
-			final ParametersContext context,
+	private void setAttributes(final Connection connection, final ParametersContext context,
 			final DoubleKeyMap<String, String, Dimension> dimensions) {
-		execute(connection, getSqlNodeCache().getString("dimensionAttributes.sql"),
-				context, new ResultSetNextHandler() {
-			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Dimension dimension = dimensions.get(getString(rs, "OWNER"),
-						getString(rs, DIMENSION_NAME));
-				if (dimension == null) {
-					return;
-				}
-				String attributeName = getString(rs, "ATTRIBUTE_NAME");
-				DimensionAttribute attribute = dimension.getAttributes()
-						.get(attributeName);
-				if (attribute == null) {
-					attribute = new DimensionAttribute(attributeName);
-					dimension.getAttributes().add(attribute);
-				}
-				DimensionAttributeColumn attributeColumn =
-						new DimensionAttributeColumn(getString(rs, "COLUMN_NAME"));
-				attribute.getColumns().add(attributeColumn);
-				Column column = attributeColumn.getColumn();
-				column.setSchemaName(getString(rs, "DETAILOBJ_OWNER"));
-				column.setTableName(getString(rs, "DETAILOBJ_NAME"));
-			}
-		});
+		execute(connection, getSqlNodeCache().getString("dimensionAttributes.sql"), context,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(ExResultSet rs) throws SQLException {
+						Dimension dimension = dimensions.get(getString(rs, "OWNER"), getString(rs, DIMENSION_NAME));
+						if (dimension == null) {
+							return;
+						}
+						String attributeName = getString(rs, "ATTRIBUTE_NAME");
+						DimensionAttribute attribute = dimension.getAttributes().get(attributeName);
+						if (attribute == null) {
+							attribute = new DimensionAttribute(attributeName);
+							dimension.getAttributes().add(attribute);
+						}
+						DimensionAttributeColumn attributeColumn = new DimensionAttributeColumn(
+								getString(rs, "COLUMN_NAME"));
+						attribute.getColumns().add(attributeColumn);
+						Column column = attributeColumn.getColumn();
+						column.setSchemaName(getString(rs, "DETAILOBJ_OWNER"));
+						column.setTableName(getString(rs, "DETAILOBJ_NAME"));
+					}
+				});
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {

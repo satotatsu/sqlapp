@@ -29,27 +29,24 @@ class MariadbTable11_40Reader extends MariadbTable10_27Reader {
 	}
 
 	@Override
-	protected void setMetadataDetail(Connection connection, ParametersContext context,
-			List<Table> tableList) throws SQLException {
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> tableList)
+			throws SQLException {
 		super.setMetadataDetail(connection, context, tableList);
 		for (Table table : tableList) {
 			Column start = null;
 			Column end = null;
 			for (Column column : table.getColumns()) {
-				if (Boolean.TRUE.equals(column.getSpecifics().get(
-						"SYSTEM_TIME_PERIOD_START", Boolean.class))) {
+				if (Boolean.TRUE.equals(column.getSpecifics().get("SYSTEM_TIME_PERIOD_START", Boolean.class))) {
 					start = column;
 				}
-				if (Boolean.TRUE.equals(column.getSpecifics().get(
-						"SYSTEM_TIME_PERIOD_END", Boolean.class))) {
+				if (Boolean.TRUE.equals(column.getSpecifics().get("SYSTEM_TIME_PERIOD_END", Boolean.class))) {
 					end = column;
 				}
 			}
 			if (start != null && end != null) {
-				table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
-						.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
-						.setStartColumnName(start.getName())
-						.setEndColumnName(end.getName()));
+				table.getTemporalPeriods()
+						.add(new TemporalPeriod("SYSTEM_TIME").setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+								.setStartColumnName(start.getName()).setEndColumnName(end.getName()));
 				table.toSystemVersioning().setImplicit(false);
 			}
 		}

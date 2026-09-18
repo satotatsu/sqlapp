@@ -16,9 +16,8 @@ import com.sqlapp.util.CommonUtils;
 public class Postgres180MergeFactory extends Postgres170MergeFactory {
 
 	@Override
-	protected void addMergeTableAfter(final Table table, final SqlSignature sqlSignature,
-			final String targetTableAlias, final String sourceTableAlias,
-			final PostgresSqlBuilder builder) {
+	protected void addMergeTableAfter(final Table table, final SqlSignature sqlSignature, final String targetTableAlias,
+			final String sourceTableAlias, final PostgresSqlBuilder builder) {
 		final String oldAlias = getTableOptions().getReturningOldAlias().apply(table);
 		final String newAlias = getTableOptions().getReturningNewAlias().apply(table);
 		if (CommonUtils.isEmpty(oldAlias) && CommonUtils.isEmpty(newAlias)) {
@@ -31,8 +30,8 @@ public class Postgres180MergeFactory extends Postgres170MergeFactory {
 		if (!CommonUtils.isEmpty(oldAlias) && oldAlias.equalsIgnoreCase(newAlias)) {
 			throw new IllegalArgumentException("OLD and NEW aliases must be different.");
 		}
-		final var columns = getTableOptions().getReturningColumnStrategy().apply(table)
-				.getWithoutCheck(sqlSignature).getKeyColumns();
+		final var columns = getTableOptions().getReturningColumnStrategy().apply(table).getWithoutCheck(sqlSignature)
+				.getKeyColumns();
 		if (columns.isEmpty()) {
 			throw new IllegalArgumentException("MERGE RETURNING requires at least one selected column.");
 		}

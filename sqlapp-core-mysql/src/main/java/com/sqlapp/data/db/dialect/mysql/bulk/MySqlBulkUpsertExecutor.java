@@ -39,25 +39,24 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stageName(option), stageSql = quote(stage);
 		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
-		try (var scope = BulkUpsertExecutionScope.begin(connection,
-				option.isUseTransaction())) {
+		try (var scope = BulkUpsertExecutionScope.begin(connection, option.isUseTransaction())) {
 			try {
-			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TEMPORARY TABLE " + stageSql + " AS SELECT " + list(staged, null) + " FROM "
-						+ target + " WHERE 1 = 0");
-			}
-			scope.addCleanupSql("DROP TEMPORARY TABLE " + stageSql);
-			BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
-					bulkOption(option.getBulkOption()));
-			final long affected;
-			try (var statement = connection.createStatement()) {
-				affected = statement.executeUpdate(sql(target, stageSql, keys, staged, updates, option));
-			}
-			scope.commit();
-			return affected;
-		} catch (SQLException | RuntimeException e) {
-			scope.rollback(e);
-			throw e;
+				try (var statement = connection.createStatement()) {
+					statement.execute("CREATE TEMPORARY TABLE " + stageSql + " AS SELECT " + list(staged, null)
+							+ " FROM " + target + " WHERE 1 = 0");
+				}
+				scope.addCleanupSql("DROP TEMPORARY TABLE " + stageSql);
+				BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
+						bulkOption(option.getBulkOption()));
+				final long affected;
+				try (var statement = connection.createStatement()) {
+					affected = statement.executeUpdate(sql(target, stageSql, keys, staged, updates, option));
+				}
+				scope.commit();
+				return affected;
+			} catch (SQLException | RuntimeException e) {
+				scope.rollback(e);
+				throw e;
 			}
 		}
 	}

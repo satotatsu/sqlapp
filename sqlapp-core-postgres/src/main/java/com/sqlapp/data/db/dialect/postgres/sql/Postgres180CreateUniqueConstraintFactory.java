@@ -15,11 +15,9 @@ public class Postgres180CreateUniqueConstraintFactory
 	public static final String WITHOUT_OVERLAPS = "withoutOverlaps";
 
 	@Override
-	public void addObjectDetail(UniqueConstraint obj, Table table,
-			AbstractSqlBuilder<?> builder) {
+	public void addObjectDetail(UniqueConstraint obj, Table table, AbstractSqlBuilder<?> builder) {
 		builder.constraint().space();
-		builder.name(obj, table != null ? false
-				: this.getOptions().isDecorateSchemaName());
+		builder.name(obj, table != null ? false : this.getOptions().isDecorateSchemaName());
 		if (obj.isPrimaryKey()) {
 			builder.primaryKey();
 		} else {

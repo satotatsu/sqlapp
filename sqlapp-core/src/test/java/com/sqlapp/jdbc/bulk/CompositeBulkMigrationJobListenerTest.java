@@ -20,8 +20,8 @@ class CompositeBulkMigrationJobListenerTest {
 		final var chunkResult = new ChunkedBulkMigrationResult(0, 1, 1, false);
 		final var jobResult = new BulkMigrationJobResult("fingerprint", List.of());
 
-		composite.onLeaseAcquired(new BulkMigrationJobLease("job", "fingerprint", "worker",
-				"acquisition", java.time.Instant.now().plusSeconds(60)));
+		composite.onLeaseAcquired(new BulkMigrationJobLease("job", "fingerprint", "worker", "acquisition",
+				java.time.Instant.now().plusSeconds(60)));
 		composite.onLeaseAcquisitionFailed("fingerprint", new SQLException("conflict"));
 		composite.onJobStarted("fingerprint", 1);
 		composite.onJobRejected("fingerprint", new IllegalStateException("rejected"));
@@ -34,10 +34,9 @@ class CompositeBulkMigrationJobListenerTest {
 		composite.onJobPaused("fingerprint", "task", progress);
 
 		assertEquals(List.of("lease-first", "lease-second", "lease-failed-first", "lease-failed-second",
-				"job-start-first", "job-start-second",
-				"job-reject-first", "job-reject-second",
-				"task-start-first", "task-start-second", "task-complete-first", "task-complete-second",
-				"task-fail-first", "task-fail-second", "task-pause-first", "task-pause-second", "job-complete-first",
+				"job-start-first", "job-start-second", "job-reject-first", "job-reject-second", "task-start-first",
+				"task-start-second", "task-complete-first", "task-complete-second", "task-fail-first",
+				"task-fail-second", "task-pause-first", "task-pause-second", "job-complete-first",
 				"job-complete-second", "job-fail-first", "job-fail-second", "job-pause-first", "job-pause-second"),
 				events);
 		assertThrows(UnsupportedOperationException.class, () -> composite.getListeners().clear());

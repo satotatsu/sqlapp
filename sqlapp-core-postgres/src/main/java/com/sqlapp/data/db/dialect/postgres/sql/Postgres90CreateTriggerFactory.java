@@ -31,7 +31,7 @@ import com.sqlapp.data.schemas.Trigger;
 public class Postgres90CreateTriggerFactory extends PostgresCreateTriggerFactory {
 
 	@Override
-	protected void addWhen(final Trigger obj, PostgresSqlBuilder builder){
+	protected void addWhen(final Trigger obj, PostgresSqlBuilder builder) {
 		builder.lineBreak();
 		builder.when().space()._add(obj.getWhen());
 	}

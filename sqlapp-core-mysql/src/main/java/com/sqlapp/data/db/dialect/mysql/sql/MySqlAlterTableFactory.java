@@ -206,8 +206,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				final Column column = diff.getTarget(Column.class);
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				sqlBuilder.add().name(column);
-				sqlBuilder.space().definition(column,
-						this.getTableOptions().getWithColumnRemarks().test(column));
+				sqlBuilder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 				addColumnPosition(column, columns, sqlBuilder);
 				sqlBuilder.setFirstElement(false);
 			} else {
@@ -216,13 +215,11 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				if (CommonUtils.eq(oldColumn.getName(), column.getName())) {
 					sqlBuilder.modify().name(column);
-					sqlBuilder.space().definition(column,
-							this.getTableOptions().getWithColumnRemarks().test(column));
+					sqlBuilder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 				} else {
 					sqlBuilder.change().name(oldColumn);
 					sqlBuilder.name(column);
-					sqlBuilder.space().definition(column,
-							this.getTableOptions().getWithColumnRemarks().test(column));
+					sqlBuilder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 				}
 				addColumnPosition(column, columns, sqlBuilder);
 				sqlBuilder.setFirstElement(false);

@@ -41,7 +41,7 @@ public class Oracle11gColumnReader extends OracleColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
-		//column.setFormula(getString(rs, "QUALIFIED_COL_NAME"));
+		// column.setFormula(getString(rs, "QUALIFIED_COL_NAME"));
 		column.setHidden("YES".equalsIgnoreCase(getString(rs, "HIDDEN_COLUMN")));
 		return column;
 	}

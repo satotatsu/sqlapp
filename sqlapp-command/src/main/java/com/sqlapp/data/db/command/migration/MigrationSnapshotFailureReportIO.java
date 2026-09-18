@@ -107,7 +107,8 @@ public final class MigrationSnapshotFailureReportIO {
 		}
 		if (report.leaseAcquisitionId() != null) {
 			if (report.lease() == null) {
-				throw new CommandException("Migration snapshot failure report contains lease acquisition without lease evidence");
+				throw new CommandException(
+						"Migration snapshot failure report contains lease acquisition without lease evidence");
 			}
 			nonBlank(report.leaseAcquisitionId(), "leaseAcquisitionId");
 			if (report.leaseAcquisitionId().length() > BulkMigrationJobLease.ID_MAX_LENGTH) {

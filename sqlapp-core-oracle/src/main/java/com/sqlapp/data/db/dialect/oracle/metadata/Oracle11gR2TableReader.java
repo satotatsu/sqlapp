@@ -36,7 +36,7 @@ public class Oracle11gR2TableReader extends Oracle11gTableReader {
 	protected Oracle11gR2TableReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);

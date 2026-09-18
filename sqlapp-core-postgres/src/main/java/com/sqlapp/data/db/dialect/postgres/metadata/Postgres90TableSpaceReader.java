@@ -24,20 +24,22 @@ import java.sql.SQLException;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.TableSpace;
 import com.sqlapp.jdbc.ExResultSet;
+
 /**
  * Postgres9.0以降のテーブルスペース読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class Postgres90TableSpaceReader extends PostgresTableSpaceReader{
+public class Postgres90TableSpaceReader extends PostgresTableSpaceReader {
 
 	protected Postgres90TableSpaceReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
-	protected TableSpace createTableSpace(ExResultSet rs) throws SQLException{
-		TableSpace tableSpace=super.createTableSpace(rs);
+	protected TableSpace createTableSpace(ExResultSet rs) throws SQLException {
+		TableSpace tableSpace = super.createTableSpace(rs);
 		setSpecifics(rs, "spcacl", tableSpace);
 		setSpecifics(rs, "spcoptions", tableSpace);
 		return tableSpace;

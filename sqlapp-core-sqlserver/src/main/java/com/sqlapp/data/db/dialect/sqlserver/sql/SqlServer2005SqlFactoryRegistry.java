@@ -32,8 +32,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.View;
 
-public class SqlServer2005SqlFactoryRegistry extends
-		SqlServerSqlFactoryRegistry {
+public class SqlServer2005SqlFactoryRegistry extends SqlServerSqlFactoryRegistry {
 
 	public SqlServer2005SqlFactoryRegistry(final Dialect dialect) {
 		super(dialect);
@@ -42,43 +41,29 @@ public class SqlServer2005SqlFactoryRegistry extends
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2005CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2005AlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DROP,
-				SqlServer2005DropTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2005CreateIndexFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2005CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2005AlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, SqlServer2005DropTableFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2005CreateIndexFactory.class);
 		//
-		registerSqlFactory(Partitioning.class, SqlType.CREATE,
-				SqlServer2005CreatePartitioningFactory.class);
+		registerSqlFactory(Partitioning.class, SqlType.CREATE, SqlServer2005CreatePartitioningFactory.class);
 		//
-		registerSqlFactory(Assembly.class, SqlType.CREATE,
-				SqlServer2005CreateAssemblyFactory.class);
+		registerSqlFactory(Assembly.class, SqlType.CREATE, SqlServer2005CreateAssemblyFactory.class);
 		//
-		registerSqlFactory(Function.class, SqlType.CREATE,
-				SqlServer2005CreateFunctionFactory.class);
-		registerSqlFactory(Function.class, SqlType.DROP,
-				SqlServer2005DropFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, SqlServer2005CreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.DROP, SqlServer2005DropFunctionFactory.class);
 		//
-		registerSqlFactory(Procedure.class, SqlType.CREATE,
-				SqlServer2005CreateProcedureFactory.class);
-		//View
-		registerSqlFactory(View.class, SqlType.CREATE,
-				SqlServer2005CreateViewFactory.class);
-		//Trigger
-		registerSqlFactory(Trigger.class, SqlType.CREATE,
-				SqlServer2005CreateTriggerFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.CREATE, SqlServer2005CreateProcedureFactory.class);
+		// View
+		registerSqlFactory(View.class, SqlType.CREATE, SqlServer2005CreateViewFactory.class);
+		// Trigger
+		registerSqlFactory(Trigger.class, SqlType.CREATE, SqlServer2005CreateTriggerFactory.class);
 		//
-		registerSqlFactory(PartitionScheme.class, SqlType.CREATE,
-				SqlServer2005CreatePartitionSchemeFactory.class);
+		registerSqlFactory(PartitionScheme.class, SqlType.CREATE, SqlServer2005CreatePartitionSchemeFactory.class);
 		//
-		registerSqlFactory(PartitionFunction.class, SqlType.CREATE,
-				SqlServer2005CreatePartitionFunctionFactory.class);
-		registerSqlFactory(PartitionFunction.class, SqlType.ALTER,
-				SqlServer2005AlterPartitionFunctionFactory.class);
+		registerSqlFactory(PartitionFunction.class, SqlType.CREATE, SqlServer2005CreatePartitionFunctionFactory.class);
+		registerSqlFactory(PartitionFunction.class, SqlType.ALTER, SqlServer2005AlterPartitionFunctionFactory.class);
 	}
 
 }

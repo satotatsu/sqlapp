@@ -23,21 +23,20 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateDomainFactory;
 import com.sqlapp.data.schemas.Domain;
 
-public class OracleCreateDomainFactory extends
-		AbstractCreateDomainFactory<OracleSqlBuilder> {
+public class OracleCreateDomainFactory extends AbstractCreateDomainFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Domain obj, OracleSqlBuilder builder) {
 		builder.create().or().replace().space().type();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.as();
-		if (obj.getArrayDimensionUpperBound()!=0){
+		if (obj.getArrayDimensionUpperBound() != 0) {
 			builder.varray(obj.getArrayDimensionUpperBound());
 			builder.of();
 			builder.space();
 			builder.typeDefinition(obj.getDataType(), obj.getDataTypeName(), obj.getLength(), obj.getScale());
 			builder.notNull(obj.isNotNull());
-		} else{
+		} else {
 			builder.table().of();
 			builder.space();
 			builder._add(obj.getDataTypeName());

@@ -29,8 +29,7 @@ class ApplyTableDataCommandTest {
 		command.setSchemaObjects(List.of(schema));
 
 		assertSame(schema, command.getSchemaObjects().get(0));
-		final List<Table> targets = command.targets(
-				command.getSchemaObjects());
+		final List<Table> targets = command.targets(command.getSchemaObjects());
 		assertEquals(List.of(table), targets);
 	}
 

@@ -83,7 +83,8 @@ public class LegacyMigrationLoadPlanIO {
 		}
 		if (plan.getTransaction() == null || plan.getTransaction().isAutoCommit()
 				|| plan.getTransaction().getCommitUnit() != LegacyMigrationLoadPlan.CommitUnit.ROOT_BATCH
-				|| plan.getTransaction().getStagingDeleteTiming() != LegacyMigrationLoadPlan.StagingDeleteTiming.BEFORE_COMMIT
+				|| plan.getTransaction()
+						.getStagingDeleteTiming() != LegacyMigrationLoadPlan.StagingDeleteTiming.BEFORE_COMMIT
 				|| !plan.getTransaction().isTargetAndStagingDeleteAtomic()
 				|| plan.getTransaction().getRestartUnit() != LegacyMigrationLoadPlan.RestartUnit.ROOT) {
 			throw new CommandException("Legacy RDB load plan transaction policy is unsupported.");
@@ -215,8 +216,8 @@ public class LegacyMigrationLoadPlanIO {
 			Table table = matches.getFirst();
 			targetTables.put(dataSet.getId(), table);
 			for (var field : dataSet.getFields()) {
-				if (field.getTargetColumn() != null
-						&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
+				if (field.getTargetColumn() != null && field
+						.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
 					column(table, field.getTargetColumn(), "Target column", dataSet.getId());
 				}
 			}
@@ -337,8 +338,8 @@ public class LegacyMigrationLoadPlanIO {
 		final var csvPositions = new HashSet<Integer>();
 		int extractedFields = 0;
 		for (var field : dataSet.getFields()) {
-			if (field == null || blank(field.getTargetColumn()) && field.getAction()
-					!= com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
+			if (field == null || blank(field.getTargetColumn()) && field
+					.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
 				throw new CommandException("Load data set contains an invalid field: " + dataSet.getId());
 			}
 			if (field.getAction() == null) {
@@ -353,8 +354,8 @@ public class LegacyMigrationLoadPlanIO {
 				throw new CommandException("Load data set field cannot be both extracted and target-generated: "
 						+ dataSet.getId() + "." + field.getStagingColumn());
 			}
-			if (field.isTargetGenerated()
-					&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.GENERATE
+			if (field.isTargetGenerated() && field
+					.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.GENERATE
 					&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.CONSTANT) {
 				throw new CommandException("Target-generated load field has an incompatible action: " + dataSet.getId()
 						+ "." + field.getAction());

@@ -39,8 +39,7 @@ public class PostgresCreateFunctionTest extends AbstractPostgresSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Function("func"), SqlType.CREATE);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Function("func"), SqlType.CREATE);
 	}
 
 	private Function getFunction(String name) {
@@ -66,7 +65,7 @@ public class PostgresCreateFunctionTest extends AbstractPostgresSqlFactoryTest {
 		String statement = getResource("create_function_statement1.sql");
 		obj.setStatement(statement);
 		List<SqlOperation> list = createOperationFactory.createSql(obj);
-		int i=0;
+		int i = 0;
 		SqlOperation operation = list.get(i++);
 		String expected = getResource("create_function1.sql");
 		assertEquals(expected, operation.getSqlText());
@@ -74,6 +73,5 @@ public class PostgresCreateFunctionTest extends AbstractPostgresSqlFactoryTest {
 		expected = getResource("create_function_comment1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
-
 
 }

@@ -23,8 +23,8 @@ class Postgres180MergeSqlFactoryTest extends AbstractPostgresSqlFactoryTest {
 		factory.getTableOptions().setMergeTableWithReturning(true);
 		factory.getTableOptions().setReturningOldAlias("old_row");
 		factory.getTableOptions().setReturningNewAlias("new_row");
-		String sql = factory.createSql(table).get(0).getSqlText()
-				.replace("\"", "").replaceAll("\\s+", " ").replace(" )", ")");
+		String sql = factory.createSql(table).get(0).getSqlText().replace("\"", "").replaceAll("\\s+", " ")
+				.replace(" )", ")");
 		assertTrue(sql.contains("RETURNING WITH (OLD AS old_row, NEW AS new_row)"), sql);
 		assertTrue(sql.contains("old_row.ID AS old_row_ID"), sql);
 		assertTrue(sql.contains("new_row.ID AS new_row_ID"), sql);

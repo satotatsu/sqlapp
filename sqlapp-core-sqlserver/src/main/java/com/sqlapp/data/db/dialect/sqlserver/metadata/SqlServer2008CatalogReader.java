@@ -21,12 +21,14 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
+
 /**
  * SQLServer2008のカタログ読み込み
+ * 
  * @author satoh
  *
  */
-public class SqlServer2008CatalogReader extends SqlServer2005CatalogReader{
+public class SqlServer2008CatalogReader extends SqlServer2005CatalogReader {
 
 	public SqlServer2008CatalogReader(Dialect dialect) {
 		super(dialect);

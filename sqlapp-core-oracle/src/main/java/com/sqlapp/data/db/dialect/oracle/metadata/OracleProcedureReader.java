@@ -51,8 +51,7 @@ public class OracleProcedureReader extends ProcedureReader {
 	private static final String OBJECT_TYPE = "PROCEDURE";
 
 	@Override
-	protected List<Procedure> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		context.put("objectType", OBJECT_TYPE);
@@ -70,22 +69,23 @@ public class OracleProcedureReader extends ProcedureReader {
 				}
 			}
 		});
-		List<Procedure> result= map.toList();
+		List<Procedure> result = map.toList();
 		ParametersContext cnt = new ParametersContext();
-		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
-		for(Procedure obj:result){
-			List<String> source=routines.get(obj.getSchemaName(), obj.getName());
-			String def=OracleMetadataUtils.getProcedureStatement(obj, source);
-			if (def!=null){
+		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
+				this.getDialect(), cnt, result, OBJECT_TYPE);
+		for (Procedure obj : result) {
+			List<String> source = routines.get(obj.getSchemaName(), obj.getName());
+			String def = OracleMetadataUtils.getProcedureStatement(obj, source);
+			if (def != null) {
 				obj.setStatement(def);
-			} else{
+			} else {
 				obj.setDefinition(source);
 			}
 		}
 		return result;
 	}
-	
-	protected Procedure createProcedure(ExResultSet rs) throws SQLException{
+
+	protected Procedure createProcedure(ExResultSet rs) throws SQLException {
 		Procedure obj = new Procedure(getString(rs, "OBJECT_NAME"));
 		OracleMetadataUtils.setCommonInfo(rs, obj);
 		obj.setDeterministic("YES".equalsIgnoreCase(getString(rs, "DETERMINISTIC")));

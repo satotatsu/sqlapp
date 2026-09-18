@@ -42,13 +42,12 @@ public class Postgres82TableReader extends PostgresTableReader {
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table obj = super.createTable(rs);
 		obj.setTableSpaceName(getString(rs, "spcname"));
-		String reloptions=getString(rs, "reloptions");
-		Map<String,String> map=PostgresUtils.parseRelOption(reloptions);
-		map.forEach((k,v)->{
+		String reloptions = getString(rs, "reloptions");
+		Map<String, String> map = PostgresUtils.parseRelOption(reloptions);
+		map.forEach((k, v) -> {
 			obj.getSpecifics().put(k, v);
 		});
 		return obj;
 	}
-
 
 }

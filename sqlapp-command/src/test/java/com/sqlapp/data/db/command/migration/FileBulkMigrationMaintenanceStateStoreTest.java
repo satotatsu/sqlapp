@@ -25,14 +25,13 @@ class FileBulkMigrationMaintenanceStateStoreTest {
 		final String jobId = "job-日本語";
 		final String fingerprint = "plan-日本語-v1";
 		final var prepared = new BulkMigrationMaintenanceState(jobId, fingerprint,
-				BulkMigrationMaintenanceStatus.PREPARED,
-				Instant.parse("2026-08-31T01:02:03Z"), null);
+				BulkMigrationMaintenanceStatus.PREPARED, Instant.parse("2026-08-31T01:02:03Z"), null);
 		store.save(prepared);
 		assertEquals(prepared, store.load(jobId).orElseThrow());
 
 		final var failed = new BulkMigrationMaintenanceState(jobId, fingerprint,
-				BulkMigrationMaintenanceStatus.RESTORE_FAILED,
-				Instant.parse("2026-08-31T01:03:00Z"), "enable constraint failed");
+				BulkMigrationMaintenanceStatus.RESTORE_FAILED, Instant.parse("2026-08-31T01:03:00Z"),
+				"enable constraint failed");
 		store.save(failed);
 		assertEquals(failed, store.load(jobId).orElseThrow());
 		try (var files = Files.list(directory)) {
@@ -48,8 +47,8 @@ class FileBulkMigrationMaintenanceStateStoreTest {
 		final var store = new FileBulkMigrationMaintenanceStateStore(directory);
 		final String jobId = "corrupt-job";
 		final String fingerprint = "corrupt-plan";
-		store.save(new BulkMigrationMaintenanceState(jobId, fingerprint,
-				BulkMigrationMaintenanceStatus.PREPARING, Instant.now(), null));
+		store.save(new BulkMigrationMaintenanceState(jobId, fingerprint, BulkMigrationMaintenanceStatus.PREPARING,
+				Instant.now(), null));
 		final java.nio.file.Path file;
 		try (var files = Files.list(directory)) {
 			file = files.findFirst().orElseThrow();

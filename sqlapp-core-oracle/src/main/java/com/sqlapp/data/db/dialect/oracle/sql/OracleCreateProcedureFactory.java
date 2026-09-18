@@ -26,8 +26,7 @@ import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.util.CommonUtils;
 
-public class OracleCreateProcedureFactory extends
-		AbstractCreateProcedureFactory<OracleSqlBuilder> {
+public class OracleCreateProcedureFactory extends AbstractCreateProcedureFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Procedure obj, OracleSqlBuilder builder) {

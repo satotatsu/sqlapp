@@ -29,8 +29,7 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.MviewLog;
 import com.sqlapp.util.CommonUtils;
 
-public class OracleCreateMviewLogFactory extends
-		AbstractCreateMviewLogFactory<OracleSqlBuilder> {
+public class OracleCreateMviewLogFactory extends AbstractCreateMviewLogFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final MviewLog obj, OracleSqlBuilder builder) {
@@ -39,37 +38,37 @@ public class OracleCreateMviewLogFactory extends
 		} else {
 			builder.create().materialized().view().log().on();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
-			if (!CommonUtils.isEmpty(obj.getTableSpaceName())){
+			if (!CommonUtils.isEmpty(obj.getTableSpaceName())) {
 				builder.lineBreak()._add(obj.getTableSpaceName());
 			}
 			builder.lineBreak();
 			builder.with();
-			boolean added=false;
-			if (obj.isSaveObjectId()){
+			boolean added = false;
+			if (obj.isSaveObjectId()) {
 				builder.comma(added);
 				builder.object().id();
-				added=true;
+				added = true;
 			}
-			if (obj.isSavePrimaryKey()){
+			if (obj.isSavePrimaryKey()) {
 				builder.comma(added);
 				builder.primaryKey();
-				added=true;
+				added = true;
 			}
-			if (obj.isSaveRowIds()){
+			if (obj.isSaveRowIds()) {
 				builder.comma(added);
 				builder.rowid();
-				added=true;
+				added = true;
 			}
-			if (obj.isSaveSequence()){
+			if (obj.isSaveSequence()) {
 				builder.comma(added);
 				builder.sequence();
-				added=true;
+				added = true;
 			}
-			if (!CommonUtils.isEmpty(obj.getColumns())){
+			if (!CommonUtils.isEmpty(obj.getColumns())) {
 				builder.lineBreak();
 				builder.names(obj.getColumns());
 			}
-			if (obj.isIncludeNewValues()){
+			if (obj.isIncludeNewValues()) {
 				builder.lineBreak();
 				builder.including().new_().values();
 			}

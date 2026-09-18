@@ -42,8 +42,7 @@ public class OracleFunctionArgumentReader extends RoutineArgumentReader<Function
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -63,11 +62,10 @@ public class OracleFunctionArgumentReader extends RoutineArgumentReader<Function
 		return getSqlNodeCache().getString("arguments.sql");
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
-		Function routine=new Function();
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
+		Function routine = new Function();
 		routine.setDialect(this.getDialect());
-		NamedArgument obj=createObject();
+		NamedArgument obj = createObject();
 		OracleMetadataUtils.setNamedArgument(rs, routine, obj);
 		return obj;
 	}

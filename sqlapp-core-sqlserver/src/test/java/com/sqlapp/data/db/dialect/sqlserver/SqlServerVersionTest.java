@@ -63,20 +63,15 @@ public class SqlServerVersionTest {
 
 	@Test
 	public void testMetadataReaderVersionBoundary() {
-		assertTrue(dialect2019.getCatalogReader()
-				instanceof SqlServer2019CatalogReader);
-		assertTrue(dialect2019.getCatalogReader().getSchemaReader()
-				instanceof SqlServer2019SchemaReader);
-		assertTrue(dialect2019.getCatalogReader().getSchemaReader()
-				.getTableReader() instanceof SqlServer2019TableReader);
-		assertTrue(dialect2022.getCatalogReader()
-				instanceof SqlServer2022CatalogReader);
-		assertTrue(dialect2022.getCatalogReader().getSchemaReader()
-				instanceof SqlServer2022SchemaReader);
-		assertTrue(dialect2022.getCatalogReader().getSchemaReader()
-				.getTableReader() instanceof SqlServer2022TableReader);
-		assertTrue(dialect2025.getCatalogReader()
-				instanceof SqlServer2022CatalogReader);
+		assertTrue(dialect2019.getCatalogReader() instanceof SqlServer2019CatalogReader);
+		assertTrue(dialect2019.getCatalogReader().getSchemaReader() instanceof SqlServer2019SchemaReader);
+		assertTrue(
+				dialect2019.getCatalogReader().getSchemaReader().getTableReader() instanceof SqlServer2019TableReader);
+		assertTrue(dialect2022.getCatalogReader() instanceof SqlServer2022CatalogReader);
+		assertTrue(dialect2022.getCatalogReader().getSchemaReader() instanceof SqlServer2022SchemaReader);
+		assertTrue(
+				dialect2022.getCatalogReader().getSchemaReader().getTableReader() instanceof SqlServer2022TableReader);
+		assertTrue(dialect2025.getCatalogReader() instanceof SqlServer2022CatalogReader);
 	}
 
 	@Test

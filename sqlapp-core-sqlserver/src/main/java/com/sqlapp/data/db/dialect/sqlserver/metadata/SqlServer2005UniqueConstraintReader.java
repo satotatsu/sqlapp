@@ -43,16 +43,14 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public class SqlServer2005UniqueConstraintReader extends
-		SqlServer2000UniqueConstraintReader {
+public class SqlServer2005UniqueConstraintReader extends SqlServer2000UniqueConstraintReader {
 
 	protected SqlServer2005UniqueConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
@@ -70,11 +68,9 @@ public class SqlServer2005UniqueConstraintReader extends
 				String columnName = getString(rs, COLUMN_NAME);
 				boolean includedColumn = rs.getInt("is_included_column") == 1;
 				if (rs.getInt("is_descending_key") == 1) {
-					obj.getColumns().add(new Column(columnName), Order.Desc)
-							.setIncludedColumn(includedColumn);
+					obj.getColumns().add(new Column(columnName), Order.Desc).setIncludedColumn(includedColumn);
 				} else {
-					obj.getColumns().add(new Column(columnName), Order.Asc)
-							.setIncludedColumn(includedColumn);
+					obj.getColumns().add(new Column(columnName), Order.Asc).setIncludedColumn(includedColumn);
 				}
 			}
 		});
@@ -86,10 +82,9 @@ public class SqlServer2005UniqueConstraintReader extends
 		return getSqlNodeCache().getString("uniqueConstraints2005.sql");
 	}
 
-	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)
-			throws SQLException {
+	protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
 		UniqueConstraint obj = super.createUniqueConstraint(rs);
-		for(SqlServerIndexOptions enm:SqlServerIndexOptions.values()) {
+		for (SqlServerIndexOptions enm : SqlServerIndexOptions.values()) {
 			enm.setUniqueConstraint(rs, obj);
 		}
 		return obj;

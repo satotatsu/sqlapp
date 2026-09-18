@@ -56,8 +56,7 @@ public class OracleFunctionReader extends FunctionReader {
 	private static final String OBJECT_TYPE = "FUNCTION";
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		context.put("objectType", OBJECT_TYPE);
@@ -72,38 +71,34 @@ public class OracleFunctionReader extends FunctionReader {
 				map.put(schema_name, name, routine);
 			}
 		});
-		List<Function> result= map.toList();
+		List<Function> result = map.toList();
 		ParametersContext cnt = new ParametersContext();
-		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
-		final boolean detectSqlMacroFromSource =
-				productVersionInfo.getMajorVersion() != null
+		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
+				this.getDialect(), cnt, result, OBJECT_TYPE);
+		final boolean detectSqlMacroFromSource = productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() == 19;
-		for(Function obj:result){
-			List<String> source=routines.get(obj.getSchemaName(), obj.getName());
-			if (detectSqlMacroFromSource
-					&& !Boolean.parseBoolean(obj.getSpecifics().get(SQL_MACRO))
+		for (Function obj : result) {
+			List<String> source = routines.get(obj.getSchemaName(), obj.getName());
+			if (detectSqlMacroFromSource && !Boolean.parseBoolean(obj.getSpecifics().get(SQL_MACRO))
 					&& containsSqlMacro(source)) {
 				obj.getSpecifics().put(SQL_MACRO, Boolean.TRUE);
 				obj.setFunctionType(FunctionType.Table);
 			}
-			String def=OracleMetadataUtils.getFunctionStatement(obj, source);
-			if (def!=null){
+			String def = OracleMetadataUtils.getFunctionStatement(obj, source);
+			if (def != null) {
 				if (Boolean.parseBoolean(obj.getSpecifics().get(SQL_MACRO))) {
-					def = def.replaceFirst(
-							"(?is)^\\s*SQL_MACRO(?:\\s*\\(\\s*(?:SCALAR|TABLE)\\s*\\))?\\s*",
-							"");
+					def = def.replaceFirst("(?is)^\\s*SQL_MACRO(?:\\s*\\(\\s*(?:SCALAR|TABLE)\\s*\\))?\\s*", "");
 				}
 				obj.setStatement(def);
-			} else{
+			} else {
 				obj.setDefinition(source);
 			}
 		}
 		return result;
 	}
-	
+
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 21) {
+		if (productVersionInfo.getMajorVersion() != null && productVersionInfo.getMajorVersion() >= 21) {
 			return getSqlNodeCache().getString("functions21c.sql");
 		}
 		return getSqlNodeCache().getString("functions.sql");
@@ -118,22 +113,20 @@ public class OracleFunctionReader extends FunctionReader {
 		long max_length = rs.getLong("CHAR_LENGTH");
 		long precision = rs.getLong("DATA_PRECISION");
 		Integer scale = getInteger(rs, "DATA_SCALE");
-		String characterSetName=getString(rs, "CHARACTER_SET_NAME");
+		String characterSetName = getString(rs, "CHARACTER_SET_NAME");
 		routine.setDeterministic("YES".equalsIgnoreCase(getString(rs, "DETERMINISTIC")));
 		routine.setParallel("YES".equalsIgnoreCase(getString(rs, "PARALLEL")));
 		final String sqlMacro = getString(rs, SQL_MACRO);
-		if ("SCALAR".equalsIgnoreCase(sqlMacro)
-				|| "TABLE".equalsIgnoreCase(sqlMacro)) {
+		if ("SCALAR".equalsIgnoreCase(sqlMacro) || "TABLE".equalsIgnoreCase(sqlMacro)) {
 			routine.getSpecifics().put(SQL_MACRO, Boolean.TRUE);
-			routine.setFunctionType("TABLE".equalsIgnoreCase(sqlMacro)
-					? FunctionType.Table : FunctionType.Scalar);
+			routine.setFunctionType("TABLE".equalsIgnoreCase(sqlMacro) ? FunctionType.Table : FunctionType.Scalar);
 		}
 		obj.setCharacterSet(characterSetName);
 		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
-		if ("OBJECT".equals(productDataType)){
-			String typeName=getString(rs, "TYPE_NAME");
+		if ("OBJECT".equals(productDataType)) {
+			String typeName = getString(rs, "TYPE_NAME");
 			obj.setDataTypeName(typeName);
-		} else{
+		} else {
 			obj.setDataTypeName(productDataType);
 		}
 		routine.setReturning(obj);
@@ -145,14 +138,13 @@ public class OracleFunctionReader extends FunctionReader {
 			return false;
 		}
 		for (final String line : source) {
-			if (line != null && line.toUpperCase(java.util.Locale.ROOT)
-					.contains("SQL_MACRO")) {
+			if (line != null && line.toUpperCase(java.util.Locale.ROOT).contains("SQL_MACRO")) {
 				return true;
 			}
 		}
 		return false;
 	}
-	
+
 	@Override
 	protected RoutineArgumentReader<?> newRoutineArgumentReader() {
 		return new OracleFunctionArgumentReader(this.getDialect());

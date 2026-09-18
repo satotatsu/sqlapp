@@ -43,7 +43,7 @@ public class SqlServer2014 extends SqlServer2012 {
 	protected SqlServer2014(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
-	
+
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();

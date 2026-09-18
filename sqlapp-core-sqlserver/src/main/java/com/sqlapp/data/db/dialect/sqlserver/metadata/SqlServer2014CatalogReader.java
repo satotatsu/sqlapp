@@ -21,12 +21,14 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
+
 /**
  * SQLServer2014のカタログ読み込み
+ * 
  * @author satoh
  *
  */
-public class SqlServer2014CatalogReader extends SqlServer2012CatalogReader{
+public class SqlServer2014CatalogReader extends SqlServer2012CatalogReader {
 
 	public SqlServer2014CatalogReader(Dialect dialect) {
 		super(dialect);

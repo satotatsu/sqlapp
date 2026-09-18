@@ -29,12 +29,11 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
  * @author satoh
  * 
  */
-public class MySqlForeignKeyConstraintFactory 
-	extends AbstractCreateForeignKeyConstraintFactory<MySqlSqlBuilder> {
+public class MySqlForeignKeyConstraintFactory extends AbstractCreateForeignKeyConstraintFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addAfter(ForeignKeyConstraint obj, MySqlSqlBuilder builder) {
-		if (obj.getRemarks()!=null){
+		if (obj.getRemarks() != null) {
 			builder.comment().space().sqlChar(obj.getRemarks());
 		}
 	}

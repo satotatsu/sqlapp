@@ -48,11 +48,11 @@ public class SqlServer2019IndexReader extends SqlServer2016IndexReader {
 	 * OPTIMIZE_FOR_SEQUENTIAL_KEY
 	 */
 	public static final String OPTIMIZE_FOR_SEQUENTIAL_KEY = "OPTIMIZE_FOR_SEQUENTIAL_KEY";
+
 	@Override
 	protected Index createIndex(final ExResultSet rs) throws SQLException {
 		final Index index = super.createIndex(rs);
-		setSpecifics(rs, "optimize_for_sequential_key",
-				OPTIMIZE_FOR_SEQUENTIAL_KEY, index);
+		setSpecifics(rs, "optimize_for_sequential_key", OPTIMIZE_FOR_SEQUENTIAL_KEY, index);
 		return index;
 	}
 }

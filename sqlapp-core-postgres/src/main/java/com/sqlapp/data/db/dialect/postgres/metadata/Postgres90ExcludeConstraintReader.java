@@ -60,8 +60,7 @@ public class Postgres90ExcludeConstraintReader extends ExcludeConstraintReader {
 	}
 
 	@Override
-	protected List<ExcludeConstraint> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<ExcludeConstraint> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ExcludeConstraint> result = list();
@@ -79,28 +78,24 @@ public class Postgres90ExcludeConstraintReader extends ExcludeConstraintReader {
 				String schema_name = getString(rs, "constraint_schema");
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				ExcludeConstraint c = map.get(schema_name, table_name,
-						constraint_name);
+				ExcludeConstraint c = map.get(schema_name, table_name, constraint_name);
 				if (c == null) {
 					c = new ExcludeConstraint(constraint_name);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
-					c.setDeferrability(Deferrability.getDeferrability(
-							rs.getBoolean("is_deferrable"),
+					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
 					result.add(c);
 					// conexclop
 					String oids = unwrap(rs.getString("conexclop"), "{", "}");
 					String[] oidArray = split(oids, "[, ]");
-					operatorIdMap.put(schema_name, table_name, constraint_name,
-							oidArray);
+					operatorIdMap.put(schema_name, table_name, constraint_name, oidArray);
 					for (String oid : oidArray) {
 						Operator operator = operatorMap.get(oid);
 						if (operator == null) {
 							ParametersContext opContext = new ParametersContext();
 							opContext.put("id", Integer.valueOf(oid));
-							List<Operator> list = operatorReader.getAll(
-									connection, opContext);
+							List<Operator> list = operatorReader.getAll(connection, opContext);
 							operator = first(list);
 							operatorMap.put(oid, operator);
 						}
@@ -108,14 +103,12 @@ public class Postgres90ExcludeConstraintReader extends ExcludeConstraintReader {
 					map.put(schema_name, table_name, constraint_name, c);
 				}
 				int columnPosition = rs.getInt("column_position");
-				String[] oidArray = operatorIdMap.get(schema_name, table_name,
-						constraint_name);
+				String[] oidArray = operatorIdMap.get(schema_name, table_name, constraint_name);
 				Operator operator = operatorMap.get(oidArray[columnPosition - 1]);
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(table_name);
 				c.getColumns().add(column);
-				c.getColumns().get(column.getName())
-						.setWith(operator.getName());
+				c.getColumns().get(column.getName()).setWith(operator.getName());
 			}
 		});
 		return result;

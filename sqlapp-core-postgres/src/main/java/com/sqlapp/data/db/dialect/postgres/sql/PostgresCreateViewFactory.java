@@ -33,16 +33,16 @@ import com.sqlapp.data.schemas.View;
  * @author satoh
  * 
  */
-public class PostgresCreateViewFactory extends
-		AbstractCreateViewFactory<PostgresSqlBuilder> {
+public class PostgresCreateViewFactory extends AbstractCreateViewFactory<PostgresSqlBuilder> {
 
 	@Override
-	protected void addOtherDefinitions(View table, List<SqlOperation> result){
-		if (table.getRemarks()!=null){
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().view().space().name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(table.getRemarks());
+	protected void addOtherDefinitions(View table, List<SqlOperation> result) {
+		if (table.getRemarks() != null) {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().view().space().name(table, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(table.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 	}
-	
+
 }

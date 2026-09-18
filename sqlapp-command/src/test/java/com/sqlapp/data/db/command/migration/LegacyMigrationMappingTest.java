@@ -163,8 +163,7 @@ class LegacyMigrationMappingTest {
 		second.getParent().setMappingId(first.getId());
 		cyclic.getTables().add(first);
 		cyclic.getTables().add(second);
-		assertThrows(CommandException.class,
-				() -> new LegacyMigrationMappingValidator().validate(cyclic));
+		assertThrows(CommandException.class, () -> new LegacyMigrationMappingValidator().validate(cyclic));
 
 		LegacyMigrationMapping multipleParents = new LegacyMigrationMapping();
 		TableMapping parent1 = table("parent1", "PARENT1");
@@ -173,8 +172,7 @@ class LegacyMigrationMappingTest {
 		multipleParents.getTables().addAll(java.util.List.of(parent1, parent2, child));
 		multipleParents.getRelationships().add(relationship("rel1", parent1, child));
 		multipleParents.getRelationships().add(relationship("rel2", parent2, child));
-		assertThrows(CommandException.class,
-				() -> new LegacyMigrationMappingValidator().validate(multipleParents));
+		assertThrows(CommandException.class, () -> new LegacyMigrationMappingValidator().validate(multipleParents));
 
 		LegacyMigrationMapping incompleteReference = new LegacyMigrationMapping();
 		TableMapping referenced = table("referenced", "REFERENCED");
@@ -183,12 +181,10 @@ class LegacyMigrationMappingTest {
 		reference.setTarget("PARENT_ID");
 		referenced.getColumns().add(reference);
 		incompleteReference.getTables().add(referenced);
-		assertThrows(CommandException.class,
-				() -> new LegacyMigrationMappingValidator().validate(incompleteReference));
+		assertThrows(CommandException.class, () -> new LegacyMigrationMappingValidator().validate(incompleteReference));
 	}
 
-	private RelationshipMapping relationship(String id, TableMapping parent,
-			TableMapping child) {
+	private RelationshipMapping relationship(String id, TableMapping parent, TableMapping child) {
 		RelationshipMapping relationship = new RelationshipMapping();
 		relationship.setId(id);
 		relationship.setParentMappingId(parent.getId());

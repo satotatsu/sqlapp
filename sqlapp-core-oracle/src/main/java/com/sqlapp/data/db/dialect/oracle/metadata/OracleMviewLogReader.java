@@ -48,8 +48,7 @@ public class OracleMviewLogReader extends MviewLogReader {
 	}
 
 	@Override
-	protected List<MviewLog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<MviewLog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<MviewLog> result = list();
@@ -74,13 +73,10 @@ public class OracleMviewLogReader extends MviewLogReader {
 		obj.setSaveRowIds("YES".equalsIgnoreCase(getString(rs, "ROWIDS")));
 		obj.setSavePrimaryKey("YES".equalsIgnoreCase(getString(rs, "PRIMARY_KEY")));
 		obj.setSaveObjectId("YES".equalsIgnoreCase(getString(rs, "OBJECT_ID")));
-		obj.setSaveFilterColumns("YES".equalsIgnoreCase(getString(rs,
-				"FILTER_COLUMNS")));
+		obj.setSaveFilterColumns("YES".equalsIgnoreCase(getString(rs, "FILTER_COLUMNS")));
 		obj.setSaveSequence("YES".equalsIgnoreCase(getString(rs, "SEQUENCE")));
-		obj.setIncludeNewValues("YES".equalsIgnoreCase(getString(rs,
-				"INCLUDE_NEW_VALUES")));
-		obj.setIncludeNewValues("YES".equalsIgnoreCase(getString(rs,
-				"INCLUDE_NEW_VALUES")));
+		obj.setIncludeNewValues("YES".equalsIgnoreCase(getString(rs, "INCLUDE_NEW_VALUES")));
+		obj.setIncludeNewValues("YES".equalsIgnoreCase(getString(rs, "INCLUDE_NEW_VALUES")));
 		return obj;
 	}
 

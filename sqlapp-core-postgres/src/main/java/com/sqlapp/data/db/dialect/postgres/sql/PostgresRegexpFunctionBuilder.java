@@ -22,18 +22,12 @@ public class PostgresRegexpFunctionBuilder {
 		MATCH("regexp_match", Set.of("string", "pattern", "flags")),
 		MATCHES("regexp_matches", Set.of("string", "pattern", "flags")),
 		LIKE("regexp_like", Set.of("string", "pattern", "flags")),
-		REPLACE("regexp_replace",
-				Set.of("string", "pattern", "replacement", "start", "N", "flags")),
+		REPLACE("regexp_replace", Set.of("string", "pattern", "replacement", "start", "N", "flags")),
 		COUNT("regexp_count", Set.of("string", "pattern", "start", "flags")),
-		INSTR("regexp_instr",
-				Set.of("string", "pattern", "start", "N", "endoption", "flags",
-						"subexpr")),
-		SUBSTR("regexp_substr",
-				Set.of("string", "pattern", "start", "N", "flags", "subexpr")),
-		SPLIT_TO_TABLE("regexp_split_to_table",
-				Set.of("string", "pattern", "flags")),
-		SPLIT_TO_ARRAY("regexp_split_to_array",
-				Set.of("string", "pattern", "flags"));
+		INSTR("regexp_instr", Set.of("string", "pattern", "start", "N", "endoption", "flags", "subexpr")),
+		SUBSTR("regexp_substr", Set.of("string", "pattern", "start", "N", "flags", "subexpr")),
+		SPLIT_TO_TABLE("regexp_split_to_table", Set.of("string", "pattern", "flags")),
+		SPLIT_TO_ARRAY("regexp_split_to_array", Set.of("string", "pattern", "flags"));
 
 		private final String sqlName;
 		private final Set<String> arguments;
@@ -56,13 +50,11 @@ public class PostgresRegexpFunctionBuilder {
 	/**
 	 * Adds a raw SQL expression as a named function argument.
 	 */
-	public PostgresRegexpFunctionBuilder argument(String name,
-			String expression) {
+	public PostgresRegexpFunctionBuilder argument(String name, String expression) {
 		require(name, "name");
 		require(expression, "expression");
 		if (!function.arguments.contains(name)) {
-			throw new IllegalArgumentException(
-					"Unsupported argument for " + function.sqlName + ": " + name);
+			throw new IllegalArgumentException("Unsupported argument for " + function.sqlName + ": " + name);
 		}
 		arguments.put(name, expression);
 		return this;
@@ -84,16 +76,15 @@ public class PostgresRegexpFunctionBuilder {
 			if (index++ > 0) {
 				builder.append(", ");
 			}
-			builder.append("N".equals(entry.getKey()) ? "\"N\"" : entry.getKey())
-					.append(" => ").append(entry.getValue());
+			builder.append("N".equals(entry.getKey()) ? "\"N\"" : entry.getKey()).append(" => ")
+					.append(entry.getValue());
 		}
 		return builder.append(")").toString();
 	}
 
 	private void requireArgument(String name) {
 		if (!arguments.containsKey(name)) {
-			throw new IllegalArgumentException(
-					function.sqlName + " requires argument: " + name);
+			throw new IllegalArgumentException(function.sqlName + " requires argument: " + name);
 		}
 	}
 

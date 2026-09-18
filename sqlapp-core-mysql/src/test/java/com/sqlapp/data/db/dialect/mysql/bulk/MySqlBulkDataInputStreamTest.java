@@ -20,8 +20,7 @@ class MySqlBulkDataInputStreamTest {
 	@Test
 	void streamsDelimitedRowsAndOmitsGeneratedColumns() throws Exception {
 		final Table table = createTable();
-		try (MySqlBulkDataInputStream input = new MySqlBulkDataInputStream(
-				table, BulkOption.defaults())) {
+		try (MySqlBulkDataInputStream input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
 			assertEquals(4, input.getColumns().size());
 			assertEquals("name", input.getColumns().get(0).getName());
 			assertEquals("山田,\"太郎\"\nline\\\\path\u001f\\N\u001f\u001f00ff\u001e",
@@ -33,30 +32,24 @@ class MySqlBulkDataInputStreamTest {
 	@Test
 	void includesIdentityOnlyWhenRequestedAndResolvesProvider() throws Exception {
 		final Table table = createTable();
-		try (MySqlBulkDataInputStream omitted = new MySqlBulkDataInputStream(
-				table, BulkOption.defaults());
-				MySqlBulkDataInputStream included = new MySqlBulkDataInputStream(
-						table, BulkOption.builder().keepIdentity(true).build())) {
-			assertFalse(omitted.getColumns().stream()
-					.anyMatch(column -> "id".equals(column.getName())));
-			assertTrue(included.getColumns().stream()
-					.anyMatch(column -> "id".equals(column.getName())));
+		try (MySqlBulkDataInputStream omitted = new MySqlBulkDataInputStream(table, BulkOption.defaults());
+				MySqlBulkDataInputStream included = new MySqlBulkDataInputStream(table,
+						BulkOption.builder().keepIdentity(true).build())) {
+			assertFalse(omitted.getColumns().stream().anyMatch(column -> "id".equals(column.getName())));
+			assertTrue(included.getColumns().stream().anyMatch(column -> "id".equals(column.getName())));
 		}
-		assertTrue(BulkInsertResolver.resolve(DialectHolder.mysql840Dialect)
-				instanceof MySqlBulkInsertExecutor);
+		assertTrue(BulkInsertResolver.resolve(DialectHolder.mysql840Dialect) instanceof MySqlBulkInsertExecutor);
 	}
 
 	private Table createTable() {
 		final Table table = new Table("load_target");
 		table.setDialect(DialectHolder.mysql840Dialect);
-		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT)
-				.setIdentity(true));
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT).setIdentity(true));
 		table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("nullable_value").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("empty_value").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("payload").setDataType(DataType.VARBINARY));
-		table.getColumns().add(new Column("calculated").setDataType(DataType.INT)
-				.setFormula("id + 1"));
+		table.getColumns().add(new Column("calculated").setDataType(DataType.INT).setFormula("id + 1"));
 		table.getRows().add(row -> {
 			row.put("id", 10L);
 			row.put("name", "山田,\"太郎\"\nline\\path");

@@ -39,7 +39,7 @@ public class MySqlCatalog570Reader extends MySqlCatalog564Reader {
 	protected SchemaReader newSchemaReader() {
 		return new MySqlSchema570Reader(this.getDialect());
 	}
-	
+
 	@Override
 	protected SettingReader newSettingReader() {
 		return new MySqlSetting570Reader(this.getDialect());

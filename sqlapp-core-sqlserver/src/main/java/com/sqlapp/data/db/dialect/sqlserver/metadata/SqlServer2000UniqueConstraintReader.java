@@ -52,8 +52,7 @@ public class SqlServer2000UniqueConstraintReader extends UniqueConstraintReader 
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
@@ -83,8 +82,7 @@ public class SqlServer2000UniqueConstraintReader extends UniqueConstraintReader 
 		return getSqlNodeCache().getString("uniqueConstraints2000.sql");
 	}
 
-	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)
-			throws SQLException {
+	protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
 		UniqueConstraint obj = new UniqueConstraint(getString(rs, INDEX_NAME));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));

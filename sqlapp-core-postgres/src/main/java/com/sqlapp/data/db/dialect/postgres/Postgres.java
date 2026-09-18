@@ -94,6 +94,7 @@ public class Postgres extends Dialect {
 		}
 		return null;
 	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -110,11 +111,10 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
-	public boolean setDbType(final String productDataType, final Long lengthOrPrecision,
-			final Integer scale, final DataTypeLengthProperties<?> column) {
+	public boolean setDbType(final String productDataType, final Long lengthOrPrecision, final Integer scale,
+			final DataTypeLengthProperties<?> column) {
 		boolean matched = super.setDbType(productDataType, lengthOrPrecision, scale, column);
-		if (matched && (column.getDataType() == DataType.RANGE
-				|| column.getDataType() == DataType.MULTIRANGE)) {
+		if (matched && (column.getDataType() == DataType.RANGE || column.getDataType() == DataType.MULTIRANGE)) {
 			column.setDataTypeName(productDataType);
 		}
 		return matched;

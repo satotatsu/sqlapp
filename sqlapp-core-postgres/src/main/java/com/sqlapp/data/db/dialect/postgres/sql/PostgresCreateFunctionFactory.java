@@ -28,19 +28,17 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.util.CommonUtils;
 
-public class PostgresCreateFunctionFactory extends
-		AbstractCreateFunctionFactory<PostgresSqlBuilder> {
+public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory<PostgresSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Function obj,
-			PostgresSqlBuilder builder) {
+	protected void addCreateObject(final Function obj, PostgresSqlBuilder builder) {
 		builder.create().or().replace();
 		builder.function();
 		builder.name(obj);
 		builder.space().arguments(obj.getArguments());
 		builder.lineBreak().returns();
 		builder.space()._add(obj.getReturning());
-		String quate=getQuate(obj);
+		String quate = getQuate(obj);
 		builder.lineBreak();
 		builder.as().space()._add(quate);
 		builder.lineBreak();
@@ -51,15 +49,15 @@ public class PostgresCreateFunctionFactory extends
 			builder.lineBreak();
 			builder.language().space()._add(obj.getLanguage());
 		}
-		if (obj.getDeterministic()!=null) {
+		if (obj.getDeterministic() != null) {
 			builder.lineBreak();
 			if (obj.getDeterministic().booleanValue()) {
 				builder.immutable();
-			} else{
+			} else {
 				builder._volatile();
 			}
-		} else{
-			if (obj.getStable()!=null&&obj.getStable().booleanValue()) {
+		} else {
+			if (obj.getStable() != null && obj.getStable().booleanValue()) {
 				builder.lineBreak();
 				builder.stable();
 			}
@@ -73,35 +71,36 @@ public class PostgresCreateFunctionFactory extends
 			builder._add(obj.getSqlSecurity());
 		}
 	}
-	
-	private String getQuate(Function obj){
-		StringBuilder builder=new StringBuilder();
-		for(String line:obj.getStatement()){
+
+	private String getQuate(Function obj) {
+		StringBuilder builder = new StringBuilder();
+		for (String line : obj.getStatement()) {
 			builder.append(line);
 			builder.append('\n');
 		}
-		String text=builder.toString();
-		if (!text.contains("$$")){
+		String text = builder.toString();
+		if (!text.contains("$$")) {
 			return "$$";
 		}
-		String name="$"+obj.getName()+"$";
-		if (!text.contains(name)){
+		String name = "$" + obj.getName() + "$";
+		if (!text.contains(name)) {
 			return name;
 		}
-		int i=0;
-		while(true){
-			name="$"+i+"$";
-			if (!text.contains(name)){
+		int i = 0;
+		while (true) {
+			name = "$" + i + "$";
+			if (!text.contains(name)) {
 				return name;
 			}
 		}
 	}
-	
+
 	@Override
 	protected void addOptions(final Function obj, List<SqlOperation> sqlList) {
-		if (obj.getRemarks()!=null){
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().function().space().specificName(obj, this.getOptions().isDecorateSchemaName()).is().sqlChar(obj.getRemarks());
+		if (obj.getRemarks() != null) {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().function().space().specificName(obj, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(obj.getRemarks());
 			addSql(sqlList, builder, SqlType.SET_COMMENT, obj);
 		}
 	}

@@ -27,39 +27,38 @@ import com.sqlapp.data.db.dialect.postgres.sql.Postgres91SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
-
-public class Postgres91 extends Postgres90{
-
+public class Postgres91 extends Postgres90 {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
 
-    protected Postgres91(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres91(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-    }
+	}
 
 	/**
-     * 同値判定
-     */
+	 * 同値判定
+	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;
 	}
-	
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Postgres91CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

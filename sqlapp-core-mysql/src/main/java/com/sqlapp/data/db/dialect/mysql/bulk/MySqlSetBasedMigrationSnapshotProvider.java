@@ -8,8 +8,13 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 
 /** MySQL staging-table SCD2 provider. */
 public class MySqlSetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(final Dialect dialect) { return dialect instanceof MySql; }
-	@Override public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect instanceof MySql;
+	}
+
+	@Override
+	public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
 		return new MySqlSetBasedMigrationSnapshotExecutor(dialect);
 	}
 }

@@ -36,17 +36,16 @@ import com.sqlapp.util.OutputTextBuilder;
 
 public class MigrationCommandTest extends AbstractVersionUpCommandTest {
 
-		
 	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		testVersionUp(handler, (times, ds)->{
-			final MigrationDownCommand versionDownCommand=new MigrationDownCommand();
+		final DbVersionFileHandler handler = new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds) -> {
+			final MigrationDownCommand versionDownCommand = new MigrationDownCommand();
 			initialize(versionDownCommand, ds);
-			versionDownCommand.setLastChangeToApply(times.get(times.size()-2));
+			versionDownCommand.setLastChangeToApply(times.get(times.size() - 2));
 			versionDownCommand.run();
-			final Table table=versionDownCommand.getTable();
+			final Table table = versionDownCommand.getTable();
 			try {
 				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
 			} catch (final ParseException e) {
@@ -54,10 +53,10 @@ public class MigrationCommandTest extends AbstractVersionUpCommandTest {
 			} finally {
 				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
 			}
-			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-			final OutputTextBuilder builder=new OutputTextBuilder();
+			final DbVersionHandler dbVersionHandler = new DbVersionHandler();
+			final OutputTextBuilder builder = new OutputTextBuilder();
 			dbVersionHandler.append(table, builder);
-			final String expected=this.getResource("versionAfter.txt");
+			final String expected = this.getResource("versionAfter.txt");
 			assertEquals(expected, builder.toString());
 		});
 	}

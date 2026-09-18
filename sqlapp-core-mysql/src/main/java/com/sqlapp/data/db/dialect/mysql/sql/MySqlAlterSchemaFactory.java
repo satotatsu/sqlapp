@@ -37,30 +37,25 @@ import com.sqlapp.data.schemas.State;
  * @author tatsuo satoh
  * 
  */
-public class MySqlAlterSchemaFactory extends
-		AbstractAlterSchemaFactory<MySqlSqlBuilder> {
+public class MySqlAlterSchemaFactory extends AbstractAlterSchemaFactory<MySqlSqlBuilder> {
 
 	@Override
-	protected void addAlterSchema(DbObjectDifference difference,
-			Map<String, Difference<?>> allDiff,
-			DbObjectDifference characterSetDiff,
-			DbObjectDifference collationDiff,
+	protected void addAlterSchema(DbObjectDifference difference, Map<String, Difference<?>> allDiff,
+			DbObjectDifference characterSetDiff, DbObjectDifference collationDiff,
 			DbObjectDifference characterSemanticsDiff, List<SqlOperation> sqlList) {
-		Schema orgSchema=difference.getOriginal(Schema.class);
-		Schema schema=difference.getTarget(Schema.class);
+		Schema orgSchema = difference.getOriginal(Schema.class);
+		Schema schema = difference.getTarget(Schema.class);
 		MySqlSqlBuilder builder = createSqlBuilder(getDialect());
 		if (difference.getState() == State.Modified) {
 			if (characterSetDiff != null || collationDiff != null)
-				builder.alter().schema()
-						.name((Schema) difference.getOriginal());
+				builder.alter().schema().name((Schema) difference.getOriginal());
 			if (characterSetDiff != null) {
-				builder.characterSet().space()
-						._add(characterSetDiff.getTarget().toString());
+				builder.characterSet().space()._add(characterSetDiff.getTarget().toString());
 			}
 			if (collationDiff != null) {
 				builder.collate().space()._add(collationDiff.getTarget().toString());
 			}
-			add(sqlList, this.createOperation(builder.toString(), SqlType.ALTER, orgSchema,schema));
+			add(sqlList, this.createOperation(builder.toString(), SqlType.ALTER, orgSchema, schema));
 		}
 	}
 }

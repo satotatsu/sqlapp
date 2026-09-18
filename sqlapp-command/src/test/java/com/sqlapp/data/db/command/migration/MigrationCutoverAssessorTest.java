@@ -26,8 +26,8 @@ class MigrationCutoverAssessorTest {
 				var target = DriverManager.getConnection("jdbc:hsqldb:mem:fresh_target", "SA", "")) {
 			create(source, Instant.parse("2026-09-16T10:00:00Z"));
 			create(target, Instant.parse("2026-09-16T09:58:00Z"));
-			final var check = new MigrationFreshnessCheck("orders", null, null, "EVENTS", "UPDATED_AT", null,
-					null, Map.of(), Duration.ofMinutes(5));
+			final var check = new MigrationFreshnessCheck("orders", null, null, "EVENTS", "UPDATED_AT", null, null,
+					Map.of(), Duration.ofMinutes(5));
 			final Instant now = Instant.parse("2026-09-16T10:01:00Z");
 
 			final var ready = MigrationCutoverAssessor.assess(source, target, List.of(check),

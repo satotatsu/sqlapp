@@ -28,92 +28,75 @@ public class PostgresBulkUpsertExecutor implements BulkUpsertExecutor {
 	}
 
 	@Override
-	public long execute(final Connection connection, final Table table,
-			final BulkUpsertOption options) throws SQLException {
+	public long execute(final Connection connection, final Table table, final BulkUpsertOption options)
+			throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
-		final BulkUpsertOption effective = options == null
-				? BulkUpsertOption.defaults() : options;
+		final BulkUpsertOption effective = options == null ? BulkUpsertOption.defaults() : options;
 		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(table, effective);
 		final List<Column> keys = plan.getKeyColumns();
 		final List<Column> stagingColumns = plan.getStagingColumns();
 		final List<Column> updateColumns = plan.getUpdateColumns();
 		final String stagingName = stagingName(effective);
-		final String targetName = dialect.getObjectFullName(table.getCatalogName(),
-				table.getSchemaName(), table.getName());
-		try (var scope = BulkUpsertExecutionScope.begin(connection,
-				effective.isUseTransaction())) {
+		final String targetName = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(),
+				table.getName());
+		try (var scope = BulkUpsertExecutionScope.begin(connection, effective.isUseTransaction())) {
 			try {
-			try (var statement = connection.createStatement()) {
-				statement.execute(createStagingSql(targetName, stagingName,
-						stagingColumns));
-			}
-			scope.addCleanupSql("DROP TABLE " + quote(stagingName));
-			BulkInsertResolver.resolve(dialect).execute(connection,
-					plan.createStagingTable(stagingName),
-					stagingBulkOption(effective.getBulkOption()));
-			final long affected = apply(connection, targetName, stagingName,
-					keys, stagingColumns, updateColumns, effective);
-			scope.commit();
-			return affected;
-		} catch (SQLException | RuntimeException e) {
-			scope.rollback(e);
-			throw e;
+				try (var statement = connection.createStatement()) {
+					statement.execute(createStagingSql(targetName, stagingName, stagingColumns));
+				}
+				scope.addCleanupSql("DROP TABLE " + quote(stagingName));
+				BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stagingName),
+						stagingBulkOption(effective.getBulkOption()));
+				final long affected = apply(connection, targetName, stagingName, keys, stagingColumns, updateColumns,
+						effective);
+				scope.commit();
+				return affected;
+			} catch (SQLException | RuntimeException e) {
+				scope.rollback(e);
+				throw e;
 			}
 		}
 	}
 
-	private long apply(final Connection connection, final String targetName,
-			final String stagingName, final List<Column> keys,
-			final List<Column> stagingColumns,
-			final List<Column> updateColumns,
+	private long apply(final Connection connection, final String targetName, final String stagingName,
+			final List<Column> keys, final List<Column> stagingColumns, final List<Column> updateColumns,
 			final BulkUpsertOption options) throws SQLException {
 		final String sql;
 		if (!options.isInsertWhenNotMatched()) {
 			sql = createUpdateSql(targetName, stagingName, keys, updateColumns);
 		} else {
-			sql = createInsertSql(targetName, stagingName, keys, stagingColumns,
-					updateColumns, options);
+			sql = createInsertSql(targetName, stagingName, keys, stagingColumns, updateColumns, options);
 		}
 		try (var statement = connection.createStatement()) {
 			return statement.executeUpdate(sql);
 		}
 	}
 
-	private String createStagingSql(final String targetName,
-			final String stagingName, final List<Column> columns) {
-		return "CREATE TEMPORARY TABLE " + quote(stagingName)
-				+ " AS SELECT " + columnList(columns, null) + " FROM "
+	private String createStagingSql(final String targetName, final String stagingName, final List<Column> columns) {
+		return "CREATE TEMPORARY TABLE " + quote(stagingName) + " AS SELECT " + columnList(columns, null) + " FROM "
 				+ targetName + " WITH NO DATA";
 	}
 
-	private String createUpdateSql(final String targetName,
-			final String stagingName, final List<Column> keys,
+	private String createUpdateSql(final String targetName, final String stagingName, final List<Column> keys,
 			final List<Column> updateColumns) {
-		final StringBuilder sql = new StringBuilder("UPDATE ")
-				.append(targetName).append(" AS target SET ");
+		final StringBuilder sql = new StringBuilder("UPDATE ").append(targetName).append(" AS target SET ");
 		appendAssignments(sql, updateColumns);
 		sql.append(" FROM ").append(quote(stagingName)).append(" AS source WHERE ");
 		appendMatch(sql, keys);
 		return sql.toString();
 	}
 
-	private String createInsertSql(final String targetName,
-			final String stagingName, final List<Column> keys,
-			final List<Column> stagingColumns,
-			final List<Column> updateColumns,
-			final BulkUpsertOption options) {
-		final boolean identityInsert = stagingColumns.stream()
-				.anyMatch(Column::isIdentity);
-		final StringBuilder sql = new StringBuilder("INSERT INTO ")
-				.append(targetName).append(" (")
+	private String createInsertSql(final String targetName, final String stagingName, final List<Column> keys,
+			final List<Column> stagingColumns, final List<Column> updateColumns, final BulkUpsertOption options) {
+		final boolean identityInsert = stagingColumns.stream().anyMatch(Column::isIdentity);
+		final StringBuilder sql = new StringBuilder("INSERT INTO ").append(targetName).append(" (")
 				.append(columnList(stagingColumns, null)).append(')');
 		if (identityInsert) {
 			sql.append(" OVERRIDING SYSTEM VALUE");
 		}
-		sql.append(" SELECT ").append(columnList(stagingColumns, "source"))
-				.append(" FROM ").append(quote(stagingName)).append(" AS source")
-				.append(" ON CONFLICT (").append(columnList(keys, null)).append(')');
+		sql.append(" SELECT ").append(columnList(stagingColumns, "source")).append(" FROM ").append(quote(stagingName))
+				.append(" AS source").append(" ON CONFLICT (").append(columnList(keys, null)).append(')');
 		if (options.isUpdateWhenMatched() && !updateColumns.isEmpty()) {
 			sql.append(" DO UPDATE SET ");
 			for (int i = 0; i < updateColumns.size(); i++) {
@@ -129,8 +112,7 @@ public class PostgresBulkUpsertExecutor implements BulkUpsertExecutor {
 		return sql.toString();
 	}
 
-	private void appendAssignments(final StringBuilder sql,
-			final List<Column> columns) {
+	private void appendAssignments(final StringBuilder sql, final List<Column> columns) {
 		for (int i = 0; i < columns.size(); i++) {
 			if (i > 0) {
 				sql.append(", ");
@@ -152,8 +134,8 @@ public class PostgresBulkUpsertExecutor implements BulkUpsertExecutor {
 
 	private BulkOption stagingBulkOption(final BulkOption source) {
 		final BulkOption option = source == null ? BulkOption.defaults() : source;
-		return BulkOption.builder().keepIdentity(true).keepNulls(true)
-				.checkConstraints(option.isCheckConstraints()).build();
+		return BulkOption.builder().keepIdentity(true).keepNulls(true).checkConstraints(option.isCheckConstraints())
+				.build();
 	}
 
 	private String stagingName(final BulkUpsertOption options) {
@@ -161,8 +143,7 @@ public class PostgresBulkUpsertExecutor implements BulkUpsertExecutor {
 				? "sqlapp_upsert_" + UUID.randomUUID().toString().replace("-", "")
 				: options.getStagingTableName();
 		if (!name.matches("[A-Za-z_][A-Za-z0-9_]*")) {
-			throw new IllegalArgumentException(
-					"Invalid PostgreSQL stagingTableName: " + name);
+			throw new IllegalArgumentException("Invalid PostgreSQL stagingTableName: " + name);
 		}
 		return name;
 	}

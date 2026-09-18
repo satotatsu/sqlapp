@@ -62,8 +62,7 @@ public class PostgresIndexReader extends IndexReader {
 	/**
 	 * インデックスのカラムを取得するための正規表現
 	 */
-	private static final Pattern indexPattern = Pattern.compile(
-			"create\\s+.*index.*\\s+on\\s+.*\\((.*)\\).*",
+	private static final Pattern indexPattern = Pattern.compile("create\\s+.*index.*\\s+on\\s+.*\\((.*)\\).*",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
 	/**
@@ -74,8 +73,7 @@ public class PostgresIndexReader extends IndexReader {
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
 	@Override
-	protected List<Index> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
@@ -133,9 +131,7 @@ public class PostgresIndexReader extends IndexReader {
 					return;
 				}
 				String columns = columnsMap.get(index.getName());
-				int pos = min(
-						columnName.length() + columns.indexOf(columnName),
-						columns.length());
+				int pos = min(columnName.length() + columns.indexOf(columnName), columns.length());
 				String sub = trim(columns.substring(pos).toUpperCase());
 				if (sub.startsWith("DESC")) {
 					index.getColumns().add(columnName, Order.Desc);

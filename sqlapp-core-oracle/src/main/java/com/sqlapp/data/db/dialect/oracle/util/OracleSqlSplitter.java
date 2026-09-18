@@ -28,58 +28,62 @@ import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 import com.sqlapp.util.CommonUtils;
 
-public class OracleSqlSplitter extends SqlSplitter{
+public class OracleSqlSplitter extends SqlSplitter {
 
 	public OracleSqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern CREATE_PATTERN=Pattern.compile("\\s*(CREATE|ALTER)\\s*.*", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
 
-	private static final Pattern BEGIN_PATTERN=Pattern.compile("\\s*(BEGIN|DECLARE)\\s*", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
+	private static final Pattern CREATE_PATTERN = Pattern.compile("\\s*(CREATE|ALTER)\\s*.*",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
 
-	private static final Pattern END_PATTERN=Pattern.compile("\\s*END\\s*(?<term>[^\\s;])?\\s*;\\s*/\\s*.*", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
+	private static final Pattern BEGIN_PATTERN = Pattern.compile("\\s*(BEGIN|DECLARE)\\s*",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+
+	private static final Pattern END_PATTERN = Pattern.compile("\\s*END\\s*(?<term>[^\\s;])?\\s*;\\s*/\\s*.*",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
 
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isStartStatement(String text, StringHolder stringHolder){
-				Matcher matcher=CREATE_PATTERN.matcher(text);
-				if (matcher.matches()){
-					int delPos=stringHolder.indexOf(this.getCurrentDelimiter(), stringHolder.getPosition()+10);
-					int beginPos=stringHolder.searchLineOf(BEGIN_PATTERN, stringHolder.getPosition()+10);
-					if (beginPos<0){
+			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				Matcher matcher = CREATE_PATTERN.matcher(text);
+				if (matcher.matches()) {
+					int delPos = stringHolder.indexOf(this.getCurrentDelimiter(), stringHolder.getPosition() + 10);
+					int beginPos = stringHolder.searchLineOf(BEGIN_PATTERN, stringHolder.getPosition() + 10);
+					if (beginPos < 0) {
 						return false;
 					}
-					if (delPos<beginPos){
+					if (delPos < beginPos) {
 						return false;
 					}
-					int ePos=searchEnd(stringHolder, beginPos+6);
-					if (ePos>=0){
-						int del=stringHolder.indexOf("/", ePos+4);
+					int ePos = searchEnd(stringHolder, beginPos + 6);
+					if (ePos >= 0) {
+						int del = stringHolder.indexOf("/", ePos + 4);
 						setPosition(del);
 						return true;
-					} else{
-						stringHolder.throwInvalidTextException("Delimiter[/] not found.["+stringHolder.substringAt()+"]");
+					} else {
+						stringHolder.throwInvalidTextException(
+								"Delimiter[/] not found.[" + stringHolder.substringAt() + "]");
 					}
 				}
 				return false;
 			}
 
-			private int searchEnd(StringHolder stringHolder, int pos){
-				int ePos=stringHolder.searchLineOf(END_PATTERN, pos+6, false, (i, matcher)->{
-					String term=matcher.group("term");
-					if (CommonUtils.isEmpty(term)){
+			private int searchEnd(StringHolder stringHolder, int pos) {
+				int ePos = stringHolder.searchLineOf(END_PATTERN, pos + 6, false, (i, matcher) -> {
+					String term = matcher.group("term");
+					if (CommonUtils.isEmpty(term)) {
 						return true;
 					}
-					if ("IF".equalsIgnoreCase(term)){
+					if ("IF".equalsIgnoreCase(term)) {
 						return false;
 					}
-					if ("LOOP".equalsIgnoreCase(term)){
+					if ("LOOP".equalsIgnoreCase(term)) {
 						return false;
 					}
-					if ("CASE".equalsIgnoreCase(term)){
+					if ("CASE".equalsIgnoreCase(term)) {
 						return false;
 					}
 					return true;
@@ -88,6 +92,6 @@ public class OracleSqlSplitter extends SqlSplitter{
 			}
 
 		};
-		
+
 	}
 }

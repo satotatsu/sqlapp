@@ -59,8 +59,7 @@ public class SqlServer2000TableReader extends TableReader {
 	 * @param context
 	 */
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -91,7 +90,7 @@ public class SqlServer2000TableReader extends TableReader {
 		table.setLobTableSpaceName(getString(rs, "lob_file_group_name"));
 		table.setRemarks(getString(rs, REMARKS));
 		setSpecifics(rs, "text_in_row_limit", table);
-		//setSpecifics(rs, "has_clustered_index", table);
+		// setSpecifics(rs, "has_clustered_index", table);
 		return table;
 	}
 
@@ -136,8 +135,7 @@ public class SqlServer2000TableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

@@ -40,17 +40,17 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 	protected void addOption(final Table table, final SqlServerSqlBuilder builder) {
 		super.addOption(table, builder);
 		final Map<String, String> map = table.getSpecifics();
-		if(table.isCompression()) {
+		if (table.isCompression()) {
 			builder.lineBreak();
-			builder.with().space().brackets(()->{
+			builder.with().space().brackets(() -> {
 				builder.dataCompression().eq().space();
 				if ("ROW".equalsIgnoreCase(table.getCompressionType())) {
 					builder.row();
-				}else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
+				} else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.page();
-				}else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
+				} else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.columnstore();
-				}else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
+				} else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.columnstoreArchive();
 				} else {
 					builder.row();
@@ -61,14 +61,13 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			SqlServerSqlBuilder child = builder.newInstance();
 			addWithOption(table, child);
 			if (!child.toString().isEmpty()) {
-				builder.with().space().brackets(()->{
+				builder.with().space().brackets(() -> {
 					builder.space();
 					builder._add(child.toString());
 				});
 			}
 		}
-		final Boolean val = Converters.getDefault().convertObject(
-				map.get("HAS_CHANGE_TRACKING"), Boolean.class);
+		final Boolean val = Converters.getDefault().convertObject(map.get("HAS_CHANGE_TRACKING"), Boolean.class);
 		if (val != null) {
 			builder.lineBreak();
 			if (val.booleanValue()) {
@@ -79,19 +78,19 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			}
 		}
 	}
-	
+
 	protected void addWithOption(final Table table, final SqlServerSqlBuilder builder) {
 		final Map<String, String> map = table.getSpecifics();
-		boolean[] first = new boolean[]{true};
-		map.forEach((k,v) -> {
+		boolean[] first = new boolean[] { true };
+		map.forEach((k, v) -> {
 			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k)) {
 				return;
 			}
 			if (!first[0]) {
 				builder.space().comma();
 			}
-			SqlServerIndexOptions enm=SqlServerIndexOptions.parse(k);
-			if (enm!=null) {
+			SqlServerIndexOptions enm = SqlServerIndexOptions.parse(k);
+			if (enm != null) {
 				builder._add(enm);
 				first[0] = false;
 				if (CommonUtils.isEmpty(v)) {
@@ -99,8 +98,8 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 				}
 				builder.space().eq().space();
 				if (enm.isOnOff()) {
-					OnOffType onOffType=OnOffType.parse(k, null);
-					if (onOffType==null) {
+					OnOffType onOffType = OnOffType.parse(k, null);
+					if (onOffType == null) {
 						builder._add(enm.getDefaultValue());
 					} else {
 						builder._add(onOffType);

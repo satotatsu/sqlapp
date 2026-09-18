@@ -41,8 +41,7 @@ public class SqlServer2005ColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ColumnPrivilege> result = list();
@@ -60,8 +59,7 @@ public class SqlServer2005ColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return getSqlNodeCache().getString("columnPrivileges2005.sql");
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs) throws SQLException {
 		String catalogName = getString(rs, CATALOG_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String objectName = getString(rs, OBJECT_NAME);
@@ -76,8 +74,7 @@ public class SqlServer2005ColumnPrivilegeReader extends ColumnPrivilegeReader {
 		obj.setCreatedAt(rs.getTimestamp("create_date"));
 		obj.setLastAlteredAt(rs.getTimestamp("modify_date"));
 		obj.setState(getString(rs, "state_desc"));
-		obj.setGrantable("GRANT_WITH_GRANT_OPTION".equals(getString(rs,
-				"state_desc")));
+		obj.setGrantable("GRANT_WITH_GRANT_OPTION".equals(getString(rs, "state_desc")));
 		return obj;
 	}
 }

@@ -30,22 +30,19 @@ import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2005CreateIndexFactory extends
-	SqlServerCreateIndexFactory{
+public class SqlServer2005CreateIndexFactory extends SqlServerCreateIndexFactory {
 
 	@Override
-	protected void addObjectDetailAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+	protected void addObjectDetailAfter(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
 		addIncludes(obj, table, builder);
 		addIncludesAfter(obj, table, builder);
 		addIndexWithOption(obj, table, builder);
 		addPartitioning(obj, table, builder);
 	}
 
-	protected void addIncludes(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(obj.getIncludes())){
-			builder.lineBreak().include().space().brackets(()->{
+	protected void addIncludes(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getIncludes())) {
+			builder.lineBreak().include().space().brackets(() -> {
 				builder.space();
 				builder.names(obj.getIncludes());
 				builder.space();
@@ -53,31 +50,30 @@ public class SqlServer2005CreateIndexFactory extends
 		}
 	}
 
-	protected void addIncludesAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+	protected void addIncludesAfter(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
 	}
-	
+
 	@Override
-	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
-		final Map<String,String> map=super.createIndexWithOption(obj, table);
-		String key=SqlServerIndexOptions.IGNORE_DUP_KEY.toString();
-		String val=obj.getSpecifics().get(key);
-		if (val!=null){
+	protected Map<String, String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String, String> map = super.createIndexWithOption(obj, table);
+		String key = SqlServerIndexOptions.IGNORE_DUP_KEY.toString();
+		String val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=SqlServerIndexOptions.STATISTICS_NORECOMPUTE.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = SqlServerIndexOptions.STATISTICS_NORECOMPUTE.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
 		return map;
 	}
-	
-	protected void addPartitioning(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		if (obj.getPartitioning()!=null) {
-			final AddObjectDetail<Partitioning,SqlServerSqlBuilder> addObjectDetail=this.getAddObjectDetail(obj.getPartitioning(), SqlType.CREATE);
-			if (addObjectDetail!=null){
+
+	protected void addPartitioning(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
+		if (obj.getPartitioning() != null) {
+			final AddObjectDetail<Partitioning, SqlServerSqlBuilder> addObjectDetail = this
+					.getAddObjectDetail(obj.getPartitioning(), SqlType.CREATE);
+			if (addObjectDetail != null) {
 				addObjectDetail.addObjectDetail(obj.getPartitioning(), builder);
 			}
 		}

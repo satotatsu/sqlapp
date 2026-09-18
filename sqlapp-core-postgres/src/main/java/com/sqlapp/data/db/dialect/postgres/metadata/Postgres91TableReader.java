@@ -26,24 +26,26 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * Postgres9.1のテーブル情報読み込み
+ * 
  * @author satoh
  *
  */
-public class Postgres91TableReader extends Postgres90TableReader{
+public class Postgres91TableReader extends Postgres90TableReader {
 
 	protected Postgres91TableReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
-	protected Table createTable(ExResultSet rs) throws SQLException{
-		Table table=super.createTable(rs);
+	protected Table createTable(ExResultSet rs) throws SQLException {
+		Table table = super.createTable(rs);
 		this.setSpecifics("unlogged", "u".equalsIgnoreCase(getString(rs, "relpersistence")), table);
 		return table;
 	}
-	
+
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables91.sql");

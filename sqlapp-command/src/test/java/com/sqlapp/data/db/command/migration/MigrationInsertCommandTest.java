@@ -42,7 +42,7 @@ public class MigrationInsertCommandTest extends AbstractVersionUpCommandTest {
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler = new DbVersionFileHandler();
-		testVersionUp(handler, (times, ds)->{
+		testVersionUp(handler, (times, ds) -> {
 			final MigrationDeleteCommand versionDownCommand = new MigrationDeleteCommand();
 			initialize(versionDownCommand, ds);
 			versionDownCommand.setLastChangeToApply(times.get(times.size() - 2));

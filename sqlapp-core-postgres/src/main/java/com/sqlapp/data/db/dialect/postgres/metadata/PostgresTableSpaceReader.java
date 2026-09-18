@@ -47,8 +47,7 @@ public class PostgresTableSpaceReader extends TableSpaceReader {
 	}
 
 	@Override
-	protected List<TableSpace> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpace> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableSpace> result = CommonUtils.list();
@@ -70,8 +69,8 @@ public class PostgresTableSpaceReader extends TableSpaceReader {
 		String name = getString(rs, "spcname");
 		TableSpace obj = new TableSpace(name);
 		obj.setOwnerName(getString(rs, "usename"));
-		//TODO postgres bugs
-		//obj.setLocation(getString(rs, "spclocation"));
+		// TODO postgres bugs
+		// obj.setLocation(getString(rs, "spclocation"));
 		obj.setRemarks(getString(rs, "remarks"));
 		return obj;
 	}

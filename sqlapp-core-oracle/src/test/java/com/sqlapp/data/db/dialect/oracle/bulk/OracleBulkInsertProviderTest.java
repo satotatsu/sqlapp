@@ -14,8 +14,7 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 class OracleBulkInsertProviderTest {
 	@Test
 	void resolvesOracleProvider() {
-		assertInstanceOf(OracleBulkInsertExecutor.class,
-				BulkInsertResolver.resolve(DialectHolder.oracle23aiDialect));
+		assertInstanceOf(OracleBulkInsertExecutor.class, BulkInsertResolver.resolve(DialectHolder.oracle23aiDialect));
 	}
 
 	@Test

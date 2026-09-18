@@ -35,12 +35,12 @@ public class MySqlColumn570Reader extends MySqlColumn564Reader {
 
 	@Override
 	protected Column createColumn(final Connection connection, final ExResultSet rs) throws SQLException {
-		final Column column=super.createColumn(connection, rs);
+		final Column column = super.createColumn(connection, rs);
 		final String extra = getString(rs, "EXTRA");
 		final String expression = getString(rs, "GENERATION_EXPRESSION");
 		if (!CommonUtils.isEmpty(expression)) {
 			column.setFormula(expression);
-			if (extra==null||extra.contains("VIRTUAL")) {
+			if (extra == null || extra.contains("VIRTUAL")) {
 				column.setFormulaPersisted(false);
 			} else {
 				column.setFormulaPersisted(true);

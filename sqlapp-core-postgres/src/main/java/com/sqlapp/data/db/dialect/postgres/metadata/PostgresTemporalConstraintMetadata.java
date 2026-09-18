@@ -20,16 +20,13 @@ final class PostgresTemporalConstraintMetadata {
 
 	static void apply(UniqueConstraint constraint, String definition) {
 		if (contains(definition, "WITHOUT OVERLAPS")) {
-			constraint.getSpecifics().put(
-					Postgres180CreateUniqueConstraintFactory.WITHOUT_OVERLAPS,
-					"true");
+			constraint.getSpecifics().put(Postgres180CreateUniqueConstraintFactory.WITHOUT_OVERLAPS, "true");
 		}
 	}
 
 	static void apply(ForeignKeyConstraint constraint, String definition) {
 		if (contains(definition, "PERIOD")) {
-			constraint.getSpecifics().put(
-					Postgres180CreateForeignKeyConstraintFactory.PERIOD, "true");
+			constraint.getSpecifics().put(Postgres180CreateForeignKeyConstraintFactory.PERIOD, "true");
 		}
 		applyEnforcement(constraint, definition);
 	}
@@ -38,8 +35,7 @@ final class PostgresTemporalConstraintMetadata {
 		applyEnforcement(constraint, definition);
 	}
 
-	private static void applyEnforcement(
-			com.sqlapp.data.schemas.Constraint constraint, String definition) {
+	private static void applyEnforcement(com.sqlapp.data.schemas.Constraint constraint, String definition) {
 		if (contains(definition, "NOT ENFORCED")) {
 			constraint.getSpecifics().put(
 					com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateCheckConstraintFactory.NOT_ENFORCED,
@@ -48,7 +44,6 @@ final class PostgresTemporalConstraintMetadata {
 	}
 
 	private static boolean contains(String value, String token) {
-		return !CommonUtils.isEmpty(value)
-				&& value.toUpperCase(Locale.ROOT).contains(token);
+		return !CommonUtils.isEmpty(value) && value.toUpperCase(Locale.ROOT).contains(token);
 	}
 }

@@ -12,10 +12,8 @@ public class Postgres180CreateCheckConstraintFactory
 	public static final String NOT_ENFORCED = "notEnforced";
 
 	@Override
-	protected void addCheckConstraintAfter(CheckConstraint constraint,
-			AbstractSqlBuilder<?> builder) {
-		if (Boolean.parseBoolean(
-				constraint.getSpecifics().get(NOT_ENFORCED))) {
+	protected void addCheckConstraintAfter(CheckConstraint constraint, AbstractSqlBuilder<?> builder) {
+		if (Boolean.parseBoolean(constraint.getSpecifics().get(NOT_ENFORCED))) {
 			builder.space()._add("NOT ENFORCED");
 		}
 	}

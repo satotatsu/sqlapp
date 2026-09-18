@@ -21,17 +21,19 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.TableReader;
+
 /**
  * SqlServer2014のスキーマ読み込み
+ * 
  * @author satoh
  *
  */
-public class SqlServer2014SchemaReader extends SqlServer2012SchemaReader{
+public class SqlServer2014SchemaReader extends SqlServer2012SchemaReader {
 
 	public SqlServer2014SchemaReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected TableReader newTableReader() {
 		return new SqlServer2014TableReader(this.getDialect());

@@ -12,8 +12,7 @@ import com.sqlapp.data.schemas.View;
  */
 public final class OracleJsonDualityViewUtils {
 
-	public static final String JSON_RELATIONAL_DUALITY_VIEW =
-			"JSON_RELATIONAL_DUALITY_VIEW";
+	public static final String JSON_RELATIONAL_DUALITY_VIEW = "JSON_RELATIONAL_DUALITY_VIEW";
 	public static final String JSON_COLUMN_NAME = "JSON_COLUMN_NAME";
 	public static final String ROOT_TABLE_OWNER = "ROOT_TABLE_OWNER";
 	public static final String ROOT_TABLE_NAME = "ROOT_TABLE_NAME";
@@ -26,13 +25,10 @@ public final class OracleJsonDualityViewUtils {
 	}
 
 	public static boolean isJsonRelationalDualityView(final View view) {
-		return Boolean.TRUE.equals(
-				view.getSpecifics().get(JSON_RELATIONAL_DUALITY_VIEW,
-						Boolean.class));
+		return Boolean.TRUE.equals(view.getSpecifics().get(JSON_RELATIONAL_DUALITY_VIEW, Boolean.class));
 	}
 
-	public static View setJsonRelationalDualityView(final View view,
-			final boolean value) {
+	public static View setJsonRelationalDualityView(final View view, final boolean value) {
 		view.getSpecifics().put(JSON_RELATIONAL_DUALITY_VIEW, value);
 		return view;
 	}

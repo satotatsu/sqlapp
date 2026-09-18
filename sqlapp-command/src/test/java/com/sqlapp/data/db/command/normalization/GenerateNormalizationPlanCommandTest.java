@@ -35,33 +35,23 @@ class GenerateNormalizationPlanCommandTest {
 	void testGenerateCandidatesAndPreviewSchema() throws Exception {
 		Schema schema = new Schema("PUBLIC");
 		Table orders = new Table("ORDERS");
-		orders.getColumns().add(new Column("TENANT_CODE")
-				.setDataType(DataType.CHAR).setLength(20).setNotNull(true));
-		orders.getColumns().add(new Column("ORDER_NO")
-				.setDataType(DataType.CHAR).setLength(20).setNotNull(true));
-		orders.getColumns().add(new Column("ORDER_DATE")
-				.setDataType(DataType.CHAR).setLength(8));
-		orders.getColumns().add(new Column("ITEM_1")
-				.setDataType(DataType.CHAR).setLength(30));
-		orders.getColumns().add(new Column("ITEM_2")
-				.setDataType(DataType.CHAR).setLength(30));
-		orders.getColumns().add(new Column("QUANTITY_1")
-				.setDataType(DataType.INT));
-		orders.getColumns().add(new Column("QUANTITY_2")
-				.setDataType(DataType.INT));
-		orders.setPrimaryKey("PK_ORDERS", orders.getColumns().get("TENANT_CODE"),
-				orders.getColumns().get("ORDER_NO"));
+		orders.getColumns().add(new Column("TENANT_CODE").setDataType(DataType.CHAR).setLength(20).setNotNull(true));
+		orders.getColumns().add(new Column("ORDER_NO").setDataType(DataType.CHAR).setLength(20).setNotNull(true));
+		orders.getColumns().add(new Column("ORDER_DATE").setDataType(DataType.CHAR).setLength(8));
+		orders.getColumns().add(new Column("ITEM_1").setDataType(DataType.CHAR).setLength(30));
+		orders.getColumns().add(new Column("ITEM_2").setDataType(DataType.CHAR).setLength(30));
+		orders.getColumns().add(new Column("QUANTITY_1").setDataType(DataType.INT));
+		orders.getColumns().add(new Column("QUANTITY_2").setDataType(DataType.INT));
+		orders.setPrimaryKey("PK_ORDERS", orders.getColumns().get("TENANT_CODE"), orders.getColumns().get("ORDER_NO"));
 		schema.getTables().add(orders);
 		Table noKey = new Table("LEGACY_MEMO");
-		noKey.getColumns().add(new Column("MEMO")
-				.setDataType(DataType.NCHAR).setLength(100));
+		noKey.getColumns().add(new Column("MEMO").setDataType(DataType.NCHAR).setLength(100));
 		schema.getTables().add(noKey);
 		File source = new File(temporaryDirectory, "legacy.xml");
 		schema.writeXml(source);
 		File output = new File(temporaryDirectory, "plan");
 
-		GenerateNormalizationPlanCommand command =
-				new GenerateNormalizationPlanCommand();
+		GenerateNormalizationPlanCommand command = new GenerateNormalizationPlanCommand();
 		command.setTargetFile(source);
 		command.setOutputDirectory(output);
 		command.setLocale(Locale.ENGLISH);
@@ -91,17 +81,15 @@ class GenerateNormalizationPlanCommandTest {
 
 	@Test
 	void testMessagesAreAvailableForSupportedLocales() {
-		List<Locale> locales = List.of(Locale.ENGLISH, Locale.JAPANESE, Locale.GERMAN,
-				Locale.FRENCH, Locale.SIMPLIFIED_CHINESE);
+		List<Locale> locales = List.of(Locale.ENGLISH, Locale.JAPANESE, Locale.GERMAN, Locale.FRENCH,
+				Locale.SIMPLIFIED_CHINESE);
 		for (Locale locale : locales) {
-			assertFalse(GenerateNormalizationPlanCommand.getMessage(locale,
-					"question.repeatingColumns.sequenceOrder").isBlank());
-			assertFalse(GenerateNormalizationPlanCommand.getMessage(locale,
-					"error.candidateThresholds").isBlank());
+			assertFalse(GenerateNormalizationPlanCommand.getMessage(locale, "question.repeatingColumns.sequenceOrder")
+					.isBlank());
+			assertFalse(GenerateNormalizationPlanCommand.getMessage(locale, "error.candidateThresholds").isBlank());
 		}
-		assertEquals("連番は行の順序を表しますか？",
-				GenerateNormalizationPlanCommand.getMessage(Locale.JAPANESE,
-						"question.repeatingColumns.sequenceOrder"));
+		assertEquals("連番は行の順序を表しますか？", GenerateNormalizationPlanCommand.getMessage(Locale.JAPANESE,
+				"question.repeatingColumns.sequenceOrder"));
 	}
 
 	@Test
@@ -119,8 +107,7 @@ class GenerateNormalizationPlanCommandTest {
 		File foreignKeyDirectory = new File(temporaryDirectory, "foreignkey");
 		assertTrue(foreignKeyDirectory.mkdirs());
 		Files.writeString(new File(foreignKeyDirectory, "hierarchy.def").toPath(),
-				"TAB1(A,B,C)->TAB(A,B,C)\n"
-						+ "TAB1_1(A,B,C,D)->TAB1(A,B,C,D)\n");
+				"TAB1(A,B,C)->TAB(A,B,C)\n" + "TAB1_1(A,B,C,D)->TAB1(A,B,C,D)\n");
 		File output = new File(temporaryDirectory, "hierarchy-plan");
 
 		GenerateNormalizationPlanCommand command = new GenerateNormalizationPlanCommand();
@@ -136,8 +123,7 @@ class GenerateNormalizationPlanCommandTest {
 		assertEquals(List.of("PARENT_ID", "D"), businessKey(candidates, "TAB1"));
 		assertEquals(List.of("PARENT_ID", "E"), businessKey(candidates, "TAB1_1"));
 
-		Schema preview = (Schema) SchemaUtils
-				.readXml(new File(output, "hierarchy-normalization-preview.xml"));
+		Schema preview = (Schema) SchemaUtils.readXml(new File(output, "hierarchy-normalization-preview.xml"));
 		assertUnique(preview.getTables().get("TAB"), "A", "B", "C");
 		assertUnique(preview.getTables().get("TAB1"), "PARENT_ID", "D");
 		assertUnique(preview.getTables().get("TAB1_1"), "PARENT_ID", "E");
@@ -147,8 +133,7 @@ class GenerateNormalizationPlanCommandTest {
 
 	@SuppressWarnings("unchecked")
 	private List<String> businessKey(List<Map<String, Object>> candidates, String table) {
-		return candidates.stream()
-				.filter(candidate -> "composite-primary-key".equals(candidate.get("category")))
+		return candidates.stream().filter(candidate -> "composite-primary-key".equals(candidate.get("category")))
 				.filter(candidate -> table.equals(((Map<String, Object>) candidate.get("source")).get("table")))
 				.map(candidate -> (Map<String, Object>) candidate.get("proposal"))
 				.map(proposal -> (List<String>) proposal.get("businessKey")).findFirst().orElseThrow();
@@ -159,9 +144,8 @@ class GenerateNormalizationPlanCommandTest {
 		for (String columnName : primaryKeyNames) {
 			table.getColumns().add(new Column(columnName).setDataType(DataType.VARCHAR).setLength(32).setNotNull(true));
 		}
-		table.setPrimaryKey("PK_" + name,
-				java.util.Arrays.stream(primaryKeyNames).map(columnName -> table.getColumns().get(columnName))
-						.toArray(Column[]::new));
+		table.setPrimaryKey("PK_" + name, java.util.Arrays.stream(primaryKeyNames)
+				.map(columnName -> table.getColumns().get(columnName)).toArray(Column[]::new));
 		return table;
 	}
 

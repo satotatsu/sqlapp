@@ -24,7 +24,7 @@ import com.sqlapp.data.geometry.Point;
 import org.postgresql.geometric.PGpoint;
 import java.sql.SQLException;
 
-public class ToPGPointConverter extends AbstractToObjectConverter<PGpoint, Point>{
+public class ToPGPointConverter extends AbstractToObjectConverter<PGpoint, Point> {
 
 	/**
 	 * serialVersionUID
@@ -47,9 +47,7 @@ public class ToPGPointConverter extends AbstractToObjectConverter<PGpoint, Point
 
 	@Override
 	protected PGpoint toDbType(Point obj) {
-		return new PGpoint(obj.getX()
-				, obj.getY()
-			);
+		return new PGpoint(obj.getX(), obj.getY());
 	}
 
 	@Override
@@ -57,15 +55,16 @@ public class ToPGPointConverter extends AbstractToObjectConverter<PGpoint, Point
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGpoint copy(Object obj){
-		if (obj==null){
+	public PGpoint copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

@@ -61,8 +61,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 			_add(column.getDataTypeName());
 			return this;
 		}
-		if (column.isIdentity() && column.getIdentityGenerationType() == null
-				&& getDialect().supportsIdentity()) {
+		if (column.isIdentity() && column.getIdentityGenerationType() == null && getDialect().supportsIdentity()) {
 			if (column.getDataType() == DataType.SMALLINT && this.getDialect().compareTo(postgres92) >= 0) {
 				_add("smallserial");
 			} else if (column.getDataType() == DataType.INT) {
@@ -91,7 +90,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 			throw new IllegalArgumentException("PostgreSQL generated columns require PostgreSQL 12 or later.");
 		}
 		typeDefinition(column);
-		space().generated().always().as().space().brackets(()->_add(column.getFormula()));
+		space().generated().always().as().space().brackets(() -> _add(column.getFormula()));
 		if (column.isFormulaPersisted()) {
 			space()._add("STORED");
 		} else if (getDialect().compareTo(postgresVersionResolver.getDialect(18, 0, 0)) >= 0) {
@@ -270,8 +269,9 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 
 	protected PostgresSqlBuilder autoIncrement(AbstractColumn<?> column) {
 		if (column.getIdentityGenerationType() != null) {
-			generated().space()._add(column.getIdentityGenerationType() == IdentityGenerationType.Always
-					? "ALWAYS" : "BY DEFAULT").space().as().space().identity();
+			generated().space()
+					._add(column.getIdentityGenerationType() == IdentityGenerationType.Always ? "ALWAYS" : "BY DEFAULT")
+					.space().as().space().identity();
 		}
 		return instance();
 	}

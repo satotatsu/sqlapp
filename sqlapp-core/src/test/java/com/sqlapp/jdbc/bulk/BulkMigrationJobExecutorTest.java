@@ -323,8 +323,7 @@ class BulkMigrationJobExecutorTest {
 
 			@Override
 			public void onJobStarted(String planFingerprint, int taskCount) {
-				assertEquals(acquired.get().acquisitionId(),
-						store.load(plan.getJobId()).orElseThrow().acquisitionId());
+				assertEquals(acquired.get().acquisitionId(), store.load(plan.getJobId()).orElseThrow().acquisitionId());
 				assertThrows(BulkMigrationJobLeaseUnavailableException.class,
 						() -> competitor.acquire(plan.getJobId(), planFingerprint));
 			}

@@ -54,25 +54,21 @@ public class Postgres83FunctionFamilyReader extends FunctionFamilyReader {
 	}
 
 	@Override
-	protected List<FunctionFamily> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<FunctionFamily> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<FunctionFamily> result = list();
-		final QuadKeyMap<String, String, String, String, FunctionFamily> map = CommonUtils
-				.quadKeyMap();
+		final QuadKeyMap<String, String, String, String, FunctionFamily> map = CommonUtils.quadKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				FunctionFamily obj = createFunctionFamily(connection, rs);
-				FunctionFamily obj1 = map.get(obj.getFunctionName(),
-						obj.getSchemaName(), obj.getOperatorClassName(),
+				FunctionFamily obj1 = map.get(obj.getFunctionName(), obj.getSchemaName(), obj.getOperatorClassName(),
 						obj.getFunctionName());
 				if (obj1 == null) {
 					obj = createFunctionFamily(connection, rs);
-					map.put(obj.getFunctionName(), obj.getSchemaName(),
-							obj.getOperatorClassName(), obj.getFunctionName(),
-							obj);
+					map.put(obj.getFunctionName(), obj.getSchemaName(), obj.getOperatorClassName(),
+							obj.getFunctionName(), obj);
 					result.add(obj);
 				}
 			}
@@ -84,8 +80,7 @@ public class Postgres83FunctionFamilyReader extends FunctionFamilyReader {
 		return getSqlNodeCache().getString("functionFamilies83.sql");
 	}
 
-	protected FunctionFamily createFunctionFamily(final Connection connection,
-			ExResultSet rs) throws SQLException {
+	protected FunctionFamily createFunctionFamily(final Connection connection, ExResultSet rs) throws SQLException {
 		FunctionFamily obj = new FunctionFamily();
 		obj.setDialect(this.getDialect());
 		obj.setOperatorClassName(getString(rs, "operator_class_name"));
@@ -99,13 +94,11 @@ public class Postgres83FunctionFamilyReader extends FunctionFamilyReader {
 			if (allArgTypes != null) {
 				String[] argArray = split(allArgTypes, "[, ]");
 				SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(
-						connection, this.getDialect(), argArray);
+				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(connection, this.getDialect(), argArray);
 				for (NamedArgument argument : arguments) {
 					builder.add(argument.getDataTypeName());
 				}
-				function.setSpecificName(function.getName() + "("
-						+ builder.toString() + ")");
+				function.setSpecificName(function.getName() + "(" + builder.toString() + ")");
 			}
 		}
 		obj.setFunction(function);

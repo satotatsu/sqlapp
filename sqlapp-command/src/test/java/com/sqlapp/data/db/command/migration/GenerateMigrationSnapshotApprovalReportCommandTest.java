@@ -15,7 +15,8 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
 class GenerateMigrationSnapshotApprovalReportCommandTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void generatesApprovalWithoutDatabase() throws Exception {
@@ -33,10 +34,11 @@ class GenerateMigrationSnapshotApprovalReportCommandTest {
 		schema.getTables().add(target);
 		schema.writeXml(directory.resolve("schema.xml").toFile());
 		final Path yaml = directory.resolve("snapshot.yaml");
-		Files.writeString(yaml, "schemaFile: schema.xml\nsourceTable: CUSTOMER\ntargetTable: CUSTOMER_HISTORY\n"
-				+ "keyColumns: [ID]\ntrackedColumns: [NAME]\nvalidFromColumn: VALID_FROM\n"
-				+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\n"
-				+ "effectiveAt: 2026-09-16T00:00:00Z\napprovalReportFile: not-created-yet.json\n");
+		Files.writeString(yaml,
+				"schemaFile: schema.xml\nsourceTable: CUSTOMER\ntargetTable: CUSTOMER_HISTORY\n"
+						+ "keyColumns: [ID]\ntrackedColumns: [NAME]\nvalidFromColumn: VALID_FROM\n"
+						+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\n"
+						+ "effectiveAt: 2026-09-16T00:00:00Z\napprovalReportFile: not-created-yet.json\n");
 		final Path targetFile = directory.resolve("review/approval.json");
 		final var command = new GenerateMigrationSnapshotApprovalReportCommand();
 		command.setConfigurationFile(yaml.toFile());

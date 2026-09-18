@@ -48,8 +48,7 @@ public class SqlServer2005DomainReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Domain> result = list();
 		SqlNode node = getSqlSqlNode(productVersionInfo);
@@ -72,13 +71,11 @@ public class SqlServer2005DomainReader extends DomainReader {
 		Domain obj = new Domain(name);
 		String productDataType = getString(rs, "base_type_name");
 		Long byteLength = getLong(rs, "max_length");
-		Long max_length = SqlServerUtils.getMaxLength(productDataType,
-				byteLength);
+		Long max_length = SqlServerUtils.getMaxLength(productDataType, byteLength);
 		Long prec = this.getLong(rs, "precision");
 		Integer scale = getInteger(rs, "scale");
 		obj.setNullable(rs.getBoolean("is_nullable"));
-		getDialect().setDbType(productDataType, notZero(max_length, prec),
-				scale, obj);
+		getDialect().setDbType(productDataType, notZero(max_length, prec), scale, obj);
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));

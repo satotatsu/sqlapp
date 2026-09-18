@@ -56,66 +56,60 @@ public class OracleDomainReader extends DomainReader {
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
 	private static final Pattern DOMAIN_PATTERN2 = Pattern.compile(
-			".*TYPE\\s+.*\\s+(IS|AS)\\s+TABLE\\s+OF\\s+(?<type>.*)",
+			".*TYPE\\s+.*\\s+(IS|AS)\\s+TABLE\\s+OF\\s+(?<type>.*)", Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
+
+	private static final Pattern NOT_NULL = Pattern.compile("(?<type>.*)\\s+NOT\\s+NULL\\s*",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
-	private static final Pattern NOT_NULL = Pattern.compile(
-			"(?<type>.*)\\s+NOT\\s+NULL\\s*",
-			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
-
-	
 	private static final String OBJECT_TYPE = "TYPE";
 
 	@Override
-	protected List<Domain> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Domain> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Domain> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Domain obj = createDomain(rs, connection, context,
-						productVersionInfo);
+				Domain obj = createDomain(rs, connection, context, productVersionInfo);
 				result.add(obj);
 			}
 		});
 		ParametersContext cnt = new ParametersContext();
-		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
-		for(Domain obj:result){
+		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
+				this.getDialect(), cnt, result, OBJECT_TYPE);
+		for (Domain obj : result) {
 			List<String> text = routines.get(obj.getSchemaName(), obj.getName());
 			StringBuilder builder = new StringBuilder();
 			for (String line : text) {
 				builder.append(line);
 				builder.append(" ");
 			}
-			String def=builder.toString();
+			String def = builder.toString();
 			Matcher matcher = DOMAIN_PATTERN.matcher(def);
 			if (matcher.matches()) {
 				String arrayMax = matcher.group("arrayMax");
 				obj.setArrayDimension(1);
 				obj.setArrayDimensionUpperBound(Integer.parseInt(trim(arrayMax)));
 				String productDataType = trim(rtrim(trim(matcher.group("type")), ';'));
-				Matcher notNullMatcher=NOT_NULL.matcher(productDataType);
-				if (notNullMatcher.matches()){
-					productDataType=trim(notNullMatcher.group("type"));
+				Matcher notNullMatcher = NOT_NULL.matcher(productDataType);
+				if (notNullMatcher.matches()) {
+					productDataType = trim(notNullMatcher.group("type"));
 					obj.setNotNull(true);
 				}
-				getDialect().setDbType(productDataType, null,null,
-						obj);
-			} else{
-				matcher =DOMAIN_PATTERN2.matcher(def);
+				getDialect().setDbType(productDataType, null, null, obj);
+			} else {
+				matcher = DOMAIN_PATTERN2.matcher(def);
 				if (matcher.matches()) {
 					String productDataType = trim(rtrim(trim(matcher.group("type")), ';'));
-					Matcher notNullMatcher=NOT_NULL.matcher(productDataType);
-					if (notNullMatcher.matches()){
-						productDataType=trim(notNullMatcher.group("type"));
+					Matcher notNullMatcher = NOT_NULL.matcher(productDataType);
+					if (notNullMatcher.matches()) {
+						productDataType = trim(notNullMatcher.group("type"));
 						obj.setNotNull(true);
 					}
-					getDialect().setDbType(productDataType, null,null,
-							obj);
-				} else{
-					logger.warn("Parse Error.Domain="+obj+", contents="+def);
+					getDialect().setDbType(productDataType, null, null, obj);
+				} else {
+					logger.warn("Parse Error.Domain=" + obj + ", contents=" + def);
 				}
 			}
 		}
@@ -126,8 +120,7 @@ public class OracleDomainReader extends DomainReader {
 		return getSqlNodeCache().getString("domains.sql");
 	}
 
-	protected Domain createDomain(ExResultSet rs, final Connection connection,
-			final ParametersContext context,
+	protected Domain createDomain(ExResultSet rs, final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) throws SQLException {
 		String name = getString(rs, "TYPE_NAME");
 		Domain obj = new Domain(name);

@@ -66,9 +66,8 @@ public final class BulkMigrationOperationalReportBuilder {
 			final Table table = planned.getSourceTable() != null ? planned.getSourceTable()
 					: planned.getKeysetSource().getTable();
 			return new BulkMigrationOperationalReport.Task(planned.getTaskId(), planned.getOptions().getMigrationId(),
-					table.getCatalogName(), table.getSchemaName(), table.getName(),
-					planned.getOptions().getMode(), planned.getOptions().getChunkSize(),
-					planned.getOptions().getCheckpointMode(), current.getState(),
+					table.getCatalogName(), table.getSchemaName(), table.getName(), planned.getOptions().getMode(),
+					planned.getOptions().getChunkSize(), planned.getOptions().getCheckpointMode(), current.getState(),
 					checkpoint(current.getCheckpoint()));
 		}).toList();
 		final var operations = plan.getOperations().stream()

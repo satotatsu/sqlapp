@@ -40,8 +40,8 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	}
 
 	@Override
-	protected void setIndexType(final ExResultSet rs, final Index index,
-			final String productIndexType) throws SQLException {
+	protected void setIndexType(final ExResultSet rs, final Index index, final String productIndexType)
+			throws SQLException {
 		if (!"VECTOR".equalsIgnoreCase(productIndexType)) {
 			return;
 		}
@@ -58,20 +58,17 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection, final Index index)
-			throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final Index index) throws SQLException {
 		super.setMetadataDetail(connection, index);
 		if (index.getIndexType() == IndexType.Domain) {
 			setHybridVectorIndexDetail(connection, index);
 			return;
 		}
-		if (index.getIndexType() != IndexType.Vector
-				|| vectorIndexDetailUnavailable) {
+		if (index.getIndexType() != IndexType.Vector || vectorIndexDetailUnavailable) {
 			return;
 		}
 		final SqlNode node = getSqlNodeCache().getString("vectorIndexDetails.sql");
-		final ParametersContext context = newParametersContext(connection, null,
-				index.getSchemaName());
+		final ParametersContext context = newParametersContext(connection, null, index.getSchemaName());
 		context.put("indexName", nativeCaseString(connection, index.getName()));
 		try {
 			execute(connection, node, context, new ResultSetNextHandler() {
@@ -91,25 +88,19 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 		}
 	}
 
-	private void setHybridVectorIndexDetail(final Connection connection,
-			final Index index) {
+	private void setHybridVectorIndexDetail(final Connection connection, final Index index) {
 		if (hybridVectorIndexDetailUnavailable) {
 			return;
 		}
-		final SqlNode node = getSqlNodeCache().getString(
-				"hybridVectorIndexDetails.sql");
-		final ParametersContext context = newParametersContext(connection,
-				null, index.getSchemaName());
-		context.put("indexName",
-				nativeCaseString(connection, index.getName()));
+		final SqlNode node = getSqlNodeCache().getString("hybridVectorIndexDetails.sql");
+		final ParametersContext context = newParametersContext(connection, null, index.getSchemaName());
+		context.put("indexName", nativeCaseString(connection, index.getName()));
 		try {
 			execute(connection, node, context, new ResultSetNextHandler() {
 				@Override
-				public void handleResultSetNext(final ExResultSet rs)
-						throws SQLException {
+				public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 					index.setIndexType(IndexType.Vector);
-					index.getSpecifics().put(
-							Oracle23aiCreateIndexFactory.HYBRID, true);
+					index.getSpecifics().put(Oracle23aiCreateIndexFactory.HYBRID, true);
 					final String key = getString(rs, "IXO_CLASS");
 					final String value = getString(rs, "IXO_OBJECT");
 					if (key != null && value != null) {
@@ -123,8 +114,7 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 			}
 			hybridVectorIndexDetailUnavailable = true;
 			logger.warn("Oracle hybrid vector index metadata is unavailable "
-					+ "or not permitted; basic domain-index metadata is "
-					+ "retained. " + sqlExceptionMessage(e));
+					+ "or not permitted; basic domain-index metadata is " + "retained. " + sqlExceptionMessage(e));
 		}
 	}
 
@@ -154,22 +144,20 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 		}
 	}
 
-	private static void putSpecific(final Index index, final Map<String, Object> parameters,
-			final String sourceKey, final String targetKey) {
+	private static void putSpecific(final Index index, final Map<String, Object> parameters, final String sourceKey,
+			final String targetKey) {
 		final Object value = getIgnoreCase(parameters, sourceKey);
 		if (value != null) {
 			index.getSpecifics().put(targetKey, value);
 		}
 	}
 
-	private static String stringValue(final Map<String, Object> parameters,
-			final String key) {
+	private static String stringValue(final Map<String, Object> parameters, final String key) {
 		final Object value = getIgnoreCase(parameters, key);
 		return value == null ? null : value.toString();
 	}
 
-	private static Object getIgnoreCase(final Map<String, Object> parameters,
-			final String key) {
+	private static Object getIgnoreCase(final Map<String, Object> parameters, final String key) {
 		for (final Map.Entry<String, Object> entry : parameters.entrySet()) {
 			if (key.equalsIgnoreCase(entry.getKey())) {
 				return entry.getValue();

@@ -53,12 +53,11 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 	}
 
 	private static BulkMigrationResumeReadiness terminal(final BulkMigrationOperationalReport report) {
-		if (!report.compatible() || report.tasks().stream()
-				.anyMatch(task -> task.state() == BulkMigrationJobTaskState.INCOMPATIBLE)) {
+		if (!report.compatible()
+				|| report.tasks().stream().anyMatch(task -> task.state() == BulkMigrationJobTaskState.INCOMPATIBLE)) {
 			return BulkMigrationResumeReadiness.INCOMPATIBLE;
 		}
-		if (report.maintenance() != null
-				&& report.maintenance().status().requiresRecovery()) {
+		if (report.maintenance() != null && report.maintenance().status().requiresRecovery()) {
 			return BulkMigrationResumeReadiness.RECOVERY_REQUIRED;
 		}
 		return null;
@@ -70,7 +69,6 @@ public final class BulkMigrationOperationalReportResumeAssessor {
 
 	private static boolean completionConfirmed(final BulkMigrationOperationalReport report) {
 		return report.completedTasks() == report.totalTasks()
-				&& (report.execution() == null
-						|| report.execution().event() == ExecutionEvent.JOB_COMPLETED);
+				&& (report.execution() == null || report.execution().event() == ExecutionEvent.JOB_COMPLETED);
 	}
 }

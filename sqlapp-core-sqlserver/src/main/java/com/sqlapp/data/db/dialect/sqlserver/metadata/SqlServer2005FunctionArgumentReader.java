@@ -42,8 +42,7 @@ public class SqlServer2005FunctionArgumentReader extends RoutineArgumentReader<F
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -61,8 +60,7 @@ public class SqlServer2005FunctionArgumentReader extends RoutineArgumentReader<F
 		return getSqlNodeCache().getString("functionArguments2005.sql");
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		Function routine = new Function();
 		routine.setDialect(this.getDialect());
 		NamedArgument obj = createObject(this.getString(rs, "PARAMETER_NAME"));

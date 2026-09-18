@@ -33,8 +33,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * @author satoh
  * 
  */
-public class SqlServer2008FullTextIndexReader extends
-		SqlServer2005FullTextIndexReader {
+public class SqlServer2008FullTextIndexReader extends SqlServer2005FullTextIndexReader {
 
 	public SqlServer2008FullTextIndexReader(Dialect dialect) {
 		super(dialect);

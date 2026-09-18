@@ -29,45 +29,49 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * Oracle固有情報クラス
+ * 
  * @author SATOH
  *
  */
 public class Oracle11g extends Oracle10g {
-    /**
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -6436736419643892528L;
+
 	/**
 	 * コンストラクタ
 	 */
-    protected Oracle11g(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Oracle11g(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
 	@Override
-    public int hashCode(){
-    	return getProductName().hashCode()+1;
-    }
+	public int hashCode() {
+		return getProductName().hashCode() + 1;
+	}
 
-    /**
-     * 同値判定
-     */
+	/**
+	 * 同値判定
+	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Oracle11gCatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

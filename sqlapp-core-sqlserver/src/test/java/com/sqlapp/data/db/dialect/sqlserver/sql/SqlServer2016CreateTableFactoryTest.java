@@ -44,17 +44,17 @@ public class SqlServer2016CreateTableFactoryTest extends AbstractSqlServer13SqlF
 
 	@BeforeEach
 	public void before() {
-		sqlFactoryRegistry.registerSqlFactory(Index.class,
-				SqlType.CREATE, CreateIndexFactory.class);
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Added);
+		sqlFactoryRegistry.registerSqlFactory(Index.class, SqlType.CREATE, CreateIndexFactory.class);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), State.Added);
 	}
 
 	@Test
 	public void testGetDdlTable() {
 		final Table table0 = createTable();
 		final Table table = createTable1();
-		table.getConstraints().addForeignKeyConstraint("FK1", table.getColumns().get("colA"), table0.getColumns().get("colA")).setUpdateRule(CascadeRule.Restrict).setDeleteRule(CascadeRule.Cascade);
+		table.getConstraints()
+				.addForeignKeyConstraint("FK1", table.getColumns().get("colA"), table0.getColumns().get("colA"))
+				.setUpdateRule(CascadeRule.Restrict).setDeleteRule(CascadeRule.Cascade);
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
@@ -62,39 +62,27 @@ public class SqlServer2016CreateTableFactoryTest extends AbstractSqlServer13SqlF
 		assertEquals(expected, commandText.getSqlText());
 	}
 
-	protected Table createTable(){
+	protected Table createTable() {
 		final Table table = new Table("tableB");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
 		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		return table;
 	}
-	
-	protected Table createTable1(){
+
+	protected Table createTable1() {
 		final Table table = new Table("tableA");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true).setIdentity(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
 		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true).setIdentity(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		table.getColumns().add(
-				new Column("colD").setLength(Integer.MAX_VALUE).setDataType(DataType.VARCHAR).setMaskingFunction("DEFAULT()"));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
+		table.getColumns().add(new Column("colD").setLength(Integer.MAX_VALUE).setDataType(DataType.VARCHAR)
+				.setMaskingFunction("DEFAULT()"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		table.getSpecifics().put("fillfactor", "80");
 		table.getSpecifics().put("PAD_INDEX", "on");
 		return table;

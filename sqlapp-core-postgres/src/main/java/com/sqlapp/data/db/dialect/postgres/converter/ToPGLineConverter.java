@@ -24,7 +24,7 @@ import com.sqlapp.data.geometry.Line;
 import org.postgresql.geometric.PGline;
 import java.sql.SQLException;
 
-public class ToPGLineConverter extends AbstractToObjectConverter<PGline, Line>{
+public class ToPGLineConverter extends AbstractToObjectConverter<PGline, Line> {
 
 	/**
 	 * serialVersionUID
@@ -47,11 +47,8 @@ public class ToPGLineConverter extends AbstractToObjectConverter<PGline, Line>{
 
 	@Override
 	protected PGline toDbType(Line obj) {
-		return new PGline(obj.getPoints()[0].getX()
-				, obj.getPoints()[0].getY()
-				, obj.getPoints()[1].getX()
-				, obj.getPoints()[1].getY()
-			);
+		return new PGline(obj.getPoints()[0].getX(), obj.getPoints()[0].getY(), obj.getPoints()[1].getX(),
+				obj.getPoints()[1].getY());
 	}
 
 	@Override
@@ -59,15 +56,16 @@ public class ToPGLineConverter extends AbstractToObjectConverter<PGline, Line>{
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGline copy(Object obj){
-		if (obj==null){
+	public PGline copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

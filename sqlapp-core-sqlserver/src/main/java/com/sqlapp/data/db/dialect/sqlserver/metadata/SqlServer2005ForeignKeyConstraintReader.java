@@ -45,16 +45,14 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public class SqlServer2005ForeignKeyConstraintReader extends
-		ForeignKeyConstraintReader {
+public class SqlServer2005ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 
 	public SqlServer2005ForeignKeyConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -67,31 +65,25 @@ public class SqlServer2005ForeignKeyConstraintReader extends
 				String pk_table_schema = getString(rs, SCHEMA_NAME);
 				String pk_table_name = getString(rs, TABLE_NAME);
 				String pk_columnName = getString(rs, COLUMN_NAME);
-				String fk_table_schema = getString(rs,
-						"referential_schema_name");
+				String fk_table_schema = getString(rs, "referential_schema_name");
 				String fk_table_name = getString(rs, "referential_table_name");
 				String fk_columnName = getString(rs, "referential_column_name");
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setCatalogName(pk_table_catalog);
 					c.setSchemaName(pk_table_schema);
 					c.setTableName(pk_table_name);
-					c.setUpdateRule(CascadeRule.parse(getString(rs,
-							"update_referential_action_desc")));
-					c.setDeleteRule(CascadeRule.parse(getString(rs,
-							"delete_referential_action_desc")));
+					c.setUpdateRule(CascadeRule.parse(getString(rs, "update_referential_action_desc")));
+					c.setDeleteRule(CascadeRule.parse(getString(rs, "delete_referential_action_desc")));
 					c.setEnable(rs.getInt("is_disabled") != 1);
 					c.setCreatedAt(rs.getTimestamp("create_date"));
 					c.setLastAlteredAt(rs.getTimestamp("modify_date"));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
-					tColMap.put(pk_table_catalog, pk_table_schema, fk_name,
-							colList);
+					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

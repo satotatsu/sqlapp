@@ -52,8 +52,7 @@ public class MySqlFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
@@ -71,14 +70,12 @@ public class MySqlFunctionReader extends FunctionReader {
 		return getSqlNodeCache().getString("functions.sql");
 	}
 
-	protected static final Pattern ARGUMENT_PATTERN = Pattern.compile(
-			"([^ ]+)\\s+(.*)", Pattern.CASE_INSENSITIVE);
+	protected static final Pattern ARGUMENT_PATTERN = Pattern.compile("([^ ]+)\\s+(.*)", Pattern.CASE_INSENSITIVE);
 
-	protected static final Pattern RETURNING_PATTERN = Pattern.compile(
-			"([^ ]+)\\s*(CHARSET\\s+.*){0,1}", Pattern.CASE_INSENSITIVE);
+	protected static final Pattern RETURNING_PATTERN = Pattern.compile("([^ ]+)\\s*(CHARSET\\s+.*){0,1}",
+			Pattern.CASE_INSENSITIVE);
 
-	protected Function createFunction(ExResultSet rs,
-			ProductVersionInfo productVersionInfo) throws SQLException {
+	protected Function createFunction(ExResultSet rs, ProductVersionInfo productVersionInfo) throws SQLException {
 		Function obj = new Function(getString(rs, ROUTINE_NAME));
 		obj.setSpecificName(getString(rs, SPECIFIC_NAME));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
@@ -95,8 +92,7 @@ public class MySqlFunctionReader extends FunctionReader {
 		String paramList = getString(rs, "param_list");
 		String[] args = paramList.split("\\s*,\\s*");
 		for (String arg : args) {
-			NamedArgument argument = MySqlUtils.getFunctionNamedArgument(arg,
-					this.getDialect());
+			NamedArgument argument = MySqlUtils.getFunctionNamedArgument(arg, this.getDialect());
 			obj.getArguments().add(argument);
 		}
 		String returns = getString(rs, "returns");

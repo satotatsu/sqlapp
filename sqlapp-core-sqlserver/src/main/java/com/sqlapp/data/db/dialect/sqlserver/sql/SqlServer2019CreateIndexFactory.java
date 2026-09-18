@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-public class SqlServer2019CreateIndexFactory extends
-	SqlServer2016CreateIndexFactory{
+public class SqlServer2019CreateIndexFactory extends SqlServer2016CreateIndexFactory {
 
 }

@@ -31,7 +31,7 @@ public class Postgres100ColumnReader extends Postgres93ColumnReader {
 
 	@Override
 	protected String[] getType() {
-		return new String[] {"r", "m", "p"};
+		return new String[] { "r", "m", "p" };
 	}
 
 	@Override

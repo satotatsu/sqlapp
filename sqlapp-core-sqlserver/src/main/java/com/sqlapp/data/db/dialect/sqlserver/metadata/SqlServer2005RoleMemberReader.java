@@ -27,8 +27,7 @@ import com.sqlapp.data.schemas.RoleMember;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2005RoleMemberReader extends
-		SqlServer2000RoleMemberReader {
+public class SqlServer2005RoleMemberReader extends SqlServer2000RoleMemberReader {
 
 	protected SqlServer2005RoleMemberReader(Dialect dialect) {
 		super(dialect);

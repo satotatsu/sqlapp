@@ -18,24 +18,17 @@ class Postgres180NotNullConstraintFactoryTest {
 	@Test
 	void testAlterTableAddNamedNotNullConstraint() {
 		Table table = new Table("CUSTOMERS");
-		Column column = new Column("CUSTOMER_ID")
-				.setDataType(DataType.BIGINT);
+		Column column = new Column("CUSTOMER_ID").setDataType(DataType.BIGINT);
 		table.getColumns().add(column);
-		NotNullConstraint constraint = new NotNullConstraint(
-				"NN_CUSTOMERS_CUSTOMER_ID", column)
-				.setNoInherit(true).setValidated(false);
+		NotNullConstraint constraint = new NotNullConstraint("NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true)
+				.setValidated(false);
 		table.getConstraints().add(constraint);
 
-		SqlFactory factory = DialectHolder.postgreSQL180
-				.createSqlFactoryRegistry()
-				.getSqlFactory(constraint, SqlType.CREATE);
-		String sql = ((SqlOperation) factory.createSql(constraint).get(0))
-				.getSqlText();
-		assertTrue(sql.contains("ALTER TABLE \"CUSTOMERS\" ADD CONSTRAINT"),
-				sql);
-		assertTrue(sql.contains(
-				"\"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\" NO INHERIT NOT VALID"),
-				sql);
+		SqlFactory factory = DialectHolder.postgreSQL180.createSqlFactoryRegistry().getSqlFactory(constraint,
+				SqlType.CREATE);
+		String sql = ((SqlOperation) factory.createSql(constraint).get(0)).getSqlText();
+		assertTrue(sql.contains("ALTER TABLE \"CUSTOMERS\" ADD CONSTRAINT"), sql);
+		assertTrue(sql.contains("\"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\" NO INHERIT NOT VALID"), sql);
 	}
 
 	@Test
@@ -43,10 +36,9 @@ class Postgres180NotNullConstraintFactoryTest {
 		Table table = new Table("CUSTOMERS");
 		Column column = new Column("CUSTOMER_ID");
 		table.getColumns().add(column);
-		NotNullConstraint constraint = new NotNullConstraint("NN_ID",
-				column);
+		NotNullConstraint constraint = new NotNullConstraint("NN_ID", column);
 		table.getConstraints().add(constraint);
-		assertTrue(DialectHolder.postgreSQL170.createSqlFactoryRegistry()
-				.createSql(constraint, SqlType.CREATE).isEmpty());
+		assertTrue(
+				DialectHolder.postgreSQL170.createSqlFactoryRegistry().createSql(constraint, SqlType.CREATE).isEmpty());
 	}
 }

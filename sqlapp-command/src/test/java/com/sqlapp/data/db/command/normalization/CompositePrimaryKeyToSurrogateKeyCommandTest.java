@@ -63,8 +63,8 @@ class CompositePrimaryKeyToSurrogateKeyCommandTest {
 		assertNotNull(tab1.getColumns().get("PARENT_ID"));
 		assertUnique(tab1, "PARENT_ID", "PK_COL3");
 		assertEquals("TAB", tab1.getConstraints().getForeignKeyConstraints().getFirst().getRelatedTable().getName());
-		assertEquals("ID", tab1.getConstraints().getForeignKeyConstraints().getFirst().getRelatedColumns()
-				.getFirst().getName());
+		assertEquals("ID",
+				tab1.getConstraints().getForeignKeyConstraints().getFirst().getRelatedColumns().getFirst().getName());
 
 		Table tab11 = converted.getTables().get("TAB_1_1");
 		assertPrimaryKey(tab11, "ID");
@@ -76,11 +76,9 @@ class CompositePrimaryKeyToSurrogateKeyCommandTest {
 		File mappingFile = new File(logs, "schema-legacy-migration.yaml");
 		assertTrue(mappingFile.isFile());
 		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(mappingFile);
-		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand",
-				mapping.getTransformations().getFirst().getCommand());
-		assertEquals("ID", mapping.getTables().stream()
-				.filter(item -> "TAB".equals(item.getTarget().getTable())).findFirst().orElseThrow()
-				.getKeys().getGeneratedKey().getColumn());
+		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand", mapping.getTransformations().getFirst().getCommand());
+		assertEquals("ID", mapping.getTables().stream().filter(item -> "TAB".equals(item.getTarget().getTable()))
+				.findFirst().orElseThrow().getKeys().getGeneratedKey().getColumn());
 	}
 
 	@Test
@@ -180,9 +178,8 @@ class CompositePrimaryKeyToSurrogateKeyCommandTest {
 		}
 		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(256));
 		table.getColumns().add(new Column("CREATED_AT").setDataType(DataType.DATETIME).setNotNull(true));
-		table.setPrimaryKey("PK_" + name,
-				java.util.Arrays.stream(primaryKeyNames).map(item -> table.getColumns().get(item))
-						.toArray(Column[]::new));
+		table.setPrimaryKey("PK_" + name, java.util.Arrays.stream(primaryKeyNames)
+				.map(item -> table.getColumns().get(item)).toArray(Column[]::new));
 		return table;
 	}
 

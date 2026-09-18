@@ -19,15 +19,13 @@ class Postgres180DmlReturningTest extends AbstractPostgresSqlFactoryTest {
 	@Test
 	void testInsertUpdateDeleteReturningOldAndNew() {
 		Table table = table();
-		for (SqlType type : new SqlType[] {
-				SqlType.INSERT, SqlType.UPDATE, SqlType.DELETE }) {
+		for (SqlType type : new SqlType[] { SqlType.INSERT, SqlType.UPDATE, SqlType.DELETE }) {
 			SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, type);
 			factory.getTableOptions().setReturningOldAlias("old_row");
 			factory.getTableOptions().setReturningNewAlias("new_row");
-			String sql = factory.createSql(table).get(0).getSqlText()
-					.replace("\"", "").replaceAll("\\s+", " ").replace(" )", ")");
-			assertTrue(sql.contains(
-					"RETURNING WITH (OLD AS old_row, NEW AS new_row)"), sql);
+			String sql = factory.createSql(table).get(0).getSqlText().replace("\"", "").replaceAll("\\s+", " ")
+					.replace(" )", ")");
+			assertTrue(sql.contains("RETURNING WITH (OLD AS old_row, NEW AS new_row)"), sql);
 			assertTrue(sql.contains("old_row.ID AS old_row_ID"), sql);
 			assertTrue(sql.contains("new_row.ID AS new_row_ID"), sql);
 		}
@@ -36,9 +34,8 @@ class Postgres180DmlReturningTest extends AbstractPostgresSqlFactoryTest {
 	@Test
 	void testAliasesDoNotChangePostgres17Dml() {
 		Table table = table();
-		SqlFactory<Table> factory = com.sqlapp.data.db.dialect.postgres.DialectHolder
-				.postgreSQL170.createSqlFactoryRegistry()
-				.getSqlFactory(table, SqlType.UPDATE);
+		SqlFactory<Table> factory = com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL170
+				.createSqlFactoryRegistry().getSqlFactory(table, SqlType.UPDATE);
 		factory.getTableOptions().setReturningOldAlias("old_row");
 		factory.getTableOptions().setReturningNewAlias("new_row");
 		String sql = factory.createSql(table).get(0).getSqlText();
@@ -49,8 +46,7 @@ class Postgres180DmlReturningTest extends AbstractPostgresSqlFactoryTest {
 		Table table = new Table("ORDERS");
 		table.setDialect(dialect);
 		table.getColumns().add("ID", c -> c.setDataType(DataType.INT));
-		table.getColumns().add("NAME",
-				c -> c.setDataType(DataType.VARCHAR).setLength(20));
+		table.getColumns().add("NAME", c -> c.setDataType(DataType.VARCHAR).setLength(20));
 		table.setPrimaryKey(table.getColumns().get("ID"));
 		return table;
 	}

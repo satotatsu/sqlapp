@@ -54,8 +54,7 @@ public class PostgresLargeObjectDefaultPrivilegesBuilder {
 		return this;
 	}
 
-	public PostgresLargeObjectDefaultPrivilegesBuilder privilege(
-			Privilege privilege) {
+	public PostgresLargeObjectDefaultPrivilegesBuilder privilege(Privilege privilege) {
 		privileges.add(Objects.requireNonNull(privilege, "privilege"));
 		return this;
 	}
@@ -65,8 +64,7 @@ public class PostgresLargeObjectDefaultPrivilegesBuilder {
 		return this;
 	}
 
-	public PostgresLargeObjectDefaultPrivilegesBuilder grant(
-			boolean withGrantOption) {
+	public PostgresLargeObjectDefaultPrivilegesBuilder grant(boolean withGrantOption) {
 		this.grant = true;
 		this.actionSet = true;
 		this.grantOption = withGrantOption;
@@ -74,8 +72,7 @@ public class PostgresLargeObjectDefaultPrivilegesBuilder {
 		return this;
 	}
 
-	public PostgresLargeObjectDefaultPrivilegesBuilder revoke(
-			boolean grantOptionFor, boolean cascade) {
+	public PostgresLargeObjectDefaultPrivilegesBuilder revoke(boolean grantOptionFor, boolean cascade) {
 		this.grant = false;
 		this.actionSet = true;
 		this.grantOptionFor = grantOptionFor;
@@ -87,19 +84,15 @@ public class PostgresLargeObjectDefaultPrivilegesBuilder {
 	public String build() {
 		checkVersion();
 		if (!actionSet) {
-			throw new IllegalArgumentException(
-					"grant or revoke action must be specified.");
+			throw new IllegalArgumentException("grant or revoke action must be specified.");
 		}
 		if (!allPrivileges && privileges.isEmpty()) {
-			throw new IllegalArgumentException(
-					"At least one privilege must be specified.");
+			throw new IllegalArgumentException("At least one privilege must be specified.");
 		}
 		if (!publicGrantee && grantees.isEmpty()) {
-			throw new IllegalArgumentException(
-					"At least one grantee must be specified.");
+			throw new IllegalArgumentException("At least one grantee must be specified.");
 		}
-		StringBuilder builder = new StringBuilder(
-				"ALTER DEFAULT PRIVILEGES");
+		StringBuilder builder = new StringBuilder("ALTER DEFAULT PRIVILEGES");
 		if (!targetRoles.isEmpty()) {
 			builder.append(" FOR ROLE ");
 			appendNames(builder, targetRoles);
@@ -147,8 +140,7 @@ public class PostgresLargeObjectDefaultPrivilegesBuilder {
 
 	private void checkVersion() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"Large-object default privileges require PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("Large-object default privileges require PostgreSQL 18 or later.");
 		}
 	}
 

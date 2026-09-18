@@ -36,8 +36,7 @@ public class PostgresSubscriptionBuilder {
 	private Boolean enabled;
 	private Boolean copyData;
 
-	public PostgresSubscriptionBuilder(Dialect dialect,
-			String subscriptionName) {
+	public PostgresSubscriptionBuilder(Dialect dialect, String subscriptionName) {
 		this.dialect = Objects.requireNonNull(dialect, "dialect");
 		this.subscriptionName = require(subscriptionName, "subscriptionName");
 	}
@@ -73,21 +72,17 @@ public class PostgresSubscriptionBuilder {
 	}
 
 	public Streaming getEffectiveDefaultStreaming() {
-		return dialect.compareTo(DialectHolder.postgreSQL180) >= 0
-				? Streaming.PARALLEL : Streaming.OFF;
+		return dialect.compareTo(DialectHolder.postgreSQL180) >= 0 ? Streaming.PARALLEL : Streaming.OFF;
 	}
 
 	public String buildCreate() {
 		require(connection, "connection");
 		if (publications.isEmpty()) {
-			throw new IllegalArgumentException(
-					"At least one publication must be specified.");
+			throw new IllegalArgumentException("At least one publication must be specified.");
 		}
 		checkStreamingVersion();
-		StringBuilder builder = new StringBuilder("CREATE SUBSCRIPTION ")
-				.append(dialect.quote(subscriptionName))
-				.append(" CONNECTION ").append(sqlString(connection))
-				.append(" PUBLICATION ");
+		StringBuilder builder = new StringBuilder("CREATE SUBSCRIPTION ").append(dialect.quote(subscriptionName))
+				.append(" CONNECTION ").append(sqlString(connection)).append(" PUBLICATION ");
 		appendNames(builder, publications);
 		List<String> options = new ArrayList<>();
 		if (streaming != null) {
@@ -103,8 +98,7 @@ public class PostgresSubscriptionBuilder {
 			options.add("copy_data = " + copyData);
 		}
 		if (!options.isEmpty()) {
-			builder.append(" WITH (").append(String.join(", ", options))
-					.append(")");
+			builder.append(" WITH (").append(String.join(", ", options)).append(")");
 		}
 		return builder.toString();
 	}
@@ -114,18 +108,14 @@ public class PostgresSubscriptionBuilder {
 	 */
 	public String alterTwoPhase(boolean value) {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"ALTER SUBSCRIPTION two_phase requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("ALTER SUBSCRIPTION two_phase requires PostgreSQL 18 or later.");
 		}
-		return "ALTER SUBSCRIPTION " + dialect.quote(subscriptionName)
-				+ " SET (two_phase = " + value + ")";
+		return "ALTER SUBSCRIPTION " + dialect.quote(subscriptionName) + " SET (two_phase = " + value + ")";
 	}
 
 	private void checkStreamingVersion() {
-		if (streaming == Streaming.PARALLEL
-				&& dialect.compareTo(DialectHolder.postgreSQL160) < 0) {
-			throw new IllegalArgumentException(
-					"Subscription streaming=parallel requires PostgreSQL 16 or later.");
+		if (streaming == Streaming.PARALLEL && dialect.compareTo(DialectHolder.postgreSQL160) < 0) {
+			throw new IllegalArgumentException("Subscription streaming=parallel requires PostgreSQL 16 or later.");
 		}
 	}
 

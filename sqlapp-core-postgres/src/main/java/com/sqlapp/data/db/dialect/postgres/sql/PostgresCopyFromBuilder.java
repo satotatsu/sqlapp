@@ -16,8 +16,8 @@ import com.sqlapp.util.CommonUtils;
 /**
  * PostgreSQL {@code COPY ... FROM STDIN} SQL builder.
  * <p>
- * PostgreSQL JDBC's {@code CopyManager} can execute the generated SQL. PostgreSQL
- * 17 options are checked against the supplied dialect.
+ * PostgreSQL JDBC's {@code CopyManager} can execute the generated SQL.
+ * PostgreSQL 17 options are checked against the supplied dialect.
  */
 public class PostgresCopyFromBuilder {
 	private final Dialect dialect;
@@ -38,8 +38,7 @@ public class PostgresCopyFromBuilder {
 		this(dialect, null, tableName);
 	}
 
-	public PostgresCopyFromBuilder(Dialect dialect, String schemaName,
-			String tableName) {
+	public PostgresCopyFromBuilder(Dialect dialect, String schemaName, String tableName) {
 		this.dialect = Objects.requireNonNull(dialect, "dialect");
 		require(tableName, "tableName");
 		this.schemaName = schemaName;
@@ -93,8 +92,7 @@ public class PostgresCopyFromBuilder {
 	public PostgresCopyFromBuilder onError(String value) {
 		require(value, "onError");
 		if (!"stop".equalsIgnoreCase(value) && !"ignore".equalsIgnoreCase(value)) {
-			throw new IllegalArgumentException(
-					"onError must be stop or ignore.");
+			throw new IllegalArgumentException("onError must be stop or ignore.");
 		}
 		this.onError = value;
 		return this;
@@ -105,11 +103,9 @@ public class PostgresCopyFromBuilder {
 	 */
 	public PostgresCopyFromBuilder logVerbosity(String value) {
 		require(value, "logVerbosity");
-		if (!"default".equalsIgnoreCase(value)
-				&& !"verbose".equalsIgnoreCase(value)
+		if (!"default".equalsIgnoreCase(value) && !"verbose".equalsIgnoreCase(value)
 				&& !"silent".equalsIgnoreCase(value)) {
-			throw new IllegalArgumentException(
-					"logVerbosity must be default, verbose or silent.");
+			throw new IllegalArgumentException("logVerbosity must be default, verbose or silent.");
 		}
 		this.logVerbosity = value;
 		return this;
@@ -120,8 +116,7 @@ public class PostgresCopyFromBuilder {
 	 */
 	public PostgresCopyFromBuilder rejectLimit(long value) {
 		if (value <= 0) {
-			throw new IllegalArgumentException(
-					"rejectLimit must be greater than zero.");
+			throw new IllegalArgumentException("rejectLimit must be greater than zero.");
 		}
 		this.rejectLimit = value;
 		return this;
@@ -167,9 +162,8 @@ public class PostgresCopyFromBuilder {
 			builder.append(")");
 		}
 		builder.append(" FROM STDIN");
-		if (!options.isEmpty() || !CommonUtils.isEmpty(onError)
-				|| !CommonUtils.isEmpty(logVerbosity) || rejectLimit != null
-				|| freeze || forceNullAll || forceNotNullAll) {
+		if (!options.isEmpty() || !CommonUtils.isEmpty(onError) || !CommonUtils.isEmpty(logVerbosity)
+				|| rejectLimit != null || freeze || forceNullAll || forceNotNullAll) {
 			builder.append(" WITH (");
 			List<String> allOptions = new ArrayList<>(options);
 			if (freeze) {
@@ -202,40 +196,30 @@ public class PostgresCopyFromBuilder {
 	}
 
 	private void validateVersion() {
-		if ((!CommonUtils.isEmpty(onError) || !CommonUtils.isEmpty(logVerbosity))
-				|| forceNullAll || forceNotNullAll) {
+		if ((!CommonUtils.isEmpty(onError) || !CommonUtils.isEmpty(logVerbosity)) || forceNullAll || forceNotNullAll) {
 			if (dialect.compareTo(DialectHolder.postgreSQL170) < 0) {
 				throw new IllegalArgumentException(
 						"COPY ON_ERROR, LOG_VERBOSITY and all-column FORCE options require PostgreSQL 17 or later.");
 			}
 		}
-		if (!CommonUtils.isEmpty(logVerbosity)
-				&& !"ignore".equalsIgnoreCase(onError)) {
-			throw new IllegalArgumentException(
-					"COPY LOG_VERBOSITY requires ON_ERROR ignore.");
+		if (!CommonUtils.isEmpty(logVerbosity) && !"ignore".equalsIgnoreCase(onError)) {
+			throw new IllegalArgumentException("COPY LOG_VERBOSITY requires ON_ERROR ignore.");
 		}
 		if (rejectLimit != null) {
 			if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-				throw new IllegalArgumentException(
-						"COPY REJECT_LIMIT requires PostgreSQL 18 or later.");
+				throw new IllegalArgumentException("COPY REJECT_LIMIT requires PostgreSQL 18 or later.");
 			}
 			if (!"ignore".equalsIgnoreCase(onError)) {
-				throw new IllegalArgumentException(
-						"COPY REJECT_LIMIT requires ON_ERROR ignore.");
+				throw new IllegalArgumentException("COPY REJECT_LIMIT requires ON_ERROR ignore.");
 			}
 		}
-		if ("silent".equalsIgnoreCase(logVerbosity)
-				&& dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"COPY LOG_VERBOSITY silent requires PostgreSQL 18 or later.");
+		if ("silent".equalsIgnoreCase(logVerbosity) && dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
+			throw new IllegalArgumentException("COPY LOG_VERBOSITY silent requires PostgreSQL 18 or later.");
 		}
-		if ((forceNullAll || forceNotNullAll)
-				&& !"csv".equalsIgnoreCase(format)) {
-			throw new IllegalArgumentException(
-					"COPY all-column FORCE options require FORMAT csv.");
+		if ((forceNullAll || forceNotNullAll) && !"csv".equalsIgnoreCase(format)) {
+			throw new IllegalArgumentException("COPY all-column FORCE options require FORMAT csv.");
 		}
-		if (freeze && foreignTable
-				&& dialect.compareTo(DialectHolder.postgreSQL180) >= 0) {
+		if (freeze && foreignTable && dialect.compareTo(DialectHolder.postgreSQL180) >= 0) {
 			throw new IllegalArgumentException(
 					"COPY FREEZE is not supported for foreign tables on PostgreSQL 18 or later.");
 		}

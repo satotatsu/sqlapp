@@ -56,8 +56,7 @@ public class MySqlTableReader extends TableReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -96,37 +95,36 @@ public class MySqlTableReader extends TableReader {
 			table.setCompression(true);
 		}
 		this.setStatistics("ROW_FORMAT", format, table);
-		final String createOption=getString(rs, "CREATE_OPTIONS");
-		if (createOption != null && createOption.toLowerCase(java.util.Locale.ROOT).contains("partitioned")){
+		final String createOption = getString(rs, "CREATE_OPTIONS");
+		if (createOption != null && createOption.toLowerCase(java.util.Locale.ROOT).contains("partitioned")) {
 			table.toPartitioning();
 		}
 		return table;
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> tableList) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> tableList) throws SQLException {
 		super.setMetadataDetail(connection, context, tableList);
-		final DoubleKeyMap<String,String,Table> tables=SchemaUtils.toDoubleKeyMap(tableList);
+		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitioning(connection, context, tables);
 	}
-	
+
 	/**
 	 * テーブルのパーティション情報を設定します
 	 * 
 	 * @param connection
 	 * @param table
 	 */
-	protected void setPartitioning(final Connection connection, final ParametersContext context, final DoubleKeyMap<String,String,Table> tables) {
+	protected void setPartitioning(final Connection connection, final ParametersContext context,
+			final DoubleKeyMap<String, String, Table> tables) {
 		final SqlNode node = getSqlNodeCache().getString("partitions.sql");
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-				final String schemaName=getString(rs,
-						SCHEMA_NAME);
-				final String tableName=getString(rs,
-						TABLE_NAME);
-				final Table table=tables.get(schemaName, tableName);
+				final String schemaName = getString(rs, SCHEMA_NAME);
+				final String tableName = getString(rs, TABLE_NAME);
+				final Table table = tables.get(schemaName, tableName);
 				if (table != null) {
 					setPartition(rs, table);
 				}
@@ -134,57 +132,45 @@ public class MySqlTableReader extends TableReader {
 		});
 	}
 
-	protected void setPartition(final ExResultSet rs, final Table table) throws SQLException{
+	protected void setPartition(final ExResultSet rs, final Table table) throws SQLException {
 		final Dialect dialect = this.getDialect();
 		final String partitioningType = getString(rs, "PARTITION_METHOD");
-		final String subPartitioningType = getString(rs,
-				"SUBPARTITION_METHOD");
+		final String subPartitioningType = getString(rs, "SUBPARTITION_METHOD");
 		final String partitionName = getString(rs, "PARTITION_NAME");
 		final String subPartitionName = getString(rs, "SUBPARTITION_NAME");
-		final String partitionDescription = getString(rs,
-				"PARTITION_DESCRIPTION");
-		final String partitionExpression = dialect.unQuote(getString(rs,
-				"PARTITION_EXPRESSION"));
-		final String subPartitionExpression = dialect.unQuote(getString(rs,
-				"SUBPARTITION_EXPRESSION"));
+		final String partitionDescription = getString(rs, "PARTITION_DESCRIPTION");
+		final String partitionExpression = dialect.unQuote(getString(rs, "PARTITION_EXPRESSION"));
+		final String subPartitionExpression = dialect.unQuote(getString(rs, "SUBPARTITION_EXPRESSION"));
 		table.toPartitioning();
 		final Partitioning partitioning = table.getPartitioning();
-		partitioning.setPartitioningType(PartitioningType
-				.parse(partitioningType));
-		partitioning.setSubPartitioningType(PartitioningType
-				.parse(subPartitioningType));
-		if (!isEmpty(partitionExpression)
-				&& !partitioning.getPartitioningColumns().contains(
-						partitionExpression)) {
-			partitioning.getPartitioningColumns().add(
-					partitionExpression);
+		partitioning.setPartitioningType(PartitioningType.parse(partitioningType));
+		partitioning.setSubPartitioningType(PartitioningType.parse(subPartitioningType));
+		if (!isEmpty(partitionExpression) && !partitioning.getPartitioningColumns().contains(partitionExpression)) {
+			partitioning.getPartitioningColumns().add(partitionExpression);
 		}
-		Partition partition = partitioning.getPartitions().get(
-				partitionName);
+		Partition partition = partitioning.getPartitions().get(partitionName);
 		if (partition == null) {
 			partition = new Partition(partitionName);
 			partition.setHighValue(partitionDescription);
-			if (subPartitionExpression==null){
+			if (subPartitionExpression == null) {
 				setPartitionDetails(rs, partition);
 			}
 			partitioning.getPartitions().add(partition);
 		}
 		if (!isEmpty(subPartitionName)) {
 			if (!isEmpty(subPartitionExpression)
-					&& !partitioning.getSubPartitioningColumns()
-							.contains(subPartitionExpression)) {
-				partitioning.getSubPartitioningColumns().add(
-						subPartitionExpression);
+					&& !partitioning.getSubPartitioningColumns().contains(subPartitionExpression)) {
+				partitioning.getSubPartitioningColumns().add(subPartitionExpression);
 			}
 			final SubPartition subPartition = new SubPartition(subPartitionName);
-			if (subPartitionExpression!=null){
+			if (subPartitionExpression != null) {
 				setPartitionDetails(rs, subPartition);
 			}
 			partition.getSubPartitions().add(subPartition);
 		}
 	}
-	
-	private void setPartitionDetails(final ExResultSet rs, final AbstractPartition<?> partition) throws SQLException{
+
+	private void setPartitionDetails(final ExResultSet rs, final AbstractPartition<?> partition) throws SQLException {
 		partition.setRemarks(getString(rs, "PARTITION_COMMENT"));
 		partition.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		partition.setLastAlteredAt(rs.getTimestamp("UPDATE_TIME"));
@@ -195,7 +181,7 @@ public class MySqlTableReader extends TableReader {
 		Statistics.INDEX_LENGTH.setValue(rs, "INDEX_LENGTH", partition);
 		this.setStatistics(rs, "DATA_FREE", partition);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -220,8 +206,7 @@ public class MySqlTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newUniqueConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newUniqueConstraintReader ()
 	 */
 	@Override
 	protected UniqueConstraintReader newUniqueConstraintReader() {
@@ -231,8 +216,7 @@ public class MySqlTableReader extends TableReader {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newCheckConstraintReader
+	 * @see com.sqlapp.data.db.dialect.metadata.TableReader#newCheckConstraintReader
 	 * ()
 	 */
 	@Override
@@ -256,8 +240,7 @@ public class MySqlTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

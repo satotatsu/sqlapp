@@ -8,8 +8,13 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 
 /** SQL Server temporary-table SCD2 provider. */
 public class SqlServerSetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(final Dialect dialect) { return dialect instanceof SqlServer2000; }
-	@Override public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
+	@Override
+	public boolean supports(final Dialect dialect) {
+		return dialect instanceof SqlServer2000;
+	}
+
+	@Override
+	public SetBasedMigrationSnapshotExecutor create(final Dialect dialect) {
 		return new SqlServerSetBasedMigrationSnapshotExecutor(dialect);
 	}
 }

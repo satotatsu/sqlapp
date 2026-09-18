@@ -34,8 +34,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * @author satoh
  * 
  */
-public class SqlServer2005TableSpaceReader extends
-		SqlServer2000TableSpaceReader {
+public class SqlServer2005TableSpaceReader extends SqlServer2000TableSpaceReader {
 
 	protected SqlServer2005TableSpaceReader(Dialect dialect) {
 		super(dialect);

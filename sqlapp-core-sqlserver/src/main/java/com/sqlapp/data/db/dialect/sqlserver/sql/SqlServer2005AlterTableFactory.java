@@ -41,21 +41,19 @@ import com.sqlapp.data.schemas.Table;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2005AlterTableFactory extends
-		AbstractAlterTableFactory<SqlServerSqlBuilder> {
+public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<SqlServerSqlBuilder> {
 
 	/** SQL Server omits the optional COLUMN keyword in ADD column syntax. */
 	@Override
-	protected void addAddColumn(final Table originalTable, final Table table,
-			final DbObjectDifference diff, final List<SqlOperation> result) {
+	protected void addAddColumn(final Table originalTable, final Table table, final DbObjectDifference diff,
+			final List<SqlOperation> result) {
 		final Column column = diff.getTarget(Column.class);
 		final SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.alter().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		builder.add();
 		builder.name(column);
-		builder.space().definition(column,
-				this.getTableOptions().getWithColumnRemarks().test(column));
+		builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 		add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 	}
 
@@ -68,8 +66,7 @@ public class SqlServer2005AlterTableFactory extends
 	 * @param result
 	 */
 	@Override
-	protected void addConstraintDefinitions(Map<String, Difference<?>> allDiff
-			, Table originalTable, Table table,
+	protected void addConstraintDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
 			List<DbObjectDifference> consDiff, List<SqlOperation> result) {
 		Difference<?> tableProp = allDiff.get(SchemaObjectProperties.PARTITIONING.getLabel());
 		if (tableProp == null) {
@@ -78,8 +75,8 @@ public class SqlServer2005AlterTableFactory extends
 				Constraint constraint = diff.getTarget(Constraint.class);
 				addConstraintDefinition(originalTable, table, originalConstraint, constraint, diff, result);
 			}
-		} else{
-			
+		} else {
+
 		}
 	}
 
@@ -90,13 +87,12 @@ public class SqlServer2005AlterTableFactory extends
 	 * @param sqlBuilder
 	 */
 	@Override
-	protected void addPartitionDefinition(Map<String, Difference<?>> allDiff
-			, Table originalTable, Table table
-			, DbObjectDifference partitioningProp
-			, List<SqlOperation> result) {
+	protected void addPartitionDefinition(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
+			DbObjectDifference partitioningProp, List<SqlOperation> result) {
 		SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.alter().table().space().name(table, this.getOptions().isDecorateSchemaName());
-		AddObjectDetail<Partitioning,SqlServerSqlBuilder> addObjectDetail=this.getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
+		AddObjectDetail<Partitioning, SqlServerSqlBuilder> addObjectDetail = this
+				.getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
 		addObjectDetail.addObjectDetail(table.getPartitioning(), builder);
 	}
 }

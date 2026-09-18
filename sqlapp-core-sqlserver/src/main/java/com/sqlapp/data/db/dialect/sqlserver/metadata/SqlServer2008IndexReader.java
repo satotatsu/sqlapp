@@ -49,8 +49,7 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 
 	@Override
 	protected IndexReader newFullTextIndexReader() {
-		final IndexReader reader = new SqlServer2008FullTextIndexReader(
-				this.getDialect());
+		final IndexReader reader = new SqlServer2008FullTextIndexReader(this.getDialect());
 		return reader;
 	}
 
@@ -106,11 +105,12 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	 * MAXDOP
 	 */
 	public static final String MAXDOP = "MAXDOP";
+
 	@Override
 	protected Index createIndex(final ExResultSet rs) throws SQLException {
 		final Index index = super.createIndex(rs);
-		String where=getString(rs, FILTER_DEFINITION);
-		where=CommonUtils.unwrap(SqlServerUtils.replaceNames(where), "(", ")");
+		String where = getString(rs, FILTER_DEFINITION);
+		where = CommonUtils.unwrap(SqlServerUtils.replaceNames(where), "(", ")");
 		index.setWhere(where);
 		if (index.getIndexType() == IndexType.Spatial) {
 			setSpecifics(rs, TESSELLATION_SCHEMA, index);

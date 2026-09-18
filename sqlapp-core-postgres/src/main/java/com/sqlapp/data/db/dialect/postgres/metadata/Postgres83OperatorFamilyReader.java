@@ -47,8 +47,7 @@ public class Postgres83OperatorFamilyReader extends OperatorFamilyReader {
 	}
 
 	@Override
-	protected List<OperatorFamily> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<OperatorFamily> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<OperatorFamily> result = list();
@@ -66,8 +65,7 @@ public class Postgres83OperatorFamilyReader extends OperatorFamilyReader {
 		return getSqlNodeCache().getString("operatorFamilies83.sql");
 	}
 
-	protected OperatorFamily createOperatorFamily(ExResultSet rs)
-			throws SQLException {
+	protected OperatorFamily createOperatorFamily(ExResultSet rs) throws SQLException {
 		OperatorFamily obj = new OperatorFamily();
 		obj.setDialect(this.getDialect());
 		obj.setStrategyNumber(rs.getInt("operator_family_strategy"));

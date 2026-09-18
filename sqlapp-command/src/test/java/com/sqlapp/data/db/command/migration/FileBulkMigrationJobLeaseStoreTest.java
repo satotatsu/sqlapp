@@ -24,10 +24,8 @@ class FileBulkMigrationJobLeaseStoreTest {
 		final var first = new FileBulkMigrationJobLeaseStore(directory);
 		final var second = new FileBulkMigrationJobLeaseStore(directory);
 		final Instant now = Instant.parse("2026-08-31T12:00:00Z");
-		final var owner1 = new BulkMigrationJobLease("job", "plan", "owner-1",
-				now.plusSeconds(30));
-		final var owner2 = new BulkMigrationJobLease("job", "changed-plan", "owner-2",
-				now.plusSeconds(60));
+		final var owner1 = new BulkMigrationJobLease("job", "plan", "owner-1", now.plusSeconds(30));
+		final var owner2 = new BulkMigrationJobLease("job", "changed-plan", "owner-2", now.plusSeconds(60));
 
 		assertTrue(first.tryAcquire(owner1, now));
 		assertFalse(second.tryAcquire(owner2, now));
@@ -51,14 +49,13 @@ class FileBulkMigrationJobLeaseStoreTest {
 			final var firstResult = executor.submit(() -> {
 				ready.countDown();
 				start.await();
-				return first.tryAcquire(new BulkMigrationJobLease("job", "plan", "owner-1",
-						now.plusSeconds(30)), now);
+				return first.tryAcquire(new BulkMigrationJobLease("job", "plan", "owner-1", now.plusSeconds(30)), now);
 			});
 			final var secondResult = executor.submit(() -> {
 				ready.countDown();
 				start.await();
-				return second.tryAcquire(new BulkMigrationJobLease("job", "plan-2", "owner-2",
-						now.plusSeconds(30)), now);
+				return second.tryAcquire(new BulkMigrationJobLease("job", "plan-2", "owner-2", now.plusSeconds(30)),
+						now);
 			});
 			ready.await();
 			start.countDown();
@@ -72,12 +69,11 @@ class FileBulkMigrationJobLeaseStoreTest {
 		final var second = new FileBulkMigrationJobLeaseStore(directory);
 		final Instant now = Instant.parse("2026-08-31T12:00:00Z");
 		final var stale = new BulkMigrationJobLease("job", "plan", "shared", "old-token", now);
-		final var replacement = new BulkMigrationJobLease("job", "plan", "shared", "new-token",
-				now.plusSeconds(30));
+		final var replacement = new BulkMigrationJobLease("job", "plan", "shared", "new-token", now.plusSeconds(30));
 		assertTrue(first.tryAcquire(stale, now.minusSeconds(1)));
 		assertTrue(second.tryAcquire(replacement, now));
-		assertFalse(first.renew(new BulkMigrationJobLease("job", "plan", "shared", "old-token",
-				now.plusSeconds(60)), now));
+		assertFalse(
+				first.renew(new BulkMigrationJobLease("job", "plan", "shared", "old-token", now.plusSeconds(60)), now));
 		first.release(stale);
 		assertEquals("new-token", second.load("job").orElseThrow().acquisitionId());
 	}

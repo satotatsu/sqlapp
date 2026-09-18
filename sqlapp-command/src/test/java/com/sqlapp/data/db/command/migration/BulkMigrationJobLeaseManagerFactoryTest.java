@@ -20,27 +20,21 @@ class BulkMigrationJobLeaseManagerFactoryTest {
 
 	@Test
 	void databaseIsTheDefaultConfiguration() {
-		final var configuration = BulkMigrationJobLeaseConfiguration
-				.database("worker-1");
+		final var configuration = BulkMigrationJobLeaseConfiguration.database("worker-1");
 		assertEquals(BulkMigrationJobLeaseMode.DATABASE, configuration.mode());
-		assertEquals(BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION,
-				configuration.duration());
-		assertEquals(JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME,
-				configuration.tableName());
-		assertThrows(NullPointerException.class,
-				() -> BulkMigrationJobLeaseManagerFactory.create(null, configuration));
+		assertEquals(BulkMigrationJobLeaseConfiguration.DEFAULT_DURATION, configuration.duration());
+		assertEquals(JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME, configuration.tableName());
+		assertThrows(NullPointerException.class, () -> BulkMigrationJobLeaseManagerFactory.create(null, configuration));
 	}
 
 	@Test
-	void fileConfigurationCreatesCompetingManagersWithoutAConnection()
-			throws Exception {
+	void fileConfigurationCreatesCompetingManagersWithoutAConnection() throws Exception {
 		final var first = BulkMigrationJobLeaseManagerFactory.create(null,
 				BulkMigrationJobLeaseConfiguration.file("worker-1", directory));
 		final var second = BulkMigrationJobLeaseManagerFactory.create(null,
 				BulkMigrationJobLeaseConfiguration.file("worker-2", directory));
 		try (var ignored = first.acquire("job", "plan")) {
-			assertThrows(BulkMigrationJobLeaseUnavailableException.class,
-					() -> second.acquire("job", "changed-plan"));
+			assertThrows(BulkMigrationJobLeaseUnavailableException.class, () -> second.acquire("job", "changed-plan"));
 		}
 		try (var lease = second.acquire("job", "plan")) {
 			assertEquals("worker-2", lease.getLease().ownerId());
@@ -50,16 +44,13 @@ class BulkMigrationJobLeaseManagerFactoryTest {
 	@Test
 	void rejectsAmbiguousOrUnsafeConfiguration() {
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobLeaseConfiguration(
-						BulkMigrationJobLeaseMode.DATABASE, "worker", Duration.ZERO,
-						"LEASES", null));
+				() -> new BulkMigrationJobLeaseConfiguration(BulkMigrationJobLeaseMode.DATABASE, "worker",
+						Duration.ZERO, "LEASES", null));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobLeaseConfiguration(
-						BulkMigrationJobLeaseMode.DATABASE, "worker", Duration.ofMinutes(1),
-						"LEASES", directory));
+				() -> new BulkMigrationJobLeaseConfiguration(BulkMigrationJobLeaseMode.DATABASE, "worker",
+						Duration.ofMinutes(1), "LEASES", directory));
 		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobLeaseConfiguration(
-						BulkMigrationJobLeaseMode.FILE, "worker", Duration.ofMinutes(1),
-						"LEASES", directory));
+				() -> new BulkMigrationJobLeaseConfiguration(BulkMigrationJobLeaseMode.FILE, "worker",
+						Duration.ofMinutes(1), "LEASES", directory));
 	}
 }

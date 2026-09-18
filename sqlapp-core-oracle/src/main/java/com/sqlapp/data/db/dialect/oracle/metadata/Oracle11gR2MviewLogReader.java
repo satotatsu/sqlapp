@@ -19,27 +19,27 @@
 
 package com.sqlapp.data.db.dialect.oracle.metadata;
 
-
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.MviewLog;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
+
 /**
  * Oracle11gR2のマテビューログファクトリ
+ * 
  * @author satoh
  *
  */
-public class Oracle11gR2MviewLogReader extends OracleMviewLogReader{
+public class Oracle11gR2MviewLogReader extends OracleMviewLogReader {
 
 	protected Oracle11gR2MviewLogReader(Dialect dialect) {
 		super(dialect);
 	}
 
-
-	protected MviewLog createMviewLog(ExResultSet rs, ResultSetNextHandler handler) throws SQLException{
-		MviewLog obj=super.createMviewLog(rs, handler);
+	protected MviewLog createMviewLog(ExResultSet rs, ResultSetNextHandler handler) throws SQLException {
+		MviewLog obj = super.createMviewLog(rs, handler);
 		obj.setPurgeInterval(getString(rs, "PURGE_INTERVAL"));
 		obj.setPurgeAsynchronous("YES".equalsIgnoreCase(getString(rs, "PURGE_ASYNCHRONOUS")));
 		obj.setPurgeDeferred("YES".equalsIgnoreCase(getString(rs, "PURGE_DEFERRED")));

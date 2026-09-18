@@ -18,7 +18,6 @@ public class Oracle18cSqlFactoryRegistry extends Oracle12cOperationFactoryRegist
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Sequence.class, SqlType.CREATE,
-				Oracle18cCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE, Oracle18cCreateSequenceFactory.class);
 	}
 }

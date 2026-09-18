@@ -11,26 +11,19 @@ class PostgresAmcheckBuilderTest {
 
 	@Test
 	void testGinIndexCheck() {
-		PostgresAmcheckBuilder builder =
-				new PostgresAmcheckBuilder(DialectHolder.postgreSQL180);
+		PostgresAmcheckBuilder builder = new PostgresAmcheckBuilder(DialectHolder.postgreSQL180);
 
-		assertEquals(
-				"SELECT gin_index_check('search.idx_documents'::regclass)",
+		assertEquals("SELECT gin_index_check('search.idx_documents'::regclass)",
 				builder.ginIndexCheck("search", "idx_documents"));
-		assertEquals(
-				"SELECT gin_index_check('\"Search Data\".\"Document Index\"'::regclass)",
+		assertEquals("SELECT gin_index_check('\"Search Data\".\"Document Index\"'::regclass)",
 				builder.ginIndexCheck("Search Data", "Document Index"));
 	}
 
 	@Test
 	void testRejectBeforePostgres18AndEmptyName() {
 		assertThrows(IllegalArgumentException.class,
-				() -> new PostgresAmcheckBuilder(
-						DialectHolder.postgreSQL170)
-						.ginIndexCheck("idx_documents"));
+				() -> new PostgresAmcheckBuilder(DialectHolder.postgreSQL170).ginIndexCheck("idx_documents"));
 		assertThrows(IllegalArgumentException.class,
-				() -> new PostgresAmcheckBuilder(
-						DialectHolder.postgreSQL180)
-						.ginIndexCheck(""));
+				() -> new PostgresAmcheckBuilder(DialectHolder.postgreSQL180).ginIndexCheck(""));
 	}
 }

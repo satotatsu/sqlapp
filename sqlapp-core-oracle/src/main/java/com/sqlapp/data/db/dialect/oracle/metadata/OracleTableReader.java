@@ -69,8 +69,7 @@ public class OracleTableReader extends TableReader {
 	 * @param connection
 	 * @param context
 	 */
-	protected List<Table> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -102,7 +101,7 @@ public class OracleTableReader extends TableReader {
 			table.toPartitioning();
 		}
 		table.setValid("VALID".equalsIgnoreCase(getString(rs, "STATUS")));
-		for(String key:OracleUtils.getTableStatisticsKeys()){
+		for (String key : OracleUtils.getTableStatisticsKeys()) {
 			setSpecifics(rs, key, table);
 		}
 		Statistics.ROWS.setValue(rs, "NUM_ROWS", table);
@@ -113,23 +112,23 @@ public class OracleTableReader extends TableReader {
 	private static final String PARTTITIONED_KEY = "PARTITIONED";
 
 	@Override
-	protected void setMetadataDetail(Connection connection,
-			ParametersContext context, List<Table> tableList) throws SQLException {
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> tableList)
+			throws SQLException {
 		super.setMetadataDetail(connection, context, tableList);
-		if (CommonUtils.isEmpty(tableList)){
+		if (CommonUtils.isEmpty(tableList)) {
 			return;
 		}
-		final DoubleKeyMap<String,String,Table> tables=SchemaUtils.toDoubleKeyMap(tableList);
+		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitioning(connection, tables);
 	}
-	
+
 	/**
 	 * テーブルのパーティション情報を設定します
 	 * 
 	 * @param connection
 	 * @param tableName
 	 */
-	protected void setPartitioning(Connection connection, final DoubleKeyMap<String,String,Table> tables) {
+	protected void setPartitioning(Connection connection, final DoubleKeyMap<String, String, Table> tables) {
 		SqlNode node = getSqlNodeCache().getString("tablePartitions.sql");
 		ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
@@ -137,20 +136,17 @@ public class OracleTableReader extends TableReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=getString(rs,
-						SCHEMA_NAME);
-				String tableName=getString(rs,
-						TABLE_NAME);
-				Table table=tables.get(schemaName, tableName);
+				String schemaName = getString(rs, SCHEMA_NAME);
+				String tableName = getString(rs, TABLE_NAME);
+				Table table = tables.get(schemaName, tableName);
 				setPartition(connection, rs, table);
 			}
 		});
 	}
 
-	protected void setPartition(Connection connection, ExResultSet rs, final Table table) throws SQLException{
+	protected void setPartition(Connection connection, ExResultSet rs, final Table table) throws SQLException {
 		String partitioningType = getString(rs, "PARTITIONING_TYPE");
-		String subPartitioningType = getString(rs,
-				"SUBPARTITIONING_TYPE");
+		String subPartitioningType = getString(rs, "SUBPARTITIONING_TYPE");
 		Partitioning partitioning = null;
 		if (table.getPartitioning() == null) {
 			partitioning = new Partitioning();
@@ -164,32 +160,27 @@ public class OracleTableReader extends TableReader {
 		}
 		Partition partition = addPartition(rs, partitioning);
 		if (initializePartitioning) {
-			setPartitionColumnInfo(connection, table.getSchemaName(),
-					table.getName(), partitioning);
+			setPartitionColumnInfo(connection, table.getSchemaName(), table.getName(), partitioning);
 			if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
 				partitioning.setSubPartitioningType(subPartitioningType);
-				setSubPartitionColumnInfo(connection,
-						table.getSchemaName(), table.getName(),
-						partitioning);
+				setSubPartitionColumnInfo(connection, table.getSchemaName(), table.getName(), partitioning);
 			}
 		}
 		if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
-			setTableSubPartitionInfo(connection, table.getSchemaName(),
-					table.getName(), partition,
+			setTableSubPartitionInfo(connection, table.getSchemaName(), table.getName(), partition,
 					PartitioningType.parse(subPartitioningType));
 		}
 	}
-	
-	private Partition addPartition(ExResultSet rs, Partitioning partitioning)
-			throws SQLException {
+
+	private Partition addPartition(ExResultSet rs, Partitioning partitioning) throws SQLException {
 		String partitionName = getString(rs, "PARTITION_NAME");
 		Partition partition = new Partition(partitionName);
 		setPartitionDetails(rs, partition);
 		partitioning.getPartitions().add(partition);
 		return partition;
 	}
-	
-	private void setPartitionDetails(ExResultSet rs, AbstractPartition<?> partition) throws SQLException{
+
+	private void setPartitionDetails(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
 		String highValue = getString(rs, "HIGH_VALUE");
 		String compression = getString(rs, "COMPRESSION");
 		partition.setHighValue(highValue);
@@ -197,7 +188,7 @@ public class OracleTableReader extends TableReader {
 			partition.setCompression(true);
 		}
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
-		for(String key:OracleUtils.getTableStatisticsKeys()){
+		for (String key : OracleUtils.getTableStatisticsKeys()) {
 			this.setSpecifics(rs, key, partition);
 		}
 		//
@@ -214,42 +205,30 @@ public class OracleTableReader extends TableReader {
 	 * パーティションカラム情報を設定します
 	 * 
 	 * @param connection
-	 * @param schemaName
-	 *            スキーマ名
-	 * @param objectName
-	 *             テーブル名 or インデックス名
-	 * @param partitionInfo
-	 *            パーティション情報
+	 * @param schemaName    スキーマ名
+	 * @param objectName    テーブル名 or インデックス名
+	 * @param partitionInfo パーティション情報
 	 */
-	protected void setPartitionColumnInfo(Connection connection,
-			String schemaName, String objectName,
+	protected void setPartitionColumnInfo(Connection connection, String schemaName, String objectName,
 			final Partitioning partitionInfo) {
 		SqlNode node = getSqlNodeCache().getString("partitionKeyColumns.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				schemaName);
-		OracleMetadataUtils.setPartitionColumnInfo(connection, node, context,
-				"TABLE", objectName, partitionInfo);
+		ParametersContext context = newParametersContext(connection, null, schemaName);
+		OracleMetadataUtils.setPartitionColumnInfo(connection, node, context, "TABLE", objectName, partitionInfo);
 	}
 
 	/**
 	 * サブパーティションカラム情報を設定します
 	 * 
 	 * @param connection
-	 * @param schemaName
-	 *            スキーマ名
-	 * @param objectName
-	 *            テーブル名 or インデックス名
-	 * @param partitionInfo
-	 *            パーティション情報
+	 * @param schemaName    スキーマ名
+	 * @param objectName    テーブル名 or インデックス名
+	 * @param partitionInfo パーティション情報
 	 */
-	protected void setSubPartitionColumnInfo(Connection connection,
-			String schemaName, String objectName,
+	protected void setSubPartitionColumnInfo(Connection connection, String schemaName, String objectName,
 			final Partitioning partitionInfo) {
 		SqlNode node = getSqlNodeCache().getString("subpartitionKeyColumns.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				schemaName);
-		OracleMetadataUtils.setSubPartitionColumnInfo(connection, node,
-				context, "TABLE", objectName, partitionInfo);
+		ParametersContext context = newParametersContext(connection, null, schemaName);
+		OracleMetadataUtils.setSubPartitionColumnInfo(connection, node, context, "TABLE", objectName, partitionInfo);
 	}
 
 	/**
@@ -259,12 +238,10 @@ public class OracleTableReader extends TableReader {
 	 * @param schemaName
 	 * @param tableName
 	 */
-	protected void setTableSubPartitionInfo(Connection connection,
-			String schemaName, String tableName, final Partition partition,
-			PartitioningType subPartitioningType) {
+	protected void setTableSubPartitionInfo(Connection connection, String schemaName, String tableName,
+			final Partition partition, PartitioningType subPartitioningType) {
 		SqlNode node = getSqlNodeCache().getString("tableSubPartitions.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				schemaName);
+		ParametersContext context = newParametersContext(connection, null, schemaName);
 		context.put(SchemaProperties.TABLE_NAME.getLabel(), tableName);
 		context.put("partitionName", partition.getName());
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -274,9 +251,8 @@ public class OracleTableReader extends TableReader {
 			}
 		});
 	}
-	
-	private SubPartition addSubPartition(ExResultSet rs, final Partition parent)
-			throws SQLException {
+
+	private SubPartition addSubPartition(ExResultSet rs, final Partition parent) throws SQLException {
 		String partitionName = getString(rs, "SUBPARTITION_NAME");
 		SubPartition partition = new SubPartition(partitionName);
 		setPartitionDetails(rs, partition);
@@ -313,8 +289,7 @@ public class OracleTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

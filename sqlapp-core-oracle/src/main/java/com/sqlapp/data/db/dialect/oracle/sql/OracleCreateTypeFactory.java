@@ -25,8 +25,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTypeFactory;
 import com.sqlapp.data.schemas.Type;
 
-public class OracleCreateTypeFactory extends
-		AbstractCreateTypeFactory<OracleSqlBuilder> {
+public class OracleCreateTypeFactory extends AbstractCreateTypeFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Type obj, OracleSqlBuilder builder) {

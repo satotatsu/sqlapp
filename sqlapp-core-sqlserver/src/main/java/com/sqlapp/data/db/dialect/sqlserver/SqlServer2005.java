@@ -66,8 +66,8 @@ public class SqlServer2005 extends SqlServer2000 {
 	public void prepareBatchExecuteGeneratedKeys(Connection connection, Table table, Column identityColumn)
 			throws SQLException {
 		try (Statement statement = connection.createStatement()) {
-			statement.execute("IF OBJECT_ID('tempdb.." + GENERATED_KEYS_TABLE + "') IS NULL "
-					+ "CREATE TABLE " + GENERATED_KEYS_TABLE + " ("
+			statement.execute("IF OBJECT_ID('tempdb.." + GENERATED_KEYS_TABLE + "') IS NULL " + "CREATE TABLE "
+					+ GENERATED_KEYS_TABLE + " ("
 					+ "ROW_NO BIGINT IDENTITY(1,1) PRIMARY KEY, GENERATED_KEY SQL_VARIANT NOT NULL) "
 					+ "ELSE TRUNCATE TABLE " + GENERATED_KEYS_TABLE);
 		}
@@ -79,10 +79,8 @@ public class SqlServer2005 extends SqlServer2000 {
 		if (!matcher.find()) {
 			throw new IllegalArgumentException("Unable to add SQL Server generated-key capture to INSERT SQL: " + sql);
 		}
-		return sql.substring(0, matcher.start())
-				+ " OUTPUT INSERTED." + getObjectFullName(identityColumn.getName())
-				+ " INTO " + GENERATED_KEYS_TABLE + "(GENERATED_KEY) "
-				+ sql.substring(matcher.start());
+		return sql.substring(0, matcher.start()) + " OUTPUT INSERTED." + getObjectFullName(identityColumn.getName())
+				+ " INTO " + GENERATED_KEYS_TABLE + "(GENERATED_KEY) " + sql.substring(matcher.start());
 	}
 
 	@Override
@@ -90,8 +88,8 @@ public class SqlServer2005 extends SqlServer2000 {
 			throws SQLException {
 		List<Object> keys = new ArrayList<>();
 		try (Statement statement = connection.createStatement();
-				ResultSet resultSet = statement.executeQuery(
-						"SELECT GENERATED_KEY FROM " + GENERATED_KEYS_TABLE + " ORDER BY ROW_NO")) {
+				ResultSet resultSet = statement
+						.executeQuery("SELECT GENERATED_KEY FROM " + GENERATED_KEYS_TABLE + " ORDER BY ROW_NO")) {
 			while (resultSet.next()) {
 				keys.add(resultSet.getObject(1));
 			}

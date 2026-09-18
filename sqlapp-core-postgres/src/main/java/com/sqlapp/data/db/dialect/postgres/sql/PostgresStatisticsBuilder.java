@@ -14,9 +14,9 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 import com.sqlapp.util.CommonUtils;
 
 /**
- * PostgreSQL 18 optimizer-statistics restore and clear SQL builder.
- * Statistic values are SQL expressions so their required PostgreSQL types can
- * be preserved.
+ * PostgreSQL 18 optimizer-statistics restore and clear SQL builder. Statistic
+ * values are SQL expressions so their required PostgreSQL types can be
+ * preserved.
  */
 public class PostgresStatisticsBuilder {
 	private final Dialect dialect;
@@ -25,16 +25,15 @@ public class PostgresStatisticsBuilder {
 		this.dialect = Objects.requireNonNull(dialect, "dialect");
 	}
 
-	public RestoreExpression restoreRelation(String schemaName,
-			String tableName) {
+	public RestoreExpression restoreRelation(String schemaName, String tableName) {
 		checkVersion();
 		return new RestoreExpression("pg_restore_relation_stats")
 				.argument("schemaname", sqlString(require(schemaName, "schemaName")))
 				.argument("relname", sqlString(require(tableName, "tableName")));
 	}
 
-	public RestoreExpression restoreAttribute(String schemaName,
-			String tableName, String columnName, boolean inherited) {
+	public RestoreExpression restoreAttribute(String schemaName, String tableName, String columnName,
+			boolean inherited) {
 		checkVersion();
 		return new RestoreExpression("pg_restore_attribute_stats")
 				.argument("schemaname", sqlString(require(schemaName, "schemaName")))
@@ -45,19 +44,15 @@ public class PostgresStatisticsBuilder {
 
 	public String clearRelation(String schemaName, String tableName) {
 		checkVersion();
-		return "SELECT pg_clear_relation_stats("
-				+ sqlString(require(schemaName, "schemaName")) + ", "
+		return "SELECT pg_clear_relation_stats(" + sqlString(require(schemaName, "schemaName")) + ", "
 				+ sqlString(require(tableName, "tableName")) + ")";
 	}
 
-	public String clearAttribute(String schemaName, String tableName,
-			String columnName, boolean inherited) {
+	public String clearAttribute(String schemaName, String tableName, String columnName, boolean inherited) {
 		checkVersion();
-		return "SELECT pg_clear_attribute_stats("
-				+ sqlString(require(schemaName, "schemaName")) + ", "
-				+ sqlString(require(tableName, "tableName")) + ", "
-				+ sqlString(require(columnName, "columnName")) + ", "
-				+ inherited + ")";
+		return "SELECT pg_clear_attribute_stats(" + sqlString(require(schemaName, "schemaName")) + ", "
+				+ sqlString(require(tableName, "tableName")) + ", " + sqlString(require(columnName, "columnName"))
+				+ ", " + inherited + ")";
 	}
 
 	public final class RestoreExpression {
@@ -69,21 +64,18 @@ public class PostgresStatisticsBuilder {
 		}
 
 		public RestoreExpression statistic(String name, String valueExpression) {
-			return argument(require(name, "statistic name"),
-					require(valueExpression, "statistic value"));
+			return argument(require(name, "statistic name"), require(valueExpression, "statistic value"));
 		}
 
 		public RestoreExpression sourceVersion(int value) {
 			if (value <= 0) {
-				throw new IllegalArgumentException(
-						"sourceVersion must be greater than zero.");
+				throw new IllegalArgumentException("sourceVersion must be greater than zero.");
 			}
 			return argument("version", Integer.toString(value));
 		}
 
 		public String build() {
-			return "SELECT " + function + "("
-					+ String.join(", ", arguments) + ")";
+			return "SELECT " + function + "(" + String.join(", ", arguments) + ")";
 		}
 
 		private RestoreExpression argument(String name, String valueExpression) {

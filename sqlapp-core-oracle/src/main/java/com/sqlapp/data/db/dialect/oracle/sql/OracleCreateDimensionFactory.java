@@ -25,8 +25,7 @@ import com.sqlapp.data.schemas.Dimension;
 import com.sqlapp.data.schemas.DimensionLevel;
 import com.sqlapp.data.schemas.DimensionLevelColumn;
 
-public class OracleCreateDimensionFactory extends
-		AbstractCreateDimensionFactory<OracleSqlBuilder> {
+public class OracleCreateDimensionFactory extends AbstractCreateDimensionFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Dimension obj, OracleSqlBuilder builder) {
@@ -36,8 +35,7 @@ public class OracleCreateDimensionFactory extends
 		builder.appendIndent(+1);
 		for (DimensionLevel level : obj.getLevels()) {
 			builder.lineBreak();
-			builder.level().space().name(level)
-			.space().is().space()._add("(");
+			builder.level().space().name(level).space().is().space()._add("(");
 			boolean first = true;
 			for (DimensionLevelColumn column : level.getColumns()) {
 				if (!first) {

@@ -36,19 +36,19 @@ import com.sqlapp.data.schemas.Setting;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableSpace;
 
-public class GenerateAllHtmlDocsCommandTest extends AbstractGenerateHtmlDocsCommandTest{
-	
+public class GenerateAllHtmlDocsCommandTest extends AbstractGenerateHtmlDocsCommandTest {
+
 	@Override
-	protected Catalog createCatalog(){
-		final Catalog catalog=super.createCatalog();
-		final TableSpace tableSpace=createTableSpace("tableSpaceA");
+	protected Catalog createCatalog() {
+		final Catalog catalog = super.createCatalog();
+		final TableSpace tableSpace = createTableSpace("tableSpaceA");
 		catalog.getTableSpaces().add(tableSpace);
 		catalog.getSettings().add(createSetting("settingA"));
 		return catalog;
 	}
 
-	protected Setting createSetting(final String name){
-		final Setting obj=new Setting(name);
+	protected Setting createSetting(final String name) {
+		final Setting obj = new Setting(name);
 		setValues(obj);
 		return obj;
 	}
@@ -61,53 +61,51 @@ public class GenerateAllHtmlDocsCommandTest extends AbstractGenerateHtmlDocsComm
 		command.setCatalog(catalog);
 		command.setOutputDirectory(testProjectDir);
 		command.run();
-		String html = Files.readString(testProjectDir.toPath().resolve("settings.html"),
-				StandardCharsets.UTF_8);
+		String html = Files.readString(testProjectDir.toPath().resolve("settings.html"), StandardCharsets.UTF_8);
 		assertFalse(html.contains(">Default Value</th>"));
 	}
 
-	protected TableSpace createTableSpace(final String name){
-		final TableSpace obj=new TableSpace(name);
+	protected TableSpace createTableSpace(final String name) {
+		final TableSpace obj = new TableSpace(name);
 		setValues(obj);
 		return obj;
 	}
 
 	@Override
-	protected Schema createSchema(){
-		final Schema schema=super.createSchema();
-		final Table table=createTable("tableA");
+	protected Schema createSchema() {
+		final Schema schema = super.createSchema();
+		final Table table = createTable("tableA");
 		schema.getTables().add(table);
-		final Domain domain=createDomain("DomainA");
+		final Domain domain = createDomain("DomainA");
 		schema.getDomains().add(domain);
-		final Mask mask=createMask("MaskA");
+		final Mask mask = createMask("MaskA");
 		schema.getMasks().add(mask);
 		return schema;
 	}
 
-	protected Table createTable(final String name){
-		final Table table=new Table(name);
-		final Column column=createColumn("cola");
+	protected Table createTable(final String name) {
+		final Table table = new Table(name);
+		final Column column = createColumn("cola");
 		table.getColumns().add(column);
 		setValues(table);
 		table.toPartitioning();
 		return table;
 	}
 
-	protected Domain createDomain(final String name){
-		final Domain obj=new Domain(name);
+	protected Domain createDomain(final String name) {
+		final Domain obj = new Domain(name);
 		setValues(obj);
 		return obj;
 	}
 
-	protected Mask createMask(final String name){
-		final Mask obj=new Mask(name);
+	protected Mask createMask(final String name) {
+		final Mask obj = new Mask(name);
 		setValues(obj);
 		return obj;
 	}
 
-	
-	protected Column createColumn(final String name){
-		final Column obj=new Column(name);
+	protected Column createColumn(final String name) {
+		final Column obj = new Column(name);
 		setValues(obj);
 		return obj;
 	}

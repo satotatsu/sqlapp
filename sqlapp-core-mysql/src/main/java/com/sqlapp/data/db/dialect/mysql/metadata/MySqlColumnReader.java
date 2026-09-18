@@ -48,8 +48,8 @@ public class MySqlColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(final Connection connection,
-			ParametersContext context, ProductVersionInfo productVersionInfo) {
+	protected List<Column> doGetAll(final Connection connection, ParametersContext context,
+			ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -94,8 +94,8 @@ public class MySqlColumnReader extends ColumnReader {
 				column.setOctetLength(octetLength);
 			}
 		}
-		Matcher matcher=ON_UPDATE_PATTERN.matcher(extra);
-		if (matcher.matches()){
+		Matcher matcher = ON_UPDATE_PATTERN.matcher(extra);
+		if (matcher.matches()) {
 			column.setOnUpdate(matcher.group(1));
 		}
 		column.setRemarks(getString(rs, "COLUMN_COMMENT"));
@@ -107,28 +107,27 @@ public class MySqlColumnReader extends ColumnReader {
 		this.setStatistics(rs, "CARDINALITY", column);
 		return column;
 	}
-	
-	protected void setDefaultValue(final Connection connection, final ExResultSet rs, final Column column, final String def) {
+
+	protected void setDefaultValue(final Connection connection, final ExResultSet rs, final Column column,
+			final String def) {
 		if (def != null) {
 			DbDataType<?> dataType = this.getDialect().getDbDataType(column);
 			column.setDefaultValue(dataType.withLiteral(def));
 		}
 	}
-	
-	protected Long getMaxLength(ExResultSet rs) throws SQLException{
+
+	protected Long getMaxLength(ExResultSet rs) throws SQLException {
 		Long maxLength = getLong(rs, "CHARACTER_MAXIMUM_LENGTH");
 		Long numericPrecision = getLong(rs, "NUMERIC_PRECISION");
 		return CommonUtils.coalesce(maxLength, numericPrecision);
 	}
 
-	private static final Pattern ON_UPDATE_PATTERN = Pattern
-			.compile("on\\s+update\\s+(.*?)\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern ON_UPDATE_PATTERN = Pattern.compile("on\\s+update\\s+(.*?)\\s*",
+			Pattern.CASE_INSENSITIVE);
 
-	private static final Pattern FUNCTION_PATTERN = Pattern
-			.compile("^[^0-9].*");
+	private static final Pattern FUNCTION_PATTERN = Pattern.compile("^[^0-9].*");
 
-	protected boolean isFunction(final Connection connection, String value,
-			final Map<String, Boolean> functionMap) {
+	protected boolean isFunction(final Connection connection, String value, final Map<String, Boolean> functionMap) {
 		Boolean bool = functionMap.get(value);
 		if (bool != null) {
 			return bool.booleanValue();
@@ -139,8 +138,7 @@ public class MySqlColumnReader extends ColumnReader {
 			return false;
 		}
 		try {
-			String text = DbUtils.executeScalar(connection, "SELECT " + value,
-					String.class);
+			String text = DbUtils.executeScalar(connection, "SELECT " + value, String.class);
 			boolean ret = CommonUtils.eq(text, value);
 			functionMap.put(value, ret);
 			return ret;

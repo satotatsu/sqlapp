@@ -51,8 +51,7 @@ public class MySqlFunction553Reader extends MySqlFunctionReader {
 	}
 
 	@Override
-	protected Function createFunction(ExResultSet rs,
-			ProductVersionInfo productVersionInfo) throws SQLException {
+	protected Function createFunction(ExResultSet rs, ProductVersionInfo productVersionInfo) throws SQLException {
 		if (productVersionInfo.lt(5, 5, 3)) {
 			return super.createFunction(rs, productVersionInfo);
 		}
@@ -67,7 +66,8 @@ public class MySqlFunction553Reader extends MySqlFunctionReader {
 		obj.getReturning().setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.getReturning().setCollation(getString(rs, COLLATION_NAME));
 		obj.getReturning().setDataTypeName(productDataType);
-		this.getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision), numericScale, obj.getReturning());
+		this.getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision), numericScale,
+				obj.getReturning());
 		obj.getReturning().setOctetLength(octetLength);
 		return obj;
 	}

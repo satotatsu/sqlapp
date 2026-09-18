@@ -19,15 +19,16 @@
 
 package com.sqlapp.data.db.dialect.mysql.metadata;
 
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.ISTriggerReader;
+
 /**
  * MySqlのトリガー作成クラス
+ * 
  * @author satoh
  *
  */
-public class MySqlTriggerReader extends ISTriggerReader{
+public class MySqlTriggerReader extends ISTriggerReader {
 
 	protected MySqlTriggerReader(Dialect dialect) {
 		super(dialect);

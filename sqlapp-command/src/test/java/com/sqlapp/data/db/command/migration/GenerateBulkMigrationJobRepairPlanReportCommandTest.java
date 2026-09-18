@@ -25,8 +25,7 @@ class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 
 	@Test
 	void writesAnEmptyReviewedPlanWithoutExecutingDatabaseWork() throws Exception {
-		try (var connection = DriverManager.getConnection(
-				"jdbc:hsqldb:mem:repair_plan_report")) {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:repair_plan_report")) {
 			final var plan = BulkMigrationJobRepairPlanner.plan(connection, List.of());
 			final Path target = directory.resolve("repair-plan.json");
 			final var command = new GenerateBulkMigrationJobRepairPlanReportCommand();
@@ -47,8 +46,7 @@ class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 		missingPlan.setTargetFile(directory.resolve("missing-plan.json").toFile());
 		assertThrows(CommandException.class, missingPlan::run);
 
-		try (var connection = DriverManager.getConnection(
-				"jdbc:hsqldb:mem:repair_plan_missing_file")) {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:repair_plan_missing_file")) {
 			final var missingFile = new GenerateBulkMigrationJobRepairPlanReportCommand();
 			missingFile.setPlan(BulkMigrationJobRepairPlanner.plan(connection, List.of()));
 			assertThrows(CommandException.class, missingFile::run);
@@ -57,8 +55,7 @@ class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 
 	@Test
 	void writesDependencyOrderedTasksAndMismatchDetails() throws Exception {
-		try (var connection = DriverManager.getConnection(
-				"jdbc:hsqldb:mem:repair_plan_tasks")) {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:repair_plan_tasks")) {
 			final Table parent = table("PARENT", false);
 			final Table child = table("CHILD", true);
 			child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT",
@@ -72,16 +69,11 @@ class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 				row.put("PARENT_ID", 1);
 			});
 			final var option = BulkMigrationRepairOption.defaults();
-			final var childTask = BulkMigrationJobRepairTask.builder().taskId("child")
-					.expected(child).verificationResult(
-							BulkMigrationVerifier.verify(child, actualChild, 1))
-					.options(option).build();
-			final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent")
-					.expected(parent).verificationResult(
-							BulkMigrationVerifier.verify(parent, actualParent, 1))
-					.options(option).build();
-			final var plan = BulkMigrationJobRepairPlanner.plan(connection,
-					List.of(childTask, parentTask));
+			final var childTask = BulkMigrationJobRepairTask.builder().taskId("child").expected(child)
+					.verificationResult(BulkMigrationVerifier.verify(child, actualChild, 1)).options(option).build();
+			final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent").expected(parent)
+					.verificationResult(BulkMigrationVerifier.verify(parent, actualParent, 1)).options(option).build();
+			final var plan = BulkMigrationJobRepairPlanner.plan(connection, List.of(childTask, parentTask));
 			final Path target = directory.resolve("repair-plan-tasks.json");
 			final var command = new GenerateBulkMigrationJobRepairPlanReportCommand();
 			command.setPlan(plan);
@@ -89,14 +81,12 @@ class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 
 			command.run();
 
-			final var report = new BulkMigrationJobRepairPlanReportIO().read(target,
-					plan.getFingerprint());
-			assertEquals(List.of("parent", "child"), report.tasks().stream()
-					.map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
+			final var report = new BulkMigrationJobRepairPlanReportIO().read(target, plan.getFingerprint());
+			assertEquals(List.of("parent", "child"),
+					report.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
 			assertEquals(2, report.mismatchChunks());
 			assertEquals(0, report.estimatedReplayRows());
-			assertEquals(0, report.tasks().get(0).repairPlan()
-					.mismatchChunks().get(0).expectedRows());
+			assertEquals(0, report.tasks().get(0).repairPlan().mismatchChunks().get(0).expectedRows());
 		}
 	}
 

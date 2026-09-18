@@ -36,8 +36,7 @@ import com.sqlapp.data.schemas.Table;
 
 public class MariadbTest {
 
-	Dialect dialect = DialectResolver.getInstance().getDialect("mariadb", 10,
-			0);
+	Dialect dialect = DialectResolver.getInstance().getDialect("mariadb", 10, 0);
 
 	@Test
 	public void testIdentityInsertDefaultValue() {

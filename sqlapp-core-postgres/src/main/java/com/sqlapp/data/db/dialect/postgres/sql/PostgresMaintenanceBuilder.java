@@ -46,8 +46,7 @@ public class PostgresMaintenanceBuilder {
 		private final List<String> columns = new ArrayList<>();
 		private boolean only;
 
-		private MaintenanceExpression(String command, String schemaName,
-				String tableName) {
+		private MaintenanceExpression(String command, String schemaName, String tableName) {
 			this.command = command;
 			this.schemaName = schemaName;
 			this.tableName = require(tableName, "tableName");
@@ -72,8 +71,7 @@ public class PostgresMaintenanceBuilder {
 
 		public String build() {
 			if (only && dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-				throw new IllegalArgumentException(
-						"VACUUM/ANALYZE ONLY requires PostgreSQL 18 or later.");
+				throw new IllegalArgumentException("VACUUM/ANALYZE ONLY requires PostgreSQL 18 or later.");
 			}
 			StringBuilder builder = new StringBuilder(command).append(" ");
 			if (only) {
@@ -94,8 +92,7 @@ public class PostgresMaintenanceBuilder {
 		}
 	}
 
-	private void appendQualifiedName(StringBuilder builder, String schemaName,
-			String tableName) {
+	private void appendQualifiedName(StringBuilder builder, String schemaName, String tableName) {
 		if (!CommonUtils.isEmpty(schemaName)) {
 			builder.append(dialect.quote(schemaName)).append(".");
 		}

@@ -24,28 +24,26 @@ import com.sqlapp.data.db.sql.AbstractCreatePartitionSchemeFactory;
 import com.sqlapp.data.schemas.PartitionScheme;
 import com.sqlapp.data.schemas.TableSpace;
 
-public class SqlServer2005CreatePartitionSchemeFactory extends
-		AbstractCreatePartitionSchemeFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreatePartitionSchemeFactory
+		extends AbstractCreatePartitionSchemeFactory<SqlServerSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final PartitionScheme obj,
-			final SqlServerSqlBuilder builder) {
+	protected void addCreateObject(final PartitionScheme obj, final SqlServerSqlBuilder builder) {
 		builder.create().partition().scheme();
 		builder.name(obj);
 		builder.lineBreak();
-		builder.as().partition().space()
-				.name(obj.getPartitionFunctionName());
+		builder.as().partition().space().name(obj.getPartitionFunctionName());
 		builder.lineBreak();
-		builder.all(obj.getTableSpaces().isEmpty()||obj.getTableSpaces().size()==1).to().space().brackets(()->{
+		builder.all(obj.getTableSpaces().isEmpty() || obj.getTableSpaces().size() == 1).to().space().brackets(() -> {
 			builder.space();
 			if (obj.getTableSpaces().isEmpty()) {
 				builder._add("[PRIMARY]");
 			} else {
-				boolean first=true;
-				for(final TableSpace tableSpace:obj.getTableSpaces()){
+				boolean first = true;
+				for (final TableSpace tableSpace : obj.getTableSpaces()) {
 					builder._add(", ", !first);
 					builder._add(tableSpace.getName());
-					first=false;
+					first = false;
 				}
 			}
 			builder.space();

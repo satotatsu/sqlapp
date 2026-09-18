@@ -58,8 +58,7 @@ public class OracleIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final Dialect dialact = this.getDialect();
@@ -74,8 +73,7 @@ public class OracleIndexReader extends IndexReader {
 				String columnExpression = getString(rs, "COLUMN_EXPRESSION");
 				String indexType = getString(rs, "INDEX_TYPE");
 				String uniqueness = getString(rs, "UNIQUENESS");
-				boolean desc = "DESC".equalsIgnoreCase(
-						getString(rs, "DESCEND"));
+				boolean desc = "DESC".equalsIgnoreCase(getString(rs, "DESCEND"));
 				Index index = map.get(schema_name, name);
 				if (index == null) {
 					index = new Index(name);
@@ -88,15 +86,14 @@ public class OracleIndexReader extends IndexReader {
 					} else {
 						index.setUnique(false);
 					}
-					for(String key:OracleUtils.getTableStatisticsKeys()){
+					for (String key : OracleUtils.getTableStatisticsKeys()) {
 						setSpecifics(rs, key, index);
 					}
 					String partitioned = getString(rs, PARTTITIONED_KEY);
 					if ("YES".equalsIgnoreCase(partitioned)) {
 						index.getSpecifics().put(PARTTITIONED_KEY, Boolean.TRUE.toString());
 					}
-					index.setCompression("ENABLED".equalsIgnoreCase(getString(
-							rs, "COMPRESSION")));
+					index.setCompression("ENABLED".equalsIgnoreCase(getString(rs, "COMPRESSION")));
 					index.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
 					//
 					setStatistics(rs, "BLEVEL", index);
@@ -111,10 +108,9 @@ public class OracleIndexReader extends IndexReader {
 				} else {
 					order = Order.Asc;
 				}
-				if (!isEmpty(columnExpression)
-						&& columnExpression.matches("\"[^\"]+\"")) {
-					index.getColumns().add(new Column(columnExpression.substring(
-							1, columnExpression.length() - 1)), order);
+				if (!isEmpty(columnExpression) && columnExpression.matches("\"[^\"]+\"")) {
+					index.getColumns().add(new Column(columnExpression.substring(1, columnExpression.length() - 1)),
+							order);
 				} else if (!isEmpty(columnExpression)) {
 					index.getColumns().add(columnExpression, order);
 				} else {
@@ -125,8 +121,8 @@ public class OracleIndexReader extends IndexReader {
 		return result;
 	}
 
-	protected void setIndexType(final ExResultSet rs, final Index index,
-			final String productIndexType) throws SQLException {
+	protected void setIndexType(final ExResultSet rs, final Index index, final String productIndexType)
+			throws SQLException {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
@@ -136,26 +132,21 @@ public class OracleIndexReader extends IndexReader {
 	private static final String PARTTITIONED_KEY = "PARTITIONED";
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final Index index) throws SQLException {
-		String value=index.getSpecifics().get(PARTTITIONED_KEY);
-		if (!eq(Boolean.TRUE.toString(),
-				value)) {
-			index.getSpecifics().remove(this.getDialect(),
-					PARTTITIONED_KEY);
+	protected void setMetadataDetail(final Connection connection, final Index index) throws SQLException {
+		String value = index.getSpecifics().get(PARTTITIONED_KEY);
+		if (!eq(Boolean.TRUE.toString(), value)) {
+			index.getSpecifics().remove(this.getDialect(), PARTTITIONED_KEY);
 			return;
 		}
 		SqlNode node = getSqlNodeCache().getString("indexPartitions.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				index.getSchemaName());
+		ParametersContext context = newParametersContext(connection, null, index.getSchemaName());
 		context.put("indexName", nativeCaseString(connection, index.getName()));
 		index.setPartitioning(null);
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String partitioningType = getString(rs, "PARTITIONING_TYPE");
-				String subPartitioningType = getString(rs,
-						"SUBPARTITIONING_TYPE");
+				String subPartitioningType = getString(rs, "SUBPARTITIONING_TYPE");
 				// int defSubpartitionCount=rs.getInt("DEF_SUBPARTITION_COUNT");
 				Partitioning partitionInfo = null;
 				Partition partition = null;
@@ -167,26 +158,21 @@ public class OracleIndexReader extends IndexReader {
 					partitionInfo.setPartitioningType(partitioningType);
 					index.setPartitioning(partitionInfo);
 					partition = addIndexPartition(rs, partitionInfo);
-					setPartitionColumnInfo(connection, index.getSchemaName(),
-							index.getName(), partitionInfo);
+					setPartitionColumnInfo(connection, index.getSchemaName(), index.getName(), partitionInfo);
 					if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
 						partitionInfo.setSubPartitioningType(subPartitioningType);
-						setSubPartitionColumnInfo(connection,
-								index.getSchemaName(), index.getName(),
-								partitionInfo);
+						setSubPartitionColumnInfo(connection, index.getSchemaName(), index.getName(), partitionInfo);
 					}
 				}
 				if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
-					setIndexSubPartitionInfo(connection, index.getSchemaName(),
-							index.getName(), partition,
+					setIndexSubPartitionInfo(connection, index.getSchemaName(), index.getName(), partition,
 							PartitioningType.parse(subPartitioningType));
 				}
 			}
 		});
 	}
 
-	private Partition addIndexPartition(ExResultSet rs, Partitioning partitionInfo)
-			throws SQLException {
+	private Partition addIndexPartition(ExResultSet rs, Partitioning partitionInfo) throws SQLException {
 		String partitionName = getString(rs, "PARTITION_NAME");
 		String highValue = getString(rs, "HIGH_VALUE");
 		String compression = getString(rs, "COMPRESSION");
@@ -203,44 +189,32 @@ public class OracleIndexReader extends IndexReader {
 	 * パーティションカラム情報を設定します
 	 * 
 	 * @param connection
-	 * @param schemaName
-	 *            スキーマ名
-	 * @param objectName
-	 *             テーブル名 or インデックス名
-	 * @param partitionInfo
-	 *            パーティション情報
+	 * @param schemaName    スキーマ名
+	 * @param objectName    テーブル名 or インデックス名
+	 * @param partitionInfo パーティション情報
 	 */
-	protected void setPartitionColumnInfo(Connection connection,
-			String schemaName, String objectName,
+	protected void setPartitionColumnInfo(Connection connection, String schemaName, String objectName,
 			final Partitioning partitionInfo) {
 		SqlNode node = getSqlNodeCache().getString("partitionKeyColumns.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				schemaName);
-		OracleMetadataUtils.setPartitionColumnInfo(connection, node, context,
-				"INDEX", nativeCaseString(connection, objectName),
-				partitionInfo);
+		ParametersContext context = newParametersContext(connection, null, schemaName);
+		OracleMetadataUtils.setPartitionColumnInfo(connection, node, context, "INDEX",
+				nativeCaseString(connection, objectName), partitionInfo);
 	}
 
 	/**
 	 * サブパーティションカラム情報を設定します
 	 * 
 	 * @param connection
-	 * @param schemaName
-	 *            スキーマ名
-	 * @param objectName
-	 *             テーブル名 or インデックス名
-	 * @param partitionInfo
-	 *            パーティション情報
+	 * @param schemaName    スキーマ名
+	 * @param objectName    テーブル名 or インデックス名
+	 * @param partitionInfo パーティション情報
 	 */
-	protected void setSubPartitionColumnInfo(Connection connection,
-			String schemaName, String objectName,
+	protected void setSubPartitionColumnInfo(Connection connection, String schemaName, String objectName,
 			final Partitioning partitionInfo) {
 		SqlNode node = getSqlNodeCache().getString("subpartitionKeyColumns.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				schemaName);
-		OracleMetadataUtils.setSubPartitionColumnInfo(connection, node,
-				context, "INDEX", nativeCaseString(connection, objectName),
-				partitionInfo);
+		ParametersContext context = newParametersContext(connection, null, schemaName);
+		OracleMetadataUtils.setSubPartitionColumnInfo(connection, node, context, "INDEX",
+				nativeCaseString(connection, objectName), partitionInfo);
 	}
 
 	/**
@@ -252,15 +226,12 @@ public class OracleIndexReader extends IndexReader {
 	 * @param partition
 	 * @param subPartitioningType
 	 */
-	protected void setIndexSubPartitionInfo(Connection connection,
-			String schemaName, String indexName, final Partition partition,
-			PartitioningType subPartitioningType) {
+	protected void setIndexSubPartitionInfo(Connection connection, String schemaName, String indexName,
+			final Partition partition, PartitioningType subPartitioningType) {
 		SqlNode node = getSqlNodeCache().getString("indexSubPartitions.sql");
-		ParametersContext context = newParametersContext(connection, null,
-				schemaName);
+		ParametersContext context = newParametersContext(connection, null, schemaName);
 		context.put("indexName", nativeCaseString(connection, indexName));
-		context.put("partitionName",
-				nativeCaseString(connection, partition.getName()));
+		context.put("partitionName", nativeCaseString(connection, partition.getName()));
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {

@@ -41,8 +41,8 @@ import com.sqlapp.exceptions.CommandException;
 public class LegacyRdbLoaderGenerator {
 
 	public LegacyMigrationLoadPlan plan(File contractFile, File schemaFile, LegacyMigrationContract contract,
-			TableOperationMode operationMode, int rootBatchSize, long commitEveryRootBatches, boolean deleteCommittedRoots,
-			String stagingTablePrefix, RootCursorStrategy rootCursorStrategy) {
+			TableOperationMode operationMode, int rootBatchSize, long commitEveryRootBatches,
+			boolean deleteCommittedRoots, String stagingTablePrefix, RootCursorStrategy rootCursorStrategy) {
 		new LegacyMigrationContractValidator().validate(contract);
 		if (rootBatchSize <= 0 || commitEveryRootBatches <= 0) {
 			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");

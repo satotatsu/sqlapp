@@ -23,11 +23,10 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class SqlServer2012CreateSequenceFactory extends
-		AbstractCreateSequenceFactory<SqlServerSqlBuilder> {
-	
+public class SqlServer2012CreateSequenceFactory extends AbstractCreateSequenceFactory<SqlServerSqlBuilder> {
+
 	@Override
-	protected void addOrder(final Sequence obj, SqlServerSqlBuilder builder){
+	protected void addOrder(final Sequence obj, SqlServerSqlBuilder builder) {
 	}
 
 }

@@ -24,8 +24,7 @@ import com.sqlapp.data.db.sql.AbstractCreateTriggerFactory;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlCreateTriggerFactory extends
-		AbstractCreateTriggerFactory<MySqlSqlBuilder> {
+public class MySqlCreateTriggerFactory extends AbstractCreateTriggerFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addEventManipulationText(final Trigger obj, MySqlSqlBuilder builder) {

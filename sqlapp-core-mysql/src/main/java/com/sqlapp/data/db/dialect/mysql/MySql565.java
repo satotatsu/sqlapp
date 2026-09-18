@@ -25,6 +25,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.sql.MySql565SqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.mysql.util.MySql565SqlBuilder;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+
 /**
  * MySql
  * 
@@ -41,14 +42,14 @@ public class MySql565 extends MySql564 {
 	protected MySql565(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
-	
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new MySql565SqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public MySql565SqlBuilder createSqlBuilder(){
+	public MySql565SqlBuilder createSqlBuilder() {
 		return new MySql565SqlBuilder(this);
 	}
 

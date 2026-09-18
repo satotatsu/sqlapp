@@ -11,7 +11,6 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 class OracleBulkUpsertProviderTest {
 	@Test
 	void resolvesProvider() {
-		assertInstanceOf(OracleBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.oracle23aiDialect));
+		assertInstanceOf(OracleBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.oracle23aiDialect));
 	}
 }

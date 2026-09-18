@@ -9,8 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertProvider;
 public class PostgresBulkInsertProvider implements BulkInsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect != null
-				&& "PostgreSQL".equalsIgnoreCase(dialect.getProductName());
+		return dialect != null && "PostgreSQL".equalsIgnoreCase(dialect.getProductName());
 	}
 
 	@Override

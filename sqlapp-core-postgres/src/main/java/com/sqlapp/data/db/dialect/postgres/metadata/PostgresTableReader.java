@@ -53,18 +53,17 @@ public class PostgresTableReader extends TableReader {
 		super(dialect);
 	}
 
-	private String[] relkind=new String[]{"r"};
-	
+	private String[] relkind = new String[] { "r" };
+
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		ParametersContext clone=context.clone();
-		if (!CommonUtils.isEmpty(this.relkind)){
+		ParametersContext clone = context.clone();
+		if (!CommonUtils.isEmpty(this.relkind)) {
 			clone.put("relkind", this.relkind);
 		}
-		final DoubleKeyMap<String,String,Table> result = CommonUtils.doubleKeyMap();
+		final DoubleKeyMap<String, String, Table> result = CommonUtils.doubleKeyMap();
 		execute(connection, node, clone, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -76,13 +75,13 @@ public class PostgresTableReader extends TableReader {
 		return result.toList();
 	}
 
-	protected void setInherits(Connection connection,
-			ParametersContext context, final DoubleKeyMap<String,String,Table> map) {
-		if (map.size()==0){
+	protected void setInherits(Connection connection, ParametersContext context,
+			final DoubleKeyMap<String, String, Table> map) {
+		if (map.size() == 0) {
 			return;
 		}
 		SqlNode node = getInheritsSqlSqlNode();
-		ParametersContext clone=context.clone();
+		ParametersContext clone = context.clone();
 		clone.put(SCHEMA_NAME, map.keySet());
 		clone.put(TABLE_NAME, map.secondKeySet());
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -90,21 +89,20 @@ public class PostgresTableReader extends TableReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String psName = getString(rs, "parent_" + SCHEMA_NAME);
 				String ptName = getString(rs, "parent_" + TABLE_NAME);
-				Table table = map.get(getString(rs, SCHEMA_NAME),
-						getString(rs, TABLE_NAME));
+				Table table = map.get(getString(rs, SCHEMA_NAME), getString(rs, TABLE_NAME));
 				Table pTable = map.get(psName, ptName);
 				if (pTable == null) {
 					pTable = new Table(ptName).setSchemaName(psName);
 				}
-				addInherits(table,pTable);
+				addInherits(table, pTable);
 			}
 		});
 	}
-	
+
 	protected void addInherits(Table table, Table pTable) {
 		table.getInherits().add(pTable);
 	}
-	
+
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table obj = createTable(getString(rs, TABLE_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -136,15 +134,15 @@ public class PostgresTableReader extends TableReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(Connection connection,
-			ParametersContext context, List<Table> list) throws SQLException {
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> list)
+			throws SQLException {
 		super.setMetadataDetail(connection, context, list);
 	}
 
-	public void setRelkind(String... relkind){
-		this.relkind=relkind;
+	public void setRelkind(String... relkind) {
+		this.relkind = relkind;
 	}
-	
+
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables.sql");
 	}
@@ -182,8 +180,7 @@ public class PostgresTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

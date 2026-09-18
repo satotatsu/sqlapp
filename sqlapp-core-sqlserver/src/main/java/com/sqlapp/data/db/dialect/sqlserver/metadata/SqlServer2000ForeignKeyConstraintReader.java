@@ -45,16 +45,14 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public class SqlServer2000ForeignKeyConstraintReader extends
-		ForeignKeyConstraintReader {
+public class SqlServer2000ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 
 	public SqlServer2000ForeignKeyConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -71,10 +69,8 @@ public class SqlServer2000ForeignKeyConstraintReader extends
 				String fk_table_name = getString(rs, "referential_table_name");
 				String fk_columnName = getString(rs, "referential_column_name");
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setCatalogName(pk_table_catalog);
@@ -85,8 +81,7 @@ public class SqlServer2000ForeignKeyConstraintReader extends
 					c.setEnable(rs.getInt("IsDisabled") != 1);
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
-					tColMap.put(pk_table_catalog, pk_table_schema, fk_name,
-							colList);
+					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

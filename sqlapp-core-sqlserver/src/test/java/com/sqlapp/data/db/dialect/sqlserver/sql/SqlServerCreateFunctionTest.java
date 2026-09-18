@@ -40,8 +40,7 @@ public class SqlServerCreateFunctionTest extends AbstractSqlServerSqlFactoryTest
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Function("func"), SqlType.CREATE);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Function("func"), SqlType.CREATE);
 	}
 
 	private Function getFunction(String name) {

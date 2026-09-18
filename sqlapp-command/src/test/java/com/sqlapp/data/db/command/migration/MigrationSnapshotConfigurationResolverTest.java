@@ -23,7 +23,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CommandException;
 
 class MigrationSnapshotConfigurationResolverTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void resolvesConciseYamlAgainstSchemaModel() throws Exception {
@@ -67,8 +68,8 @@ class MigrationSnapshotConfigurationResolverTest {
 		final var approved = resolver.resolve(files.yaml().toFile());
 		assertEquals(approval.toAbsolutePath().normalize(), approved.approvalReportFile());
 
-		Files.writeString(files.yaml(), Files.readString(files.yaml()).replace("2026-09-16T00:00:00Z",
-				"2026-09-17T00:00:00Z"));
+		Files.writeString(files.yaml(),
+				Files.readString(files.yaml()).replace("2026-09-16T00:00:00Z", "2026-09-17T00:00:00Z"));
 		final var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
 		assertEquals("Migration snapshot approval report configuration fingerprint mismatch", error.getMessage());
 	}
@@ -98,24 +99,24 @@ class MigrationSnapshotConfigurationResolverTest {
 		final var initial = resolver.resolveForApproval(files.yaml().toFile());
 		final Path approval = directory.resolve("approved.json");
 		final var io = new MigrationSnapshotApprovalReportIO();
-		io.write(approval, report(initial.configurationFingerprint(), Instant.parse("2026-09-16T01:00:00Z"),
-				Duration.ofHours(1)));
+		io.write(approval,
+				report(initial.configurationFingerprint(), Instant.parse("2026-09-16T01:00:00Z"), Duration.ofHours(1)));
 		Files.writeString(files.yaml(), Files.readString(files.yaml()) + "approvalReportFile: approved.json\n");
 		var error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
 		assertEquals("Migration snapshot approval report has expired", error.getMessage());
 
-		io.write(approval, report(initial.configurationFingerprint(), Instant.parse("2026-09-16T02:00:00Z"),
-				Duration.ofHours(1)));
+		io.write(approval,
+				report(initial.configurationFingerprint(), Instant.parse("2026-09-16T02:00:00Z"), Duration.ofHours(1)));
 		error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
 		assertEquals("Migration snapshot approval report has expired", error.getMessage());
 
-		io.write(approval, report(initial.configurationFingerprint(), Instant.parse("2026-09-16T04:00:00Z"),
-				Duration.ofHours(1)));
+		io.write(approval,
+				report(initial.configurationFingerprint(), Instant.parse("2026-09-16T04:00:00Z"), Duration.ofHours(1)));
 		error = assertThrows(CommandException.class, () -> resolver.resolve(files.yaml().toFile()));
 		assertEquals("Migration snapshot approval report generatedAt is in the future", error.getMessage());
 
-		io.write(approval, report(initial.configurationFingerprint(), Instant.parse("2026-09-16T02:30:00Z"),
-				Duration.ofHours(1)));
+		io.write(approval,
+				report(initial.configurationFingerprint(), Instant.parse("2026-09-16T02:30:00Z"), Duration.ofHours(1)));
 		assertEquals(Duration.ofHours(1), resolver.resolve(files.yaml().toFile()).approvalValidFor());
 	}
 
@@ -173,14 +174,15 @@ class MigrationSnapshotConfigurationResolverTest {
 		final Path xml = directory.resolve("schema.xml");
 		schema.writeXml(xml.toFile());
 		final Path yaml = directory.resolve("snapshot.yaml");
-		Files.writeString(yaml, "schemaFile: schema.xml\nsourceTable: CUSTOMER\ntargetTable: CUSTOMER_HISTORY\n"
-				+ "keyColumns: [ID]\n" + (includeTrackedColumns ? "trackedColumns: [NAME]\n" : "")
-				+ "validFromColumn: VALID_FROM\n"
-				+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\n" + tail);
+		Files.writeString(yaml,
+				"schemaFile: schema.xml\nsourceTable: CUSTOMER\ntargetTable: CUSTOMER_HISTORY\n" + "keyColumns: [ID]\n"
+						+ (includeTrackedColumns ? "trackedColumns: [NAME]\n" : "") + "validFromColumn: VALID_FROM\n"
+						+ "validToColumn: VALID_TO\ncurrentColumn: IS_CURRENT\n" + tail);
 		return new FileSet(xml, yaml);
 	}
 
-	private record FileSet(Path xml, Path yaml) { }
+	private record FileSet(Path xml, Path yaml) {
+	}
 
 	private static MigrationSnapshotApprovalReport report(final String fingerprint) {
 		return report(fingerprint, Instant.parse("2026-09-16T01:00:00Z"), null);
@@ -188,9 +190,9 @@ class MigrationSnapshotConfigurationResolverTest {
 
 	private static MigrationSnapshotApprovalReport report(final String fingerprint, final Instant generatedAt,
 			final Duration approvalValidFor) {
-		return new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION,
-				generatedAt, fingerprint, "CUSTOMER", "PUBLIC.CUSTOMER",
-				"PUBLIC.CUSTOMER_HISTORY", java.util.List.of("ID"), java.util.List.of("NAME"), true,
-				Instant.parse("2026-09-16T00:00:00Z"), 10_000, 10_000, approvalValidFor);
+		return new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION, generatedAt,
+				fingerprint, "CUSTOMER", "PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", java.util.List.of("ID"),
+				java.util.List.of("NAME"), true, Instant.parse("2026-09-16T00:00:00Z"), 10_000, 10_000,
+				approvalValidFor);
 	}
 }

@@ -26,8 +26,7 @@ import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.util.CommonUtils;
 
-public class OracleCreateFunctionFactory extends
-		AbstractCreateFunctionFactory<OracleSqlBuilder> {
+public class OracleCreateFunctionFactory extends AbstractCreateFunctionFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Function obj, OracleSqlBuilder builder) {

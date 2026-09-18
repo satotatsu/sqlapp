@@ -19,10 +19,8 @@ import com.sqlapp.util.CommonUtils;
  * PostgreSQL {@code EXPLAIN} SQL builder.
  */
 public class PostgresExplainBuilder {
-	private static final Set<String> FORMATS =
-			Set.of("TEXT", "XML", "JSON", "YAML");
-	private static final Set<String> SERIALIZE_MODES =
-			Set.of("NONE", "TEXT", "BINARY");
+	private static final Set<String> FORMATS = Set.of("TEXT", "XML", "JSON", "YAML");
+	private static final Set<String> SERIALIZE_MODES = Set.of("NONE", "TEXT", "BINARY");
 
 	private final Dialect dialect;
 	private final Map<String, String> options = new LinkedHashMap<>();
@@ -55,8 +53,7 @@ public class PostgresExplainBuilder {
 
 	public PostgresExplainBuilder genericPlan(boolean value) {
 		if (dialect.compareTo(DialectHolder.postgreSQL160) < 0) {
-			throw new IllegalArgumentException(
-					"EXPLAIN GENERIC_PLAN requires PostgreSQL 16 or later.");
+			throw new IllegalArgumentException("EXPLAIN GENERIC_PLAN requires PostgreSQL 16 or later.");
 		}
 		return option("GENERIC_PLAN", value);
 	}
@@ -96,13 +93,11 @@ public class PostgresExplainBuilder {
 		boolean analyze = Boolean.parseBoolean(options.get("ANALYZE"));
 		boolean genericPlan = Boolean.parseBoolean(options.get("GENERIC_PLAN"));
 		if (analyze && genericPlan) {
-			throw new IllegalArgumentException(
-					"GENERIC_PLAN cannot be used with ANALYZE.");
+			throw new IllegalArgumentException("GENERIC_PLAN cannot be used with ANALYZE.");
 		}
 		requireAnalyze(analyze, "WAL");
 		requireAnalyze(analyze, "TIMING");
-		if (options.containsKey("SERIALIZE")
-				&& !"NONE".equals(options.get("SERIALIZE"))) {
+		if (options.containsKey("SERIALIZE") && !"NONE".equals(options.get("SERIALIZE"))) {
 			requireAnalyze(analyze, "SERIALIZE");
 		}
 		StringBuilder builder = new StringBuilder("EXPLAIN");
@@ -113,8 +108,7 @@ public class PostgresExplainBuilder {
 				if (!first) {
 					builder.append(", ");
 				}
-				builder.append(entry.getKey()).append(" ")
-						.append(entry.getValue());
+				builder.append(entry.getKey()).append(" ").append(entry.getValue());
 				first = false;
 			}
 			builder.append(")");
@@ -127,30 +121,25 @@ public class PostgresExplainBuilder {
 		return this;
 	}
 
-	private PostgresExplainBuilder enumOption(String name, String value,
-			Set<String> allowed) {
+	private PostgresExplainBuilder enumOption(String name, String value, Set<String> allowed) {
 		require(value, name);
 		String normalized = value.toUpperCase(Locale.ROOT);
 		if (!allowed.contains(normalized)) {
-			throw new IllegalArgumentException(
-					"Unsupported EXPLAIN " + name + ": " + value);
+			throw new IllegalArgumentException("Unsupported EXPLAIN " + name + ": " + value);
 		}
 		options.put(name, normalized);
 		return this;
 	}
 
 	private void requireAnalyze(boolean analyze, String option) {
-		if (options.containsKey(option)
-				&& !"FALSE".equals(options.get(option)) && !analyze) {
-			throw new IllegalArgumentException(
-					option + " requires EXPLAIN ANALYZE.");
+		if (options.containsKey(option) && !"FALSE".equals(options.get(option)) && !analyze) {
+			throw new IllegalArgumentException(option + " requires EXPLAIN ANALYZE.");
 		}
 	}
 
 	private void checkPostgres17(String option) {
 		if (dialect.compareTo(DialectHolder.postgreSQL170) < 0) {
-			throw new IllegalArgumentException(
-					"EXPLAIN " + option + " requires PostgreSQL 17 or later.");
+			throw new IllegalArgumentException("EXPLAIN " + option + " requires PostgreSQL 17 or later.");
 		}
 	}
 

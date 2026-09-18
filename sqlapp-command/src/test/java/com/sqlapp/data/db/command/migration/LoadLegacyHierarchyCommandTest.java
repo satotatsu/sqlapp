@@ -50,8 +50,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "invalid-schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema>");
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		File planFile = new File(temporaryDirectory, "invalid-load-plan.yaml");
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
 		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
@@ -67,8 +66,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		plan.getDataSets().getFirst().setFileName("different.csv");
 		File planFile = new File(temporaryDirectory, "mismatched-load-plan.yaml");
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
@@ -84,8 +82,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		plan.getDataSets().getFirst().setStagingTable("UNRELATED_STAGE");
 		File planFile = new File(temporaryDirectory, "tampered-staging-load-plan.yaml");
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
@@ -102,8 +99,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		File contractFile = new File(temporaryDirectory, "contract.yaml");
 		var contract = new LegacyMigrationContractIO().read(contractFile);
 		var omitted = new com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet();
@@ -123,8 +119,7 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.getFields().add(field);
 		contract.getDataSets().add(omitted);
 		new LegacyMigrationContractIO().write(contractFile, contract);
-		plan.setContractFingerprint(
-				new LegacyMigrationMappingValidator().fingerprint(contractFile));
+		plan.setContractFingerprint(new LegacyMigrationMappingValidator().fingerprint(contractFile));
 		File planFile = new File(temporaryDirectory, "omitted-load-plan.yaml");
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
 		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
@@ -141,8 +136,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		addOmittedContractDataSet(plan);
 		configureViewpoint(plan);
 		plan.getResolvedDataSetIds().add("root");
@@ -153,8 +147,7 @@ class LoadLegacyHierarchyCommandTest {
 
 		CommandException exception = assertThrows(CommandException.class, command::run);
 
-		assertTrue(exception.getMessage().contains("Target column was not found"),
-				exception::getMessage);
+		assertTrue(exception.getMessage().contains("Target column was not found"), exception::getMessage);
 	}
 
 	@Test
@@ -162,8 +155,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		addOmittedContractDataSet(plan);
 		configureViewpoint(plan);
 		plan.getResolvedDataSetIds().add("different");
@@ -172,8 +164,7 @@ class LoadLegacyHierarchyCommandTest {
 		CommandException exception = assertThrows(CommandException.class,
 				() -> new LegacyMigrationLoadPlanIO().write(planFile, plan));
 
-		assertTrue(exception.getMessage().contains(
-				"resolvedDataSetIds must match dataSets in order"));
+		assertTrue(exception.getMessage().contains("resolvedDataSetIds must match dataSets in order"));
 	}
 
 	@Test
@@ -181,8 +172,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		configureViewpoint(plan);
 		plan.getResolvedDataSetIds().add("root");
 		plan.getResolvedTableIds().set(0, "PUBLIC.DIFFERENT");
@@ -193,8 +183,8 @@ class LoadLegacyHierarchyCommandTest {
 
 		CommandException exception = assertThrows(CommandException.class, command::run);
 
-		assertTrue(exception.getMessage().contains(
-				"Viewpoint resolvedTableIds disagree with current schema selection"));
+		assertTrue(
+				exception.getMessage().contains("Viewpoint resolvedTableIds disagree with current schema selection"));
 	}
 
 	@Test
@@ -202,8 +192,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		addOmittedContractDataSet(plan);
 		addOmittedPlanDataSet(plan);
 		configureViewpoint(plan);
@@ -216,8 +205,8 @@ class LoadLegacyHierarchyCommandTest {
 
 		CommandException exception = assertThrows(CommandException.class, command::run);
 
-		assertTrue(exception.getMessage().contains(
-				"Viewpoint data set selection disagrees with current schema selection"));
+		assertTrue(exception.getMessage()
+				.contains("Viewpoint data set selection disagrees with current schema selection"));
 	}
 
 	@Test
@@ -225,14 +214,12 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		addOmittedPlanDataSet(plan);
 		plan.getDataSets().getLast().setStagingTable("stg_root");
 
-		CommandException exception = assertThrows(CommandException.class,
-				() -> new LegacyMigrationLoadPlanIO().write(
-						new File(temporaryDirectory, "duplicate-staging.yaml"), plan));
+		CommandException exception = assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO()
+				.write(new File(temporaryDirectory, "duplicate-staging.yaml"), plan));
 
 		assertTrue(exception.getMessage().contains("Duplicate staging table: stg_root"));
 	}
@@ -242,14 +229,12 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		addOmittedPlanDataSet(plan);
 		Collections.swap(plan.getDataSets(), 0, 1);
 
-		CommandException exception = assertThrows(CommandException.class,
-				() -> new LegacyMigrationLoadPlanIO().write(
-						new File(temporaryDirectory, "unordered-load-plan.yaml"), plan));
+		CommandException exception = assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO()
+				.write(new File(temporaryDirectory, "unordered-load-plan.yaml"), plan));
 
 		assertTrue(exception.getMessage().contains("ordered by loadOrder and id"));
 	}
@@ -259,14 +244,11 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
-		plan.getDataSets().getFirst().getFields().getFirst()
-				.setStagingColumn("sqlapp_loaded_at");
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		plan.getDataSets().getFirst().getFields().getFirst().setStagingColumn("sqlapp_loaded_at");
 
-		CommandException exception = assertThrows(CommandException.class,
-				() -> new LegacyMigrationLoadPlanIO().write(
-						new File(temporaryDirectory, "reserved-staging-column.yaml"), plan));
+		CommandException exception = assertThrows(CommandException.class, () -> new LegacyMigrationLoadPlanIO()
+				.write(new File(temporaryDirectory, "reserved-staging-column.yaml"), plan));
 
 		assertTrue(exception.getMessage().contains("uses a reserved staging column"));
 	}
@@ -276,14 +258,12 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		addOmittedPlanDataSet(plan);
 		plan.getDataSets().getLast().setFileName("ROOT.CSV");
 
 		CommandException exception = assertThrows(CommandException.class,
-				() -> new LegacyMigrationLoadPlanIO().write(
-						new File(temporaryDirectory, "duplicate-csv.yaml"), plan));
+				() -> new LegacyMigrationLoadPlanIO().write(new File(temporaryDirectory, "duplicate-csv.yaml"), plan));
 
 		assertTrue(exception.getMessage().contains("Duplicate load CSV file name"));
 	}
@@ -293,8 +273,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		plan.getDataSets().getFirst().getSourceBusinessKey().add("id");
 
 		CommandException exception = assertThrows(CommandException.class,
@@ -303,12 +282,11 @@ class LoadLegacyHierarchyCommandTest {
 		assertTrue(exception.getMessage().contains("sourceBusinessKey is invalid"));
 
 		LegacyMigrationLoadPlan rootForeignKey = new LegacyMigrationLoadPlan();
-		initialize(rootForeignKey, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(rootForeignKey, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		rootForeignKey.getDataSets().getFirst().getTargetForeignKey().add("ID");
-		assertTrue(assertThrows(CommandException.class,
-				() -> LegacyMigrationLoadPlanIO.validateExecution(rootForeignKey))
-				.getMessage().contains("must not define targetForeignKey"));
+		assertTrue(
+				assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validateExecution(rootForeignKey))
+						.getMessage().contains("must not define targetForeignKey"));
 	}
 
 	@Test
@@ -316,8 +294,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		var field = plan.getDataSets().getFirst().getFields().getFirst();
 		field.setAction(null);
 		assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validate(plan));
@@ -325,8 +302,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(false);
 		field.setCsvPosition(0);
-		CommandException inert = assertThrows(CommandException.class,
-				() -> LegacyMigrationLoadPlanIO.validate(plan));
+		CommandException inert = assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validate(plan));
 		assertTrue(inert.getMessage().contains("must be extracted or target-generated"));
 
 		field.setExtracted(true);
@@ -334,8 +310,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setTargetGenerated(true);
 		CommandException conflicting = assertThrows(CommandException.class,
 				() -> LegacyMigrationLoadPlanIO.validate(plan));
-		assertTrue(conflicting.getMessage().contains(
-				"cannot be both extracted and target-generated"));
+		assertTrue(conflicting.getMessage().contains("cannot be both extracted and target-generated"));
 	}
 
 	@Test
@@ -343,19 +318,16 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		plan.setTableOperationMode(LegacyMigrationLoadPlan.TableOperationMode.INSERT);
 		plan.getDataSets().getFirst().setTargetCatalog("CATALOG_A");
 		Table expected = table("CATALOG_A");
 		Table other = table("CATALOG_B");
 
-		assertDoesNotThrow(() -> LegacyMigrationLoadPlanIO.validateSchema(plan,
-				java.util.List.of(other, expected)));
+		assertDoesNotThrow(() -> LegacyMigrationLoadPlanIO.validateSchema(plan, java.util.List.of(other, expected)));
 
 		CommandException exception = assertThrows(CommandException.class,
-				() -> LegacyMigrationLoadPlanIO.validateSchema(plan,
-						java.util.List.of(other)));
+				() -> LegacyMigrationLoadPlanIO.validateSchema(plan, java.util.List.of(other)));
 		assertTrue(exception.getMessage().contains("CATALOG_A.PUBLIC.ROOT"));
 	}
 
@@ -364,8 +336,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "empty-schema.xml");
 		Files.writeString(schemaFile.toPath(), "<schema name=\"PUBLIC\"/>");
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		File planFile = new File(temporaryDirectory, "missing-target-load-plan.yaml");
 		new LegacyMigrationLoadPlanIO().write(planFile, plan);
 		LoadLegacyHierarchyCommand command = new LoadLegacyHierarchyCommand();
@@ -380,8 +351,7 @@ class LoadLegacyHierarchyCommandTest {
 		File schemaFile = new File(temporaryDirectory, "relative-schema.xml");
 		writeRootSchema(schemaFile);
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
-		initialize(plan, schemaFile,
-				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		initialize(plan, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		File contractFile = new File(temporaryDirectory, "contract.yaml");
 		configureViewpoint(plan);
 		plan.getResolvedDataSetIds().add("root");
@@ -399,8 +369,7 @@ class LoadLegacyHierarchyCommandTest {
 		assertTrue(exception.getMessage().contains("Target column was not found"));
 	}
 
-	private void initialize(LegacyMigrationLoadPlan plan, File schemaFile,
-			String schemaFingerprint) throws Exception {
+	private void initialize(LegacyMigrationLoadPlan plan, File schemaFile, String schemaFingerprint) throws Exception {
 		plan.setMigrationId("test-migration");
 		plan.setSchemaFile(schemaFile.getPath());
 		plan.setSchemaFingerprint(schemaFingerprint);
@@ -444,8 +413,7 @@ class LoadLegacyHierarchyCommandTest {
 		File contractFile = new File(temporaryDirectory, "contract.yaml");
 		new LegacyMigrationContractIO().write(contractFile, contract);
 		plan.setContractFile(contractFile.getPath());
-		plan.setContractFingerprint(
-				new LegacyMigrationMappingValidator().fingerprint(contractFile));
+		plan.setContractFingerprint(new LegacyMigrationMappingValidator().fingerprint(contractFile));
 	}
 
 	private void addOmittedContractDataSet(LegacyMigrationLoadPlan plan) {
@@ -471,8 +439,7 @@ class LoadLegacyHierarchyCommandTest {
 		omitted.getFields().add(field);
 		contract.getDataSets().add(omitted);
 		new LegacyMigrationContractIO().write(contractFile, contract);
-		plan.setContractFingerprint(
-				new LegacyMigrationMappingValidator().fingerprint(contractFile));
+		plan.setContractFingerprint(new LegacyMigrationMappingValidator().fingerprint(contractFile));
 	}
 
 	private void addOmittedPlanDataSet(LegacyMigrationLoadPlan plan) {
@@ -505,8 +472,7 @@ class LoadLegacyHierarchyCommandTest {
 		new SchemaViewpointsIO().write(viewpointsFile, viewpoints);
 		plan.setViewpointId("root-only");
 		plan.setViewpointsFile(viewpointsFile.getPath());
-		plan.setViewpointsFingerprint(
-				new LegacyMigrationMappingValidator().fingerprint(viewpointsFile));
+		plan.setViewpointsFingerprint(new LegacyMigrationMappingValidator().fingerprint(viewpointsFile));
 		plan.getResolvedTableIds().add("PUBLIC.ROOT");
 	}
 

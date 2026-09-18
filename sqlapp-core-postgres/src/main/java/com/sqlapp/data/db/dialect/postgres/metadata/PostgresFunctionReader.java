@@ -54,8 +54,7 @@ public class PostgresFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
@@ -74,44 +73,43 @@ public class PostgresFunctionReader extends FunctionReader {
 		return node;
 	}
 
-	protected Function createFunction(ExResultSet rs)
-			throws SQLException {
+	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = new Function(getString(rs, FUNCTION_NAME));
 		obj.setDialect(this.getDialect());
 		// function.setSpecificName(getString(rs, "oid"));
 		// function.setCatalogName(getString(rs, "function_catalog"));
 		obj.setSchemaName(getString(rs, "function_schema"));
 		obj.setLanguage(getString(rs, "lanname"));
-		if(this.getReaderOptions().isReadStatement()){
+		if (this.getReaderOptions().isReadStatement()) {
 			obj.setStatement(getString(rs, "prosrc"));
 		}
-		Boolean prosecdef=getBoolean(rs, "prosecdef");
-		if (prosecdef!=null){
-			if (prosecdef.booleanValue()){
+		Boolean prosecdef = getBoolean(rs, "prosecdef");
+		if (prosecdef != null) {
+			if (prosecdef.booleanValue()) {
 				obj.setSqlSecurity(SqlSecurity.Definer);
-			} else{
+			} else {
 				obj.setSqlSecurity(SqlSecurity.Invoker);
 			}
 		}
-		Boolean proisstrict=getBoolean(rs, "proisstrict");
-		if (proisstrict!=null){
-			if (proisstrict.booleanValue()){
+		Boolean proisstrict = getBoolean(rs, "proisstrict");
+		if (proisstrict != null) {
+			if (proisstrict.booleanValue()) {
 				obj.setOnNullCall(OnNullCall.ReturnsNullOnNullInput);
-			} else{
+			} else {
 				obj.setOnNullCall(OnNullCall.CalledOnNullInput);
 			}
 		}
-		String provolatile=getString(rs, "provolatile");
-		if ("i".equalsIgnoreCase(provolatile)){
+		String provolatile = getString(rs, "provolatile");
+		if ("i".equalsIgnoreCase(provolatile)) {
 			obj.setDeterministic(true);
-		}else if ("v".equalsIgnoreCase(provolatile)){
+		} else if ("v".equalsIgnoreCase(provolatile)) {
 			obj.setDeterministic(false);
-		}else if ("s".equalsIgnoreCase(provolatile)){
+		} else if ("s".equalsIgnoreCase(provolatile)) {
 			obj.setStable(true);
 		}
 		String retTypeId = getString(rs, "prorettype");
-		NamedArgument routineArgument = PostgresUtils.getTypeInfoById(
-				rs.getStatement().getConnection(), this.getDialect(), retTypeId);
+		NamedArgument routineArgument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(),
+				this.getDialect(), retTypeId);
 		obj.getReturning().setDataTypeName(routineArgument.getDataTypeName());
 		obj.getReturning().setDataType(routineArgument.getDataType());
 		obj.getReturning().setLength(routineArgument.getLength());
@@ -122,8 +120,8 @@ public class PostgresFunctionReader extends FunctionReader {
 		}
 		return obj;
 	}
-	
-	protected void setArguments(ExResultSet rs, Function obj) throws SQLException{
+
+	protected void setArguments(ExResultSet rs, Function obj) throws SQLException {
 		String allArgTypes = unwrap(rs.getString("proargtypes"), "{", "}");
 		String allArgModes = unwrap(rs.getString("proargmodes"), "{", "}");
 		String allArgNames = unwrap(rs.getString("proargnames"), "{", "}");
@@ -132,14 +130,12 @@ public class PostgresFunctionReader extends FunctionReader {
 		String[] argNameArray = split(allArgNames, "[, ]");
 		if (allArgTypes != null) {
 			SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-			List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(
-					rs.getStatement().getConnection(), this.getDialect(), argArray, argNameArray,
-					argModeArray);
+			List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(),
+					this.getDialect(), argArray, argNameArray, argModeArray);
 			for (NamedArgument argument : arguments) {
 				builder.add(argument.getDataTypeName());
 			}
-			obj.setSpecificName(obj.getName() + "(" + builder.toString()
-					+ ")");
+			obj.setSpecificName(obj.getName() + "(" + builder.toString() + ")");
 			obj.getArguments().addAll(arguments);
 		}
 	}

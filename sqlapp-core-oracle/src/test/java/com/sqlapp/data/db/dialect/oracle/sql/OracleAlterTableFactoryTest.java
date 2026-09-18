@@ -51,10 +51,8 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 	}
-
 
 	@Test
 	public void testStorage() {
@@ -80,7 +78,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		table2.getSpecifics().put("FREELISTS", 1);
 		table2.getSpecifics().put("FREELIST_GROUPS", 1);
 		table2.getSpecifics().put("BUFFER_POOL", "DEFAULT");
-		DbObjectDifference diff=table1.diff(table2);
+		DbObjectDifference diff = table1.diff(table2);
 		List<SqlOperation> list = operation.createDiffSql(diff);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
@@ -88,7 +86,6 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		assertEquals(expected, operation.getSqlText());
 	}
 
-	
 	@Test
 	public void testForeinfKey() {
 		Table table1 = getTable1("tableA");
@@ -96,12 +93,9 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table3 = getTable1("tableB");
 		table3.getColumns().get("cola").setName("cola1");
 		table3.getColumns().get("colb").setName("colb1");
-		table2.getConstraints().addForeignKeyConstraint(
-				"tableA_tableb_fk",
-				new Column[] { table2.getColumns().get("colb"),
-						table2.getColumns().get("cola") },
-				new Column[] { table3.getColumns().get("cola1"),
-						table3.getColumns().get("colb1") });
+		table2.getConstraints().addForeignKeyConstraint("tableA_tableb_fk",
+				new Column[] { table2.getColumns().get("colb"), table2.getColumns().get("cola") },
+				new Column[] { table3.getColumns().get("cola1"), table3.getColumns().get("colb1") });
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
@@ -118,8 +112,8 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
 		table.getColumns().add(column);
-		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50)
-				.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
+				.setCollation("utf8mb4_binary");
 		table.getColumns().add(column);
 		column = new Column("colc").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
@@ -133,12 +127,10 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	public void testGetDdlTableTablePrimaryKey1() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table1.getConstraints().addPrimaryKeyConstraint("pk1",
-				table1.getColumns().get("cola"));
+		table1.getConstraints().addPrimaryKeyConstraint("pk1", table1.getColumns().get("cola"));
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		SqlOperation commandText = CommonUtils.first(list);
-		assertEquals("ALTER TABLE \"tableA\" DROP CONSTRAINT \"pk1\"",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" DROP CONSTRAINT \"pk1\"", commandText.getSqlText());
 		System.out.println(list);
 	}
 
@@ -149,17 +141,13 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	public void testGetDdlTableTablePrimaryKey2() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table2.getConstraints().addPrimaryKeyConstraint("pk1",
-				table2.getColumns().get("cola"));
+		table2.getConstraints().addPrimaryKeyConstraint("pk1", table2.getColumns().get("cola"));
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		SqlOperation commandText = list.get(i++);
-		assertEquals(
-				"ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(9,0) NOT NULL\n)",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(9,0) NOT NULL\n)", commandText.getSqlText());
 		commandText = list.get(i++);
-		assertEquals(
-				"ALTER TABLE \"tableA\" ADD CONSTRAINT \"pk1\" PRIMARY KEY ( \"cola\" )",
+		assertEquals("ALTER TABLE \"tableA\" ADD CONSTRAINT \"pk1\" PRIMARY KEY ( \"cola\" )",
 				commandText.getSqlText());
 		System.out.println(list);
 	}
@@ -171,21 +159,14 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	public void testGetDdlTableTablePrimaryKey3() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table1.getConstraints().addPrimaryKeyConstraint("pk1",
-				table2.getColumns().get("cola"));
-		table2.getConstraints()
-				.addPrimaryKeyConstraint("pk1", table2.getColumns().get("cola"))
-				.setPrimaryKey(false);
+		table1.getConstraints().addPrimaryKeyConstraint("pk1", table2.getColumns().get("cola"));
+		table2.getConstraints().addPrimaryKeyConstraint("pk1", table2.getColumns().get("cola")).setPrimaryKey(false);
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		SqlOperation commandText = list.get(i++);
-		assertEquals(
-				"ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(9,0) NOT NULL\n)",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(9,0) NOT NULL\n)", commandText.getSqlText());
 		commandText = list.get(i++);
-		assertEquals(
-				"ALTER TABLE \"tableA\" DROP CONSTRAINT \"pk1\"",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" DROP CONSTRAINT \"pk1\"", commandText.getSqlText());
 		System.out.println(list);
 	}
 
@@ -199,17 +180,14 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		table2.getColumns().add(new Column("d").setDataType(DataType.INT));
 		table1.getIndexes().add("index1", table1.getColumns().get("cola"));
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		SqlOperation operation = list.get(i++);
 		String expected;
 		expected = getResource("alter_table_drop_index1.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table3.sql");
-		assertEquals(expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		System.out.println(list);
 	}
 
@@ -222,12 +200,10 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table2 = getTable1("tableA");
 		table2.getIndexes().add("index1", table1.getColumns().get("cola"));
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		SqlOperation operation = list.get(i++);
 		String expected = getResource("alter_table4.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		System.out.println(list);
 	}
 
@@ -238,15 +214,12 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	public void testGetDdlTableTableIndex3() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table2.getIndexes().add("index1", table1.getColumns().get("cola"))
-				.setIndexType(IndexType.FullText);
+		table2.getIndexes().add("index1", table1.getColumns().get("cola")).setIndexType(IndexType.FullText);
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		SqlOperation operation = list.get(i++);
 		String expected = getResource("alter_table_add_index2.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		System.out.println(list);
 	}
 
@@ -259,8 +232,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table2 = getTable1("tableA");
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Hash);
-		partitionInfo.getPartitioningColumns().add(
-				table1.getColumns().get("cola"));
+		partitionInfo.getPartitioningColumns().add(table1.getColumns().get("cola"));
 		partitionInfo.setPartitionSize(10);
 		table2.setPartitioning(partitionInfo);
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
@@ -289,9 +261,8 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	private List<Partition> getPartitions(String baseName, int start, int size) {
 		List<Partition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			Partition partition = new Partition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			Partition partition = new Partition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {
@@ -301,13 +272,12 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		}
 		return partitions;
 	}
-	
+
 	private List<SubPartition> getSubPartitions(String baseName, int start, int size) {
 		List<SubPartition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			SubPartition partition = new SubPartition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			SubPartition partition = new SubPartition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {
@@ -379,8 +349,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	private Partitioning getPartitionInfo1(Table table) {
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
 		List<Partition> partitions = getPartitions("p", 0, 3);
 		partitionInfo.getPartitions().addAll(partitions);
 		return partitionInfo;
@@ -390,10 +359,8 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
 		partitionInfo.setSubPartitioningType(PartitioningType.Range);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
-		partitionInfo.getSubPartitioningColumns().add(
-				table.getColumns().get("colb"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
+		partitionInfo.getSubPartitioningColumns().add(table.getColumns().get("colb"));
 		List<Partition> partitions = getPartitions("p", 0, 1);
 		partitionInfo.getPartitions().addAll(partitions);
 		List<SubPartition> subpartitions = getSubPartitions("s", 0, 3);

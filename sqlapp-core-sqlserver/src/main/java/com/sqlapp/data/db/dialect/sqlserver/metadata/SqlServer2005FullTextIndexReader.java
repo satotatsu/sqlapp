@@ -50,8 +50,7 @@ public class SqlServer2005FullTextIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();

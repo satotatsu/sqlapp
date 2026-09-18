@@ -24,7 +24,7 @@ import com.sqlapp.data.geometry.Box;
 import org.postgresql.geometric.PGbox;
 import java.sql.SQLException;
 
-public class ToPGBoxConverter extends AbstractToObjectConverter<PGbox, Box>{
+public class ToPGBoxConverter extends AbstractToObjectConverter<PGbox, Box> {
 
 	/**
 	 * serialVersionUID
@@ -47,11 +47,8 @@ public class ToPGBoxConverter extends AbstractToObjectConverter<PGbox, Box>{
 
 	@Override
 	protected PGbox toDbType(Box obj) {
-		return new PGbox(obj.getPoints()[0].getX()
-				, obj.getPoints()[0].getY()
-				, obj.getPoints()[1].getX()
-				, obj.getPoints()[1].getY()
-			);
+		return new PGbox(obj.getPoints()[0].getX(), obj.getPoints()[0].getY(), obj.getPoints()[1].getX(),
+				obj.getPoints()[1].getY());
 	}
 
 	@Override
@@ -59,15 +56,16 @@ public class ToPGBoxConverter extends AbstractToObjectConverter<PGbox, Box>{
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGbox copy(Object obj){
-		if (obj==null){
+	public PGbox copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractOptimizeTableFactory;
 import com.sqlapp.data.schemas.Table;
 
-public class MySqlOptimizeTableFactory extends
-		AbstractOptimizeTableFactory<MySqlSqlBuilder> {
+public class MySqlOptimizeTableFactory extends AbstractOptimizeTableFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addTableCommand(Table obj, MySqlSqlBuilder builder) {
@@ -49,8 +48,7 @@ public class MySqlOptimizeTableFactory extends
 	}
 
 	/**
-	 * @param local
-	 *            the local to set
+	 * @param local the local to set
 	 */
 	public void setLocal(boolean local) {
 		this.local = local;

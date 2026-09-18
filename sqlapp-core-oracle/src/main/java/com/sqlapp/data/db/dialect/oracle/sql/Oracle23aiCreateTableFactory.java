@@ -19,21 +19,17 @@ import com.sqlapp.data.schemas.Table;
 public class Oracle23aiCreateTableFactory extends OracleCreateTableFactory {
 
 	@Override
-	protected void addCreateObject(final Table table,
-			final OracleSqlBuilder builder) {
-		builder.create().table()
-				.ifNotExists(this.getOptions().isCreateIfNotExists()).space();
+	protected void addCreateObject(final Table table, final OracleSqlBuilder builder) {
+		builder.create().table().ifNotExists(this.getOptions().isCreateIfNotExists()).space();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 	}
 
 	@Override
-	protected void addOtherDefinitions(final Table table,
-			final List<SqlOperation> result) {
+	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
 		super.addOtherDefinitions(table, result);
 		if (!OracleAnnotationUtils.getAnnotations(table).isEmpty()) {
 			final OracleSqlBuilder builder = createSqlBuilder();
-			builder.alter().table().space()
-					.name(table, this.getOptions().isDecorateSchemaName());
+			builder.alter().table().space().name(table, this.getOptions().isDecorateSchemaName());
 			OracleAnnotationUtils.addAnnotations(builder, table);
 			addSql(result, builder, SqlType.ALTER, table);
 		}
@@ -42,9 +38,8 @@ public class Oracle23aiCreateTableFactory extends OracleCreateTableFactory {
 				continue;
 			}
 			final OracleSqlBuilder builder = createSqlBuilder();
-			builder.alter().table().space()
-					.name(table, this.getOptions().isDecorateSchemaName())
-					.space()._add("MODIFY").space().name(column);
+			builder.alter().table().space().name(table, this.getOptions().isDecorateSchemaName()).space()._add("MODIFY")
+					.space().name(column);
 			OracleAnnotationUtils.addAnnotations(builder, column);
 			addSql(result, builder, SqlType.ALTER, column);
 		}

@@ -47,11 +47,10 @@ public class OracleTriggerReader extends TriggerReader {
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_TRIGGERS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"DBA_TRIGGERS");
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		OracleMetadataUtils.setDba(dba, context);
 		final List<Trigger> result = list();

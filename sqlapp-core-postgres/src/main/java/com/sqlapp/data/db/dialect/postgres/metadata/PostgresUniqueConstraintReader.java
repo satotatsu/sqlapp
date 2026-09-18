@@ -51,8 +51,7 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UniqueConstraint> result = list();
@@ -63,19 +62,15 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 				String schema_name = getString(rs, "constraint_schema");
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				UniqueConstraint c = map.get(schema_name, table_name,
-						constraint_name);
+				UniqueConstraint c = map.get(schema_name, table_name, constraint_name);
 				if (c == null) {
-					boolean primary = !"unique".equalsIgnoreCase(getString(rs,
-							"constraint_type"));
+					boolean primary = !"unique".equalsIgnoreCase(getString(rs, "constraint_type"));
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
-					c.setDeferrability(Deferrability.getDeferrability(
-							rs.getBoolean("is_deferrable"),
+					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
-					PostgresTemporalConstraintMetadata.apply(c,
-							getString(rs, "consrc"));
+					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					result.add(c);
 					map.put(schema_name, table_name, constraint_name, c);
 				}

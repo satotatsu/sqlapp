@@ -41,7 +41,7 @@ public class MySql800 extends MySql570 {
 	protected MySql800(Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
-	
+
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();

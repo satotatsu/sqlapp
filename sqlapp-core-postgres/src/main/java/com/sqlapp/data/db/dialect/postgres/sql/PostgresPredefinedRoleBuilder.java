@@ -21,11 +21,9 @@ public class PostgresPredefinedRoleBuilder {
 		this.dialect = Objects.requireNonNull(dialect, "dialect");
 	}
 
-	public String grant(PostgresPredefinedRole role, String grantee,
-			boolean withAdminOption) {
+	public String grant(PostgresPredefinedRole role, String grantee, boolean withAdminOption) {
 		checkRole(role);
-		StringBuilder builder = new StringBuilder("GRANT ")
-				.append(role.getRoleName()).append(" TO ")
+		StringBuilder builder = new StringBuilder("GRANT ").append(role.getRoleName()).append(" TO ")
 				.append(dialect.quote(require(grantee, "grantee")));
 		if (withAdminOption) {
 			builder.append(" WITH ADMIN OPTION");
@@ -33,15 +31,13 @@ public class PostgresPredefinedRoleBuilder {
 		return builder.toString();
 	}
 
-	public String revoke(PostgresPredefinedRole role, String grantee,
-			boolean adminOptionFor, boolean cascade) {
+	public String revoke(PostgresPredefinedRole role, String grantee, boolean adminOptionFor, boolean cascade) {
 		checkRole(role);
 		StringBuilder builder = new StringBuilder("REVOKE ");
 		if (adminOptionFor) {
 			builder.append("ADMIN OPTION FOR ");
 		}
-		builder.append(role.getRoleName()).append(" FROM ")
-				.append(dialect.quote(require(grantee, "grantee")))
+		builder.append(role.getRoleName()).append(" FROM ").append(dialect.quote(require(grantee, "grantee")))
 				.append(cascade ? " CASCADE" : " RESTRICT");
 		return builder.toString();
 	}
@@ -49,8 +45,7 @@ public class PostgresPredefinedRoleBuilder {
 	private void checkRole(PostgresPredefinedRole role) {
 		Objects.requireNonNull(role, "role");
 		if (!role.isSupported(dialect)) {
-			throw new IllegalArgumentException(
-					role.getRoleName() + " is not supported by this PostgreSQL version.");
+			throw new IllegalArgumentException(role.getRoleName() + " is not supported by this PostgreSQL version.");
 		}
 	}
 

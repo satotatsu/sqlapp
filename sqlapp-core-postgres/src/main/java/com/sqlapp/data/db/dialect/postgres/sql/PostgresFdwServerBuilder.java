@@ -18,8 +18,7 @@ import com.sqlapp.util.CommonUtils;
  * {@code CREATE SERVER ... FOREIGN DATA WRAPPER postgres_fdw} SQL builder.
  */
 public class PostgresFdwServerBuilder {
-	private static final Set<String> USER_MAPPING_OPTIONS =
-			Set.of("user", "password", "sslpassword");
+	private static final Set<String> USER_MAPPING_OPTIONS = Set.of("user", "password", "sslpassword");
 
 	private final Dialect dialect;
 	private final String serverName;
@@ -36,8 +35,7 @@ public class PostgresFdwServerBuilder {
 		Objects.requireNonNull(value, "optionValue");
 		String normalized = name.toLowerCase(java.util.Locale.ROOT);
 		if (USER_MAPPING_OPTIONS.contains(normalized)) {
-			throw new IllegalArgumentException(
-					name + " must be specified in a user mapping, not a foreign server.");
+			throw new IllegalArgumentException(name + " must be specified in a user mapping, not a foreign server.");
 		}
 		options.put(normalized, value);
 		return this;
@@ -49,17 +47,14 @@ public class PostgresFdwServerBuilder {
 	}
 
 	public String buildCreate(boolean ifNotExists) {
-		if (useScramPassthrough
-				&& dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"postgres_fdw use_scram_passthrough requires PostgreSQL 18 or later.");
+		if (useScramPassthrough && dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
+			throw new IllegalArgumentException("postgres_fdw use_scram_passthrough requires PostgreSQL 18 or later.");
 		}
 		StringBuilder builder = new StringBuilder("CREATE SERVER ");
 		if (ifNotExists) {
 			builder.append("IF NOT EXISTS ");
 		}
-		builder.append(dialect.quote(serverName))
-				.append(" FOREIGN DATA WRAPPER postgres_fdw");
+		builder.append(dialect.quote(serverName)).append(" FOREIGN DATA WRAPPER postgres_fdw");
 		Map<String, String> allOptions = new LinkedHashMap<>(options);
 		if (useScramPassthrough) {
 			allOptions.put("use_scram_passthrough", "true");
@@ -71,8 +66,7 @@ public class PostgresFdwServerBuilder {
 				if (index++ > 0) {
 					builder.append(", ");
 				}
-				builder.append(entry.getKey()).append(" ")
-						.append(sqlString(entry.getValue()));
+				builder.append(entry.getKey()).append(" ").append(sqlString(entry.getValue()));
 			}
 			builder.append(")");
 		}
@@ -81,13 +75,10 @@ public class PostgresFdwServerBuilder {
 
 	public String alterScramPassthrough(boolean value, boolean add) {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"postgres_fdw use_scram_passthrough requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("postgres_fdw use_scram_passthrough requires PostgreSQL 18 or later.");
 		}
-		return "ALTER SERVER " + dialect.quote(serverName) + " OPTIONS ("
-				+ (add ? "ADD" : "SET")
-				+ " use_scram_passthrough " + sqlString(Boolean.toString(value))
-				+ ")";
+		return "ALTER SERVER " + dialect.quote(serverName) + " OPTIONS (" + (add ? "ADD" : "SET")
+				+ " use_scram_passthrough " + sqlString(Boolean.toString(value)) + ")";
 	}
 
 	private String sqlString(String value) {

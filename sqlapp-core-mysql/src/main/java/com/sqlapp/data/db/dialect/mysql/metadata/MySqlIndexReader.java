@@ -52,8 +52,7 @@ public class MySqlIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
@@ -68,7 +67,7 @@ public class MySqlIndexReader extends IndexReader {
 				String expression = getString(rs, "EXPRESSION");
 				String indexType = getString(rs, "INDEX_TYPE");
 				Index index = map.get(catalog_name, schema_name, name);
-				Long subPart=getLong(rs, "SUB_PART");
+				Long subPart = getLong(rs, "SUB_PART");
 				if (index == null) {
 					index = new Index(name);
 					index.setCatalogName(catalog_name);
@@ -80,8 +79,8 @@ public class MySqlIndexReader extends IndexReader {
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
 				}
-				String visible=getString(rs, "IS_VISIBLE");
-				if (visible!=null) {
+				String visible = getString(rs, "IS_VISIBLE");
+				if (visible != null) {
 					index.setEnable("YES".equalsIgnoreCase(visible));
 				}
 				String ignored = getString(rs, "IGNORED");

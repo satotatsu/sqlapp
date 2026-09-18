@@ -33,34 +33,31 @@ import org.geolatte.geom.codec.db.oracle.OracleJDBCTypeFactory;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 
-public class OracleGeometryJdbcTypeHandler  implements JdbcTypeHandler {
+public class OracleGeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	private final ConnectionFinder connectionFinder;
-	
+
 	private final OracleJDBCTypeFactory sqlTypeFactory;
-	
+
 	public OracleGeometryJdbcTypeHandler() {
-		connectionFinder=new DefaultConnectionFinder();
-		sqlTypeFactory=new OracleJDBCTypeFactory(connectionFinder);
+		connectionFinder = new DefaultConnectionFinder();
+		sqlTypeFactory = new OracleJDBCTypeFactory(connectionFinder);
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, int columnIndex)
-			throws SQLException {
-		return Decoders.decode((java.sql.Struct)rs.getObject(columnIndex));
+	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
+		return Decoders.decode((java.sql.Struct) rs.getObject(columnIndex));
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, String columnLabel)
-			throws SQLException {
-		return Decoders.decode((java.sql.Struct)rs.getObject(columnLabel));
+	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
+		return Decoders.decode((java.sql.Struct) rs.getObject(columnLabel));
 	}
 
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex,
-			Object x) throws SQLException {
-		Geometry<?> geo=Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
-		java.sql.Struct struct=Encoders.encode(geo, stmt.getConnection(), sqlTypeFactory);
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+		Geometry<?> geo = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
+		java.sql.Struct struct = Encoders.encode(geo, stmt.getConnection(), sqlTypeFactory);
 		stmt.setObject(parameterIndex, struct);
 	}
 }

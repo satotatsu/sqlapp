@@ -22,12 +22,14 @@ package com.sqlapp.data.db.dialect.oracle.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.metadata.TableSpaceReader;
+
 /**
  * Oracle11gR2のカタログ読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class Oracle11gR2CatalogReader extends Oracle11gCatalogReader{
+public class Oracle11gR2CatalogReader extends Oracle11gCatalogReader {
 
 	public Oracle11gR2CatalogReader(Dialect dialect) {
 		super(dialect);
@@ -37,7 +39,7 @@ public class Oracle11gR2CatalogReader extends Oracle11gCatalogReader{
 	protected SchemaReader newSchemaReader() {
 		return new Oracle11gR2SchemaReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
 		return new Oracle11gR2TableSpaceReader(this.getDialect());

@@ -21,14 +21,13 @@ class FileBulkMigrationCheckpointStoreTest {
 	void savesReplacesLoadsAndDeletesCheckpoint() throws Exception {
 		final var store = new FileBulkMigrationCheckpointStore(directory);
 		final var first = BulkMigrationCheckpoint.builder().migrationId("schema/table 日本語")
-				.sourceFingerprint("source-1").targetFingerprint("target-1")
-				.processedRows(20).completedChunks(2).chunkSize(10).lastChunkHash("abc")
-				.resumeToken("[customer-id,20]").build();
+				.sourceFingerprint("source-1").targetFingerprint("target-1").processedRows(20).completedChunks(2)
+				.chunkSize(10).lastChunkHash("abc").resumeToken("[customer-id,20]").build();
 		store.save(first);
 		assertEquals(first, store.load(first.getMigrationId()).orElseThrow());
 
-		final var complete = first.toBuilder().processedRows(30).completedChunks(3)
-				.lastChunkHash("def").complete(true).build();
+		final var complete = first.toBuilder().processedRows(30).completedChunks(3).lastChunkHash("def").complete(true)
+				.build();
 		store.save(complete);
 		assertEquals(complete, store.load(first.getMigrationId()).orElseThrow());
 		try (var files = Files.list(directory)) {
@@ -45,28 +44,23 @@ class FileBulkMigrationCheckpointStoreTest {
 	@Test
 	void rejectsMissingInvalidAndMismatchedProperties() throws Exception {
 		final var store = new FileBulkMigrationCheckpointStore(directory);
-		final var checkpoint = BulkMigrationCheckpoint.builder()
-				.migrationId("migration-1").processedRows(0).completedChunks(0)
-				.chunkSize(10).complete(false).build();
+		final var checkpoint = BulkMigrationCheckpoint.builder().migrationId("migration-1").processedRows(0)
+				.completedChunks(0).chunkSize(10).complete(false).build();
 		store.save(checkpoint);
 		final java.nio.file.Path file;
 		try (var files = Files.list(directory)) {
 			file = files.findFirst().orElseThrow();
 		}
 
-		Files.writeString(file, "migrationId=migration-1\nprocessedRows=0\n"
-				+ "completedChunks=0\nchunkSize=10\n");
-		assertThrows(java.sql.SQLException.class,
-				() -> store.load("migration-1"));
+		Files.writeString(file, "migrationId=migration-1\nprocessedRows=0\n" + "completedChunks=0\nchunkSize=10\n");
+		assertThrows(java.sql.SQLException.class, () -> store.load("migration-1"));
 
-		Files.writeString(file, "migrationId=migration-1\nprocessedRows=0\n"
-				+ "completedChunks=0\nchunkSize=10\ncomplete=unknown\n");
-		assertThrows(java.sql.SQLException.class,
-				() -> store.load("migration-1"));
+		Files.writeString(file,
+				"migrationId=migration-1\nprocessedRows=0\n" + "completedChunks=0\nchunkSize=10\ncomplete=unknown\n");
+		assertThrows(java.sql.SQLException.class, () -> store.load("migration-1"));
 
-		Files.writeString(file, "migrationId=other\nprocessedRows=0\n"
-				+ "completedChunks=0\nchunkSize=10\ncomplete=false\n");
-		assertThrows(java.sql.SQLException.class,
-				() -> store.load("migration-1"));
+		Files.writeString(file,
+				"migrationId=other\nprocessedRows=0\n" + "completedChunks=0\nchunkSize=10\ncomplete=false\n");
+		assertThrows(java.sql.SQLException.class, () -> store.load("migration-1"));
 	}
 }

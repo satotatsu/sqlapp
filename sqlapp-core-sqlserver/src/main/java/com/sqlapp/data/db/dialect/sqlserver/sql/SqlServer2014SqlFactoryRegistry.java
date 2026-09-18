@@ -33,14 +33,11 @@ public class SqlServer2014SqlFactoryRegistry extends SqlServer2012SqlFactoryRegi
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2014CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2014AlterTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2014CreateIndexFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2014CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2014AlterTableFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2014CreateIndexFactory.class);
 	}
 
 }

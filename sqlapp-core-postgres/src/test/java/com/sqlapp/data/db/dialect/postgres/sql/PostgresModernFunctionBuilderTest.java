@@ -13,8 +13,8 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 
 class PostgresModernFunctionBuilderTest {
-	private final PostgresModernFunctionBuilder builder =
-			new PostgresModernFunctionBuilder(DialectHolder.postgreSQL180);
+	private final PostgresModernFunctionBuilder builder = new PostgresModernFunctionBuilder(
+			DialectHolder.postgreSQL180);
 
 	@Test
 	void testCasefoldAndChecksums() {
@@ -26,12 +26,9 @@ class PostgresModernFunctionBuilderTest {
 	@Test
 	void testByteaFunctionsAndIntegerCasts() {
 		assertEquals("reverse(payload)", builder.reverseBytes("payload"));
-		assertEquals("CAST(event_id AS bytea)",
-				builder.integerToBytea("event_id"));
-		assertEquals("CAST(payload AS bigint)",
-				builder.byteaToInteger("payload", "BIGINT"));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.byteaToInteger("payload", "numeric"));
+		assertEquals("CAST(event_id AS bytea)", builder.integerToBytea("event_id"));
+		assertEquals("CAST(payload AS bigint)", builder.byteaToInteger("payload", "BIGINT"));
+		assertThrows(IllegalArgumentException.class, () -> builder.byteaToInteger("payload", "numeric"));
 	}
 
 	@Test
@@ -42,74 +39,48 @@ class PostgresModernFunctionBuilderTest {
 
 	@Test
 	void testWeekAndRomanNumberFunctions() {
-		assertEquals("EXTRACT(WEEK FROM occurred_at)",
-				builder.extractWeek("occurred_at"));
-		assertEquals("to_number(roman_value, 'RN')",
-				builder.toNumberRoman("roman_value"));
+		assertEquals("EXTRACT(WEEK FROM occurred_at)", builder.extractWeek("occurred_at"));
+		assertEquals("to_number(roman_value, 'RN')", builder.toNumberRoman("roman_value"));
 	}
 
 	@Test
 	void testAclFunctions() {
-		assertEquals("pg_get_acl(classid, objid, objsubid)",
-				builder.pgGetAcl("classid", "objid", "objsubid"));
+		assertEquals("pg_get_acl(classid, objid, objsubid)", builder.pgGetAcl("classid", "objid", "objsubid"));
 		assertEquals("has_largeobject_privilege(large_object_oid, 'SELECT')",
-				builder.hasLargeObjectPrivilege(
-						"large_object_oid", "'SELECT'"));
-		assertEquals(
-				"has_largeobject_privilege(current_user, large_object_oid, 'UPDATE')",
-				builder.hasLargeObjectPrivilege(
-						"current_user", "large_object_oid", "'UPDATE'"));
+				builder.hasLargeObjectPrivilege("large_object_oid", "'SELECT'"));
+		assertEquals("has_largeobject_privilege(current_user, large_object_oid, 'UPDATE')",
+				builder.hasLargeObjectPrivilege("current_user", "large_object_oid", "'UPDATE'"));
 	}
 
 	@Test
 	void testStripNullArrayElements() {
-		assertEquals("json_strip_nulls(payload, true)",
-				builder.jsonStripNulls("payload", true));
-		assertEquals("jsonb_strip_nulls(payload, false)",
-				builder.jsonbStripNulls("payload", false));
+		assertEquals("json_strip_nulls(payload, true)", builder.jsonStripNulls("payload", true));
+		assertEquals("jsonb_strip_nulls(payload, false)", builder.jsonbStripNulls("payload", false));
 	}
 
 	@Test
 	void testRejectBeforePostgres18() {
-		PostgresModernFunctionBuilder postgres17 =
-				new PostgresModernFunctionBuilder(DialectHolder.postgreSQL170);
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.casefold("display_name"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.crc32("payload"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.reverseBytes("payload"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.gamma("value"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.extractWeek("occurred_at"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.toNumberRoman("roman_value"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.pgGetAcl("classid", "objid", "0"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.hasLargeObjectPrivilege("loid", "'SELECT'"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.integerToBytea("event_id"));
-		assertThrows(IllegalArgumentException.class,
-				() -> postgres17.jsonbStripNulls("payload", true));
+		PostgresModernFunctionBuilder postgres17 = new PostgresModernFunctionBuilder(DialectHolder.postgreSQL170);
+		assertThrows(IllegalArgumentException.class, () -> postgres17.casefold("display_name"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.crc32("payload"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.reverseBytes("payload"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.gamma("value"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.extractWeek("occurred_at"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.toNumberRoman("roman_value"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.pgGetAcl("classid", "objid", "0"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.hasLargeObjectPrivilege("loid", "'SELECT'"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.integerToBytea("event_id"));
+		assertThrows(IllegalArgumentException.class, () -> postgres17.jsonbStripNulls("payload", true));
 	}
 
 	@Test
 	void testRejectEmptyExpression() {
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.casefold(""));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.jsonStripNulls(null, true));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.byteaToInteger("", "integer"));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.extractWeek(""));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.toNumberRoman(""));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.pgGetAcl("", "objid", "0"));
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.hasLargeObjectPrivilege("loid", ""));
+		assertThrows(IllegalArgumentException.class, () -> builder.casefold(""));
+		assertThrows(IllegalArgumentException.class, () -> builder.jsonStripNulls(null, true));
+		assertThrows(IllegalArgumentException.class, () -> builder.byteaToInteger("", "integer"));
+		assertThrows(IllegalArgumentException.class, () -> builder.extractWeek(""));
+		assertThrows(IllegalArgumentException.class, () -> builder.toNumberRoman(""));
+		assertThrows(IllegalArgumentException.class, () -> builder.pgGetAcl("", "objid", "0"));
+		assertThrows(IllegalArgumentException.class, () -> builder.hasLargeObjectPrivilege("loid", ""));
 	}
 }

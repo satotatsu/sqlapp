@@ -84,33 +84,30 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 		assertNotNull(targetSchema.getTables().get("DEPARTMENT_GROUP").getColumns().get("COMPANY_ID"));
 		assertNotNull(targetSchema.getTables().get("EMPLOYEE_LIST").getColumns().get("ID"));
 		assertNotNull(targetSchema.getTables().get("EMPLOYEE_LIST").getColumns().get("PARENT_ID"));
-		assertNotNull(targetSchema.getTables().get("COMPANY_MASTER_DETAIL_1")
-				.getColumns().get("CONTACT_DATE"));
+		assertNotNull(targetSchema.getTables().get("COMPANY_MASTER_DETAIL_1").getColumns().get("CONTACT_DATE"));
 		var accumulatedMapping = new LegacyMigrationMappingIO().read(mapping);
 		for (var relationship : accumulatedMapping.getRelationships()) {
 			assertNotEquals(relationship.getParentMappingId(), relationship.getChildMappingId(),
-					() -> "Self relationship: id=" + relationship.getId()
-							+ ", parent=" + relationship.getParentMappingId()
-							+ ", child=" + relationship.getChildMappingId()
-							+ ", sourceKeys=" + relationship.getSourceKeys()
-							+ ", targetKeys=" + relationship.getTargetKeys());
+					() -> "Self relationship: id=" + relationship.getId() + ", parent="
+							+ relationship.getParentMappingId() + ", child=" + relationship.getChildMappingId()
+							+ ", sourceKeys=" + relationship.getSourceKeys() + ", targetKeys="
+							+ relationship.getTargetKeys());
 		}
 
 		File contractDirectory = new File(temporaryDirectory, "contract");
-		GenerateLegacyMigrationContractCommand contractCommand =
-				new GenerateLegacyMigrationContractCommand();
+		GenerateLegacyMigrationContractCommand contractCommand = new GenerateLegacyMigrationContractCommand();
 		contractCommand.setMappingFile(mapping);
 		contractCommand.setOutputDirectory(contractDirectory);
 		contractCommand.run();
 		File contract = new File(contractDirectory, "company-contract.yaml");
 		var generatedContract = new LegacyMigrationContractIO().read(contract);
 		var numberedDetail = generatedContract.getDataSets().stream()
-				.filter(dataSet -> "COMPANY_MASTER_DETAIL_1".equals(dataSet.getTargetTable()))
-				.findFirst().orElseThrow();
+				.filter(dataSet -> "COMPANY_MASTER_DETAIL_1".equals(dataSet.getTargetTable())).findFirst()
+				.orElseThrow();
 		assertEquals("NUMBERED_COLUMNS", numberedDetail.getOccurrenceSourceMode());
-		assertEquals(2, numberedDetail.getFields().stream()
-				.filter(field -> "CONTACT_DATE".equals(field.getStagingColumn()))
-				.findFirst().orElseThrow().getIndexedSources().size());
+		assertEquals(2,
+				numberedDetail.getFields().stream().filter(field -> "CONTACT_DATE".equals(field.getStagingColumn()))
+						.findFirst().orElseThrow().getIndexedSources().size());
 
 		File loaderDirectory = new File(temporaryDirectory, "loader");
 		GenerateLegacyRdbLoaderCommand generator = new GenerateLegacyRdbLoaderCommand();
@@ -121,13 +118,10 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 		generator.setCommitEveryRootBatches(1);
 		generator.setRootCursorStrategy("REOPEN");
 		generator.run();
-		assertFalse(new File(loaderDirectory,
-				"LegacyMigrationLoader.java.template").exists());
-		var plan = new LegacyMigrationLoadPlanIO()
-				.read(new File(loaderDirectory, "company-load-plan.yaml"));
+		assertFalse(new File(loaderDirectory, "LegacyMigrationLoader.java.template").exists());
+		var plan = new LegacyMigrationLoadPlanIO().read(new File(loaderDirectory, "company-load-plan.yaml"));
 		var employeePlan = plan.getDataSets().stream()
-				.filter(dataSet -> "EMPLOYEE_LIST".equals(dataSet.getTargetTable()))
-				.findFirst().orElseThrow();
+				.filter(dataSet -> "EMPLOYEE_LIST".equals(dataSet.getTargetTable())).findFirst().orElseThrow();
 		assertEquals(2, employeePlan.getParentJoinKeys().size());
 		assertEquals(java.util.List.of("PARENT_ID"), employeePlan.getTargetForeignKey());
 
@@ -135,8 +129,7 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 				Connection connection = dataSource.getConnection()) {
 			dropGeneratedTables(connection, plan, targetSchema);
 			createTargetTables(connection, targetSchema);
-			executeScript(connection,
-					Files.readString(new File(loaderDirectory, "company-staging.sql").toPath()));
+			executeScript(connection, Files.readString(new File(loaderDirectory, "company-staging.sql").toPath()));
 			executeSql(connection, """
 					INSERT INTO TMP_COMPANY_MASTER
 						(COMPANY_ID,COMPANY_NAME)
@@ -160,13 +153,11 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 			connection.commit();
 			connection.setAutoCommit(false);
 
-			assertEquals(1,
-					new JdbcTreeStagingLoader(connection, targetSchema, plan).load());
+			assertEquals(1, new JdbcTreeStagingLoader(connection, targetSchema, plan).load());
 			assertEquals(1, count(connection, "COMPANY_MASTER"));
 			assertEquals(1, count(connection, "DEPARTMENT_GROUP"));
 			assertEquals(1, count(connection, "EMPLOYEE_LIST"));
-			assertEquals(2, count(connection,
-					"COMPANY_MASTER_DETAIL_1 WHERE COMPANY_ID='C001'"));
+			assertEquals(2, count(connection, "COMPANY_MASTER_DETAIL_1 WHERE COMPANY_ID='C001'"));
 			assertEquals(1, count(connection, """
 					EMPLOYEE_LIST E
 					JOIN DEPARTMENT_GROUP D ON D.ID=E.PARENT_ID
@@ -178,8 +169,7 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 	}
 
 	private void createTargetTables(Connection connection, Schema schema) throws Exception {
-		var dialect = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
-				.getDialect(connection);
+		var dialect = com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(connection);
 		schema.setDialect(dialect);
 		var registry = dialect.createSqlFactoryRegistry();
 		for (Table table : schema.getTables()) {
@@ -194,8 +184,7 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 	}
 
 	private void dropGeneratedTables(Connection connection,
-			com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan plan,
-			Schema schema) throws Exception {
+			com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan plan, Schema schema) throws Exception {
 		for (int i = schema.getTables().size() - 1; i >= 0; i--) {
 			dropTables(connection, schema.getTables().get(i).getName());
 		}

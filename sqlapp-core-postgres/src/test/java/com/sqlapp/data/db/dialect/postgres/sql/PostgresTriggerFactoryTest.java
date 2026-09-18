@@ -45,10 +45,8 @@ public class PostgresTriggerFactoryTest extends AbstractPostgresSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 	}
-
 
 	@Test
 	public void testCreate1() {

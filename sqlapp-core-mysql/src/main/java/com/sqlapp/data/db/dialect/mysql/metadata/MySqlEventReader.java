@@ -47,8 +47,7 @@ public class MySqlEventReader extends EventReader {
 	}
 
 	@Override
-	protected List<Event> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Event> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Event> result = list();
@@ -66,8 +65,7 @@ public class MySqlEventReader extends EventReader {
 		return getSqlNodeCache().getString("events.sql");
 	}
 
-	protected Event createEvent(ExResultSet rs,
-			final ProductVersionInfo productVersionInfo) throws SQLException {
+	protected Event createEvent(ExResultSet rs, final ProductVersionInfo productVersionInfo) throws SQLException {
 		Event obj = new Event(getString(rs, EVENT_NAME));
 		obj.setDefiner(getString(rs, "DEFINER"));
 		obj.setIntervalField(getString(rs, "INTERVAL_FIELD"));

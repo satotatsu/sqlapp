@@ -39,48 +39,48 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 
 	@Override
 	protected void addOption(final Table table, OracleSqlBuilder builder) {
-		Map<String,String> map=table.getSpecifics();
-		if (CommonUtils.isEmpty(map)){
+		Map<String, String> map = table.getSpecifics();
+		if (CommonUtils.isEmpty(map)) {
 			return;
 		}
-		boolean hasProperty=false;
-		for(Map.Entry<String, String> entry:map.entrySet()){
-			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())){
+		boolean hasProperty = false;
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())) {
 				continue;
 			}
-			if (entry.getValue()!=null){
-				hasProperty=true;
+			if (entry.getValue() != null) {
+				hasProperty = true;
 			}
 		}
-		if (!hasProperty){
+		if (!hasProperty) {
 			return;
 		}
-		boolean hasStorage=false;
-		for(Map.Entry<String, String> entry:map.entrySet()){
-			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())){
+		boolean hasStorage = false;
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())) {
 				continue;
 			}
-			if (entry.getValue()==null){
+			if (entry.getValue() == null) {
 				continue;
 			}
-			if (builder.isStoragePropertyName(entry.getKey())){
-				hasStorage=true;
+			if (builder.isStoragePropertyName(entry.getKey())) {
+				hasStorage = true;
 				continue;
 			}
 			builder.lineBreak().oracleProperty(entry.getKey(), entry.getValue());
 		}
-		if (hasStorage){
+		if (hasStorage) {
 			builder.lineBreak().storage();
 			builder.lineBreak()._add("(");
 			builder.appendIndent(1);
-			for(Map.Entry<String, String> entry:map.entrySet()){
-				if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())){
+			for (Map.Entry<String, String> entry : map.entrySet()) {
+				if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())) {
 					continue;
 				}
-				if (entry.getValue()==null){
+				if (entry.getValue() == null) {
 					continue;
 				}
-				if (!builder.isStoragePropertyName(entry.getKey())){
+				if (!builder.isStoragePropertyName(entry.getKey())) {
 					continue;
 				}
 				builder.lineBreak().oracleProperty(entry.getKey(), entry.getValue());
@@ -89,28 +89,31 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 			builder.lineBreak()._add(")");
 		}
 	}
-	
-	
+
 	@Override
-	protected void addOtherDefinitions(Table table, List<SqlOperation> result){
-		if (table.getRemarks()!=null){
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(table.getRemarks());
+	protected void addOtherDefinitions(Table table, List<SqlOperation> result) {
+		if (table.getRemarks() != null) {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(table.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
-		table.getColumns().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+		table.getColumns().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
-		table.getIndexes().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+		table.getIndexes().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
-		table.getConstraints().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().constraint().space().name(c, this.getOptions().isDecorateSchemaName()).on().name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+		table.getConstraints().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().constraint().space().name(c, this.getOptions().isDecorateSchemaName()).on()
+					.name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
 	}

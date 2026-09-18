@@ -21,12 +21,14 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
+
 /**
  * SQLServer2019のカタログ読み込み
+ * 
  * @author satoh
  *
  */
-public class SqlServer2019CatalogReader extends SqlServer2017CatalogReader{
+public class SqlServer2019CatalogReader extends SqlServer2017CatalogReader {
 
 	public SqlServer2019CatalogReader(Dialect dialect) {
 		super(dialect);

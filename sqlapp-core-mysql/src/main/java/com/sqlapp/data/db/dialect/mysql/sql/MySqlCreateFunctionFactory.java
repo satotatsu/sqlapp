@@ -24,8 +24,7 @@ import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlCreateFunctionFactory extends
-		AbstractCreateFunctionFactory<MySqlSqlBuilder> {
+public class MySqlCreateFunctionFactory extends AbstractCreateFunctionFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Function obj, MySqlSqlBuilder builder) {

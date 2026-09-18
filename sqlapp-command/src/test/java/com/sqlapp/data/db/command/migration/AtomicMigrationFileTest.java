@@ -22,8 +22,7 @@ class AtomicMigrationFileTest {
 		final Path file = directory.resolve("report.json");
 		Files.writeString(file, "old", StandardCharsets.UTF_8);
 
-		AtomicMigrationFile.write(file,
-				temporary -> Files.writeString(temporary, "new", StandardCharsets.UTF_8));
+		AtomicMigrationFile.write(file, temporary -> Files.writeString(temporary, "new", StandardCharsets.UTF_8));
 
 		assertEquals("new", Files.readString(file, StandardCharsets.UTF_8));
 		assertNoTemporaryFile();

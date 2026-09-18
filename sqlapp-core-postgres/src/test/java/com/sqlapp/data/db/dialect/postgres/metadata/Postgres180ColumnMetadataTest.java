@@ -12,13 +12,11 @@ class Postgres180ColumnMetadataTest {
 	@Test
 	void testRestoreNamedNotNullConstraint() {
 		Column column = new Column("CUSTOMER_ID").setNotNull(true);
-		Postgres180ColumnMetadata.applyNamedNotNull(column,
-				"NN_CUSTOMERS_CUSTOMER_ID");
+		Postgres180ColumnMetadata.applyNamedNotNull(column, "NN_CUSTOMERS_CUSTOMER_ID");
 		Table table = table(column);
 		Postgres180ColumnMetadata.moveNamedNotNullConstraints(table);
 		assertTrue(column.isNotNull());
-		assertEquals("NN_CUSTOMERS_CUSTOMER_ID",
-				table.getConstraints().getNotNullConstraints().get(0).getName());
+		assertEquals("NN_CUSTOMERS_CUSTOMER_ID", table.getConstraints().getNotNullConstraints().get(0).getName());
 	}
 
 	@Test
@@ -34,14 +32,11 @@ class Postgres180ColumnMetadataTest {
 	@Test
 	void testRestorePostgresSpecificConstraintState() {
 		Column column = new Column("CUSTOMER_ID").setNotNull(true);
-		Postgres180ColumnMetadata.applyNamedNotNull(column,
-				"NN_CUSTOMERS_CUSTOMER_ID", true, false);
+		Postgres180ColumnMetadata.applyNamedNotNull(column, "NN_CUSTOMERS_CUSTOMER_ID", true, false);
 		Table table = table(column);
 		Postgres180ColumnMetadata.moveNamedNotNullConstraints(table);
-		assertTrue(table.getConstraints().getNotNullConstraints().get(0)
-				.isNoInherit());
-		assertTrue(!table.getConstraints().getNotNullConstraints().get(0)
-				.isValidated());
+		assertTrue(table.getConstraints().getNotNullConstraints().get(0).isNoInherit());
+		assertTrue(!table.getConstraints().getNotNullConstraints().get(0).isValidated());
 	}
 
 	private Table table(Column column) {

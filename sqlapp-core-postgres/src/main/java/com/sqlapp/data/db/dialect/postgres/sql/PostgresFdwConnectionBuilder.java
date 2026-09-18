@@ -27,14 +27,12 @@ public class PostgresFdwConnectionBuilder {
 	public String listConnections(boolean checkConnection) {
 		checkPostgres18();
 		return "SELECT server_name, user_name, valid, used_in_xact, closed, "
-				+ "remote_backend_pid FROM postgres_fdw_get_connections("
-				+ checkConnection + ")";
+				+ "remote_backend_pid FROM postgres_fdw_get_connections(" + checkConnection + ")";
 	}
 
 	public String disconnect(String serverName) {
 		require(serverName, "serverName");
-		return "SELECT postgres_fdw_disconnect("
-				+ sqlString(serverName) + ")";
+		return "SELECT postgres_fdw_disconnect(" + sqlString(serverName) + ")";
 	}
 
 	public String disconnectAll() {

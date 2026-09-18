@@ -37,8 +37,7 @@ public class SqlServerCreatePartitionSchemeTest extends AbstractSqlServerSqlFact
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new PartitionScheme("func"), SqlType.CREATE);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new PartitionScheme("func"), SqlType.CREATE);
 	}
 
 	private PartitionScheme getObj(String name) {

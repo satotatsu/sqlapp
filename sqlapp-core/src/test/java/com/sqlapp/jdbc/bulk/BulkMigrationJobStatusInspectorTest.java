@@ -69,15 +69,12 @@ class BulkMigrationJobStatusInspectorTest {
 		assertThrows(NullPointerException.class, () -> new BulkMigrationJobTaskStatus("task", null, null));
 		assertThrows(IllegalArgumentException.class,
 				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.IN_PROGRESS, null));
-		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.COMPLETE,
-						checkpoint("task", "source", false, 1)));
-		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.IN_PROGRESS,
-						checkpoint("task", "source", true, 1)));
-		assertThrows(IllegalArgumentException.class,
-				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.NOT_STARTED,
-						checkpoint("task", "source", false, 1)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskStatus("task",
+				BulkMigrationJobTaskState.COMPLETE, checkpoint("task", "source", false, 1)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskStatus("task",
+				BulkMigrationJobTaskState.IN_PROGRESS, checkpoint("task", "source", true, 1)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskStatus("task",
+				BulkMigrationJobTaskState.NOT_STARTED, checkpoint("task", "source", false, 1)));
 		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus(" ", List.of()));
 		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus("plan", List.of(first, first)));
 		assertThrows(ArithmeticException.class,

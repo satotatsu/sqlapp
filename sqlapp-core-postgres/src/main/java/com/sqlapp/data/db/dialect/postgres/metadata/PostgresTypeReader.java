@@ -49,8 +49,7 @@ public class PostgresTypeReader extends TypeReader {
 	}
 
 	@Override
-	protected List<Type> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Type> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Type> result = list();
@@ -75,7 +74,7 @@ public class PostgresTypeReader extends TypeReader {
 
 	protected Type createType(ExResultSet rs) throws SQLException {
 		Type obj = new Type(getString(rs, "type_name"));
-		//obj.setSpecificName(getString(rs, "oid"));
+		// obj.setSpecificName(getString(rs, "oid"));
 		// obj.setCatalogName(getString(rs, "type_catalog"));
 		obj.setSchemaName(getString(rs, "type_schema"));
 		obj.setDefinition(splitLine(getString(rs, "definition")));

@@ -27,28 +27,30 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * Postgres9.3 Table Reader
+ * 
  * @author satoh
  *
  */
-public class Postgres93TableReader extends Postgres91TableReader{
+public class Postgres93TableReader extends Postgres91TableReader {
 
 	protected Postgres93TableReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
-	protected Table createTable(ExResultSet rs) throws SQLException{
-		Table table=super.createTable(rs);
+	protected Table createTable(ExResultSet rs) throws SQLException {
+		Table table = super.createTable(rs);
 		return table;
 	}
-	
+
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables93.sql");
 	}
-	
+
 	@Override
 	protected ColumnReader newColumnReader() {
 		return new Postgres93ColumnReader(this.getDialect());

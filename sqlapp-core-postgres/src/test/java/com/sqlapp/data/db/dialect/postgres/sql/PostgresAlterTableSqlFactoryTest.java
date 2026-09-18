@@ -48,8 +48,7 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 	}
 
 	@Test
@@ -59,13 +58,12 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		Table table3 = getTable1("tableB");
 		table3.getColumns().get("cola").setName("cola1");
 		table3.getColumns().get("colb").setName("colb1");
-		table2.getConstraints().addForeignKeyConstraint(
-				"tablea_tableb_fk",
-				new Column[] { table2.getColumns().get("colb"),
-						table2.getColumns().get("cola") },
-				new Column[] { table3.getColumns().get("cola1"),
-						table3.getColumns().get("colb1") }).setDeleteRule(CascadeRule.Cascade).setMatchOption(MatchOption.Simple);
-		DbObjectDifference diff=table1.diff(table2);
+		table2.getConstraints()
+				.addForeignKeyConstraint("tablea_tableb_fk",
+						new Column[] { table2.getColumns().get("colb"), table2.getColumns().get("cola") },
+						new Column[] { table3.getColumns().get("cola1"), table3.getColumns().get("colb1") })
+				.setDeleteRule(CascadeRule.Cascade).setMatchOption(MatchOption.Simple);
+		DbObjectDifference diff = table1.diff(table2);
 		List<SqlOperation> list = sqlFactory.createDiffSql(diff);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
@@ -78,12 +76,12 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		expected = getResource("alter_table_add_foreignKey1_reverse.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
-	
+
 	@Test
 	public void testRenameTable() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableB");
-		DbObjectDifference diff=table1.diff(table2);
+		DbObjectDifference diff = table1.diff(table2);
 		List<SqlOperation> list = sqlFactory.createDiffSql(diff);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
@@ -106,8 +104,8 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(column);
-		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50)
-				.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
+				.setCollation("utf8mb4_binary");
 		table.getColumns().add(column);
 		column = new Column("colc").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
@@ -124,14 +122,11 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 	public void testGetDdlTableTableAutoIncrement() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table2.getColumns().get("cola").setIdentity(true)
-				.setIdentityLastValue(10);
+		table2.getColumns().get("cola").setIdentity(true).setIdentityLastValue(10);
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		assertEquals(
-				"ALTER TABLE \"tableA\" ALTER COLUMN cola serial",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" ALTER COLUMN cola serial", commandText.getSqlText());
 	}
 
 	/**
@@ -141,12 +136,10 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 	public void testGetDdlTableTablePrimaryKey1() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table1.getConstraints().addPrimaryKeyConstraint("pk1",
-				table1.getColumns().get("cola"));
+		table1.getConstraints().addPrimaryKeyConstraint("pk1", table1.getColumns().get("cola"));
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
 		SqlOperation commandText = CommonUtils.first(list);
-		assertEquals("ALTER TABLE \"tableA\" DROP CONSTRAINT pk1",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" DROP CONSTRAINT pk1", commandText.getSqlText());
 		System.out.println(list);
 	}
 
@@ -157,14 +150,11 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 	public void testGetDdlTableTablePrimaryKey2() {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
-		table2.getConstraints().addPrimaryKeyConstraint("pk1",
-				table2.getColumns().get("cola"));
+		table2.getConstraints().addPrimaryKeyConstraint("pk1", table2.getColumns().get("cola"));
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		SqlOperation commandText = list.get(i++);
-		assertEquals(
-				"ALTER TABLE \"tableA\" ADD CONSTRAINT pk1 PRIMARY KEY ( cola )",
-				commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" ADD CONSTRAINT pk1 PRIMARY KEY ( cola )", commandText.getSqlText());
 		System.out.println(list);
 	}
 
@@ -178,33 +168,23 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		table2.getColumns().add(new Column("d").setDataType(DataType.INT).setNotNull(true).setDefaultValue("0"));
 		table1.getIndexes().add("index1", table1.getColumns().get("cola"));
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		System.out.println(list);
 		SqlOperation operation = list.get(i++);
 		String expected = getResource("alter_table_drop_index1.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_add_column1.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_add_column2.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_add_column3.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_add_column4.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 	}
 
 	/**
@@ -216,15 +196,13 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		Table table2 = getTable1("tableA");
 		table2.getSpecifics().put("oids", "true");
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		System.out.println(list);
 		SqlOperation operation = list.get(i++);
 		String expected = getResource("alter_table_set_with_oids.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 	}
-	
+
 	/**
 	 * Indexテスト1
 	 */
@@ -234,28 +212,20 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		Table table2 = getTable1("tableA");
 		table2.getColumns().get("cold").setNotNull(true).setDefaultValue("0");
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
-		int i=0;
+		int i = 0;
 		System.out.println(list);
 		SqlOperation operation = list.get(i++);
 		String expected = getResource("alter_table_modify_column1.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_modify_column2.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_modify_column3.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 		operation = list.get(i++);
 		expected = getResource("alter_table_modify_column4.sql");
-		assertEquals(
-				expected,
-				operation.getSqlText());
+		assertEquals(expected, operation.getSqlText());
 	}
 
 }

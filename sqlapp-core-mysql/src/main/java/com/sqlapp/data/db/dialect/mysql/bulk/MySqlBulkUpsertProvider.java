@@ -7,10 +7,13 @@ import com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 
 /** MySQL temporary-table upsert provider. */
 public class MySqlBulkUpsertProvider implements BulkUpsertProvider {
-	@Override public boolean supports(final Dialect dialect) {
+	@Override
+	public boolean supports(final Dialect dialect) {
 		return dialect != null && "MySQL".equalsIgnoreCase(dialect.getProductName());
 	}
-	@Override public BulkUpsertExecutor create(final Dialect dialect) {
+
+	@Override
+	public BulkUpsertExecutor create(final Dialect dialect) {
 		return new MySqlBulkUpsertExecutor(dialect);
 	}
 }

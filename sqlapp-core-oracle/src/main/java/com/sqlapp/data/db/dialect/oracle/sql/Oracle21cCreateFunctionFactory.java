@@ -15,11 +15,9 @@ import com.sqlapp.data.schemas.FunctionType;
 public class Oracle21cCreateFunctionFactory extends Oracle19cCreateFunctionFactory {
 
 	@Override
-	protected void addSqlMacroClause(final Function function,
-			final OracleSqlBuilder builder) {
+	protected void addSqlMacroClause(final Function function, final OracleSqlBuilder builder) {
 		builder.space()._add("SQL_MACRO")._add("(");
-		builder._add(function.getFunctionType() == FunctionType.Table
-				? "TABLE" : "SCALAR");
+		builder._add(function.getFunctionType() == FunctionType.Table ? "TABLE" : "SCALAR");
 		builder._add(")");
 	}
 

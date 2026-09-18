@@ -51,8 +51,7 @@ public class PostgresDomainReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Domain> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Domain> result = list();
@@ -85,8 +84,8 @@ public class PostgresDomainReader extends DomainReader {
 		Integer intervalScale = getInt(rs, "interval_scale");
 		Domain obj = new Domain(getString(rs, "domain_name"));
 		obj.setNullable(!rs.getBoolean("typnotnull"));
-		getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision)
-				, CommonUtils.notZero(numericScale, datetimeScale, intervalScale), obj);
+		getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision),
+				CommonUtils.notZero(numericScale, datetimeScale, intervalScale), obj);
 		obj.setId(getString(rs, "oid"));
 		// obj.setCatalogName(getString(rs, "domain_catalog"));
 		obj.setSchemaName(getString(rs, "domain_schema"));
@@ -96,8 +95,7 @@ public class PostgresDomainReader extends DomainReader {
 		obj.setCheck(getString(rs, "consrc")); // ドメイン制約式
 		boolean is_deferrable = rs.getBoolean("is_deferrable");
 		boolean initially_deferred = rs.getBoolean("initially_deferred");
-		obj.setDeferrability(Deferrability.getDeferrability(is_deferrable,
-				initially_deferred));
+		obj.setDeferrability(Deferrability.getDeferrability(is_deferrable, initially_deferred));
 		return obj;
 	}
 }

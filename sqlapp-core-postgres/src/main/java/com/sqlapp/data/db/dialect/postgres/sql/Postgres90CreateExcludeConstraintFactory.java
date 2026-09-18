@@ -32,25 +32,25 @@ import com.sqlapp.data.schemas.Table;
  * 
  */
 public class Postgres90CreateExcludeConstraintFactory
-		extends AbstractCreateExcludeConstraintFactory<PostgresSqlBuilder>{
+		extends AbstractCreateExcludeConstraintFactory<PostgresSqlBuilder> {
 
 	@Override
 	public void addObjectDetail(final ExcludeConstraint obj, Table table, PostgresSqlBuilder builder) {
 		builder.constraint().space();
-		if (table!=null){
+		if (table != null) {
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
-		} else{
+		} else {
 			builder.name(obj, false);
 		}
 		builder.exclude();
 		builder.using().gist();
 		builder.space()._add('(');
-		boolean first=true;
-		for(ReferenceColumn column:obj.getColumns()){
+		boolean first = true;
+		for (ReferenceColumn column : obj.getColumns()) {
 			builder.comma(!first);
 			builder.name(column);
 			builder.with().space()._add(column.getWith());
-			first=false;
+			first = false;
 		}
 		builder.space()._add(')');
 	}

@@ -14,9 +14,9 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 import com.sqlapp.util.CommonUtils;
 
 /**
- * PostgreSQL 17 SQL/JSON query expression builder.
- * Context items, PASSING values, defaults and SQL type definitions are SQL
- * fragments. JSON paths and identifiers are escaped by the builder.
+ * PostgreSQL 17 SQL/JSON query expression builder. Context items, PASSING
+ * values, defaults and SQL type definitions are SQL fragments. JSON paths and
+ * identifiers are escaped by the builder.
  */
 public class PostgresSqlJsonBuilder {
 	private final Dialect dialect;
@@ -75,8 +75,7 @@ public class PostgresSqlJsonBuilder {
 		return new JsonArrayAggregateExpression(valueExpression);
 	}
 
-	public JsonObjectAggregateExpression jsonObjectAgg(String keyExpression,
-			String valueExpression) {
+	public JsonObjectAggregateExpression jsonObjectAgg(String keyExpression, String valueExpression) {
 		return new JsonObjectAggregateExpression(keyExpression, valueExpression);
 	}
 
@@ -94,8 +93,7 @@ public class PostgresSqlJsonBuilder {
 			return entry(keyExpression, valueExpression, false);
 		}
 
-		public JsonObjectExpression entry(String keyExpression, String valueExpression,
-				boolean formatJson) {
+		public JsonObjectExpression entry(String keyExpression, String valueExpression, boolean formatJson) {
 			require(keyExpression, "keyExpression");
 			require(valueExpression, "valueExpression");
 			entries.add(new JsonObjectEntry(keyExpression, valueExpression, formatJson));
@@ -125,8 +123,7 @@ public class PostgresSqlJsonBuilder {
 					builder.append(", ");
 				}
 				JsonObjectEntry entry = entries.get(i);
-				builder.append(entry.keyExpression).append(" VALUE ")
-						.append(entry.valueExpression);
+				builder.append(entry.keyExpression).append(" VALUE ").append(entry.valueExpression);
 				if (entry.formatJson) {
 					builder.append(" FORMAT JSON");
 				}
@@ -157,8 +154,7 @@ public class PostgresSqlJsonBuilder {
 		public JsonArrayExpression value(String expression, boolean formatJson) {
 			require(expression, "expression");
 			if (!CommonUtils.isEmpty(queryExpression)) {
-				throw new IllegalArgumentException(
-						"JSON_ARRAY cannot combine values with a query expression.");
+				throw new IllegalArgumentException("JSON_ARRAY cannot combine values with a query expression.");
 			}
 			entries.add(new JsonArrayEntry(expression, formatJson));
 			return this;
@@ -167,8 +163,7 @@ public class PostgresSqlJsonBuilder {
 		public JsonArrayExpression query(String expression) {
 			require(expression, "query expression");
 			if (!entries.isEmpty()) {
-				throw new IllegalArgumentException(
-						"JSON_ARRAY cannot combine a query expression with values.");
+				throw new IllegalArgumentException("JSON_ARRAY cannot combine a query expression with values.");
 			}
 			this.queryExpression = expression;
 			return this;
@@ -241,8 +236,7 @@ public class PostgresSqlJsonBuilder {
 
 		public String build() {
 			checkConstructorVersion();
-			StringBuilder builder = new StringBuilder("JSON_ARRAYAGG(")
-					.append(valueExpression);
+			StringBuilder builder = new StringBuilder("JSON_ARRAYAGG(").append(valueExpression);
 			if (!CommonUtils.isEmpty(orderBy)) {
 				builder.append(" ORDER BY ").append(orderBy);
 			}
@@ -262,8 +256,7 @@ public class PostgresSqlJsonBuilder {
 		private boolean uniqueKeys;
 		private String returningType;
 
-		private JsonObjectAggregateExpression(String keyExpression,
-				String valueExpression) {
+		private JsonObjectAggregateExpression(String keyExpression, String valueExpression) {
 			require(keyExpression, "keyExpression");
 			require(valueExpression, "valueExpression");
 			this.keyExpression = keyExpression;
@@ -294,8 +287,8 @@ public class PostgresSqlJsonBuilder {
 
 		public String build() {
 			checkConstructorVersion();
-			StringBuilder builder = new StringBuilder("JSON_OBJECTAGG(")
-					.append(keyExpression).append(" VALUE ").append(valueExpression);
+			StringBuilder builder = new StringBuilder("JSON_OBJECTAGG(").append(keyExpression).append(" VALUE ")
+					.append(valueExpression);
 			if (!CommonUtils.isEmpty(orderBy)) {
 				builder.append(" ORDER BY ").append(orderBy);
 			}
@@ -351,8 +344,7 @@ public class PostgresSqlJsonBuilder {
 				builder.append(" ").append(type);
 			}
 			if (uniqueKeys != null) {
-				builder.append(uniqueKeys ? " WITH UNIQUE KEYS"
-						: " WITHOUT UNIQUE KEYS");
+				builder.append(uniqueKeys ? " WITH UNIQUE KEYS" : " WITHOUT UNIQUE KEYS");
 			}
 			return builder.toString();
 		}
@@ -424,8 +416,8 @@ public class PostgresSqlJsonBuilder {
 			require(contextItem, "contextItem");
 			require(path, "path");
 			validateOptions();
-			StringBuilder builder = new StringBuilder(function).append("(")
-					.append(contextItem).append(", ").append(sqlString(path));
+			StringBuilder builder = new StringBuilder(function).append("(").append(contextItem).append(", ")
+					.append(sqlString(path));
 			if (!passingValues.isEmpty()) {
 				builder.append(" PASSING ");
 				for (int i = 0; i < passingValues.size(); i++) {
@@ -433,8 +425,7 @@ public class PostgresSqlJsonBuilder {
 						builder.append(", ");
 					}
 					PassingValue passing = passingValues.get(i);
-					builder.append(passing.expression).append(" AS ")
-							.append(dialect.quote(passing.name));
+					builder.append(passing.expression).append(" AS ").append(dialect.quote(passing.name));
 				}
 			}
 			if (!CommonUtils.isEmpty(returningType)) {
@@ -453,8 +444,8 @@ public class PostgresSqlJsonBuilder {
 
 		private void validateOptions() {
 			if ("JSON_EXISTS".equals(function)) {
-				if (!CommonUtils.isEmpty(returningType) || !CommonUtils.isEmpty(wrapper)
-						|| !CommonUtils.isEmpty(quotes) || !CommonUtils.isEmpty(onEmpty)) {
+				if (!CommonUtils.isEmpty(returningType) || !CommonUtils.isEmpty(wrapper) || !CommonUtils.isEmpty(quotes)
+						|| !CommonUtils.isEmpty(onEmpty)) {
 					throw new IllegalArgumentException(
 							"JSON_EXISTS does not support RETURNING, WRAPPER, QUOTES or ON EMPTY.");
 				}
@@ -480,16 +471,14 @@ public class PostgresSqlJsonBuilder {
 	private void checkConstructorVersion() {
 		Dialect postgres16 = DialectHolder.postgreSQL160;
 		if (dialect.compareTo(postgres16) < 0) {
-			throw new IllegalArgumentException(
-					"SQL/JSON constructors and predicates require PostgreSQL 16 or later.");
+			throw new IllegalArgumentException("SQL/JSON constructors and predicates require PostgreSQL 16 or later.");
 		}
 	}
 
 	private void checkVersion() {
 		Dialect postgres17 = DialectHolder.postgreSQL170;
 		if (dialect.compareTo(postgres17) < 0) {
-			throw new IllegalArgumentException(
-					"SQL/JSON query functions require PostgreSQL 17 or later.");
+			throw new IllegalArgumentException("SQL/JSON query functions require PostgreSQL 17 or later.");
 		}
 	}
 
@@ -506,6 +495,7 @@ public class PostgresSqlJsonBuilder {
 	private static final class PassingValue {
 		private final String expression;
 		private final String name;
+
 		private PassingValue(String expression, String name) {
 			this.expression = expression;
 			this.name = name;
@@ -516,8 +506,8 @@ public class PostgresSqlJsonBuilder {
 		private final String keyExpression;
 		private final String valueExpression;
 		private final boolean formatJson;
-		private JsonObjectEntry(String keyExpression, String valueExpression,
-				boolean formatJson) {
+
+		private JsonObjectEntry(String keyExpression, String valueExpression, boolean formatJson) {
 			this.keyExpression = keyExpression;
 			this.valueExpression = valueExpression;
 			this.formatJson = formatJson;
@@ -527,6 +517,7 @@ public class PostgresSqlJsonBuilder {
 	private static final class JsonArrayEntry {
 		private final String expression;
 		private final boolean formatJson;
+
 		private JsonArrayEntry(String expression, boolean formatJson) {
 			this.expression = expression;
 			this.formatJson = formatJson;

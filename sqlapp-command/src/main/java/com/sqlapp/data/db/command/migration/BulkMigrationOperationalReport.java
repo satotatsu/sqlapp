@@ -57,14 +57,10 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	}
 
 	public enum ExecutionEvent {
-		JOB_STARTED(false, false, false, true),
-		JOB_COMPLETED(false, true, false, false),
-		JOB_REJECTED(false, false, true, false),
-		JOB_FAILED(false, false, true, false),
-		JOB_PAUSED(true, true, false, false),
-		TASK_STARTED(true, false, false, true),
-		TASK_COMPLETED(true, true, false, true),
-		TASK_FAILED(true, false, true, false),
+		JOB_STARTED(false, false, false, true), JOB_COMPLETED(false, true, false, false),
+		JOB_REJECTED(false, false, true, false), JOB_FAILED(false, false, true, false),
+		JOB_PAUSED(true, true, false, false), TASK_STARTED(true, false, false, true),
+		TASK_COMPLETED(true, true, false, true), TASK_FAILED(true, false, true, false),
 		TASK_PAUSED(true, true, false, false);
 
 		private final boolean taskRequired;

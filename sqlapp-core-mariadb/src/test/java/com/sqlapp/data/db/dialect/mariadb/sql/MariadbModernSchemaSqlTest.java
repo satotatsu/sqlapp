@@ -122,14 +122,10 @@ class MariadbModernSchemaSqlTest extends AbstractMariadbSqlFactoryTest {
 		Table table = new Table("AUDIT_LOG");
 		table.setDialect(dialect);
 		table.getColumns().add("ID", column -> column.setDataType(DataType.INT));
-		table.getColumns().add("ROW_START",
-				column -> column.setDataType(DataType.TIMESTAMP).setScale(6));
-		table.getColumns().add("ROW_END",
-				column -> column.setDataType(DataType.TIMESTAMP).setScale(6));
-		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
-				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
-				.setStartColumnName("ROW_START")
-				.setEndColumnName("ROW_END"));
+		table.getColumns().add("ROW_START", column -> column.setDataType(DataType.TIMESTAMP).setScale(6));
+		table.getColumns().add("ROW_END", column -> column.setDataType(DataType.TIMESTAMP).setScale(6));
+		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME").setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+				.setStartColumnName("ROW_START").setEndColumnName("ROW_END"));
 		table.setSystemVersioning(new SystemVersioning().setPeriodName("SYSTEM_TIME"));
 
 		SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);

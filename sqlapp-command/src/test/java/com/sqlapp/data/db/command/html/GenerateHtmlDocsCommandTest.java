@@ -128,14 +128,10 @@ public class GenerateHtmlDocsCommandTest {
 		table.getColumns().add("ID");
 		table.getColumns().add("ROW_START");
 		table.getColumns().add("ROW_END");
-		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
-				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
-				.setStartColumnName("ROW_START")
-				.setEndColumnName("ROW_END"));
-		table.setSystemVersioning(new SystemVersioning()
-				.setPeriodName("SYSTEM_TIME")
-				.setHistoryTableName("AUDIT_LOG_HISTORY")
-				.setTransactionIdColumnName("TRANSACTION_ID"));
+		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME").setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+				.setStartColumnName("ROW_START").setEndColumnName("ROW_END"));
+		table.setSystemVersioning(new SystemVersioning().setPeriodName("SYSTEM_TIME")
+				.setHistoryTableName("AUDIT_LOG_HISTORY").setTransactionIdColumnName("TRANSACTION_ID"));
 
 		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
 		command.setCatalog(catalog);
@@ -149,8 +145,8 @@ public class GenerateHtmlDocsCommandTest {
 
 		Path tablePath;
 		try (var paths = Files.list(new File(outputDir, "tables").toPath())) {
-			tablePath = paths.filter(path -> path.getFileName().toString().contains("AUDIT_LOG"))
-					.findFirst().orElseThrow();
+			tablePath = paths.filter(path -> path.getFileName().toString().contains("AUDIT_LOG")).findFirst()
+					.orElseThrow();
 		}
 		String tableHtml = Files.readString(tablePath);
 		assertTrue(tableHtml.contains("href=\"#Temporal\""));
@@ -168,13 +164,11 @@ public class GenerateHtmlDocsCommandTest {
 		Catalog catalog = new Catalog("CATALOG");
 		Schema schema = new Schema("PUBLIC");
 		Table table = new Table("CUSTOMERS");
-		Column column = new Column("CUSTOMER_ID")
-				.setDataType(DataType.BIGINT).setNotNull(true);
+		Column column = new Column("CUSTOMER_ID").setDataType(DataType.BIGINT).setNotNull(true);
 		catalog.getSchemas().add(schema);
 		schema.getTables().add(table);
 		table.getColumns().add(column);
-		table.getConstraints().add(new NotNullConstraint(
-				"NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true));
+		table.getConstraints().add(new NotNullConstraint("NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true));
 
 		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
 		command.setCatalog(catalog);
@@ -184,15 +178,12 @@ public class GenerateHtmlDocsCommandTest {
 
 		Path tablePath;
 		try (var paths = Files.list(new File(outputDir, "tables").toPath())) {
-			tablePath = paths
-					.filter(path -> path.getFileName().toString()
-							.contains("CUSTOMERS"))
-					.findFirst().orElseThrow();
+			tablePath = paths.filter(path -> path.getFileName().toString().contains("CUSTOMERS")).findFirst()
+					.orElseThrow();
 		}
 		String tableHtml = Files.readString(tablePath);
 		assertTrue(tableHtml.contains("NN_CUSTOMERS_CUSTOMER_ID"));
-		assertTrue(tableHtml.contains("NOT NULL Constraint")
-				|| tableHtml.contains("NOT NULL制約名"));
+		assertTrue(tableHtml.contains("NOT NULL Constraint") || tableHtml.contains("NOT NULL制約名"));
 	}
 
 	@Test
@@ -201,12 +192,9 @@ public class GenerateHtmlDocsCommandTest {
 		Catalog catalog = new Catalog("CATALOG");
 		Schema schema = new Schema("PUBLIC");
 		Table table = new Table("DOCUMENTS");
-		Column vector = new Column("EMBEDDING")
-				.setDataType(DataType.VECTOR)
-				.setVectorElementDataType(DataType.REAL)
+		Column vector = new Column("EMBEDDING").setDataType(DataType.VECTOR).setVectorElementDataType(DataType.REAL)
 				.setVectorDimension(768);
-		Index index = new Index("IDX_DOCUMENTS_EMBEDDING", vector)
-				.setIndexType(IndexType.Vector)
+		Index index = new Index("IDX_DOCUMENTS_EMBEDDING", vector).setIndexType(IndexType.Vector)
 				.setVectorDistanceType(VectorDistanceType.Cosine);
 		catalog.getSchemas().add(schema);
 		schema.getTables().add(table);
@@ -225,8 +213,8 @@ public class GenerateHtmlDocsCommandTest {
 
 		Path tablePath;
 		try (var paths = Files.list(new File(outputDir, "tables").toPath())) {
-			tablePath = paths.filter(path -> path.getFileName().toString().contains("DOCUMENTS"))
-					.findFirst().orElseThrow();
+			tablePath = paths.filter(path -> path.getFileName().toString().contains("DOCUMENTS")).findFirst()
+					.orElseThrow();
 		}
 		String tableHtml = Files.readString(tablePath);
 		assertTrue(tableHtml.contains("href=\"#Vector\""));

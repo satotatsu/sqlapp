@@ -23,12 +23,12 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.metadata.TriggerReader;
 
-public class Postgres90SchemaReader extends Postgres84SchemaReader{
+public class Postgres90SchemaReader extends Postgres84SchemaReader {
 
 	protected Postgres90SchemaReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected TableReader newTableReader() {
 		return new Postgres90TableReader(this.getDialect());

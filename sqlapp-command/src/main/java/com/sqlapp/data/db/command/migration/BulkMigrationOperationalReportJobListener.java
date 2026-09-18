@@ -129,8 +129,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		if (result != null) {
 			result.validateAgainst(plan);
 		}
-		terminalBoundary(execution(ExecutionEvent.JOB_COMPLETED, null,
-				result == null ? null : result.getProcessedRows(), null));
+		terminalBoundary(
+				execution(ExecutionEvent.JOB_COMPLETED, null, result == null ? null : result.getProcessedRows(), null));
 	}
 
 	@Override
@@ -149,9 +149,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final ChunkedBulkMigrationProgress progress) {
 		requirePlanFingerprint(planFingerprint);
 		requireTask(taskId);
-		terminalBoundary(
-				execution(ExecutionEvent.JOB_PAUSED, taskId,
-						progress == null ? null : progress.getProcessedRowsAfter(), null));
+		terminalBoundary(execution(ExecutionEvent.JOB_PAUSED, taskId,
+				progress == null ? null : progress.getProcessedRowsAfter(), null));
 	}
 
 	private void terminalBoundary(final BulkMigrationOperationalReport.Execution execution) {
@@ -187,9 +186,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	public void onTaskPaused(final String taskId, final ChunkedBulkMigrationProgress progress, final int taskIndex,
 			final int taskCount) {
 		requireTaskPosition(taskId, taskIndex, taskCount);
-		publishBoundary(
-				execution(ExecutionEvent.TASK_PAUSED, taskId,
-						progress == null ? null : progress.getProcessedRowsAfter(), null));
+		publishBoundary(execution(ExecutionEvent.TASK_PAUSED, taskId,
+				progress == null ? null : progress.getProcessedRowsAfter(), null));
 	}
 
 	private synchronized void publishBoundary(final BulkMigrationOperationalReport.Execution execution) {
@@ -226,8 +224,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	/** Refreshes after a durable chunk belonging to this listener's plan. */
 	public void refreshAfterChunk(final ChunkedBulkMigrationProgress progress) {
 		Objects.requireNonNull(progress, "progress");
-		if (plan.getTasks().stream().noneMatch(
-				task -> task.getOptions().getMigrationId().equals(progress.getMigrationId()))) {
+		if (plan.getTasks().stream()
+				.noneMatch(task -> task.getOptions().getMigrationId().equals(progress.getMigrationId()))) {
 			throw new IllegalArgumentException("Chunk migrationId does not belong to the operational report plan");
 		}
 		refresh();
@@ -249,8 +247,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	private BulkMigrationOperationalReport.Execution execution(final ExecutionEvent event, final String taskId,
 			final Long processedRows, final Throwable failure) {
 		return new BulkMigrationOperationalReport.Execution(event, taskId, Instant.now(), processedRows,
-				leaseAcquisitionId,
-				failure == null ? null : failure.getClass().getName(),
+				leaseAcquisitionId, failure == null ? null : failure.getClass().getName(),
 				failure == null ? null : failureMessage(failure));
 	}
 

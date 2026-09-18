@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Point;
 import org.postgresql.geometric.PGpoint;
 
-public class FromPGPointConverter extends AbstractFromObjectConverter<Point, PGpoint>{
+public class FromPGPointConverter extends AbstractFromObjectConverter<Point, PGpoint> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Point copy(Object obj){
-		if (obj==null){
+	public Point copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Point)convertObject(obj).clone();
+		return (Point) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGPointConverter extends AbstractFromObjectConverter<Point, PGp
 
 	@Override
 	protected Point toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGpoint pgObject=new PGpoint(val);
+			PGpoint pgObject = new PGpoint(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Point toObject(PGpoint value) {
-		Point obj=new Point();
+		Point obj = new Point();
 		obj.setValue(value.getValue());
 		return obj;
 	}

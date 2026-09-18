@@ -46,8 +46,7 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 	}
 
 	@Override
-	protected List<RoutinePrivilege> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<RoutinePrivilege> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<RoutinePrivilege> result = list();
@@ -65,8 +64,7 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 		return getSqlNodeCache().getString("routinePrivileges.sql");
 	}
 
-	protected RoutinePrivilege createPrivilege(Connection connection,
-			ExResultSet rs) throws SQLException {
+	protected RoutinePrivilege createPrivilege(Connection connection, ExResultSet rs) throws SQLException {
 		RoutinePrivilege obj = new RoutinePrivilege();
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, "ROUTINE_SCHEMA"));
@@ -83,13 +81,11 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 			if (allArgTypes != null) {
 				String[] argArray = split(allArgTypes, "[, ]");
 				SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(
-						connection, this.getDialect(), argArray);
+				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(connection, this.getDialect(), argArray);
 				for (NamedArgument argument : arguments) {
 					builder.add(argument.getDataTypeName());
 				}
-				obj.setSpecificName(function.getName() + "("
-						+ builder.toString() + ")");
+				obj.setSpecificName(function.getName() + "(" + builder.toString() + ")");
 			}
 		}
 		return obj;

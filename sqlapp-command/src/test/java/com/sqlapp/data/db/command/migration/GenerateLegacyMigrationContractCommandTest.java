@@ -58,12 +58,12 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertEquals(50, child.getMaximumOccurrences());
 		assertTrue(child.getFields().stream().anyMatch(field -> "EMP_ID".equals(field.getTargetColumn())
 				&& field.isExtracted() && field.getSourcePath().endsWith(".EMP_ID")));
-		assertTrue(child.getFields().stream().anyMatch(field -> "ID".equals(field.getTargetColumn())
-				&& field.isGenerated() && !field.isExtracted()));
+		assertTrue(child.getFields().stream().anyMatch(
+				field -> "ID".equals(field.getTargetColumn()) && field.isGenerated() && !field.isExtracted()));
 		assertTrue(child.getFields().stream().anyMatch(field -> "COMPANY_ID".equals(field.getStagingColumn())
 				&& field.getAction() == LegacyMigrationMapping.ColumnAction.DROP && field.isExtracted()));
-		assertTrue(child.getFields().stream().anyMatch(field -> field.isOccurrenceIndex()
-				&& field.isExtracted() && "EMPLOYEE_LIST_NO".equals(field.getTargetColumn())));
+		assertTrue(child.getFields().stream().anyMatch(field -> field.isOccurrenceIndex() && field.isExtracted()
+				&& "EMPLOYEE_LIST_NO".equals(field.getTargetColumn())));
 		assertEquals("table-department", child.getAncestorKeys().getFirst().getAncestorDataSetId());
 		assertEquals("COMPANY_ID", child.getAncestorKeys().getFirst().getColumns().getFirst().getSourceColumn());
 		assertFalse(new File(output, "company-contract.yaml.tmp").exists());
@@ -80,29 +80,25 @@ class GenerateLegacyMigrationContractCommandTest {
 	private LegacyMigrationMapping mapping() {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		mapping.getMigration().setId("company-migration");
-		TableMapping department = table("table-department", "DEPARTMENT_GROUP",
-				"COMPANY_MASTER.DEPARTMENT_GROUP");
+		TableMapping department = table("table-department", "DEPARTMENT_GROUP", "COMPANY_MASTER.DEPARTMENT_GROUP");
 		department.getKeys().getTargetPrimaryKey().add("ID");
-		department.getColumns().add(column("COMPANY_ID", "COMPANY_MASTER.COMPANY_ID", "COMPANY_ID",
-				ColumnAction.COPY, "VARCHAR"));
+		department.getColumns()
+				.add(column("COMPANY_ID", "COMPANY_MASTER.COMPANY_ID", "COMPANY_ID", ColumnAction.COPY, "VARCHAR"));
 		mapping.getTables().add(department);
 
 		TableMapping employee = table("table-employee", "EMPLOYEE_LIST",
 				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST");
 		employee.getKeys().getTargetPrimaryKey().add("ID");
 		employee.getKeys().getBusinessKey().add("EMP_ID");
-		employee.getColumns().add(column("EMP_ID",
-				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID",
+		employee.getColumns().add(column("EMP_ID", "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID",
 				ColumnAction.COPY, "VARCHAR"));
-		employee.getColumns().add(column(null,
-				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index", "EMPLOYEE_LIST_NO",
-				ColumnAction.GENERATE, "INT"));
+		employee.getColumns().add(column(null, "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index",
+				"EMPLOYEE_LIST_NO", ColumnAction.GENERATE, "INT"));
 		employee.getColumns().getLast().getConversion().put("type", "OCCURRENCE_NUMBER");
 		employee.getColumns().add(column(null, null, "ID", ColumnAction.GENERATE, "INT"));
-		employee.getColumns().add(column("COMPANY_ID",
-				"COMPANY_MASTER.DEPARTMENT_GROUP.COMPANY_ID", null, ColumnAction.DROP, "VARCHAR"));
-		employee.getDetails().put("occurrence",
-				java.util.Map.of("column", "EMPLOYEE_LIST_NO", "maximum", 50));
+		employee.getColumns().add(
+				column("COMPANY_ID", "COMPANY_MASTER.DEPARTMENT_GROUP.COMPANY_ID", null, ColumnAction.DROP, "VARCHAR"));
+		employee.getDetails().put("occurrence", java.util.Map.of("column", "EMPLOYEE_LIST_NO", "maximum", 50));
 		mapping.getTables().add(employee);
 
 		RelationshipMapping relationship = new RelationshipMapping();

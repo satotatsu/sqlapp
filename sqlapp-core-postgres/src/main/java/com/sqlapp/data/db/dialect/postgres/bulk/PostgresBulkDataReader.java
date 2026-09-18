@@ -35,8 +35,7 @@ public class PostgresBulkDataReader extends Reader {
 			columns.add(column);
 		}
 		if (columns.isEmpty()) {
-			throw new IllegalArgumentException("No writable PostgreSQL COPY columns: "
-					+ table.getName());
+			throw new IllegalArgumentException("No writable PostgreSQL COPY columns: " + table.getName());
 		}
 		this.rows = table.getRows().iterator();
 	}
@@ -50,8 +49,7 @@ public class PostgresBulkDataReader extends Reader {
 	}
 
 	@Override
-	public int read(final char[] buffer, final int offset, final int length)
-			throws IOException {
+	public int read(final char[] buffer, final int offset, final int length) throws IOException {
 		java.util.Objects.checkFromIndexSize(offset, length, buffer.length);
 		if (closed) {
 			throw new IOException("Reader is closed");
@@ -69,10 +67,8 @@ public class PostgresBulkDataReader extends Reader {
 				position = 0;
 				rowCount++;
 			}
-			final int count = Math.min(length - written,
-					current.length() - position);
-			current.getChars(position, position + count, buffer,
-					offset + written);
+			final int count = Math.min(length - written, current.length() - position);
+			current.getChars(position, position + count, buffer, offset + written);
 			position += count;
 			written += count;
 		}
@@ -113,8 +109,7 @@ public class PostgresBulkDataReader extends Reader {
 				if (element == null) {
 					builder.append("NULL");
 				} else {
-					builder.append('"').append(element.toString()
-							.replace("\\", "\\\\").replace("\"", "\\\""))
+					builder.append('"').append(element.toString().replace("\\", "\\\\").replace("\"", "\\\""))
 							.append('"');
 				}
 			}

@@ -24,12 +24,10 @@ import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2005CreateProcedureFactory extends
-		AbstractCreateProcedureFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreateProcedureFactory extends AbstractCreateProcedureFactory<SqlServerSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Procedure obj,
-			SqlServerSqlBuilder builder) {
+	protected void addCreateObject(final Procedure obj, SqlServerSqlBuilder builder) {
 		if (this.getOptions().isDropIfExists()) {
 			builder.createOrAlter();
 		} else {
@@ -45,10 +43,8 @@ public class SqlServer2005CreateProcedureFactory extends
 			builder.lineBreak().with();
 			builder.setCondition(conditionKey, false);
 			if (obj.getExecuteAs() != null) {
-				builder.comma(builder.getCondition(conditionKey)).space()
-						.execute().as();
-				if ("CALLER".equalsIgnoreCase(obj.getExecuteAs())
-						|| "SELF".equalsIgnoreCase(obj.getExecuteAs())
+				builder.comma(builder.getCondition(conditionKey)).space().execute().as();
+				if ("CALLER".equalsIgnoreCase(obj.getExecuteAs()) || "SELF".equalsIgnoreCase(obj.getExecuteAs())
 						|| "OWNER".equalsIgnoreCase(obj.getExecuteAs())) {
 					builder.space()._add(obj.getExecuteAs().toUpperCase());
 				} else {
@@ -64,8 +60,7 @@ public class SqlServer2005CreateProcedureFactory extends
 			if (!CommonUtils.isEmpty(obj.getClassNamePrefix())) {
 				builder._add(obj.getClassNamePrefix() + ".");
 			}
-			builder._add(obj.getClassName() + ".")
-					._add(obj.getMethodName());
+			builder._add(obj.getClassName() + ".")._add(obj.getMethodName());
 		}
 	}
 }

@@ -38,7 +38,6 @@ public class SqlServer2019TableReader extends SqlServer2016TableReader {
 	protected IndexReader newIndexReader() {
 		return new SqlServer2019IndexReader(this.getDialect());
 	}
-	
 
 	@Override
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {

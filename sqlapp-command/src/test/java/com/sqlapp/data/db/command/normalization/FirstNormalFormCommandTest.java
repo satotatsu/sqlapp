@@ -119,8 +119,7 @@ class FirstNormalFormCommandTest {
 		assertEquals(3, migration.getStatistics().getTargetTableCount());
 		assertEquals(3, migration.getTables().size());
 		assertEquals(2, migration.getRelationships().size());
-		assertTrue(migration.getTables().stream()
-				.filter(table -> "ORDERS_LINES_1".equals(table.getTarget().getTable()))
+		assertTrue(migration.getTables().stream().filter(table -> "ORDERS_LINES_1".equals(table.getTarget().getTable()))
 				.findFirst().orElseThrow().getColumns().stream()
 				.anyMatch(column -> column.getAction() == LegacyMigrationMapping.ColumnAction.SPLIT
 						&& "DATE".equals(column.getTarget()) && column.getSourceColumns().size() == 2));
@@ -184,8 +183,7 @@ class FirstNormalFormCommandTest {
 		source.getColumns().add(new Column("ORDER_NO").setDataType(DataType.VARCHAR).setLength(20));
 		source.getColumns().add(new Column("ITEM_1").setDataType(DataType.VARCHAR).setLength(100));
 		source.getColumns().add(new Column("ITEM_2").setDataType(DataType.VARCHAR).setLength(100));
-		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"),
-				source.getColumns().get("ORDER_NO"));
+		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"), source.getColumns().get("ORDER_NO"));
 		schema.getTables().add(source);
 		File inputDirectory = new File(temporaryDirectory, "integrated-input");
 		File outputDirectory = new File(temporaryDirectory, "integrated-output");
@@ -235,8 +233,7 @@ class FirstNormalFormCommandTest {
 		source.getColumns().add(new Column("ORDER_NO").setDataType(DataType.VARCHAR).setLength(20));
 		source.getColumns().add(new Column("ITEM_1").setDataType(DataType.VARCHAR).setLength(100));
 		source.getColumns().add(new Column("ITEM_2").setDataType(DataType.VARCHAR).setLength(100));
-		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"),
-				source.getColumns().get("ORDER_NO"));
+		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"), source.getColumns().get("ORDER_NO"));
 		schema.getTables().add(source);
 		File input = new File(temporaryDirectory, "chain-source.xml");
 		File normalizedDirectory = new File(temporaryDirectory, "chain-normalized");
@@ -249,8 +246,8 @@ class FirstNormalFormCommandTest {
 		normalize.setMinimumColumnCount(1);
 		normalize.run();
 		File mappingFile = new File(normalizedDirectory, "chain-source-legacy-migration.yaml");
-		String originalFingerprint = new LegacyMigrationMappingIO().read(mappingFile)
-				.getSource().getSchemaFingerprint();
+		String originalFingerprint = new LegacyMigrationMappingIO().read(mappingFile).getSource()
+				.getSchemaFingerprint();
 
 		CompositePrimaryKeyToSurrogateKeyCommand surrogate = new CompositePrimaryKeyToSurrogateKeyCommand();
 		surrogate.setTargetFile(new File(normalizedDirectory, input.getName()));
@@ -262,8 +259,7 @@ class FirstNormalFormCommandTest {
 		assertEquals(originalFingerprint, mapping.getSource().getSchemaFingerprint());
 		assertEquals(2, mapping.getTransformations().size());
 		assertEquals("FirstNormalFormCommand", mapping.getTransformations().getFirst().getCommand());
-		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand",
-				mapping.getTransformations().getLast().getCommand());
+		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand", mapping.getTransformations().getLast().getCommand());
 		assertTrue(mapping.getRelationships().getFirst().isParentIdPropagation());
 		assertEquals("PARENT_ID", mapping.getRelationships().getFirst().getTargetKeys().getFirst().getChildColumn());
 	}

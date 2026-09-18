@@ -37,6 +37,7 @@ import com.sqlapp.util.OutputTextBuilder;
 public class MigrationCommandTest4 extends AbstractVersionUpCommandTest {
 	/**
 	 * 全部元に戻すテスト
+	 * 
 	 * @throws ParseException
 	 * @throws IOException
 	 * @throws SQLException
@@ -44,20 +45,21 @@ public class MigrationCommandTest4 extends AbstractVersionUpCommandTest {
 	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		testVersionUp(handler, (times, ds)->{
+		final DbVersionFileHandler handler = new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds) -> {
 			try {
-				handler.addUpDownSql((""+BASEDATE+3).toString(), "create table4", "create table DDD (id int primary key, text varchar(10))", "drop table DDD");
-				final MigrationDownCommand versionDownCommand=new MigrationDownCommand();
+				handler.addUpDownSql(("" + BASEDATE + 3).toString(), "create table4",
+						"create table DDD (id int primary key, text varchar(10))", "drop table DDD");
+				final MigrationDownCommand versionDownCommand = new MigrationDownCommand();
 				initialize(versionDownCommand, ds);
-				versionDownCommand.setLastChangeToApply(times.get(times.size()-3)-1);
+				versionDownCommand.setLastChangeToApply(times.get(times.size() - 3) - 1);
 				versionDownCommand.run();
-				final Table table=versionDownCommand.getTable();
+				final Table table = versionDownCommand.getTable();
 				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
-				final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-				final OutputTextBuilder builder=new OutputTextBuilder();
+				final DbVersionHandler dbVersionHandler = new DbVersionHandler();
+				final OutputTextBuilder builder = new OutputTextBuilder();
 				dbVersionHandler.append(table, builder);
-				final String expected=this.getResource("versionAfter4.txt");
+				final String expected = this.getResource("versionAfter4.txt");
 				assertEquals(expected, builder.toString());
 			} catch (final Exception e) {
 				throw new RuntimeException(e);

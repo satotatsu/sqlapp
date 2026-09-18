@@ -75,23 +75,20 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	@Override
 	protected MySqlSqlBuilder comment(AbstractColumn<?> column) {
 		if (!CommonUtils.isEmpty(column.getRemarks())) {
-			comment()._add(
-					" '" + CommonUtils.left(column.getRemarks().replace("'", "''"), 255) + "'");
+			comment()._add(" '" + CommonUtils.left(column.getRemarks().replace("'", "''"), 255) + "'");
 		}
 		return instance();
 	}
 
 	@Override
-	protected MySqlSqlBuilder checkConstraintDefinition(
-			Column column) {
+	protected MySqlSqlBuilder checkConstraintDefinition(Column column) {
 		return instance();
 	}
 
 	/**
 	 * カラムのCharacter Setの定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	@Override
 	protected MySqlSqlBuilder characterSetDefinition(Column column) {
@@ -100,8 +97,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 		}
 		Table table = column.getAncestor(Table.class);
 		if (table != null) {
-			if (!CommonUtils.eq(table.getCharacterSet(),
-					column.getCharacterSet())
+			if (!CommonUtils.eq(table.getCharacterSet(), column.getCharacterSet())
 					&& !CommonUtils.isEmpty(column.getCharacterSet())) {
 				characterSet().space()._add(column.getCharacterSet());
 			}
@@ -117,8 +113,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 		if (column.getDataType().isCharacter()) {
 			return true;
 		}
-		if (column.getDataType() == DataType.SET
-				|| column.getDataType() == DataType.ENUM) {
+		if (column.getDataType() == DataType.SET || column.getDataType() == DataType.ENUM) {
 			return true;
 		}
 		return true;
@@ -127,8 +122,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	/**
 	 * カラムのCollateの定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	@Override
 	protected MySqlSqlBuilder collateDefinition(Column column) {
@@ -280,8 +274,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 		if (column.getDefaultValue() == null) {
 			return instance();
 		}
-		if (column.getDataType() == DataType.DATETIME
-				|| column.getDataType() == DataType.TIME) {
+		if (column.getDataType() == DataType.DATETIME || column.getDataType() == DataType.TIME) {
 			if (CommonUtils.isEmpty(column.getDefaultValue())) {
 				return instance();
 			}
@@ -291,10 +284,10 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 		}
 		return super.defaultDefinition(column);
 	}
-	
+
 	@Override
-	public MySqlSqlBuilder clone(){
-		return (MySqlSqlBuilder)super.clone();
+	public MySqlSqlBuilder clone() {
+		return (MySqlSqlBuilder) super.clone();
 	}
 
 	/**
@@ -306,7 +299,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 		for (int i = 0; i < columns.size(); i++) {
 			ReferenceColumn column = columns.get(i);
 			comma(i > 0).appendQuoteColumnName(column.getName());
-			if (column.getLength()!=null) {
+			if (column.getLength() != null) {
 				this._add("(");
 				this._add(column.getLength());
 				this._add(")");

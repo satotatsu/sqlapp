@@ -35,13 +35,12 @@ public class PostgresAmcheckBuilder {
 	 * Creates a PostgreSQL 18 GIN structural consistency check.
 	 *
 	 * @param schemaName the optional schema name
-	 * @param indexName the index name
+	 * @param indexName  the index name
 	 * @return SELECT statement invoking {@code gin_index_check}
 	 */
 	public String ginIndexCheck(String schemaName, String indexName) {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"gin_index_check requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("gin_index_check requires PostgreSQL 18 or later.");
 		}
 		require(indexName, "indexName");
 		StringBuilder relation = new StringBuilder();
@@ -49,8 +48,7 @@ public class PostgresAmcheckBuilder {
 			relation.append(dialect.quote(schemaName)).append(".");
 		}
 		relation.append(dialect.quote(indexName));
-		return "SELECT gin_index_check("
-				+ sqlString(relation.toString()) + "::regclass)";
+		return "SELECT gin_index_check(" + sqlString(relation.toString()) + "::regclass)";
 	}
 
 	private String sqlString(String value) {

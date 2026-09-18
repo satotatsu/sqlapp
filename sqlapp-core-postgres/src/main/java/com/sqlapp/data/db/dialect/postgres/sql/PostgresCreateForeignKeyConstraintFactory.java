@@ -29,11 +29,12 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
  * @author satoh
  * 
  */
-public class PostgresCreateForeignKeyConstraintFactory extends AbstractCreateForeignKeyConstraintFactory<PostgresSqlBuilder> {
+public class PostgresCreateForeignKeyConstraintFactory
+		extends AbstractCreateForeignKeyConstraintFactory<PostgresSqlBuilder> {
 
 	@Override
 	protected void addMatchOption(ForeignKeyConstraint obj, PostgresSqlBuilder builder) {
-		if (obj.getMatchOption()!=null){
+		if (obj.getMatchOption() != null) {
 			builder.matchOption(obj);
 		}
 	}

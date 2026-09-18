@@ -38,6 +38,7 @@ public class MigrationCommandTest2 extends AbstractVersionUpCommandTest {
 
 	/**
 	 * 2つ元に戻すテスト
+	 * 
 	 * @throws ParseException
 	 * @throws IOException
 	 * @throws SQLException
@@ -45,13 +46,13 @@ public class MigrationCommandTest2 extends AbstractVersionUpCommandTest {
 	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		testVersionUp(handler, (times, ds)->{
-			final MigrationDownCommand versionDownCommand=new MigrationDownCommand();
+		final DbVersionFileHandler handler = new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds) -> {
+			final MigrationDownCommand versionDownCommand = new MigrationDownCommand();
 			initialize(versionDownCommand, ds);
-			versionDownCommand.setLastChangeToApply(times.get(times.size()-3));
+			versionDownCommand.setLastChangeToApply(times.get(times.size() - 3));
 			versionDownCommand.run();
-			final Table table=versionDownCommand.getTable();
+			final Table table = versionDownCommand.getTable();
 			try {
 				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
 			} catch (final ParseException e) {
@@ -59,10 +60,10 @@ public class MigrationCommandTest2 extends AbstractVersionUpCommandTest {
 			} finally {
 				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
 			}
-			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-			final OutputTextBuilder builder=new OutputTextBuilder();
+			final DbVersionHandler dbVersionHandler = new DbVersionHandler();
+			final OutputTextBuilder builder = new OutputTextBuilder();
 			dbVersionHandler.append(table, builder);
-			final String expected=this.getResource("versionAfter2.txt");
+			final String expected = this.getResource("versionAfter2.txt");
 			assertEquals(expected, builder.toString());
 		});
 	}

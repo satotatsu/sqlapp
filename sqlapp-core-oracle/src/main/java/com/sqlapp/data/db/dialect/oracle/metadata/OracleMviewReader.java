@@ -57,8 +57,7 @@ public class OracleMviewReader extends MviewReader {
 	 * @param context
 	 */
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -89,8 +88,7 @@ public class OracleMviewReader extends MviewReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final Table table) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final Table table) throws SQLException {
 
 	}
 
@@ -108,8 +106,7 @@ public class OracleMviewReader extends MviewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

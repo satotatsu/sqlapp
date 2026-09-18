@@ -46,8 +46,7 @@ public class OracleCreateTableFactoryTest extends AbstractOracleSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Added);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), State.Added);
 	}
 
 	@Test

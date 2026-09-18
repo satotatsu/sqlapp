@@ -37,8 +37,8 @@ public class Postgres180TableReader extends Postgres130TableReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(Connection connection,
-			ParametersContext context, List<Table> list) throws SQLException {
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> list)
+			throws SQLException {
 		super.setMetadataDetail(connection, context, list);
 		for (Table table : list) {
 			Postgres180ColumnMetadata.moveNamedNotNullConstraints(table);

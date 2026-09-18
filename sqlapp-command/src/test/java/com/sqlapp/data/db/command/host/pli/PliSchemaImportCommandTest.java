@@ -85,8 +85,8 @@ class PliSchemaImportCommandTest {
 				department.getConstraints().getForeignKeyConstraints().getFirst().getRelatedTable().getName());
 
 		Table employee = schema.getTables().get("EMPLOYEE_LIST");
-		assertColumns(employee, "COMPANY_ID", "DEPARTMENT_GROUP_NO", "EMPLOYEE_LIST_NO", "EMP_ID",
-				"LAST_NAME", "FIRST_NAME", "SALARY", "BONUS", "STATUS_FLAGS");
+		assertColumns(employee, "COMPANY_ID", "DEPARTMENT_GROUP_NO", "EMPLOYEE_LIST_NO", "EMP_ID", "LAST_NAME",
+				"FIRST_NAME", "SALARY", "BONUS", "STATUS_FLAGS");
 		assertPrimaryKey(employee, "COMPANY_ID", "DEPARTMENT_GROUP_NO", "EMPLOYEE_LIST_NO");
 		assertColumn(employee, "SALARY", DataType.DECIMAL, 9L, 2);
 		assertColumn(employee, "STATUS_FLAGS", DataType.BINARY, 1L, null);
@@ -100,16 +100,17 @@ class PliSchemaImportCommandTest {
 		var employeeMapping = mapping.getTables().stream()
 				.filter(item -> "EMPLOYEE_LIST".equals(item.getTarget().getTable())).findFirst().orElseThrow();
 		assertEquals("COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST", employeeMapping.getSource().getPath());
-		assertEquals(50, ((Number) ((java.util.Map<?, ?>) employeeMapping.getDetails().get("occurrence"))
-				.get("maximum")).intValue());
+		assertEquals(50,
+				((Number) ((java.util.Map<?, ?>) employeeMapping.getDetails().get("occurrence")).get("maximum"))
+						.intValue());
 		assertTrue(employeeMapping.getColumns().stream()
 				.anyMatch(column -> "EMP_ID".equals(column.getTarget())
-						&& "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID"
-								.equals(column.getSourcePath())
+						&& "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID".equals(column.getSourcePath())
 						&& "CHAR(6)".equals(column.getConversion().get("declaration"))));
-		assertTrue(String.valueOf(employeeMapping.getColumns().stream()
-				.filter(column -> "LAST_NAME".equals(column.getTarget())).findFirst().orElseThrow()
-				.getConversion().get("remarks")).contains("階層5"));
+		assertTrue(String
+				.valueOf(employeeMapping.getColumns().stream().filter(column -> "LAST_NAME".equals(column.getTarget()))
+						.findFirst().orElseThrow().getConversion().get("remarks"))
+				.contains("階層5"));
 		assertEquals(2, mapping.getRelationships().size());
 
 		File convertedDirectory = new File(temporaryDirectory, "converted");
@@ -121,13 +122,11 @@ class PliSchemaImportCommandTest {
 		LegacyMigrationMapping accumulated = new LegacyMigrationMappingIO().read(mappingFile);
 		assertEquals("PL/I", accumulated.getSource().getSystem());
 		assertEquals(2, accumulated.getTransformations().size());
-		assertTrue(accumulated.getTables().stream()
-				.filter(item -> "EMPLOYEE_LIST".equals(item.getTarget().getTable())).findFirst().orElseThrow()
-				.getColumns().stream().anyMatch(column -> "EMP_ID".equals(column.getTarget())
-						&& column.getSourcePath().endsWith(".EMP_ID")));
-		assertTrue(accumulated.getRelationships().stream().anyMatch(relationship ->
-				relationship.isParentIdPropagation()
-						&& "PARENT_ID".equals(relationship.getTargetKeys().getFirst().getChildColumn())));
+		assertTrue(accumulated.getTables().stream().filter(item -> "EMPLOYEE_LIST".equals(item.getTarget().getTable()))
+				.findFirst().orElseThrow().getColumns().stream()
+				.anyMatch(column -> "EMP_ID".equals(column.getTarget()) && column.getSourcePath().endsWith(".EMP_ID")));
+		assertTrue(accumulated.getRelationships().stream().anyMatch(relationship -> relationship.isParentIdPropagation()
+				&& "PARENT_ID".equals(relationship.getTargetKeys().getFirst().getChildColumn())));
 	}
 
 	private void assertColumns(Table table, String... names) {

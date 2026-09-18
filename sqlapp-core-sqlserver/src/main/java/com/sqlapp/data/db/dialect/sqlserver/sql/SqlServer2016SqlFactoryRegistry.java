@@ -33,15 +33,11 @@ public class SqlServer2016SqlFactoryRegistry extends SqlServer2014SqlFactoryRegi
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2016CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2016AlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DROP,
-				SqlServer2016DropTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2016CreateIndexFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2016CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2016AlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, SqlServer2016DropTableFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2016CreateIndexFactory.class);
 	}
 }

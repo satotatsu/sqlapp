@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropTypeBodyFactory;
 import com.sqlapp.data.schemas.TypeBody;
 
-public class OracleDropTypeBodyFactory extends
-		AbstractDropTypeBodyFactory<OracleSqlBuilder> {
+public class OracleDropTypeBodyFactory extends AbstractDropTypeBodyFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addDropObject(TypeBody obj, OracleSqlBuilder builder) {

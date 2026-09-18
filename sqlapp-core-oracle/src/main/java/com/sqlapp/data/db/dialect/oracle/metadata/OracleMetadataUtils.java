@@ -67,19 +67,14 @@ public class OracleMetadataUtils {
 	 * パーティションカラム情報を設定します
 	 * 
 	 * @param connection
-	 * @param node
-	 *            SQL
+	 * @param node          SQL
 	 * @param context
-	 * @param objectType
-	 *            TABLE or INDEX
-	 * @param objectName
-	 *            テーブル名 or インデックス名
-	 * @param partitionInfo
-	 *            パーティション情報
+	 * @param objectType    TABLE or INDEX
+	 * @param objectName    テーブル名 or インデックス名
+	 * @param partitionInfo パーティション情報
 	 */
-	protected static void setPartitionColumnInfo(Connection connection,
-			SqlNode node, ParametersContext context, String objectType,
-			String objectName, final Partitioning partitionInfo) {
+	protected static void setPartitionColumnInfo(Connection connection, SqlNode node, ParametersContext context,
+			String objectType, String objectName, final Partitioning partitionInfo) {
 		context.put("objectType", objectType);
 		context.put("objectName", objectName);
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -91,9 +86,8 @@ public class OracleMetadataUtils {
 		});
 	}
 
-	protected static JdbcQueryHandler execute(final Connection connection,
-			SqlNode node, final ParametersContext context,
-			ResultSetNextHandler handler) {
+	protected static JdbcQueryHandler execute(final Connection connection, SqlNode node,
+			final ParametersContext context, ResultSetNextHandler handler) {
 		JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
 		return jdbcQueryHandler.execute(connection, context);
 	}
@@ -101,19 +95,14 @@ public class OracleMetadataUtils {
 	/**
 	 * サブパーティションカラム情報を設定します
 	 * 
-	 * @param node
-	 *            SQL
+	 * @param node          SQL
 	 * @param context
-	 * @param objectType
-	 *            TABLE or INDEX
-	 * @param objectName
-	 *            テーブル名 or インデックス名
-	 * @param partitionInfo
-	 *            パーティション情報
+	 * @param objectType    TABLE or INDEX
+	 * @param objectName    テーブル名 or インデックス名
+	 * @param partitionInfo パーティション情報
 	 */
-	protected static void setSubPartitionColumnInfo(Connection connection,
-			SqlNode node, ParametersContext context, String objectType,
-			String objectName, final Partitioning partitionInfo) {
+	protected static void setSubPartitionColumnInfo(Connection connection, SqlNode node, ParametersContext context,
+			String objectType, String objectName, final Partitioning partitionInfo) {
 		context.put("objectType", objectType);
 		context.put("objectName", objectName);
 		final List<String> columnNameSet = list();
@@ -129,14 +118,12 @@ public class OracleMetadataUtils {
 		}
 	}
 
-	protected static void setCommonInfo(ResultSet rs,
-			AbstractSchemaObject<?> obj) throws SQLException {
+	protected static void setCommonInfo(ResultSet rs, AbstractSchemaObject<?> obj) throws SQLException {
 		obj.setSchemaName(rs.getString("OWNER"));
-		setCommonInfo(rs, (AbstractNamedObject<?>)obj);
+		setCommonInfo(rs, (AbstractNamedObject<?>) obj);
 	}
 
-	protected static void setCommonInfo(ResultSet rs, AbstractNamedObject<?> obj)
-			throws SQLException {
+	protected static void setCommonInfo(ResultSet rs, AbstractNamedObject<?> obj) throws SQLException {
 		obj.setCreatedAt(rs.getTimestamp("CREATED"));
 		obj.setLastAlteredAt(rs.getTimestamp("LAST_DDL_TIME"));
 		if (!"VALID".equalsIgnoreCase(rs.getString("STATUS"))) {
@@ -152,20 +139,20 @@ public class OracleMetadataUtils {
 	 * @param routineType
 	 */
 	protected static DoubleKeyMap<String, String, List<String>> getRoutineSources(Connection connection,
-			Dialect dialect, ParametersContext context,
-			List<? extends AbstractSchemaObject<?>> list, String routineType) {
-		Set<String> schemaNames=CommonUtils.treeSet();
-		Set<String> objectNames=CommonUtils.treeSet();
-		for(AbstractSchemaObject<?> obj:list){
-			if (obj.getSchemaName()!=null){
+			Dialect dialect, ParametersContext context, List<? extends AbstractSchemaObject<?>> list,
+			String routineType) {
+		Set<String> schemaNames = CommonUtils.treeSet();
+		Set<String> objectNames = CommonUtils.treeSet();
+		for (AbstractSchemaObject<?> obj : list) {
+			if (obj.getSchemaName() != null) {
 				schemaNames.add(obj.getSchemaName());
 			}
-			if (obj.getName()!=null){
+			if (obj.getName() != null) {
 				objectNames.add(obj.getName());
 			}
 		}
-		final DoubleKeyMap<String, String, List<String>> result=new DoubleKeyMap<String, String, List<String>>();
-		if (schemaNames.isEmpty()&&objectNames.isEmpty()){
+		final DoubleKeyMap<String, String, List<String>> result = new DoubleKeyMap<String, String, List<String>>();
+		if (schemaNames.isEmpty() && objectNames.isEmpty()) {
 			return result;
 		}
 		SqlNode node = getSqlNodeCache().getString("source.sql");
@@ -175,10 +162,10 @@ public class OracleMetadataUtils {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=rs.getString("OWNER");
-				String objectName=rs.getString("NAME");
-				List<String> texts=result.get(schemaName, objectName);
-				if (texts==null){
+				String schemaName = rs.getString("OWNER");
+				String objectName = rs.getString("NAME");
+				List<String> texts = result.get(schemaName, objectName);
+				if (texts == null) {
 					texts = list();
 					result.put(schemaName, objectName, texts);
 				}
@@ -193,94 +180,103 @@ public class OracleMetadataUtils {
 	/**
 	 * FunctionのStatementを抽出します。
 	 * 
-	 * @param obj オブジェクト
+	 * @param obj        オブジェクト
 	 * @param difinition 定義
 	 */
 	protected static String getFunctionStatement(AbstractSchemaObject<?> obj, List<String> difinition) {
-		Pattern pattern=Pattern.compile("FUNCTION\\s+("+obj.getName()+"|\""+obj.getName()+"\")[\\s\\n]*.*?RETURN\\s+([^-/\\s\\n])+\\s+(?<statement>.*)", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
-		Pattern endPattern=createEndPattern(obj);
-		StringBuilder builder=new StringBuilder();
-		for(String text:difinition){
+		Pattern pattern = Pattern.compile(
+				"FUNCTION\\s+(" + obj.getName() + "|\"" + obj.getName()
+						+ "\")[\\s\\n]*.*?RETURN\\s+([^-/\\s\\n])+\\s+(?<statement>.*)",
+				Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+		Pattern endPattern = createEndPattern(obj);
+		StringBuilder builder = new StringBuilder();
+		for (String text : difinition) {
 			builder.append(text);
 			builder.append('\n');
 		}
-		Matcher matcher=pattern.matcher(builder.substring(0, builder.length()-1));
-		if (matcher.matches()){
-			String statement=matcher.group("statement");
-			Matcher endMatcher=endPattern.matcher(statement);
-			if (endMatcher.matches()){
-				return endMatcher.group("statement")+endMatcher.group("end");
-			} else{
+		Matcher matcher = pattern.matcher(builder.substring(0, builder.length() - 1));
+		if (matcher.matches()) {
+			String statement = matcher.group("statement");
+			Matcher endMatcher = endPattern.matcher(statement);
+			if (endMatcher.matches()) {
+				return endMatcher.group("statement") + endMatcher.group("end");
+			} else {
 				return statement;
 			}
 		}
 		return null;
 	}
 
-	private static final Pattern createEndPattern(AbstractSchemaObject<?> obj){
-		Pattern endPattern=Pattern.compile("(?<statement>.*)(?<end>END)\\s+"+obj.getName()+"\\s*.*", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
+	private static final Pattern createEndPattern(AbstractSchemaObject<?> obj) {
+		Pattern endPattern = Pattern.compile("(?<statement>.*)(?<end>END)\\s+" + obj.getName() + "\\s*.*",
+				Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
 		return endPattern;
 	}
-	
+
 	/**
 	 * ProcedureのStatementを抽出します。
 	 * 
-	 * @param obj オブジェクト
+	 * @param obj        オブジェクト
 	 * @param difinition 定義
 	 */
 	protected static String getProcedureStatement(AbstractSchemaObject<?> obj, List<String> difinition) {
-		Pattern pattern=Pattern.compile("PROCEDURE\\s+("+obj.getName()+"|\""+obj.getName()+"\")[\\s\\n]*.*?(?<asis>AS|IS)(?<statement>.*)", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
-		Pattern endPattern=createEndPattern(obj);
-		StringBuilder builder=new StringBuilder();
-		for(String text:difinition){
+		Pattern pattern = Pattern.compile(
+				"PROCEDURE\\s+(" + obj.getName() + "|\"" + obj.getName()
+						+ "\")[\\s\\n]*.*?(?<asis>AS|IS)(?<statement>.*)",
+				Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+		Pattern endPattern = createEndPattern(obj);
+		StringBuilder builder = new StringBuilder();
+		for (String text : difinition) {
 			builder.append(text);
 			builder.append('\n');
 		}
-		Matcher matcher=pattern.matcher(builder.substring(0, builder.length()-1));
-		if (matcher.matches()){
-			String asis=matcher.group("asis");
-			String statement=matcher.group("statement");
-			statement=asis+statement;
-			Matcher endMatcher=endPattern.matcher(statement);
-			if (endMatcher.matches()){
-				return endMatcher.group(1)+endMatcher.group(2);
-			} else{
+		Matcher matcher = pattern.matcher(builder.substring(0, builder.length() - 1));
+		if (matcher.matches()) {
+			String asis = matcher.group("asis");
+			String statement = matcher.group("statement");
+			statement = asis + statement;
+			Matcher endMatcher = endPattern.matcher(statement);
+			if (endMatcher.matches()) {
+				return endMatcher.group(1) + endMatcher.group(2);
+			} else {
 				return statement;
 			}
 		}
 		return null;
 	}
-	
+
 	/**
 	 * PackageのStatementを抽出します。
 	 * 
-	 * @param obj オブジェクト
+	 * @param obj        オブジェクト
 	 * @param difinition 定義
 	 */
 	protected static String getPackageStatement(AbstractSchemaObject<?> obj, List<String> difinition) {
-		Pattern pattern=Pattern.compile("PACKAGE\\s*(BODY)?\\s+("+obj.getName()+"|\""+obj.getName()+"\")[\\s\\n]*.*?(?<asis>AS|IS)(?<statement>.*)", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
-		Pattern endPattern=createEndPattern(obj);
-		StringBuilder builder=new StringBuilder();
-		for(String text:difinition){
+		Pattern pattern = Pattern.compile(
+				"PACKAGE\\s*(BODY)?\\s+(" + obj.getName() + "|\"" + obj.getName()
+						+ "\")[\\s\\n]*.*?(?<asis>AS|IS)(?<statement>.*)",
+				Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+		Pattern endPattern = createEndPattern(obj);
+		StringBuilder builder = new StringBuilder();
+		for (String text : difinition) {
 			builder.append(text);
 			builder.append('\n');
 		}
-		Matcher matcher=pattern.matcher(builder.substring(0, builder.length()-1));
-		if (matcher.matches()){
-			String asis=matcher.group("asis");
-			String statement=matcher.group("statement");
-			statement=asis+statement;
-			Matcher endMatcher=endPattern.matcher(statement);
-			if (endMatcher.matches()){
-				return endMatcher.group(1)+endMatcher.group(2);
-			} else{
+		Matcher matcher = pattern.matcher(builder.substring(0, builder.length() - 1));
+		if (matcher.matches()) {
+			String asis = matcher.group("asis");
+			String statement = matcher.group("statement");
+			statement = asis + statement;
+			Matcher endMatcher = endPattern.matcher(statement);
+			if (endMatcher.matches()) {
+				return endMatcher.group(1) + endMatcher.group(2);
+			} else {
 				return statement;
 			}
 		}
 		return null;
 	}
-	
-	
+
 	public static SqlNodeCache getSqlNodeCache() {
 		return SqlNodeCache.getInstance(OracleMetadataUtils.class);
 	}
@@ -294,8 +290,8 @@ public class OracleMetadataUtils {
 	 * @param objectName
 	 * @throws SQLException
 	 */
-	public static String getDdl(Connection connection, String objectType,
-			String schemaName, String objectName) throws SQLException {
+	public static String getDdl(Connection connection, String objectType, String schemaName, String objectName)
+			throws SQLException {
 		SqlExecuter sql = new SqlExecuter("SELECT ");
 		sql.addSql("DBMS_METADATA.GET_DDL(?, ?");
 		sql.addParameter(objectType);
@@ -328,8 +324,7 @@ public class OracleMetadataUtils {
 	 * @param deferrable
 	 * @param deferred
 	 */
-	public static Deferrability getDeferrability(String deferrable,
-			String deferred) {
+	public static Deferrability getDeferrability(String deferrable, String deferred) {
 		if ("DEFERRABLE".equalsIgnoreCase(deferrable)) {
 			if ("IMMEDIATE".equalsIgnoreCase(deferred)) {
 				return Deferrability.InitiallyImmediate;
@@ -342,8 +337,8 @@ public class OracleMetadataUtils {
 		return null;
 	}
 
-	public static boolean hasSelectPrivilege(Connection connection,
-			Dialect dialect, String schemaName, String tableName) {
+	public static boolean hasSelectPrivilege(Connection connection, Dialect dialect, String schemaName,
+			String tableName) {
 		SqlNode node = getSqlNodeCache().getString("hasPrivileges.sql");
 		ParametersContext context = new ParametersContext();
 		context.put("schemaName", schemaName);
@@ -358,10 +353,8 @@ public class OracleMetadataUtils {
 				obj.setSchemaName(rs.getString("TABLE_SCHEMA"));
 				obj.setObjectName(rs.getString(TABLE_NAME));
 				obj.setPrivilege(rs.getString("PRIVILEGE"));
-				obj.setGrantable("YES".equalsIgnoreCase(rs
-						.getString("GRANTABLE")));
-				obj.setHierachy("YES".equalsIgnoreCase(rs
-						.getString("HIERARCHY")));
+				obj.setGrantable("YES".equalsIgnoreCase(rs.getString("GRANTABLE")));
+				obj.setHierachy("YES".equalsIgnoreCase(rs.getString("HIERARCHY")));
 				result.add(obj);
 			}
 		});
@@ -383,12 +376,11 @@ public class OracleMetadataUtils {
 			context.put("dbaOrUser", "USER");
 		}
 	}
-	
-	protected static void setNamedArgument(ResultSet rs, Routine<?> routine, NamedArgument obj)
-			throws SQLException {
-		long dataLevel=rs.getLong("DATA_LEVEL");
-		String name=getString(rs, "ARGUMENT_NAME");
-		if (name==null&&dataLevel==0){
+
+	protected static void setNamedArgument(ResultSet rs, Routine<?> routine, NamedArgument obj) throws SQLException {
+		long dataLevel = rs.getLong("DATA_LEVEL");
+		String name = getString(rs, "ARGUMENT_NAME");
+		if (name == null && dataLevel == 0) {
 			return;
 		}
 		routine.setSchemaName(getString(rs, "OWNER"));
@@ -397,24 +389,24 @@ public class OracleMetadataUtils {
 		obj.setSchemaName(getString(rs, "OWNER"));
 		obj.setDirection(ParameterDirection.parse(getString(rs, "IN_OUT")));
 		String productDataType = getString(rs, "DATA_TYPE");
-		String def=getString(rs, "DEFAULTED");
-		if ("Y".equals(def)){
+		String def = getString(rs, "DEFAULTED");
+		if ("Y".equals(def)) {
 			obj.setDefaultValue("NULL");
 		}
 		long max_length = rs.getLong("CHAR_LENGTH");
 		long precision = rs.getLong("DATA_PRECISION");
 		Integer scale = getInteger(rs, "DATA_SCALE");
-		String characterSetName=getString(rs, "CHARACTER_SET_NAME");
+		String characterSetName = getString(rs, "CHARACTER_SET_NAME");
 		obj.setCharacterSet(characterSetName);
 		obj.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
-		if ("OBJECT".equals(productDataType)){
-			String typeName=getString(rs, "TYPE_NAME");
+		if ("OBJECT".equals(productDataType)) {
+			String typeName = getString(rs, "TYPE_NAME");
 			obj.setDataTypeName(typeName);
 		}
 		SchemaUtils.setRoutine(obj, routine);
 	}
 
-	private static String getString(ResultSet rs, String name) throws SQLException{
+	private static String getString(ResultSet rs, String name) throws SQLException {
 		return rs.getString(name);
 	}
 
@@ -426,8 +418,7 @@ public class OracleMetadataUtils {
 	 * @throws SQLException
 	 */
 	protected static Integer getInteger(ResultSet rs, String name) throws SQLException {
-		Integer val = Converters.getDefault().convertObject(rs.getObject(name),
-				Integer.class);
+		Integer val = Converters.getDefault().convertObject(rs.getObject(name), Integer.class);
 		return val;
 	}
 }

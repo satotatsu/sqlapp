@@ -9,8 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 public class SqlServerBulkUpsertProvider implements BulkUpsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect != null && "Microsoft SQL Server"
-				.equalsIgnoreCase(dialect.getProductName())
+		return dialect != null && "Microsoft SQL Server".equalsIgnoreCase(dialect.getProductName())
 				&& dialect.supportsMerge();
 	}
 

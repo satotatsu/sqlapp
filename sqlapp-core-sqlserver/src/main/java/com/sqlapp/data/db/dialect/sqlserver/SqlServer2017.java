@@ -60,7 +60,7 @@ public class SqlServer2017 extends SqlServer2016Sp1 {
 		}
 		return true;
 	}
-	
+
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new SqlServer2017CatalogReader(this);

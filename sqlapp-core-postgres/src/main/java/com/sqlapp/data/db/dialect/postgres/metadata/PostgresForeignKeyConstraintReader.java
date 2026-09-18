@@ -46,16 +46,14 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public class PostgresForeignKeyConstraintReader extends
-		ForeignKeyConstraintReader {
+public class PostgresForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 
 	public PostgresForeignKeyConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -68,33 +66,25 @@ public class PostgresForeignKeyConstraintReader extends
 				String pk_table_schema = getString(rs, "constraint_schema");
 				String pk_table_name = getString(rs, TABLE_NAME);
 				String pk_columnName = getString(rs, COLUMN_NAME);
-				String fk_table_schema = getString(rs,
-						"referential_table_schema");
+				String fk_table_schema = getString(rs, "referential_table_schema");
 				String fk_table_name = getString(rs, "referential_table_name");
 				String fk_columnName = getString(rs, "referential_column_name");
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setSchemaName(pk_table_schema);
 					c.setTableName(pk_table_name);
-					c.setUpdateRule(CascadeRule.parse(getString(rs,
-							"update_rule")));
-					c.setDeleteRule(CascadeRule.parse(getString(rs,
-							"delete_rule")));
-					c.setDeferrability(Deferrability.getDeferrability(
-							rs.getBoolean("is_deferrable"),
+					c.setUpdateRule(CascadeRule.parse(getString(rs, "update_rule")));
+					c.setDeleteRule(CascadeRule.parse(getString(rs, "delete_rule")));
+					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
 					c.setMatchOption(getString(rs, "match_option"));
-					PostgresTemporalConstraintMetadata.apply(c,
-							getString(rs, "consrc"));
+					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
-					tColMap.put(pk_table_catalog, pk_table_schema, fk_name,
-							colList);
+					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

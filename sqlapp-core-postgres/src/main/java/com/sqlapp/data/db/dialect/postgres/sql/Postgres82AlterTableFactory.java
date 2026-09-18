@@ -34,8 +34,8 @@ import com.sqlapp.data.schemas.Table;
  */
 public class Postgres82AlterTableFactory extends PostgresAlterTableFactory {
 	@Override
-	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff
-			, Table originalTable, Table table, List<SqlOperation> result){
+	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
+			List<SqlOperation> result) {
 		super.addOtherDefinitions(allDiff, originalTable, table, result);
 	}
 

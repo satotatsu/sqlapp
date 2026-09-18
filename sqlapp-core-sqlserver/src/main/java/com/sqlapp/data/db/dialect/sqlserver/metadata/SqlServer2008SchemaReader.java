@@ -22,12 +22,14 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.metadata.TypeReader;
+
 /**
  * SqlServer2008のスキーマ読み込み
+ * 
  * @author satoh
  *
  */
-public class SqlServer2008SchemaReader extends SqlServer2005SchemaReader{
+public class SqlServer2008SchemaReader extends SqlServer2005SchemaReader {
 
 	public SqlServer2008SchemaReader(Dialect dialect) {
 		super(dialect);
@@ -37,7 +39,7 @@ public class SqlServer2008SchemaReader extends SqlServer2005SchemaReader{
 	protected TableReader newTableReader() {
 		return new SqlServer2008TableReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected TypeReader newTypeReader() {
 		return new SqlServer2008TypeReader(this.getDialect());

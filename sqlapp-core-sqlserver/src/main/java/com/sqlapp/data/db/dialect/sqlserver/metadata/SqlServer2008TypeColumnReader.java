@@ -50,8 +50,7 @@ public class SqlServer2008TypeColumnReader extends TypeColumnReader {
 	}
 
 	@Override
-	protected List<TypeColumn> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TypeColumn> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TypeColumn> result = list();
@@ -73,14 +72,12 @@ public class SqlServer2008TypeColumnReader extends TypeColumnReader {
 		TypeColumn obj = createObject(getString(rs, COLUMN_NAME));
 		String productDataType = getString(rs, "column_type_name");
 		Long byteLength = getLong(rs, "max_length");
-		Long max_length = SqlServerUtils.getMaxLength(productDataType,
-				byteLength);
+		Long max_length = SqlServerUtils.getMaxLength(productDataType, byteLength);
 		long precision = rs.getLong("precision");
 		Integer scale = getInteger(rs, "scale");
 		obj.setNullable(rs.getBoolean("is_nullable"));
 		obj.setIdentity(rs.getBoolean("is_identity"));
-		this.getDialect().setDbType(productDataType,
-				notZero(max_length, precision), scale, obj);
+		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
 		obj.setDefaultValue(unwrap(getString(rs, "default_definition"), '(', ')'));
 		// column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
@@ -92,8 +89,7 @@ public class SqlServer2008TypeColumnReader extends TypeColumnReader {
 			obj.setIdentityLastValue(rs.getLong("ident_current"));
 		}
 		obj.setRemarks(getString(rs, "remarks"));
-		String check_definition = trim(unwrap(
-				getString(rs, "check_definition"), '(', ')'));
+		String check_definition = trim(unwrap(getString(rs, "check_definition"), '(', ')'));
 		obj.setCheck(check_definition);
 		setSpecifics(rs, "is_rowguidcol", obj);
 		// setDbSpecificInfo(rs, "is_id_not_for_repl", column);

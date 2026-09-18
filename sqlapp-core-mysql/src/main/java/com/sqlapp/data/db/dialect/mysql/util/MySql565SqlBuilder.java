@@ -38,14 +38,14 @@ public class MySql565SqlBuilder extends MySqlSqlBuilder {
 	public MySql565SqlBuilder(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
-	public MySql565SqlBuilder clone(){
-		return (MySql565SqlBuilder)super.clone();
+	public MySql565SqlBuilder clone() {
+		return (MySql565SqlBuilder) super.clone();
 	}
-	
+
 	@Override
-	protected void onUpdateDefinition(Column column){
+	protected void onUpdateDefinition(Column column) {
 		this.on().update().space()._add(column.getOnUpdate());
 	}
 

@@ -27,46 +27,48 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 
-public class MySqlSqlSplitter extends SqlSplitter{
+public class MySqlSqlSplitter extends SqlSplitter {
 
 	public MySqlSqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern CHANGE_DELIMITER=Pattern.compile("\\s*delimiter\\s+(?<delimiter>[^\\s]+)\\s*", Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern CHANGE_DELIMITER = Pattern.compile("\\s*delimiter\\s+(?<delimiter>[^\\s]+)\\s*",
+			Pattern.CASE_INSENSITIVE);
 
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){			
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isChangeDelimiter(String text, StringHolder stringHolder){
-				Matcher matcher=CHANGE_DELIMITER.matcher(text);
-				if (matcher.matches()){
-					String delimiter=matcher.group("delimiter");
+			protected boolean isChangeDelimiter(String text, StringHolder stringHolder) {
+				Matcher matcher = CHANGE_DELIMITER.matcher(text);
+				if (matcher.matches()) {
+					String delimiter = matcher.group("delimiter");
 					this.setCurrentDelimiter(delimiter);
 					stringHolder.addPosition(matcher.group(0).length());
 					return true;
 				}
 				return false;
 			}
+
 			@Override
-			protected boolean isLineComment(String value){
-				if (value.startsWith("#")){
+			protected boolean isLineComment(String value) {
+				if (value.startsWith("#")) {
 					return true;
 				}
-				if (value.trim().startsWith("--")){
+				if (value.trim().startsWith("--")) {
 					return true;
 				}
 				return false;
 			}
 		};
 	}
-	
+
 	@Override
-	protected TextType getTextType(boolean isComment, String sql){
-		if (isComment){
-			Matcher matcher=DIRECTIVE_PATTERN.matcher(sql);
-			if (matcher.matches()){
+	protected TextType getTextType(boolean isComment, String sql) {
+		if (isComment) {
+			Matcher matcher = DIRECTIVE_PATTERN.matcher(sql);
+			if (matcher.matches()) {
 				return TextType.COMMENT_DIRECTIVE;
 			}
 			return TextType.COMMENT;
@@ -74,6 +76,7 @@ public class MySqlSqlSplitter extends SqlSplitter{
 		return TextType.SQL;
 	}
 
-	private static final Pattern DIRECTIVE_PATTERN=Pattern.compile("/\\*![0-9]{5}\\s+.*?\\*/", Pattern.MULTILINE+Pattern.DOTALL);
-	
+	private static final Pattern DIRECTIVE_PATTERN = Pattern.compile("/\\*![0-9]{5}\\s+.*?\\*/",
+			Pattern.MULTILINE + Pattern.DOTALL);
+
 }

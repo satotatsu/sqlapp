@@ -60,8 +60,7 @@ public class PostgresUtils extends ReaderUtils {
 	 * @param column
 	 * @throws SQLException
 	 */
-	public static void setColumnMetadata(ResultSet rs, Dialect dialect,
-			AbstractColumn<?> column) throws SQLException {
+	public static void setColumnMetadata(ResultSet rs, Dialect dialect, AbstractColumn<?> column) throws SQLException {
 		column.setName(rs.getString("attname"));
 		column.setSchemaName(rs.getString("nspname"));
 		String productDataType = rs.getString("typname");
@@ -83,13 +82,13 @@ public class PostgresUtils extends ReaderUtils {
 		String generatedType = rs.getString("attgenerated");
 		if (!isEmpty(identityType)) {
 			autoIncrement = true;
-			column.setIdentityGenerationType("a".equals(identityType)
-					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
+			column.setIdentityGenerationType(
+					"a".equals(identityType) ? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
 		}
 		column.setNullable(nullable);
 		column.setIdentity(autoIncrement);
-		dialect.setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision)
-				, CommonUtils.notZero(numericScale, datetimeScale, intervalScale), column);
+		dialect.setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision),
+				CommonUtils.notZero(numericScale, datetimeScale, intervalScale), column);
 		if (!isEmpty(sequenceName)) {
 			String[] names = sequenceName.split("[.]");
 			Sequence sequence = new Sequence(names[names.length - 1]);
@@ -104,8 +103,7 @@ public class PostgresUtils extends ReaderUtils {
 		column.setRemarks(rs.getString("remarks"));
 	}
 
-	static void setGeneratedExpression(AbstractColumn<?> column,
-			String expression, String generatedType) {
+	static void setGeneratedExpression(AbstractColumn<?> column, String expression, String generatedType) {
 		if (!isEmpty(generatedType)) {
 			column.setFormula(expression);
 			column.setFormulaPersisted("s".equals(generatedType));
@@ -124,23 +122,22 @@ public class PostgresUtils extends ReaderUtils {
 	 * @param typeId
 	 * @return 型情報
 	 */
-	public static NamedArgument getTypeInfoById(Connection connection,
-			final Dialect dialect, final String typeId) {
-		WeakReference<NamedArgument> ref=TYPE_CACHE.get(typeId);
-		NamedArgument arg=null;
+	public static NamedArgument getTypeInfoById(Connection connection, final Dialect dialect, final String typeId) {
+		WeakReference<NamedArgument> ref = TYPE_CACHE.get(typeId);
+		NamedArgument arg = null;
 		if (ref != null) {
-			arg=ref.get();
+			arg = ref.get();
 			if (arg != null) {
 				return arg;
-			} else{
-				synchronized(TYPE_CACHE){
-					Set<String> keySet=CommonUtils.set();
-					for(Map.Entry<String, WeakReference<NamedArgument>> entry:TYPE_CACHE.entrySet()){
-						if (entry.getValue()==null||entry.getValue().get()==null){
+			} else {
+				synchronized (TYPE_CACHE) {
+					Set<String> keySet = CommonUtils.set();
+					for (Map.Entry<String, WeakReference<NamedArgument>> entry : TYPE_CACHE.entrySet()) {
+						if (entry.getValue() == null || entry.getValue().get() == null) {
 							keySet.add(entry.getKey());
 						}
 					}
-					for(String key:keySet){
+					for (String key : keySet) {
 						TYPE_CACHE.remove(key);
 					}
 				}
@@ -162,30 +159,27 @@ public class PostgresUtils extends ReaderUtils {
 				}
 			}
 		});
-		if (obj.getDataTypeName() == null&&obj.getDataType()==null) {
+		if (obj.getDataTypeName() == null && obj.getDataType() == null) {
 			throw new RuntimeException("typeId=" + typeId);
 		}
 		return obj;
 	}
 
-	public static List<NamedArgument> getTypeInfoById(Connection connection,
-			final Dialect dialect, final String... typeIds) {
+	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,
+			final String... typeIds) {
 		List<NamedArgument> result = list();
 		for (String typeId : typeIds) {
-			NamedArgument routineArgument = getTypeInfoById(connection,
-					dialect, typeId);
+			NamedArgument routineArgument = getTypeInfoById(connection, dialect, typeId);
 			result.add(routineArgument);
 		}
 		return result;
 	}
 
-	public static List<NamedArgument> getTypeInfoById(Connection connection,
-			final Dialect dialect, final String[] typeIds, String[] argNames,
-			String[] argModes) {
+	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,
+			final String[] typeIds, String[] argNames, String[] argModes) {
 		List<NamedArgument> result = list();
 		for (int i = 0; i < typeIds.length; i++) {
-			NamedArgument routineArgument = getTypeInfoById(connection,
-					dialect, typeIds[i]);
+			NamedArgument routineArgument = getTypeInfoById(connection, dialect, typeIds[i]);
 			if (!isEmpty(argModes) && argModes.length > i) {
 				String mode = argModes[i];
 				if ("o".equalsIgnoreCase(mode)) {
@@ -203,13 +197,11 @@ public class PostgresUtils extends ReaderUtils {
 		return result;
 	}
 
-	public static List<NamedArgument> getTypeInfoById(Connection connection,
-			final Dialect dialect, final String[] typeIds, String[] argNames,
-			String[] argModes, String[] argDefaults) {
+	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,
+			final String[] typeIds, String[] argNames, String[] argModes, String[] argDefaults) {
 		List<NamedArgument> result = list();
 		for (int i = 0; i < typeIds.length; i++) {
-			NamedArgument routineArgument = getTypeInfoById(connection,
-					dialect, typeIds[i]);
+			NamedArgument routineArgument = getTypeInfoById(connection, dialect, typeIds[i]);
 			if (!isEmpty(argModes) && argModes.length > i) {
 				String mode = argModes[i];
 				if ("o".equalsIgnoreCase(mode)) {
@@ -230,10 +222,8 @@ public class PostgresUtils extends ReaderUtils {
 		return result;
 	}
 
-	
-	protected static JdbcQueryHandler execute(final Connection connection,
-			SqlNode node, final ParametersContext context,
-			ResultSetNextHandler handler) {
+	protected static JdbcQueryHandler execute(final Connection connection, SqlNode node,
+			final ParametersContext context, ResultSetNextHandler handler) {
 		JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
 		return jdbcQueryHandler.execute(connection, context);
 	}
@@ -241,24 +231,24 @@ public class PostgresUtils extends ReaderUtils {
 	protected static SqlNodeCache getSqlNodeCache() {
 		return SqlNodeCache.getInstance(PostgresUtils.class);
 	}
-	
-	private static final Pattern RELOPTION_PATTERN=Pattern.compile("\\s*\\{(.*)\\}\\s*", Pattern.CASE_INSENSITIVE);
-	
-	public static Map<String,String> parseRelOption(String value){
-		if (value==null||value.length()==0){
+
+	private static final Pattern RELOPTION_PATTERN = Pattern.compile("\\s*\\{(.*)\\}\\s*", Pattern.CASE_INSENSITIVE);
+
+	public static Map<String, String> parseRelOption(String value) {
+		if (value == null || value.length() == 0) {
 			return Collections.emptyMap();
 		}
-		Map<String,String> map=CommonUtils.map();
-		Matcher matcher=RELOPTION_PATTERN.matcher(value);
-		if (matcher.matches()){
-			value=matcher.group(1);
-			String[] args=value.split("\\s*(,;)\\s*");
-			for(String arg:args){
-				String[] splits=arg.split("\\s*=\\s*");
-				if (splits.length==2){
+		Map<String, String> map = CommonUtils.map();
+		Matcher matcher = RELOPTION_PATTERN.matcher(value);
+		if (matcher.matches()) {
+			value = matcher.group(1);
+			String[] args = value.split("\\s*(,;)\\s*");
+			for (String arg : args) {
+				String[] splits = arg.split("\\s*=\\s*");
+				if (splits.length == 2) {
 					map.put(splits[0], splits[1]);
-				}else{
-					throw new IllegalArgumentException("value="+value);
+				} else {
+					throw new IllegalArgumentException("value=" + value);
 				}
 			}
 		}

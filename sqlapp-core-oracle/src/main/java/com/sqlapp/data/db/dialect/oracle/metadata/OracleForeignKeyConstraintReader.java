@@ -45,16 +45,14 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public class OracleForeignKeyConstraintReader extends
-		ForeignKeyConstraintReader {
+public class OracleForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 
 	public OracleForeignKeyConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -69,14 +67,10 @@ public class OracleForeignKeyConstraintReader extends
 				String table_name = getString(rs, TABLE_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
 				String reference_table_schema = getString(rs, "REFERENCE_OWNER");
-				String reference_table_name = getString(rs,
-						"REFERENCE_TABLE_NAME");
-				String reference_columnName = getString(rs,
-						"REFERENCE_COLUMN_NAME");
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, fk_schema,
-						fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog,
-						fk_schema, fk_name);
+				String reference_table_name = getString(rs, "REFERENCE_TABLE_NAME");
+				String reference_columnName = getString(rs, "REFERENCE_COLUMN_NAME");
+				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, fk_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, fk_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setSchemaName(fk_schema);
@@ -85,8 +79,7 @@ public class OracleForeignKeyConstraintReader extends
 					c.setDeleteRule(rs.getString(DELETE_RULE));
 					String deferrable = getString(rs, "DEFERRABLE");
 					String deferred = getString(rs, "DEFERRED");
-					c.setDeferrability(OracleMetadataUtils.getDeferrability(
-							deferrable, deferred));
+					c.setDeferrability(OracleMetadataUtils.getDeferrability(deferrable, deferred));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, fk_schema, fk_name, c);
 					tColMap.put(pk_table_catalog, fk_schema, fk_name, colList);

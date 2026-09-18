@@ -14,7 +14,8 @@ import com.sqlapp.data.db.command.migration.GenerateMigrationSnapshotApprovalRep
 public abstract class GenerateMigrationSnapshotApprovalReportTask
 		extends AbstractTask<GenerateMigrationSnapshotApprovalReportCommand> {
 	public GenerateMigrationSnapshotApprovalReportTask() {
-		// schemaFile is resolved from YAML at execution time and is therefore an indirect input.
+		// schemaFile is resolved from YAML at execution time and is therefore an
+		// indirect input.
 		getOutputs().upToDateWhen(task -> false);
 	}
 

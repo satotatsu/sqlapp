@@ -47,8 +47,7 @@ public class PostgresTriggerReader extends TriggerReader {
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Trigger> result = list();
@@ -77,8 +76,7 @@ public class PostgresTriggerReader extends TriggerReader {
 		obj.addEventManipulation(getString(rs, "is_delete"));
 		obj.setRemarks(getString(rs, "remarks"));
 		// A:常にトリガーが起動、O:起点モードとローカルモードでトリガが起動、D:無効、R:replicaモード
-		obj.setEnable(!"D".equalsIgnoreCase(getString(rs,
-				"tgenabled")));
+		obj.setEnable(!"D".equalsIgnoreCase(getString(rs, "tgenabled")));
 		return obj;
 	}
 

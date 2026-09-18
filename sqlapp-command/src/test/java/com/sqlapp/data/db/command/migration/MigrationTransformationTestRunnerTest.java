@@ -22,10 +22,10 @@ class MigrationTransformationTestRunnerTest {
 					FROM (VALUES (1, CAST('alice' AS VARCHAR(20))), (2, CAST('bob' AS VARCHAR(20)))) AS FIXTURE(ID, NAME)
 					WHERE ID IN /*ids*/(1)
 					""";
-			final var passing = new MigrationTransformationTest("upper-name", sql,
-					Map.of("ids", List.of(1, 2)), List.of(List.of("2", "BOB"), List.of("1", "ALICE")), false);
-			final var failing = new MigrationTransformationTest("wrong-name", sql,
-					Map.of("ids", List.of(1)), List.of(List.of("1", "BOB")), true);
+			final var passing = new MigrationTransformationTest("upper-name", sql, Map.of("ids", List.of(1, 2)),
+					List.of(List.of("2", "BOB"), List.of("1", "ALICE")), false);
+			final var failing = new MigrationTransformationTest("wrong-name", sql, Map.of("ids", List.of(1)),
+					List.of(List.of("1", "BOB")), true);
 
 			final var results = MigrationTransformationTestRunner.run(connection, List.of(passing, failing));
 

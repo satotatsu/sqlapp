@@ -21,19 +21,15 @@ public class Postgres180SqlFactoryRegistry extends Postgres170SqlFactoryRegistry
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				Postgres180CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, Postgres180CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT, Postgres180InsertFactory.class);
 		registerSqlFactory(Table.class, SqlType.UPDATE, Postgres180UpdateFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE, Postgres180DeleteFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, Postgres180MergeFactory.class);
-		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE,
-				Postgres180CreateUniqueConstraintFactory.class);
+		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, Postgres180CreateUniqueConstraintFactory.class);
 		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE,
 				Postgres180CreateForeignKeyConstraintFactory.class);
-		registerSqlFactory(CheckConstraint.class, SqlType.CREATE,
-				Postgres180CreateCheckConstraintFactory.class);
-		registerSqlFactory(NotNullConstraint.class, SqlType.CREATE,
-				Postgres180CreateNotNullConstraintFactory.class);
+		registerSqlFactory(CheckConstraint.class, SqlType.CREATE, Postgres180CreateCheckConstraintFactory.class);
+		registerSqlFactory(NotNullConstraint.class, SqlType.CREATE, Postgres180CreateNotNullConstraintFactory.class);
 	}
 }

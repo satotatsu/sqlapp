@@ -16,8 +16,7 @@ import com.sqlapp.util.CommonUtils;
  */
 public class Postgres180CreateTableFactory extends PostgresCreateTableFactory {
 	@Override
-	protected void addColumnDefinition(Column column,
-			PostgresSqlBuilder builder) {
+	protected void addColumnDefinition(Column column, PostgresSqlBuilder builder) {
 		NotNullConstraint constraint = findNotNullConstraint(column);
 		if (constraint == null || !column.isNotNull()) {
 			super.addColumnDefinition(column, builder);
@@ -36,10 +35,8 @@ public class Postgres180CreateTableFactory extends PostgresCreateTableFactory {
 		if (table == null) {
 			return null;
 		}
-		for (NotNullConstraint constraint : table.getConstraints()
-				.getNotNullConstraints()) {
-			if (CommonUtils.eqIgnoreCase(column.getName(),
-					constraint.getColumnName())) {
+		for (NotNullConstraint constraint : table.getConstraints().getNotNullConstraints()) {
+			if (CommonUtils.eqIgnoreCase(column.getName(), constraint.getColumnName())) {
 				return constraint;
 			}
 		}
@@ -47,13 +44,10 @@ public class Postgres180CreateTableFactory extends PostgresCreateTableFactory {
 	}
 
 	@Override
-	protected void addConstraintDefinitions(Table table,
-			PostgresSqlBuilder builder) {
+	protected void addConstraintDefinitions(Table table, PostgresSqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
-		for (NotNullConstraint constraint : table.getConstraints()
-				.getNotNullConstraints()) {
-			builder.lineBreak().comma().constraint().space()
-					.name(constraint.getName()).space().notNull().space()
+		for (NotNullConstraint constraint : table.getConstraints().getNotNullConstraints()) {
+			builder.lineBreak().comma().constraint().space().name(constraint.getName()).space().notNull().space()
 					.name(constraint.getColumnName());
 			if (constraint.isNoInherit()) {
 				builder.space()._add("NO INHERIT");

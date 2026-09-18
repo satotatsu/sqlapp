@@ -50,8 +50,7 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
@@ -67,10 +66,10 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 					map.put(catalog_name, schema_name, name, index);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
-				boolean included=getBoolean(rs, "is_included_column");
-				if (included && !index.getIndexType().isColumnStore()){
+				boolean included = getBoolean(rs, "is_included_column");
+				if (included && !index.getIndexType().isColumnStore()) {
 					index.getIncludes().add(new Column(columnName));
-				} else{
+				} else {
 					if (rs.getInt("is_descending_key") == 1) {
 						index.getColumns().add(new Column(columnName), Order.Desc);
 					} else {
@@ -80,14 +79,12 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 			}
 		});
 		List<Index> result = map.toList();
-		List<Index> fullTextResult = getMetadataFullTextIndex(connection,
-				context, productVersionInfo);
+		List<Index> fullTextResult = getMetadataFullTextIndex(connection, context, productVersionInfo);
 		result.addAll(fullTextResult);
 		return result;
 	}
 
-	protected List<Index> getMetadataFullTextIndex(final Connection connection,
-			ParametersContext context,
+	protected List<Index> getMetadataFullTextIndex(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		IndexReader reader = getFullTextIndexReader();
 		return reader.getAll(connection, context);
@@ -100,8 +97,7 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 	}
 
 	protected IndexReader newFullTextIndexReader() {
-		SqlServer2005FullTextIndexReader reader = new SqlServer2005FullTextIndexReader(
-				this.getDialect());
+		SqlServer2005FullTextIndexReader reader = new SqlServer2005FullTextIndexReader(this.getDialect());
 		return reader;
 	}
 

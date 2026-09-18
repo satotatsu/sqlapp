@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Path;
 import org.postgresql.geometric.PGpath;
 
-public class FromPGPathConverter extends AbstractFromObjectConverter<Path, PGpath>{
+public class FromPGPathConverter extends AbstractFromObjectConverter<Path, PGpath> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Path copy(Object obj){
-		if (obj==null){
+	public Path copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Path)convertObject(obj).clone();
+		return (Path) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGPathConverter extends AbstractFromObjectConverter<Path, PGpat
 
 	@Override
 	protected Path toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGpath pgObject=new PGpath(val);
+			PGpath pgObject = new PGpath(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Path toObject(PGpath value) {
-		Path obj=new Path();
+		Path obj = new Path();
 		obj.setValue(value.getValue());
 		return obj;
 	}

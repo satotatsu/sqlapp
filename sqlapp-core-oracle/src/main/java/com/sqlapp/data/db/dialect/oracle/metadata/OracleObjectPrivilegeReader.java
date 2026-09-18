@@ -41,11 +41,10 @@ public class OracleObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected List<ObjectPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ObjectPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_TAB_PRIVS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"DBA_TAB_PRIVS");
 		SqlNode node = getSqlSqlNode(dba);
 		OracleMetadataUtils.setDba(dba, context);
 		final List<ObjectPrivilege> result = list();

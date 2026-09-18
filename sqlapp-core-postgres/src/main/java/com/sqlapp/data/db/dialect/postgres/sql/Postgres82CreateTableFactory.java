@@ -32,8 +32,8 @@ public class Postgres82CreateTableFactory extends PostgresCreateTableFactory {
 
 	@Override
 	protected void addOption(final Table table, PostgresSqlBuilder builder) {
-		String value=table.getSpecifics().get("fillfactor");
-		if (value!=null){
+		String value = table.getSpecifics().get("fillfactor");
+		if (value != null) {
 			builder.lineBreak();
 			builder.with();
 			builder.appendIndent(1);
@@ -42,5 +42,5 @@ public class Postgres82CreateTableFactory extends PostgresCreateTableFactory {
 			builder.appendIndent(-1);
 		}
 	}
-	
+
 }

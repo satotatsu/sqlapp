@@ -24,19 +24,14 @@ class Postgres180NamedNotNullConstraintTest {
 	@Test
 	void testCreateNamedNotNullConstraintOnPostgres18() {
 		Table table = new Table("CUSTOMERS");
-		Column column = new Column("CUSTOMER_ID")
-				.setDataType(DataType.BIGINT).setNotNull(true);
+		Column column = new Column("CUSTOMER_ID").setDataType(DataType.BIGINT).setNotNull(true);
 		table.getColumns().add(column);
-		table.getConstraints().add(new NotNullConstraint(
-				"NN_CUSTOMERS_CUSTOMER_ID", column));
+		table.getConstraints().add(new NotNullConstraint("NN_CUSTOMERS_CUSTOMER_ID", column));
 
-		SqlFactory factory = DialectHolder.postgreSQL180
-				.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
-		String sql = ((SqlOperation) factory.createSql(table).get(0))
-				.getSqlText();
-		assertTrue(sql.contains(
-				"CONSTRAINT \"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\""),
-				sql);
+		SqlFactory factory = DialectHolder.postgreSQL180.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.CREATE);
+		String sql = ((SqlOperation) factory.createSql(table).get(0)).getSqlText();
+		assertTrue(sql.contains("CONSTRAINT \"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\""), sql);
 		assertFalse(sql.contains("\"CUSTOMER_ID\" BIGINT NOT NULL"), sql);
 		assertTrue(column.isNotNull());
 	}
@@ -45,16 +40,13 @@ class Postgres180NamedNotNullConstraintTest {
 	@Test
 	void testEarlierVersionKeepsUnnamedNotNullBehavior() {
 		Table table = new Table("CUSTOMERS");
-		table.getColumns().add(new Column("CUSTOMER_ID")
-				.setDataType(DataType.BIGINT).setNotNull(true));
-		table.getConstraints().add(new NotNullConstraint(
-				"NN_CUSTOMERS_CUSTOMER_ID",
-				table.getColumns().get("CUSTOMER_ID")));
+		table.getColumns().add(new Column("CUSTOMER_ID").setDataType(DataType.BIGINT).setNotNull(true));
+		table.getConstraints()
+				.add(new NotNullConstraint("NN_CUSTOMERS_CUSTOMER_ID", table.getColumns().get("CUSTOMER_ID")));
 
-		SqlFactory factory = DialectHolder.postgreSQL170
-				.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
-		String sql = ((SqlOperation) factory.createSql(table).get(0))
-				.getSqlText();
+		SqlFactory factory = DialectHolder.postgreSQL170.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.CREATE);
+		String sql = ((SqlOperation) factory.createSql(table).get(0)).getSqlText();
 		assertTrue(sql.contains("\"CUSTOMER_ID\" BIGINT NOT NULL"), sql);
 		assertFalse(sql.contains("NN_CUSTOMERS_CUSTOMER_ID"), sql);
 	}
@@ -63,18 +55,13 @@ class Postgres180NamedNotNullConstraintTest {
 	@Test
 	void testNamedNotNullNoInherit() {
 		Table table = new Table("CUSTOMERS");
-		Column column = new Column("CUSTOMER_ID")
-				.setDataType(DataType.BIGINT).setNotNull(true);
+		Column column = new Column("CUSTOMER_ID").setDataType(DataType.BIGINT).setNotNull(true);
 		table.getColumns().add(column);
-		table.getConstraints().add(new NotNullConstraint(
-				"NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true));
+		table.getConstraints().add(new NotNullConstraint("NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true));
 
-		SqlFactory factory = DialectHolder.postgreSQL180
-				.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
-		String sql = ((SqlOperation) factory.createSql(table).get(0))
-				.getSqlText();
-		assertTrue(sql.contains(
-				"CONSTRAINT \"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\" NO INHERIT"),
-				sql);
+		SqlFactory factory = DialectHolder.postgreSQL180.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.CREATE);
+		String sql = ((SqlOperation) factory.createSql(table).get(0)).getSqlText();
+		assertTrue(sql.contains("CONSTRAINT \"NN_CUSTOMERS_CUSTOMER_ID\" NOT NULL \"CUSTOMER_ID\" NO INHERIT"), sql);
 	}
 }

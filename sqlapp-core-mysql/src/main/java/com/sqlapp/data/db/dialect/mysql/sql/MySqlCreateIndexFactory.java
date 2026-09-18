@@ -27,13 +27,11 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 
-public class MySqlCreateIndexFactory extends
-		AbstractCreateIndexFactory<MySqlSqlBuilder> 
-	implements AddTableObjectDetailFactory<Index, MySqlSqlBuilder>{
+public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSqlBuilder>
+		implements AddTableObjectDetailFactory<Index, MySqlSqlBuilder> {
 
 	@Override
-	public void addObjectDetail(final Index obj, Table table,
-			MySqlSqlBuilder builder) {
+	public void addObjectDetail(final Index obj, Table table, MySqlSqlBuilder builder) {
 		if (obj.getIndexType() == IndexType.FullText) {
 			builder.fulltext();
 		} else if (obj.getIndexType() == IndexType.Spatial) {
@@ -41,15 +39,15 @@ public class MySqlCreateIndexFactory extends
 		} else {
 		}
 		builder.index().space();
-		if (table!=null){
+		if (table != null) {
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
-		} else{
+		} else {
 			builder.name(obj, false);
 		}
 		if (obj.getIndexType() == IndexType.FullText) {
 		} else if (obj.getIndexType() == IndexType.Spatial) {
 		} else if (obj.getIndexType() == IndexType.BTree) {
-		} else if (obj.getIndexType()!=null){
+		} else if (obj.getIndexType() != null) {
 			builder.space().using().space()._add(obj.getIndexType());
 		} else {
 		}
@@ -73,7 +71,7 @@ public class MySqlCreateIndexFactory extends
 			}
 		}
 		builder.space()._add(")");
-		if (obj.getRemarks()!=null){
+		if (obj.getRemarks() != null) {
 			builder.comment().space().sqlChar(obj.getRemarks());
 		}
 		if (!obj.isEnable()) {

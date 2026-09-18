@@ -28,5 +28,6 @@ import com.sqlapp.data.db.sql.AbstractTruncateTemporaryTableFactory;
  * @author satoh
  * 
  */
-public class SqlServer2005TruncateTemporaryTableFactory extends AbstractTruncateTemporaryTableFactory<SqlServerSqlBuilder> {
+public class SqlServer2005TruncateTemporaryTableFactory
+		extends AbstractTruncateTemporaryTableFactory<SqlServerSqlBuilder> {
 }

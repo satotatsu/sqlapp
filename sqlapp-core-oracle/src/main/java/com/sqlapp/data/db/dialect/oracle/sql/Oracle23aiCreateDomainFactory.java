@@ -21,23 +21,19 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 	public static final String ORDER = "ORDER";
 
 	@Override
-	protected void addCreateObject(final Domain domain,
-			final OracleSqlBuilder builder) {
+	protected void addCreateObject(final Domain domain, final OracleSqlBuilder builder) {
 		validate(domain);
 		builder.create().space()._add("DOMAIN").space();
 		builder.ifNotExists(this.getOptions().isCreateIfNotExists()).space();
 		builder.name(domain, this.getOptions().isDecorateSchemaName());
 		builder.space().as().space();
-		builder.typeDefinition(domain.getDataType(), domain.getDataTypeName(),
-				domain.getLength(), domain.getScale());
-		if (Boolean.TRUE.equals(
-				domain.getSpecifics().get(STRICT, Boolean.class))) {
+		builder.typeDefinition(domain.getDataType(), domain.getDataTypeName(), domain.getLength(), domain.getScale());
+		if (Boolean.TRUE.equals(domain.getSpecifics().get(STRICT, Boolean.class))) {
 			builder.space()._add("STRICT");
 		}
 		if (domain.getDefaultValue() != null) {
 			builder.space()._add("DEFAULT");
-			if (Boolean.TRUE.equals(domain.getSpecifics()
-					.get(DEFAULT_ON_NULL, Boolean.class))) {
+			if (Boolean.TRUE.equals(domain.getSpecifics().get(DEFAULT_ON_NULL, Boolean.class))) {
 				builder.space()._add("ON NULL");
 			}
 			builder.space()._add(domain.getDefaultValue());
@@ -47,13 +43,11 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 		}
 		if (domain.getCheck() != null) {
 			builder.space()._add("CONSTRAINT");
-			final String constraintName = CommonUtils.trim(
-					domain.getSpecifics().get(CONSTRAINT_NAME));
+			final String constraintName = CommonUtils.trim(domain.getSpecifics().get(CONSTRAINT_NAME));
 			if (constraintName != null) {
 				builder.space().name(constraintName);
 			}
-			builder.space()._add("CHECK").space()._add("(")
-					._add(domain.getCheck())._add(")");
+			builder.space()._add("CHECK").space()._add("(")._add(domain.getCheck())._add(")");
 			if (domain.getDeferrability() != null) {
 				builder.space()._add(domain.getDeferrability().getSqlValue());
 			}
@@ -63,10 +57,8 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 		OracleAnnotationUtils.addAnnotations(builder, domain);
 	}
 
-	private void addExpression(final Domain domain,
-			final OracleSqlBuilder builder, final String key) {
-		final String expression = CommonUtils.trim(
-				domain.getSpecifics().get(key));
+	private void addExpression(final Domain domain, final OracleSqlBuilder builder, final String key) {
+		final String expression = CommonUtils.trim(domain.getSpecifics().get(key));
 		if (expression != null) {
 			builder.space()._add(key).space()._add(expression);
 		}
@@ -74,15 +66,11 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 
 	private void validate(final Domain domain) {
 		if (domain.getDataType() == null && domain.getDataTypeName() == null) {
-			throw new IllegalArgumentException(
-					"Oracle data use case domain requires a data type: "
-							+ domain.getName());
+			throw new IllegalArgumentException("Oracle data use case domain requires a data type: " + domain.getName());
 		}
-		if (domain.getArrayDimension() != 0
-				|| domain.getArrayDimensionUpperBound() != 0) {
+		if (domain.getArrayDimension() != 0 || domain.getArrayDimensionUpperBound() != 0) {
 			throw new IllegalArgumentException(
-					"Oracle single-column data use case domain cannot be an array: "
-							+ domain.getName());
+					"Oracle single-column data use case domain cannot be an array: " + domain.getName());
 		}
 		validateExpression(domain, DISPLAY);
 		validateExpression(domain, ORDER);
@@ -90,11 +78,8 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 
 	private void validateExpression(final Domain domain, final String key) {
 		final String expression = domain.getSpecifics().get(key);
-		if (expression != null
-				&& (expression.indexOf('\r') >= 0
-						|| expression.indexOf('\n') >= 0)) {
-			throw new IllegalArgumentException(key
-					+ " must not contain line breaks: " + domain.getName());
+		if (expression != null && (expression.indexOf('\r') >= 0 || expression.indexOf('\n') >= 0)) {
+			throw new IllegalArgumentException(key + " must not contain line breaks: " + domain.getName());
 		}
 	}
 }

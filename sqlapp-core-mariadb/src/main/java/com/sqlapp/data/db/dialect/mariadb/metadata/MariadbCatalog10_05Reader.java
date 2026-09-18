@@ -24,7 +24,7 @@ import com.sqlapp.data.db.dialect.mysql.metadata.MySqlCatalog564Reader;
 import com.sqlapp.data.db.metadata.RoleReader;
 import com.sqlapp.data.db.metadata.SchemaReader;
 
-public class MariadbCatalog10_05Reader extends MySqlCatalog564Reader{
+public class MariadbCatalog10_05Reader extends MySqlCatalog564Reader {
 
 	public MariadbCatalog10_05Reader(Dialect dialect) {
 		super(dialect);
@@ -34,7 +34,7 @@ public class MariadbCatalog10_05Reader extends MySqlCatalog564Reader{
 	protected SchemaReader newSchemaReader() {
 		return new MariadbSchema10_00Reader(this.getDialect());
 	}
-	
+
 	@Override
 	protected RoleReader newRoleReader() {
 		return new MariadbRole10_05Reader(this.getDialect());

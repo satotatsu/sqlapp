@@ -53,8 +53,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.run();
 
 			assertNotNull(command.getResult());
-			assertEquals(command.getPlan().getFingerprint(),
-					command.getResult().getPlanFingerprint());
+			assertEquals(command.getPlan().getFingerprint(), command.getResult().getPlanFingerprint());
 			assertEquals(List.of(), command.getResult().getTasks());
 		}
 	}
@@ -66,21 +65,18 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setDataSource(dataSource);
 			command.setCloseDataSource(false);
 			command.setPlan(BulkMigrationJobPlanner.plan(List.of()));
-			command.setLeaseConfiguration(
-					BulkMigrationJobLeaseConfiguration.database("gradle-worker"));
+			command.setLeaseConfiguration(BulkMigrationJobLeaseConfiguration.database("gradle-worker"));
 
 			command.run();
 
 			assertNotNull(command.getResult());
-			assertEquals(command.getPlan().getFingerprint(),
-					command.getResult().getPlanFingerprint());
+			assertEquals(command.getPlan().getFingerprint(), command.getResult().getPlanFingerprint());
 		}
 	}
 
 	@Test
 	void executesDeclarativeConfigurationFromSeparateSource() throws Exception {
-		try (var source = dataSource("bulk_source");
-				var target = dataSource("bulk_target")) {
+		try (var source = dataSource("bulk_source"); var target = dataSource("bulk_target")) {
 			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
 			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
 			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
@@ -119,26 +115,24 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final File configurationFile = temporaryDirectory.resolve("job.yaml").toFile();
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 			try (var connection = source.getConnection()) {
-				final var resolution = new BulkMigrationJobConfigurationResolver()
-						.resolveJob(configurationFile, connection);
+				final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
+						connection);
 				final var plan = resolution.plan();
 				assertEquals("nightly-items", plan.getJobId());
 				assertEquals(List.of("items"), plan.getTaskIds());
-				assertEquals(BulkMigrationJobLeaseMode.DATABASE,
-						resolution.leaseConfiguration().mode());
+				assertEquals(BulkMigrationJobLeaseMode.DATABASE, resolution.leaseConfiguration().mode());
 				assertEquals("yaml-worker", resolution.leaseConfiguration().ownerId());
 				assertEquals(90, resolution.leaseConfiguration().duration().toSeconds());
 				final var options = plan.getTasks().get(0).getOptions();
 				assertEquals(250, options.getBulkOption().getBatchSize());
 				assertEquals(true, options.getBulkOption().isKeepNulls());
-				assertSame(options.getBulkOption(),
-						options.getBulkUpsertOption().getBulkOption());
+				assertSame(options.getBulkOption(), options.getBulkUpsertOption().getBulkOption());
 				assertEquals(3, options.getRetryOption().getMaxRetries());
 				assertEquals(List.of("40001"), options.getRetryOption().getSqlStates());
 				try (var targetConnection = target.getConnection()) {
 					targetConnection.setAutoCommit(true);
-					final var reportPlan = ExecuteBulkMigrationJobCommand
-							.withExplicitDatabaseCheckpointStores(plan, targetConnection);
+					final var reportPlan = ExecuteBulkMigrationJobCommand.withExplicitDatabaseCheckpointStores(plan,
+							targetConnection);
 					assertEquals("nightly-items", reportPlan.getJobId());
 					assertEquals(plan.getFingerprint(), reportPlan.getFingerprint());
 					assertEquals(JdbcBulkMigrationCheckpointStore.class,
@@ -147,38 +141,33 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					new BulkMigrationOperationalReportJobListener(reportPlan, reportFile)
 							.onJobStarted(reportPlan.getFingerprint(), 1);
 					assertEquals(true, Files.isRegularFile(reportFile));
-					final var verificationResult = ExecuteBulkMigrationJobCommand.verify(
-							plan, targetConnection, 1);
+					final var verificationResult = ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1);
 					assertEquals(true, verificationResult.isMatch());
 					assertEquals(plan.getFingerprint(), verificationResult.getPlanFingerprint());
 					assertEquals(2, verificationResult.getExpectedRows());
-					assertEquals(List.of("ID", "NAME"),
-							verificationResult.getTasks().get(0).getColumns());
-					executeSql(targetConnection,
-							"UPDATE PUBLIC.ITEMS SET NAME='changed' WHERE ID=2");
-					final var mismatch = ExecuteBulkMigrationJobCommand.verify(
-							plan, targetConnection, 1);
+					assertEquals(List.of("ID", "NAME"), verificationResult.getTasks().get(0).getColumns());
+					executeSql(targetConnection, "UPDATE PUBLIC.ITEMS SET NAME='changed' WHERE ID=2");
+					final var mismatch = ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1);
 					assertEquals(false, mismatch.isMatch());
 					assertEquals(1, mismatch.getMismatchedTasks());
-					final var idOnly = ExecuteBulkMigrationJobCommand.verify(plan,
-							targetConnection, 1, Map.of("items", List.of("ID")));
+					final var idOnly = ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1,
+							Map.of("items", List.of("ID")));
 					assertEquals(true, idOnly.isMatch());
 					assertEquals(List.of("ID"), idOnly.getTasks().get(0).getColumns());
 					final int originalIsolation = targetConnection.getTransactionIsolation();
 					final boolean originalAutoCommit = targetConnection.getAutoCommit();
-					assertEquals(true, ExecuteBulkMigrationJobCommand.verifyWithIsolation(plan,
-							targetConnection, 1, Map.of("items", List.of("ID")),
-							BulkMigrationVerificationIsolation.REPEATABLE_READ).isMatch());
+					assertEquals(true,
+							ExecuteBulkMigrationJobCommand.verifyWithIsolation(plan, targetConnection, 1,
+									Map.of("items", List.of("ID")), BulkMigrationVerificationIsolation.REPEATABLE_READ)
+									.isMatch());
 					assertEquals(originalIsolation, targetConnection.getTransactionIsolation());
 					assertEquals(originalAutoCommit, targetConnection.getAutoCommit());
 					final Path idOnlyReport = temporaryDirectory.resolve("reports/id-only.json");
-					new BulkMigrationVerificationReportIO().write(idOnlyReport,
-							plan.getFingerprint(), idOnly);
-					assertThrows(IllegalArgumentException.class,
-							() -> new BulkMigrationVerificationReportIO().write(idOnlyReport,
-									"different-plan", idOnly));
-					final var idOnlyArtifact = new BulkMigrationVerificationReportIO()
-							.read(idOnlyReport, plan.getFingerprint());
+					new BulkMigrationVerificationReportIO().write(idOnlyReport, plan.getFingerprint(), idOnly);
+					assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationReportIO()
+							.write(idOnlyReport, "different-plan", idOnly));
+					final var idOnlyArtifact = new BulkMigrationVerificationReportIO().read(idOnlyReport,
+							plan.getFingerprint());
 					assertEquals(List.of("ID"), idOnlyArtifact.tasks().get(0).columns());
 					assertEquals("DEFAULT", idOnlyArtifact.isolation());
 				}
@@ -189,8 +178,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			task.setRetry(new BulkMigrationJobConfiguration.Retry());
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
 			try (var connection = source.getConnection()) {
-				final var filePlan = new BulkMigrationJobConfigurationResolver()
-						.resolve(configurationFile, connection);
+				final var filePlan = new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection);
 				assertEquals(FileBulkMigrationCheckpointStore.class,
 						filePlan.getTasks().get(0).getCheckpointStore().getClass());
 			}
@@ -200,8 +188,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			configuration.setReport(mismatchReport);
 			final var mismatchVerification = new BulkMigrationJobConfiguration.Verification();
 			mismatchVerification.setTargetFile("reports/mismatch-verification.json");
-			mismatchVerification.setIsolation(
-					BulkMigrationVerificationIsolation.REPEATABLE_READ);
+			mismatchVerification.setIsolation(BulkMigrationVerificationIsolation.REPEATABLE_READ);
 			configuration.setVerification(mismatchVerification);
 			configuration.setLease(null);
 			task.setMode(BulkMigrationMode.INSERT);
@@ -226,11 +213,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertThrows(RuntimeException.class, mismatchCommand::run);
 			assertEquals(false, mismatchCommand.getVerificationResult().isMatch());
 			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
-					new BulkMigrationOperationalReportIO().read(
-					temporaryDirectory.resolve("reports/mismatch-status.json"))
-						.execution().event());
-			final var mismatchArtifact = new BulkMigrationVerificationReportIO().read(
-					temporaryDirectory.resolve("reports/mismatch-verification.json"));
+					new BulkMigrationOperationalReportIO()
+							.read(temporaryDirectory.resolve("reports/mismatch-status.json")).execution().event());
+			final var mismatchArtifact = new BulkMigrationVerificationReportIO()
+					.read(temporaryDirectory.resolve("reports/mismatch-verification.json"));
 			assertEquals(false, mismatchArtifact.match());
 			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
 			assertNotNull(mismatchArtifact.tasks().get(0).expectedKeysetFingerprint());
@@ -241,20 +227,16 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertNotNull(mismatchChunk.actualFirstKey());
 			assertNotNull(mismatchChunk.actualLastKey());
 
-			final var twoMismatches = new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(
-					1, 2, 2, List.of(
-							new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(
-									0, 1, 1, "a", "b"),
-							new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(
-									1, 1, 1, "c", "d")));
+			final var twoMismatches = new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 2, 2,
+					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "a", "b"),
+							new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(1, 1, 1, "c", "d")));
 			final var cappedResult = new com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult(
-					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult(
-							"items", List.of("ID"), twoMismatches)));
+					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult("items", List.of("ID"),
+							twoMismatches)));
 			final Path cappedFile = temporaryDirectory.resolve("reports/capped.json");
 			new BulkMigrationVerificationReportIO().write(cappedFile, "plan",
 					BulkMigrationVerificationIsolation.DEFAULT, 1, cappedResult);
-			final var cappedTask = new BulkMigrationVerificationReportIO().read(cappedFile)
-					.tasks().get(0);
+			final var cappedTask = new BulkMigrationVerificationReportIO().read(cappedFile).tasks().get(0);
 			assertEquals(2, cappedTask.mismatchedChunks());
 			assertEquals(1, cappedTask.mismatches().size());
 
@@ -280,18 +262,14 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 
 			assertEquals(0, command.getResult().getTasks().size());
 			assertEquals(true, command.getVerificationResult().isMatch());
-			assertEquals(true, Files.isRegularFile(
-					temporaryDirectory.resolve("reports/verification.json")));
+			assertEquals(true, Files.isRegularFile(temporaryDirectory.resolve("reports/verification.json")));
 			final var verificationReport = new BulkMigrationVerificationReportIO().read(
-					temporaryDirectory.resolve("reports/verification.json"),
-					command.getResult().getPlanFingerprint());
+					temporaryDirectory.resolve("reports/verification.json"), command.getResult().getPlanFingerprint());
 			assertEquals(true, verificationReport.match());
 			assertEquals(0, verificationReport.mismatchedTasks());
-			assertThrows(CommandException.class, () ->
-					new BulkMigrationVerificationReportIO().read(
-							temporaryDirectory.resolve("reports/verification.json"), "wrong"));
-			assertEquals(true, Files.isRegularFile(
-					temporaryDirectory.resolve("reports/status.json")));
+			assertThrows(CommandException.class, () -> new BulkMigrationVerificationReportIO()
+					.read(temporaryDirectory.resolve("reports/verification.json"), "wrong"));
+			assertEquals(true, Files.isRegularFile(temporaryDirectory.resolve("reports/status.json")));
 
 			final var fileLease = new BulkMigrationJobConfiguration.Lease();
 			fileLease.setMode(BulkMigrationJobLeaseMode.FILE);
@@ -307,22 +285,19 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			fileLeaseCommand.setConfigurationFile(configurationFile);
 			fileLeaseCommand.run();
 			assertNotNull(fileLeaseCommand.getVerificationResult());
-			assertEquals(true, Files.isRegularFile(temporaryDirectory
-					.resolve("reports/verification-file-lease.json")));
+			assertEquals(true, Files.isRegularFile(temporaryDirectory.resolve("reports/verification-file-lease.json")));
 			final Path statusFile = temporaryDirectory.resolve("reports/status.json");
 			final var fileSuccess = new BulkMigrationOperationalReportIO().read(statusFile);
-			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED,
-					fileSuccess.execution().event());
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED, fileSuccess.execution().event());
 			assertNotNull(fileSuccess.execution().leaseAcquisitionId());
 
 			final BulkMigrationJobPlan emptyPlan;
 			try (var sourceConnection = source.getConnection()) {
-				emptyPlan = new BulkMigrationJobConfigurationResolver()
-						.resolveJob(configurationFile, sourceConnection).plan();
+				emptyPlan = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile, sourceConnection)
+						.plan();
 			}
-			final var fileBlocker = BulkMigrationJobLeaseManagerFactory.create(null,
-					BulkMigrationJobLeaseConfiguration.file("blocking-file-worker",
-							temporaryDirectory.resolve("leases")));
+			final var fileBlocker = BulkMigrationJobLeaseManagerFactory.create(null, BulkMigrationJobLeaseConfiguration
+					.file("blocking-file-worker", temporaryDirectory.resolve("leases")));
 			try (var ignored = fileBlocker.acquire(emptyPlan)) {
 				final var rejectedCommand = new ExecuteBulkMigrationJobCommand();
 				rejectedCommand.setDataSource(target);
@@ -332,8 +307,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertThrows(RuntimeException.class, rejectedCommand::run);
 			}
 			final var fileRejected = new BulkMigrationOperationalReportIO().read(statusFile);
-			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
-					fileRejected.execution().event());
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED, fileRejected.execution().event());
 			assertNull(fileRejected.execution().leaseAcquisitionId());
 
 			final var databaseLease = new BulkMigrationJobConfiguration.Lease();
@@ -373,8 +347,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			for (final String schemaName : List.of("A", "B")) {
 				final Schema schema = new Schema(schemaName);
 				final Table table = new Table("ITEMS");
-				table.getColumns().add(new Column("ID").setDataType(DataType.INT)
-						.setNotNull(true));
+				table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
 				table.setPrimaryKey("PK_" + schemaName, table.getColumns().get("ID"));
 				schema.getTables().add(table);
 				catalog.getSchemas().add(schema);
@@ -393,8 +366,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 
 			try (var connection = source.getConnection()) {
 				assertThrows(CommandException.class,
-						() -> new BulkMigrationJobConfigurationResolver()
-								.resolve(configurationFile, connection));
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
 			}
 		}
 	}
@@ -405,40 +377,30 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 		final Map<String, List<String>> columnsByTask = new LinkedHashMap<>();
 		columnsByTask.put("items", columns);
 		final Path relativeReport = Path.of("build", "verification.json");
-		final var verification = new BulkMigrationJobConfigurationResolver.VerificationConfiguration(
-				10, true, relativeReport, columnsByTask,
-				BulkMigrationVerificationIsolation.REPEATABLE_READ, 25);
+		final var verification = new BulkMigrationJobConfigurationResolver.VerificationConfiguration(10, true,
+				relativeReport, columnsByTask, BulkMigrationVerificationIsolation.REPEATABLE_READ, 25);
 
 		columns.clear();
 		columnsByTask.clear();
 		assertEquals(List.of("ID"), verification.columnsByTask().get("items"));
 		assertEquals(relativeReport.toAbsolutePath().normalize(), verification.targetFile());
-		assertThrows(UnsupportedOperationException.class,
-				() -> verification.columnsByTask().clear());
-		assertThrows(UnsupportedOperationException.class,
-				() -> verification.columnsByTask().get("items").clear());
-		assertThrows(IllegalArgumentException.class,
-				() -> verification(0, 1, Map.of("items", List.of("ID"))));
-		assertThrows(IllegalArgumentException.class,
-				() -> verification(1, 0, Map.of("items", List.of("ID"))));
-		assertThrows(IllegalArgumentException.class,
-				() -> verification(1, 1, Map.of(" ", List.of("ID"))));
-		assertThrows(IllegalArgumentException.class,
-				() -> verification(1, 1, Map.of("items", List.of("ID", "ID"))));
+		assertThrows(UnsupportedOperationException.class, () -> verification.columnsByTask().clear());
+		assertThrows(UnsupportedOperationException.class, () -> verification.columnsByTask().get("items").clear());
+		assertThrows(IllegalArgumentException.class, () -> verification(0, 1, Map.of("items", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class, () -> verification(1, 0, Map.of("items", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class, () -> verification(1, 1, Map.of(" ", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class, () -> verification(1, 1, Map.of("items", List.of("ID", "ID"))));
 		assertThrows(NullPointerException.class,
-				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(
-						null, BulkMigrationOperationalReportFailurePolicy.FAIL_JOB));
+				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(null,
+						BulkMigrationOperationalReportFailurePolicy.FAIL_JOB));
 		assertThrows(NullPointerException.class,
-				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(
-						relativeReport, null));
+				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(relativeReport, null));
 	}
 
-	private static BulkMigrationJobConfigurationResolver.VerificationConfiguration verification(
-			final int chunkSize, final int maxReportedMismatches,
-			final Map<String, List<String>> columnsByTask) {
-		return new BulkMigrationJobConfigurationResolver.VerificationConfiguration(chunkSize,
-				true, null, columnsByTask, BulkMigrationVerificationIsolation.DEFAULT,
-				maxReportedMismatches);
+	private static BulkMigrationJobConfigurationResolver.VerificationConfiguration verification(final int chunkSize,
+			final int maxReportedMismatches, final Map<String, List<String>> columnsByTask) {
+		return new BulkMigrationJobConfigurationResolver.VerificationConfiguration(chunkSize, true, null, columnsByTask,
+				BulkMigrationVerificationIsolation.DEFAULT, maxReportedMismatches);
 	}
 
 	@Test
@@ -450,8 +412,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			schema.getTables().add(table);
 			final File schemaFile = temporaryDirectory.resolve("task-schema.xml").toFile();
 			schema.writeXml(schemaFile);
-			final File configurationFile = temporaryDirectory.resolve("invalid-task.yaml")
-					.toFile();
+			final File configurationFile = temporaryDirectory.resolve("invalid-task.yaml").toFile();
 			final var configuration = new BulkMigrationJobConfiguration();
 			configuration.setSchemaFile(schemaFile.getName());
 
@@ -489,14 +450,12 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 		}
 	}
 
-	private static void assertInvalidConfiguration(final HikariDataSource source,
-			final File configurationFile,
+	private static void assertInvalidConfiguration(final HikariDataSource source, final File configurationFile,
 			final BulkMigrationJobConfiguration configuration) throws Exception {
 		new YamlConverter().writeJsonValue(configurationFile, configuration);
 		try (var connection = source.getConnection()) {
 			assertThrows(CommandException.class,
-					() -> new BulkMigrationJobConfigurationResolver()
-							.resolve(configurationFile, connection));
+					() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
 		}
 	}
 
@@ -518,21 +477,18 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			task.setId("items");
 			task.setTable("PUBLIC.ITEMS");
 			configuration.setTasks(List.of(task));
-			final File configurationFile = temporaryDirectory.resolve("verification-job.yaml")
-					.toFile();
+			final File configurationFile = temporaryDirectory.resolve("verification-job.yaml").toFile();
 
 			try (var connection = source.getConnection()) {
 				task.setVerificationColumns(List.of("MISSING"));
 				new YamlConverter().writeJsonValue(configurationFile, configuration);
-				assertThrows(CommandException.class, () ->
-						new BulkMigrationJobConfigurationResolver()
-								.resolve(configurationFile, connection));
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
 
 				task.setVerificationColumns(List.of("ID", "ID"));
 				new YamlConverter().writeJsonValue(configurationFile, configuration);
-				assertThrows(CommandException.class, () ->
-						new BulkMigrationJobConfigurationResolver()
-								.resolve(configurationFile, connection));
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
 			}
 		}
 	}

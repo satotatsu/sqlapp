@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateDirectoryFactory;
 import com.sqlapp.data.schemas.Directory;
 
-public class OracleCreateDirectoryFactory extends
-		AbstractCreateDirectoryFactory<OracleSqlBuilder> {
+public class OracleCreateDirectoryFactory extends AbstractCreateDirectoryFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Directory obj, OracleSqlBuilder builder) {

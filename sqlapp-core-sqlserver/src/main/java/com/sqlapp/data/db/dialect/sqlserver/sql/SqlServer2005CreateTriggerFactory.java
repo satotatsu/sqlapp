@@ -28,8 +28,7 @@ import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
-public class SqlServer2005CreateTriggerFactory extends
-		AbstractCreateTriggerFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreateTriggerFactory extends AbstractCreateTriggerFactory<SqlServerSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Trigger obj, SqlServerSqlBuilder builder) {
@@ -55,9 +54,9 @@ public class SqlServer2005CreateTriggerFactory extends
 		}
 		builder.name(obj.getTableName());
 		addEventManipulationText(obj, builder);
-		String val=obj.getSpecifics().get("is_not_for_replication");
-		Boolean bool=Converters.getDefault().convertObject(val, Boolean.class);
-		if (bool!=null&&bool.booleanValue()){
+		String val = obj.getSpecifics().get("is_not_for_replication");
+		Boolean bool = Converters.getDefault().convertObject(val, Boolean.class);
+		if (bool != null && bool.booleanValue()) {
 			builder.lineBreak();
 			builder.not().for_().replication();
 		}
@@ -68,11 +67,11 @@ public class SqlServer2005CreateTriggerFactory extends
 	protected void addEventManipulationText(final Trigger obj, SqlServerSqlBuilder builder) {
 		SeparatedStringBuilder sepBuilder = new SeparatedStringBuilder(" , ");
 		sepBuilder.add(obj.getEventManipulation());
-		if (obj.getActionTiming()!=null){
+		if (obj.getActionTiming() != null) {
 			builder.lineBreak();
 			builder._add(obj.getActionTiming());
 		}
-		if (!CommonUtils.isEmpty(obj.getEventManipulation())){
+		if (!CommonUtils.isEmpty(obj.getEventManipulation())) {
 			builder.lineBreak();
 			builder._add(sepBuilder.toString());
 		}

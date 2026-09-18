@@ -43,22 +43,21 @@ public class SqlServer2005AlterPartitionFunctionFactoryTest extends AbstractSqlS
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new PartitionFunction(), SqlType.ALTER);
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new PartitionFunction(), SqlType.ALTER);
 	}
 
 	@Test
 	public void test1() throws ParseException {
 		PartitionFunction obj1 = getPartitionFunction1("funcA");
 		PartitionFunction obj2 = getPartitionFunction2("funcA");
-		List<SqlOperation> operations=sqlFactory.createDiffSql(obj1.diff(obj2));
-		for(int i=0;i<operations.size();i++){
-			SqlOperation operation=operations.get(i);
-			String expected = getResource("alter_partition_function"+(i+1)+".sql");
+		List<SqlOperation> operations = sqlFactory.createDiffSql(obj1.diff(obj2));
+		for (int i = 0; i < operations.size(); i++) {
+			SqlOperation operation = operations.get(i);
+			String expected = getResource("alter_partition_function" + (i + 1) + ".sql");
 			assertEquals(expected, operation.getSqlText());
 		}
 	}
-	
+
 	private PartitionFunction getPartitionFunction1(String name) throws ParseException {
 		PartitionFunction obj = getPartitionFunction(name);
 		obj.getValues().add("1");

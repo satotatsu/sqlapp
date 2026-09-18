@@ -134,8 +134,8 @@ public class PostgresInsertTableFactoryTest extends AbstractPostgresSqlFactoryTe
 
 	private Table createIdentityTable(IdentityGenerationType generationType) {
 		Table table = getTable("identity_table");
-		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT)
-				.setIdentity(true).setIdentityGenerationType(generationType));
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT).setIdentity(true)
+				.setIdentityGenerationType(generationType));
 		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(50));
 		table.setPrimaryKey(table.getColumns().get("id"));
 		return table;

@@ -23,13 +23,12 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 
-public class SqlServer2005DropFunctionFactory extends
-		AbstractDropFunctionFactory<SqlServerSqlBuilder> {
+public class SqlServer2005DropFunctionFactory extends AbstractDropFunctionFactory<SqlServerSqlBuilder> {
 
 	@Override
 	protected void addDropObject(Function obj, SqlServerSqlBuilder builder) {
 		builder.drop();
-		if (obj.getFunctionType()!=null&&obj.getFunctionType().isAggregate()) {
+		if (obj.getFunctionType() != null && obj.getFunctionType().isAggregate()) {
 			builder.aggregate();
 		} else {
 			builder.function();

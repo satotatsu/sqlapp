@@ -41,8 +41,7 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 		this.rows = table.getRows().iterator();
 	}
 
-	public static SQLServerBulkCopyOptions toSqlServerOptions(final BulkOption options)
-			throws SQLServerException {
+	public static SQLServerBulkCopyOptions toSqlServerOptions(final BulkOption options) throws SQLServerException {
 		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		final SQLServerBulkCopyOptions result = new SQLServerBulkCopyOptions();
 		if (effective.getBatchSize() != null) {

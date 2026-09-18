@@ -33,40 +33,37 @@ import org.geolatte.geom.codec.WkbEncoder;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 
-public class MySqlGeometryJdbcTypeHandler  implements JdbcTypeHandler {
+public class MySqlGeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	public MySqlGeometryJdbcTypeHandler() {
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, int columnIndex)
-			throws SQLException {
-		byte[] bytes=rs.getBytes(columnIndex);
-		if (bytes==null){
-		    return null;
+	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
+		byte[] bytes = rs.getBytes(columnIndex);
+		if (bytes == null) {
+			return null;
 		}
 		return toGeometry(bytes);
 	}
-	
-	private Object toGeometry(byte[] bytes){
+
+	private Object toGeometry(byte[] bytes) {
 		ByteBuffer buffer = ByteBuffer.from(bytes);
 		WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.MYSQL_WKB);
 		return decoder.decode(buffer);
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, String columnLabel)
-			throws SQLException {
-		byte[] bytes=rs.getBytes(columnLabel);
-		if (bytes==null){
-		    return null;
+	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
+		byte[] bytes = rs.getBytes(columnLabel);
+		if (bytes == null) {
+			return null;
 		}
 		return toGeometry(bytes);
 	}
 
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex,
-			Object x) throws SQLException {
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
 		WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.MYSQL_WKB);
 		Geometry<?> geometry = Converters.getDefault().convertObject(x, Geometry.class);
 		ByteBuffer buffer = encoder.encode(geometry, ByteOrder.NDR);

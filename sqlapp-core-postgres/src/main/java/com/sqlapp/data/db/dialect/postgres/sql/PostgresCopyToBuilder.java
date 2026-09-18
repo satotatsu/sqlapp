@@ -28,8 +28,7 @@ public class PostgresCopyToBuilder {
 		this(dialect, null, relationName);
 	}
 
-	public PostgresCopyToBuilder(Dialect dialect, String schemaName,
-			String relationName) {
+	public PostgresCopyToBuilder(Dialect dialect, String schemaName, String relationName) {
 		this.dialect = Objects.requireNonNull(dialect, "dialect");
 		require(relationName, "relationName");
 		this.schemaName = schemaName;
@@ -86,10 +85,8 @@ public class PostgresCopyToBuilder {
 	}
 
 	public String build() {
-		if (materializedView
-				&& dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"COPY TO from a materialized view requires PostgreSQL 18 or later.");
+		if (materializedView && dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
+			throw new IllegalArgumentException("COPY TO from a materialized view requires PostgreSQL 18 or later.");
 		}
 		StringBuilder builder = new StringBuilder("COPY ");
 		if (!CommonUtils.isEmpty(schemaName)) {
@@ -108,8 +105,7 @@ public class PostgresCopyToBuilder {
 		}
 		builder.append(" TO STDOUT");
 		if (!options.isEmpty()) {
-			builder.append(" WITH (").append(String.join(", ", options))
-					.append(")");
+			builder.append(" WITH (").append(String.join(", ", options)).append(")");
 		}
 		return builder.toString();
 	}

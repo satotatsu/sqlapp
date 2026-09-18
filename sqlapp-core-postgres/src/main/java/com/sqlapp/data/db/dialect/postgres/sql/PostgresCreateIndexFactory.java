@@ -48,88 +48,83 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 	@Override
 	protected void addUnique(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 		builder.unique(obj.isUnique()).index();
-		boolean conc=table!=null&&this.getTableOptions().getOnlineIndex().test(table, obj);
+		boolean conc = table != null && this.getTableOptions().getOnlineIndex().test(table, obj);
 		builder.concurrently(conc);
-		builder.ifNotExists(table!=null&&this.getOptions().isCreateIfNotExists()).space();
+		builder.ifNotExists(table != null && this.getOptions().isCreateIfNotExists()).space();
 	}
-	
+
 	@Override
 	public void addObjectDetail(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 		super.addObjectDetail(obj, table, builder);
 		addWith(obj, table, builder);
 		addFilter(obj, table, builder);
 	}
-	
-	protected void addObjectDetailAfter(final Index obj, final Table table,
-			final PostgresSqlBuilder builder) {
+
+	protected void addObjectDetailAfter(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 		addIncludes(obj, table, builder);
 		addIncludesAfter(obj, table, builder);
 	}
 
-	protected void addIncludes(final Index obj, final Table table,
-			final PostgresSqlBuilder builder) {
-	}
-	
-	protected void addIncludesAfter(final Index obj, final Table table,
-			final PostgresSqlBuilder builder) {
+	protected void addIncludes(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 	}
 
-	protected void addWith(final Index obj, final Table table,
-			final PostgresSqlBuilder builder) {
-		Map<String,String> map=createIndexWithOption(obj, table);
+	protected void addIncludesAfter(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+	}
+
+	protected void addWith(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+		Map<String, String> map = createIndexWithOption(obj, table);
 		if (map.isEmpty()) {
 			return;
 		}
-		builder.lineBreak().with().space().brackets(()->{
-			builder.indent(()->{
-				final boolean[] first=new boolean[]{true};
-				map.forEach((k,v)->{
+		builder.lineBreak().with().space().brackets(() -> {
+			builder.indent(() -> {
+				final boolean[] first = new boolean[] { true };
+				map.forEach((k, v) -> {
 					builder.lineBreak().comma(!first[0])._add(k).eq().space()._add(v);
-					first[0]=false;
+					first[0] = false;
 				});
 			});
 			builder.lineBreak();
 		});
 	}
-	
-	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
-		final Map<String,String> map=CommonUtils.linkedMap();
-		String key=PostgresIndexOptions.FILLFACTOR.toString();
-		String val=obj.getSpecifics().get(key);
-		if (val!=null){
+
+	protected Map<String, String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String, String> map = CommonUtils.linkedMap();
+		String key = PostgresIndexOptions.FILLFACTOR.toString();
+		String val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=PostgresIndexOptions.BUFFERING.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = PostgresIndexOptions.BUFFERING.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=PostgresIndexOptions.FASTUPDATE.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = PostgresIndexOptions.FASTUPDATE.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=PostgresIndexOptions.GIN_PENDING_LIST_LIMIT.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = PostgresIndexOptions.GIN_PENDING_LIST_LIMIT.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=PostgresIndexOptions.PAGE_PER_RANGE.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = PostgresIndexOptions.PAGE_PER_RANGE.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=PostgresIndexOptions.AUTOSUMMARISE.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = PostgresIndexOptions.AUTOSUMMARISE.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
 		return map;
 	}
 
-	protected void addFilter(final Index obj, final Table table,
-			final PostgresSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(obj.getWhere())){
+	protected void addFilter(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getWhere())) {
 			builder.lineBreak().where().space()._add(obj.getWhere());
 		}
 	}
@@ -137,10 +132,10 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 	@Override
 	protected void addColumn(final ReferenceColumn col, final PostgresSqlBuilder builder) {
 		builder.name(col);
-		if (col.getOrder()!=null&&col.getOrder()!=Order.Asc) {
+		if (col.getOrder() != null && col.getOrder() != Order.Asc) {
 			builder.space()._add(col.getOrder());
 		}
-		if (col.getNullsOrder()!=null) {
+		if (col.getNullsOrder() != null) {
 			builder.space()._add(col.getNullsOrder());
 		}
 	}

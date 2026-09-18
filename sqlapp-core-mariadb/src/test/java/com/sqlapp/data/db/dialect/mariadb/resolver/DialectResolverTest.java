@@ -72,30 +72,30 @@ public class DialectResolverTest {
 
 	@Test
 	public void testMetadataReaderVersionBoundaries() {
-		assertMetadataReaders("MariadbCatalog10_00Reader", "MariadbSchema10_00Reader",
-				"MySqlTable564Reader", "MySqlColumn564Reader", 10, 0, 0);
-		assertMetadataReaders("MariadbCatalog10_00Reader", "MariadbSchema10_00Reader",
-				"MySqlTable564Reader", "MySqlColumn564Reader", 10, 0, 4);
-		assertMetadataReaders("MariadbCatalog10_05Reader", "MariadbSchema10_00Reader",
-				"MySqlTable564Reader", "MySqlColumn564Reader", 10, 0, 5);
-		assertMetadataReaders("MariadbCatalog10_05Reader", "MariadbSchema10_00Reader",
-				"MySqlTable564Reader", "MySqlColumn564Reader", 10, 2, 4);
-		assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader",
-				"MariadbTable10_27Reader", "MariadbColumn10_27Reader", 10, 2, 7);
-		assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader",
-				"MariadbTable10_27Reader", "MariadbColumn10_27Reader", 10, 11, 8);
-		assertMetadataReaders("MariadbCatalog11_40Reader", "MariadbSchema11_40Reader",
-				"MariadbTable11_40Reader", "MariadbColumn11_40Reader", 11, 4, 9);
-		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader",
-				"MariadbTable11_40Reader", "MariadbColumn11_40Reader", 11, 5, 0);
-		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader",
-				"MariadbTable11_40Reader", "MariadbColumn11_40Reader", 11, 8, 0);
-		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader",
-				"MariadbTable11_40Reader", "MariadbColumn11_40Reader", 12, 1, 0);
+		assertMetadataReaders("MariadbCatalog10_00Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 0, 0);
+		assertMetadataReaders("MariadbCatalog10_00Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 0, 4);
+		assertMetadataReaders("MariadbCatalog10_05Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 0, 5);
+		assertMetadataReaders("MariadbCatalog10_05Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 2, 4);
+		assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader", "MariadbTable10_27Reader",
+				"MariadbColumn10_27Reader", 10, 2, 7);
+		assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader", "MariadbTable10_27Reader",
+				"MariadbColumn10_27Reader", 10, 11, 8);
+		assertMetadataReaders("MariadbCatalog11_40Reader", "MariadbSchema11_40Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 11, 4, 9);
+		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 11, 5, 0);
+		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 11, 8, 0);
+		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 12, 1, 0);
 	}
 
-	private void assertMetadataReaders(String catalogClass, String schemaClass,
-			String tableClass, String columnClass, int major, int minor, int revision) {
+	private void assertMetadataReaders(String catalogClass, String schemaClass, String tableClass, String columnClass,
+			int major, int minor, int revision) {
 		Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", major, minor, revision);
 		var catalogReader = dialect.getCatalogReader();
 		assertEquals(catalogClass, catalogReader.getClass().getSimpleName());
@@ -103,8 +103,7 @@ public class DialectResolverTest {
 		assertEquals(schemaClass, schemaReader.getClass().getSimpleName());
 		var tableReader = schemaReader.getTableReader();
 		assertEquals(tableClass, tableReader.getClass().getSimpleName());
-		assertEquals(columnClass,
-				tableReader.getColumnReader().getClass().getSimpleName());
+		assertEquals(columnClass, tableReader.getColumnReader().getClass().getSimpleName());
 	}
 
 	@Test

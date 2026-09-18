@@ -48,8 +48,7 @@ public class OracleExternalTableReader extends ExternalTableReader {
 	}
 
 	@Override
-	protected List<ExternalTable> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<ExternalTable> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String, String, ExternalTable> map = doubleKeyMap();
@@ -72,8 +71,7 @@ public class OracleExternalTableReader extends ExternalTableReader {
 		return getSqlNodeCache().getString("externalTables.sql");
 	}
 
-	protected ExternalTable createExternalTable(ExResultSet rs)
-			throws SQLException {
+	protected ExternalTable createExternalTable(ExResultSet rs) throws SQLException {
 		ExternalTable obj = new ExternalTable(getString(rs, TABLE_NAME));
 		obj.setSchemaName(getString(rs, "OWNER"));
 		obj.setTypeName(getString(rs, "TYPE_NAME"));

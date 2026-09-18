@@ -52,8 +52,7 @@ public class SqlServer2005FunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
@@ -80,23 +79,22 @@ public class SqlServer2005FunctionReader extends FunctionReader {
 		obj.setClassName(getString(rs, "assembly_class"));
 		obj.setMethodName(getString(rs, "assembly_method"));
 		/*
-		 * 'AF' --集計関数 (CLR) 'FN' --SQL スカラー関数 'FS' --アセンブリ (CLR)スカラー関数 'FT'
-		 * --アセンブリ (CLR) テーブル値関数 'IF' --SQL インライン テーブル値関数 'TF' --SQL テーブル値関数
+		 * 'AF' --集計関数 (CLR) 'FN' --SQL スカラー関数 'FS' --アセンブリ (CLR)スカラー関数 'FT' --アセンブリ
+		 * (CLR) テーブル値関数 'IF' --SQL インライン テーブル値関数 'TF' --SQL テーブル値関数
 		 */
 		String type = rs.getString("type");
-		if ("AF".equalsIgnoreCase(type)){
+		if ("AF".equalsIgnoreCase(type)) {
 			obj.setFunctionType(FunctionType.Aggregate);
-		} else if ("FN".equalsIgnoreCase(type)||"FS".equalsIgnoreCase(type)){
+		} else if ("FN".equalsIgnoreCase(type) || "FS".equalsIgnoreCase(type)) {
 			obj.setFunctionType(FunctionType.Scalar);
-		}else if ("FT".equalsIgnoreCase(type)||"IF".equalsIgnoreCase(type)||"TF".equalsIgnoreCase(type)){
+		} else if ("FT".equalsIgnoreCase(type) || "IF".equalsIgnoreCase(type) || "TF".equalsIgnoreCase(type)) {
 			obj.setFunctionType(FunctionType.Table);
 		}
 		String definition = getString(rs, "definition");
 		if (this.getReaderOptions().isReadDefinition()) {
 			obj.setDefinition(definition);
-		}else if (this.getReaderOptions().isReadStatement()) {
-			obj.setStatement(SqlServerUtils.getFunctionStatement(definition,
-					type));
+		} else if (this.getReaderOptions().isReadStatement()) {
+			obj.setStatement(SqlServerUtils.getFunctionStatement(definition, type));
 		}
 		obj.setCreatedAt(rs.getTimestamp("create_date"));
 		obj.setLastAlteredAt(rs.getTimestamp("modify_date"));
@@ -123,8 +121,7 @@ public class SqlServer2005FunctionReader extends FunctionReader {
 			Long max_length = getLong(rs, "max_length");
 			Long precision = getLong(rs, "precision");
 			Integer scale = getInteger(rs, "scale");
-			this.getDialect().setDbType(productDataType,
-					notZero(max_length, precision), scale, ret);
+			this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, ret);
 		}
 		return obj;
 	}

@@ -37,8 +37,7 @@ public class SqlServerCreatePartitionFunctionTest extends AbstractSqlServerSqlFa
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new PartitionFunction("func"), SqlType.CREATE);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new PartitionFunction("func"), SqlType.CREATE);
 	}
 
 	private PartitionFunction getObj(String name) {

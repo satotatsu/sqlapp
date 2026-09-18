@@ -13,12 +13,9 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 class PostgresBulkUpsertProviderTest {
 	@Test
 	void resolvesOnlyForOnConflictVersions() {
-		assertInstanceOf(PostgresBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.postgreSQL95));
-		assertInstanceOf(PostgresBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.postgreSQL180));
-		assertThrows(IllegalArgumentException.class,
-				() -> BulkUpsertResolver.resolve(DialectHolder.postgreSQL94));
+		assertInstanceOf(PostgresBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.postgreSQL95));
+		assertInstanceOf(PostgresBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.postgreSQL180));
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertResolver.resolve(DialectHolder.postgreSQL94));
 	}
 
 	@Test

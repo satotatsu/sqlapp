@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-public class SqlServer2012CreateIndexFactory extends
-	SqlServer2008CreateIndexFactory{
+public class SqlServer2012CreateIndexFactory extends SqlServer2008CreateIndexFactory {
 
 }

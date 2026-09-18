@@ -30,8 +30,8 @@ import com.sqlapp.data.schemas.properties.SchemaNameProperty;
  * @author tatsuo satoh
  * 
  */
-public class PostgresSetSearchPathToSchemaFactory extends
-		AbstractSetSearchPathToSchemaFactory<DbObject<?>, PostgresSqlBuilder> {
+public class PostgresSetSearchPathToSchemaFactory
+		extends AbstractSetSearchPathToSchemaFactory<DbObject<?>, PostgresSqlBuilder> {
 
 	@Override
 	protected void addSetSearchPath(DbObject<?> obj, PostgresSqlBuilder builder) {

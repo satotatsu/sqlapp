@@ -22,7 +22,6 @@ package com.sqlapp.data.db.dialect.mysql.sql;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropTriggerFactory;
 
-public class MySqlDropTriggerFactory extends
-		AbstractDropTriggerFactory<MySqlSqlBuilder> {
+public class MySqlDropTriggerFactory extends AbstractDropTriggerFactory<MySqlSqlBuilder> {
 
 }

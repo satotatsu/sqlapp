@@ -18,8 +18,7 @@ import com.sqlapp.util.CommonUtils;
  * versions.
  */
 public class PostgresModernFunctionBuilder {
-	private static final Set<String> INTEGER_TYPES = Set.of(
-			"smallint", "integer", "bigint");
+	private static final Set<String> INTEGER_TYPES = Set.of("smallint", "integer", "bigint");
 
 	private final Dialect dialect;
 
@@ -69,33 +68,29 @@ public class PostgresModernFunctionBuilder {
 		return "to_number(" + textExpression + ", 'RN')";
 	}
 
-	public String pgGetAcl(String classIdExpression, String objectIdExpression,
-			String subObjectIdExpression) {
+	public String pgGetAcl(String classIdExpression, String objectIdExpression, String subObjectIdExpression) {
 		checkPostgres18();
 		require(classIdExpression, "classIdExpression");
 		require(objectIdExpression, "objectIdExpression");
 		require(subObjectIdExpression, "subObjectIdExpression");
-		return "pg_get_acl(" + classIdExpression + ", " + objectIdExpression
-				+ ", " + subObjectIdExpression + ")";
+		return "pg_get_acl(" + classIdExpression + ", " + objectIdExpression + ", " + subObjectIdExpression + ")";
 	}
 
-	public String hasLargeObjectPrivilege(String largeObjectExpression,
-			String privilegeExpression) {
+	public String hasLargeObjectPrivilege(String largeObjectExpression, String privilegeExpression) {
 		checkPostgres18();
 		require(largeObjectExpression, "largeObjectExpression");
 		require(privilegeExpression, "privilegeExpression");
-		return "has_largeobject_privilege(" + largeObjectExpression + ", "
-				+ privilegeExpression + ")";
+		return "has_largeobject_privilege(" + largeObjectExpression + ", " + privilegeExpression + ")";
 	}
 
-	public String hasLargeObjectPrivilege(String userExpression,
-			String largeObjectExpression, String privilegeExpression) {
+	public String hasLargeObjectPrivilege(String userExpression, String largeObjectExpression,
+			String privilegeExpression) {
 		checkPostgres18();
 		require(userExpression, "userExpression");
 		require(largeObjectExpression, "largeObjectExpression");
 		require(privilegeExpression, "privilegeExpression");
-		return "has_largeobject_privilege(" + userExpression + ", "
-				+ largeObjectExpression + ", " + privilegeExpression + ")";
+		return "has_largeobject_privilege(" + userExpression + ", " + largeObjectExpression + ", " + privilegeExpression
+				+ ")";
 	}
 
 	public String integerToBytea(String integerExpression) {
@@ -108,8 +103,7 @@ public class PostgresModernFunctionBuilder {
 		require(integerType, "integerType");
 		String normalized = integerType.toLowerCase(Locale.ROOT);
 		if (!INTEGER_TYPES.contains(normalized)) {
-			throw new IllegalArgumentException(
-					"integerType must be smallint, integer, or bigint.");
+			throw new IllegalArgumentException("integerType must be smallint, integer, or bigint.");
 		}
 		return cast(byteaExpression, normalized);
 	}
@@ -144,8 +138,7 @@ public class PostgresModernFunctionBuilder {
 
 	private void checkPostgres18() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"These functions require PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("These functions require PostgreSQL 18 or later.");
 		}
 	}
 

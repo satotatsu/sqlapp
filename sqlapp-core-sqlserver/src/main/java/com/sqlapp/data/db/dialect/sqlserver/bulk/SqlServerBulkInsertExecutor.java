@@ -19,14 +19,13 @@ public class SqlServerBulkInsertExecutor implements BulkInsertExecutor {
 	}
 
 	@Override
-	public long execute(final Connection connection, final Table table,
-			final BulkOption options) throws SQLException {
+	public long execute(final Connection connection, final Table table, final BulkOption options) throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		try (SQLServerBulkCopy bulkCopy = new SQLServerBulkCopy(connection);
 				BulkData data = new BulkData(table, options)) {
-			bulkCopy.setDestinationTableName(dialect.getObjectFullName(
-					table.getCatalogName(), table.getSchemaName(), table.getName()));
+			bulkCopy.setDestinationTableName(
+					dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName()));
 			bulkCopy.setBulkCopyOptions(BulkData.toSqlServerOptions(options));
 			for (final int ordinal : data.getColumnOrdinals()) {
 				bulkCopy.addColumnMapping(ordinal, data.getColumnName(ordinal));

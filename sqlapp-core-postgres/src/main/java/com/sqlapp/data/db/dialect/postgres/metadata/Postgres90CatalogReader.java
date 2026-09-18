@@ -22,22 +22,24 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.metadata.TableSpaceReader;
+
 /**
  * Postgres 9.0 以降のカタログ読み込み
+ * 
  * @author satoh
  *
  */
-public class Postgres90CatalogReader extends Postgres83CatalogReader{
+public class Postgres90CatalogReader extends Postgres83CatalogReader {
 
 	public Postgres90CatalogReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected SchemaReader newSchemaReader() {
 		return new Postgres90SchemaReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
 		return new PostgresTableSpaceReader(this.getDialect());

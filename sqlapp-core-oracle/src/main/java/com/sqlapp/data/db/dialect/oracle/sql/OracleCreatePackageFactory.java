@@ -25,8 +25,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreatePackageFactory;
 import com.sqlapp.data.schemas.Package;
 
-public class OracleCreatePackageFactory extends
-		AbstractCreatePackageFactory<OracleSqlBuilder> {
+public class OracleCreatePackageFactory extends AbstractCreatePackageFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Package obj, OracleSqlBuilder builder) {

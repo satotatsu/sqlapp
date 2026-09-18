@@ -14,43 +14,30 @@ class PostgresPredefinedRoleBuilderTest {
 
 	@Test
 	void testVersionedRoleDefinition() {
-		assertFalse(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER
-				.isSupported(DialectHolder.postgreSQL170));
-		assertTrue(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER
-				.isSupported(DialectHolder.postgreSQL180));
-		assertEquals("pg_signal_autovacuum_worker",
-				PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER.getRoleName());
+		assertFalse(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER.isSupported(DialectHolder.postgreSQL170));
+		assertTrue(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER.isSupported(DialectHolder.postgreSQL180));
+		assertEquals("pg_signal_autovacuum_worker", PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER.getRoleName());
 	}
 
 	@Test
 	void testGrantAutovacuumSignalRole() {
-		assertEquals(
-				"GRANT pg_signal_autovacuum_worker TO operators WITH ADMIN OPTION",
-				new PostgresPredefinedRoleBuilder(
-						DialectHolder.postgreSQL180)
-						.grant(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER,
-								"operators", true));
+		assertEquals("GRANT pg_signal_autovacuum_worker TO operators WITH ADMIN OPTION",
+				new PostgresPredefinedRoleBuilder(DialectHolder.postgreSQL180)
+						.grant(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER, "operators", true));
 	}
 
 	@Test
 	void testRevokeAutovacuumSignalRole() {
-		assertEquals(
-				"REVOKE ADMIN OPTION FOR pg_signal_autovacuum_worker FROM operators CASCADE",
-				new PostgresPredefinedRoleBuilder(
-						DialectHolder.postgreSQL180)
-						.revoke(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER,
-								"operators", true, true));
+		assertEquals("REVOKE ADMIN OPTION FOR pg_signal_autovacuum_worker FROM operators CASCADE",
+				new PostgresPredefinedRoleBuilder(DialectHolder.postgreSQL180)
+						.revoke(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER, "operators", true, true));
 	}
 
 	@Test
 	void testRejectRoleBeforeIntroduction() {
-		PostgresPredefinedRoleBuilder builder =
-				new PostgresPredefinedRoleBuilder(
-						DialectHolder.postgreSQL170);
+		PostgresPredefinedRoleBuilder builder = new PostgresPredefinedRoleBuilder(DialectHolder.postgreSQL170);
 
 		assertThrows(IllegalArgumentException.class,
-				() -> builder.grant(
-						PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER,
-						"operators", false));
+				() -> builder.grant(PostgresPredefinedRole.SIGNAL_AUTOVACUUM_WORKER, "operators", false));
 	}
 }

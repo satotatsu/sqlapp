@@ -50,8 +50,7 @@ public class OracleTypeBodyReader extends TypeBodyReader {
 	private static final String OBJECT_TYPE = "TYPE BODY";
 
 	@Override
-	protected List<TypeBody> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<TypeBody> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TypeBody> result = list();
@@ -63,8 +62,9 @@ public class OracleTypeBodyReader extends TypeBodyReader {
 			}
 		});
 		ParametersContext cnt = new ParametersContext();
-		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
-		for(TypeBody obj:result){
+		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
+				this.getDialect(), cnt, result, OBJECT_TYPE);
+		for (TypeBody obj : result) {
 			obj.setDefinition(routines.get(obj.getSchemaName(), obj.getName()));
 		}
 		return result;

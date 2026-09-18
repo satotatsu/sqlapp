@@ -47,16 +47,14 @@ public class OracleDirectoryReader extends DirectoryReader {
 	}
 
 	@Override
-	protected List<Directory> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Directory> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Directory> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Directory directory = new Directory(getString(rs,
-						"DIRECTORY_NAME"));
+				Directory directory = new Directory(getString(rs, "DIRECTORY_NAME"));
 				directory.setDirectoryPath(getString(rs, "DIRECTORY_PATH"));
 				setSpecifics(rs, "OWNER", directory);
 				result.add(directory);

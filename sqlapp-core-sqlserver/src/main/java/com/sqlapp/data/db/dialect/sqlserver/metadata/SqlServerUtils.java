@@ -37,22 +37,22 @@ import com.sqlapp.util.CommonUtils;
 public class SqlServerUtils extends ReaderUtils {
 
 	protected static String replaceNames(String definition, String name) {
-		if (name==null) {
+		if (name == null) {
 			return replaceNames(definition);
 		}
 		return definition.replace("[" + name + "]", name);
 	}
 
 	private static Pattern QUOTE_PATTERN = Pattern.compile("\\[[^\\]\\s]+\\]", Pattern.MULTILINE);
-	
+
 	protected static String replaceNames(String definition) {
 		if (CommonUtils.isEmpty(definition)) {
 			return definition;
 		}
-		Matcher matcher=QUOTE_PATTERN.matcher(definition);
-		while(matcher.find()) {
-			String val=matcher.group(0);
-			definition=definition.replace(val, val.substring(1, val.length()-1));
+		Matcher matcher = QUOTE_PATTERN.matcher(definition);
+		while (matcher.find()) {
+			String val = matcher.group(0);
+			definition = definition.replace(val, val.substring(1, val.length() - 1));
 		}
 		return definition;
 	}
@@ -79,8 +79,7 @@ public class SqlServerUtils extends ReaderUtils {
 		return IndexType.BTree;
 	}
 
-	protected static void setNamedArgument(ResultSet rs,
-			Routine<?> routine, NamedArgument obj) throws SQLException {
+	protected static void setNamedArgument(ResultSet rs, Routine<?> routine, NamedArgument obj) throws SQLException {
 		routine.setCatalogName(getString(rs, MetadataReader.CATALOG_NAME));
 		routine.setSchemaName(getString(rs, MetadataReader.SCHEMA_NAME));
 		routine.setName(getString(rs, MetadataReader.ROUTINE_NAME));
@@ -89,19 +88,18 @@ public class SqlServerUtils extends ReaderUtils {
 		SchemaUtils.setRoutine(obj, routine);
 		String productDataType = getString(rs, "NAME");
 		Long maxLength = getLong(rs, "max_length");
-		if (maxLength!=null&&maxLength.longValue()==-1L){
-			if ("xml".equalsIgnoreCase(productDataType)){
-				maxLength=null;
-			} else{
-				maxLength=CommonUtils.LEN_2GB;
+		if (maxLength != null && maxLength.longValue() == -1L) {
+			if ("xml".equalsIgnoreCase(productDataType)) {
+				maxLength = null;
+			} else {
+				maxLength = CommonUtils.LEN_2GB;
 			}
 		}
 		Long precision = getLong(rs, "precision");
 		Integer scale = getInteger(rs, "scale");
 		obj.setDefaultValue(getString(rs, "default_value"));
 		obj.setReadonly(getBoolean(rs, "is_readonly"));
-		obj.getDialect().setDbType(productDataType, notZero(maxLength, precision),
-				scale, obj);
+		obj.getDialect().setDbType(productDataType, notZero(maxLength, precision), scale, obj);
 	}
 
 	/**
@@ -111,35 +109,29 @@ public class SqlServerUtils extends ReaderUtils {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected static String getString(ResultSet rs, String name)
-			throws SQLException {
+	protected static String getString(ResultSet rs, String name) throws SQLException {
 		return rtrim(rs.getNString(name));
 	}
 
-	private static final Pattern PROCEDURE_PATTERN1 = Pattern.compile(
-			".*CREATE.*?PROC(EDURE){0,1}.*?\\s+AS(.*)",
+	private static final Pattern PROCEDURE_PATTERN1 = Pattern.compile(".*CREATE.*?PROC(EDURE){0,1}.*?\\s+AS(.*)",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern PROCEDURE_PATTERN2 = Pattern
-			.compile(
-					".*CREATE.*?PROC(EDURE){0,1}.*EXECUTE\\s+AS\\s+[^\\s]+.*?\\s+AS(.*)",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern PROCEDURE_PATTERN2 = Pattern.compile(
+			".*CREATE.*?PROC(EDURE){0,1}.*EXECUTE\\s+AS\\s+[^\\s]+.*?\\s+AS(.*)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern FIRST_SPACE_PATTERN = Pattern.compile(
-			"[ \\t]*\\n(.*)", Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-					+ Pattern.DOTALL);
+	private static final Pattern FIRST_SPACE_PATTERN = Pattern.compile("[ \\t]*\\n(.*)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * プロシージャー定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            プロシージャー定義
+	 * @param definition プロシージャー定義
 	 * @return ステートメント
 	 */
 	public static String getProcedureStatement(String definition) {
 		definition = rtrim(definition);
-		if (CommonUtils.isEmpty(definition)){
+		if (CommonUtils.isEmpty(definition)) {
 			return definition;
 		}
 		Matcher matcher = PROCEDURE_PATTERN2.matcher(definition);
@@ -175,14 +167,13 @@ public class SqlServerUtils extends ReaderUtils {
 	/**
 	 * 関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	public static String getFunctionStatement(String definition, String type) {
-		if (definition==null){
+		if (definition == null) {
 			return definition;
-		}else if ("FN".equalsIgnoreCase(type)) {
+		} else if ("FN".equalsIgnoreCase(type)) {
 			return getFunctionStatementFN(definition);
 		} else if ("IF".equalsIgnoreCase(type)) {
 			return getFunctionStatementIF(definition);
@@ -199,8 +190,7 @@ public class SqlServerUtils extends ReaderUtils {
 	/**
 	 * 'FN' SQL スカラー関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	protected static String getFunctionStatementFN(String definition) {
@@ -223,8 +213,7 @@ public class SqlServerUtils extends ReaderUtils {
 	/**
 	 * 'IF' SQL インライン テーブル値関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	protected static String getFunctionStatementIF(String definition) {
@@ -242,17 +231,14 @@ public class SqlServerUtils extends ReaderUtils {
 			".*CREATE.*?FUNCTION.*?RETURNS\\s+.*?\\s*(@\\S+).*?TABLE\\s+(.*)",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern FUNCTION_TF_PATTERN2 = Pattern
-			.compile(
-					".*?(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(\\s*AS\\s*){0,1}.*?\\s*(BEGIN.*END).*",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern FUNCTION_TF_PATTERN2 = Pattern.compile(
+			".*?(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(\\s*AS\\s*){0,1}.*?\\s*(BEGIN.*END).*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * 'TF' SQL テーブル値関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	protected static String getFunctionStatementTF(String definition) {
@@ -274,13 +260,12 @@ public class SqlServerUtils extends ReaderUtils {
 	/**
 	 * 'TF' SQL テーブル値関数定義からリターン変数名を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return リターン変数名
 	 */
 	public static String getFunctionReturnName(String definition) {
 		definition = rtrim(definition);
-		if (definition==null){
+		if (definition == null) {
 			return null;
 		}
 		Matcher matcher = FUNCTION_TF_PATTERN1.matcher(definition);
@@ -290,23 +275,18 @@ public class SqlServerUtils extends ReaderUtils {
 		return matcher.group(1);
 	}
 
-	private static final Pattern FUNCTION_FT_PATTERN1 = Pattern
-			.compile(
-					".*CREATE.*?FUNCTION.*?RETURNS\\s+.*?TABLE\\s+.*?(.*)\\s*EXTERNAL\\s+NAME\\s+([\\S]+).*",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern FUNCTION_FT_PATTERN1 = Pattern.compile(
+			".*CREATE.*?FUNCTION.*?RETURNS\\s+.*?TABLE\\s+.*?(.*)\\s*EXTERNAL\\s+NAME\\s+([\\S]+).*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern FUNCTION_FT_PATTERN2 = Pattern
-			.compile(
-					"(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(ORDER\\s+.*?){0,1}(\\s*AS\\s*){0,1}.*",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern FUNCTION_FT_PATTERN2 = Pattern.compile(
+			"(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(ORDER\\s+.*?){0,1}(\\s*AS\\s*){0,1}.*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * 'TF' SQL テーブル値関数定義からテーブル定義部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return リターンテーブル定義
 	 */
 	public static String getFunctionReturnTable(String definition) {
@@ -336,19 +316,17 @@ public class SqlServerUtils extends ReaderUtils {
 		return statement;
 	}
 
-	private static final Pattern TRIGGER_PATTERN1 = Pattern.compile(
-			".*CREATE.*?TRIGGER.*?AS\\s+(.*)",
+	private static final Pattern TRIGGER_PATTERN1 = Pattern.compile(".*CREATE.*?TRIGGER.*?AS\\s+(.*)",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * トリガー定義からトリガーのstatement部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return トリガーのstatement部分
 	 */
 	public static String getTriggerStatement(String definition) {
-		if (definition==null){
+		if (definition == null) {
 			return null;
 		}
 		definition = rtrim(definition);
@@ -362,8 +340,7 @@ public class SqlServerUtils extends ReaderUtils {
 
 	public static Long getMaxLength(String productDataType, Long byteLength) {
 		productDataType = productDataType.toUpperCase();
-		if (productDataType.startsWith("NTEXT")
-				|| productDataType.startsWith("NCHAR")
+		if (productDataType.startsWith("NTEXT") || productDataType.startsWith("NCHAR")
 				|| productDataType.startsWith("NVARCHAR") && byteLength != null) {
 			if (byteLength.longValue() > 0) {
 				return byteLength.longValue() / 2;

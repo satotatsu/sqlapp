@@ -24,7 +24,7 @@ import com.sqlapp.data.db.metadata.DomainReader;
 import com.sqlapp.data.db.metadata.OperatorClassReader;
 import com.sqlapp.data.db.metadata.OperatorReader;
 
-public class Postgres83SchemaReader extends Postgres82SchemaReader{
+public class Postgres83SchemaReader extends Postgres82SchemaReader {
 
 	protected Postgres83SchemaReader(Dialect dialect) {
 		super(dialect);

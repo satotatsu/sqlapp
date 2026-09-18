@@ -42,5 +42,5 @@ public class PostgresDefragTableFactory extends AbstractTableCommandFactory<Post
 	protected SqlType getSqlType() {
 		return SqlType.DEFRAG;
 	}
-	
+
 }

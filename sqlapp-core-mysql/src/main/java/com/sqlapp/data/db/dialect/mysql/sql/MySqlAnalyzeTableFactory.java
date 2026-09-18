@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractAnalyzeTableFactory;
 import com.sqlapp.data.schemas.Table;
 
-public class MySqlAnalyzeTableFactory extends
-		AbstractAnalyzeTableFactory<MySqlSqlBuilder> {
+public class MySqlAnalyzeTableFactory extends AbstractAnalyzeTableFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addAnalyzeTable(Table obj, MySqlSqlBuilder builder) {
@@ -49,8 +48,7 @@ public class MySqlAnalyzeTableFactory extends
 	}
 
 	/**
-	 * @param local
-	 *            the local to set
+	 * @param local the local to set
 	 */
 	public void setLocal(boolean local) {
 		this.local = local;

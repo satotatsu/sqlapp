@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Box;
 import org.postgresql.geometric.PGbox;
 
-public class FromPGBoxConverter extends AbstractFromObjectConverter<Box, PGbox>{
+public class FromPGBoxConverter extends AbstractFromObjectConverter<Box, PGbox> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Box copy(Object obj){
-		if (obj==null){
+	public Box copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Box)convertObject(obj).clone();
+		return (Box) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGBoxConverter extends AbstractFromObjectConverter<Box, PGbox>{
 
 	@Override
 	protected Box toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGbox pgObject=new PGbox(val);
+			PGbox pgObject = new PGbox(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Box toObject(PGbox value) {
-		Box obj=new Box();
+		Box obj = new Box();
 		obj.setValue(value.getValue());
 		return obj;
 	}

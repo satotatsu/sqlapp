@@ -41,8 +41,7 @@ public class SqlServer2005ObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected List<ObjectPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ObjectPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ObjectPrivilege> result = list();
@@ -72,8 +71,7 @@ public class SqlServer2005ObjectPrivilegeReader extends ObjectPrivilegeReader {
 		obj.setGranteeName(getString(rs, GRANTEE));
 		obj.setPrivilege(getString(rs, "permission_name"));
 		obj.setState(getString(rs, "state_desc"));
-		obj.setGrantable("GRANT_WITH_GRANT_OPTION".equals(getString(rs,
-				"state_desc")));
+		obj.setGrantable("GRANT_WITH_GRANT_OPTION".equals(getString(rs, "state_desc")));
 		return obj;
 	}
 }

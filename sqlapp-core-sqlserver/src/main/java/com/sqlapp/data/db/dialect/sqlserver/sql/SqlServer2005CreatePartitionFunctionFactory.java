@@ -23,15 +23,14 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreatePartitionFunctionFactory;
 import com.sqlapp.data.schemas.PartitionFunction;
 
-public class SqlServer2005CreatePartitionFunctionFactory extends
-		AbstractCreatePartitionFunctionFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreatePartitionFunctionFactory
+		extends AbstractCreatePartitionFunctionFactory<SqlServerSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final PartitionFunction obj,
-			final SqlServerSqlBuilder builder) {
+	protected void addCreateObject(final PartitionFunction obj, final SqlServerSqlBuilder builder) {
 		builder.create().partition().function();
 		builder.name(obj);
-		builder.space().brackets(()->{
+		builder.space().brackets(() -> {
 			builder.space();
 			builder.typeDefinition(obj);
 			builder.space();
@@ -45,7 +44,7 @@ public class SqlServer2005CreatePartitionFunctionFactory extends
 		}
 		builder.lineBreak();
 		builder.for_().space().values();
-		builder.space().brackets(()->{
+		builder.space().brackets(() -> {
 			builder.space();
 			builder._add(", ", obj.getValues());
 			builder.space();

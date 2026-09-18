@@ -21,12 +21,14 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
+
 /**
  * Postgres 9.1 以降のカタログ読み込み
+ * 
  * @author satoh
  *
  */
-public class Postgres91CatalogReader extends Postgres90CatalogReader{
+public class Postgres91CatalogReader extends Postgres90CatalogReader {
 
 	public Postgres91CatalogReader(Dialect dialect) {
 		super(dialect);
@@ -36,5 +38,5 @@ public class Postgres91CatalogReader extends Postgres90CatalogReader{
 	protected SchemaReader newSchemaReader() {
 		return new Postgres91SchemaReader(this.getDialect());
 	}
-	
+
 }

@@ -18,9 +18,8 @@ import com.sqlapp.util.CommonUtils;
  * PostgreSQL 18 {@code CREATE FOREIGN TABLE ... (LIKE ...)} builder.
  */
 public class PostgresForeignTableLikeBuilder {
-	private static final Set<String> LIKE_OPTIONS = Set.of(
-			"COMMENTS", "CONSTRAINTS", "DEFAULTS", "GENERATED", "STATISTICS",
-			"ALL");
+	private static final Set<String> LIKE_OPTIONS = Set.of("COMMENTS", "CONSTRAINTS", "DEFAULTS", "GENERATED",
+			"STATISTICS", "ALL");
 
 	private final Dialect dialect;
 	private final String tableName;
@@ -47,8 +46,7 @@ public class PostgresForeignTableLikeBuilder {
 		return like(null, sourceTable);
 	}
 
-	public PostgresForeignTableLikeBuilder like(String sourceSchema,
-			String sourceTable) {
+	public PostgresForeignTableLikeBuilder like(String sourceSchema, String sourceTable) {
 		require(sourceTable, "sourceTable");
 		this.sourceSchemaName = sourceSchema;
 		this.sourceTableName = sourceTable;
@@ -97,14 +95,12 @@ public class PostgresForeignTableLikeBuilder {
 		}
 		builder.append(") SERVER ").append(dialect.quote(serverName));
 		if (!foreignOptions.isEmpty()) {
-			builder.append(" OPTIONS (")
-					.append(String.join(", ", foreignOptions)).append(")");
+			builder.append(" OPTIONS (").append(String.join(", ", foreignOptions)).append(")");
 		}
 		return builder.toString();
 	}
 
-	private PostgresForeignTableLikeBuilder likeOption(String mode,
-			String value) {
+	private PostgresForeignTableLikeBuilder likeOption(String mode, String value) {
 		require(value, "like option");
 		String normalized = value.toUpperCase(java.util.Locale.ROOT);
 		if (!LIKE_OPTIONS.contains(normalized)) {
@@ -114,8 +110,7 @@ public class PostgresForeignTableLikeBuilder {
 		return this;
 	}
 
-	private void appendQualifiedName(StringBuilder builder, String schema,
-			String name) {
+	private void appendQualifiedName(StringBuilder builder, String schema, String name) {
 		if (!CommonUtils.isEmpty(schema)) {
 			builder.append(dialect.quote(schema)).append(".");
 		}
@@ -124,8 +119,7 @@ public class PostgresForeignTableLikeBuilder {
 
 	private void checkVersion() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"CREATE FOREIGN TABLE LIKE requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("CREATE FOREIGN TABLE LIKE requires PostgreSQL 18 or later.");
 		}
 	}
 

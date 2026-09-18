@@ -8,11 +8,13 @@ import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class MySqlBulkUpsertProviderTest {
-	@Test void resolvesProvider() {
-		assertInstanceOf(MySqlBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.mysql840Dialect));
+	@Test
+	void resolvesProvider() {
+		assertInstanceOf(MySqlBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.mysql840Dialect));
 	}
-	@Test void resolvesSetBasedSnapshotProvider() {
+
+	@Test
+	void resolvesSetBasedSnapshotProvider() {
 		assertInstanceOf(MySqlSetBasedMigrationSnapshotExecutor.class,
 				SetBasedMigrationSnapshotResolver.resolve(DialectHolder.mysql840Dialect));
 	}

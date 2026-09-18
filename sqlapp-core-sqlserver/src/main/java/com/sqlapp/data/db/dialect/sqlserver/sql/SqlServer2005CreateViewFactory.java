@@ -23,8 +23,8 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateViewFactory;
 import com.sqlapp.data.schemas.View;
 
-public class SqlServer2005CreateViewFactory extends AbstractCreateViewFactory<SqlServerSqlBuilder>{
-	
+public class SqlServer2005CreateViewFactory extends AbstractCreateViewFactory<SqlServerSqlBuilder> {
+
 	@Override
 	protected void createObject(final View obj, final SqlServerSqlBuilder builder) {
 		if (this.getOptions().isDropIfExists()) {

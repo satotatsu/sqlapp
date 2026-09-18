@@ -34,17 +34,15 @@ import com.sqlapp.data.schemas.Table;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2008AlterTableFactory extends	SqlServer2005AlterTableFactory {
+public class SqlServer2008AlterTableFactory extends SqlServer2005AlterTableFactory {
 
 	@Override
-	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff
-			, Table originalTable, Table table, List<SqlOperation> result){
-		super.addOtherDefinitions(allDiff
-				, originalTable, table, result);
-		Difference<?> diff=allDiff.get("HAS_CHANGE_TRACKING");
-		if (diff!=null&&diff.getState().isChanged()) {
-			Boolean val = Converters.getDefault().convertObject(
-					diff.getTarget(), Boolean.class);
+	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
+			List<SqlOperation> result) {
+		super.addOtherDefinitions(allDiff, originalTable, table, result);
+		Difference<?> diff = allDiff.get("HAS_CHANGE_TRACKING");
+		if (diff != null && diff.getState().isChanged()) {
+			Boolean val = Converters.getDefault().convertObject(diff.getTarget(), Boolean.class);
 			SqlServerSqlBuilder builder = createSqlBuilder();
 			builder.alter().table().name(originalTable, this.getOptions().isDecorateSchemaName());
 			builder.lineBreak();

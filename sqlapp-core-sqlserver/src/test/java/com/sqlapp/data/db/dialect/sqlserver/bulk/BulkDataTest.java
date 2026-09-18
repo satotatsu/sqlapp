@@ -32,8 +32,7 @@ class BulkDataTest {
 			assertEquals("amount", data.getColumnName(2));
 			assertEquals(2, data.getScale(2));
 			assertTrue(data.next());
-			assertArrayEquals(new Object[] { "alpha", new BigDecimal("12.34") },
-					data.getRowData());
+			assertArrayEquals(new Object[] { "alpha", new BigDecimal("12.34") }, data.getRowData());
 			assertFalse(data.next());
 			assertEquals(1, data.getRowCount());
 		}
@@ -42,23 +41,19 @@ class BulkDataTest {
 	@Test
 	void includesIdentityWhenRequested() throws Exception {
 		final Table table = createTable();
-		try (BulkData data = new BulkData(table,
-				BulkOption.builder().keepIdentity(true).build())) {
+		try (BulkData data = new BulkData(table, BulkOption.builder().keepIdentity(true).build())) {
 			assertEquals(Set.of(1, 2, 3), data.getColumnOrdinals());
 			assertEquals("id", data.getColumnName(1));
 			assertTrue(data.next());
-			assertArrayEquals(new Object[] { 10, "alpha", new BigDecimal("12.34") },
-					data.getRowData());
+			assertArrayEquals(new Object[] { 10, "alpha", new BigDecimal("12.34") }, data.getRowData());
 		}
 	}
 
 	@Test
 	void mapsAllCommonOptions() throws Exception {
-		final var source = BulkOption.builder().batchSize(500)
-				.bulkCopyTimeout(42).checkConstraints(true).fireTriggers(true)
-				.keepIdentity(true).keepNulls(true).tableLock(true)
-				.useTransaction(true).allowEncryptedValueModifications(true)
-				.build();
+		final var source = BulkOption.builder().batchSize(500).bulkCopyTimeout(42).checkConstraints(true)
+				.fireTriggers(true).keepIdentity(true).keepNulls(true).tableLock(true).useTransaction(true)
+				.allowEncryptedValueModifications(true).build();
 		final var target = BulkData.toSqlServerOptions(source);
 		assertEquals(500, target.getBatchSize());
 		assertEquals(42, target.getBulkCopyTimeout());
@@ -73,26 +68,20 @@ class BulkDataTest {
 
 	@Test
 	void resolvesSqlServerProviderAndRejectsBadAccessOrder() throws Exception {
-		assertTrue(BulkInsertResolver.resolve(DialectHolder.defaultDialect2022)
-				instanceof SqlServerBulkInsertExecutor);
+		assertTrue(BulkInsertResolver.resolve(DialectHolder.defaultDialect2022) instanceof SqlServerBulkInsertExecutor);
 		try (BulkData data = new BulkData(createTable(), BulkOption.defaults())) {
 			assertThrows(java.sql.SQLException.class, data::getRowData);
-			assertThrows(IllegalArgumentException.class,
-					() -> data.getColumnName(0));
+			assertThrows(IllegalArgumentException.class, () -> data.getColumnName(0));
 		}
 	}
 
 	private Table createTable() {
 		final Table table = new Table("target");
 		table.setDialect(DialectHolder.defaultDialect2022);
-		table.getColumns().add(new Column("id").setDataType(DataType.INT)
-				.setIdentity(true));
-		table.getColumns().add(new Column("name").setDataType(DataType.NVARCHAR)
-				.setLength(100));
-		table.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL)
-				.setLength(10).setScale(2));
-		table.getColumns().add(new Column("computed")
-				.setDataType(DataType.INT).setFormula("[id] + 1"));
+		table.getColumns().add(new Column("id").setDataType(DataType.INT).setIdentity(true));
+		table.getColumns().add(new Column("name").setDataType(DataType.NVARCHAR).setLength(100));
+		table.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL).setLength(10).setScale(2));
+		table.getColumns().add(new Column("computed").setDataType(DataType.INT).setFormula("[id] + 1"));
 		table.getRows().add(row -> {
 			row.put("id", 10);
 			row.put("name", "alpha");

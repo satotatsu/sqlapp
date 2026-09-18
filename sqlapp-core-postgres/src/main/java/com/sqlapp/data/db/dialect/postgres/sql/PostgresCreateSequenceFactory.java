@@ -27,18 +27,18 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
 
-public class PostgresCreateSequenceFactory extends
-		AbstractCreateSequenceFactory<PostgresSqlBuilder> {
+public class PostgresCreateSequenceFactory extends AbstractCreateSequenceFactory<PostgresSqlBuilder> {
 
 	@Override
-	protected void addDataType(final Sequence obj, PostgresSqlBuilder builder){
+	protected void addDataType(final Sequence obj, PostgresSqlBuilder builder) {
 	}
-	
+
 	@Override
 	protected void addOptions(final Sequence obj, List<SqlOperation> sqlList) {
-		if (obj.getRemarks()!=null){
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().sequence().space().name(obj, this.getOptions().isDecorateSchemaName()).is().sqlChar(obj.getRemarks());
+		if (obj.getRemarks() != null) {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().sequence().space().name(obj, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(obj.getRemarks());
 			addSql(sqlList, builder, SqlType.SET_COMMENT, obj);
 		}
 	}

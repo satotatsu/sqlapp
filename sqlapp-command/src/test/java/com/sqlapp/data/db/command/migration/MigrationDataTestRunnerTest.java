@@ -25,8 +25,8 @@ class MigrationDataTestRunnerTest {
 				statement.execute("INSERT INTO CUSTOMER VALUES (1, 'ACTIVE'), (2, NULL), (3, 'INVALID')");
 			}
 			final var notNull = new MigrationDataTest("customer-status-not-null", MigrationDataTest.Type.NOT_NULL,
-					MigrationDataTest.Severity.ERROR, null, null, "CUSTOMER", List.of("STATUS"), null, Map.of(),
-					0, 0, 10);
+					MigrationDataTest.Severity.ERROR, null, null, "CUSTOMER", List.of("STATUS"), null, Map.of(), 0, 0,
+					10);
 			final var accepted = new MigrationDataTest("customer-status-accepted", MigrationDataTest.Type.CUSTOM_SQL,
 					MigrationDataTest.Severity.ERROR, null, null, "CUSTOMER", List.of("STATUS"),
 					"SELECT ID, STATUS FROM CUSTOMER WHERE STATUS NOT IN /*values*/('ACTIVE')",

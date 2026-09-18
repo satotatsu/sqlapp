@@ -94,8 +94,7 @@ class GeneratePliCsvExtractorCommandTest {
 		contract.setMigrationId("company-migration");
 		contract.getCsv().setEncoding("MS932");
 		contract.getCsv().setNullValue("\\N");
-		DataSet root = dataSet("table-company", "COMPANY_MASTER", "company_master.csv",
-				"COMPANY_MASTER", null, 0);
+		DataSet root = dataSet("table-company", "COMPANY_MASTER", "company_master.csv", "COMPANY_MASTER", null, 0);
 		root.getSourceBusinessKey().add("COMPANY_ID");
 		root.getFields().add(field(1, "COMPANY_MASTER.COMPANY_ID", "COMPANY_ID", false));
 		contract.getDataSets().add(root);
@@ -103,12 +102,11 @@ class GeneratePliCsvExtractorCommandTest {
 				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST", root.getId(), 1);
 		employee.setMaximumOccurrences(50);
 		employee.setOccurrenceColumn("EMPLOYEE_LIST_NO");
-		employee.getFields().add(field(1,
-				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.COMPANY_ID", "COMPANY_ID", false));
-		employee.getFields().add(field(2,
-				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID", false));
-		employee.getFields().add(field(3,
-				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index", "EMPLOYEE_LIST_NO", true));
+		employee.getFields()
+				.add(field(1, "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.COMPANY_ID", "COMPANY_ID", false));
+		employee.getFields().add(field(2, "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID", false));
+		employee.getFields()
+				.add(field(3, "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index", "EMPLOYEE_LIST_NO", true));
 		AncestorKey ancestor = new AncestorKey();
 		ancestor.setAncestorDataSetId(root.getId());
 		ancestor.setAncestorTable("COMPANY_MASTER");
@@ -141,8 +139,8 @@ class GeneratePliCsvExtractorCommandTest {
 		field.setSourceColumn(column);
 		field.setStagingColumn(column);
 		field.setTargetColumn(column);
-		field.setAction(occurrence ? LegacyMigrationMapping.ColumnAction.GENERATE
-				: LegacyMigrationMapping.ColumnAction.COPY);
+		field.setAction(
+				occurrence ? LegacyMigrationMapping.ColumnAction.GENERATE : LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(true);
 		field.setGenerated(occurrence);
 		field.setOccurrenceIndex(occurrence);

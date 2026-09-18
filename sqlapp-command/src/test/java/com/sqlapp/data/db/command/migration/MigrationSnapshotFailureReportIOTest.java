@@ -15,7 +15,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.exceptions.CommandException;
 
 class MigrationSnapshotFailureReportIOTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void atomicallyRoundTripsAndValidatesFailureReports() throws Exception {
@@ -34,10 +35,10 @@ class MigrationSnapshotFailureReportIOTest {
 	@Test
 	void verifiesTheExactApprovalArtifact() {
 		final Path approvalFile = directory.resolve("approval.json");
-		final var approval = new MigrationSnapshotApprovalReport(
-				MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION, Instant.parse("2026-09-16T00:30:00Z"),
-				"sha256:" + "0".repeat(64), "customer", "PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY",
-				List.of("ID"), List.of("NAME"), true, Instant.parse("2026-09-16T00:00:00Z"), 100, 100, null);
+		final var approval = new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION,
+				Instant.parse("2026-09-16T00:30:00Z"), "sha256:" + "0".repeat(64), "customer", "PUBLIC.CUSTOMER",
+				"PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true, Instant.parse("2026-09-16T00:00:00Z"),
+				100, 100, null);
 		final var approvalIo = new MigrationSnapshotApprovalReportIO();
 		approvalIo.write(approvalFile, approval);
 		final String artifactFingerprint = approvalIo.readArtifact(approvalFile).artifactFingerprint();
@@ -63,10 +64,11 @@ class MigrationSnapshotFailureReportIOTest {
 		final MigrationSnapshotFailureReport valid = report("failure");
 		final var invalid = new MigrationSnapshotFailureReport(valid.formatVersion(), valid.generatedAt(),
 				valid.startedAt(), valid.phase(), valid.snapshotId(), valid.configurationFingerprint(),
-				valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(), valid.sourceTable(), valid.targetTable(),
-				valid.effectiveAt(), null, valid.leaseAcquisitionId(), valid.failureType(), valid.failureMessage());
-		assertThrows(CommandException.class,
-				() -> new MigrationSnapshotFailureReportIO().write(directory.resolve("invalid-acquisition.json"), invalid));
+				valid.approvalGeneratedAt(), valid.approvalArtifactFingerprint(), valid.sourceTable(),
+				valid.targetTable(), valid.effectiveAt(), null, valid.leaseAcquisitionId(), valid.failureType(),
+				valid.failureMessage());
+		assertThrows(CommandException.class, () -> new MigrationSnapshotFailureReportIO()
+				.write(directory.resolve("invalid-acquisition.json"), invalid));
 	}
 
 	private static MigrationSnapshotFailureReport report(final String message) {
@@ -76,7 +78,6 @@ class MigrationSnapshotFailureReportIOTest {
 				"PUBLIC.CUSTOMER", "PUBLIC.CUSTOMER_HISTORY", Instant.parse("2026-09-16T00:00:00Z"),
 				new MigrationSnapshotLeaseEvidence(com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.DATABASE, "worker-1",
 						java.time.Duration.ofMinutes(5), "SQLAPP_BULK_MIGRATION_LEASE", null),
-				"acquisition-1",
-				"java.sql.SQLException", message);
+				"acquisition-1", "java.sql.SQLException", message);
 	}
 }

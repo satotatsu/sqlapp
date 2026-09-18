@@ -30,8 +30,8 @@ import com.sqlapp.data.schemas.properties.SchemaNameProperty;
  * @author tatsuo satoh
  * 
  */
-public class MySqlSetSearchPathToSchemaFactory extends
-		AbstractSetSearchPathToSchemaFactory<DbObject<?>, MySqlSqlBuilder> {
+public class MySqlSetSearchPathToSchemaFactory
+		extends AbstractSetSearchPathToSchemaFactory<DbObject<?>, MySqlSqlBuilder> {
 
 	@Override
 	protected void addSetSearchPath(DbObject<?> obj, MySqlSqlBuilder builder) {

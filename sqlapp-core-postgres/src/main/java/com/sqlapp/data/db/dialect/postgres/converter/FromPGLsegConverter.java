@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Lseg;
 import org.postgresql.geometric.PGlseg;
 
-public class FromPGLsegConverter extends AbstractFromObjectConverter<Lseg, PGlseg>{
+public class FromPGLsegConverter extends AbstractFromObjectConverter<Lseg, PGlseg> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Lseg copy(Object obj){
-		if (obj==null){
+	public Lseg copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Lseg)convertObject(obj).clone();
+		return (Lseg) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGLsegConverter extends AbstractFromObjectConverter<Lseg, PGlse
 
 	@Override
 	protected Lseg toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGlseg pgObject=new PGlseg(val);
+			PGlseg pgObject = new PGlseg(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Lseg toObject(PGlseg value) {
-		Lseg obj=new Lseg();
+		Lseg obj = new Lseg();
 		obj.setValue(value.getValue());
 		return obj;
 	}

@@ -23,10 +23,9 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class OracleCreateSequenceFactory extends
-		AbstractCreateSequenceFactory<OracleSqlBuilder> {
+public class OracleCreateSequenceFactory extends AbstractCreateSequenceFactory<OracleSqlBuilder> {
 
 	@Override
-	protected void addDataType(final Sequence obj, OracleSqlBuilder builder){
+	protected void addDataType(final Sequence obj, OracleSqlBuilder builder) {
 	}
 }

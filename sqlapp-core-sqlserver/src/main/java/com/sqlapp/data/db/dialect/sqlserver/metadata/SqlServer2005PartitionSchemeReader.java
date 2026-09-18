@@ -49,8 +49,7 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 	}
 
 	@Override
-	protected List<PartitionScheme> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<PartitionScheme> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String, String, PartitionScheme> map = doubleKeyMap();
@@ -64,7 +63,7 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 					obj = createPartitionScheme(rs);
 					map.put(catalog_name, name, obj);
 				}
-				TableSpace ts=new TableSpace(getString(rs, "file_group_name"));
+				TableSpace ts = new TableSpace(getString(rs, "file_group_name"));
 				ts.setId("" + rs.getInt("destination_id"));
 				obj.getTableSpaces().add(ts);
 			}
@@ -76,8 +75,7 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 		return getSqlNodeCache().getString("partitionSchemes2005.sql");
 	}
 
-	protected PartitionScheme createPartitionScheme(ExResultSet rs)
-			throws SQLException {
+	protected PartitionScheme createPartitionScheme(ExResultSet rs) throws SQLException {
 		String catalog_name = getString(rs, CATALOG_NAME);
 		String name = getString(rs, PARTITION_SHCEME_NAME);
 		PartitionScheme obj = new PartitionScheme(name);

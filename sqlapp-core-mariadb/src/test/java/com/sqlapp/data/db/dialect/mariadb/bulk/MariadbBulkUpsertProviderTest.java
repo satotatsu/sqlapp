@@ -8,8 +8,8 @@ import com.sqlapp.data.db.dialect.mysql.bulk.MySqlBulkUpsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
 
 class MariadbBulkUpsertProviderTest {
-	@Test void resolvesProvider() {
-		assertInstanceOf(MySqlBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.mariadb11_80Dialect));
+	@Test
+	void resolvesProvider() {
+		assertInstanceOf(MySqlBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.mariadb11_80Dialect));
 	}
 }

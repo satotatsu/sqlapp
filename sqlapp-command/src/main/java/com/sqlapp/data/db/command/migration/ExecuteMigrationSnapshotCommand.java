@@ -64,8 +64,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 						name(resolved.sourceTable()), name(resolved.targetTable()), resolved.definition().keyColumns(),
 						resolved.definition().trackedColumns(), resolved.definition().expireMissingRows(),
 						resolved.effectiveAt(), resolved.fetchSize(), resolved.batchSize(), resolved.approvalValidFor(),
-						MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()),
-						leaseAcquisitionId,
+						MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()), leaseAcquisitionId,
 						metadata.getDatabaseProductName(), metadata.getDatabaseProductVersion(),
 						setBased.<String>map(x -> x.getClass().getName())
 								.orElse(JdbcBatchMigrationSnapshotExecutor.class.getName()),
@@ -146,8 +145,7 @@ public class ExecuteMigrationSnapshotCommand extends AbstractDataSourceCommand {
 				resolved.definition().id(), resolved.configurationFingerprint(), resolved.approvalGeneratedAt(),
 				resolved.approvalArtifactFingerprint(), name(resolved.sourceTable()), name(resolved.targetTable()),
 				resolved.effectiveAt(), MigrationSnapshotLeaseEvidence.from(resolved.leaseConfiguration()),
-				leaseAcquisitionId,
-				failure.getClass().getName(), bounded);
+				leaseAcquisitionId, failure.getClass().getName(), bounded);
 		try {
 			new MigrationSnapshotFailureReportIO().write(resolved.failureReportFile(), failureReport);
 			info("Migration snapshot failure report: ", resolved.failureReportFile());

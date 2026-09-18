@@ -59,8 +59,8 @@ public class SqlServer2016Sp1 extends SqlServer2016 {
 	}
 
 	@Override
-	public SqlServer2016Sp1SqlBuilder createSqlBuilder(){
+	public SqlServer2016Sp1SqlBuilder createSqlBuilder() {
 		return new SqlServer2016Sp1SqlBuilder(this);
 	}
-	
+
 }

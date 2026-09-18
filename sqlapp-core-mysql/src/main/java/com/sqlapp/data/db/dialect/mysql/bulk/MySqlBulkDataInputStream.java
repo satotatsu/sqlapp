@@ -14,7 +14,9 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.util.CommonUtils;
 
-/** Streams rows for MySQL LOAD DATA LOCAL INFILE without buffering the table. */
+/**
+ * Streams rows for MySQL LOAD DATA LOCAL INFILE without buffering the table.
+ */
 public class MySqlBulkDataInputStream extends InputStream {
 	static final char RECORD_TERMINATOR = '\u001e';
 	static final char DELIMITER = '\u001f';
@@ -37,8 +39,7 @@ public class MySqlBulkDataInputStream extends InputStream {
 			columns.add(column);
 		}
 		if (columns.isEmpty()) {
-			throw new IllegalArgumentException(
-					"No writable MySQL bulk columns: " + table.getName());
+			throw new IllegalArgumentException("No writable MySQL bulk columns: " + table.getName());
 		}
 		rows = table.getRows().iterator();
 	}
@@ -58,8 +59,7 @@ public class MySqlBulkDataInputStream extends InputStream {
 	}
 
 	@Override
-	public int read(final byte[] buffer, final int offset, final int length)
-			throws IOException {
+	public int read(final byte[] buffer, final int offset, final int length) throws IOException {
 		java.util.Objects.checkFromIndexSize(offset, length, buffer.length);
 		if (closed) {
 			throw new IOException("Stream is closed");
@@ -95,8 +95,7 @@ public class MySqlBulkDataInputStream extends InputStream {
 			if (value == null) {
 				builder.append("\\N");
 			} else {
-				final String text = value instanceof byte[] bytes
-						? java.util.HexFormat.of().formatHex(bytes)
+				final String text = value instanceof byte[] bytes ? java.util.HexFormat.of().formatHex(bytes)
 						: value.toString();
 				appendEscaped(builder, text);
 			}
@@ -107,8 +106,7 @@ public class MySqlBulkDataInputStream extends InputStream {
 	private void appendEscaped(final StringBuilder builder, final String text) {
 		for (int i = 0; i < text.length(); i++) {
 			final char character = text.charAt(i);
-			if (character == '\\' || character == DELIMITER
-					|| character == RECORD_TERMINATOR) {
+			if (character == '\\' || character == DELIMITER || character == RECORD_TERMINATOR) {
 				builder.append('\\');
 			}
 			builder.append(character);

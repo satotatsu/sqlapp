@@ -15,9 +15,8 @@ import com.sqlapp.data.schemas.Table;
 public class Postgres170MergeFactory extends Postgres150MergeFactory {
 
 	@Override
-	protected void addMergeTableWhenNotMatchedBySource(final Table table,
-			final SqlSignature sqlSignature, final String targetTableAlias,
-			final String sourceTableAlias, final PostgresSqlBuilder builder) {
+	protected void addMergeTableWhenNotMatchedBySource(final Table table, final SqlSignature sqlSignature,
+			final String targetTableAlias, final String sourceTableAlias, final PostgresSqlBuilder builder) {
 		if (!getTableOptions().getMergeTableWithDelete().test(table)) {
 			return;
 		}
@@ -27,9 +26,8 @@ public class Postgres170MergeFactory extends Postgres150MergeFactory {
 	}
 
 	@Override
-	protected void addMergeTableAfter(final Table table, final SqlSignature sqlSignature,
-			final String targetTableAlias, final String sourceTableAlias,
-			final PostgresSqlBuilder builder) {
+	protected void addMergeTableAfter(final Table table, final SqlSignature sqlSignature, final String targetTableAlias,
+			final String sourceTableAlias, final PostgresSqlBuilder builder) {
 		if (!getTableOptions().getMergeTableWithReturning().test(table)) {
 			return;
 		}

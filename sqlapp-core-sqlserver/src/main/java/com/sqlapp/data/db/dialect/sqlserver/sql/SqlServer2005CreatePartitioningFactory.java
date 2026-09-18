@@ -24,20 +24,19 @@ import com.sqlapp.data.db.sql.AbstractCreatePartitioningFactory;
 import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2005CreatePartitioningFactory extends
-		AbstractCreatePartitioningFactory<SqlServerSqlBuilder> {
-	
+public class SqlServer2005CreatePartitioningFactory extends AbstractCreatePartitioningFactory<SqlServerSqlBuilder> {
+
 	@Override
 	public void addObjectDetail(final Partitioning obj, final SqlServerSqlBuilder builder) {
 		if (obj != null) {
-			if (!CommonUtils.isEmpty(obj.getPartitionSchemeName())&&!CommonUtils.isEmpty(obj.getPartitioningColumns())){
+			if (!CommonUtils.isEmpty(obj.getPartitionSchemeName())
+					&& !CommonUtils.isEmpty(obj.getPartitioningColumns())) {
 				builder.lineBreak();
-				builder.on().space()._add(obj.getPartitionSchemeName()).space().brackets(()->{
+				builder.on().space()._add(obj.getPartitionSchemeName()).space().brackets(() -> {
 					builder.names(obj.getPartitioningColumns());
 				});
 			}
 		}
 	}
-
 
 }

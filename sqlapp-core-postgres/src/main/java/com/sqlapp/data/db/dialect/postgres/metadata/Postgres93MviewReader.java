@@ -52,14 +52,12 @@ public class Postgres93MviewReader extends MviewReader {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.metadata.MetadataReader#doGetAll(java.sql.Connection,
+	 * @see com.sqlapp.data.db.metadata.MetadataReader#doGetAll(java.sql.Connection,
 	 * com.sqlapp.data.parameter.ParametersContext,
 	 * com.sqlapp.data.schemas.ProductVersionInfo)
 	 */
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -87,8 +85,7 @@ public class Postgres93MviewReader extends MviewReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final Table table) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final Table table) throws SQLException {
 
 	}
 
@@ -106,8 +103,7 @@ public class Postgres93MviewReader extends MviewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

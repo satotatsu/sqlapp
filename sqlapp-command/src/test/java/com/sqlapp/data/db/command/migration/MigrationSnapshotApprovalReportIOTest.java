@@ -14,7 +14,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.exceptions.CommandException;
 
 class MigrationSnapshotApprovalReportIOTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void atomicallyRoundTripsAndChecksFingerprint() {
@@ -30,15 +31,14 @@ class MigrationSnapshotApprovalReportIOTest {
 	@Test
 	void rejectsInvalidArtifact() {
 		final var io = new MigrationSnapshotApprovalReportIO();
-		assertThrows(CommandException.class,
-				() -> io.write(directory.resolve("invalid.json"), report("invalid")));
+		assertThrows(CommandException.class, () -> io.write(directory.resolve("invalid.json"), report("invalid")));
 		assertThrows(CommandException.class, () -> io.read(directory.resolve("missing.json")));
 	}
 
 	private static MigrationSnapshotApprovalReport report(final String fingerprint) {
 		return new MigrationSnapshotApprovalReport(MigrationSnapshotApprovalReport.CURRENT_FORMAT_VERSION,
 				Instant.parse("2026-09-16T01:00:00Z"), fingerprint, "CUSTOMER", "PUBLIC.CUSTOMER",
-				"PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true,
-				Instant.parse("2026-09-16T00:00:00Z"), 1000, 500, null);
+				"PUBLIC.CUSTOMER_HISTORY", List.of("ID"), List.of("NAME"), true, Instant.parse("2026-09-16T00:00:00Z"),
+				1000, 500, null);
 	}
 }

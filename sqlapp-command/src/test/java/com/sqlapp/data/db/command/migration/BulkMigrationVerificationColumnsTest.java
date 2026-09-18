@@ -23,12 +23,10 @@ class BulkMigrationVerificationColumnsTest {
 		table.getColumns().add(new Column("CALCULATED").setFormula("VALUE * 2"));
 		table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
 
-		assertEquals(List.of("ID", "VALUE"), BulkMigrationVerificationColumns.resolve(
-				table, BulkMigrationMode.INSERT, BulkOption.defaults(),
-				BulkUpsertOption.defaults()));
-		assertEquals(List.of("ID", "VALUE"), BulkMigrationVerificationColumns.resolve(
-				table, BulkMigrationMode.UPSERT, BulkOption.defaults(),
-				BulkUpsertOption.defaults()));
+		assertEquals(List.of("ID", "VALUE"), BulkMigrationVerificationColumns.resolve(table, BulkMigrationMode.INSERT,
+				BulkOption.defaults(), BulkUpsertOption.defaults()));
+		assertEquals(List.of("ID", "VALUE"), BulkMigrationVerificationColumns.resolve(table, BulkMigrationMode.UPSERT,
+				BulkOption.defaults(), BulkUpsertOption.defaults()));
 	}
 
 	@Test
@@ -37,10 +35,9 @@ class BulkMigrationVerificationColumnsTest {
 		table.getColumns().add(new Column("ID").setIdentity(true));
 		table.getColumns().add(new Column("VALUE"));
 
-		assertEquals(List.of("VALUE"), BulkMigrationVerificationColumns.resolve(table,
-				BulkMigrationMode.INSERT, BulkOption.defaults(), BulkUpsertOption.defaults()));
-		assertEquals(List.of("ID", "VALUE"), BulkMigrationVerificationColumns.resolve(table,
-				BulkMigrationMode.INSERT, BulkOption.builder().keepIdentity(true).build(),
-				BulkUpsertOption.defaults()));
+		assertEquals(List.of("VALUE"), BulkMigrationVerificationColumns.resolve(table, BulkMigrationMode.INSERT,
+				BulkOption.defaults(), BulkUpsertOption.defaults()));
+		assertEquals(List.of("ID", "VALUE"), BulkMigrationVerificationColumns.resolve(table, BulkMigrationMode.INSERT,
+				BulkOption.builder().keepIdentity(true).build(), BulkUpsertOption.defaults()));
 	}
 }
