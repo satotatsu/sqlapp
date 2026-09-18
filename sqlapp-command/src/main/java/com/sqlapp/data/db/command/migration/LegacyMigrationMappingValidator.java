@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
@@ -18,6 +19,8 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKeyGenerationType;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.Diagnostic;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.DiagnosticSeverity;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
 import com.sqlapp.exceptions.CommandException;
@@ -115,7 +118,39 @@ public class LegacyMigrationMappingValidator {
 				throw new CommandException("Relationship disagrees with child parent mapping: " + relationship.getId());
 			}
 		}
+		validateDiagnostics(mapping, ids);
 		validateTransformations(mapping);
+	}
+
+	private void validateDiagnostics(LegacyMigrationMapping mapping, Set<String> tableIds) {
+		var diagnostics = mapping.getDiagnostics();
+		if (diagnostics.getWarnings() == null || diagnostics.getSkipped() == null || diagnostics.getErrors() == null) {
+			throw new CommandException("Legacy migration diagnostic collections are required.");
+		}
+		validateDiagnostics(diagnostics.getWarnings(), DiagnosticSeverity.WARNING, tableIds, "warning");
+		validateDiagnostics(diagnostics.getSkipped(), null, tableIds, "skipped");
+		validateDiagnostics(diagnostics.getErrors(), DiagnosticSeverity.ERROR, tableIds, "error");
+		var statistics = mapping.getStatistics();
+		if (statistics.getSourceTableCount() < 0 || statistics.getTargetTableCount() < 0
+				|| statistics.getTransformedTableCount() < 0 || statistics.getWarningCount() < 0
+				|| statistics.getSkippedCount() < 0 || statistics.getErrorCount() < 0
+				|| statistics.getWarningCount() != diagnostics.getWarnings().size()
+				|| statistics.getSkippedCount() != diagnostics.getSkipped().size()
+				|| statistics.getErrorCount() != diagnostics.getErrors().size()) {
+			throw new CommandException("Legacy migration statistics disagree with diagnostics.");
+		}
+	}
+
+	private void validateDiagnostics(List<Diagnostic> values, DiagnosticSeverity requiredSeverity, Set<String> tableIds,
+			String category) {
+		for (Diagnostic diagnostic : values) {
+			if (diagnostic == null || blank(diagnostic.getCode()) || diagnostic.getSeverity() == null
+					|| requiredSeverity != null && diagnostic.getSeverity() != requiredSeverity
+					|| diagnostic.getTableMappingId() != null && !tableIds.contains(diagnostic.getTableMappingId())
+					|| blank(diagnostic.getAction()) || blank(diagnostic.getMessage()) || diagnostic.getDetails() == null) {
+				throw new CommandException("Legacy migration " + category + " diagnostic is invalid.");
+			}
+		}
 	}
 
 	private void validateGeneratedKey(TableMapping table) {
@@ -194,12 +229,29 @@ public class LegacyMigrationMappingValidator {
 
 	private void validateTransformations(LegacyMigrationMapping mapping) {
 		Set<Integer> sequences = new HashSet<>();
+		int previousSequence = 0;
+		String previousOutput = null;
 		for (var transformation : mapping.getTransformations()) {
 			if (transformation == null || transformation.getSequence() <= 0
+					|| transformation.getSequence() <= previousSequence
 					|| !sequences.add(transformation.getSequence()) || blank(transformation.getCommand())
 					|| transformation.getStatus() == null || transformation.getConfiguration() == null
 					|| transformation.getChanges() == null) {
 				throw new CommandException("Legacy migration transformation is invalid.");
+			}
+			if (!blank(previousOutput) && !blank(transformation.getInputFingerprint())
+					&& !Objects.equals(previousOutput, transformation.getInputFingerprint())) {
+				throw new CommandException("Legacy migration transformation fingerprint chain is discontinuous.");
+			}
+			previousSequence = transformation.getSequence();
+			previousOutput = transformation.getOutputFingerprint();
+		}
+		if (!mapping.getTransformations().isEmpty()) {
+			var first = mapping.getTransformations().getFirst();
+			var last = mapping.getTransformations().getLast();
+			if (!Objects.equals(mapping.getSource().getSchemaFingerprint(), first.getInputFingerprint())
+					|| !Objects.equals(mapping.getTarget().getSchemaFingerprint(), last.getOutputFingerprint())) {
+				throw new CommandException("Legacy migration transformation endpoints disagree with schema fingerprints.");
 			}
 		}
 	}

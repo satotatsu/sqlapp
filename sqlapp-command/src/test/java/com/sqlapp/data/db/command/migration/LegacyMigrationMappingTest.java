@@ -18,6 +18,8 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.Diagnostic;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.DiagnosticSeverity;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKeyGenerationType;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
@@ -34,6 +36,8 @@ class LegacyMigrationMappingTest {
 	void testYamlRoundTripAndValidation() throws Exception {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		mapping.getMigration().setId("sample-v1");
+		mapping.getSource().setSchemaFingerprint("source");
+		mapping.getTarget().setSchemaFingerprint("target");
 		TableMapping parent = table("table-parent", "PARENT");
 		GeneratedKey generatedKey = new GeneratedKey();
 		generatedKey.setColumn("ID");
@@ -59,6 +63,14 @@ class LegacyMigrationMappingTest {
 		relationship.setParentIdPropagation(true);
 		mapping.getRelationships().add(relationship);
 		mapping.getTransformations().add(transformation(10, "Normalize", "source", "target"));
+		Diagnostic warning = new Diagnostic();
+		warning.setCode("REVIEW_COLUMN");
+		warning.setSeverity(DiagnosticSeverity.WARNING);
+		warning.setTableMappingId(parent.getId());
+		warning.setAction("REVIEW");
+		warning.setMessage("Review the generated column mapping.");
+		mapping.getDiagnostics().getWarnings().add(warning);
+		mapping.getStatistics().setWarningCount(1);
 
 		File yaml = new File(temporaryDirectory, "mapping.yaml");
 		LegacyMigrationMappingIO io = new LegacyMigrationMappingIO();
@@ -75,12 +87,16 @@ class LegacyMigrationMappingTest {
 		assertTrue(serialized.contains("status: \"SUCCESS\"") || serialized.contains("status: SUCCESS"));
 		assertTrue(serialized.contains("generationType: \"SEQUENCE\"")
 				|| serialized.contains("generationType: SEQUENCE"));
+		assertTrue(serialized.contains("severity: \"WARNING\"") || serialized.contains("severity: WARNING"));
 		File unknownStatus = new File(temporaryDirectory, "unknown-status.yaml");
 		Files.writeString(unknownStatus.toPath(), serialized.replace("SUCCESS", "UNKNOWN"));
 		assertThrows(CommandException.class, () -> io.read(unknownStatus));
 		File unknownGenerationType = new File(temporaryDirectory, "unknown-generation-type.yaml");
 		Files.writeString(unknownGenerationType.toPath(), serialized.replace("SEQUENCE", "UNKNOWN"));
 		assertThrows(CommandException.class, () -> io.read(unknownGenerationType));
+		File unknownSeverity = new File(temporaryDirectory, "unknown-severity.yaml");
+		Files.writeString(unknownSeverity.toPath(), serialized.replace("WARNING", "UNKNOWN"));
+		assertThrows(CommandException.class, () -> io.read(unknownSeverity));
 	}
 
 	@Test
@@ -113,6 +129,53 @@ class LegacyMigrationMappingTest {
 		table.getKeys().getGeneratedKey().setGenerationType(GeneratedKeyGenerationType.IDENTITY);
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
 		table.getKeys().getGeneratedKey().setSequence(null);
+		validator.validate(mapping);
+	}
+
+	@Test
+	void testRejectInvalidDiagnosticsAndStatistics() {
+		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		TableMapping table = table("table-item", "ITEM");
+		mapping.getTables().add(table);
+		Diagnostic warning = new Diagnostic();
+		warning.setCode("REVIEW");
+		warning.setSeverity(DiagnosticSeverity.WARNING);
+		warning.setTableMappingId(table.getId());
+		warning.setAction("REVIEW");
+		warning.setMessage("Review item.");
+		mapping.getDiagnostics().getWarnings().add(warning);
+		mapping.getStatistics().setWarningCount(1);
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		validator.validate(mapping);
+
+		warning.setTableMappingId("missing");
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		warning.setTableMappingId(table.getId());
+		warning.setSeverity(DiagnosticSeverity.ERROR);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		warning.setSeverity(DiagnosticSeverity.WARNING);
+		mapping.getStatistics().setWarningCount(0);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+	}
+
+	@Test
+	void testRejectInvalidTransformationHistory() {
+		LegacyMigrationMapping mapping = mapping("source", "target");
+		mapping.getTransformations().add(transformation(20, "Second", "middle", "target"));
+		mapping.getTransformations().add(transformation(10, "First", "source", "middle"));
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+
+		mapping.getTransformations().clear();
+		mapping.getTransformations().add(transformation(10, "First", "wrong", "middle"));
+		mapping.getTransformations().add(transformation(20, "Second", "middle", "target"));
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+
+		mapping.getTransformations().getFirst().setInputFingerprint("source");
+		mapping.getTransformations().getLast().setInputFingerprint("other");
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+
+		mapping.getTransformations().getLast().setInputFingerprint("middle");
 		validator.validate(mapping);
 	}
 

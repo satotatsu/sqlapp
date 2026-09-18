@@ -181,6 +181,12 @@ and `SEQUENCE`; mappings retain these names in YAML and reject unknown values.
 Generated-key lineage is validated as one unit: its column must be part of the
 target primary key and have a matching `GENERATE` column mapping; `SEQUENCE`
 requires a sequence name while `IDENTITY` must not declare one.
+Mapping diagnostics require a typed severity, actionable code/message/action,
+and a valid table mapping reference when one is present. Diagnostic summary
+counts are checked against the actual warning, skipped, and error collections.
+Transformation history must be in strictly increasing sequence order. Its first
+and last fingerprints must match the mapping source and target, and adjacent
+steps with recorded boundary fingerprints must form a continuous chain.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |
