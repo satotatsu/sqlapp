@@ -26,6 +26,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.zaxxer.hikari.HikariDataSource;
 
 class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
@@ -104,7 +105,8 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 		var numberedDetail = generatedContract.getDataSets().stream()
 				.filter(dataSet -> "COMPANY_MASTER_DETAIL_1".equals(dataSet.getTargetTable())).findFirst()
 				.orElseThrow();
-		assertEquals("NUMBERED_COLUMNS", numberedDetail.getOccurrenceSourceMode());
+		assertEquals(LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS,
+				numberedDetail.getOccurrenceSourceMode());
 		assertEquals(2,
 				numberedDetail.getFields().stream().filter(field -> "CONTACT_DATE".equals(field.getStagingColumn()))
 						.findFirst().orElseThrow().getIndexedSources().size());

@@ -63,11 +63,15 @@ public class LegacyMigrationContract {
 		private String parentDataSetId;
 		private Integer maximumOccurrences;
 		private String occurrenceColumn;
-		private String occurrenceSourceMode;
+		private OccurrenceSourceMode occurrenceSourceMode;
 		private List<String> sourceBusinessKey = new ArrayList<>();
 		private List<String> targetPrimaryKey = new ArrayList<>();
 		private List<Field> fields = new ArrayList<>();
 		private List<AncestorKey> ancestorKeys = new ArrayList<>();
+	}
+
+	public enum OccurrenceSourceMode {
+		NUMBERED_COLUMNS
 	}
 
 	@Getter

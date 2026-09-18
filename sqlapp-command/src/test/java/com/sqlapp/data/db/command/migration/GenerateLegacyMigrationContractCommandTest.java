@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.nio.file.Files;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,6 +21,7 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnDefinition;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.IndexedSourceColumn;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
 import com.sqlapp.exceptions.CommandException;
@@ -30,7 +32,7 @@ class GenerateLegacyMigrationContractCommandTest {
 	File temporaryDirectory;
 
 	@Test
-	void testGenerateCsvStagingAndHierarchyContract() {
+	void testGenerateCsvStagingAndHierarchyContract() throws Exception {
 		File mappingFile = new File(temporaryDirectory, "company-legacy-migration.yaml");
 		LegacyMigrationMapping mapping = mapping();
 		new LegacyMigrationMappingIO().write(mappingFile, mapping);
@@ -67,6 +69,21 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertEquals("table-department", child.getAncestorKeys().getFirst().getAncestorDataSetId());
 		assertEquals("COMPANY_ID", child.getAncestorKeys().getFirst().getColumns().getFirst().getSourceColumn());
 		assertFalse(new File(output, "company-contract.yaml.tmp").exists());
+		String yaml = Files.readString(contractFile.toPath());
+		assertTrue(yaml.contains("action: \"COPY\"") || yaml.contains("action: COPY"));
+		assertTrue(yaml.contains("occurrenceSourceMode: \"NUMBERED_COLUMNS\"")
+				|| yaml.contains("occurrenceSourceMode: NUMBERED_COLUMNS"));
+		File unknownAction = new File(output, "unknown-action.yaml");
+		Files.writeString(unknownAction.toPath(), yaml.replace("action: \"COPY\"", "action: \"UNKNOWN_ACTION\"")
+				.replace("action: COPY", "action: \"UNKNOWN_ACTION\""));
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownAction));
+		File unknownOccurrenceMode = new File(output, "unknown-occurrence-mode.yaml");
+		Files.writeString(unknownOccurrenceMode.toPath(),
+				yaml.replace("occurrenceSourceMode: \"NUMBERED_COLUMNS\"",
+						"occurrenceSourceMode: \"UNKNOWN_MODE\"")
+						.replace("occurrenceSourceMode: NUMBERED_COLUMNS",
+								"occurrenceSourceMode: \"UNKNOWN_MODE\""));
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownOccurrenceMode));
 	}
 
 	@Test
@@ -92,6 +109,8 @@ class GenerateLegacyMigrationContractCommandTest {
 		employee.getKeys().getBusinessKey().add("EMP_ID");
 		employee.getColumns().add(column("EMP_ID", "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID",
 				ColumnAction.COPY, "VARCHAR"));
+		employee.getColumns().getLast().getSourceColumns().add(indexedSource(1, "EMP_ID_1"));
+		employee.getColumns().getLast().getSourceColumns().add(indexedSource(2, "EMP_ID_2"));
 		employee.getColumns().add(column(null, "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index",
 				"EMPLOYEE_LIST_NO", ColumnAction.GENERATE, "INT"));
 		employee.getColumns().getLast().getConversion().put("type", "OCCURRENCE_NUMBER");
@@ -133,5 +152,12 @@ class GenerateLegacyMigrationContractCommandTest {
 		definition.setDataType(dataType);
 		column.setTargetDefinition(definition);
 		return column;
+	}
+
+	private IndexedSourceColumn indexedSource(int index, String column) {
+		IndexedSourceColumn source = new IndexedSourceColumn();
+		source.setIndex(index);
+		source.setColumn(column);
+		return source;
 	}
 }

@@ -88,7 +88,7 @@ public class LegacyMigrationContractBuilder {
 			dataSet.getFields().add(field);
 		}
 		if (dataSet.getFields().stream().anyMatch(field -> !field.getIndexedSources().isEmpty())) {
-			dataSet.setOccurrenceSourceMode("NUMBERED_COLUMNS");
+			dataSet.setOccurrenceSourceMode(LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS);
 		}
 		addAncestorKeys(dataSet, table, tables, parentRelationships);
 		return dataSet;

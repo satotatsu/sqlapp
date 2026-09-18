@@ -182,7 +182,7 @@ public class PliCsvExtractorGenerator {
 				"   /* TODO: position IMS at children of the current " + dataSet.getParentDataSetId() + " segment. */");
 		line(builder, "   DO OCCURRENCE-INDEX-" + symbol(dataSet) + " = 1 TO "
 				+ (dataSet.getMaximumOccurrences() == null ? "CHILD-COUNT" : dataSet.getMaximumOccurrences()) + ";");
-		if ("NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode())) {
+		if (dataSet.getOccurrenceSourceMode() == LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS) {
 			line(builder, "      CALL WRITE-" + symbol(dataSet) + ";");
 			for (DataSet child : directChildren(contract, dataSet.getId())) {
 				line(builder, "      CALL PROCESS-CHILDREN-" + symbol(child) + ";");

@@ -223,14 +223,12 @@ public class LegacyMigrationContractValidator {
 				.anyMatch(field -> field.getIndexedSources() != null && !field.getIndexedSources().isEmpty());
 		List<Field> occurrenceFields = dataSet.getFields().stream().filter(Field::isOccurrenceIndex).toList();
 		boolean configured = dataSet.getMaximumOccurrences() != null || !blank(dataSet.getOccurrenceColumn())
-				|| !blank(dataSet.getOccurrenceSourceMode()) || hasIndexedSources || !occurrenceFields.isEmpty();
+				|| dataSet.getOccurrenceSourceMode() != null || hasIndexedSources || !occurrenceFields.isEmpty();
 		if (!configured) {
 			return;
 		}
 		if (dataSet.getMaximumOccurrences() == null || dataSet.getMaximumOccurrences() <= 0
-				|| blank(dataSet.getOccurrenceColumn()) || occurrenceFields.size() != 1
-				|| dataSet.getOccurrenceSourceMode() != null
-						&& !"NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode())) {
+				|| blank(dataSet.getOccurrenceColumn()) || occurrenceFields.size() != 1) {
 			throw new CommandException("Data set occurrence configuration is invalid: " + dataSet.getId());
 		}
 		Field occurrence = occurrenceFields.getFirst();
@@ -238,7 +236,8 @@ public class LegacyMigrationContractValidator {
 				|| !equalsName(dataSet.getOccurrenceColumn(), occurrence.getStagingColumn())) {
 			throw new CommandException("Data set occurrence field is invalid: " + dataSet.getId());
 		}
-		if ("NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode()) != hasIndexedSources) {
+		if ((dataSet.getOccurrenceSourceMode() == LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS)
+				!= hasIndexedSources) {
 			throw new CommandException("Data set occurrence source mode is inconsistent: " + dataSet.getId());
 		}
 	}

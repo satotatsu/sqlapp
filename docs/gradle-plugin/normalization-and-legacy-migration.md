@@ -167,6 +167,12 @@ The generated transaction policy is typed in the same way: `commitUnit` is
 `ROOT_BATCH`, `stagingDeleteTiming` is `BEFORE_COMMIT`, and `restartUnit` is
 `ROOT`. These values describe the loader's atomic restart contract and unknown
 policy names are rejected rather than interpreted loosely.
+Contract and load-plan field `action` values likewise use the shared
+`ColumnAction` enum. Their YAML representation remains the stable names such as
+`COPY`, `GENERATE`, and `DROP`; an unknown name is rejected during loading.
+Repeated-column extraction uses the typed `occurrenceSourceMode` value
+`NUMBERED_COLUMNS`, which is serialized by that stable name and also rejects
+unknown names during contract loading.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

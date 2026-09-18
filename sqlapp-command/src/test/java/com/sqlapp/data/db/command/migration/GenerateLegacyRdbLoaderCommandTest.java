@@ -85,6 +85,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertUnknownLoadPlanEnum(planYaml, "stagingDeleteTiming", "BEFORE_COMMIT", "UNKNOWN_DELETE_TIMING",
 				"unknown-delete-timing.yaml");
 		assertUnknownLoadPlanEnum(planYaml, "restartUnit", "ROOT", "UNKNOWN_RESTART_UNIT", "unknown-restart-unit.yaml");
+		assertUnknownLoadPlanEnum(planYaml, "action", "COPY", "UNKNOWN_ACTION", "unknown-action.yaml");
 		assertEquals(new File("..", contractFile.getName()).getPath(), plan.getContractFile());
 		assertEquals(new File("..", schemaFile.getName()).getPath(), plan.getSchemaFile());
 		assertTrue(plan.getTransaction().isTargetAndStagingDeleteAtomic());
