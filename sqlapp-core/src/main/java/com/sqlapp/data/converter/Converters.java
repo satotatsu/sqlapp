@@ -110,6 +110,10 @@ public class Converters implements Serializable {
 		setOptionalConverters();
 		setByteConverters();
 		setBooleanConverter();
+		puts(new CharacterConverter(), Character.class);
+		puts(new CharacterConverter().setDefaultValue(() -> '\0'), char.class);
+		puts(new CharArrayConverter(this.getConverter(char.class)), char[].class);
+		puts(new CharacterArrayConverter(this.getConverter(Character.class)), Character[].class);
 		puts(new URLConverter(), URL.class);
 		puts(new URLArrayConverter(this.getConverter(URL.class)), URL[].class);
 		puts(new URIConverter(), URI.class);
@@ -138,6 +142,8 @@ public class Converters implements Serializable {
 	protected void setBooleanConverter() {
 		puts(new BooleanConverter(), Boolean.class);
 		puts(new BooleanConverter().setDefaultValue(() -> Boolean.FALSE), boolean.class);
+		puts(new BooleanArrayConverter(this.getConverter(boolean.class)), boolean[].class);
+		puts(new BooleanObjectArrayConverter(this.getConverter(Boolean.class)), Boolean[].class);
 	}
 
 	protected void setZoneIdConverters() {
@@ -154,13 +160,14 @@ public class Converters implements Serializable {
 
 	public Converters setStringConverter(final StringConverter converter) {
 		converter.setConverters(this);
-		puts(new StringConverter(), String.class, Clob.class);
+		puts(converter, String.class, Clob.class);
 		puts(new StringArrayConverter(converter), String[].class);
 		return this;
 	}
 
 	public Converters setNumberConverter(final NumberConverter converter) {
 		converter.setConverters(this);
+		puts(converter, Number.class);
 		puts(new NumberArrayConverter(converter), Number[].class);
 		return this;
 	}
@@ -386,7 +393,7 @@ public class Converters implements Serializable {
 		final DateConverter dateConverter = this.getConverter(java.util.Date.class);
 		dateConverter.getZonedDateTimeConverter().setFormat(DateTimeFormatter.ISO_INSTANT);
 		final LocalDateTimeConverter localDateTimeConverter = this.getConverter(LocalDateTime.class);
-		localDateTimeConverter.setFormat(DateTimeFormatter.ISO_INSTANT);
+		localDateTimeConverter.setFormat(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 		//
 		final SqlDateConverter sqlDateConverter = this.getConverter(java.sql.Date.class);
 		sqlDateConverter.getZonedDateTimeConverter().setFormat(DateTimeFormatter.ISO_DATE);
@@ -528,6 +535,8 @@ public class Converters implements Serializable {
 	private <T> T getPrimitiveDefaultValue(final Class<T> clazz) {
 		if (clazz == boolean.class) {
 			return (T) Boolean.FALSE;
+		} else if (clazz == char.class) {
+			return (T) Character.valueOf('\0');
 		} else if (clazz == int.class) {
 			return (T) IntegerConverter.ZERO;
 		} else if (clazz == byte.class) {

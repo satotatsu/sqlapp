@@ -107,7 +107,7 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	public static long toLong(final byte[] bytes) {

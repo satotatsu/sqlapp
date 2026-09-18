@@ -91,6 +91,10 @@ public class NumberConverter extends AbstractConverter<Number> {
 		if (value == null) {
 			return null;
 		}
+		final Converter<?> converter = this.converters.getConverter(value.getClass());
+		if (converter instanceof NumberConverter) {
+			return value.toString();
+		}
 		return this.converters.convertString(value);
 	}
 

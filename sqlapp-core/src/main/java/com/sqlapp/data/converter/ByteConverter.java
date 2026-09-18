@@ -99,7 +99,7 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	/*

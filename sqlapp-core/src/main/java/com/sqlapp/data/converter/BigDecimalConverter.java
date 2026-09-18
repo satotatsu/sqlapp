@@ -91,7 +91,7 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 		if (getNumberFormat() == null) {
 			return value.toPlainString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	/*

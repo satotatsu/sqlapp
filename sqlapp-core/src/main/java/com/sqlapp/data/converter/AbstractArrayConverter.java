@@ -82,7 +82,9 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 				list.add(unitConverter.convertObject(obj, conn));
 			}
 			final T array = newArrayInstance(list.size());
-			System.arraycopy(list.toArray(), 0, array, 0, list.size());
+			for (int i = 0; i < list.size(); i++) {
+				setArray(array, i, list.get(i));
+			}
 			return array;
 		} else if (value instanceof java.sql.Array) {
 			final java.sql.Array c = (java.sql.Array) value;
@@ -92,7 +94,7 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 				final int size = Array.getLength(arr);
 				final T array = newArrayInstance(size);
 				for (int i = 0; i < size; i++) {
-					final Object obj = Array.get(value, i);
+					final Object obj = Array.get(arr, i);
 					setArray(array, i, unitConverter.convertObject(obj, conn));
 				}
 				return array;
@@ -123,7 +125,7 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 
 	@Override
 	public T getDefaultValue() {
-		return copy(defaultObject);
+		return defaultObject == null ? null : copy(defaultObject.get());
 	}
 
 	@Override
@@ -140,7 +142,15 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 		if (!value.getClass().isArray()) {
 			return null;
 		}
-		final Object[] arr = (Object[]) value;
+		final Object[] arr;
+		if (value instanceof Object[]) {
+			arr = (Object[]) value;
+		} else {
+			arr = new Object[Array.getLength(value)];
+			for (int i = 0; i < arr.length; i++) {
+				arr[i] = Array.get(value, i);
+			}
+		}
 		return Arrays.deepToString(arr);
 	}
 
