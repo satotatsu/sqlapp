@@ -92,15 +92,13 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownAction));
 		File unknownOccurrenceMode = new File(output, "unknown-occurrence-mode.yaml");
 		Files.writeString(unknownOccurrenceMode.toPath(),
-				yaml.replace("occurrenceSourceMode: \"NUMBERED_COLUMNS\"",
-						"occurrenceSourceMode: \"UNKNOWN_MODE\"")
-						.replace("occurrenceSourceMode: NUMBERED_COLUMNS",
-								"occurrenceSourceMode: \"UNKNOWN_MODE\""));
+				yaml.replace("occurrenceSourceMode: \"NUMBERED_COLUMNS\"", "occurrenceSourceMode: \"UNKNOWN_MODE\"")
+						.replace("occurrenceSourceMode: NUMBERED_COLUMNS", "occurrenceSourceMode: \"UNKNOWN_MODE\""));
 		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownOccurrenceMode));
 		File unknownRecordSeparator = new File(output, "unknown-record-separator.yaml");
 		Files.writeString(unknownRecordSeparator.toPath(),
-				yaml.replace("recordSeparator: \"CRLF\"", "recordSeparator: \"CR\"")
-						.replace("recordSeparator: CRLF", "recordSeparator: \"CR\""));
+				yaml.replace("recordSeparator: \"CRLF\"", "recordSeparator: \"CR\"").replace("recordSeparator: CRLF",
+						"recordSeparator: \"CR\""));
 		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownRecordSeparator));
 	}
 

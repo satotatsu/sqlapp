@@ -235,8 +235,8 @@ public class LegacyMigrationContractValidator {
 				|| !equalsName(dataSet.getOccurrenceColumn(), occurrence.getStagingColumn())) {
 			throw new CommandException("Data set occurrence field is invalid: " + dataSet.getId());
 		}
-		if ((dataSet.getOccurrenceSourceMode() == LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS)
-				!= hasIndexedSources) {
+		if ((dataSet
+				.getOccurrenceSourceMode() == LegacyMigrationContract.OccurrenceSourceMode.NUMBERED_COLUMNS) != hasIndexedSources) {
 			throw new CommandException("Data set occurrence source mode is inconsistent: " + dataSet.getId());
 		}
 	}
@@ -358,8 +358,7 @@ public class LegacyMigrationContractValidator {
 				&& Objects.equals(left.getTargetCatalog(), right.getTargetCatalog())
 				&& Objects.equals(left.getTargetSchema(), right.getTargetSchema())
 				&& Objects.equals(left.getTargetTable(), right.getTargetTable())
-				&& left.getHierarchyDepth() == right.getHierarchyDepth()
-				&& left.getLoadOrder() == right.getLoadOrder()
+				&& left.getHierarchyDepth() == right.getHierarchyDepth() && left.getLoadOrder() == right.getLoadOrder()
 				&& Objects.equals(left.getParentDataSetId(), right.getParentDataSetId())
 				&& Objects.equals(left.getMaximumOccurrences(), right.getMaximumOccurrences())
 				&& Objects.equals(left.getOccurrenceColumn(), right.getOccurrenceColumn())

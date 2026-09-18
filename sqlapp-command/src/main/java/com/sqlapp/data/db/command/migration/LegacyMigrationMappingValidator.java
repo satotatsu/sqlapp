@@ -78,6 +78,7 @@ public class LegacyMigrationMappingValidator {
 			for (ColumnMapping column : table.getColumns()) {
 				validateColumn(column, table.getId());
 			}
+			validateOccurrence(table);
 		}
 		for (TableMapping table : mapping.getTables()) {
 			if (table.getParent() != null) {
@@ -135,8 +136,8 @@ public class LegacyMigrationMappingValidator {
 		try {
 			OffsetDateTime.parse(migration.getGeneratedAt());
 		} catch (DateTimeParseException e) {
-			throw new CommandException("Legacy migration generatedAt must be an offset date-time: "
-					+ migration.getGeneratedAt(), e);
+			throw new CommandException(
+					"Legacy migration generatedAt must be an offset date-time: " + migration.getGeneratedAt(), e);
 		}
 		validateEndpoint(mapping.getSource(), "source");
 		validateEndpoint(mapping.getTarget(), "target");
@@ -156,19 +157,21 @@ public class LegacyMigrationMappingValidator {
 
 	private void validateHierarchyConsistency(LegacyMigrationMapping mapping, Map<String, TableMapping> byId) {
 		for (TableMapping table : mapping.getTables()) {
-			List<RelationshipMapping> parents = mapping.getRelationships().stream()
-					.filter(relationship -> relationship.getType() == LegacyMigrationMapping.RelationshipType.HIERARCHICAL
+			List<RelationshipMapping> parents = mapping.getRelationships().stream().filter(
+					relationship -> relationship.getType() == LegacyMigrationMapping.RelationshipType.HIERARCHICAL
 							&& table.getId().equals(relationship.getChildMappingId()))
 					.toList();
 			if (table.getParent() == null) {
 				if (!parents.isEmpty()) {
-					throw new CommandException("Hierarchical relationship requires child parent mapping: " + table.getId());
+					throw new CommandException(
+							"Hierarchical relationship requires child parent mapping: " + table.getId());
 				}
 				continue;
 			}
-			if (parents.size() != 1 || !table.getParent().getMappingId().equals(parents.getFirst().getParentMappingId())) {
-				throw new CommandException("Child parent mapping requires one matching hierarchical relationship: "
-						+ table.getId());
+			if (parents.size() != 1
+					|| !table.getParent().getMappingId().equals(parents.getFirst().getParentMappingId())) {
+				throw new CommandException(
+						"Child parent mapping requires one matching hierarchical relationship: " + table.getId());
 			}
 			if (!byId.containsKey(table.getParent().getMappingId())) {
 				throw new CommandException("Unknown parent mapping id: " + table.getParent().getMappingId());
@@ -178,8 +181,8 @@ public class LegacyMigrationMappingValidator {
 			RelationshipMapping relationship = parents.getFirst();
 			if (!samePairs(table.getParent().getSourceReference(), relationship.getSourceKeys())
 					|| !samePairs(table.getParent().getResolvedReference(), relationship.getTargetKeys())) {
-				throw new CommandException("Child parent references disagree with hierarchical relationship: "
-						+ table.getId());
+				throw new CommandException(
+						"Child parent references disagree with hierarchical relationship: " + table.getId());
 			}
 		}
 	}
@@ -222,7 +225,8 @@ public class LegacyMigrationMappingValidator {
 			if (diagnostic == null || blank(diagnostic.getCode()) || diagnostic.getSeverity() == null
 					|| requiredSeverity != null && diagnostic.getSeverity() != requiredSeverity
 					|| diagnostic.getTableMappingId() != null && !tableIds.contains(diagnostic.getTableMappingId())
-					|| blank(diagnostic.getAction()) || blank(diagnostic.getMessage()) || diagnostic.getDetails() == null) {
+					|| blank(diagnostic.getAction()) || blank(diagnostic.getMessage())
+					|| diagnostic.getDetails() == null) {
 				throw new CommandException("Legacy migration " + category + " diagnostic is invalid.");
 			}
 		}
@@ -248,6 +252,36 @@ public class LegacyMigrationMappingValidator {
 				|| generatedColumn.getTargetDefinition() == null
 				|| !equalsName(key.getDataType(), generatedColumn.getTargetDefinition().getDataType())) {
 			throw new CommandException("Generated key column mapping is inconsistent: " + table.getId());
+		}
+	}
+
+	private void validateOccurrence(TableMapping table) {
+		List<ColumnMapping> occurrenceColumns = table.getColumns().stream()
+				.filter(column -> "OCCURRENCE_NUMBER".equals(column.getConversion().get("type"))).toList();
+		boolean hasIndexedSources = table.getColumns().stream()
+				.anyMatch(column -> !column.getSourceColumns().isEmpty());
+		Object configured = table.getDetails().get("occurrence");
+		if (configured == null && occurrenceColumns.isEmpty() && !hasIndexedSources) {
+			return;
+		}
+		if (!(configured instanceof Map<?, ?> occurrence) || occurrenceColumns.size() != 1) {
+			throw new CommandException("Occurrence mapping is incomplete: " + table.getId());
+		}
+		String column = occurrence.get("column") == null ? null : String.valueOf(occurrence.get("column"));
+		Object maximumValue = occurrence.get("maximum");
+		if (blank(column) || !(maximumValue instanceof Number maximumNumber) || maximumNumber.intValue() <= 0) {
+			throw new CommandException("Occurrence mapping is invalid: " + table.getId());
+		}
+		int maximum = maximumNumber.intValue();
+		ColumnMapping occurrenceColumn = occurrenceColumns.getFirst();
+		if (occurrenceColumn.getAction() != ColumnAction.GENERATE
+				|| !equalsName(column, occurrenceColumn.getTarget())) {
+			throw new CommandException("Occurrence column mapping is inconsistent: " + table.getId());
+		}
+		for (ColumnMapping mappedColumn : table.getColumns()) {
+			if (mappedColumn.getSourceColumns().stream().anyMatch(source -> source.getIndex() > maximum)) {
+				throw new CommandException("Indexed source exceeds occurrence maximum: " + table.getId());
+			}
 		}
 	}
 
@@ -310,10 +344,9 @@ public class LegacyMigrationMappingValidator {
 		String previousOutput = null;
 		for (var transformation : mapping.getTransformations()) {
 			if (transformation == null || transformation.getSequence() <= 0
-					|| transformation.getSequence() <= previousSequence
-					|| !sequences.add(transformation.getSequence()) || blank(transformation.getCommand())
-					|| transformation.getStatus() == null || transformation.getConfiguration() == null
-					|| transformation.getChanges() == null) {
+					|| transformation.getSequence() <= previousSequence || !sequences.add(transformation.getSequence())
+					|| blank(transformation.getCommand()) || transformation.getStatus() == null
+					|| transformation.getConfiguration() == null || transformation.getChanges() == null) {
 				throw new CommandException("Legacy migration transformation is invalid.");
 			}
 			if (!blank(previousOutput) && !blank(transformation.getInputFingerprint())
@@ -328,7 +361,8 @@ public class LegacyMigrationMappingValidator {
 			var last = mapping.getTransformations().getLast();
 			if (!Objects.equals(mapping.getSource().getSchemaFingerprint(), first.getInputFingerprint())
 					|| !Objects.equals(mapping.getTarget().getSchemaFingerprint(), last.getOutputFingerprint())) {
-				throw new CommandException("Legacy migration transformation endpoints disagree with schema fingerprints.");
+				throw new CommandException(
+						"Legacy migration transformation endpoints disagree with schema fingerprints.");
 			}
 		}
 	}

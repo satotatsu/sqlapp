@@ -24,6 +24,7 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.Diagnostic;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.DiagnosticSeverity;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKeyGenerationType;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.IndexedSourceColumn;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TransformationRecord;
@@ -90,8 +91,8 @@ class LegacyMigrationMappingTest {
 				restored.getTransformations().getFirst().getStatus());
 		final String serialized = Files.readString(yaml.toPath());
 		assertTrue(serialized.contains("status: \"SUCCESS\"") || serialized.contains("status: SUCCESS"));
-		assertTrue(serialized.contains("generationType: \"SEQUENCE\"")
-				|| serialized.contains("generationType: SEQUENCE"));
+		assertTrue(
+				serialized.contains("generationType: \"SEQUENCE\"") || serialized.contains("generationType: SEQUENCE"));
 		assertTrue(serialized.contains("severity: \"WARNING\"") || serialized.contains("severity: WARNING"));
 		File unknownStatus = new File(temporaryDirectory, "unknown-status.yaml");
 		Files.writeString(unknownStatus.toPath(), serialized.replace("SUCCESS", "UNKNOWN"));
@@ -165,6 +166,41 @@ class LegacyMigrationMappingTest {
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
 		warning.setSeverity(DiagnosticSeverity.WARNING);
 		mapping.getStatistics().setWarningCount(0);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+	}
+
+	@Test
+	void testRejectInvalidOccurrenceMapping() {
+		LegacyMigrationMapping mapping = initializedMapping();
+		TableMapping table = table("table-detail", "DETAIL");
+		ColumnMapping occurrence = new ColumnMapping();
+		occurrence.setTarget("ROW_NO");
+		occurrence.setAction(ColumnAction.GENERATE);
+		occurrence.getConversion().put("type", "OCCURRENCE_NUMBER");
+		table.getColumns().add(occurrence);
+		ColumnMapping repeated = new ColumnMapping();
+		repeated.setTarget("VALUE");
+		repeated.setAction(ColumnAction.SPLIT);
+		IndexedSourceColumn source = new IndexedSourceColumn();
+		source.setIndex(1);
+		source.setColumn("VALUE_1");
+		repeated.getSourceColumns().add(source);
+		table.getColumns().add(repeated);
+		var occurrenceDetails = new java.util.LinkedHashMap<String, Object>();
+		occurrenceDetails.put("column", "ROW_NO");
+		occurrenceDetails.put("maximum", 1);
+		table.getDetails().put("occurrence", occurrenceDetails);
+		mapping.getTables().add(table);
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		validator.validate(mapping);
+
+		occurrenceDetails.put("maximum", 0);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		occurrenceDetails.put("maximum", 1);
+		source.setIndex(2);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		source.setIndex(1);
+		table.getDetails().clear();
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
 	}
 
