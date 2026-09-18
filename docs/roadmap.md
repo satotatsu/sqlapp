@@ -177,8 +177,11 @@ The following work is intentionally deferred:
 - existence-clause support for additional Oracle object factories where the
   exact database-version boundary and syntax have been verified
 - remaining advanced data use case domain forms listed above
-- integration tests against real Oracle 23ai and 26ai instances for DDL,
-  metadata permissions and Schema XML/DDL round trips
+- broader DDL, metadata-permission, and Schema XML/DDL round-trip integration
+  coverage against Oracle 23ai, plus initial integration coverage against a real
+  Oracle 26ai instance. Oracle Database Free 23ai already covers the current
+  bulk insert, generated-key, cursor/commit, set-based migration, and core
+  metadata-reader paths.
 
 Duality-view definitions remain in the existing `View.statement` property.
 Oracle-only flags and discovered metadata remain in `View.specifics`. A shared

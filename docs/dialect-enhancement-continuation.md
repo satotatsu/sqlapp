@@ -1,8 +1,8 @@
 # Dialect enhancement continuation
 
-This note is the handoff point for the ongoing H2, SAP HANA, Cloud Spanner,
-and Vertica enhancement task. Read this file together with the
-`Less-covered database dialects` section of `docs/roadmap.md`.
+This note records the completed H2, SAP HANA, Cloud Spanner, and Vertica
+enhancement work and the remaining environment-dependent boundaries. Read it
+together with the `Less-covered database dialects` section of `docs/roadmap.md`.
 
 ## Working rules
 
@@ -80,30 +80,51 @@ and Vertica enhancement task. Read this file together with the
 start value. It now writes the cache size, with a regression test in
 `TableTest`.
 
-## Next work requiring database environments
+## Database verification completed
 
-### 1. Verify SAP HANA metadata against real Platform and Cloud systems
+### SAP HANA Platform
 
-Verify `FULLTEXT_INDEXES`, `VECTOR_INDEXES`, and normal `INDEXES` recovery.
-The unit tests cover type mapping, but no SAP HANA server is available in the
-normal test environment.
+SAP HANA Express 2.0 integration tests exercise the Platform metadata reader,
+sequence-based generated-key propagation, prepared-statement reuse, set-based
+migration, lease, repair, checkpoint, and LOB paths. Native IDENTITY without an
+explicit associated sequence remains an intentional pre-execution error because
+the JDBC driver cannot return an ordered key set for a batch.
 
-### 2. Add Cloud Spanner metadata integration coverage
+### Cloud Spanner emulator
 
-Verify round trips for search/vector indexes, locality/storage options,
-sequences, identity, generated columns, commit timestamps, and view security.
-Use emulator-compatible tests where possible. Do not model interleaving,
-change streams, or property graphs until the shared design is agreed.
+Emulator integration tests exercise generated identity alignment,
+prepared-statement reuse, metadata loading, checkpoint read-only behavior, and
+lease handling. Search/vector index and locality/storage metadata that require
+service features unavailable in the emulator still need a Cloud Spanner service
+environment. Do not model interleaving, change streams, or property graphs until
+the shared design is agreed.
 
-### 3. Verify Vertica metadata against a real current catalog
+### Vertica
 
-Verify the corrected Table, View, Column, ViewColumn, Sequence, and constraint
-queries. Projection, segmentation, KSAFE, flex-table, and external-table work
-remains deferred because it needs shared Schema design.
+Vertica CE 25.1 integration tests exercise the corrected metadata reader,
+sequence-based generated-key propagation, JDBC generated-key capability probe,
+COPY, COPY staging with MERGE, lease, repair, and checkpoint paths. Projection,
+segmentation, KSAFE, flex-table, and external-table work remains deferred because
+it needs shared Schema design.
+
+## Remaining environment-dependent verification
+
+- Verify HANA Cloud-only `VECTOR_INDEXES` and fuzzy-search metadata against a
+  HANA Cloud tenant. HANA Express covers the Platform path but not Cloud-only
+  catalog views.
+- Verify Cloud Spanner service-only search/vector index, locality/storage,
+  sequence, generated-column, commit-timestamp, and view-security round trips.
+- Run the Phoenix 5.3.1 multi-row UPSERT and sequence-block path against a real
+  Phoenix cluster. The Apache project does not publish an official ready-to-run
+  Docker image, so the current coverage is module-level SQL generation, version
+  resolution, and sequence-block expansion.
+- Re-run supported-database integration suites when a JDBC driver is upgraded;
+  generated-key limitations are driver capabilities and may change independently
+  of server SQL support.
 
 ## Verification commands
 
-Run focused tests while editing, then the four module suites:
+Run focused tests while editing, then the module suites:
 
 ```bat
 .\gradlew.bat :sqlapp-core:test --tests com.sqlapp.data.schemas.TableTest
@@ -111,6 +132,20 @@ Run focused tests while editing, then the four module suites:
 .\gradlew.bat :sqlapp-core-saphana:test
 .\gradlew.bat :sqlapp-core-spanner:test
 .\gradlew.bat :sqlapp-core-virtica:test
+.\gradlew.bat :sqlapp-core-phoenix:test
+```
+
+Run the disposable real-engine integration suites from
+`sqlapp-core-dialect-test` one database package at a time to limit memory use:
+
+```bat
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.db2.*"
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.oracle.*"
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.saphana.*"
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.virtica.*"
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.sybase.*"
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.informix.*"
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests "com.sqlapp.data.db.dialect.test.spanner.*"
 ```
 
 When Codex runs Gradle, use the repository-local `.gradle-user-home` cache.
