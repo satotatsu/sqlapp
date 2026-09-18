@@ -140,12 +140,15 @@ notes before production use.
 
 See [Published artifacts and dependency selection](docs/artifacts.md) for the
 complete artifact list, common dependency combinations, dialect artifact
-names, and current JDBC dependency behavior.
+names, and current JDBC dependency behavior. See the
+[compatibility and verification matrix](docs/compatibility.md) for Java and
+Gradle baselines, dialect version boundaries, and real-engine test evidence.
 
 ## Documentation
 
 - [Gradle plugin task guide](docs/gradle-plugin/README.md)
 - [Published artifacts and dependency selection](docs/artifacts.md)
+- [Compatibility and database verification matrix](docs/compatibility.md)
 - [Runnable Gradle example map](docs/gradle-plugin/example-project.md)
 - [Schema XML, SQL, and HTML workflows](docs/gradle-plugin/schema-sql-and-html.md)
 - [Custom tasks and versioned migrations](docs/gradle-plugin/custom-tasks-and-migrations.md)

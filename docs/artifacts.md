@@ -201,3 +201,7 @@ available on every database release. Metadata catalogs, SQL syntax, bulk APIs,
 and JDBC behavior vary by product version. Consult database-specific release
 notes and tests before production rollout, and validate generated DDL against a
 non-production instance of the target database version.
+
+The [compatibility and verification matrix](compatibility.md) distinguishes
+version-aware implementation boundaries from server versions exercised by the
+repository's current integration-test suites.
