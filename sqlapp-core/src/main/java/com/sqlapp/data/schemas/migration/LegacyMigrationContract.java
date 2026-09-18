@@ -82,7 +82,7 @@ public class LegacyMigrationContract {
 		private Long length;
 		private Integer scale;
 		private Boolean nullable;
-		private String action;
+		private LegacyMigrationMapping.ColumnAction action;
 		private boolean extracted;
 		private boolean generated;
 		private boolean occurrenceIndex;

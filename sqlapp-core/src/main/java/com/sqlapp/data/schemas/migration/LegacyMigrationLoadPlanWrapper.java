@@ -203,7 +203,7 @@ public class LegacyMigrationLoadPlanWrapper {
 			return this.inner.isTargetGenerated();
 		}
 
-		public String getAction() {
+		public LegacyMigrationMapping.ColumnAction getAction() {
 			return this.inner.getAction();
 		}
 

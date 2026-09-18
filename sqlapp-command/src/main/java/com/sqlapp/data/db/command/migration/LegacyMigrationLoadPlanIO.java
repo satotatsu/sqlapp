@@ -26,9 +26,6 @@ import com.sqlapp.util.YamlConverter;
  * Reads and writes legacy RDB load plans.
  */
 public class LegacyMigrationLoadPlanIO {
-	private static final Set<String> FIELD_ACTIONS = Set.of("COPY", "RENAME", "CAST", "GENERATE", "CONSTANT", "DERIVE",
-			"SPLIT", "COMBINE", "DROP", "REFERENCE");
-
 	private final YamlConverter converter = new YamlConverter();
 
 	public LegacyMigrationLoadPlan read(File file) {
@@ -218,7 +215,8 @@ public class LegacyMigrationLoadPlanIO {
 			Table table = matches.getFirst();
 			targetTables.put(dataSet.getId(), table);
 			for (var field : dataSet.getFields()) {
-				if (field.getTargetColumn() != null && !"DROP".equals(field.getAction())) {
+				if (field.getTargetColumn() != null
+						&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
 					column(table, field.getTargetColumn(), "Target column", dataSet.getId());
 				}
 			}
@@ -339,10 +337,11 @@ public class LegacyMigrationLoadPlanIO {
 		final var csvPositions = new HashSet<Integer>();
 		int extractedFields = 0;
 		for (var field : dataSet.getFields()) {
-			if (field == null || blank(field.getTargetColumn()) && !"DROP".equals(field.getAction())) {
+			if (field == null || blank(field.getTargetColumn()) && field.getAction()
+					!= com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
 				throw new CommandException("Load data set contains an invalid field: " + dataSet.getId());
 			}
-			if (!FIELD_ACTIONS.contains(field.getAction())) {
+			if (field.getAction() == null) {
 				throw new CommandException(
 						"Load data set field action is unsupported: " + dataSet.getId() + "." + field.getAction());
 			}
@@ -354,7 +353,9 @@ public class LegacyMigrationLoadPlanIO {
 				throw new CommandException("Load data set field cannot be both extracted and target-generated: "
 						+ dataSet.getId() + "." + field.getStagingColumn());
 			}
-			if (field.isTargetGenerated() && !Set.of("GENERATE", "CONSTANT").contains(field.getAction())) {
+			if (field.isTargetGenerated()
+					&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.GENERATE
+					&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.CONSTANT) {
 				throw new CommandException("Target-generated load field has an incompatible action: " + dataSet.getId()
 						+ "." + field.getAction());
 			}

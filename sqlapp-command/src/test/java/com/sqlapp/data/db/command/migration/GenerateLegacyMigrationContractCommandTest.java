@@ -61,7 +61,7 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertTrue(child.getFields().stream().anyMatch(field -> "ID".equals(field.getTargetColumn())
 				&& field.isGenerated() && !field.isExtracted()));
 		assertTrue(child.getFields().stream().anyMatch(field -> "COMPANY_ID".equals(field.getStagingColumn())
-				&& "DROP".equals(field.getAction()) && field.isExtracted()));
+				&& field.getAction() == LegacyMigrationMapping.ColumnAction.DROP && field.isExtracted()));
 		assertTrue(child.getFields().stream().anyMatch(field -> field.isOccurrenceIndex()
 				&& field.isExtracted() && "EMPLOYEE_LIST_NO".equals(field.getTargetColumn())));
 		assertEquals("table-department", child.getAncestorKeys().getFirst().getAncestorDataSetId());

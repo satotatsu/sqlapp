@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Column;
@@ -117,7 +118,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setSourcePath("OMITTED.ID");
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
-		field.setAction("COPY");
+		field.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(true);
 		omitted.getFields().add(field);
 		contract.getDataSets().add(omitted);
@@ -318,10 +319,10 @@ class LoadLegacyHierarchyCommandTest {
 		initialize(plan, schemaFile,
 				new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		var field = plan.getDataSets().getFirst().getFields().getFirst();
-		field.setAction("UNKNOWN");
+		field.setAction(null);
 		assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validate(plan));
 
-		field.setAction("COPY");
+		field.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(false);
 		field.setCsvPosition(0);
 		CommandException inert = assertThrows(CommandException.class,
@@ -415,7 +416,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
 		field.setDataType("INT");
-		field.setAction("COPY");
+		field.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(true);
 		dataSet.getFields().add(field);
 		plan.getDataSets().add(dataSet);
@@ -436,7 +437,7 @@ class LoadLegacyHierarchyCommandTest {
 		contractField.setStagingColumn("ID");
 		contractField.setTargetColumn("ID");
 		contractField.setTargetDataType("INT");
-		contractField.setAction("COPY");
+		contractField.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		contractField.setExtracted(true);
 		contractDataSet.getFields().add(contractField);
 		contract.getDataSets().add(contractDataSet);
@@ -465,7 +466,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
 		field.setTargetDataType("INT");
-		field.setAction("COPY");
+		field.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(true);
 		omitted.getFields().add(field);
 		contract.getDataSets().add(omitted);
@@ -488,7 +489,7 @@ class LoadLegacyHierarchyCommandTest {
 		field.setStagingColumn("ID");
 		field.setTargetColumn("ID");
 		field.setDataType("INT");
-		field.setAction("COPY");
+		field.setAction(LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(true);
 		dataSet.getFields().add(field);
 		plan.getDataSets().add(dataSet);

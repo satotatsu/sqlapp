@@ -129,7 +129,7 @@ public class PliCsvExtractorGenerator {
 			line(builder,
 					"| " + csvPosition++ + " | `" + value(field.getStagingColumn()) + "` | `"
 							+ value(field.getSourcePath()) + "` | `" + value(field.getTargetColumn()) + "` | `"
-							+ value(field.getAction()) + "` |");
+							+ value(field.getAction() == null ? null : field.getAction().name()) + "` |");
 		}
 		if (!dataSet.getAncestorKeys().isEmpty()) {
 			line(builder, "");

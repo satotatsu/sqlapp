@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.AncestorKey;
@@ -386,7 +387,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		employee.getSourceBusinessKey().add("EMP_ID");
 		employee.getFields().add(field(1, "COMPANY_MASTER.EMPLOYEE_LIST.COMPANY_ID",
 				"COMPANY_ID", null, "VARCHAR", 4L, false, false));
-		employee.getFields().getLast().setAction("DROP");
+		employee.getFields().getLast().setAction(LegacyMigrationMapping.ColumnAction.DROP);
 		employee.getFields().add(field(2, "COMPANY_MASTER.EMPLOYEE_LIST.EMP_ID",
 				"EMP_ID", "EMP_ID", "VARCHAR", 6L, false, false));
 		employee.getFields().add(field(3, "COMPANY_MASTER.EMPLOYEE_LIST.$index",
@@ -427,7 +428,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 		field.setTargetColumn(target);
 		field.setTargetDataType(type);
 		field.setLength(length);
-		field.setAction(generated || occurrence ? "GENERATE" : "COPY");
+		field.setAction(generated || occurrence ? LegacyMigrationMapping.ColumnAction.GENERATE
+				: LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(path != null);
 		field.setGenerated(generated || occurrence);
 		field.setOccurrenceIndex(occurrence);

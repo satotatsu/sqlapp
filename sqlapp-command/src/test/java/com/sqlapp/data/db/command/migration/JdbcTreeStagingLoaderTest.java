@@ -20,6 +20,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.JoinKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadField;
@@ -942,7 +943,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 		field.setTargetColumn(target);
 		field.setExtracted(extracted);
 		field.setTargetGenerated(generated);
-		field.setAction(action);
+		field.setAction(LegacyMigrationMapping.ColumnAction.valueOf(action));
 		return field;
 	}
 

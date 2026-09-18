@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.AncestorKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
@@ -140,7 +141,8 @@ class GeneratePliCsvExtractorCommandTest {
 		field.setSourceColumn(column);
 		field.setStagingColumn(column);
 		field.setTargetColumn(column);
-		field.setAction(occurrence ? "GENERATE" : "COPY");
+		field.setAction(occurrence ? LegacyMigrationMapping.ColumnAction.GENERATE
+				: LegacyMigrationMapping.ColumnAction.COPY);
 		field.setExtracted(true);
 		field.setGenerated(occurrence);
 		field.setOccurrenceIndex(occurrence);

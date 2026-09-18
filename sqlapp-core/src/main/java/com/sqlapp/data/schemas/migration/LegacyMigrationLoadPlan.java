@@ -129,7 +129,7 @@ public class LegacyMigrationLoadPlan {
 		private Integer scale;
 		private boolean extracted;
 		private boolean targetGenerated;
-		private String action;
+		private LegacyMigrationMapping.ColumnAction action;
 	}
 
 	@Getter

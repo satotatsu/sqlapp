@@ -20,6 +20,7 @@ import java.util.Set;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.exceptions.CommandException;
 
 /**
@@ -66,9 +67,7 @@ public class LegacyMigrationContractValidator {
 			Set<String> stagingColumns = new HashSet<>();
 			for (int i = 0; i < dataSet.getFields().size(); i++) {
 				Field field = dataSet.getFields().get(i);
-				try {
-					com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.valueOf(field.getAction());
-				} catch (IllegalArgumentException | NullPointerException e) {
+				if (field.getAction() == null) {
 					throw new CommandException(
 							"Unsupported field action in data set: " + dataSet.getId() + "." + field.getAction());
 				}
@@ -175,7 +174,8 @@ public class LegacyMigrationContractValidator {
 	}
 
 	private void validateFieldSemantics(DataSet dataSet, Field field, int fieldIndex) {
-		boolean generatedAction = Set.of("GENERATE", "CONSTANT").contains(field.getAction());
+		boolean generatedAction = field.getAction() == LegacyMigrationMapping.ColumnAction.GENERATE
+				|| field.getAction() == LegacyMigrationMapping.ColumnAction.CONSTANT;
 		if (generatedAction != field.isGenerated()) {
 			throw new CommandException(
 					"Field action and generated flag disagree: " + dataSet.getId() + "[" + fieldIndex + "]");
@@ -188,11 +188,12 @@ public class LegacyMigrationContractValidator {
 			throw new CommandException("Occurrence-index field must be extracted and generated: " + dataSet.getId()
 					+ "[" + fieldIndex + "]");
 		}
-		if (!"DROP".equals(field.getAction()) && blank(field.getTargetColumn())) {
+		if (field.getAction() != LegacyMigrationMapping.ColumnAction.DROP && blank(field.getTargetColumn())) {
 			throw new CommandException(
 					"Non-drop field requires targetColumn: " + dataSet.getId() + "[" + fieldIndex + "]");
 		}
-		if ("DROP".equals(field.getAction()) && (!field.isExtracted() || field.isGenerated())) {
+		if (field.getAction() == LegacyMigrationMapping.ColumnAction.DROP
+				&& (!field.isExtracted() || field.isGenerated())) {
 			throw new CommandException(
 					"Drop field must only be extracted: " + dataSet.getId() + "[" + fieldIndex + "]");
 		}

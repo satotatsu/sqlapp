@@ -101,7 +101,7 @@ public class LegacyMigrationContractBuilder {
 		field.setSourceColumn(column.getSource());
 		field.setStagingColumn(column.getSource() == null ? column.getTarget() : column.getSource());
 		field.setTargetColumn(column.getTarget());
-		field.setAction(column.getAction().name());
+		field.setAction(column.getAction());
 		field.setGenerated(column.getAction() == ColumnAction.GENERATE || column.getAction() == ColumnAction.CONSTANT);
 		field.setOccurrenceIndex("OCCURRENCE_NUMBER".equals(column.getConversion().get("type")));
 		field.setExtracted(field.isOccurrenceIndex() || (column.getSourcePath() != null && !field.isGenerated()));
@@ -185,7 +185,7 @@ public class LegacyMigrationContractBuilder {
 				column -> equals(column.getSource(), pair.getChildColumn()) && equals(column.getTarget(), targetColumn))
 				.findFirst().orElse(null);
 		field.setTargetColumn(target == null ? null : targetColumn);
-		field.setAction(target == null ? ColumnAction.DROP.name() : target.getAction().name());
+		field.setAction(target == null ? ColumnAction.DROP : target.getAction());
 		field.setExtracted(true);
 		if (ancestorColumn != null && ancestorColumn.getTargetDefinition() != null) {
 			field.setTargetDataType(ancestorColumn.getTargetDefinition().getDataType());

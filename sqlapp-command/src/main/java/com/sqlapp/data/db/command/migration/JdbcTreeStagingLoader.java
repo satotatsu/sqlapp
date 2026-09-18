@@ -289,7 +289,7 @@ public class JdbcTreeStagingLoader {
 	private void copyTargetValues(LoadDataSetWrapper dataSet, Row source, Row target) {
 		for (LoadFieldWrapper field : dataSet.getFields()) {
 			if (!field.isExtracted() || field.isTargetGenerated() || field.getTargetColumn() == null
-					|| "DROP".equals(field.getAction())) {
+					|| field.getAction() == com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
 				continue;
 			}
 			if (field.getTargetColumn() == null) {
@@ -360,7 +360,8 @@ public class JdbcTreeStagingLoader {
 			dataSet.setTargetTable(table);
 			targetTables.put(dataSet.getId(), table);
 			for (LoadFieldWrapper field : dataSet.getFields()) {
-				if (field.getInner().getTargetColumn() != null && !"DROP".equals(field.getAction())
+				if (field.getInner().getTargetColumn() != null
+						&& field.getAction() != com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP
 						&& table.getColumns().get(field.getInner().getTargetColumn()) == null) {
 					throw new CommandException(
 							"Target column was not found: " + dataSet.getId() + "." + field.getTargetColumn());
@@ -464,7 +465,9 @@ public class JdbcTreeStagingLoader {
 		for (LoadDataSetWrapper dataSet : plan.getDataSets()) {
 			Set<String> targetColumns = new LinkedHashSet<>();
 			dataSet.getFields().stream().filter(field -> field.getInner().getTargetColumn() != null)
-					.filter(field -> !"DROP".equals(field.getAction())).map(field -> field.getInner().getTargetColumn())
+					.filter(field -> field.getAction()
+							!= com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP)
+					.map(field -> field.getInner().getTargetColumn())
 					.forEach(targetColumns::add);
 			validateReadable(failures, dataSet.getId(), "target",
 					qualifiedId(dataSet.getInner().getTargetSchema(), dataSet.getTargetTable()), targetColumns);
