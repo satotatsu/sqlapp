@@ -7,6 +7,12 @@ product/version information in the XML so SQL generation can resolve the
 appropriate dialect. Examples below assume the plugin and runtime dependencies
 from the setup guide have already been configured.
 
+The companion example uses `schemas/latest` for a fresh export and
+`schemas/baseline` for the reviewed snapshot. Its `generateDiffSql` compares
+those locations, while `generateSql` and `generateHtmlDocs` consume the
+baseline. This separation is useful because exporting metadata does not
+silently change the input used for documentation or migration generation.
+
 ## Export database metadata
 
 `exportSchemaXml` reads the configured database and writes Schema XML.

@@ -4,6 +4,8 @@ The `com.sqlapp.db` plugin exposes sqlapp commands as Gradle tasks. This
 document is the index and authoritative task-name reference. Runnable project
 configurations are maintained in
 [`sqlapp-gradle-example`](https://github.com/satotatsu/sqlapp-gradle-example).
+The examples in this guide have also been checked against that project's
+`build.gradle` and `gradle.properties` layout.
 
 ## Documentation map
 
@@ -15,6 +17,7 @@ use a plugin release that contains the tasks you need.
 | Guide | Contents |
 |---|---|
 | [Getting started](getting-started.md) | Plugin setup, JDBC runtime, credentials, task dependencies, troubleshooting |
+| [Runnable example project](example-project.md) | How the companion project is organized and which task demonstrates each workflow |
 | [Schema, SQL and HTML](schema-sql-and-html.md) | XML export, comparison, SQL generation, documentation properties and outputs |
 | [Custom tasks and versioned migrations](custom-tasks-and-migrations.md) | Data export, file conversion, SQL execution, migration extension and task types |
 | [Normalization and legacy migration](normalization-and-legacy-migration.md) | Normalization, PL/I import, extraction contracts and hierarchy loading |

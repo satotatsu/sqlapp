@@ -7,6 +7,11 @@ classes are available for registration with a project-specific name. All task
 types below are in `com.sqlapp.gradle.plugins`; applying the plugin makes
 those classes available to a Groovy build script.
 
+The companion example registers `exportData`, `importData`, `toExcel`,
+`toJson`, `toYaml`, `toToml`, `toCsv`, `generateDataConfig`, `generateData`,
+and several query tasks. See the [example project map](example-project.md) for
+the source locations and corresponding documentation.
+
 ## Export table data
 
 ```groovy

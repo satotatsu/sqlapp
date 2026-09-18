@@ -2,6 +2,10 @@
 
 [Task guide](README.md) · [Schema, SQL and HTML reference](schema-sql-and-html.md)
 
+For a complete build containing these workflows, see the
+[`sqlapp-gradle-example` project](https://github.com/satotatsu/sqlapp-gradle-example)
+and the [project map](example-project.md).
+
 The `com.sqlapp.db` plugin turns sqlapp commands into Gradle tasks. A common
 workflow reads database metadata once into Schema XML, then generates HTML or
 SQL from that file. The following examples use Groovy DSL and Java 21.
@@ -31,6 +35,22 @@ dialect and plugin versions aligned. PostgreSQL is used here as an example;
 for another database, supply its `sqlapp-core-{db}` module and JDBC driver.
 The dialect supplies sqlapp's metadata and SQL behavior; the driver supplies
 the JDBC connection. They serve different purposes.
+
+The companion example selects them through `gradle.properties`:
+
+```properties
+db=hsql
+jdbc_driver=org.hsqldb:hsqldb:2.7.4
+schema_level=catalog
+dataSourceProperties=./src/main/config/local/dataSource.properties
+defaultEncoding=UTF-8
+```
+
+Its `build.gradle` maps those values to `implementation` dependencies because
+the example also has a `copyLib` task. For ordinary execution, either
+`implementation` or `runtimeOnly` reaches Java's `runtimeClasspath`; use
+`implementation` only when your build also needs to compile against the driver
+or dialect classes.
 
 The `java` plugin creates `runtimeClasspath`. sqlapp tasks pick up that
 configuration when they are constructed. This also works for custom task
