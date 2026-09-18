@@ -332,6 +332,32 @@ public class LegacyMigrationContractValidator {
 		if (!Objects.equals(contract.getMigrationId(), mapping.getMigration().getId())) {
 			throw new CommandException("Migration mapping migrationId does not match the contract.");
 		}
+		validateMappingDataSets(contract, mapping);
+	}
+
+	private void validateMappingDataSets(LegacyMigrationContract contract, LegacyMigrationMapping mapping) {
+		Map<String, LegacyMigrationMapping.TableMapping> mappingTables = new HashMap<>();
+		mapping.getTables().stream().filter(table -> table.getOperation() != LegacyMigrationMapping.TableOperation.SKIP)
+				.forEach(table -> mappingTables.put(table.getId(), table));
+		if (mappingTables.size() != contract.getDataSets().size()) {
+			throw new CommandException("Migration contract data sets do not match the referenced mapping.");
+		}
+		for (DataSet dataSet : contract.getDataSets()) {
+			var table = mappingTables.get(dataSet.getId());
+			String parentId = table == null || table.getParent() == null ? null : table.getParent().getMappingId();
+			if (table == null || !Objects.equals(dataSet.getSourcePath(), table.getSource().getPath())
+					|| !equalsOptionalName(dataSet.getTargetCatalog(), table.getTarget().getCatalog())
+					|| !equalsOptionalName(dataSet.getTargetSchema(), table.getTarget().getSchema())
+					|| !equalsName(dataSet.getTargetTable(), table.getTarget().getTable())
+					|| !Objects.equals(dataSet.getParentDataSetId(), parentId)) {
+				throw new CommandException(
+						"Migration contract data set disagrees with the referenced mapping: " + dataSet.getId());
+			}
+		}
+	}
+
+	private boolean equalsOptionalName(String left, String right) {
+		return left == null ? right == null : right != null && left.equalsIgnoreCase(right);
 	}
 
 	private File resolve(File owner, String value) {

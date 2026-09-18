@@ -194,6 +194,10 @@ declaration. Parent reference pairs are validated with the relationship data.
 The source and resolved parent-reference pairs must match the relationship's
 source and target key pairs in the same order, preventing a structurally valid
 but semantically different join from reaching contract generation.
+When a contract records `mappingFile` and `mappingFingerprint`, validation also
+checks every non-skipped data-set ID, source path, target table qualifier, and
+parent ID against that exact mapping. A contract cannot retain valid provenance
+while redirecting a data set to a different table or hierarchy.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

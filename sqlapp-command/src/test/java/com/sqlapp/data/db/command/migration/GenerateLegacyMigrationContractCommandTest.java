@@ -48,6 +48,7 @@ class GenerateLegacyMigrationContractCommandTest {
 		File contractFile = new File(output, "company-contract.yaml");
 		assertTrue(contractFile.isFile());
 		var contract = new LegacyMigrationContractIO().read(contractFile);
+		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
 		assertEquals("sqlapp-legacy-migration-contract", contract.getFormat());
 		assertEquals("MS932", contract.getCsv().getEncoding());
 		assertEquals("\\N", contract.getCsv().getNullValue());
@@ -69,6 +70,10 @@ class GenerateLegacyMigrationContractCommandTest {
 		assertEquals("table-department", child.getAncestorKeys().getFirst().getAncestorDataSetId());
 		assertEquals("COMPANY_ID", child.getAncestorKeys().getFirst().getColumns().getFirst().getSourceColumn());
 		assertFalse(new File(output, "company-contract.yaml.tmp").exists());
+		contract.getDataSets().getLast().setTargetTable("OTHER_TABLE");
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile));
+		contract.getDataSets().getLast().setTargetTable("EMPLOYEE_LIST");
 		String yaml = Files.readString(contractFile.toPath());
 		assertTrue(yaml.contains("action: \"COPY\"") || yaml.contains("action: COPY"));
 		assertTrue(yaml.contains("occurrenceSourceMode: \"NUMBERED_COLUMNS\"")
