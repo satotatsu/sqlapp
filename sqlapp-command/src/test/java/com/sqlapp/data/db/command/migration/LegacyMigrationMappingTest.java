@@ -17,6 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnDefinition;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.Diagnostic;
@@ -35,7 +36,7 @@ class LegacyMigrationMappingTest {
 
 	@Test
 	void testYamlRoundTripAndValidation() throws Exception {
-		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		LegacyMigrationMapping mapping = initializedMapping();
 		mapping.getMigration().setId("sample-v1");
 		mapping.getSource().setSchemaFingerprint("source");
 		mapping.getTarget().setSchemaFingerprint("target");
@@ -51,6 +52,9 @@ class LegacyMigrationMappingTest {
 		generatedColumn.setTarget("ID");
 		generatedColumn.setAction(ColumnAction.GENERATE);
 		generatedColumn.getConversion().put("type", "SEQUENCE");
+		ColumnDefinition generatedDefinition = new ColumnDefinition();
+		generatedDefinition.setDataType("BIGINT");
+		generatedColumn.setTargetDefinition(generatedDefinition);
 		parent.getColumns().add(generatedColumn);
 		TableMapping child = table("table-child", "CHILD");
 		child.setParent(new LegacyMigrationMapping.ParentMapping());
@@ -113,7 +117,7 @@ class LegacyMigrationMappingTest {
 
 	@Test
 	void testRejectInconsistentGeneratedKeyMapping() {
-		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		LegacyMigrationMapping mapping = initializedMapping();
 		TableMapping table = generatedKeyTable();
 		mapping.getTables().add(table);
 		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
@@ -127,15 +131,20 @@ class LegacyMigrationMappingTest {
 		table.getKeys().getTargetPrimaryKey().add("ID");
 		table.getColumns().getFirst().getConversion().put("type", "IDENTITY");
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getColumns().getFirst().getConversion().put("type", "SEQUENCE");
+		table.getColumns().getFirst().getTargetDefinition().setDataType("INTEGER");
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		table.getColumns().getFirst().getTargetDefinition().setDataType("BIGINT");
 		table.getKeys().getGeneratedKey().setGenerationType(GeneratedKeyGenerationType.IDENTITY);
 		assertThrows(CommandException.class, () -> validator.validate(mapping));
 		table.getKeys().getGeneratedKey().setSequence(null);
+		table.getColumns().getFirst().getConversion().put("type", "IDENTITY");
 		validator.validate(mapping);
 	}
 
 	@Test
 	void testRejectInvalidDiagnosticsAndStatistics() {
-		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		LegacyMigrationMapping mapping = initializedMapping();
 		TableMapping table = table("table-item", "ITEM");
 		mapping.getTables().add(table);
 		Diagnostic warning = new Diagnostic();
@@ -310,7 +319,7 @@ class LegacyMigrationMappingTest {
 
 	@Test
 	void testAtomicReplacementLeavesNoTemporaryFile() {
-		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		LegacyMigrationMapping mapping = initializedMapping();
 		File yaml = new File(temporaryDirectory, "atomic.yaml");
 		LegacyMigrationMappingIO io = new LegacyMigrationMappingIO();
 		io.write(yaml, mapping);
@@ -327,6 +336,26 @@ class LegacyMigrationMappingTest {
 		Files.writeString(file.toPath(), "format: wrong\nversion: 1\n");
 
 		assertThrows(CommandException.class, () -> new LegacyMigrationMappingIO().read(file));
+	}
+
+	@Test
+	void testRejectIncompleteOrInvalidMappingHeader() {
+		LegacyMigrationMapping mapping = initializedMapping();
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		validator.validate(mapping);
+
+		mapping.getMigration().setGeneratedAt("not-a-date");
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		mapping.getMigration().setGeneratedAt("2026-01-01T00:00:00Z");
+		mapping.getSource().setSchemaFile(null);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		mapping.getSource().setSchemaFile("source.xml");
+		var definition = new LegacyMigrationMapping.DefinitionFile();
+		definition.setPath("source.pli");
+		mapping.getSource().getDefinitionFiles().add(definition);
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+		definition.setType("PLI");
+		validator.validate(mapping);
 	}
 
 	@Test
@@ -382,7 +411,7 @@ class LegacyMigrationMappingTest {
 
 	@Test
 	void testRejectHierarchyKeyDisagreement() {
-		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		LegacyMigrationMapping mapping = initializedMapping();
 		TableMapping parent = table("parent", "PARENT");
 		TableMapping child = table("child", "CHILD");
 		child.setParent(new LegacyMigrationMapping.ParentMapping());
@@ -429,14 +458,28 @@ class LegacyMigrationMappingTest {
 		column.setTarget("ID");
 		column.setAction(ColumnAction.GENERATE);
 		column.getConversion().put("type", "SEQUENCE");
+		ColumnDefinition definition = new ColumnDefinition();
+		definition.setDataType("BIGINT");
+		column.setTargetDefinition(definition);
 		table.getColumns().add(column);
 		return table;
 	}
 
 	private LegacyMigrationMapping mapping(String sourceFingerprint, String targetFingerprint) {
-		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		LegacyMigrationMapping mapping = initializedMapping();
 		mapping.getSource().setSchemaFingerprint(sourceFingerprint);
 		mapping.getTarget().setSchemaFingerprint(targetFingerprint);
+		return mapping;
+	}
+
+	private LegacyMigrationMapping initializedMapping() {
+		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		mapping.getMigration().setId("test-migration");
+		mapping.getMigration().setGeneratedAt("2026-01-01T00:00:00Z");
+		mapping.getSource().setSchemaFile("source.xml");
+		mapping.getSource().setSchemaFingerprint("source");
+		mapping.getTarget().setSchemaFile("target.xml");
+		mapping.getTarget().setSchemaFingerprint("target");
 		return mapping;
 	}
 

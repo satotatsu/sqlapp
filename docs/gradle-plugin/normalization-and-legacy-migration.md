@@ -179,14 +179,19 @@ boundary and are converted before the contract is written.
 Generated-key lineage records use the typed `generationType` values `IDENTITY`
 and `SEQUENCE`; mappings retain these names in YAML and reject unknown values.
 Generated-key lineage is validated as one unit: its column must be part of the
-target primary key and have a matching `GENERATE` column mapping; `SEQUENCE`
-requires a sequence name while `IDENTITY` must not declare one.
+target primary key and have a matching `GENERATE` column mapping and target
+data type; `SEQUENCE` requires a sequence name while `IDENTITY` must not declare
+one.
 Mapping diagnostics require a typed severity, actionable code/message/action,
 and a valid table mapping reference when one is present. Diagnostic summary
 counts are checked against the actual warning, skipped, and error collections.
 Transformation history must be in strictly increasing sequence order. Its first
 and last fingerprints must match the mapping source and target, and adjacent
 steps with recorded boundary fingerprints must form a continuous chain.
+Mapping headers require a migration ID, an offset-based `generatedAt`, generator
+identity, and source/target schema file names and fingerprints. Optional source
+definition-file entries require both path and type, so incomplete provenance is
+rejected when the mapping is read rather than during a later generation step.
 Hierarchical relationships are validated bidirectionally: every child
 `parent` declaration must have exactly one matching hierarchical relationship,
 and every hierarchical relationship must have the corresponding child parent

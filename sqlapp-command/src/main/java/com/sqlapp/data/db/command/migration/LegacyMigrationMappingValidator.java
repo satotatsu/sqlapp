@@ -6,6 +6,8 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +50,7 @@ public class LegacyMigrationMappingValidator {
 				|| mapping.getStatistics() == null || mapping.getOptions() == null) {
 			throw new CommandException("Legacy migration mapping structure is incomplete.");
 		}
+		validateHeader(mapping);
 		Set<String> ids = new HashSet<>();
 		Map<String, TableMapping> byId = new HashMap<>();
 		for (TableMapping table : mapping.getTables()) {
@@ -121,6 +124,34 @@ public class LegacyMigrationMappingValidator {
 		validateHierarchyConsistency(mapping, byId);
 		validateDiagnostics(mapping, ids);
 		validateTransformations(mapping);
+	}
+
+	private void validateHeader(LegacyMigrationMapping mapping) {
+		var migration = mapping.getMigration();
+		if (blank(migration.getId()) || blank(migration.getGeneratedAt()) || migration.getGenerator() == null
+				|| blank(migration.getGenerator().getName())) {
+			throw new CommandException("Legacy migration metadata is incomplete.");
+		}
+		try {
+			OffsetDateTime.parse(migration.getGeneratedAt());
+		} catch (DateTimeParseException e) {
+			throw new CommandException("Legacy migration generatedAt must be an offset date-time: "
+					+ migration.getGeneratedAt(), e);
+		}
+		validateEndpoint(mapping.getSource(), "source");
+		validateEndpoint(mapping.getTarget(), "target");
+	}
+
+	private void validateEndpoint(LegacyMigrationMapping.SchemaEndpoint endpoint, String role) {
+		if (blank(endpoint.getSchemaFile()) || blank(endpoint.getSchemaFingerprint())
+				|| endpoint.getDefinitionFiles() == null) {
+			throw new CommandException("Legacy migration " + role + " schema endpoint is incomplete.");
+		}
+		for (var definition : endpoint.getDefinitionFiles()) {
+			if (definition == null || blank(definition.getPath()) || blank(definition.getType())) {
+				throw new CommandException("Legacy migration " + role + " definition file is invalid.");
+			}
+		}
 	}
 
 	private void validateHierarchyConsistency(LegacyMigrationMapping mapping, Map<String, TableMapping> byId) {
@@ -213,7 +244,9 @@ public class LegacyMigrationMappingValidator {
 		ColumnMapping generatedColumn = table.getColumns().stream()
 				.filter(column -> equalsName(column.getTarget(), key.getColumn())).findFirst().orElse(null);
 		if (generatedColumn == null || generatedColumn.getAction() != ColumnAction.GENERATE
-				|| !key.getGenerationType().name().equals(generatedColumn.getConversion().get("type"))) {
+				|| !key.getGenerationType().name().equals(generatedColumn.getConversion().get("type"))
+				|| generatedColumn.getTargetDefinition() == null
+				|| !equalsName(key.getDataType(), generatedColumn.getTargetDefinition().getDataType())) {
 			throw new CommandException("Generated key column mapping is inconsistent: " + table.getId());
 		}
 	}

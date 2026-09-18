@@ -126,6 +126,11 @@ class GenerateLegacyMigrationContractCommandTest {
 	private LegacyMigrationMapping mapping() {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		mapping.getMigration().setId("company-migration");
+		mapping.getMigration().setGeneratedAt("2026-01-01T00:00:00Z");
+		mapping.getSource().setSchemaFile("legacy.xml");
+		mapping.getSource().setSchemaFingerprint("source");
+		mapping.getTarget().setSchemaFile("company.xml");
+		mapping.getTarget().setSchemaFingerprint("target");
 		TableMapping department = table("table-department", "DEPARTMENT_GROUP", "COMPANY_MASTER.DEPARTMENT_GROUP");
 		department.getKeys().getTargetPrimaryKey().add("ID");
 		department.getColumns()
