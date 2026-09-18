@@ -147,6 +147,7 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 ## Documentation
 
 - [Gradle plugin task guide](docs/gradle-plugin/README.md)
+- [Java API getting started](docs/java-api-getting-started.md)
 - [Published artifacts and dependency selection](docs/artifacts.md)
 - [Compatibility and database verification matrix](docs/compatibility.md)
 - [Architecture](docs/architecture.md)
