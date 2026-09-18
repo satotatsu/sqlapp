@@ -165,6 +165,11 @@ of 5 and 0 are also applied after file loading, so set those two values on the
 extension when you need to override the fallbacks. Avoid storing credentials
 in a committed build script or properties file.
 
+The configuration loader also recognizes Java-properties XML, JSON, YAML, and
+YML files. More than one file may be supplied through repeated `properties`
+calls. See the [task reference](task-reference.md#configure-a-data-source-from-a-file)
+for merge behavior, the companion-project pattern, and missing-file behavior.
+
 ## Troubleshooting
 
 | Symptom | Check |
