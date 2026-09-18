@@ -144,7 +144,26 @@ public class LegacyMigrationMappingValidator {
 			}
 			validatePairs(table.getParent().getSourceReference(), "parent.sourceReference", table.getId());
 			validatePairs(table.getParent().getResolvedReference(), "parent.resolvedReference", table.getId());
+			RelationshipMapping relationship = parents.getFirst();
+			if (!samePairs(table.getParent().getSourceReference(), relationship.getSourceKeys())
+					|| !samePairs(table.getParent().getResolvedReference(), relationship.getTargetKeys())) {
+				throw new CommandException("Child parent references disagree with hierarchical relationship: "
+						+ table.getId());
+			}
 		}
+	}
+
+	private boolean samePairs(List<ColumnPair> left, List<ColumnPair> right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		for (int i = 0; i < left.size(); i++) {
+			if (!equalsName(left.get(i).getParentColumn(), right.get(i).getParentColumn())
+					|| !equalsName(left.get(i).getChildColumn(), right.get(i).getChildColumn())) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private void validateDiagnostics(LegacyMigrationMapping mapping, Set<String> tableIds) {

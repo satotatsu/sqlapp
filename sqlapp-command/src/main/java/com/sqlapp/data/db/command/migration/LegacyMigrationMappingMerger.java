@@ -14,6 +14,7 @@ import java.util.Objects;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ParentMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableOperation;
@@ -120,9 +121,7 @@ public class LegacyMigrationMappingMerger {
 		}
 		current.setTarget(step.getTarget());
 		current.setKeys(step.getKeys());
-		if (step.getParent() != null) {
-			current.setParent(step.getParent());
-		}
+		composeParent(current, step);
 		current.setConstraints(step.getConstraints());
 		current.getDetails().putAll(step.getDetails());
 		if (step.getOperation() != TableOperation.COPY) {
@@ -131,6 +130,22 @@ public class LegacyMigrationMappingMerger {
 		if (step.getRole() != LegacyMigrationMapping.TableRole.ROOT) {
 			current.setRole(step.getRole());
 		}
+	}
+
+	private void composeParent(TableMapping current, TableMapping step) {
+		if (step.getParent() == null) {
+			return;
+		}
+		if (current.getParent() == null) {
+			current.setParent(step.getParent());
+			return;
+		}
+		ParentMapping parent = current.getParent();
+		parent.setMappingId(step.getParent().getMappingId());
+		if (parent.getSourceReference().isEmpty()) {
+			parent.setSourceReference(step.getParent().getSourceReference());
+		}
+		parent.setResolvedReference(step.getParent().getResolvedReference());
 	}
 
 	private void translateParents(List<TableMapping> tables, Map<String, String> ids) {
@@ -155,7 +170,9 @@ public class LegacyMigrationMappingMerger {
 			if (current == null) {
 				existing.getRelationships().add(relationship);
 			} else {
-				current.setSourceKeys(relationship.getSourceKeys());
+				if (current.getSourceKeys().isEmpty()) {
+					current.setSourceKeys(relationship.getSourceKeys());
+				}
 				current.setTargetKeys(relationship.getTargetKeys());
 				current.setParentIdPropagation(relationship.isParentIdPropagation());
 				current.setLoadOrder(relationship.getLoadOrder());

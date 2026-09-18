@@ -191,6 +191,9 @@ Hierarchical relationships are validated bidirectionally: every child
 `parent` declaration must have exactly one matching hierarchical relationship,
 and every hierarchical relationship must have the corresponding child parent
 declaration. Parent reference pairs are validated with the relationship data.
+The source and resolved parent-reference pairs must match the relationship's
+source and target key pairs in the same order, preventing a structurally valid
+but semantically different join from reaching contract generation.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

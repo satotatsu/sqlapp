@@ -145,6 +145,10 @@ class GenerateLegacyMigrationContractCommandTest {
 		relationship.setLoadOrder(2);
 		relationship.getSourceKeys().add(new ColumnPair("COMPANY_ID", "COMPANY_ID"));
 		relationship.getTargetKeys().add(new ColumnPair("ID", "PARENT_ID"));
+		employee.setParent(new LegacyMigrationMapping.ParentMapping());
+		employee.getParent().setMappingId(department.getId());
+		employee.getParent().getSourceReference().add(new ColumnPair("COMPANY_ID", "COMPANY_ID"));
+		employee.getParent().getResolvedReference().add(new ColumnPair("ID", "PARENT_ID"));
 		mapping.getRelationships().add(relationship);
 		return mapping;
 	}

@@ -497,6 +497,11 @@ public class LegacyMigrationMappingBuilder {
 				relationship.getTargetKeys().clear();
 				relationship.getTargetKeys().add(new ColumnPair(string(foreignKey.get("referencedColumn")), newColumn));
 				relationship.setParentIdPropagation(true);
+				if (tableMapping.getParent().getSourceReference().isEmpty()) {
+					tableMapping.getParent().getSourceReference().addAll(relationship.getSourceKeys());
+				}
+				tableMapping.getParent().getResolvedReference().clear();
+				tableMapping.getParent().getResolvedReference().addAll(relationship.getTargetKeys());
 			}
 			converted.add(tableName);
 		}

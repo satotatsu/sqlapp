@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.Diagnostic;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.DiagnosticSeverity;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.GeneratedKey;
@@ -256,6 +257,50 @@ class LegacyMigrationMappingTest {
 	}
 
 	@Test
+	void testComposeHierarchyReferencesAcrossTransformationSteps() {
+		LegacyMigrationMapping existing = mapping("source", "middle");
+		TableMapping parent = table("parent", "PARENT_MIDDLE");
+		TableMapping child = table("child", "CHILD_MIDDLE");
+		child.setParent(new LegacyMigrationMapping.ParentMapping());
+		child.getParent().setMappingId(parent.getId());
+		child.getParent().getSourceReference().add(new ColumnPair("LEGACY_ID", "LEGACY_PARENT_ID"));
+		child.getParent().getResolvedReference().add(new ColumnPair("MIDDLE_ID", "MIDDLE_PARENT_ID"));
+		RelationshipMapping relationship = relationship("source-relationship", parent, child);
+		relationship.getSourceKeys().add(new ColumnPair("LEGACY_ID", "LEGACY_PARENT_ID"));
+		relationship.getTargetKeys().add(new ColumnPair("MIDDLE_ID", "MIDDLE_PARENT_ID"));
+		existing.getTables().addAll(java.util.List.of(parent, child));
+		existing.getRelationships().add(relationship);
+		existing.getTransformations().add(transformation(10, "First", "source", "middle"));
+
+		LegacyMigrationMapping step = mapping("middle", "target");
+		TableMapping nextParent = table("next-parent", "PARENT_FINAL");
+		nextParent.getSource().setTable("PARENT_MIDDLE");
+		TableMapping nextChild = table("next-child", "CHILD_FINAL");
+		nextChild.getSource().setTable("CHILD_MIDDLE");
+		nextChild.setParent(new LegacyMigrationMapping.ParentMapping());
+		nextChild.getParent().setMappingId(nextParent.getId());
+		nextChild.getParent().getSourceReference().add(new ColumnPair("MIDDLE_ID", "MIDDLE_PARENT_ID"));
+		nextChild.getParent().getResolvedReference().add(new ColumnPair("FINAL_ID", "FINAL_PARENT_ID"));
+		RelationshipMapping nextRelationship = relationship("target-relationship", nextParent, nextChild);
+		nextRelationship.getSourceKeys().add(new ColumnPair("MIDDLE_ID", "MIDDLE_PARENT_ID"));
+		nextRelationship.getTargetKeys().add(new ColumnPair("FINAL_ID", "FINAL_PARENT_ID"));
+		step.getTables().addAll(java.util.List.of(nextParent, nextChild));
+		step.getRelationships().add(nextRelationship);
+		step.getTransformations().add(transformation(10, "Second", "middle", "target"));
+
+		LegacyMigrationMapping merged = new LegacyMigrationMappingMerger().merge(existing, step);
+
+		TableMapping mergedChild = merged.getTables().stream()
+				.filter(table -> "CHILD_FINAL".equals(table.getTarget().getTable())).findFirst().orElseThrow();
+		assertEquals("LEGACY_ID", mergedChild.getParent().getSourceReference().getFirst().getParentColumn());
+		assertEquals("FINAL_ID", mergedChild.getParent().getResolvedReference().getFirst().getParentColumn());
+		RelationshipMapping mergedRelationship = merged.getRelationships().getFirst();
+		assertEquals("LEGACY_ID", mergedRelationship.getSourceKeys().getFirst().getParentColumn());
+		assertEquals("FINAL_ID", mergedRelationship.getTargetKeys().getFirst().getParentColumn());
+		new LegacyMigrationMappingValidator().validate(merged);
+	}
+
+	@Test
 	void testRejectDiscontinuousMapping() {
 		LegacyMigrationMapping existing = mapping("sha256:source", "sha256:middle");
 		LegacyMigrationMapping step = mapping("sha256:other", "sha256:target");
@@ -333,6 +378,27 @@ class LegacyMigrationMappingTest {
 		missingParent.getTables().addAll(java.util.List.of(parent, child));
 		missingParent.getRelationships().add(relationship("parent-child", parent, child));
 		assertThrows(CommandException.class, () -> validator.validate(missingParent));
+	}
+
+	@Test
+	void testRejectHierarchyKeyDisagreement() {
+		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		TableMapping parent = table("parent", "PARENT");
+		TableMapping child = table("child", "CHILD");
+		child.setParent(new LegacyMigrationMapping.ParentMapping());
+		child.getParent().setMappingId(parent.getId());
+		child.getParent().getSourceReference().add(new ColumnPair("PARENT_ID", "PARENT_ID"));
+		child.getParent().getResolvedReference().add(new ColumnPair("ID", "PARENT_ID"));
+		RelationshipMapping relationship = relationship("parent-child", parent, child);
+		relationship.getSourceKeys().add(new ColumnPair("PARENT_ID", "OTHER_ID"));
+		relationship.getTargetKeys().add(new ColumnPair("ID", "PARENT_ID"));
+		mapping.getTables().addAll(java.util.List.of(parent, child));
+		mapping.getRelationships().add(relationship);
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		assertThrows(CommandException.class, () -> validator.validate(mapping));
+
+		relationship.getSourceKeys().getFirst().setChildColumn("PARENT_ID");
+		validator.validate(mapping);
 	}
 
 	private RelationshipMapping relationship(String id, TableMapping parent, TableMapping child) {
