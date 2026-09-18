@@ -11,7 +11,6 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,7 +22,6 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.YamlConverter;
 
 /**
  * Validates the portable extraction and load contract.
@@ -347,31 +345,100 @@ public class LegacyMigrationContractValidator {
 		}
 		for (DataSet dataSet : contract.getDataSets()) {
 			DataSet expectedDataSet = expectedDataSets.get(dataSet.getId());
-			if (expectedDataSet == null || !provenanceSignature(dataSet).equals(provenanceSignature(expectedDataSet))) {
+			if (expectedDataSet == null || !sameProvenance(dataSet, expectedDataSet)) {
 				throw new CommandException(
 						"Migration contract data set disagrees with the referenced mapping: " + dataSet.getId());
 			}
 		}
 	}
 
-	private String provenanceSignature(DataSet dataSet) {
-		Map<String, Object> values = new LinkedHashMap<>();
-		values.put("id", dataSet.getId());
-		values.put("sourcePath", dataSet.getSourcePath());
-		values.put("targetCatalog", dataSet.getTargetCatalog());
-		values.put("targetSchema", dataSet.getTargetSchema());
-		values.put("targetTable", dataSet.getTargetTable());
-		values.put("hierarchyDepth", dataSet.getHierarchyDepth());
-		values.put("loadOrder", dataSet.getLoadOrder());
-		values.put("parentDataSetId", dataSet.getParentDataSetId());
-		values.put("maximumOccurrences", dataSet.getMaximumOccurrences());
-		values.put("occurrenceColumn", dataSet.getOccurrenceColumn());
-		values.put("occurrenceSourceMode", dataSet.getOccurrenceSourceMode());
-		values.put("sourceBusinessKey", dataSet.getSourceBusinessKey());
-		values.put("targetPrimaryKey", dataSet.getTargetPrimaryKey());
-		values.put("fields", dataSet.getFields());
-		values.put("ancestorKeys", dataSet.getAncestorKeys());
-		return new YamlConverter().toJsonString(values);
+	private boolean sameProvenance(DataSet left, DataSet right) {
+		return Objects.equals(left.getId(), right.getId())
+				&& Objects.equals(left.getSourcePath(), right.getSourcePath())
+				&& Objects.equals(left.getTargetCatalog(), right.getTargetCatalog())
+				&& Objects.equals(left.getTargetSchema(), right.getTargetSchema())
+				&& Objects.equals(left.getTargetTable(), right.getTargetTable())
+				&& left.getHierarchyDepth() == right.getHierarchyDepth()
+				&& left.getLoadOrder() == right.getLoadOrder()
+				&& Objects.equals(left.getParentDataSetId(), right.getParentDataSetId())
+				&& Objects.equals(left.getMaximumOccurrences(), right.getMaximumOccurrences())
+				&& Objects.equals(left.getOccurrenceColumn(), right.getOccurrenceColumn())
+				&& left.getOccurrenceSourceMode() == right.getOccurrenceSourceMode()
+				&& Objects.equals(left.getSourceBusinessKey(), right.getSourceBusinessKey())
+				&& Objects.equals(left.getTargetPrimaryKey(), right.getTargetPrimaryKey())
+				&& sameFields(left.getFields(), right.getFields())
+				&& sameAncestorKeys(left.getAncestorKeys(), right.getAncestorKeys());
+	}
+
+	private boolean sameFields(List<Field> left, List<Field> right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		for (int i = 0; i < left.size(); i++) {
+			Field first = left.get(i);
+			Field second = right.get(i);
+			if (first.getPosition() != second.getPosition()
+					|| !Objects.equals(first.getSourcePath(), second.getSourcePath())
+					|| !Objects.equals(first.getSourceColumn(), second.getSourceColumn())
+					|| !Objects.equals(first.getStagingColumn(), second.getStagingColumn())
+					|| !Objects.equals(first.getTargetColumn(), second.getTargetColumn())
+					|| !Objects.equals(first.getTargetDataType(), second.getTargetDataType())
+					|| !Objects.equals(first.getLength(), second.getLength())
+					|| !Objects.equals(first.getScale(), second.getScale())
+					|| !Objects.equals(first.getNullable(), second.getNullable())
+					|| first.getAction() != second.getAction() || first.isExtracted() != second.isExtracted()
+					|| first.isGenerated() != second.isGenerated()
+					|| first.isOccurrenceIndex() != second.isOccurrenceIndex()
+					|| !Objects.equals(first.getRemarks(), second.getRemarks())
+					|| !sameIndexedSources(first.getIndexedSources(), second.getIndexedSources())) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean sameIndexedSources(List<LegacyMigrationContract.IndexedSource> left,
+			List<LegacyMigrationContract.IndexedSource> right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		for (int i = 0; i < left.size(); i++) {
+			var first = left.get(i);
+			var second = right.get(i);
+			if (first.getIndex() != second.getIndex()
+					|| !Objects.equals(first.getSourceColumn(), second.getSourceColumn())
+					|| !Objects.equals(first.getSourcePath(), second.getSourcePath())) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean sameAncestorKeys(List<LegacyMigrationContract.AncestorKey> left,
+			List<LegacyMigrationContract.AncestorKey> right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		for (int i = 0; i < left.size(); i++) {
+			var first = left.get(i);
+			var second = right.get(i);
+			if (!Objects.equals(first.getAncestorDataSetId(), second.getAncestorDataSetId())
+					|| !Objects.equals(first.getAncestorTable(), second.getAncestorTable())
+					|| first.getDepth() != second.getDepth()
+					|| !Objects.equals(first.getTargetForeignKey(), second.getTargetForeignKey())
+					|| first.getColumns().size() != second.getColumns().size()) {
+				return false;
+			}
+			for (int j = 0; j < first.getColumns().size(); j++) {
+				var firstColumn = first.getColumns().get(j);
+				var secondColumn = second.getColumns().get(j);
+				if (!Objects.equals(firstColumn.getAncestorColumn(), secondColumn.getAncestorColumn())
+						|| !Objects.equals(firstColumn.getSourceColumn(), secondColumn.getSourceColumn())) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	private File resolve(File owner, String value) {

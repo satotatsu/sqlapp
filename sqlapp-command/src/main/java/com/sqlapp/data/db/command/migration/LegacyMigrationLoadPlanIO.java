@@ -124,8 +124,10 @@ public class LegacyMigrationLoadPlanIO {
 				if (dataSet.getSourceBusinessKey() == null || dataSet.getSourceBusinessKey().isEmpty()) {
 					throw new CommandException("Root data set requires sourceBusinessKey: " + dataSet.getId());
 				}
-				if (dataSet.getTargetForeignKey() == null || !dataSet.getTargetForeignKey().isEmpty()) {
-					throw new CommandException("Root data set must not define targetForeignKey: " + dataSet.getId());
+				if (dataSet.getTargetForeignKey() == null || !dataSet.getTargetForeignKey().isEmpty()
+						|| dataSet.getParentJoinKeys() == null || !dataSet.getParentJoinKeys().isEmpty()) {
+					throw new CommandException(
+							"Root data set must not define targetForeignKey or parentJoinKeys: " + dataSet.getId());
 				}
 			} else if (!byId.containsKey(dataSet.getParentDataSetId()) || dataSet.getParentJoinKeys() == null
 					|| dataSet.getParentJoinKeys().isEmpty() || dataSet.getTargetForeignKey() == null

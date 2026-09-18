@@ -199,6 +199,9 @@ checks every non-skipped data set and its source/target identity, hierarchy,
 keys, occurrence settings, fields, and ancestor joins against that exact
 mapping. CSV file names and staging table names remain operational overrides;
 lineage semantics cannot be changed while retaining the mapping provenance.
+Load-plan roots must not declare `targetForeignKey` or `parentJoinKeys`; those
+properties are valid only for child data sets and malformed plans are rejected
+before a database connection is opened.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

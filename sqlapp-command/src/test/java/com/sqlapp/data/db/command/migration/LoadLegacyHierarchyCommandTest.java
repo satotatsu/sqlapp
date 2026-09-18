@@ -286,7 +286,21 @@ class LoadLegacyHierarchyCommandTest {
 		rootForeignKey.getDataSets().getFirst().getTargetForeignKey().add("ID");
 		assertTrue(
 				assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validateExecution(rootForeignKey))
-						.getMessage().contains("must not define targetForeignKey"));
+						.getMessage().contains("must not define targetForeignKey or parentJoinKeys"));
+
+		LegacyMigrationLoadPlan rootJoin = new LegacyMigrationLoadPlan();
+		initialize(rootJoin, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		var join = new LegacyMigrationLoadPlan.JoinKey();
+		join.setParentStagingColumn("ID");
+		join.setChildStagingColumn("ID");
+		rootJoin.getDataSets().getFirst().getParentJoinKeys().add(join);
+		assertTrue(assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validateExecution(rootJoin))
+				.getMessage().contains("must not define targetForeignKey or parentJoinKeys"));
+
+		LegacyMigrationLoadPlan nullRootJoin = new LegacyMigrationLoadPlan();
+		initialize(nullRootJoin, schemaFile, new LegacyMigrationMappingValidator().fingerprint(schemaFile));
+		nullRootJoin.getDataSets().getFirst().setParentJoinKeys(null);
+		assertThrows(CommandException.class, () -> LegacyMigrationLoadPlanIO.validateExecution(nullRootJoin));
 	}
 
 	@Test
