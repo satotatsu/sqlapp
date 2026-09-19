@@ -41,6 +41,9 @@ documentation generators, and migration features. Collections attach their
 children to the model, so add columns to their table and tables to their
 schema.
 
+For catalogs, relationships, constraints, indexes, lookup, and model mutation
+rules, see the [Schema model guide](schema-model.md).
+
 ```java
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.db.datatype.DataType;

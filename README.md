@@ -151,6 +151,7 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 - [Gradle plugin Kotlin DSL](docs/gradle-plugin/kotlin-dsl.md)
 - [Gradle plugin troubleshooting](docs/gradle-plugin/troubleshooting.md)
 - [Java API getting started](docs/java-api-getting-started.md)
+- [Schema model](docs/schema-model.md)
 - [Maven getting started](docs/maven-getting-started.md)
 - [Published artifacts and dependency selection](docs/artifacts.md)
 - [Compatibility and database verification matrix](docs/compatibility.md)

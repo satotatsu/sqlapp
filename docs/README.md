@@ -56,6 +56,8 @@ the relevant guides.
 - [Java API getting started](java-api-getting-started.md) shows Schema model
   construction, XML round trips, JDBC dialect resolution, SQL generation, and
   resource ownership.
+- [Schema model](schema-model.md) covers ownership, tables, columns,
+  constraints, indexes, relationships, lookup, XML, and mutation rules.
 - [Published artifacts and dependency selection](artifacts.md) lists the core,
   command, renderer, test, plugin, and database-dialect artifacts with Gradle
   and Maven examples.
