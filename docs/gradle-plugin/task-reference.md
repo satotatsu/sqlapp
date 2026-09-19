@@ -159,6 +159,10 @@ An empty include list normally means “no include restriction.” Exclusions ar
 then applied by the owning command. Exact name matching and qualification rules
 remain database/object specific.
 
+For `exportSchemaXml`, `target` selects the metadata reader and XML root type.
+See [Choose the metadata target](schema-sql-and-html.md#choose-the-metadata-target)
+for common values, singular versus collection output, and dialect limitations.
+
 ## File and directory properties
 
 Common file-processing properties are:

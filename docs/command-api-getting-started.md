@@ -69,6 +69,10 @@ use the singular or plural form expected by the workflow. `includeSchemas` and
 `includeObjects` filter metadata names. `onlyCurrentCatalog` defaults to true,
 while `onlyCurrentSchema` defaults to false.
 
+The [metadata target reference](gradle-plugin/schema-sql-and-html.md#choose-the-metadata-target)
+lists the common catalog-, schema-, table-, and constraint-level readers. The
+same target values apply to the Java command and Gradle task.
+
 `dumpRows` defaults to true in the command. Set it to false explicitly for a
 metadata-only snapshot. Enabling it reads table rows as the XML is written and
 can make the output large or expose data that should not leave the database.

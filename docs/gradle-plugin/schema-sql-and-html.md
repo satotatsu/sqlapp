@@ -44,6 +44,48 @@ tasks.named('exportSchemaXml') {
 | `dumpRows` | `Property<Boolean>` | Command default `true`; use `false` to export metadata only |
 | `includeRowDumpTables`, `excludeRowDumpTables` | `ListProperty<String>` | Additional selection for row dumping, separate from metadata selection |
 
+### Choose the metadata target
+
+`target` selects a `MetadataReader`; it is not an arbitrary XML element name.
+The default and safest full snapshot is `catalog`. Use a narrower target when
+the output contract intentionally contains only that object type.
+
+Common targets are:
+
+| Scope | Singular examples | Collection examples |
+|---|---|---|
+| Database hierarchy | `catalog`, `schema`, `table` | `catalogs`, `schemas`, `tables` |
+| Schema objects | `view`, `mview`, `sequence`, `domain`, `type`, `synonym`, `function`, `procedure`, `trigger`, `externalTable` | Corresponding plural name, such as `views`, `sequences`, or `procedures` |
+| Catalog objects | `tableSpace`, `user`, `role`, `setting`, `objectPrivilege`, `routinePrivilege` | Corresponding plural name |
+| Table children | `column`, `uniqueConstraint`, `checkConstraint`, `foreignKeyConstraint` | Corresponding plural name |
+
+Additional readers include packages, package bodies, database links, public
+synonyms, table links, rules, constants, XML schemas, operators, dimensions,
+events, masks, partition functions/schemes, assemblies, and privilege/member
+objects. Availability depends on the selected dialect and server version. A
+target fails when the resolved dialect does not provide the requested reader.
+
+The singular form writes returned objects directly. Use it only when selection
+and database scope guarantee the expected single root object. The plural form
+adds a collection root and is appropriate when multiple objects can match. For
+example:
+
+```groovy
+tasks.named('exportSchemaXml') {
+    target = 'tables'
+    includeSchemas.add('public')
+    includeTables.addAll('customer', 'orders')
+    dumpRows = false
+    outputDirectory = layout.buildDirectory.dir('schema')
+    outputFileName = 'Tables.xml'
+}
+```
+
+Prefer `catalog` or `schema` when later SQL, documentation, relationship, or
+migration work needs surrounding ownership and product metadata. A table-only
+or column-only export is useful for focused inspection but may omit context
+needed to resolve cross-schema relationships or choose a dialect offline.
+
 `exportAccessSchemaXml` and `exportSqliteSchemaXml` take `inputFile` and
 `outputFile` instead of this JDBC export's output directory and filename.
 See the [file export examples](README.md#export-an-access-file) for their

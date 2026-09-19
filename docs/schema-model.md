@@ -25,6 +25,8 @@ Catalog
     ├── View and materialized view
     ├── Sequence
     ├── Routine
+    ├── Function
+    ├── Trigger
     └── other schema objects
 ```
 
