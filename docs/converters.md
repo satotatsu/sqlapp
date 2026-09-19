@@ -1,90 +1,174 @@
-# 型変換（sqlapp-core）
+# Value conversion (`sqlapp-core`)
 
-共通の入口は `new Converters()` または `Converters.getDefault()` です。
-設定を変更する場合は、他の利用箇所に影響しないよう独立したインスタンスを使用します。
+`Converters` is the common entry point for converting scalar values, arrays,
+collections, JDBC values, and selected date/time types. It is used by sqlapp's
+file and database workflows and can also be called directly from application
+code.
+
+Use a separate instance when changing converter settings. This keeps local
+formatting and default-value choices from affecting code that uses the shared
+default registry.
 
 ```java
+import java.math.BigDecimal;
+import java.util.List;
+
+import com.sqlapp.data.converter.Converters;
+
 Converters converters = new Converters();
+
 Character letter = converters.convertObject("日", Character.class);
 char[] text = converters.convertObject("日本語", char[].class);
-boolean[] flags = converters.convertObject(List.of("yes", "off"), boolean[].class);
-Number number = converters.convertObject("12.50", Number.class); // BigDecimal
+boolean[] flags = converters.convertObject(
+        List.of("yes", "off"), boolean[].class);
+Number number = converters.convertObject("12.50", Number.class);
+
+assert number instanceof BigDecimal;
 ```
 
-## 追加された変換先
+`Converters.getDefault()` returns the shared default registry. It is suitable
+when the application only uses the built-in behavior. Prefer `new Converters()`
+before replacing converters or changing defaults.
 
-| 型 | 入力と既定値 |
-| --- | --- |
-| `Character` / `char` | `Character` またはUTF-16の1コード単位の `CharSequence`。null・空文字は `Character` ではnull、`char` では `\0`。空白はそのまま保持。複数コード単位や数値入力は `ConverterException`。 |
-| `Character[]` | 配列、Collection、Iterable、JDBC Arrayの各要素をCharacterに変換。null要素を保持。単一入力は1要素として処理。 |
-| `char[]` | 上記の各要素変換に加え、CharSequenceは全文を配列化。null要素は `\0`。文字列への変換は配列全体を文字列に戻す。 |
-| `Boolean[]` / `boolean[]` | 既存のBooleanConverterを要素変換に使用。`true`/`false`、`yes`/`no`、`1`/`0` などを受け付ける。null要素はラッパー配列ではnull、プリミティブ配列ではfalse。既存の未知の真偽値入力に対する既定値動作を継承。 |
-| `Number` | 既存のNumberConverterを登録。Number入力は保持し、それ以外は既定でBigDecimalへ変換。`setNumberConverter` で既定クラスを変更可能。 |
+## Common conversion behavior
 
-サロゲートペアを必要とする文字は `Character` には入りません。文字列または `char[]` を使ってください。
-配列入力のコピーは新しい配列を返します。配列全体のnull入力は従来どおりnullです。
-`setDefaultValue` に設定した配列Supplierは `getDefaultValue()` 時に評価され、返却配列はコピーされます。
+| Target | Accepted input and result |
+|---|---|
+| `Character` / `char` | A `Character` or a `CharSequence` containing exactly one UTF-16 code unit |
+| `Character[]` | Arrays, collections, iterables, JDBC arrays, or one scalar value; null elements are retained |
+| `char[]` | A complete `CharSequence`, or element conversion from an array, collection, iterable, or JDBC array |
+| `Boolean` and boolean arrays | Boolean values and configured text/number forms such as `true`/`false`, `yes`/`no`, and `1`/`0` |
+| `Number` | Existing `Number` values, or other values parsed to the configured number class; the default is `BigDecimal` |
+| Java enum | Enum names, subject to the registry's enum conversion settings |
+| `MonthDay`, `Month`, `DayOfWeek` | ISO text, supported numeric values, or date/time inputs with the required fields |
 
-## レビューで修正した問題
+Primitive targets cannot contain null. A null element becomes the primitive
+default, such as `\0` for `char` and `false` for `boolean`. Wrapper arrays retain
+null elements. A null input for the entire array follows the configured default
+behavior and is null unless another default was supplied.
 
-- **P1: 数値書式指定時の自己再帰。** Byte、Short、Integer、Long、Float、Double、BigInteger、BigDecimalの `format` が自身を呼び出していたため、共通のNumberFormat処理を呼び出すよう修正。
-- **P1: ZoneOffsetの情報欠落。** TimeZoneConverterがZoneIdの文字列表現を使うことで固定オフセットをGMTへ変換していたため、ZoneIdを受け取るオーバーロードを使用。
-- **P2: JDBC Arrayの変換失敗。** AbstractArrayConverterで `getArray()` の結果ではなくJDBC Array自身を参照していた箇所を修正。
-- **P2: プリミティブ配列の処理失敗。** IterableのObject配列をプリミティブ配列へ直接コピーしていた処理と、書式化時のObject配列へのキャストを修正。
-- **P2: 配列の既定値Supplierが評価されない。** Supplierの戻り値をコピーするよう修正。
-- **P2: コンバーター設定・登録の欠落。** `setStringConverter` の引数をString/Clobにも反映し、`setNumberConverter` でNumber自体も登録。Number派生型の書式化が再帰しないよう対処。
-- **P2: LocalDateTimeのISO書式化失敗。** オフセットを持たない値にISO_INSTANTを使っていたため、ISO_LOCAL_DATE_TIMEに変更。
-- **P2: nullと等価比較の例外。** StringConverterのintern有効時のnull処理、DefaultConverter.equalsの誤ったDateConverterへのキャストを修正。
+Array conversions return a new array. A configured array default supplied by a
+`Supplier` is evaluated when the default is requested, and the returned array
+is copied.
 
-変更は共通Java型の変換に限定し、既存メソッドのシグネチャ、依存ライブラリ、Schema XMLや設定形式は変更していません。
-追加型に対する `isConvertable` と変換結果、および従来例外となっていた上記の動作が変わります。
-日時や数値の既定書式は維持し、明示的なISO/NumberFormat指定時の不具合を修正しています。
+## Character conversion
 
-## 継続検討事項
+A `Character` represents one UTF-16 code unit. Empty input produces the
+configured default: initially null for `Character` and `\0` for `char`.
+Whitespace is a character and is preserved.
 
-- 一部の `equals` は `super.equals(this)` を呼んでおり、相手側の既定値や数値書式を比較していません（例: BooleanConverter、IntegerConverter）。等価性全体の統一は今回の変更には含めていません。
-- Convertersの継承型検索キャッシュは登録変更時に全面無効化されません。型を一度検索した後で基底型のコンバーターを追加・置換する動的な使い方には別途検証が必要です。
-- ファイルシステム型や追加の暦型は、具体的な入出力用途が確定してから検討します。java.timeのMonthDay・Month・DayOfWeek対応は以下に記載します。
-
-## java.timeの月日・月・曜日
+Input containing multiple code units, including a supplementary Unicode code
+point represented by a surrogate pair, cannot be converted to one
+`Character`. Use `String` or `char[]` for such text.
 
 ```java
-Converters converters = new Converters();
+Character space = converters.convertObject(" ", Character.class);
+char[] supplementary = converters.convertObject("𠮷", char[].class);
+```
+
+Numeric input is not interpreted as a character code. Invalid scalar input
+raises `ConverterException` rather than truncating it.
+
+## Boolean arrays
+
+Boolean arrays reuse the configured scalar `BooleanConverter` for every
+element. This keeps accepted true/false tokens and unknown-value handling
+consistent between scalar and array conversion.
+
+```java
+Boolean[] nullable = converters.convertObject(
+        List.of("true", "0"), Boolean[].class);
+boolean[] primitive = converters.convertObject(
+        new String[] { "yes", "no" }, boolean[].class);
+```
+
+Use `Boolean[]` when a null element must remain distinguishable from false.
+
+## Number conversion
+
+The `Number` target uses the registry's `NumberConverter`. Existing `Number`
+instances are retained. Other supported values are converted to the configured
+number class, which defaults to `BigDecimal`.
+
+```java
+Number decimal = converters.convertObject("42.25", Number.class);
+```
+
+Use `setNumberConverter(...)` on an independent `Converters` instance when the
+application requires another default number representation or number format.
+Conversions to concrete numeric targets continue to use their corresponding
+converter and range rules. Values with an invalid format, a fractional part
+that the target does not accept, or an overflow raise `ConverterException`.
+
+## Month, day, and weekday types
+
+```java
+import java.time.DayOfWeek;
+import java.time.Month;
+import java.time.MonthDay;
+import java.util.List;
+
 MonthDay anniversary = converters.convertObject("--02-29", MonthDay.class);
-Month month = converters.convertObject(12, Month.class); // DECEMBER
+Month month = converters.convertObject(12, Month.class);       // DECEMBER
 DayOfWeek day = converters.convertObject(1, DayOfWeek.class); // MONDAY
-MonthDay[] dates = converters.convertObject(List.of("--01-01", "--12-31"), MonthDay[].class);
+MonthDay[] dates = converters.convertObject(
+        List.of("--01-01", "--12-31"), MonthDay[].class);
 ```
 
-- `MonthDay` はISO形式 `--MM-dd` を読み書きします。`--02-29` は有効、`--02-30` や `--04-31` は例外です。null・空白のみの文字列は既定値（初期値null）を返します。
-- `MonthDay`、`Month`、`DayOfWeek` は、必要な日付フィールドを持つ `TemporalAccessor` と `java.sql.Date` から抽出できます。OffsetDateTime/ZonedDateTimeの現地の日付を維持します。Instantや不完全な日付からタイムゾーン・不足フィールドを推測せず、例外にします。
-- `Month` は1〜12、`DayOfWeek` はISOの1〜7（月曜〜日曜）の数値と整数文字列を受け付けます。小数部分のある数値・範囲外・整数オーバーフローは切り捨てずに例外にします。
-- 既存の `JANUARY`、`MONDAY` などの列挙名による変換と出力を維持します。Enumの空文字設定も従来どおりで、必要なら初回利用前に `setEnumEmptyToNull(true)` を指定します。
-- いずれもOptional/Supplier入力に対応します。`MonthDay[]` を追加し、既存の `Month[]` / `DayOfWeek[]` にも数値・日付の要素変換が適用されます。
-- 共通の入口は `Converters` です。独立利用には `MonthDayConverter`、`MonthConverter`、`DayOfWeekConverter` を利用できます。既存の公開メソッド、Schema XML、設定形式、依存ライブラリの変更はありません。
+`MonthDay` uses ISO `--MM-dd` text. Valid leap-day text such as `--02-29` is
+accepted; impossible dates such as `--02-30` and `--04-31` fail. Null and
+blank-only text return the configured default, initially null.
 
-回帰テストは `ConverterRegressionTest` にあり、JDBC Arrayはスタブを使って解放と例外経路を検証します。外部データベースを必要としません。
+`Month` accepts integers 1 through 12. `DayOfWeek` accepts ISO integers 1
+through 7, where Monday is 1 and Sunday is 7. Integer text is accepted as well.
+Fractional numbers, out-of-range values, and integer overflow fail instead of
+being truncated.
 
-## 検証結果（2026-09-18）
+These types can also be extracted from `java.sql.Date` and a
+`TemporalAccessor` that contains the required date fields. Local date values
+from `OffsetDateTime` and `ZonedDateTime` are preserved. The converter does not
+invent a time zone or missing date fields for an `Instant` or an incomplete
+temporal value.
 
-Java 21とリポジトリのGradle Wrapperを使用しました。
-実行時のみ `GRADLE_USER_HOME=C:/Users/satot/.gradle` として既存キャッシュを利用しています。
+Existing enum-name forms such as `JANUARY` and `MONDAY` remain available.
+Call `setEnumEmptyToNull(true)` before first use when empty enum text should
+become null.
 
-```powershell
-.\gradlew.bat :sqlapp-core:test --tests 'com.sqlapp.data.converter.ConverterRegressionTest' --console=plain --offline
-.\gradlew.bat :sqlapp-core:test --console=plain --offline
-.\gradlew.bat :sqlapp-command:test --tests '*ConvertDataCommandTest' --tests '*TableFileReaderTest' :sqlapp-core-postgres:test --tests '*PostgresArrayColumnTypeMatcherTest' --console=plain --offline
-```
+## Optional, Supplier, iterable, and JDBC input
 
-- 追加回帰テスト16件: 成功。途中で数値書式のオーバーロード選択の誤りを検出し、修正後に再実行して成功。
-- sqlapp-core全体1,032件（追加16件を含む）: 失敗・スキップともに0件。
-- 上記command / PostgreSQLの関連テスト: 成功。
-- 外部DB接続なし。coreテストでは既存の組み込みHSQLDBテストを含む。
-- その他のモジュール全体テスト、実DBとの結合テストは未実行。
-- ソース管理対象の生成ファイル変更なし。テストによるbuild出力のみ生成。
+Converters unwrap supported `Optional` and `Supplier` inputs before applying
+the target converter. Array converters accept Java arrays, collections,
+iterables, and `java.sql.Array` values.
 
-java.time追加後は、以下の専用テスト9件と `:sqlapp-core:test` 全1,041件を実行し、失敗・スキップともに0件でした。
+When a JDBC array is used, sqlapp reads its elements and releases the JDBC
+array on both successful and failed conversion paths. The caller remains
+responsible for the JDBC connection, result set, and statement that produced
+the value.
 
-```powershell
-.\gradlew.bat :sqlapp-core:test --tests '*JavaTimeValueConverterTest' --console=plain --offline
-```
+## Failure handling
+
+Conversion failures use `ConverterException`. Treat the exception as invalid
+input unless the application deliberately configured a fallback/default for
+that converter. Do not assume that every text value is trimmed or coerced:
+whitespace, empty text, null, unknown boolean tokens, overflow, and incomplete
+date/time values have target-specific behavior.
+
+For file conversion, validate the resulting data before replacing source
+files. The Gradle `ConvertDataTask` can remove originals when
+`removeOriginalFile` is enabled; its safe default workflow and properties are
+described in [Custom tasks and versioned migrations](gradle-plugin/custom-tasks-and-migrations.md#convert-saved-data-files).
+
+## Extending the registry
+
+Individual converter classes, including `CharacterConverter`,
+`MonthDayConverter`, `MonthConverter`, and `DayOfWeekConverter`, can be used
+directly when only one target type is required. Use `Converters` when a workflow
+needs consistent dispatch across multiple runtime source and target types.
+
+Register or replace converters on a dedicated registry during application
+initialization, before that registry handles values. This avoids mixing
+different conversion policies within one import or export operation.
+
+The converter regression tests use JDBC array stubs and do not require an
+external database. Repository contributors can run the focused converter tests
+as described in [Building and testing sqlapp](build-and-test.md).
