@@ -11,6 +11,7 @@ embedded in another tool.
 | Add sqlapp tasks to a Gradle build | [Gradle plugin getting started](gradle-plugin/getting-started.md) | [Task reference](gradle-plugin/task-reference.md) |
 | Run the companion example | [Runnable Gradle example map](gradle-plugin/example-project.md) | [`sqlapp-gradle-example`](https://github.com/satotatsu/sqlapp-gradle-example) |
 | Use the Schema model or SQL APIs from Java | [Java API getting started](java-api-getting-started.md) | [Published artifacts](artifacts.md) |
+| Add sqlapp libraries to Maven | [Maven getting started](maven-getting-started.md) | [Java API getting started](java-api-getting-started.md) |
 | Choose a database dialect and JDBC driver | [Published artifacts](artifacts.md) | [Compatibility matrix](compatibility.md) |
 | Diagnose a Gradle task | [Gradle plugin troubleshooting](gradle-plugin/troubleshooting.md) | [Building and testing](build-and-test.md) |
 | Contribute to sqlapp | [Architecture](architecture.md) | [Building and testing](build-and-test.md) and [CONTRIBUTING](../CONTRIBUTING.md) |
@@ -50,6 +51,8 @@ the relevant guides.
 
 ## Java libraries
 
+- [Maven getting started](maven-getting-started.md) provides a complete Java 21
+  POM, dependency scopes, dependency-tree checks, and packaging guidance.
 - [Java API getting started](java-api-getting-started.md) shows Schema model
   construction, XML round trips, JDBC dialect resolution, SQL generation, and
   resource ownership.

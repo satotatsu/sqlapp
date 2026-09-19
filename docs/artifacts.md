@@ -194,6 +194,10 @@ The same PostgreSQL Java API setup in Maven is:
 Maven runtime scope is appropriate only when application source does not import
 dialect or driver classes directly.
 
+See [Maven getting started](maven-getting-started.md) for a complete Java 21
+POM, command API selection, dependency-tree checks, and service-discovery
+considerations for packaged applications.
+
 ## Version and compatibility boundaries
 
 Artifact presence describes packaging, not a promise that every feature is
