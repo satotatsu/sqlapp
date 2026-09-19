@@ -27,6 +27,8 @@ for `com.sqlapp.db`. The focused guides are:
 - [Getting started](gradle-plugin/getting-started.md): plugin application,
   runtime dependencies, DataSource settings, Schema XML export, and HTML
   generation.
+- [Kotlin DSL](gradle-plugin/kotlin-dsl.md): typed `build.gradle.kts`
+  equivalents for common setup, lazy properties, and custom task registration.
 - [Task reference](gradle-plugin/task-reference.md): registered task names,
   task types, main inputs and outputs, database effects, common properties,
   and DataSource configuration files.

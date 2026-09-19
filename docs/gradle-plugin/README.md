@@ -17,6 +17,7 @@ use a plugin release that contains the tasks you need.
 | Guide | Contents |
 |---|---|
 | [Getting started](getting-started.md) | Plugin setup, JDBC runtime, credentials, task dependencies, troubleshooting |
+| [Kotlin DSL](kotlin-dsl.md) | Typed `build.gradle.kts` setup, lazy properties, DataSource files, and task registration |
 | [Troubleshooting](troubleshooting.md) | Task discovery, classpath, dialect, DataSource files, paths, outputs, and diagnostic commands |
 | [Runnable example project](example-project.md) | How the companion project is organized and which task demonstrates each workflow |
 | [Task reference](task-reference.md) | Registered names, task classes, primary inputs/outputs, database effects, and common properties |
