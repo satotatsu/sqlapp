@@ -209,3 +209,7 @@ Include:
 
 Do not include passwords, tokens, full JDBC URLs containing credentials, or
 production data.
+
+See [Logging and diagnostics](../logging-and-diagnostics.md) for command output
+levels, Log4j configuration, Gradle logging options, and a sanitization
+checklist.

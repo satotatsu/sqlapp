@@ -14,6 +14,7 @@ embedded in another tool.
 | Add sqlapp libraries to Maven | [Maven getting started](maven-getting-started.md) | [Java API getting started](java-api-getting-started.md) |
 | Choose a database dialect and JDBC driver | [Published artifacts](artifacts.md) | [Compatibility matrix](compatibility.md) |
 | Diagnose a Gradle task | [Gradle plugin troubleshooting](gradle-plugin/troubleshooting.md) | [Building and testing](build-and-test.md) |
+| Configure logs or collect failure evidence | [Logging and diagnostics](logging-and-diagnostics.md) | [Gradle plugin troubleshooting](gradle-plugin/troubleshooting.md) |
 | Contribute to sqlapp | [Architecture](architecture.md) | [Building and testing](build-and-test.md) and [CONTRIBUTING](../CONTRIBUTING.md) |
 
 Examples currently use sqlapp `0.80.0` or an explicit
@@ -60,6 +61,8 @@ the relevant guides.
   constraints, indexes, relationships, lookup, XML, and mutation rules.
 - [Command API getting started](command-api-getting-started.md) covers direct
   Java command execution, DataSource ownership, transactions, and failures.
+- [Logging and diagnostics](logging-and-diagnostics.md) separates command,
+  Log4j, and Gradle output and lists safe diagnostic evidence.
 - [Published artifacts and dependency selection](artifacts.md) lists the core,
   command, renderer, test, plugin, and database-dialect artifacts with Gradle
   and Maven examples.

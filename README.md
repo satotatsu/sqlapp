@@ -152,6 +152,7 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 - [Gradle plugin troubleshooting](docs/gradle-plugin/troubleshooting.md)
 - [Java API getting started](docs/java-api-getting-started.md)
 - [Command API getting started](docs/command-api-getting-started.md)
+- [Logging and diagnostics](docs/logging-and-diagnostics.md)
 - [Schema model](docs/schema-model.md)
 - [Maven getting started](docs/maven-getting-started.md)
 - [Published artifacts and dependency selection](docs/artifacts.md)
