@@ -186,6 +186,10 @@ Use `./gradlew <task> --stacktrace` for a failure trace. Task implementations
 disable build caching by default; do not assume database state is represented
 by Gradle inputs or that an unchanged build script proves the database is unchanged.
 
+See the [troubleshooting guide](troubleshooting.md) for classpath inspection,
+dialect checks, DataSource file behavior, task ordering, output paths, and the
+information to include in a bug report.
+
 These examples are configuration recipes checked against the repository's
 implementation and tests, not a claim of execution against your database.
 See [Build and test](../build-and-test.md) for testing sqlapp itself.
