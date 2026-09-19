@@ -162,6 +162,10 @@ Command configuration varies substantially by workflow. Use the
 corresponding command and properties, then consult that command's Java API.
 For an ordinary build, the Gradle plugin remains the shorter entry point.
 
+See [Command API getting started](command-api-getting-started.md) for complete
+metadata-export and offline HTML examples, DataSource ownership, transaction
+behavior, and failure handling.
+
 ## Production checklist
 
 - Keep sqlapp modules at one version and pin the JDBC driver version.

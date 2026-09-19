@@ -58,6 +58,8 @@ the relevant guides.
   resource ownership.
 - [Schema model](schema-model.md) covers ownership, tables, columns,
   constraints, indexes, relationships, lookup, XML, and mutation rules.
+- [Command API getting started](command-api-getting-started.md) covers direct
+  Java command execution, DataSource ownership, transactions, and failures.
 - [Published artifacts and dependency selection](artifacts.md) lists the core,
   command, renderer, test, plugin, and database-dialect artifacts with Gradle
   and Maven examples.
