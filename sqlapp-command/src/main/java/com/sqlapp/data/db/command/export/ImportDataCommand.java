@@ -57,19 +57,11 @@ import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
-import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.function.RowValueConverter;
-import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.TomlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.CommitCountHolder;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
@@ -378,34 +370,9 @@ public class ImportDataCommand extends AbstractExportCommand
 
 	private void readFiles(final Table table, final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
-		if (files.size() == 1) {
-			table.setRowIteratorHandler(createRowIteratorHandler(CommonUtils.first(files)));
-		} else {
-			final List<RowIteratorHandler> handlers = files.stream().map(file -> {
-				return createRowIteratorHandler(file);
-			}).collect(Collectors.toList());
-			table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
-		}
-	}
-
-	private RowIteratorHandler createRowIteratorHandler(final File file) {
-		final DataFormat workbookFileType = DataFormat.parse(file);
-		if (workbookFileType.isTextFile()) {
-			if (workbookFileType.isCsv()) {
-				return new CsvRowIteratorHandler(file, getCsvEncoding(), this.getCsvSkipHeaderRowsSize(),
-						createRowValueConverter());
-			} else if (workbookFileType.isXml()) {
-				return new XmlRowIteratorHandler(file, createRowValueConverter());
-			} else if (workbookFileType.isToml()) {
-				return new TomlRowIteratorHandler(file, this.getTomlConverter(), createRowValueConverter());
-			} else if (workbookFileType.isYaml()) {
-				return new YamlRowIteratorHandler(file, this.getYamlConverter(), createRowValueConverter());
-			} else {
-				return new JsonRowIteratorHandler(file, this.getJsonConverter(), createRowValueConverter());
-			}
-		} else {
-			return new ExcelRowIteratorHandler(file, this.getExcelSkipHeaderRowsSize(), createRowValueConverter());
-		}
+		table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(),
+				getCsvSkipHeaderRowsSize(), getExcelSkipHeaderRowsSize(), getJsonConverter(),
+				getYamlConverter(), getTomlConverter(), createRowValueConverter()));
 	}
 
 	protected void readFileAsXml(final Table table, final File file, final DataFormat workbookFileType)

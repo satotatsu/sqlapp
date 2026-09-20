@@ -186,6 +186,25 @@ is documented in [Bulk insert and bulk migration](bulk-insert.md).
 
 ## Test command integrations
 
+### File import and bulk migration
+
+`com.sqlapp.data.db.command.export.ImportDataCommand` remains the lightweight
+file-to-database entry point. It shares format decoding with `TableFileReader`:
+CSV/TSV, Excel, XML, JSON, JSONL/NDJSON, YAML and TOML. JSONL is read as one
+object per line; TOML uses an `[[items]]` array. Existing Import properties,
+SQL types, value converters and commit settings are retained.
+
+Expression evaluation remains a caller policy, separate from format decoding.
+For example, with placeholders enabled and `fileDirectory` configured,
+`${readFileAsBytes('aaa.png')}` reads a relative file as binary data. Placeholders
+are disabled by default. Custom Import value conversion remains available.
+
+Use `BulkMigration` when checkpointing, resume, verification and repair are
+required. File Import does not require migration job configuration. The two
+entry points retain their own transaction and execution policies.
+
+### Integration checks
+
 Test file-only commands with temporary input and output directories. Test JDBC
 commands with a disposable database and the same database product/version used
 by the application. Verify at least:

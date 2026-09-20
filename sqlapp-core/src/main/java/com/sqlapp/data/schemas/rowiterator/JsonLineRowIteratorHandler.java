@@ -32,7 +32,6 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler.JsonRowIterator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
@@ -69,7 +68,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
-		return new JsonRowIterator(c, file, jsonConverter, 0L, this.getRowValueConverter());
+		return new JsonlineRowIterator(c, file, jsonConverter, 0L, this.getRowValueConverter());
 	}
 
 	public static class JsonlineRowIterator extends AbstractRowIterator<Map<String, Object>> {
@@ -132,6 +131,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 				return current;
 			}
 			final String value = reader.readLine();
+			current = null;
 			if (!CommonUtils.isEmpty(value)) {
 				current = this.jsonConverter.fromJsonString(value, Map.class);
 			}

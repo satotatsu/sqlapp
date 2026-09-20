@@ -27,7 +27,7 @@ public class JsonLineRowIteratorHandlerTest extends AbstractRowJsonIteratorHandl
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {
-		return new JsonLineRowIteratorHandler(new File("src/test/resources/test.json"));
+		return new JsonLineRowIteratorHandler(new File("src/test/resources/test.jsonl"));
 	}
 
 }

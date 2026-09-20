@@ -43,26 +43,19 @@ import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
-import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaCollection;
 import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
-import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonLineRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
+import com.sqlapp.util.TomlConverter;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -327,27 +320,10 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 
 	private void readFiles(final Table table, final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
-		final List<RowIteratorHandler> handlers = files.stream().map(file -> {
-			final DataFormat workbookFileType = DataFormat.parse(file);
-			if (workbookFileType.isTextFile()) {
-				if (workbookFileType.isCsv()) {
-					return new CsvRowIteratorHandler(file, getCsvEncoding(), getCsvSkipHeaderRowsSize(),
-							getRowValueConverter());
-				} else if (workbookFileType.isXml()) {
-					return new XmlRowIteratorHandler(file, getRowValueConverter());
-				} else if (workbookFileType.isYaml()) {
-					return new YamlRowIteratorHandler(file, this.getYamlConverter(), getRowValueConverter());
-				} else if (workbookFileType.isJsonl()) {
-					return new JsonLineRowIteratorHandler(file, this.getJsonConverter(), getRowValueConverter());
-				} else {
-					return new JsonRowIteratorHandler(file, this.getJsonConverter(), getRowValueConverter());
-				}
-			} else {
-				return new ExcelRowIteratorHandler(file, getRowValueConverter());
-			}
-		}).collect(Collectors.toList());
-		if (!handlers.isEmpty()) {
-			table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
+		if (!files.isEmpty()) {
+			table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(),
+					getCsvSkipHeaderRowsSize(), 1, getJsonConverter(), getYamlConverter(),
+					new TomlConverter(), getRowValueConverter()));
 		}
 	}
 
