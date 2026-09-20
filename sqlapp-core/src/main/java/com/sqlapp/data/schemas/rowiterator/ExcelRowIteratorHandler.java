@@ -77,8 +77,13 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 			super(c, index, valueConverter);
 			this.file = file;
 			this.filename = file.getAbsolutePath();
+			if (skipHeaderRowsSize < 0) {
+				throw new IllegalArgumentException("skipHeaderRowsSize must not be negative");
+			}
+			this.skipHeaderRowsSize = skipHeaderRowsSize;
 		}
 
+		private final int skipHeaderRowsSize;
 		private final File file;
 		private Workbook workbook;
 		private final String filename;
@@ -91,6 +96,10 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void preInitialize() throws Exception {
+			if (skipHeaderRowsSize != 1 && CommonUtils.isEmpty(table.getColumns())) {
+				throw new IllegalArgumentException(
+						"Schema columns are required when Excel header rows are not 1: " + filename);
+			}
 			this.workbook = DataFormat.parse(file).createWorkBook(file, null, true);
 		}
 
@@ -108,6 +117,17 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 		protected void initializeColumn() throws IOException {
 			final Sheet sheet = workbook.getSheetAt(0);
 			rowIterator = sheet.rowIterator();
+			if (skipHeaderRowsSize != 1) {
+				for (int i = 0; i < skipHeaderRowsSize && rowIterator.hasNext(); i++) {
+					rowIterator.next();
+				}
+				int position = 0;
+				for (final Column column : table.getColumns()) {
+					columnIndexColumnMap.put(position, column);
+					columnIndexFixedTypeMap.put(position++, column.getDataType() != null);
+				}
+				return;
+			}
 			org.apache.poi.ss.usermodel.Row headerRow;
 			if (hasNextInternal()) {
 				headerRow = read();

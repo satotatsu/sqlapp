@@ -209,6 +209,13 @@ delimiters and the binary-file base directory. Import uses the same directory
 expansion for ordinary and row-batch SQL; an unreadable directory fails with its
 path instead of being treated as empty input.
 
+For Excel, both Import and `TableFileReader` expose `excelSkipHeaderRowsSize`
+(default `1`). With `1`, the first row contains column names. With `0`, every
+row is data; with a value greater than `1`, that many leading worksheet rows
+are skipped. These positional modes require Schema columns and use their
+order. Negative values are rejected. Previously the Excel reader ignored
+this setting and always consumed one header row.
+
 When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
 parameterized row batches. Full batches and the final partial batch use the
 same execution path. The configured final commit callback also runs when the

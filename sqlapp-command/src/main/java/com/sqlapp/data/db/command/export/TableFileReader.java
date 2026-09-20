@@ -76,6 +76,8 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 
 	private int csvSkipHeaderRowsSize = 1;
 
+	private int excelSkipHeaderRowsSize = 1;
+
 	private JsonConverter jsonConverter = createJsonConverter();
 
 	private YamlConverter yamlConverter = createYamlConverter();
@@ -310,7 +312,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
 		if (!files.isEmpty()) {
 			table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(),
-					getCsvSkipHeaderRowsSize(), 1, getJsonConverter(), getYamlConverter(),
+					getCsvSkipHeaderRowsSize(), getExcelSkipHeaderRowsSize(), getJsonConverter(), getYamlConverter(),
 					new TomlConverter(), getRowValueConverter()));
 		}
 	}

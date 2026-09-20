@@ -29,6 +29,47 @@ class ImportFileReadingTest {
 	Path directory;
 
 	@ParameterizedTest
+	@CsvSource({ "0", "2" })
+	void importAndTableReaderHonorExcelHeaderRows(final int headers) throws Exception {
+		final Path file = directory.resolve("items.xlsx");
+		try (var workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+				var output = Files.newOutputStream(file)) {
+			final var sheet = workbook.createSheet("items");
+			for (int i = 0; i < headers; i++) {
+				sheet.createRow(i).createCell(0).setCellValue("comment");
+			}
+			sheet.createRow(headers).createCell(0).setCellValue(42);
+			workbook.write(output);
+		}
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final var reader = new TableFileReader();
+		reader.setExcelSkipHeaderRowsSize(headers);
+		reader.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table, file.toFile())));
+		int count = 0;
+		for (var row : table.getRows()) {
+			assertEquals(42, ((Number) row.get("ID")).intValue());
+			count++;
+		}
+		assertEquals(1, count);
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		command.setExcelSkipHeaderRowsSize(headers);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
+			connection.setAutoCommit(false);
+			assertEquals(1, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(file.toFile())));
+			try (var result = statement.executeQuery("SELECT ID FROM ITEMS")) {
+				assertTrue(result.next());
+				assertEquals(42, result.getInt(1));
+				assertFalse(result.next());
+			}
+		}
+	}
+
+	@ParameterizedTest
 	@EnumSource(value = SqlType.class, names = { "INSERT", "INSERT_ROWS" })
 	void importsDirectoryWithConfiguredExpressionDelimiters(final SqlType sqlType) throws Exception {
 		final Path input = Files.createDirectory(directory.resolve("input"));

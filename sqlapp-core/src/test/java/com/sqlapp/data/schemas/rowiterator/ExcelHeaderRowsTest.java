@@ -1,0 +1,66 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.schemas.rowiterator;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+
+class ExcelHeaderRowsTest {
+	@TempDir
+	Path directory;
+
+	@ParameterizedTest
+	@ValueSource(ints = { 0, 1, 2 })
+	void honorsHeaderCountAndPreservesSchemaTypes(final int headers) throws Exception {
+		final Path file = workbook(headers);
+		final Table table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.setRowIteratorHandler(new ExcelRowIteratorHandler(file.toFile(), headers));
+		int count = 0;
+		for (var row : table.getRows()) {
+			assertEquals(42, ((Number) row.get("ID")).intValue());
+			assertEquals(headers + 1, row.getDataSourceRowNumber().intValue());
+			count++;
+		}
+		assertEquals(1, count);
+		assertEquals(DataType.INT, table.getColumns().get("ID").getDataType());
+	}
+
+	@Test
+	void rejectsPositionalInputWithoutSchema() throws Exception {
+		final Table table = new Table("ITEMS");
+		table.setRowIteratorHandler(new ExcelRowIteratorHandler(workbook(0).toFile(), 0));
+		assertThrows(RuntimeException.class, () -> table.getRows().iterator().hasNext());
+	}
+
+	@Test
+	void rejectsNegativeHeaderCount() throws Exception {
+		final Table table = new Table("ITEMS");
+		final var handler = new ExcelRowIteratorHandler(workbook(0).toFile(), -1);
+		assertThrows(IllegalArgumentException.class, () -> handler.iterator(table.getRows()));
+	}
+
+	private Path workbook(final int headers) throws Exception {
+		final Path file = directory.resolve("items.xlsx");
+		try (var workbook = new XSSFWorkbook(); var output = Files.newOutputStream(file)) {
+			final var sheet = workbook.createSheet("items");
+			for (int i = 0; i < headers; i++) {
+				sheet.createRow(i).createCell(0).setCellValue(headers == 1 ? "ID" : "comment");
+			}
+			sheet.createRow(headers).createCell(0).setCellValue(42);
+			workbook.write(output);
+		}
+		return file;
+	}
+}
