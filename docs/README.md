@@ -15,6 +15,7 @@ embedded in another tool.
 | Choose a database dialect and JDBC driver | [Published artifacts](artifacts.md) | [Compatibility matrix](compatibility.md) |
 | Diagnose a Gradle task | [Gradle plugin troubleshooting](gradle-plugin/troubleshooting.md) | [Building and testing](build-and-test.md) |
 | Configure logs or collect failure evidence | [Logging and diagnostics](logging-and-diagnostics.md) | [Gradle plugin troubleshooting](gradle-plugin/troubleshooting.md) |
+| Upgrade sqlapp dependencies | [Upgrading sqlapp](upgrading.md) | [Compatibility matrix](compatibility.md) |
 | Contribute to sqlapp | [Architecture](architecture.md) | [Building and testing](build-and-test.md) and [CONTRIBUTING](../CONTRIBUTING.md) |
 
 Examples currently use sqlapp `0.80.0` or an explicit
@@ -63,6 +64,8 @@ the relevant guides.
   Java command execution, DataSource ownership, transactions, and failures.
 - [Logging and diagnostics](logging-and-diagnostics.md) separates command,
   Log4j, and Gradle output and lists safe diagnostic evidence.
+- [Upgrading sqlapp](upgrading.md) provides dependency, Schema XML, generated
+  SQL, database-workflow, and rollback checks for a version change.
 - [Published artifacts and dependency selection](artifacts.md) lists the core,
   command, renderer, test, plugin, and database-dialect artifacts with Gradle
   and Maven examples, plus the files attached to each module publication.

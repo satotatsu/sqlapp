@@ -5,6 +5,10 @@ sqlapp is published as a set of focused artifacts under the Maven group
 database behavior. Keep all sqlapp artifacts on the same version unless a
 release note explicitly documents another supported combination.
 
+When changing versions, follow [Upgrading sqlapp](upgrading.md) to verify the
+resolved dependency graph, Schema XML, generated SQL, and database-changing
+workflows before updating a reviewed baseline.
+
 Examples on this page use version `0.80.0`, matching the current project
 version.
 
