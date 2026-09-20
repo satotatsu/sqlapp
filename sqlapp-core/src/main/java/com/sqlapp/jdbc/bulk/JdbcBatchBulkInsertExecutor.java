@@ -15,6 +15,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.jdbc.sql.JdbcParameterBinder;
 
 /** Portable streaming bulk executor based on {@link PreparedStatement} batches. */
 public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
@@ -119,7 +120,8 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 	protected void bind(final PreparedStatement statement, final Row row,
 			final List<Column> columns) throws SQLException {
 		for (int i = 0; i < columns.size(); i++) {
-			statement.setObject(i + 1, row.get(columns.get(i)));
+			final Column column = columns.get(i);
+			JdbcParameterBinder.bind(statement, dialect, null, i + 1, row.get(column));
 		}
 	}
 

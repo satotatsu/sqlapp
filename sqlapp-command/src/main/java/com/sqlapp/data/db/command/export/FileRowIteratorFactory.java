@@ -44,7 +44,9 @@ final class FileRowIteratorFactory {
 			throw new IllegalArgumentException("Unsupported data file format: " + file);
 		}
 		if (format.isCsv()) {
-			return new CsvRowIteratorHandler(file, csvEncoding, csvSkipHeaderRowsSize, valueConverter);
+			final var handler = new CsvRowIteratorHandler(file, csvEncoding, csvSkipHeaderRowsSize, valueConverter);
+			handler.setPreserveColumnTypes(true);
+			return handler;
 		} else if (format.isXml()) {
 			return new XmlRowIteratorHandler(file, valueConverter);
 		} else if (format.isToml()) {

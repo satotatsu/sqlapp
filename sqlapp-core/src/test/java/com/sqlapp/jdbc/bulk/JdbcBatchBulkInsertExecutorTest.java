@@ -3,6 +3,9 @@ package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -14,6 +17,42 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
+	@Test
+	void bindsBinaryAndNullValuesWithoutCommittingCallerTransaction() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE SQLAPP_BATCH_BINARY (ID INTEGER, CONTENT BLOB)");
+			connection.commit();
+			final var table = new Table("SQLAPP_BATCH_BINARY");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			table.getColumns().add(new Column("CONTENT").setDataType(DataType.BLOB));
+			final byte[] bytes = { 0, 127, (byte) 255 };
+			final var first = table.newRow();
+			first.put("ID", 1);
+			first.put("CONTENT", bytes);
+			table.getRows().add(first);
+			final var second = table.newRow();
+			second.put("ID", 2);
+			second.put("CONTENT", null);
+			table.getRows().add(second);
+			assertEquals(2, new JdbcBatchBulkInsertExecutor(getDialect(connection)).execute(connection, table,
+					BulkOption.builder().batchSize(1).build()));
+			assertFalse(connection.getAutoCommit());
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery("SELECT CONTENT FROM SQLAPP_BATCH_BINARY ORDER BY ID")) {
+				assertTrue(rows.next());
+				assertArrayEquals(bytes, rows.getBytes(1));
+				assertTrue(rows.next());
+				assertEquals(null, rows.getBytes(1));
+				assertFalse(rows.next());
+			}
+			connection.rollback();
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery("SELECT COUNT(*) FROM SQLAPP_BATCH_BINARY")) {
+				assertTrue(rows.next());
+				assertEquals(0, rows.getInt(1));
+			}
+		});
+	}
 	@Test
 	void validatesPortableBulkSizesBeforeExecution() {
 		assertThrows(IllegalArgumentException.class, () -> BulkOption.builder().batchSize(0).build());

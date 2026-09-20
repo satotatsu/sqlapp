@@ -95,7 +95,8 @@ public class FileGeneratorConfig {
 		if (objTmp instanceof String) {
 
 		} else if (objTmp instanceof Iterable) {
-			final Iterable<Map<String, Object>> itr = tableGeneratorConfig.eval(dataSourceExpression);
+			@SuppressWarnings("unchecked")
+			final Iterable<Map<String, Object>> itr = (Iterable<Map<String, Object>>) objTmp;
 			for (Map<String, Object> obj : itr) {
 				if (i < offset) {
 					i++;

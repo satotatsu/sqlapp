@@ -63,6 +63,7 @@ public class CsvParser extends AbstractFileParser<com.univocity.parsers.csv.CsvP
 	private static CsvParserSettings createCsvParserSettings(){
 		final CsvParserSettings settings = Csv.parseExcel();
 		settings.setEmptyValue("");
+		settings.setLineSeparatorDetectionEnabled(true);
 		return settings;
 	}
 	

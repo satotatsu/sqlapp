@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -23,6 +25,41 @@ class ImportFileReadingTest {
 
 	@TempDir
 	Path directory;
+
+	@ParameterizedTest
+	@CsvSource({ "csv,1", "csv,2", "json,1", "json,2" })
+	void importsFileConstructorBinary(final String format, final int batchSize) throws Exception {
+		final byte[] bytes = { 0, 1, 127, (byte) 255 };
+		Files.write(directory.resolve("aaa.png"), bytes);
+		final String data = "csv".equals(format)
+				? "ID,CONTENT\n1,${new File('aaa.png')}\n2,${new File('aaa.png')}\n"
+				: "[{\"ID\":1,\"CONTENT\":\"${new File('aaa.png')}\"},"
+						+ "{\"ID\":2,\"CONTENT\":\"${new File('aaa.png')}\"}]";
+		final Path file = Files.writeString(directory.resolve("items." + format), data);
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.BLOB));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		command.setDmlBatchSize(batchSize);
+		command.setPlaceholders(true);
+		command.setFileDirectory(directory.toFile());
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER, CONTENT BLOB)");
+			connection.setAutoCommit(false);
+			assertEquals(2, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(file.toFile())));
+			try (var rows = statement.executeQuery("SELECT CONTENT FROM ITEMS ORDER BY ID")) {
+				for (int i = 0; i < 2; i++) {
+					assertTrue(rows.next());
+					assertArrayEquals(bytes, rows.getBytes(1));
+				}
+				assertFalse(rows.next());
+			}
+			assertEquals(DataType.BLOB, table.getColumns().get("CONTENT").getDataType());
+		}
+	}
 
 	@Test
 	void importsBinaryMvelAndMultipleFilesThroughJdbc() throws Exception {
@@ -91,6 +128,55 @@ class ImportFileReadingTest {
 			count++;
 		}
 		assertEquals(1, count);
+	}
+
+	@Test
+	void doesNotEvaluateAnExpressionReturnedByAnotherExpression() throws Exception {
+		final Path json = Files.writeString(directory.resolve("items.json"),
+				"[{\"CONTENT\":\"${literal}\"}]");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.VARCHAR).setLength(100));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		command.setPlaceholders(true);
+		final String literal = "${counter.incrementAndGet()}";
+		final var counter = new AtomicInteger();
+		command.getContext().put("literal", literal);
+		command.getContext().put("counter", counter);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (CONTENT VARCHAR(100))");
+			connection.setAutoCommit(false);
+			assertEquals(1, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(json.toFile())));
+			try (var rows = statement.executeQuery("SELECT CONTENT FROM ITEMS")) {
+				assertTrue(rows.next());
+				assertEquals(literal, rows.getString(1));
+			}
+			assertEquals(0, counter.get());
+		}
+	}
+
+	@Test
+	void importsCsvWithoutLosingRowsOrSchemaTypes() throws Exception {
+		final Path csv = Files.writeString(directory.resolve("items.csv"), "ID,CONTENT\n1,hello\n");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.VARCHAR).setLength(20));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER, CONTENT VARCHAR(20))");
+			connection.setAutoCommit(false);
+			assertEquals(1, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(csv.toFile())));
+			assertEquals(DataType.INT, table.getColumns().get("ID").getDataType());
+			try (var rows = statement.executeQuery("SELECT CONTENT FROM ITEMS WHERE ID = 1")) {
+				assertTrue(rows.next());
+				assertEquals("hello", rows.getString(1));
+			}
+		}
 	}
 
 	@Test

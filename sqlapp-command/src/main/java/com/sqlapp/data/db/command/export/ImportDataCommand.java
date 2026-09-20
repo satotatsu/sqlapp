@@ -141,7 +141,6 @@ public class ImportDataCommand extends AbstractExportCommand
 				catalog.getSchemas().add(v);
 			});
 			final List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
-			tableFileReader.setTableFilesPairs(tfs);
 			if (this.getSqlType().getTableOrder() != null) {
 				List<TableFilesPair> sorted = this.getSqlType().getTableOrder().sort(tfs, tf -> tf.getTable());
 				tfs.clear();
@@ -306,7 +305,14 @@ public class ImportDataCommand extends AbstractExportCommand
 			handler.setValueConverter(r -> {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
-				context.putAll(convert(sqlConverter, (Row) r, table.getColumns()));
+				if (CommonUtils.isEmpty(files)) {
+					context.putAll(convert(sqlConverter, (Row) r, table.getColumns()));
+				} else {
+					// File readers already applied custom conversion and MVEL once.
+					for (final Column column : table.getColumns()) {
+						context.put(column.getName(), ((Row) r).get(column));
+					}
+				}
 				return context;
 			});
 			handler.setBatchUpdateResultHandler(result -> {

@@ -21,6 +21,8 @@ package com.sqlapp.util.eval.mvel;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.AbstractMap;
+import java.util.Set;
 
 import org.mvel2.MVEL;
 import org.mvel2.ParserContext;
@@ -43,6 +45,8 @@ public class MvelCompiledEvaluator extends AbstractEvaluator {
 
 	private final Serializable compliedExpression;
 
+	private final Set<String> inputNames;
+
 	/**
 	 * @return the compliedExpression
 	 */
@@ -60,11 +64,11 @@ public class MvelCompiledEvaluator extends AbstractEvaluator {
 	public MvelCompiledEvaluator(String expression, ParserContext parserContext) {
 		super(expression);
 		this.parserContext = parserContext;
-		if (parserContext == null) {
-			compliedExpression = MVEL.compileExpression(getExpression());
-		} else {
-			compliedExpression = MVEL.compileExpression(getExpression(), parserContext);
-		}
+		final ParserContext compilationContext = parserContext == null ? new ParserContext()
+				: parserContext.createSubcontext();
+		compliedExpression = MVEL.compileExpression(getExpression(), compilationContext);
+		inputNames = compilationContext.getInputs() == null ? Set.of()
+				: Set.copyOf(compilationContext.getInputs().keySet());
 	}
 
 	/*
@@ -105,10 +109,34 @@ public class MvelCompiledEvaluator extends AbstractEvaluator {
 	}
 
 	private VariableResolverFactory createVariableResolverFactory(Map<?, ?> map) {
-		final VariableResolverFactory factory = new MapVariableResolverFactory(map);
-		// final VariableResolverFactory factory = new
-		// CachingMapVariableResolverFactory(map);
-		return factory;
+		if (!(map instanceof ParametersContext parameters)) {
+			return new MapVariableResolverFactory(map);
+		}
+		// ParametersContext intentionally resolves unspecified SQL parameters to null.
+		// Expose real variables and the compiler's input names (including missing
+		// SQL parameters), but not synthetic entries for classes or methods.
+		final Map<String, Object> variables = new AbstractMap<>() {
+			@Override
+			public Set<Map.Entry<String, Object>> entrySet() {
+				return parameters.entrySet();
+			}
+
+			@Override
+			public boolean containsKey(final Object key) {
+				return parameters.containsKeyInternal(key) || inputNames.contains(key);
+			}
+
+			@Override
+			public Object get(final Object key) {
+				return parameters.get(key);
+			}
+
+			@Override
+			public Object put(final String key, final Object value) {
+				return parameters.put(key, value);
+			}
+		};
+		return new MapVariableResolverFactory(variables);
 	}
 
 	@Override
@@ -143,7 +171,7 @@ public class MvelCompiledEvaluator extends AbstractEvaluator {
 
 	@Override
 	public <T> T eval(ParametersContext context, Class<T> clazz) {
-		return MVEL.executeExpression(getCompliedExpression(), context, context, clazz);
+		return MVEL.executeExpression(getCompliedExpression(), context, createVariableResolverFactory(context), clazz);
 	}
 
 }

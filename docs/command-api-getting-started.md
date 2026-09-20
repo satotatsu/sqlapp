@@ -196,12 +196,26 @@ SQL types, value converters and commit settings are retained.
 
 Expression evaluation remains a caller policy, separate from format decoding.
 For example, with placeholders enabled and `fileDirectory` configured,
-`${readFileAsBytes('aaa.png')}` reads a relative file as binary data. Placeholders
-are disabled by default. Custom Import value conversion remains available.
+`${readFileAsBytes('aaa.png')}` or `${new File('aaa.png')}` reads a relative file
+as binary data. A `File` expression result is resolved against `fileDirectory`
+and read into a byte array; absolute paths are retained, and missing files fail
+the import. Placeholders are disabled by default. Custom Import value conversion
+remains available and file values are evaluated only once.
+
+CSV imports detect line endings and retain Schema column types. Standalone
+`CsvRowIteratorHandler` retains its existing string-column default; callers can
+opt into retaining supplied types with `setPreserveColumnTypes(true)`.
+
+Import and generator share MVEL variable resolution: imported classes and
+constructor method calls work with `ParametersContext`, while omitted SQL
+parameters still resolve to null. Generator file data-source expressions are
+evaluated once per load.
 
 Use `BulkMigration` when checkpointing, resume, verification and repair are
 required. File Import does not require migration job configuration. The two
-entry points retain their own transaction and execution policies.
+entry points retain their own transaction and execution policies. Their JDBC
+parameter binding is shared through `JdbcParameterBinder` for the portable
+batch-insert path; vendor-native bulk loaders retain their own implementations.
 
 ### Integration checks
 
