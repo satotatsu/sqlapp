@@ -221,6 +221,12 @@ alongside its JSON and YAML converter settings. The default TOML reader remains
 available without configuration; a supplied converter is used for each input
 file through the shared decoding path.
 
+The shared row iterators also release partially initialized resources when
+opening, header parsing, look-ahead or value conversion fails. The original
+failure is retained; exceptions thrown by cleanup are attached as suppressed
+exceptions. Once closed, the iterator does not reopen the input on another
+`hasNext()` call.
+
 When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
 parameterized row batches. Full batches and the final partial batch use the
 same execution path. The configured final commit callback also runs when the

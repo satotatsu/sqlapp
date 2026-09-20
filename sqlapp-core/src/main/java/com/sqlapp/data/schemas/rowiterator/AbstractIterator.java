@@ -39,6 +39,17 @@ public abstract class AbstractIterator implements Iterator<Row>, AutoCloseable {
 		this.rowValueConverter = rowValueConverter;
 	}
 
+	/** Release partially initialized resources without replacing the read failure. */
+	protected void closeOnFailure(final Throwable failure) {
+		try {
+			close();
+		} catch (final Exception closeFailure) {
+			if (closeFailure != failure) {
+				failure.addSuppressed(closeFailure);
+			}
+		}
+	}
+
 	protected Column searchColumn(final Table table, final String columnName) {
 		if (columnName == null) {
 			return null;
