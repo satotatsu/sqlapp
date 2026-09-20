@@ -202,7 +202,14 @@ public class ImportDataCommand extends AbstractExportCommand
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		sqlFactoryRegistry.setTableOptions(this.getTableOptions());
-		final SqlFactory<Row> factory = sqlFactoryRegistry.getSqlFactory(new Row(), this.getSqlType());
+		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
+		if (factory == null) {
+			throw new IllegalArgumentException("No row SQL factory for " + getSqlType() + " on " + dialect);
+		}
+		final List<SqlOperation> operations = factory.createSql(table);
+		if (operations.isEmpty() || operations.stream().anyMatch(operation -> !operation.getSqlType().supportRows())) {
+			throw new IllegalArgumentException("Row SQL is not supported for " + getSqlType() + " on " + dialect);
+		}
 		final List<File> targets = CommonUtils.list();
 		if (!CommonUtils.isEmpty(files)) {
 			for (final File file : files) {
@@ -226,39 +233,43 @@ public class ImportDataCommand extends AbstractExportCommand
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(queryCommitInterval, conn -> commit(conn));
 		try {
 			for (final Row row : table.getRows()) {
+				if (CommonUtils.isEmpty(files)) {
+					final Map<String, Object> values = convert(sqlConverter, row, table.getColumns());
+					values.forEach(row::put);
+				}
 				batchRows.add(row);
 				if (batchRows.size() >= batchSize) {
-					final List<SqlOperation> operations = factory.createSql(batchRows);
-					final ParametersContext context = new ParametersContext();
-					context.putAll(this.getContext());
-					context.putAll(convert(sqlConverter, row, table.getColumns()));
-					for (final SqlOperation operation : operations) {
-						final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
-						final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
-						jdbcHandler.execute(connection, context);
-						commitCountHandler.commit(connection);
-					}
+					executeRowBatch(connection, dialect, sqlConverter, operations, batchRows, commitCountHandler);
 					batchRows.clear();
 				}
 				counter++;
 			}
+			if (!batchRows.isEmpty()) {
+				executeRowBatch(connection, dialect, sqlConverter, operations, batchRows, commitCountHandler);
+			}
+			commitCountHandler.finalCommit(connection);
 		} finally {
 			table.setRowIteratorHandler(null);
 		}
-		if (batchRows.size() > 0) {
-			final List<SqlOperation> operations = factory.createSql(batchRows);
-			final ParametersContext context = new ParametersContext();
-			context.putAll(this.getContext());
-			for (final SqlOperation operation : operations) {
-				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
-				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
-				jdbcHandler.execute(connection, context);
-				commitCountHandler.commit(connection);
-			}
-			batchRows.clear();
-			commitCountHandler.finalCommit(connection);
-		}
 		return counter;
+	}
+
+	private void executeRowBatch(final Connection connection, final Dialect dialect, final SqlConverter converter,
+			final List<SqlOperation> operations, final List<Row> rows, final CommitCountHolder commits)
+			throws SQLException {
+		final ParametersContext context = new ParametersContext();
+		context.putAll(getContext());
+		context.put("rows", rows);
+		// Row discovery scans map values, so give the batch priority over caller lists.
+		final Map<String, Object> executionContext = CommonUtils.linkedMap();
+		executionContext.put("rows", rows);
+		executionContext.putAll(context);
+		for (final SqlOperation operation : operations) {
+			final SqlNode node = converter.parseSql(dialect, context, operation.getSqlText());
+			final JdbcHandler handler = new JdbcHandler(node);
+			handler.execute(connection, executionContext);
+			commits.commit(connection);
+		}
 	}
 
 	protected SqlConverter getSqlConverter() {
@@ -351,9 +362,8 @@ public class ImportDataCommand extends AbstractExportCommand
 	}
 
 	private RowValueConverter createRowValueConverter() {
-		final RowValueConverter converter = FileRowValueConverter.create(getSqlConverter().getExpressionConverter(),
+		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(),
 				getContext(), (r, c, v) -> getRowValueConverter() == null ? v : getRowValueConverter().apply(r, c, v));
-		return (r, c, v) -> this.getSqlType().supportRows() ? v : converter.apply(r, c, v);
 	}
 
 	private void readFiles(final Table table, final List<File> files)

@@ -205,6 +205,13 @@ remains available and file values are evaluated only once. Import and
 converter runs before expression evaluation. File-read failures retain the
 source file, column and original input value in their diagnostics.
 
+When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
+parameterized row batches. Full batches and the final partial batch use the
+same execution path. The configured final commit callback also runs when the
+row count is an exact multiple of the batch size; failures do not trigger that
+final callback. If the dialect cannot generate row-batch SQL, Import reports an
+error before reading the input rather than reporting unexecuted rows as imported.
+
 CSV imports detect line endings and retain Schema column types. Standalone
 `CsvRowIteratorHandler` retains its existing string-column default; callers can
 opt into retaining supplied types with `setPreserveColumnTypes(true)`.

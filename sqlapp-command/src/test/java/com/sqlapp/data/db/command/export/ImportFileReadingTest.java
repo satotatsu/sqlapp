@@ -28,6 +28,90 @@ class ImportFileReadingTest {
 	Path directory;
 
 	@Test
+	void rejectsUnsupportedRowSqlBeforeReadingInput() throws Exception {
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.MERGE_ROWS);
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getConstraints().addPrimaryKeyConstraint("PK_ITEMS", "ID");
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "")) {
+			// HSQL intentionally does not register its MERGE_ROWS factory.
+			final var error = assertThrows(IllegalArgumentException.class, () -> command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table,
+					List.of(directory.resolve("not-read.csv").toFile())));
+			assertTrue(error.getMessage().contains("MERGE_ROWS"));
+		}
+	}
+
+	@Test
+	void failedRowBatchDoesNotCommitEarlierBatches() throws Exception {
+		final Path file = Files.writeString(directory.resolve("items.csv"), "ID\n1\n2\n1\n");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT_ROWS);
+		command.setDmlBatchSize(2);
+		final var commits = new AtomicInteger();
+		command.setCommitHandler(connection -> {
+			connection.commit();
+			commits.incrementAndGet();
+		});
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER PRIMARY KEY)");
+			connection.setAutoCommit(false);
+			assertThrows(java.sql.SQLException.class, () -> command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table, List.of(file.toFile())));
+			assertEquals(0, commits.get());
+			connection.rollback();
+			try (var result = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+				assertTrue(result.next());
+				assertEquals(0, result.getInt(1));
+			}
+		}
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "1", "2", "4" })
+	void importsRowSqlWithOneEvaluationPerValue(final int batchSize) throws Exception {
+		final Path file = Files.writeString(directory.resolve("rows.csv"),
+				"ID,CONTENT\n1,${counter.incrementAndGet()}\n2,${counter.incrementAndGet()}\n3,${counter.incrementAndGet()}\n");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.INT));
+		table.getConstraints().addPrimaryKeyConstraint("PK_ITEMS", "ID");
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT_ROWS);
+		command.setDmlBatchSize(batchSize);
+		command.setPlaceholders(true);
+		final var counter = new AtomicInteger();
+		final var commits = new AtomicInteger();
+		command.setCommitHandler(connection -> {
+			connection.commit();
+			commits.incrementAndGet();
+		});
+		command.getContext().put("counter", counter);
+		command.getContext().put("lookup", List.of());
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER PRIMARY KEY, CONTENT INTEGER)");
+			connection.setAutoCommit(false);
+			assertEquals(3, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(file.toFile())));
+			assertEquals(3, counter.get());
+			assertEquals(1, commits.get());
+			try (var result = statement.executeQuery("SELECT ID, CONTENT FROM ITEMS ORDER BY ID")) {
+				for (int i = 1; i <= 3; i++) {
+					assertTrue(result.next());
+					assertEquals(i, result.getInt(1));
+					assertEquals(i, result.getInt(2));
+				}
+				assertFalse(result.next());
+			}
+		}
+	}
+
+	@Test
 	void tableReaderEvaluatesFileExpressionsWithConfiguredContextAndDelimiters() throws Exception {
 		final byte[] bytes = { 0, 127, (byte) 255 };
 		Files.write(directory.resolve("aaa.png"), bytes);
@@ -85,8 +169,10 @@ class ImportFileReadingTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({ "csv,1", "csv,2", "json,1", "json,2" })
-	void importsFileConstructorBinary(final String format, final int batchSize) throws Exception {
+	@CsvSource({ "csv,1,INSERT", "csv,2,INSERT", "json,1,INSERT", "json,2,INSERT",
+			"csv,1,INSERT_ROWS", "csv,2,INSERT_ROWS", "csv,3,INSERT_ROWS",
+			"json,1,INSERT_ROWS", "json,2,INSERT_ROWS", "json,3,INSERT_ROWS" })
+	void importsFileConstructorBinary(final String format, final int batchSize, final SqlType sqlType) throws Exception {
 		final byte[] bytes = { 0, 1, 127, (byte) 255 };
 		Files.write(directory.resolve("aaa.png"), bytes);
 		final String data = "csv".equals(format)
@@ -98,7 +184,7 @@ class ImportFileReadingTest {
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
 		table.getColumns().add(new Column("CONTENT").setDataType(DataType.BLOB));
 		final var command = new ImportDataCommand();
-		command.setSqlType(SqlType.INSERT);
+		command.setSqlType(sqlType);
 		command.setDmlBatchSize(batchSize);
 		command.setPlaceholders(true);
 		command.setFileDirectory(directory.toFile());
