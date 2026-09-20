@@ -200,7 +200,10 @@ For example, with placeholders enabled and `fileDirectory` configured,
 as binary data. A `File` expression result is resolved against `fileDirectory`
 and read into a byte array; absolute paths are retained, and missing files fail
 the import. Placeholders are disabled by default. Custom Import value conversion
-remains available and file values are evaluated only once.
+remains available and file values are evaluated only once. Import and
+`TableFileReader` use the same value-evaluation pipeline; Import's custom
+converter runs before expression evaluation. File-read failures retain the
+source file, column and original input value in their diagnostics.
 
 CSV imports detect line endings and retain Schema column types. Standalone
 `CsvRowIteratorHandler` retains its existing string-column default; callers can

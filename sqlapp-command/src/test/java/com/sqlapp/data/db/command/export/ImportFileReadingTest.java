@@ -20,11 +20,69 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.InvalidValueException;
 
 class ImportFileReadingTest {
 
 	@TempDir
 	Path directory;
+
+	@Test
+	void tableReaderEvaluatesFileExpressionsWithConfiguredContextAndDelimiters() throws Exception {
+		final byte[] bytes = { 0, 127, (byte) 255 };
+		Files.write(directory.resolve("aaa.png"), bytes);
+		final Path file = Files.writeString(directory.resolve("items.json"),
+				"[{\"CONTENT\":\"@{new File(path)}\",\"LITERAL\":\"@{literal}\"}]");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.BLOB));
+		table.getColumns().add(new Column("LITERAL").setDataType(DataType.VARCHAR));
+		final var reader = new TableFileReader();
+		reader.setPlaceholders(true);
+		reader.setPlaceholderPrefix("@{");
+		reader.setFileDirectory(directory.toFile());
+		reader.getContext().put("path", "aaa.png");
+		reader.getContext().put("literal", "@{mustNotRun()}");
+		reader.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table, file.toFile())));
+		int count = 0;
+		for (var row : table.getRows()) {
+			assertArrayEquals(bytes, (byte[]) row.get("CONTENT"));
+			assertEquals("@{mustNotRun()}", row.get("LITERAL"));
+			count++;
+		}
+		assertEquals(1, count);
+	}
+
+	@Test
+	void customImportConversionRunsBeforeExpressionsAndKeepsOriginalValueOnFailure() throws Exception {
+		final Path file = Files.writeString(directory.resolve("items.csv"), "CONTENT\nmissing.png\n");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("CONTENT").setDataType(DataType.BLOB));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		command.setPlaceholders(true);
+		command.setFileDirectory(directory.toFile());
+		final var calls = new AtomicInteger();
+		command.setRowValueConverter((row, column, value) -> {
+			calls.incrementAndGet();
+			return "${new File('" + value + "')}";
+		});
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (CONTENT BLOB)");
+			connection.setAutoCommit(false);
+			final var error = assertThrows(InvalidValueException.class, () -> command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table, List.of(file.toFile())));
+			assertEquals("CONTENT", error.getKey());
+			assertEquals("missing.png", error.getValue());
+			assertInstanceOf(java.io.IOException.class, error.getCause());
+			assertTrue(error.getMessage().contains("items.csv"));
+			assertEquals(1, calls.get());
+			try (var result = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+				assertTrue(result.next());
+				assertEquals(0, result.getInt(1));
+			}
+		}
+	}
 
 	@ParameterizedTest
 	@CsvSource({ "csv,1", "csv,2", "json,1", "json,2" })
@@ -182,17 +240,21 @@ class ImportFileReadingTest {
 	@Test
 	void missingBinaryFileFailsInsteadOfImportingAnEmptyValue() throws Exception {
 		final Path json = Files.writeString(directory.resolve("items.json"),
-				"[{\"CONTENT\":\"${readFileAsBytes('missing.png')}\"}]");
+				"[{\"CONTENT\":\"${new File('missing.png')}\"}]");
 		final Table table = new Table("ITEMS");
 		final TableFileReader reader = new TableFileReader();
 		reader.setPlaceholders(true);
 		reader.setFileDirectory(directory.toFile());
 		reader.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table, json.toFile())));
-		assertThrows(RuntimeException.class, () -> {
+		final var error = assertThrows(InvalidValueException.class, () -> {
 			for (var row : table.getRows()) {
 				fail("Missing binary must not produce a row");
 			}
 		});
+		assertEquals("CONTENT", error.getKey());
+		assertEquals("${new File('missing.png')}", error.getValue());
+		assertInstanceOf(java.io.IOException.class, error.getCause());
+		assertTrue(error.getMessage().contains("items.json"));
 	}
 
 	@Test

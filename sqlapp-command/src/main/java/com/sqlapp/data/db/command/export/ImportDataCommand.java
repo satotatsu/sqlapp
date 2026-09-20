@@ -351,27 +351,9 @@ public class ImportDataCommand extends AbstractExportCommand
 	}
 
 	private RowValueConverter createRowValueConverter() {
-		final SqlConverter sqlConverter = getSqlConverter();
-		final ParametersContext context = new ParametersContext();
-		context.putAll(this.getContext());
-		return (r, c, v) -> {
-			if (this.getSqlType().supportRows()) {
-				return v;
-			}
-			Object originalVal;
-			if (this.getRowValueConverter() != null) {
-				originalVal = this.getRowValueConverter().apply(r, c, v);
-			} else {
-				originalVal = v;
-			}
-			Object val;
-			try {
-				val = sqlConverter.getExpressionConverter().convert(originalVal, context);
-			} catch (final IOException e) {
-				throw new InvalidValueException(r, c, v, e);
-			}
-			return val;
-		};
+		final RowValueConverter converter = FileRowValueConverter.create(getSqlConverter().getExpressionConverter(),
+				getContext(), (r, c, v) -> getRowValueConverter() == null ? v : getRowValueConverter().apply(r, c, v));
+		return (r, c, v) -> this.getSqlType().supportRows() ? v : converter.apply(r, c, v);
 	}
 
 	private void readFiles(final Table table, final List<File> files)

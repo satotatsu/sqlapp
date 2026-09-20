@@ -41,7 +41,6 @@ import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
-import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaCollection;
@@ -49,7 +48,6 @@ import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
@@ -328,17 +326,6 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	}
 
 	private RowValueConverter getRowValueConverter() {
-		final SqlConverter sqlConverter = getSqlConverter();
-		final ParametersContext context = new ParametersContext();
-		context.putAll(this.getContext());
-		return (r, c, v) -> {
-			Object val;
-			try {
-				val = sqlConverter.getExpressionConverter().convert(v, context);
-			} catch (final IOException e) {
-				throw new InvalidValueException(r, c, v, e);
-			}
-			return val;
-		};
+		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(), getContext(), null);
 	}
 }
