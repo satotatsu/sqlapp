@@ -216,6 +216,11 @@ are skipped. These positional modes require Schema columns and use their
 order. Negative values are rejected. Previously the Excel reader ignored
 this setting and always consumed one header row.
 
+`TableFileReader` also accepts `setTomlConverter(...)`, just like Import,
+alongside its JSON and YAML converter settings. The default TOML reader remains
+available without configuration; a supplied converter is used for each input
+file through the shared decoding path.
+
 When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
 parameterized row batches. Full batches and the final partial batch use the
 same execution path. The configured final commit callback also runs when the

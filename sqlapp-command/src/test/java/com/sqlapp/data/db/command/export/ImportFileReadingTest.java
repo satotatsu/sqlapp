@@ -29,6 +29,52 @@ class ImportFileReadingTest {
 	Path directory;
 
 	@ParameterizedTest
+	@CsvSource({ "true", "false" })
+	void honorsCustomTomlConverterInBothEntryPoints(final boolean importCommand) throws Exception {
+		final Path file = Files.writeString(directory.resolve("items.toml"), "[[items]]\nID = 1\n");
+		final var calls = new AtomicInteger();
+		final var converter = new com.sqlapp.util.TomlConverter() {
+			@Override
+			public <T> T fromJsonString(final java.io.File input, final Class<T> type) {
+				final T document = super.fromJsonString(input, type);
+				calls.incrementAndGet();
+				assertInstanceOf(java.util.Map.class, document);
+				return type.cast(java.util.Map.of("items", List.of(java.util.Map.of("ID", 42))));
+			}
+		};
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		if (importCommand) {
+			final var command = new ImportDataCommand();
+			command.setSqlType(SqlType.INSERT);
+			command.setTomlConverter(converter);
+			try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
+				connection.setAutoCommit(false);
+				assertEquals(1, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+						table, List.of(file.toFile())));
+				try (var result = statement.executeQuery("SELECT ID FROM ITEMS")) {
+					assertTrue(result.next());
+					assertEquals(42, result.getInt(1));
+					assertFalse(result.next());
+				}
+			}
+		} else {
+			final var reader = new TableFileReader();
+			reader.setTomlConverter(converter);
+			reader.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table, file.toFile())));
+			int count = 0;
+			for (var row : table.getRows()) {
+				assertEquals(42, ((Number) row.get("ID")).intValue());
+				count++;
+			}
+			assertEquals(1, count);
+		}
+		assertEquals(1, calls.get());
+	}
+
+	@ParameterizedTest
 	@CsvSource({ "0", "2" })
 	void importAndTableReaderHonorExcelHeaderRows(final int headers) throws Exception {
 		final Path file = directory.resolve("items.xlsx");

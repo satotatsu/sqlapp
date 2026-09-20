@@ -39,6 +39,7 @@ import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
+import com.sqlapp.data.db.command.properties.TomlConverterProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.schemas.Catalog;
@@ -60,7 +61,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvEncodingProperty, JsonConverterProperty,
-		YamlConverterProperty, UseSchemaNameDirectoryProperty {
+		YamlConverterProperty, TomlConverterProperty, UseSchemaNameDirectoryProperty {
 	/**
 	 * data file Directory
 	 */
@@ -81,6 +82,8 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	private JsonConverter jsonConverter = createJsonConverter();
 
 	private YamlConverter yamlConverter = createYamlConverter();
+
+	private TomlConverter tomlConverter = createTomlConverter();
 
 	/** file directory */
 	private File fileDirectory = null;
@@ -313,7 +316,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		if (!files.isEmpty()) {
 			table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(),
 					getCsvSkipHeaderRowsSize(), getExcelSkipHeaderRowsSize(), getJsonConverter(), getYamlConverter(),
-					new TomlConverter(), getRowValueConverter()));
+					getTomlConverter(), getRowValueConverter()));
 		}
 	}
 
