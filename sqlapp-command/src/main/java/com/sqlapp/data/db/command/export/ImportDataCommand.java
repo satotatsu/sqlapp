@@ -210,22 +210,7 @@ public class ImportDataCommand extends AbstractExportCommand
 		if (operations.isEmpty() || operations.stream().anyMatch(operation -> !operation.getSqlType().supportRows())) {
 			throw new IllegalArgumentException("Row SQL is not supported for " + getSqlType() + " on " + dialect);
 		}
-		final List<File> targets = CommonUtils.list();
-		if (!CommonUtils.isEmpty(files)) {
-			for (final File file : files) {
-				if (file.isDirectory()) {
-					final File[] listFiles = file.listFiles();
-					if (listFiles != null) {
-						for (final File children : listFiles) {
-							targets.add(children);
-						}
-					}
-				} else {
-					targets.add(file);
-				}
-			}
-			readFiles(table, targets);
-		}
+		readImportFiles(table, files);
 		final SqlConverter sqlConverter = getSqlConverter();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final List<Row> batchRows = CommonUtils.list(batchSize);
@@ -274,10 +259,7 @@ public class ImportDataCommand extends AbstractExportCommand
 
 	protected SqlConverter getSqlConverter() {
 		final SqlConverter sqlConverter = new SqlConverter();
-		sqlConverter.getExpressionConverter().setFileDirectory(this.getFileDirectory());
-		sqlConverter.getExpressionConverter().setPlaceholderPrefix(this.getPlaceholderPrefix());
-		sqlConverter.getExpressionConverter().setPlaceholderSuffix(this.getPlaceholderSuffix());
-		sqlConverter.getExpressionConverter().setPlaceholders(this.isPlaceholders());
+		sqlConverter.setExpressionConverter(FileRowValueConverter.createExpressions(getFileDirectory(), this));
 		return sqlConverter;
 	}
 
@@ -294,22 +276,7 @@ public class ImportDataCommand extends AbstractExportCommand
 			final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, c.getSqlText());
 			return sqlNode;
 		}).collect(Collectors.toList());
-		final List<File> targets = CommonUtils.list();
-		if (!CommonUtils.isEmpty(files)) {
-			for (final File file : files) {
-				if (file.isDirectory()) {
-					final File[] listFiles = file.listFiles();
-					if (listFiles != null) {
-						for (final File children : listFiles) {
-							targets.add(children);
-						}
-					}
-				} else {
-					targets.add(file);
-				}
-			}
-			readFiles(table, targets);
-		}
+		readImportFiles(table, files);
 		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes,
 				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
 		try (handler) {
@@ -364,6 +331,26 @@ public class ImportDataCommand extends AbstractExportCommand
 	private RowValueConverter createRowValueConverter() {
 		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(),
 				getContext(), (r, c, v) -> getRowValueConverter() == null ? v : getRowValueConverter().apply(r, c, v));
+	}
+
+	private void readImportFiles(final Table table, final List<File> files)
+			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
+		if (CommonUtils.isEmpty(files)) {
+			return;
+		}
+		final List<File> targets = CommonUtils.list();
+		for (final File file : files) {
+			if (file.isDirectory()) {
+				final File[] children = file.listFiles();
+				if (children == null) {
+					throw new IOException("Cannot list import directory: " + file);
+				}
+				java.util.Collections.addAll(targets, children);
+			} else {
+				targets.add(file);
+			}
+		}
+		readFiles(table, targets);
 	}
 
 	private void readFiles(final Table table, final List<File> files)

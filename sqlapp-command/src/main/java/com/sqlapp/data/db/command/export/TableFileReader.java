@@ -48,7 +48,6 @@ import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
@@ -307,15 +306,6 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		return result;
 	}
 
-	private SqlConverter getSqlConverter() {
-		final SqlConverter sqlConverter = new SqlConverter();
-		sqlConverter.getExpressionConverter().setFileDirectory(this.getFileDirectory());
-		sqlConverter.getExpressionConverter().setPlaceholderPrefix(this.getPlaceholderPrefix());
-		sqlConverter.getExpressionConverter().setPlaceholderSuffix(this.getPlaceholderSuffix());
-		sqlConverter.getExpressionConverter().setPlaceholders(this.isPlaceholders());
-		return sqlConverter;
-	}
-
 	private void readFiles(final Table table, final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
 		if (!files.isEmpty()) {
@@ -326,6 +316,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	}
 
 	private RowValueConverter getRowValueConverter() {
-		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(), getContext(), null);
+		return FileRowValueConverter.create(FileRowValueConverter.createExpressions(getFileDirectory(), this),
+				getContext(), null);
 	}
 }

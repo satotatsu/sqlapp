@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -26,6 +27,60 @@ class ImportFileReadingTest {
 
 	@TempDir
 	Path directory;
+
+	@ParameterizedTest
+	@EnumSource(value = SqlType.class, names = { "INSERT", "INSERT_ROWS" })
+	void importsDirectoryWithConfiguredExpressionDelimiters(final SqlType sqlType) throws Exception {
+		final Path input = Files.createDirectory(directory.resolve("input"));
+		Files.writeString(input.resolve("first.csv"), "ID\n@{value}\n");
+		Files.writeString(input.resolve("second.json"), "[{\"ID\":\"@{value + 1}\"}]");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final var command = new ImportDataCommand();
+		command.setSqlType(sqlType);
+		command.setPlaceholders(true);
+		command.setPlaceholderPrefix("@{");
+		command.getContext().put("value", 10);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
+			connection.setAutoCommit(false);
+			assertEquals(2, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(input.toFile())));
+			try (var result = statement.executeQuery("SELECT ID FROM ITEMS ORDER BY ID")) {
+				assertTrue(result.next());
+				assertEquals(10, result.getInt(1));
+				assertTrue(result.next());
+				assertEquals(11, result.getInt(1));
+				assertFalse(result.next());
+			}
+		}
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = SqlType.class, names = { "INSERT", "INSERT_ROWS" })
+	void failsWhenImportDirectoryCannotBeListed(final SqlType sqlType) throws Exception {
+		final var unreadable = new java.io.File(directory.resolve("unreadable").toString()) {
+			@Override
+			public boolean isDirectory() {
+				return true;
+			}
+
+			@Override
+			public java.io.File[] listFiles() {
+				return null;
+			}
+		};
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final var command = new ImportDataCommand();
+		command.setSqlType(sqlType);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "")) {
+			final var error = assertThrows(java.io.IOException.class, () -> command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table, List.of(unreadable)));
+			assertTrue(error.getMessage().contains("unreadable"));
+		}
+	}
 
 	@Test
 	void rejectsUnsupportedRowSqlBeforeReadingInput() throws Exception {

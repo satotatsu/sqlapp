@@ -204,6 +204,10 @@ remains available and file values are evaluated only once. Import and
 `TableFileReader` use the same value-evaluation pipeline; Import's custom
 converter runs before expression evaluation. File-read failures retain the
 source file, column and original input value in their diagnostics.
+Expression settings are shared by both readers, including custom placeholder
+delimiters and the binary-file base directory. Import uses the same directory
+expansion for ordinary and row-batch SQL; an unreadable directory fails with its
+path instead of being treated as empty input.
 
 When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
 parameterized row batches. Full batches and the final partial batch use the
