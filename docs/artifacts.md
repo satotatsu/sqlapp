@@ -25,6 +25,61 @@ The Gradle plugin exposes `sqlapp-command` and includes the Access/MDB and
 SQLite dialects as implementation dependencies. Other target database dialects
 must be selected by the consuming build.
 
+## Files published for a module
+
+Each module using the repository's Maven publication convention is built from
+the Java component and publishes the same `com.sqlapp` group and project
+version. A release contains:
+
+| File | Purpose |
+|---|---|
+| `<artifact>-<version>.jar` | Compiled classes and runtime resources, including service descriptors |
+| `<artifact>-<version>.pom` | Maven coordinates, metadata, licenses, SCM information, and transitive dependencies |
+| `<artifact>-<version>-sources.jar` | Java/Groovy source attachment for IDE navigation and debugging |
+| `<artifact>-<version>-javadoc.jar` | Generated API documentation attachment |
+| Gradle module metadata | Gradle variants and dependency information generated with the publication |
+| Signatures and repository checksums | Integrity material required by the target Maven repository |
+
+The sources and Javadoc archives are attachments, not dependencies required at
+runtime. IDEs normally download them on demand. The ordinary JAR retains
+`META-INF/services` resources used for dialect and provider discovery.
+
+The repository's Central Portal aggregation includes core, command, test
+support, database dialects, renderers, and `sqlapp-gradle-plugin`. The internal
+`sqlapp-core-dialect-test` integration project is deliberately excluded.
+
+### Gradle plugin publication
+
+The normal consumer entry point is the plugin ID:
+
+```groovy
+plugins {
+    id 'com.sqlapp.db' version '0.80.0'
+}
+```
+
+The plugin project defines that ID and its implementation class and also has a
+Maven publication. Applying the ID through the Gradle `plugins` block lets
+Gradle resolve the plugin marker and implementation. Do not replace it with an
+ordinary application dependency on `sqlapp-gradle-plugin` unless developing or
+embedding the plugin itself.
+
+The plugin implementation artifact does not include every database dialect.
+Add the selected dialect and JDBC driver to the consuming project's task
+runtime as shown below.
+
+### Verify downloaded contents
+
+After a version is available in the configured repository, Maven users can
+inspect its dependency graph with `dependency:tree`; Gradle users can inspect
+`runtimeClasspath` with `dependencies` and `dependencyInsight`. To diagnose
+service discovery or packaging, also confirm that the downloaded dialect JAR
+contains its `META-INF/services` entries.
+
+Do not use the presence of a sources or Javadoc archive as compatibility
+evidence. Database-version support and real-engine verification are tracked in
+the [compatibility matrix](compatibility.md).
+
 ## Common Gradle combinations
 
 ### Schema model without JDBC

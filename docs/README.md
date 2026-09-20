@@ -65,7 +65,7 @@ the relevant guides.
   Log4j, and Gradle output and lists safe diagnostic evidence.
 - [Published artifacts and dependency selection](artifacts.md) lists the core,
   command, renderer, test, plugin, and database-dialect artifacts with Gradle
-  and Maven examples.
+  and Maven examples, plus the files attached to each module publication.
 - [Data converters](converters.md) documents the `sqlapp-core` value conversion
   facilities.
 - [Schema viewpoints](schema-viewpoints.md) describes reusable named table
