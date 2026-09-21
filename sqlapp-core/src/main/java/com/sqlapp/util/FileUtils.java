@@ -843,22 +843,15 @@ public final class FileUtils {
 	 * @param reader
 	 */
 	public static String read(final Reader reader) {
-		BufferedReader br = null;
-		if (reader instanceof BufferedReader) {
-			br = cast(reader);
-		} else {
-			br = new BufferedReader(reader);
-		}
+		final BufferedReader bufferedReader = reader instanceof BufferedReader ? cast(reader) : new BufferedReader(reader);
 		final StringBuilder builder = new StringBuilder();
-		String line = null;
-		try {
-			while ((line = br.readLine()) != null) {
+		try (BufferedReader closeableReader = bufferedReader) {
+			String line;
+			while ((line = closeableReader.readLine()) != null) {
 				builder.append(line).append('\n');
 			}
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
-		} finally {
-			close(br);
 		}
 		return builder.toString();
 	}
