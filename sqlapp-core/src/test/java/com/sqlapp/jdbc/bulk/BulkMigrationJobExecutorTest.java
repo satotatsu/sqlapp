@@ -4,6 +4,7 @@ package com.sqlapp.jdbc.bulk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +31,44 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
+	@Test
+	void chunkedExecutionPreservesReadFailureWhenClosingRowsFails() {
+		final RuntimeException readFailure = new RuntimeException("read");
+		final Exception closeFailure = new Exception("close");
+		final AtomicInteger closes = new AtomicInteger();
+		final class FailingIterator implements Iterator<Row>, AutoCloseable {
+			@Override
+			public boolean hasNext() {
+				throw readFailure;
+			}
+
+			@Override
+			public Row next() {
+				throw new AssertionError("next must not be called");
+			}
+
+			@Override
+			public void close() throws Exception {
+				closes.incrementAndGet();
+				throw closeFailure;
+			}
+		}
+		final Table source = table("SOURCE");
+		source.setRowIteratorHandler(rows -> new FailingIterator());
+		final ChunkedBulkMigrationOption options = ChunkedBulkMigrationOption.builder()
+				.migrationId("close-failure").mode(BulkMigrationMode.INSERT).resume(false)
+				.checkpointMode(BulkMigrationCheckpointMode.CUSTOM).build();
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class,
+				() -> ChunkedBulkMigrationExecutor.execute(connection(), source, options,
+						new InMemoryBulkMigrationCheckpointStore()));
+
+		assertSame(readFailure, thrown);
+		assertEquals(1, closes.get());
+		assertEquals(1, thrown.getSuppressed().length);
+		assertSame(closeFailure, thrown.getSuppressed()[0]);
+	}
+
 	@Test
 	void migrationResultsRejectInvalidAggregateAndTaskState() {
 		final var migration = new ChunkedBulkMigrationResult(0, 1, 1, false);

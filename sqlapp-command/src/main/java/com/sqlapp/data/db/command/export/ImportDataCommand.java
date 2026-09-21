@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,6 +71,7 @@ import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -216,8 +218,12 @@ public class ImportDataCommand extends AbstractExportCommand
 		final List<Row> batchRows = CommonUtils.list(batchSize);
 		long counter = 0;
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(queryCommitInterval, conn -> commit(conn));
+		Iterator<Row> rows = null;
+		Throwable failure = null;
 		try {
-			for (final Row row : table.getRows()) {
+			rows = table.getRows().iterator();
+			while (rows.hasNext()) {
+				final Row row = rows.next();
 				if (CommonUtils.isEmpty(files)) {
 					final Map<String, Object> values = convert(sqlConverter, row, table.getColumns());
 					values.forEach(row::put);
@@ -233,8 +239,17 @@ public class ImportDataCommand extends AbstractExportCommand
 				executeRowBatch(connection, dialect, sqlConverter, operations, batchRows, commitCountHandler);
 			}
 			commitCountHandler.finalCommit(connection);
+		} catch (final SQLException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
 		} finally {
-			table.setRowIteratorHandler(null);
+			try {
+				IteratorCloseUtils.close(failure, rows);
+			} catch (final RuntimeException e) {
+				throw new SQLException("Failed to close imported rows", e);
+			} finally {
+				table.setRowIteratorHandler(null);
+			}
 		}
 		return counter;
 	}

@@ -30,6 +30,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /**
  * Combined RowIteratorHandler
@@ -66,18 +67,7 @@ public class CombinedRowIteratorHandler implements RowIteratorHandler {
 	}
 
 	private void closeCreatedIterators(final List<Iterator<Row>> iterators, final Throwable failure) {
-		final Set<Iterator<Row>> closed = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-		for (final Iterator<Row> iterator : iterators) {
-			if (closed.add(iterator) && iterator instanceof AutoCloseable closeable) {
-				try {
-					closeable.close();
-				} catch (final Exception closeFailure) {
-					if (failure != closeFailure) {
-						failure.addSuppressed(closeFailure);
-					}
-				}
-			}
-		}
+		IteratorCloseUtils.close(failure, iterators.toArray(Iterator<?>[]::new));
 	}
 
 	@Override

@@ -147,6 +147,7 @@ public final class ChunkedBulkMigrationExecutor {
 		final Iterator<Row> iterator = keysetSource == null
 				? sourceTable.getRows().iterator()
 				: keysetSource.iterator(checkpoint.getResumeToken());
+		Throwable failure = null;
 		try {
 			if (keysetSource == null) {
 				skipAndValidateBoundary(iterator, checkpoint, sourceTable,
@@ -210,8 +211,15 @@ public final class ChunkedBulkMigrationExecutor {
 			}
 			return new ChunkedBulkMigrationResult(previouslyProcessed, processed,
 					chunks, false);
+		} catch (final SQLException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
 		} finally {
-			close(iterator);
+			try {
+				BulkMigrationIteratorSupport.close(failure, iterator);
+			} catch (final RuntimeException closeFailure) {
+				throw new SQLException("Failed to close chunked migration rows", closeFailure);
+			}
 		}
 	}
 
@@ -530,13 +538,4 @@ public final class ChunkedBulkMigrationExecutor {
 		}
 	}
 
-	private static void close(final Iterator<Row> iterator) {
-		if (iterator instanceof AutoCloseable closeable) {
-			try {
-				closeable.close();
-			} catch (Exception e) {
-				throw e instanceof RuntimeException runtime ? runtime : new IllegalStateException(e);
-			}
-		}
-	}
 }

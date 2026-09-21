@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,6 +21,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.InvalidValueException;
 
@@ -210,6 +212,30 @@ class ImportFileReadingTest {
 				assertTrue(result.next());
 				assertEquals(0, result.getInt(1));
 			}
+		}
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = SqlType.class, names = { "INSERT", "INSERT_ROWS" })
+	void closesProgrammaticRowsWhenDatabaseExecutionFails(final SqlType sqlType) throws Exception {
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final Row first = table.newRow();
+		first.put("ID", 1);
+		final Row duplicate = table.newRow();
+		duplicate.put("ID", 1);
+		final var closes = new AtomicInteger();
+		table.setRowIteratorHandler(rows -> new ClosingRowIterator(List.of(first, duplicate), closes));
+		final var command = new ImportDataCommand();
+		command.setSqlType(sqlType);
+		command.setDmlBatchSize(2);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER PRIMARY KEY)");
+			connection.setAutoCommit(false);
+			assertThrows(java.sql.SQLException.class, () -> command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table, List.of()));
+			assertEquals(1, closes.get());
 		}
 	}
 
@@ -492,5 +518,31 @@ class ImportFileReadingTest {
 				.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table,
 						directory.resolve("items.unknown").toFile()))));
 		assertTrue(error.getMessage().contains("items.unknown"));
+	}
+
+	private static final class ClosingRowIterator implements Iterator<Row>, AutoCloseable {
+
+		private final Iterator<Row> delegate;
+		private final AtomicInteger closes;
+
+		private ClosingRowIterator(final List<Row> rows, final AtomicInteger closes) {
+			this.delegate = rows.iterator();
+			this.closes = closes;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return delegate.hasNext();
+		}
+
+		@Override
+		public Row next() {
+			return delegate.next();
+		}
+
+		@Override
+		public void close() {
+			closes.incrementAndGet();
+		}
 	}
 }

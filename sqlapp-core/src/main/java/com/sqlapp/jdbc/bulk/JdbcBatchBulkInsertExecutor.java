@@ -14,8 +14,9 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.CommonUtils;
 import com.sqlapp.jdbc.sql.JdbcParameterBinder;
+import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /** Portable streaming bulk executor based on {@link PreparedStatement} batches. */
 public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
@@ -61,20 +62,14 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 				affected = addCount(affected, count(statement.executeBatch()));
 			}
 			return affected;
-		} catch (SQLException | RuntimeException e) {
+		} catch (SQLException | RuntimeException | Error e) {
 			failure = e;
 			throw e;
 		} finally {
-			if (rows instanceof AutoCloseable closeable) {
-				try {
-					closeable.close();
-				} catch (Exception e) {
-					if (failure != null) {
-						failure.addSuppressed(e);
-					} else {
-						throw new SQLException("Failed to close JDBC batch rows", e);
-					}
-				}
+			try {
+				IteratorCloseUtils.close(failure, rows);
+			} catch (final RuntimeException closeFailure) {
+				throw new SQLException("Failed to close JDBC batch rows", closeFailure);
 			}
 		}
 	}
