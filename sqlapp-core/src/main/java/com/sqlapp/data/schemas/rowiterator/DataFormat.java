@@ -39,6 +39,7 @@ import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
+import com.sqlapp.iterable.JsonMapIterable;
 import com.sqlapp.iterable.TextMapIterable;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
@@ -281,6 +282,26 @@ public enum DataFormat {
 		@Override
 		public JsonConverter createJsonConverter() {
 			return new JsonConverter();
+		}
+
+		@Override
+		public Iterable<Map<String, Object>> createMapIterable(final File file) {
+			return new JsonMapIterable(file);
+		}
+
+		@Override
+		public Iterable<Map<String, Object>> createMapIterable(final Path path) {
+			return new JsonMapIterable(path);
+		}
+
+		@Override
+		public Iterable<Map<String, Object>> createMapIterable(final InputStream inputStream) {
+			return new JsonMapIterable(inputStream);
+		}
+
+		@Override
+		public Iterable<Map<String, Object>> createMapIterable(final Reader reader) {
+			return new JsonMapIterable(reader);
 		}
 	},
 	JSONL() {

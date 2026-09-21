@@ -63,7 +63,7 @@ public class FileIterables {
 			itr = convertByXml.get();
 			return itr;
 		}
-		if (type == DataFormat.EXCEL) {
+		if (type.isWorkbook()) {
 			itr = convertByExcel.get();
 			return itr;
 		}

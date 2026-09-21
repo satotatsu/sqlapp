@@ -236,6 +236,7 @@ public class ExcelIterable extends AbstractMapIterable {
 
 		@Override
 		public Map<String, Object> next() {
+			initialize();
 			org.apache.poi.ss.usermodel.Row row = read();
 			Map<String, Object> map = CommonUtils.linkedMap();
 			set(row, map);

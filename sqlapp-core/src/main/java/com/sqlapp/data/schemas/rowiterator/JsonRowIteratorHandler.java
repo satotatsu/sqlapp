@@ -29,6 +29,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
+import com.sqlapp.iterable.JsonMapIterable;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 
@@ -111,10 +112,10 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 			this.iterator = iterator;
 		}
 
-		@SuppressWarnings("unchecked")
 		@Override
 		protected void preInitialize() throws Exception {
-			list = jsonConverter.fromJsonString(file, List.class);
+			final Object value = jsonConverter.fromJsonString(file, Object.class);
+			list = JsonMapIterable.getRows(value, file.getAbsolutePath());
 			iterator = list.iterator();
 		}
 

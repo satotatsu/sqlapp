@@ -23,12 +23,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 
 class FileIterablesTest {
+	@TempDir
+	Path temporaryDirectory;
 
 	private String packagePath = this.getClass().getPackageName().replace(".", "/");
 	private String path = "src/test/resources/" + packagePath;
@@ -75,6 +83,39 @@ class FileIterablesTest {
 				file -> file.getName().endsWith(".xml")).size());
 		assertEquals(1, FileIterables.readAllRecursiveAsMap(directory,
 				file -> file.getName().endsWith(".xlsx")).size());
+	}
+
+	@Test
+	void readsJsonArrayAsMaps() throws Exception {
+		final Path json = temporaryDirectory.resolve("items.json");
+		Files.writeString(json, "[{\"id\":1},{\"id\":2}]");
+
+		int count = 0;
+		for (final Map<String, Object> row : FileIterables.readAsMap(json)) {
+			assertTrue(row.containsKey("id"));
+			count++;
+		}
+		assertEquals(2, count);
+	}
+
+	@Test
+	void readsExcel2003WorkbookAsMaps() throws Exception {
+		final Path xls = temporaryDirectory.resolve("items.xls");
+		try (var workbook = DataFormat.EXCEL2003.createWorkbook();
+				OutputStream output = Files.newOutputStream(xls)) {
+			final var sheet = workbook.createSheet();
+			sheet.createRow(0).createCell(0).setCellValue("id");
+			sheet.createRow(1).createCell(0).setCellValue(1);
+			workbook.write(output);
+		}
+
+		final var iterator = FileIterables.readAsMap(xls).iterator();
+		try {
+			final Map<String, Object> row = iterator.next();
+			assertTrue(row.containsKey("id"));
+		} finally {
+			((AutoCloseable) iterator).close();
+		}
 	}
 
 	@Test
