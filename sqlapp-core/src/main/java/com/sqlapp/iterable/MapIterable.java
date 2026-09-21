@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.iterator.AutoCloseIterator;
 
 public class MapIterable implements Iterable<Map<String, Object>> {
 
@@ -54,11 +54,11 @@ public class MapIterable implements Iterable<Map<String, Object>> {
 
 	static class IteratorWrapper implements Iterator<Map<String, Object>>, AutoCloseable, Closeable {
 		private final String key;
-		private final Iterator<?> iterator;
+		private final AutoCloseIterator<?> iterator;
 
 		public IteratorWrapper(String key, Iterator<?> iterator) {
 			this.key = key;
-			this.iterator = iterator;
+			this.iterator = new AutoCloseIterator<>(iterator);
 		}
 
 		@Override
@@ -76,11 +76,7 @@ public class MapIterable implements Iterable<Map<String, Object>> {
 
 		@Override
 		public void close() {
-			if (iterator instanceof Closeable) {
-				FileUtils.close((Closeable) iterator);
-			} else if (iterator instanceof AutoCloseable) {
-				FileUtils.close((AutoCloseable) iterator);
-			}
+			iterator.close();
 		}
 	}
 
