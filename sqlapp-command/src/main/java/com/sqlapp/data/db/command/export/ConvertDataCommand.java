@@ -57,14 +57,12 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.TextFileWriter;
 
@@ -125,22 +123,23 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				continue;
 			}
 			DataFormat workbookFileType = DataFormat.parse(file);
-			RowIteratorHandler rowIteratorHandler;
+			if (workbookFileType == null) {
+				throw new IllegalArgumentException("Unsupported data file format: " + file);
+			}
+			if (workbookFileType.isToml()) {
+				throw new IllegalArgumentException(
+						"TOML input is not supported for data conversion because TOML has no root array: " + file);
+			}
 			Table[] table = new Table[1];
 			table[0] = new Table();
-			if (workbookFileType.isWorkbook()) {
-				rowIteratorHandler = new ExcelRowIteratorHandler(file);
-				table[0].setRowIteratorHandler(rowIteratorHandler);
-			} else if (workbookFileType.isCsv()) {
-				rowIteratorHandler = new CsvRowIteratorHandler(file, this.getCsvEncoding());
-				table[0].setRowIteratorHandler(rowIteratorHandler);
-			} else if (workbookFileType.isJson()) {
-				rowIteratorHandler = new JsonRowIteratorHandler(file, this.getJsonConverter());
-				table[0].setRowIteratorHandler(rowIteratorHandler);
-			} else {
+			if (workbookFileType.isXml()) {
 				execute(() -> {
 					table[0] = SchemaUtils.readXml(file);
 				});
+			} else {
+				final RowIteratorHandler rowIteratorHandler = FileRowIteratorFactory.create(file, getCsvEncoding(),
+						0, 0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> value);
+				table[0].setRowIteratorHandler(rowIteratorHandler);
 			}
 			execute(() -> {
 				File tempFile = null;

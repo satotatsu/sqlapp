@@ -19,13 +19,22 @@
 
 package com.sqlapp.data.db.command.export;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.sqlapp.data.db.command.test.AbstractTest;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
@@ -41,6 +50,29 @@ public class ConvertDataCommandTest extends AbstractTest {
 		command.setOutputFileType(DataFormat.EXCEL);
 		command.setOutputDirectory(outputDir);
 		command.run();
+	}
+
+	@ParameterizedTest
+	@MethodSource("additionalInputFormats")
+	void convertsFormatsSupportedByImport(final String fileName, final String content,
+			@TempDir final Path directory) throws Exception {
+		final Path input = Files.writeString(directory.resolve(fileName), content);
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.JSON);
+
+		command.run();
+
+		final String output = Files.readString(directory.resolve("items.json"));
+		assertTrue(output.contains("\"ID\""));
+		assertTrue(output.contains("1"));
+		assertTrue(output.contains("2"));
+	}
+
+	private static Stream<Arguments> additionalInputFormats() {
+		return Stream.of(
+				Arguments.of("items.jsonl", "{\"ID\":1}\n{\"ID\":2}"),
+				Arguments.of("items.yaml", "---\n- ID: 1\n- ID: 2\n"));
 	}
 
 }

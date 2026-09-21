@@ -35,7 +35,7 @@ final class FileRowIteratorFactory {
 		return handlers.size() == 1 ? handlers.get(0) : new CombinedRowIteratorHandler(handlers);
 	}
 
-	private static RowIteratorHandler create(final File file, final String csvEncoding,
+	static RowIteratorHandler create(final File file, final String csvEncoding,
 			final int csvSkipHeaderRowsSize, final int excelSkipHeaderRowsSize,
 			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
 			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
