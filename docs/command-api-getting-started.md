@@ -227,6 +227,12 @@ failure is retained; exceptions thrown by cleanup are attached as suppressed
 exceptions. Once closed, the iterator does not reopen the input on another
 `hasNext()` call.
 
+Combined inputs use the same lifecycle across file boundaries. The current
+iterator is probed once, exhausted inputs are closed before advancing, and a
+read failure closes every remaining iterator. Cleanup failures are retained as
+suppressed exceptions, and `next()` after exhaustion throws
+`NoSuchElementException` as required by the Iterator contract.
+
 When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
 parameterized row batches. Full batches and the final partial batch use the
 same execution path. The configured final commit callback also runs when the

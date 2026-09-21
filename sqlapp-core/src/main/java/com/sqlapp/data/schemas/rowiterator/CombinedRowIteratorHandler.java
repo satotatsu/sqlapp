@@ -20,7 +20,10 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import java.util.Iterator;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.sqlapp.data.schemas.Row;
@@ -57,39 +60,48 @@ public class CombinedRowIteratorHandler implements RowIteratorHandler {
 
 	public static class CombinedRowIterator implements Iterator<Row>, AutoCloseable {
 
-		private List<Iterator<Row>> rowListIterators;
-		int handlerIndex = 0;
+		private final List<Iterator<Row>> rowListIterators;
+		private int handlerIndex = 0;
+		private Iterator<Row> current;
+		private boolean closed;
+		private final Set<Iterator<Row>> closedIterators = java.util.Collections
+				.newSetFromMap(new IdentityHashMap<>());
 
 		protected CombinedRowIterator(RowCollection c, List<Iterator<Row>> rowListIterators) {
 			this.rowListIterators = rowListIterators;
 		}
 
 		protected Iterator<Row> getRowListIterator() {
-			if (handlerIndex >= rowListIterators.size()) {
+			if (closed) {
 				return null;
 			}
-			Iterator<Row> itr = rowListIterators.get(handlerIndex);
+			if (current != null) {
+				return current;
+			}
 			try {
-				if (!itr.hasNext()) {
-					closeSilent(itr);
+				while (handlerIndex < rowListIterators.size()) {
+					final Iterator<Row> iterator = rowListIterators.get(handlerIndex);
+					if (iterator.hasNext()) {
+						return iterator;
+					}
+					closeOne(iterator);
 					handlerIndex++;
-					return getRowListIterator();
 				}
-			} catch (Exception e) {
+				closed = true;
+				return null;
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
+			} catch (final Exception e) {
+				closeOnFailure(e);
 				throw new RuntimeException(e);
 			}
-			return itr;
 		}
 
 		@Override
 		public boolean hasNext() {
-			Iterator<Row> itr = getRowListIterator();
-			if (itr != null) {
-				if (itr.hasNext()) {
-					return true;
-				}
-			}
-			return false;
+			current = getRowListIterator();
+			return current != null;
 		}
 
 		@Override
@@ -99,30 +111,56 @@ public class CombinedRowIteratorHandler implements RowIteratorHandler {
 		}
 
 		protected Row nextInternal() {
-			Iterator<Row> itr = getRowListIterator();
-			if (itr != null) {
-				if (itr.hasNext()) {
-					return itr.next();
-				}
+			final Iterator<Row> iterator = current != null ? current : getRowListIterator();
+			current = null;
+			if (iterator == null) {
+				throw new NoSuchElementException();
 			}
-			return null;
+			try {
+				return iterator.next();
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
+			}
 		}
 
 		@Override
 		public void close() throws Exception {
-			for (Iterator<Row> itr : rowListIterators) {
-				if (itr instanceof AutoCloseable) {
-					((AutoCloseable) itr).close();
+			if (closed) {
+				return;
+			}
+			closed = true;
+			current = null;
+			Exception failure = null;
+			for (final Iterator<Row> iterator : rowListIterators) {
+				try {
+					closeOne(iterator);
+				} catch (final Exception e) {
+					if (failure == null) {
+						failure = e;
+					} else if (failure != e) {
+						failure.addSuppressed(e);
+					}
+				}
+			}
+			if (failure != null) {
+				throw failure;
+			}
+		}
+
+		private void closeOnFailure(final Throwable failure) {
+			try {
+				close();
+			} catch (final Exception closeFailure) {
+				if (failure != closeFailure) {
+					failure.addSuppressed(closeFailure);
 				}
 			}
 		}
 
-		private void closeSilent(Object obj) {
-			if (obj instanceof AutoCloseable) {
-				try {
-					((AutoCloseable) obj).close();
-				} catch (Exception e) {
-				}
+		private void closeOne(final Iterator<Row> iterator) throws Exception {
+			if (closedIterators.add(iterator) && iterator instanceof AutoCloseable closeable) {
+				closeable.close();
 			}
 		}
 	}
