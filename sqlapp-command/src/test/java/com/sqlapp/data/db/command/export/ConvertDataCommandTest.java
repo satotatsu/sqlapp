@@ -98,6 +98,28 @@ public class ConvertDataCommandTest extends AbstractTest {
 		assertTrue(Files.readString(directory.resolve("a.json")).contains("\"ID\""));
 	}
 
+	@Test
+	void rejectsMissingExplicitInput(@TempDir final Path directory) {
+		final Path input = directory.resolve("missing.json");
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.CSV);
+
+		final IllegalArgumentException error = assertThrows(IllegalArgumentException.class, command::run);
+		assertTrue(error.getMessage().contains("missing.json"));
+	}
+
+	@Test
+	void rejectsUnsupportedExplicitInput(@TempDir final Path directory) throws Exception {
+		final Path input = Files.writeString(directory.resolve("items.txt"), "data");
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.CSV);
+
+		final IllegalArgumentException error = assertThrows(IllegalArgumentException.class, command::run);
+		assertTrue(error.getMessage().contains("items.txt"));
+	}
+
 	private static Stream<Arguments> additionalInputFormats() {
 		return Stream.of(
 				Arguments.of("items.jsonl", "{\"ID\":1}\n{\"ID\":2}"),

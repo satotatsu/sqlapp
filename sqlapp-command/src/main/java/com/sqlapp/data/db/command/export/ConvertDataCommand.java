@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -379,44 +380,54 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 		if (this.files != null) {
 			// files優先
 			for (File file : files) {
-				findFiles(file, list);
+				findFiles(file, list, true);
 			}
 			return list;
 		}
-		findFiles(this.getDirectory(), list);
+		findFiles(this.getDirectory(), list, this.getDirectory() != null);
 		return list;
 	}
 
-	private void findFiles(File file, List<File> list) {
+	private void findFiles(final File file, final List<File> list, final boolean required) {
 		if (file == null) {
 			return;
 		}
 		if (!file.exists()) {
+			if (required) {
+				throw new IllegalArgumentException("Input file or directory does not exist: " + file);
+			}
 			return;
 		}
 		if (file.isDirectory()) {
 			File[] children = file.listFiles(f -> true);
-			if (children != null) {
-				for (File child : children) {
-					if (child.isFile()) {
-						addFile(child, list);
-					} else {
-						if (isRecursive()) {
-							findFiles(child, list);
-						}
+			if (children == null) {
+				throw new UncheckedIOException(new IOException("Cannot list input directory: " + file));
+			}
+			for (File child : children) {
+				if (child.isFile()) {
+					addFile(child, list, false);
+				} else {
+					if (isRecursive()) {
+						findFiles(child, list, false);
 					}
 				}
 			}
 		} else {
-			addFile(file, list);
+			addFile(file, list, required);
 		}
 	}
 
-	private void addFile(File file, List<File> list) {
+	private void addFile(final File file, final List<File> list, final boolean required) {
 		if (!file.exists()) {
+			if (required) {
+				throw new IllegalArgumentException("Input file does not exist: " + file);
+			}
 			return;
 		}
 		DataFormat workbookFileType = DataFormat.parse(file);
+		if (workbookFileType == null && required) {
+			throw new IllegalArgumentException("Unsupported data file format: " + file);
+		}
 		if (workbookFileType != null && workbookFileType != this.getOutputFileType()) {
 			if (getFileFilter().test(file)) {
 				list.add(file);
