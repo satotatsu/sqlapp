@@ -68,6 +68,16 @@ class FileIterablesTest {
 	}
 
 	@Test
+	void appliesFilePredicateToEachFileInDirectory() {
+		final File directory = new File(path);
+
+		assertEquals(1, FileIterables.readAllAsMap(directory,
+				file -> file.getName().endsWith(".xml")).size());
+		assertEquals(1, FileIterables.readAllRecursiveAsMap(directory,
+				file -> file.getName().endsWith(".xlsx")).size());
+	}
+
+	@Test
 	void readAllRecursiveAsMap() {
 		List<Iterable<Map<String, Object>>> list = FileIterables.readAllRecursiveAsMap(new File(path), f -> true);
 		int i = 0;

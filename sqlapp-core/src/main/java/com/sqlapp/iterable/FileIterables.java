@@ -134,7 +134,7 @@ public class FileIterables {
 		try {
 			final List<T> pathList = walkFunction.apply(pathObj);
 			for (T p : pathList) {
-				if (!fileFilter.test(pathObj)) {
+				if (!fileFilter.test(p)) {
 					continue;
 				}
 				Iterable<Map<String, Object>> itr = readerConverter.apply(p);
