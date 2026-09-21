@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.export;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -81,6 +82,20 @@ public class ConvertDataCommandTest extends AbstractTest {
 
 		final IllegalArgumentException error = assertThrows(IllegalArgumentException.class, command::run);
 		assertEquals("TOML output is not supported because TOML has no root array.", error.getMessage());
+	}
+
+	@Test
+	void removesShortNamedInputAfterSuccessfulConversion(@TempDir final Path directory) throws Exception {
+		final Path input = Files.writeString(directory.resolve("a.jsonl"), "{\"ID\":1}");
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.JSON);
+		command.setRemoveOriginalFile(true);
+
+		command.run();
+
+		assertFalse(Files.exists(input));
+		assertTrue(Files.readString(directory.resolve("a.json")).contains("\"ID\""));
 	}
 
 	private static Stream<Arguments> additionalInputFormats() {

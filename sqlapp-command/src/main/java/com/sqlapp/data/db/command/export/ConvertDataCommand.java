@@ -148,27 +148,9 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 			execute(() -> {
 				File tempFile = null;
 				try {
-					File outputFile;
-					if (this.getOutputDirectory() != null
-							&& !CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())
-							&& !CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())) {
-						String path = file.getParentFile().getName();
-						path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(), path);
-						File parent = new File(path);
-						if (!parent.exists()) {
-							parent.mkdirs();
-						}
-						tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-								"." + this.getOutputFileType().getFileExtension(), parent);
-						outputFile = new File(parent, FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())
-								+ "." + this.getOutputFileType().getFileExtension());
-					} else {
-						tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-								"." + this.getOutputFileType().getFileExtension(), file.getParentFile());
-						outputFile = new File(file.getParentFile(),
-								FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
-										+ this.getOutputFileType().getFileExtension());
-					}
+					final OutputFiles outputFiles = createOutputFiles(file);
+					tempFile = outputFiles.temporary();
+					final File outputFile = outputFiles.output();
 					if (this.getOutputFileType().isWorkbook()) {
 						readAll(table[0]);
 						writeTableAsExcel(tempFile, table[0], this.getOutputFileType());
@@ -186,16 +168,42 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					}
 					moveOutput(tempFile, outputFile);
 					if (this.isRemoveOriginalFile()) {
-						file.delete();
+						Files.delete(file.toPath());
 					}
 				} catch (Exception e) {
-					if (tempFile != null && tempFile.exists()) {
-						tempFile.delete();
+					if (tempFile != null) {
+						try {
+							Files.deleteIfExists(tempFile.toPath());
+						} catch (final IOException cleanupFailure) {
+							e.addSuppressed(cleanupFailure);
+						}
 					}
 					throw e;
 				}
 			});
 		}
+	}
+
+	private OutputFiles createOutputFiles(final File input) throws IOException {
+		final File inputParent = input.getAbsoluteFile().getParentFile();
+		final File outputParent;
+		if (getOutputDirectory() != null
+				&& !CommonUtils.eq(getOutputDirectory(), getDirectory())
+				&& !CommonUtils.eq(getOutputDirectory(), input.getParentFile())) {
+			outputParent = new File(getOutputDirectory(), inputParent.getName());
+		} else {
+			outputParent = inputParent;
+		}
+		Files.createDirectories(outputParent.toPath());
+		final String baseName = FileUtils.getFileNameWithoutExtension(input.getName());
+		final String temporaryPrefix = baseName.length() >= 3 ? baseName : (baseName + "___").substring(0, 3);
+		final String extension = "." + getOutputFileType().getFileExtension();
+		final File temporary = Files.createTempFile(outputParent.toPath(), temporaryPrefix, extension).toFile();
+		final File output = new File(outputParent, baseName + extension);
+		return new OutputFiles(temporary, output);
+	}
+
+	private record OutputFiles(File temporary, File output) {
 	}
 
 	private void validateOutputFileType() {
