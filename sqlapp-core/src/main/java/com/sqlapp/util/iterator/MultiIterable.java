@@ -21,22 +21,29 @@ package com.sqlapp.util.iterator;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class MultiIterable<S, T> implements Iterable<T> {
 
-	private MultiIterator<S, T> iterator;
+	private final List<S> iterable;
+	private final MultiIterator<S, T> iterator;
+	private final Function<S, Iterator<T>> converter;
 
 	public MultiIterable(List<S> iterable, Function<S, Iterator<T>> converter) {
-		this.iterator = new MultiIterator<S, T>(iterable, converter);
+		this.iterable = Objects.requireNonNull(iterable, "iterable");
+		this.iterator = null;
+		this.converter = Objects.requireNonNull(converter, "converter");
 	}
 
-	public MultiIterable(Iterator<S> itarator, Function<S, Iterator<T>> converter) {
-		this.iterator = new MultiIterator<S, T>(itarator, converter);
+	public MultiIterable(Iterator<S> iterator, Function<S, Iterator<T>> converter) {
+		this.iterable = null;
+		this.converter = Objects.requireNonNull(converter, "converter");
+		this.iterator = new MultiIterator<S, T>(Objects.requireNonNull(iterator, "iterator"), this.converter);
 	}
 
 	@Override
 	public Iterator<T> iterator() {
-		return iterator;
+		return iterable == null ? iterator : new MultiIterator<>(iterable, converter);
 	}
 }
