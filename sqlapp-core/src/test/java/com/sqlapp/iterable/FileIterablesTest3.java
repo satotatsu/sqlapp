@@ -87,6 +87,20 @@ class FileIterablesTest3 {
 	}
 
 	@Test
+	void recursivePathExpressionIncludesNestedFiles() {
+		final CachedMvelEvaluator evaluator = CachedMvelEvaluator.getInstance();
+		final Iterable<Map<String, Object>> iterable = new CombinedFileIterable<>(
+				FileIterables.readAllRecursiveAsMap(new File(path).toPath(),
+						"file.fileName.toString().endsWith('.xlsx') || file.fileName.toString().endsWith('.tsv')",
+						evaluator));
+		int count = 0;
+		for (@SuppressWarnings("unused") final Map<String, Object> row : iterable) {
+			count++;
+		}
+		assertEquals(46, count);
+	}
+
+	@Test
 	void readAllRecursiveAsMapYAML_EXCEL() {
 		CachedMvelEvaluator evaluator = CachedMvelEvaluator.getInstance();
 		Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
