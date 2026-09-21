@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.db.command.export;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -57,6 +59,7 @@ public class ConvertDataCommandTest extends AbstractTest {
 	void convertsFormatsSupportedByImport(final String fileName, final String content,
 			@TempDir final Path directory) throws Exception {
 		final Path input = Files.writeString(directory.resolve(fileName), content);
+		Files.writeString(directory.resolve("items.json"), "stale");
 		final ConvertDataCommand command = new ConvertDataCommand();
 		command.setFiles(List.of(input.toFile()));
 		command.setOutputFileType(DataFormat.JSON);
@@ -67,6 +70,17 @@ public class ConvertDataCommandTest extends AbstractTest {
 		assertTrue(output.contains("\"ID\""));
 		assertTrue(output.contains("1"));
 		assertTrue(output.contains("2"));
+	}
+
+	@Test
+	void rejectsTomlOutput(@TempDir final Path directory) throws Exception {
+		final Path input = Files.writeString(directory.resolve("items.json"), "[{\"ID\":1}]");
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.TOML);
+
+		final IllegalArgumentException error = assertThrows(IllegalArgumentException.class, command::run);
+		assertEquals("TOML output is not supported because TOML has no root array.", error.getMessage());
 	}
 
 	private static Stream<Arguments> additionalInputFormats() {

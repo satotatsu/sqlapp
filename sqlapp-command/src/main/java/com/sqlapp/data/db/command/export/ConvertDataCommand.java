@@ -26,6 +26,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -117,6 +120,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 
 	@Override
 	protected void doRun() {
+		validateOutputFileType();
 		List<File> list = getTargetFiles();
 		for (File file : list) {
 			if (!this.getFileFilter().test(file)) {
@@ -180,7 +184,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					} else {
 						table[0].writeXml(tempFile);
 					}
-					tempFile.renameTo(outputFile);
+					moveOutput(tempFile, outputFile);
 					if (this.isRemoveOriginalFile()) {
 						file.delete();
 					}
@@ -191,6 +195,25 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					throw e;
 				}
 			});
+		}
+	}
+
+	private void validateOutputFileType() {
+		if (getOutputFileType() == null) {
+			throw new IllegalArgumentException("Output data format is required.");
+		}
+		if (getOutputFileType().isToml()) {
+			throw new IllegalArgumentException(
+					"TOML output is not supported because TOML has no root array.");
+		}
+	}
+
+	private static void moveOutput(final File temporary, final File output) throws IOException {
+		try {
+			Files.move(temporary.toPath(), output.toPath(), StandardCopyOption.ATOMIC_MOVE,
+					StandardCopyOption.REPLACE_EXISTING);
+		} catch (final AtomicMoveNotSupportedException e) {
+			Files.move(temporary.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
 		}
 	}
 
