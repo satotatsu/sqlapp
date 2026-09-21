@@ -14,6 +14,31 @@ import com.sqlapp.data.schemas.Table;
 
 class CombinedRowIteratorFailureTest {
 	@Test
+	void closesCreatedIteratorsWhenLaterHandlerCreationFails() {
+		final var failure = new IllegalArgumentException("cannot create third iterator");
+		final ProbeIterator first = new ProbeIterator(null, null, true);
+		final ProbeIterator second = new ProbeIterator(null, null, true);
+		final var handler = new CombinedRowIteratorHandler(collection -> first, collection -> second,
+				collection -> { throw failure; });
+		final var thrown = assertThrows(IllegalArgumentException.class,
+				() -> handler.iterator(new Table().getRows()));
+		assertSame(failure, thrown);
+		assertArrayEquals(new Throwable[] { first.closeFailure, second.closeFailure }, thrown.getSuppressed());
+		assertEquals(1, first.closes);
+		assertEquals(1, second.closes);
+	}
+
+	@Test
+	void rejectsANullIteratorAfterClosingEarlierOnes() {
+		final ProbeIterator first = new ProbeIterator(null, null, false);
+		final var handler = new CombinedRowIteratorHandler(collection -> first, collection -> null);
+		final var thrown = assertThrows(NullPointerException.class,
+				() -> handler.iterator(new Table().getRows()));
+		assertTrue(thrown.getMessage().contains("returned null"));
+		assertEquals(1, first.closes);
+	}
+
+	@Test
 	void doesNotProbeTheCurrentIteratorTwice() {
 		final ProbeIterator first = new ProbeIterator(new Table().newRow(), null, false);
 		final ProbeIterator second = new ProbeIterator(new Table().newRow(), null, false);

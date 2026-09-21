@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
@@ -49,8 +49,35 @@ public class CombinedRowIteratorHandler implements RowIteratorHandler {
 		this.rowIteratorHandlers = CommonUtils.list(rowIteratorHandlers);
 	}
 
-	private List<Iterator<Row>> getAbstractRowIterator(RowCollection c) {
-		return rowIteratorHandlers.stream().map(a -> a.iterator(c)).collect(Collectors.toList());
+	private List<Iterator<Row>> getAbstractRowIterator(final RowCollection collection) {
+		final List<Iterator<Row>> iterators = CommonUtils.list(rowIteratorHandlers.size());
+		try {
+			for (int i = 0; i < rowIteratorHandlers.size(); i++) {
+				final RowIteratorHandler handler = Objects.requireNonNull(rowIteratorHandlers.get(i),
+						"rowIteratorHandlers[" + i + "]");
+				iterators.add(Objects.requireNonNull(handler.iterator(collection),
+						"rowIteratorHandlers[" + i + "] returned null"));
+			}
+			return iterators;
+		} catch (final RuntimeException | Error e) {
+			closeCreatedIterators(iterators, e);
+			throw e;
+		}
+	}
+
+	private void closeCreatedIterators(final List<Iterator<Row>> iterators, final Throwable failure) {
+		final Set<Iterator<Row>> closed = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+		for (final Iterator<Row> iterator : iterators) {
+			if (closed.add(iterator) && iterator instanceof AutoCloseable closeable) {
+				try {
+					closeable.close();
+				} catch (final Exception closeFailure) {
+					if (failure != closeFailure) {
+						failure.addSuppressed(closeFailure);
+					}
+				}
+			}
+		}
 	}
 
 	@Override

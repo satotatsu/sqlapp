@@ -232,6 +232,8 @@ iterator is probed once, exhausted inputs are closed before advancing, and a
 read failure closes every remaining iterator. Cleanup failures are retained as
 suppressed exceptions, and `next()` after exhaustion throws
 `NoSuchElementException` as required by the Iterator contract.
+If creating a later file iterator fails, iterators already created for earlier
+files are also closed before the creation failure is returned.
 
 When supported by the dialect, `INSERT_ROWS` and `MERGE_ROWS` apply the same conversion before generating
 parameterized row batches. Full batches and the final partial batch use the
