@@ -20,8 +20,12 @@
 package com.sqlapp.iterable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -45,6 +49,72 @@ class CombinedIterableTest {
 			j++;
 		}
 		assertEquals(5, j);
+	}
+
+	@Test
+	void closesCurrentIteratorWhenIterationFails() {
+		final RuntimeException readFailure = new RuntimeException("read");
+		final Exception closeFailure = new Exception("close");
+		final AtomicInteger closes = new AtomicInteger();
+		final Iterable<Integer> source = () -> new TrackingIterator(List.of(), closes, readFailure, closeFailure);
+		final Iterator<Integer> iterator = new CombinedIterable<>(List.of(source)).iterator();
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class, iterator::hasNext);
+
+		assertSame(readFailure, thrown);
+		assertEquals(1, closes.get());
+		assertEquals(1, thrown.getSuppressed().length);
+		assertSame(closeFailure, thrown.getSuppressed()[0]);
+	}
+
+	@Test
+	void closesEachIteratorOnceWhileSwitchingAndAtCompletion() throws Exception {
+		final AtomicInteger closes = new AtomicInteger();
+		final Iterable<Integer> first = () -> new TrackingIterator(List.of(1), closes, null, null);
+		final Iterable<Integer> second = () -> new TrackingIterator(List.of(2), closes, null, null);
+		final Iterator<Integer> iterator = new CombinedIterable<>(List.of(first, second)).iterator();
+
+		assertEquals(1, iterator.next());
+		assertEquals(2, iterator.next());
+		assertEquals(false, iterator.hasNext());
+		((AutoCloseable) iterator).close();
+		assertEquals(2, closes.get());
+	}
+
+	private static final class TrackingIterator implements Iterator<Integer>, AutoCloseable {
+		private final Iterator<Integer> delegate;
+		private final AtomicInteger closes;
+		private final RuntimeException readFailure;
+		private final Exception closeFailure;
+
+		private TrackingIterator(final List<Integer> values, final AtomicInteger closes,
+				final RuntimeException readFailure, final Exception closeFailure) {
+			this.delegate = values.iterator();
+			this.closes = closes;
+			this.readFailure = readFailure;
+			this.closeFailure = closeFailure;
+		}
+
+		@Override
+		public boolean hasNext() {
+			if (readFailure != null) {
+				throw readFailure;
+			}
+			return delegate.hasNext();
+		}
+
+		@Override
+		public Integer next() {
+			return delegate.next();
+		}
+
+		@Override
+		public void close() throws Exception {
+			closes.incrementAndGet();
+			if (closeFailure != null) {
+				throw closeFailure;
+			}
+		}
 	}
 
 }

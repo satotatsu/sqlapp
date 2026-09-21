@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /**
  * 指定した回数だけ値を返すIterable
@@ -78,23 +78,43 @@ public class IndexedConvertIterable<E, F> implements Iterable<F> {
 
 		@Override
 		public boolean hasNext() {
-			final boolean hasNext = iterator.hasNext();
-			if (!hasNext) {
-				close();
+			if (closed) {
+				return false;
 			}
-			return hasNext;
+			try {
+				final boolean hasNext = iterator.hasNext();
+				if (!hasNext) {
+					close();
+				}
+				return hasNext;
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
+			}
 		}
 
 		@Override
 		public F next() {
-			return valueConverter.apply(count++, iterator.next());
+			try {
+				return valueConverter.apply(count++, iterator.next());
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
+			}
 		}
 
 		@Override
 		public void close() {
 			if (!closed) {
 				closed = true;
-				FileUtils.close(iterator);
+				IteratorCloseUtils.close(null, iterator);
+			}
+		}
+
+		private void closeOnFailure(final Throwable failure) {
+			if (!closed) {
+				closed = true;
+				IteratorCloseUtils.close(failure, iterator);
 			}
 		}
 	}

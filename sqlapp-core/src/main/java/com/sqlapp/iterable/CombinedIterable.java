@@ -20,10 +20,14 @@
 package com.sqlapp.iterable;
 
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.function.Consumer;
+
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /**
  * Combined Iterable
@@ -53,11 +57,13 @@ public class CombinedIterable<E> implements Iterable<E> {
 		return new CombinedIterator<>(iterableList, switchConsumer);
 	}
 
-	static class CombinedIterator<E> implements Iterator<E> {
+	static class CombinedIterator<E> implements Iterator<E>, AutoCloseable {
 
 		private final Iterator<? extends Iterable<? extends E>> iterableIterator;
 		private Iterator<? extends E> currentIterator = Collections.emptyIterator();
 		private final Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer;
+		private final Set<Iterator<?>> closedIterators = Collections.newSetFromMap(new IdentityHashMap<>());
+		private boolean closed;
 
 		CombinedIterator(final List<? extends Iterable<? extends E>> iterableList,
 				Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer) {
@@ -67,14 +73,27 @@ public class CombinedIterable<E> implements Iterable<E> {
 
 		@Override
 		public boolean hasNext() {
-			while (!currentIterator.hasNext()) {
-				if (!iterableIterator.hasNext()) {
-					return false;
-				}
-				currentIterator = iterableIterator.next().iterator();
-				switchConsumer.accept(iterableIterator);
+			if (closed) {
+				return false;
 			}
-			return true;
+			try {
+				while (!currentIterator.hasNext()) {
+					closeOne(null, currentIterator);
+					if (!iterableIterator.hasNext()) {
+						close();
+						return false;
+					}
+					currentIterator = java.util.Objects.requireNonNull(iterableIterator.next(),
+							"combined iterable").iterator();
+					currentIterator = java.util.Objects.requireNonNull(currentIterator,
+							"combined iterable returned a null iterator");
+					switchConsumer.accept(iterableIterator);
+				}
+				return true;
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
+			}
 		}
 
 		@Override
@@ -82,12 +101,44 @@ public class CombinedIterable<E> implements Iterable<E> {
 			if (!hasNext()) {
 				throw new NoSuchElementException();
 			}
-			return currentIterator.next();
+			try {
+				return currentIterator.next();
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
+			}
 		}
 
 		@Override
 		public void remove() {
 			currentIterator.remove();
+		}
+
+		@Override
+		public void close() {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			closeOne(null, currentIterator, iterableIterator);
+		}
+
+		private void closeOnFailure(final Throwable failure) {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			closeOne(failure, currentIterator, iterableIterator);
+		}
+
+		private void closeOne(final Throwable failure, final Iterator<?>... iterators) {
+			final List<Iterator<?>> open = new java.util.ArrayList<>(iterators.length);
+			for (final Iterator<?> iterator : iterators) {
+				if (closedIterators.add(iterator)) {
+					open.add(iterator);
+				}
+			}
+			IteratorCloseUtils.close(failure, open.toArray(Iterator<?>[]::new));
 		}
 	}
 }
