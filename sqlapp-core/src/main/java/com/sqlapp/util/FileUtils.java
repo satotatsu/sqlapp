@@ -859,7 +859,6 @@ public final class FileUtils {
 			throw new RuntimeException(e);
 		} finally {
 			close(br);
-			close(reader);
 		}
 		return builder.toString();
 	}

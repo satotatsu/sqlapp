@@ -698,7 +698,7 @@ public enum DataFormat {
 		}
 		for (final DataFormat val : values()) {
 			for (String ext : val.getFileExtensions()) {
-				if (ext.equals(text)) {
+				if (ext.equals(lowername)) {
 					return val;
 				}
 			}

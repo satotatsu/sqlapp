@@ -33,6 +33,9 @@ class DataFormatTest {
 		parseFileTest("aaaa.jsonl", DataFormat.JSONL);
 		parseFileTest("aaaa.yaml", DataFormat.YAML);
 		parseFileTest("aaaa.yml", DataFormat.YAML);
+		parseFileTest("YML", DataFormat.YAML);
+		parseFileTest("NDJSON", DataFormat.JSONL);
+		parseFileTest("TML", DataFormat.TOML);
 		parseFileTest("aaaa.csv", DataFormat.CSV);
 		parseFileTest("aaaa.tsv", DataFormat.TSV);
 		parseFileTest("xls", DataFormat.EXCEL2003);
