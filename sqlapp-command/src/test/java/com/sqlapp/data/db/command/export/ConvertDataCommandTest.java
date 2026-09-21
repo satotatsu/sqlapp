@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -118,6 +119,39 @@ public class ConvertDataCommandTest extends AbstractTest {
 
 		final IllegalArgumentException error = assertThrows(IllegalArgumentException.class, command::run);
 		assertTrue(error.getMessage().contains("items.txt"));
+	}
+
+	@Test
+	void evaluatesFileFilterOncePerCandidate(@TempDir final Path directory) throws Exception {
+		final Path input = Files.writeString(directory.resolve("items.jsonl"), "{\"ID\":1}");
+		final AtomicInteger evaluations = new AtomicInteger();
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.JSON);
+		command.setFileFilter(file -> {
+			evaluations.incrementAndGet();
+			return true;
+		});
+
+		command.run();
+
+		assertEquals(1, evaluations.get());
+	}
+
+	@Test
+	void preservesCsvColumnPositionsWhenAValueIsMissing(@TempDir final Path directory) throws Exception {
+		final Path input = Files.writeString(directory.resolve("items.json"),
+				"[{\"A\":\"a1\",\"B\":\"b1\"},{\"B\":\"b2\"}]");
+		final ConvertDataCommand command = new ConvertDataCommand();
+		command.setFiles(List.of(input.toFile()));
+		command.setOutputFileType(DataFormat.CSV);
+
+		command.run();
+
+		final String output = Files.readString(directory.resolve("items.csv")).replace("\r\n", "\n");
+		assertTrue(output.contains("A,B\n"));
+		assertTrue(output.contains("a1,b1\n"));
+		assertTrue(output.contains("\n,b2"));
 	}
 
 	private static Stream<Arguments> additionalInputFormats() {

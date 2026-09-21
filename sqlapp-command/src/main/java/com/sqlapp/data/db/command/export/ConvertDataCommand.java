@@ -124,9 +124,6 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 		validateOutputFileType();
 		List<File> list = getTargetFiles();
 		for (File file : list) {
-			if (!this.getFileFilter().test(file)) {
-				continue;
-			}
 			DataFormat workbookFileType = DataFormat.parse(file);
 			if (workbookFileType == null) {
 				throw new IllegalArgumentException("Unsupported data file format: " + file);
@@ -241,15 +238,15 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
 			List<String> headers = table.getColumns().stream().map(c -> c.getName()).collect(Collectors.toList());
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			String[] values = new String[table.getColumns().size()];
 			for (Row row : table.getRows()) {
+				String[] values = new String[table.getColumns().size()];
 				int i = 0;
 				boolean set = false;
 				for (Column column : table.getColumns()) {
 					Object value = row.get(column);
 					String text = column.getFormatter().format(value);
+					values[i++] = text;
 					if (!CommonUtils.isEmpty(text)) {
-						values[i++] = text;
 						set = true;
 					}
 				}
