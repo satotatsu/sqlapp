@@ -40,7 +40,6 @@ import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 
 /**
  * ExcelIterable
@@ -128,6 +127,7 @@ public class ExcelIterable extends AbstractMapIterable {
 		private final InputStream inputStream;
 		private Workbook workbook;
 		private boolean initialized = false;
+		private boolean closed;
 
 		private final Map<Number, Column> columnIndexColumnMap = CommonUtils.map();
 
@@ -200,14 +200,31 @@ public class ExcelIterable extends AbstractMapIterable {
 
 		@Override
 		public void close() throws Exception {
-			try {
-				if (workbook != null) {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			Exception failure = null;
+			if (workbook != null) {
+				try {
 					workbook.close();
+				} catch (final Exception e) {
+					failure = e;
 				}
-				if (inputStream != null) {
-					FileUtils.close(inputStream);
+			}
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				} catch (final Exception e) {
+					if (failure == null) {
+						failure = e;
+					} else if (failure != e) {
+						failure.addSuppressed(e);
+					}
 				}
-			} catch (final IOException e) {
+			}
+			if (failure != null) {
+				throw failure;
 			}
 		}
 
