@@ -2,14 +2,18 @@
 package com.sqlapp.jdbc.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
 class BulkUpsertPlanTest {
@@ -82,6 +86,46 @@ class BulkUpsertPlanTest {
 						.duplicateRowSelector((retained, candidate) -> new com.sqlapp.data.schemas.Row()).build())
 				.createStagingTable("stage").getRows().iterator();
 		assertThrows(IllegalArgumentException.class, rows::hasNext);
+	}
+
+	@Test
+	void closesSourceAndPreservesFailureWhenDuplicateSelectionFails() throws Exception {
+		final Table table = tableWithDuplicateKeys();
+		final List<Row> sourceRows = List.copyOf(table.getRows());
+		final AtomicInteger closes = new AtomicInteger();
+		final Exception closeFailure = new Exception("close");
+		final class ClosingIterator implements Iterator<Row>, AutoCloseable {
+			private final Iterator<Row> delegate = sourceRows.iterator();
+
+			@Override
+			public boolean hasNext() {
+				return delegate.hasNext();
+			}
+
+			@Override
+			public Row next() {
+				return delegate.next();
+			}
+
+			@Override
+			public void close() throws Exception {
+				closes.incrementAndGet();
+				throw closeFailure;
+			}
+		}
+		table.setRowIteratorHandler(rows -> new ClosingIterator());
+		final Iterator<Row> rows = BulkUpsertPlan.resolve(table,
+				BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelectorFingerprint("invalid-selector-v1")
+						.duplicateRowSelector((retained, candidate) -> new Row()).build())
+				.createStagingTable("stage").getRows().iterator();
+
+		final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, rows::hasNext);
+		assertEquals(1, closes.get());
+		assertEquals(1, failure.getSuppressed().length);
+		assertSame(closeFailure, failure.getSuppressed()[0]);
+		((AutoCloseable) rows).close();
+		assertEquals(1, closes.get());
 	}
 
 	@Test

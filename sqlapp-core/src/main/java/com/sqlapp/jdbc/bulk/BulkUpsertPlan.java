@@ -16,6 +16,7 @@ import java.util.Set;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 import com.sqlapp.util.CommonUtils;
 
 /** Resolved columns and streaming input validation shared by bulk upserts. */
@@ -132,6 +133,7 @@ public final class BulkUpsertPlan {
 		private long rowNumber;
 		private Row next;
 		private boolean prepared;
+		private boolean closed;
 
 		private UniqueKeyIterator(final Iterator<Row> source, final List<Column> keys,
 				final BulkUpsertDuplicateKeyStrategy strategy,
@@ -159,34 +161,39 @@ public final class BulkUpsertPlan {
 		}
 
 		private void prepare() {
-			if (prepared) return;
+			if (prepared || closed) return;
 			prepared = true;
-			if (strategy == BulkUpsertDuplicateKeyStrategy.KEEP_LAST
-					|| strategy == BulkUpsertDuplicateKeyStrategy.CUSTOM) {
-				prepareBuffered();
-				if (buffered.hasNext()) next = buffered.next();
-				return;
-			}
-			while (source.hasNext()) {
-				final Row row = source.next();
-				rowNumber++;
-				final Object[] values = new Object[keys.size()];
-				boolean hasNull = false;
-				for (int i = 0; i < keys.size(); i++) {
-					values[i] = row.get(keys.get(i));
-					hasNull |= values[i] == null;
+			try {
+				if (strategy == BulkUpsertDuplicateKeyStrategy.KEEP_LAST
+						|| strategy == BulkUpsertDuplicateKeyStrategy.CUSTOM) {
+					prepareBuffered();
+					if (buffered.hasNext()) next = buffered.next();
+					return;
 				}
-				if (!hasNull) {
-					final Long first = firstRows.putIfAbsent(new Key(values), rowNumber);
-					if (first != null) {
-						if (strategy == BulkUpsertDuplicateKeyStrategy.ERROR)
-							throw new IllegalArgumentException("Duplicate bulk upsert key at source rows "
-									+ first + " and " + rowNumber);
-						continue;
+				while (source.hasNext()) {
+					final Row row = source.next();
+					rowNumber++;
+					final Object[] values = new Object[keys.size()];
+					boolean hasNull = false;
+					for (int i = 0; i < keys.size(); i++) {
+						values[i] = row.get(keys.get(i));
+						hasNull |= values[i] == null;
 					}
+					if (!hasNull) {
+						final Long first = firstRows.putIfAbsent(new Key(values), rowNumber);
+						if (first != null) {
+							if (strategy == BulkUpsertDuplicateKeyStrategy.ERROR)
+								throw new IllegalArgumentException("Duplicate bulk upsert key at source rows "
+										+ first + " and " + rowNumber);
+							continue;
+						}
+					}
+					next = row;
+					return;
 				}
-				next = row;
-				return;
+			} catch (final RuntimeException | Error e) {
+				closeOnFailure(e);
+				throw e;
 			}
 		}
 
@@ -219,7 +226,17 @@ public final class BulkUpsertPlan {
 		}
 
 		@Override public void close() throws Exception {
-			if (source instanceof AutoCloseable closeable) closeable.close();
+			if (closed) return;
+			closed = true;
+			next = null;
+			IteratorCloseUtils.close(null, source);
+		}
+
+		private void closeOnFailure(final Throwable failure) {
+			if (closed) return;
+			closed = true;
+			next = null;
+			IteratorCloseUtils.close(failure, source);
 		}
 	}
 
