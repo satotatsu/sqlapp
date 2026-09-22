@@ -494,10 +494,10 @@ public enum DataFormat {
 	private static final ObjectReader TSV_READER = MAP_READER.with(TSV_SCHEMA);
 	private static final ObjectReader SSV_READER = MAP_READER.with(SSV_SCHEMA);
 	private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
-	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, Object>>() {
 	});
 	private static final JsonMapper JSON_MAPPER = new JsonMapper();
-	private static final ObjectReader JSONL_READER = JSON_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	private static final ObjectReader JSONL_READER = JSON_MAPPER.readerFor(new TypeReference<Map<String, Object>>() {
 	});
 
 	public ObjectReader getObjectReader() {

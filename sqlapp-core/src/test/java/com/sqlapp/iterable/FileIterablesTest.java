@@ -20,6 +20,7 @@
 package com.sqlapp.iterable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -96,6 +97,30 @@ class FileIterablesTest {
 			count++;
 		}
 		assertEquals(2, count);
+	}
+
+	@Test
+	void preservesJsonlAndYamlScalarTypes() throws Exception {
+		final Path jsonl = temporaryDirectory.resolve("items.jsonl");
+		Files.writeString(jsonl, "{\"id\":1,\"active\":true}\n");
+		final Path yaml = temporaryDirectory.resolve("items.yaml");
+		Files.writeString(yaml, "---\n- id: 1\n  active: true\n");
+
+		for (final Path file : List.of(jsonl, yaml)) {
+			final Map<String, Object> row = FileIterables.readAsMap(file).iterator().next();
+			assertInstanceOf(Number.class, row.get("id"));
+			assertInstanceOf(Boolean.class, row.get("active"));
+		}
+	}
+
+	@Test
+	void keepsCsvValuesAsStrings() throws Exception {
+		final Path csv = temporaryDirectory.resolve("items.csv");
+		Files.writeString(csv, "id,active\n1,true\n");
+
+		final Map<String, Object> row = FileIterables.readAsMap(csv).iterator().next();
+		assertInstanceOf(String.class, row.get("id"));
+		assertInstanceOf(String.class, row.get("active"));
 	}
 
 	@Test
