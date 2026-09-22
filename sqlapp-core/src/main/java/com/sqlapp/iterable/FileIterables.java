@@ -50,13 +50,27 @@ public class FileIterables {
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
+		if (!supports(p)) {
+			throw new IllegalArgumentException("Unsupported data file format: " + p);
+		}
 		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
 				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(File p) {
+		if (!supports(p)) {
+			throw new IllegalArgumentException("Unsupported data file format: " + p);
+		}
 		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
 				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
+	}
+
+	private static Iterable<Map<String, Object>> readSupportedAsMap(Path path) {
+		return supports(path) ? readAsMap(path) : Collections.emptyList();
+	}
+
+	private static Iterable<Map<String, Object>> readSupportedAsMap(File file) {
+		return supports(file) ? readAsMap(file) : Collections.emptyList();
 	}
 
 	private static <T> Iterable<Map<String, Object>> readAsMapInternal(T p, Supplier<DataFormat> func,
@@ -83,46 +97,48 @@ public class FileIterables {
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, Predicate<Path> filter) {
-		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, Predicate<Path> filter) {
-		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, Predicate<File> filter) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, Predicate<File> filter) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
 		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filterExpression, cmvelEvaluator,
-				p -> readAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+				p -> readSupportedAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator,
+				p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
 		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filterExpression, cmvelEvaluator,
-				p -> readAsMap(p), p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
+				p -> readSupportedAsMap(p), p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator,
+				p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 

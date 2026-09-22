@@ -22,6 +22,7 @@ package com.sqlapp.iterable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -131,6 +132,15 @@ class FileIterablesTest {
 		assertFalse(FileIterables.supports(Path.of("items.toml")));
 		assertFalse(FileIterables.supports(Path.of("items.txt")));
 		assertFalse(FileIterables.supports((Path) null));
+	}
+
+	@Test
+	void rejectsUnsupportedDirectFileButSkipsItDuringDirectoryScan() throws Exception {
+		final Path toml = temporaryDirectory.resolve("items.toml");
+		Files.writeString(toml, "[[items]]\nid = 1\n");
+
+		assertThrows(IllegalArgumentException.class, () -> FileIterables.readAsMap(toml));
+		assertTrue(FileIterables.readAllAsMap(temporaryDirectory, path -> true).isEmpty());
 	}
 
 	@Test
