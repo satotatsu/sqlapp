@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,24 @@ class ExcelHeaderRowsTest {
 		final Table table = new Table("ITEMS");
 		final var handler = new ExcelRowIteratorHandler(workbook(0).toFile(), -1);
 		assertThrows(IllegalArgumentException.class, () -> handler.iterator(table.getRows()));
+	}
+
+	@Test
+	void declaredExcel2003FormatDoesNotDependOnFileExtension() throws Exception {
+		final Path file = directory.resolve("items.data");
+		try (var workbook = new HSSFWorkbook(); var output = Files.newOutputStream(file)) {
+			final var sheet = workbook.createSheet("items");
+			sheet.createRow(0).createCell(0).setCellValue("ID");
+			sheet.createRow(1).createCell(0).setCellValue(42);
+			workbook.write(output);
+		}
+		final Table table = new Table("ITEMS");
+		table.setRowIteratorHandler(DataFormat.EXCEL2003.createRowIteratorHandler(file));
+
+		final var iterator = table.getRows().iterator();
+		assertTrue(iterator.hasNext());
+		assertEquals(42, ((Number) iterator.next().get("ID")).intValue());
+		assertFalse(iterator.hasNext());
 	}
 
 	private Path workbook(final int headers) throws Exception {

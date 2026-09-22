@@ -503,7 +503,7 @@ public enum DataFormat {
 	 * Creates a row iterator handler for this format.
 	 */
 	public RowIteratorHandler createRowIteratorHandler(final File file) {
-		return createRowIteratorHandler(file, "UTF-8", 0, 0, new JsonConverter(), new YamlConverter(),
+		return createRowIteratorHandler(file, "UTF-8", 0, 1, new JsonConverter(), new YamlConverter(),
 				new TomlConverter(), (row, column, value) -> value);
 	}
 
@@ -545,7 +545,7 @@ public enum DataFormat {
 			return new JsonRowIteratorHandler(file, jsonConverter, valueConverter);
 		}
 		if (isWorkbook()) {
-			return new ExcelRowIteratorHandler(file, excelSkipHeaderRowsSize, valueConverter);
+			return new ExcelRowIteratorHandler(file, this, excelSkipHeaderRowsSize, valueConverter);
 		}
 		throw new IllegalStateException("Unsupported data format: " + this);
 	}
