@@ -3,6 +3,7 @@ package com.sqlapp.data.schemas.rowiterator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -68,6 +69,22 @@ class ExcelHeaderRowsTest {
 		assertTrue(iterator.hasNext());
 		assertEquals(42, ((Number) iterator.next().get("ID")).intValue());
 		assertFalse(iterator.hasNext());
+	}
+
+	@Test
+	void explicitCloseReportsWorkbookCloseFailure() {
+		final IOException closeFailure = new IOException("close failed");
+		final Table table = new Table("ITEMS");
+		final var iterator = new ExcelRowIteratorHandler.ExcelIterator(table.getRows(),
+				new java.io.File("items.xlsx"), 0L, (row, column, value) -> value, 1) {
+			@Override
+			protected void closeWorkbook() throws IOException {
+				throw closeFailure;
+			}
+		};
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class, iterator::close);
+		assertSame(closeFailure, thrown.getCause());
 	}
 
 	private Path workbook(final int headers) throws Exception {

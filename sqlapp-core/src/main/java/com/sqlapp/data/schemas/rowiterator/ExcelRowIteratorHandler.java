@@ -215,10 +215,15 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 		@Override
 		protected void doClose() {
 			try {
-				if (workbook != null) {
-					workbook.close();
-				}
+				closeWorkbook();
 			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		protected void closeWorkbook() throws IOException {
+			if (workbook != null) {
+				workbook.close();
 			}
 		}
 	}
