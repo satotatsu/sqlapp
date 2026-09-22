@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.generator.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,6 +45,20 @@ class GeneratorMvelUtilsTest {
 	@Test
 	void preservesEmptyResultForUnsupportedPathObject() {
 		assertEquals(0, count(GeneratorMvelUtils.fileIterator(new Object())));
+	}
+
+	@Test
+	void rejectsMissingDataPath() {
+		assertThrows(IllegalArgumentException.class,
+				() -> GeneratorMvelUtils.fileIterator(temporaryDirectory.resolve("missing.json")));
+	}
+
+	@Test
+	void rejectsUnsupportedTomlFile() throws Exception {
+		final Path file = temporaryDirectory.resolve("items.toml");
+		Files.writeString(file, "[[items]]\nid = 1\n");
+
+		assertThrows(IllegalArgumentException.class, () -> GeneratorMvelUtils.fileIterator(file));
 	}
 
 	private static int count(final Iterable<Map<String, Object>> iterable) {
