@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -31,12 +32,15 @@ class DataFormatRowIteratorHandlerTest {
 
 	@Test
 	void rejectsMissingFileAtCreationTime() {
-		assertThrows(NullPointerException.class, () -> DataFormat.JSON.createRowIteratorHandler(null));
+		assertThrows(NullPointerException.class, () -> DataFormat.JSON.createRowIteratorHandler((File) null));
 	}
 
 	@Test
 	void createsSingleAndCombinedHandlersFromFiles() {
 		assertInstanceOf(CsvRowIteratorHandler.class, FileRowIteratorFactory.create(new File("items.csv")));
+		assertInstanceOf(JsonRowIteratorHandler.class, FileRowIteratorFactory.create(Path.of("items.json")));
+		assertInstanceOf(YamlRowIteratorHandler.class,
+				DataFormat.YAML.createRowIteratorHandler(Path.of("items.yaml")));
 		assertInstanceOf(CombinedRowIteratorHandler.class,
 				FileRowIteratorFactory.create(List.of(new File("first.csv"), new File("second.json"))));
 	}

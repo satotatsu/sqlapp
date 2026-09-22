@@ -508,6 +508,14 @@ public enum DataFormat {
 	}
 
 	/**
+	 * Creates a row iterator handler for this format.
+	 */
+	public RowIteratorHandler createRowIteratorHandler(final Path path) {
+		Objects.requireNonNull(path, "path");
+		return createRowIteratorHandler(path.toFile());
+	}
+
+	/**
 	 * Creates a configured row iterator handler for this format.
 	 */
 	public RowIteratorHandler createRowIteratorHandler(final File file, final String csvEncoding,

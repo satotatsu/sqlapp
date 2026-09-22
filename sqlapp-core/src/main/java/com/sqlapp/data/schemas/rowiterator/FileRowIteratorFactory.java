@@ -2,6 +2,7 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 import com.sqlapp.data.schemas.RowIteratorHandler;
@@ -24,6 +25,11 @@ public final class FileRowIteratorFactory {
 	public static RowIteratorHandler create(final File file) {
 		final DataFormat format = requireFormat(file);
 		return format.createRowIteratorHandler(file);
+	}
+
+	public static RowIteratorHandler create(final Path path) {
+		final DataFormat format = requireFormat(path);
+		return format.createRowIteratorHandler(path);
 	}
 
 	public static RowIteratorHandler create(final List<File> files, final String csvEncoding,
@@ -49,6 +55,14 @@ public final class FileRowIteratorFactory {
 		final DataFormat format = DataFormat.parse(file);
 		if (format == null) {
 			throw new IllegalArgumentException("Unsupported data file format: " + file);
+		}
+		return format;
+	}
+
+	private static DataFormat requireFormat(final Path path) {
+		final DataFormat format = DataFormat.parse(path);
+		if (format == null) {
+			throw new IllegalArgumentException("Unsupported data file format: " + path);
 		}
 		return format;
 	}
