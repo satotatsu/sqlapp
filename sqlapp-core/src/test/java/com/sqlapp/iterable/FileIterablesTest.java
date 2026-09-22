@@ -20,6 +20,7 @@
 package com.sqlapp.iterable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -121,6 +122,15 @@ class FileIterablesTest {
 		final Map<String, Object> row = FileIterables.readAsMap(csv).iterator().next();
 		assertInstanceOf(String.class, row.get("id"));
 		assertInstanceOf(String.class, row.get("active"));
+	}
+
+	@Test
+	void reportsSupportedMapFileFormats() {
+		assertTrue(FileIterables.supports(Path.of("items.json")));
+		assertTrue(FileIterables.supports(new File("items.xlsx")));
+		assertFalse(FileIterables.supports(Path.of("items.toml")));
+		assertFalse(FileIterables.supports(Path.of("items.txt")));
+		assertFalse(FileIterables.supports((Path) null));
 	}
 
 	@Test

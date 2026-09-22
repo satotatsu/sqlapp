@@ -37,6 +37,18 @@ import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public class FileIterables {
 
+	public static boolean supports(File file) {
+		return file != null && supports(DataFormat.parse(file));
+	}
+
+	public static boolean supports(Path path) {
+		return path != null && supports(DataFormat.parse(path));
+	}
+
+	private static boolean supports(DataFormat format) {
+		return format != null && !format.isToml();
+	}
+
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
 		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
 				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));

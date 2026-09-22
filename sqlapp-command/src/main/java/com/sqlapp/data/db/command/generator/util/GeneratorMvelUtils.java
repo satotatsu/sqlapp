@@ -24,7 +24,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.iterable.CombinedFileIterable;
 import com.sqlapp.iterable.FileIterables;
 import com.sqlapp.iterable.MapIterable;
@@ -102,8 +101,7 @@ public final class GeneratorMvelUtils {
 		if (!java.nio.file.Files.isRegularFile(path)) {
 			return;
 		}
-		final DataFormat format = DataFormat.parse(path);
-		if (format == null || format.isToml()) {
+		if (!FileIterables.supports(path)) {
 			throw new IllegalArgumentException("Unsupported data file format: " + path);
 		}
 	}
