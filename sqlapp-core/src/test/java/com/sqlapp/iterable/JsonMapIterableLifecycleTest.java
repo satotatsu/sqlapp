@@ -53,6 +53,21 @@ class JsonMapIterableLifecycleTest {
 	}
 
 	@Test
+	void reportsInputStreamCloseFailure() {
+		final IOException closeFailure = new IOException("close");
+		final ByteArrayInputStream input = new ByteArrayInputStream("[{\"id\":1}]".getBytes(StandardCharsets.UTF_8)) {
+			@Override
+			public void close() throws IOException {
+				throw closeFailure;
+			}
+		};
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class,
+				() -> new JsonMapIterable(input).iterator());
+		assertSame(closeFailure, thrown.getCause().getCause());
+	}
+
+	@Test
 	void reportsReaderCloseFailure() {
 		final IOException closeFailure = new IOException("close");
 		final Reader reader = new Reader() {
