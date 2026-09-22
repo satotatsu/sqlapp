@@ -51,6 +51,15 @@ class DataFormatRowIteratorHandlerTest {
 				() -> FileRowIteratorFactory.create(new File("items.unknown")));
 	}
 
+	@Test
+	void rejectsNullInputsAtCreationTime() {
+		assertThrows(NullPointerException.class, () -> FileRowIteratorFactory.create((File) null));
+		assertThrows(NullPointerException.class, () -> FileRowIteratorFactory.create((Path) null));
+		assertThrows(NullPointerException.class, () -> FileRowIteratorFactory.create((List<File>) null));
+		assertThrows(NullPointerException.class,
+				() -> FileRowIteratorFactory.create(java.util.Arrays.asList(new File("items.csv"), null)));
+	}
+
 	private static Object create(final DataFormat format) {
 		return format.createRowIteratorHandler(new File("items." + format.getFileExtension()), "UTF-8", 1, 2,
 				new JsonConverter(), new YamlConverter(), new TomlConverter(), (row, column, value) -> value);

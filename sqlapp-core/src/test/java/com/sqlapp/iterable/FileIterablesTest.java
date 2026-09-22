@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -166,6 +168,28 @@ class FileIterablesTest {
 			assertTrue(row.containsKey("id"));
 		} finally {
 			((AutoCloseable) iterator).close();
+		}
+	}
+
+	@Test
+	void readsExcelInputStreamWithItsDeclaredFormat() throws Exception {
+		for (final DataFormat format : List.of(DataFormat.EXCEL2003, DataFormat.EXCEL)) {
+			final byte[] content;
+			try (var workbook = format.createWorkbook();
+					var output = new ByteArrayOutputStream()) {
+				final var sheet = workbook.createSheet();
+				sheet.createRow(0).createCell(0).setCellValue("id");
+				sheet.createRow(1).createCell(0).setCellValue(1);
+				workbook.write(output);
+				content = output.toByteArray();
+			}
+
+			final var iterator = format.createMapIterable(new ByteArrayInputStream(content)).iterator();
+			try {
+				assertTrue(iterator.next().containsKey("id"));
+			} finally {
+				((AutoCloseable) iterator).close();
+			}
 		}
 	}
 

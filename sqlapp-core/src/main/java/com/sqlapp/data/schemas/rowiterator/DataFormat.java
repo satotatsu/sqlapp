@@ -425,7 +425,7 @@ public enum DataFormat {
 			return new XmlRowIterable(inputStream);
 		}
 		if (isWorkbook()) {
-			return new ExcelIterable(inputStream);
+			return new ExcelIterable(inputStream, this);
 		}
 		return null;
 	}

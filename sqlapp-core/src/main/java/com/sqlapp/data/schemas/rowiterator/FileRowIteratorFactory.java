@@ -4,6 +4,7 @@ package com.sqlapp.data.schemas.rowiterator;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.function.RowValueConverter;
@@ -18,6 +19,7 @@ public final class FileRowIteratorFactory {
 	}
 
 	public static RowIteratorHandler create(final List<File> files) {
+		Objects.requireNonNull(files, "files");
 		final List<RowIteratorHandler> handlers = files.stream().map(FileRowIteratorFactory::create).toList();
 		return handlers.size() == 1 ? handlers.get(0) : new CombinedRowIteratorHandler(handlers);
 	}
@@ -36,6 +38,7 @@ public final class FileRowIteratorFactory {
 			final int csvSkipHeaderRowsSize, final int excelSkipHeaderRowsSize,
 			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
 			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
+		Objects.requireNonNull(files, "files");
 		final List<RowIteratorHandler> handlers = files.stream().map(file -> create(file, csvEncoding,
 				csvSkipHeaderRowsSize, excelSkipHeaderRowsSize, jsonConverter, yamlConverter,
 				tomlConverter, valueConverter)).toList();
@@ -52,6 +55,7 @@ public final class FileRowIteratorFactory {
 	}
 
 	private static DataFormat requireFormat(final File file) {
+		Objects.requireNonNull(file, "file");
 		final DataFormat format = DataFormat.parse(file);
 		if (format == null) {
 			throw new IllegalArgumentException("Unsupported data file format: " + file);
@@ -60,6 +64,7 @@ public final class FileRowIteratorFactory {
 	}
 
 	private static DataFormat requireFormat(final Path path) {
+		Objects.requireNonNull(path, "path");
 		final DataFormat format = DataFormat.parse(path);
 		if (format == null) {
 			throw new IllegalArgumentException("Unsupported data file format: " + path);

@@ -48,21 +48,33 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class ExcelIterable extends AbstractMapIterable {
+	private final DataFormat inputStreamFormat;
 
 	public ExcelIterable(File file) {
 		super(file);
+		this.inputStreamFormat = null;
 	}
 
 	public ExcelIterable(Path path) {
 		super(path);
+		this.inputStreamFormat = null;
 	}
 
 	public ExcelIterable(InputStream inputStream) {
+		this(inputStream, DataFormat.EXCEL);
+	}
+
+	public ExcelIterable(InputStream inputStream, DataFormat format) {
 		super(inputStream);
+		if (format == null || !format.isWorkbook()) {
+			throw new IllegalArgumentException("Workbook format is required: " + format);
+		}
+		this.inputStreamFormat = format;
 	}
 
 	public ExcelIterable(Reader reader) {
 		super(reader);
+		this.inputStreamFormat = null;
 	}
 
 	@Override
@@ -99,7 +111,7 @@ public class ExcelIterable extends AbstractMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(InputStream inputStream) {
-		return new ExcelIterator(inputStream);
+		return new ExcelIterator(inputStream, inputStreamFormat);
 	}
 
 	@Override
@@ -112,11 +124,17 @@ public class ExcelIterable extends AbstractMapIterable {
 		ExcelIterator(final File file) {
 			this.file = file;
 			this.inputStream = null;
+			this.inputStreamFormat = null;
 		}
 
 		ExcelIterator(final InputStream inputStream) {
+			this(inputStream, DataFormat.EXCEL);
+		}
+
+		ExcelIterator(final InputStream inputStream, final DataFormat format) {
 			this.file = null;
 			this.inputStream = inputStream;
+			this.inputStreamFormat = format;
 		}
 
 		ExcelIterator(final Path path) {
@@ -125,6 +143,7 @@ public class ExcelIterable extends AbstractMapIterable {
 
 		private final File file;
 		private final InputStream inputStream;
+		private final DataFormat inputStreamFormat;
 		private Workbook workbook;
 		private boolean initialized = false;
 		private boolean closed;
@@ -149,7 +168,7 @@ public class ExcelIterable extends AbstractMapIterable {
 				if (file != null) {
 					this.workbook = DataFormat.parse(file).createWorkBook(file, null, true);
 				} else {
-					this.workbook = DataFormat.EXCEL.createWorkBook(inputStream);
+					this.workbook = inputStreamFormat.createWorkBook(inputStream);
 				}
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
