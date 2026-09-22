@@ -135,6 +135,7 @@ class FileIterablesTest {
 		assertTrue(DataFormat.JSONL.supportsMapRows());
 		assertTrue(DataFormat.XML.supportsMapRows());
 		assertFalse(DataFormat.TOML.supportsMapRows());
+		assertInstanceOf(JsonMapIterable.class, DataFormat.JSON.createMapIterable(Path.of("items.json")));
 		assertInstanceOf(XmlRowIterable.class, DataFormat.XML.createMapIterable(Path.of("items.xml")));
 		assertInstanceOf(ExcelIterable.class, DataFormat.EXCEL.createMapIterable(Path.of("items.xlsx")));
 	}

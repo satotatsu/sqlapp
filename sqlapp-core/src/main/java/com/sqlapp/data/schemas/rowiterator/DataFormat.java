@@ -286,25 +286,6 @@ public enum DataFormat {
 			return new JsonConverter();
 		}
 
-		@Override
-		public Iterable<Map<String, Object>> createMapIterable(final File file) {
-			return new JsonMapIterable(file);
-		}
-
-		@Override
-		public Iterable<Map<String, Object>> createMapIterable(final Path path) {
-			return new JsonMapIterable(path);
-		}
-
-		@Override
-		public Iterable<Map<String, Object>> createMapIterable(final InputStream inputStream) {
-			return new JsonMapIterable(inputStream);
-		}
-
-		@Override
-		public Iterable<Map<String, Object>> createMapIterable(final Reader reader) {
-			return new JsonMapIterable(reader);
-		}
 	},
 	JSONL() {
 		@Override
@@ -396,6 +377,9 @@ public enum DataFormat {
 	},;
 
 	public Iterable<Map<String, Object>> createMapIterable(File file) {
+		if (isJson()) {
+			return new JsonMapIterable(file);
+		}
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(file, reader);
@@ -410,6 +394,9 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Path path) {
+		if (isJson()) {
+			return new JsonMapIterable(path);
+		}
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(path, reader);
@@ -424,6 +411,9 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
+		if (isJson()) {
+			return new JsonMapIterable(inputStream);
+		}
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(inputStream, reader);
@@ -438,6 +428,9 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Reader reader) {
+		if (isJson()) {
+			return new JsonMapIterable(reader);
+		}
 		final ObjectReader objReader = getObjectReader();
 		if (objReader != null) {
 			return new TextMapIterable(reader, objReader);
