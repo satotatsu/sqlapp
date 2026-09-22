@@ -29,7 +29,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.sqlapp.util.FileUtils;
 import com.univocity.parsers.common.AbstractParser;
 import com.univocity.parsers.common.ArgumentUtils;
 import com.univocity.parsers.common.CommonParserSettings;
@@ -136,8 +135,24 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 
 	@Override
 	public void close() {
-		FileUtils.close(reader);
-		parser.stopParsing();
+		RuntimeException failure = null;
+		try {
+			reader.close();
+		} catch (final Exception e) {
+			failure = e instanceof RuntimeException runtime ? runtime : new IllegalStateException(e);
+		}
+		try {
+			parser.stopParsing();
+		} catch (final RuntimeException e) {
+			if (failure == null) {
+				failure = e;
+			} else if (failure != e) {
+				failure.addSuppressed(e);
+			}
+		}
+		if (failure != null) {
+			throw failure;
+		}
 	}
 
 }

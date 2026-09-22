@@ -36,7 +36,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.file.TextFileReader;
 
 /**
@@ -313,10 +312,28 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void doClose() {
-			FileUtils.close(csvReader);
-			FileUtils.close(reader);
+			final TextFileReader currentCsvReader = this.csvReader;
+			final Reader currentReader = this.reader;
 			this.csvReader = null;
 			this.reader = null;
+			if (currentCsvReader != null) {
+				close(currentCsvReader);
+			} else {
+				close(currentReader);
+			}
+		}
+
+		private void close(final AutoCloseable closeable) {
+			if (closeable == null) {
+				return;
+			}
+			try {
+				closeable.close();
+			} catch (final RuntimeException e) {
+				throw e;
+			} catch (final Exception e) {
+				throw new IllegalStateException(e);
+			}
 		}
 
 	}

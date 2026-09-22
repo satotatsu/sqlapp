@@ -33,7 +33,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
 
 /**
@@ -201,7 +200,18 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void doClose() {
-			FileUtils.close(this.reader);
+			final Reader currentReader = this.reader;
+			this.reader = null;
+			if (currentReader == null) {
+				return;
+			}
+			try {
+				currentReader.close();
+			} catch (final RuntimeException e) {
+				throw e;
+			} catch (final Exception e) {
+				throw new IllegalStateException(e);
+			}
 		}
 	}
 

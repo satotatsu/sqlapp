@@ -21,8 +21,6 @@ package com.sqlapp.data.schemas.rowiterator;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -37,7 +35,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.file.AbstractFileParser;
 import com.univocity.parsers.common.CommonParserSettings;
 import com.univocity.parsers.common.Format;
@@ -191,7 +188,6 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 		@Override
 		protected void preInitialize() throws Exception {
 			if (file != null) {
-				reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
 				this.fileReader = workbookFileType.getFileType().createParser(file, charset, settingConsumer);
 				this.filename = file.getAbsolutePath();
 			} else if (path != null) {
@@ -301,9 +297,21 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void doClose() {
-			FileUtils.close(reader);
-			this.fileReader.close();
+			final AbstractFileParser<?, ?> currentFileReader = this.fileReader;
+			final Reader currentReader = this.reader;
+			this.fileReader = null;
 			this.reader = null;
+			if (currentFileReader != null) {
+				currentFileReader.close();
+			} else if (currentReader != null) {
+				try {
+					currentReader.close();
+				} catch (final RuntimeException e) {
+					throw e;
+				} catch (final Exception e) {
+					throw new IllegalStateException(e);
+				}
+			}
 		}
 
 	}
