@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
@@ -46,23 +45,21 @@ public class FileIterables {
 	}
 
 	private static boolean supports(DataFormat format) {
-		return format != null && !format.isToml();
+		return format != null && format.supportsMapRows();
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
 		if (!supports(p)) {
 			throw new IllegalArgumentException("Unsupported data file format: " + p);
 		}
-		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
-				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
+		return DataFormat.parse(p).createMapIterable(p);
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(File p) {
 		if (!supports(p)) {
 			throw new IllegalArgumentException("Unsupported data file format: " + p);
 		}
-		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
-				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
+		return DataFormat.parse(p).createMapIterable(p);
 	}
 
 	private static Iterable<Map<String, Object>> readSupportedAsMap(Path path) {
@@ -71,29 +68,6 @@ public class FileIterables {
 
 	private static Iterable<Map<String, Object>> readSupportedAsMap(File file) {
 		return supports(file) ? readAsMap(file) : Collections.emptyList();
-	}
-
-	private static <T> Iterable<Map<String, Object>> readAsMapInternal(T p, Supplier<DataFormat> func,
-			Function<DataFormat, Iterable<Map<String, Object>>> convertByWorkbook,
-			Supplier<Iterable<Map<String, Object>>> convertByXml,
-			Supplier<Iterable<Map<String, Object>>> convertByExcel) {
-		DataFormat type = func.get();
-		if (type == null) {
-			return Collections.emptyList();
-		}
-		Iterable<Map<String, Object>> itr = convertByWorkbook.apply(type);
-		if (itr != null) {
-			return itr;
-		}
-		if (type == DataFormat.XML) {
-			itr = convertByXml.get();
-			return itr;
-		}
-		if (type.isWorkbook()) {
-			itr = convertByExcel.get();
-			return itr;
-		}
-		return Collections.emptyList();
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, Predicate<Path> filter) {
@@ -214,22 +188,6 @@ public class FileIterables {
 			throw new RuntimeException(e);
 		}
 		return result;
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromXml(File file) {
-		return new XmlRowIterable(file);
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromXml(Path path) {
-		return new XmlRowIterable(path);
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromExcel(File file) {
-		return new ExcelIterable(file);
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromExcel(Path path) {
-		return new ExcelIterable(path);
 	}
 
 	@FunctionalInterface

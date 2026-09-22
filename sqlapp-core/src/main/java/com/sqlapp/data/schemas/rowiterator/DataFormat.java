@@ -40,7 +40,9 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
 import com.sqlapp.iterable.JsonMapIterable;
+import com.sqlapp.iterable.ExcelIterable;
 import com.sqlapp.iterable.TextMapIterable;
+import com.sqlapp.iterable.XmlRowIterable;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
@@ -398,6 +400,12 @@ public enum DataFormat {
 		if (reader != null) {
 			return new TextMapIterable(file, reader);
 		}
+		if (isXml()) {
+			return new XmlRowIterable(file);
+		}
+		if (isWorkbook()) {
+			return new ExcelIterable(file);
+		}
 		return null;
 	}
 
@@ -405,6 +413,12 @@ public enum DataFormat {
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(path, reader);
+		}
+		if (isXml()) {
+			return new XmlRowIterable(path);
+		}
+		if (isWorkbook()) {
+			return new ExcelIterable(path);
 		}
 		return null;
 	}
@@ -414,6 +428,12 @@ public enum DataFormat {
 		if (reader != null) {
 			return new TextMapIterable(inputStream, reader);
 		}
+		if (isXml()) {
+			return new XmlRowIterable(inputStream);
+		}
+		if (isWorkbook()) {
+			return new ExcelIterable(inputStream);
+		}
 		return null;
 	}
 
@@ -421,6 +441,9 @@ public enum DataFormat {
 		final ObjectReader objReader = getObjectReader();
 		if (objReader != null) {
 			return new TextMapIterable(reader, objReader);
+		}
+		if (isXml()) {
+			return new XmlRowIterable(reader);
 		}
 		return null;
 	}
@@ -471,6 +494,13 @@ public enum DataFormat {
 
 	public boolean isWorkbook() {
 		return false;
+	}
+
+	/**
+	 * Returns whether this format can be exposed as rows of map values.
+	 */
+	public boolean supportsMapRows() {
+		return getObjectReader() != null || isJson() || isXml() || isWorkbook();
 	}
 
 	/**
