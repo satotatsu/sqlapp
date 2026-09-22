@@ -194,6 +194,25 @@ class FileIterablesTest {
 	}
 
 	@Test
+	void declaredExcelFormatDoesNotDependOnFileExtension() throws Exception {
+		final Path file = temporaryDirectory.resolve("items.data");
+		try (var workbook = DataFormat.EXCEL2003.createWorkbook();
+				var output = Files.newOutputStream(file)) {
+			final var sheet = workbook.createSheet();
+			sheet.createRow(0).createCell(0).setCellValue("id");
+			sheet.createRow(1).createCell(0).setCellValue(1);
+			workbook.write(output);
+		}
+
+		final var iterator = DataFormat.EXCEL2003.createMapIterable(file).iterator();
+		try {
+			assertTrue(iterator.next().containsKey("id"));
+		} finally {
+			((AutoCloseable) iterator).close();
+		}
+	}
+
+	@Test
 	void readAllRecursiveAsMap() {
 		List<Iterable<Map<String, Object>>> list = FileIterables.readAllRecursiveAsMap(new File(path), f -> true);
 		int i = 0;

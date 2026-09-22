@@ -5,6 +5,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.function.RowValueConverter;
@@ -19,9 +20,7 @@ public final class FileRowIteratorFactory {
 	}
 
 	public static RowIteratorHandler create(final List<File> files) {
-		Objects.requireNonNull(files, "files");
-		final List<RowIteratorHandler> handlers = files.stream().map(FileRowIteratorFactory::create).toList();
-		return handlers.size() == 1 ? handlers.get(0) : new CombinedRowIteratorHandler(handlers);
+		return createCombined(files, FileRowIteratorFactory::create);
 	}
 
 	public static RowIteratorHandler create(final File file) {
@@ -38,11 +37,9 @@ public final class FileRowIteratorFactory {
 			final int csvSkipHeaderRowsSize, final int excelSkipHeaderRowsSize,
 			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
 			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
-		Objects.requireNonNull(files, "files");
-		final List<RowIteratorHandler> handlers = files.stream().map(file -> create(file, csvEncoding,
+		return createCombined(files, file -> create(file, csvEncoding,
 				csvSkipHeaderRowsSize, excelSkipHeaderRowsSize, jsonConverter, yamlConverter,
-				tomlConverter, valueConverter)).toList();
-		return handlers.size() == 1 ? handlers.get(0) : new CombinedRowIteratorHandler(handlers);
+				tomlConverter, valueConverter));
 	}
 
 	public static RowIteratorHandler create(final File file, final String csvEncoding,
@@ -70,5 +67,12 @@ public final class FileRowIteratorFactory {
 			throw new IllegalArgumentException("Unsupported data file format: " + path);
 		}
 		return format;
+	}
+
+	private static RowIteratorHandler createCombined(final List<File> files,
+			final Function<File, RowIteratorHandler> factory) {
+		Objects.requireNonNull(files, "files");
+		final List<RowIteratorHandler> handlers = files.stream().map(factory).toList();
+		return handlers.size() == 1 ? handlers.get(0) : new CombinedRowIteratorHandler(handlers);
 	}
 }

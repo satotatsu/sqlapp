@@ -391,7 +391,7 @@ public enum DataFormat {
 			return new XmlRowIterable(file);
 		}
 		if (isWorkbook()) {
-			return new ExcelIterable(file);
+			return new ExcelIterable(file, this);
 		}
 		return null;
 	}
@@ -408,7 +408,7 @@ public enum DataFormat {
 			return new XmlRowIterable(path);
 		}
 		if (isWorkbook()) {
-			return new ExcelIterable(path);
+			return new ExcelIterable(path, this);
 		}
 		return null;
 	}

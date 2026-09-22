@@ -48,16 +48,26 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class ExcelIterable extends AbstractMapIterable {
-	private final DataFormat inputStreamFormat;
+	private final DataFormat workbookFormat;
 
 	public ExcelIterable(File file) {
 		super(file);
-		this.inputStreamFormat = null;
+		this.workbookFormat = null;
+	}
+
+	public ExcelIterable(File file, DataFormat format) {
+		super(file);
+		this.workbookFormat = requireWorkbookFormat(format);
 	}
 
 	public ExcelIterable(Path path) {
 		super(path);
-		this.inputStreamFormat = null;
+		this.workbookFormat = null;
+	}
+
+	public ExcelIterable(Path path, DataFormat format) {
+		super(path);
+		this.workbookFormat = requireWorkbookFormat(format);
 	}
 
 	public ExcelIterable(InputStream inputStream) {
@@ -66,20 +76,24 @@ public class ExcelIterable extends AbstractMapIterable {
 
 	public ExcelIterable(InputStream inputStream, DataFormat format) {
 		super(inputStream);
-		if (format == null || !format.isWorkbook()) {
-			throw new IllegalArgumentException("Workbook format is required: " + format);
-		}
-		this.inputStreamFormat = format;
+		this.workbookFormat = requireWorkbookFormat(format);
 	}
 
 	public ExcelIterable(Reader reader) {
 		super(reader);
-		this.inputStreamFormat = null;
+		this.workbookFormat = null;
+	}
+
+	private static DataFormat requireWorkbookFormat(final DataFormat format) {
+		if (format == null || !format.isWorkbook()) {
+			throw new IllegalArgumentException("Workbook format is required: " + format);
+		}
+		return format;
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(File file) {
-		return new ExcelIterator(file);
+		return new ExcelIterator(file, workbookFormat);
 	}
 
 	protected <T> Iterator<Map<String, Object>> iteratorInternal(T obj, XmlReaderOptions options,
@@ -106,12 +120,12 @@ public class ExcelIterable extends AbstractMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(Path path) {
-		return new ExcelIterator(path);
+		return new ExcelIterator(path, workbookFormat);
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(InputStream inputStream) {
-		return new ExcelIterator(inputStream, inputStreamFormat);
+		return new ExcelIterator(inputStream, workbookFormat);
 	}
 
 	@Override
@@ -122,9 +136,13 @@ public class ExcelIterable extends AbstractMapIterable {
 	public static class ExcelIterator implements Iterator<Map<String, Object>>, AutoCloseable {
 
 		ExcelIterator(final File file) {
+			this(file, null);
+		}
+
+		ExcelIterator(final File file, final DataFormat format) {
 			this.file = file;
 			this.inputStream = null;
-			this.inputStreamFormat = null;
+			this.workbookFormat = format;
 		}
 
 		ExcelIterator(final InputStream inputStream) {
@@ -134,16 +152,20 @@ public class ExcelIterable extends AbstractMapIterable {
 		ExcelIterator(final InputStream inputStream, final DataFormat format) {
 			this.file = null;
 			this.inputStream = inputStream;
-			this.inputStreamFormat = format;
+			this.workbookFormat = format;
 		}
 
 		ExcelIterator(final Path path) {
 			this(path.toFile());
 		}
 
+		ExcelIterator(final Path path, final DataFormat format) {
+			this(path.toFile(), format);
+		}
+
 		private final File file;
 		private final InputStream inputStream;
-		private final DataFormat inputStreamFormat;
+		private final DataFormat workbookFormat;
 		private Workbook workbook;
 		private boolean initialized = false;
 		private boolean closed;
@@ -166,9 +188,10 @@ public class ExcelIterable extends AbstractMapIterable {
 		private void preInitialize() {
 			try {
 				if (file != null) {
-					this.workbook = DataFormat.parse(file).createWorkBook(file, null, true);
+					final DataFormat format = workbookFormat != null ? workbookFormat : DataFormat.parse(file);
+					this.workbook = format.createWorkBook(file, null, true);
 				} else {
-					this.workbook = inputStreamFormat.createWorkBook(inputStream);
+					this.workbook = workbookFormat.createWorkBook(inputStream);
 				}
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
