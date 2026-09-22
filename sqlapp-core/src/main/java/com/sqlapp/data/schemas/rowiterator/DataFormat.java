@@ -31,6 +31,7 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ooxml.POIXMLException;
@@ -501,10 +502,19 @@ public enum DataFormat {
 	/**
 	 * Creates a row iterator handler for this format.
 	 */
+	public RowIteratorHandler createRowIteratorHandler(final File file) {
+		return createRowIteratorHandler(file, "UTF-8", 0, 0, new JsonConverter(), new YamlConverter(),
+				new TomlConverter(), (row, column, value) -> value);
+	}
+
+	/**
+	 * Creates a configured row iterator handler for this format.
+	 */
 	public RowIteratorHandler createRowIteratorHandler(final File file, final String csvEncoding,
 			final int csvSkipHeaderRowsSize, final int excelSkipHeaderRowsSize,
 			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
 			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
+		Objects.requireNonNull(file, "file");
 		if (isCsv()) {
 			final CsvRowIteratorHandler handler = new CsvRowIteratorHandler(file, csvEncoding,
 					csvSkipHeaderRowsSize, valueConverter);

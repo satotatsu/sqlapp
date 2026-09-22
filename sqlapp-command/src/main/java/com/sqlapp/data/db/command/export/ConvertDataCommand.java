@@ -62,6 +62,7 @@ import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.data.schemas.rowiterator.FileRowIteratorFactory;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;

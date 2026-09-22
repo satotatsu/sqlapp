@@ -49,6 +49,7 @@ import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.data.schemas.rowiterator.FileRowIteratorFactory;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;

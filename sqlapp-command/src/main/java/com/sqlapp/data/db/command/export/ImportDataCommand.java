@@ -63,6 +63,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.data.schemas.rowiterator.FileRowIteratorFactory;
 import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.CommitCountHolder;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;

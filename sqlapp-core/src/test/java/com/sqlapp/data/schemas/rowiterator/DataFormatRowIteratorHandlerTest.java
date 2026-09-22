@@ -2,8 +2,10 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +17,7 @@ class DataFormatRowIteratorHandlerTest {
 
 	@Test
 	void createsHandlerForEveryDataFormat() {
-		assertInstanceOf(CsvRowIteratorHandler.class, create(DataFormat.CSV));
+		assertInstanceOf(CsvRowIteratorHandler.class, DataFormat.CSV.createRowIteratorHandler(new File("items.csv")));
 		assertInstanceOf(CsvRowIteratorHandler.class, create(DataFormat.TSV));
 		assertInstanceOf(CsvRowIteratorHandler.class, create(DataFormat.SSV));
 		assertInstanceOf(XmlRowIteratorHandler.class, create(DataFormat.XML));
@@ -25,6 +27,24 @@ class DataFormatRowIteratorHandlerTest {
 		assertInstanceOf(YamlRowIteratorHandler.class, create(DataFormat.YAML));
 		assertInstanceOf(ExcelRowIteratorHandler.class, create(DataFormat.EXCEL));
 		assertInstanceOf(ExcelRowIteratorHandler.class, create(DataFormat.EXCEL2003));
+	}
+
+	@Test
+	void rejectsMissingFileAtCreationTime() {
+		assertThrows(NullPointerException.class, () -> DataFormat.JSON.createRowIteratorHandler(null));
+	}
+
+	@Test
+	void createsSingleAndCombinedHandlersFromFiles() {
+		assertInstanceOf(CsvRowIteratorHandler.class, FileRowIteratorFactory.create(new File("items.csv")));
+		assertInstanceOf(CombinedRowIteratorHandler.class,
+				FileRowIteratorFactory.create(List.of(new File("first.csv"), new File("second.json"))));
+	}
+
+	@Test
+	void rejectsUnknownFileFormat() {
+		assertThrows(IllegalArgumentException.class,
+				() -> FileRowIteratorFactory.create(new File("items.unknown")));
 	}
 
 	private static Object create(final DataFormat format) {
