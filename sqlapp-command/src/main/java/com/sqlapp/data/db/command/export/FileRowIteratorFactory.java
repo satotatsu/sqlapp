@@ -7,14 +7,7 @@ import java.util.List;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonLineRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.TomlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
@@ -43,22 +36,7 @@ final class FileRowIteratorFactory {
 		if (format == null) {
 			throw new IllegalArgumentException("Unsupported data file format: " + file);
 		}
-		if (format.isCsv()) {
-			final var handler = new CsvRowIteratorHandler(file, csvEncoding, csvSkipHeaderRowsSize, valueConverter);
-			handler.setPreserveColumnTypes(true);
-			return handler;
-		} else if (format.isXml()) {
-			return new XmlRowIteratorHandler(file, valueConverter);
-		} else if (format.isToml()) {
-			return new TomlRowIteratorHandler(file, tomlConverter, valueConverter);
-		} else if (format.isYaml()) {
-			return new YamlRowIteratorHandler(file, yamlConverter, valueConverter);
-		} else if (format.isJsonl()) {
-			return new JsonLineRowIteratorHandler(file, jsonConverter, valueConverter);
-		} else if (format.isTextFile()) {
-			return new JsonRowIteratorHandler(file, jsonConverter, valueConverter);
-		} else {
-			return new ExcelRowIteratorHandler(file, excelSkipHeaderRowsSize, valueConverter);
-		}
+		return format.createRowIteratorHandler(file, csvEncoding, csvSkipHeaderRowsSize,
+				excelSkipHeaderRowsSize, jsonConverter, yamlConverter, tomlConverter, valueConverter);
 	}
 }

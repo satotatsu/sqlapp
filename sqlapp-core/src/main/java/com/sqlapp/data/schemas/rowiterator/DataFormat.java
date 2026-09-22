@@ -39,6 +39,8 @@ import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
+import com.sqlapp.data.schemas.RowIteratorHandler;
+import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.iterable.JsonMapIterable;
 import com.sqlapp.iterable.ExcelIterable;
 import com.sqlapp.iterable.TextMapIterable;
@@ -494,6 +496,40 @@ public enum DataFormat {
 	 */
 	public boolean supportsMapRows() {
 		return getObjectReader() != null || isJson() || isXml() || isWorkbook();
+	}
+
+	/**
+	 * Creates a row iterator handler for this format.
+	 */
+	public RowIteratorHandler createRowIteratorHandler(final File file, final String csvEncoding,
+			final int csvSkipHeaderRowsSize, final int excelSkipHeaderRowsSize,
+			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
+			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
+		if (isCsv()) {
+			final CsvRowIteratorHandler handler = new CsvRowIteratorHandler(file, csvEncoding,
+					csvSkipHeaderRowsSize, valueConverter);
+			handler.setPreserveColumnTypes(true);
+			return handler;
+		}
+		if (isXml()) {
+			return new XmlRowIteratorHandler(file, valueConverter);
+		}
+		if (isToml()) {
+			return new TomlRowIteratorHandler(file, tomlConverter, valueConverter);
+		}
+		if (isYaml()) {
+			return new YamlRowIteratorHandler(file, yamlConverter, valueConverter);
+		}
+		if (isJsonl()) {
+			return new JsonLineRowIteratorHandler(file, jsonConverter, valueConverter);
+		}
+		if (isJson()) {
+			return new JsonRowIteratorHandler(file, jsonConverter, valueConverter);
+		}
+		if (isWorkbook()) {
+			return new ExcelRowIteratorHandler(file, excelSkipHeaderRowsSize, valueConverter);
+		}
+		throw new IllegalStateException("Unsupported data format: " + this);
 	}
 
 	/**
