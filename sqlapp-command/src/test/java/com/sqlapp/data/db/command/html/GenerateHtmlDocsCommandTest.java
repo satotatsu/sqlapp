@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.html;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -46,11 +47,21 @@ import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoint;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
+import com.sqlapp.util.YamlConverter;
 
 public class GenerateHtmlDocsCommandTest {
 	@TempDir
 	protected File testProjectDir;
 	// protected File testProjectDir = new File("./");
+
+	@Test
+	void passesTheConfiguredYamlConverterToTheSharedTableReader() {
+		final var converter = new YamlConverter();
+		final var command = new GenerateHtmlDocsCommand();
+		command.setYamlConverter(converter);
+
+		assertSame(converter, command.createTableFileReader().getYamlConverter());
+	}
 
 	@Test
 	public void testRun() throws IOException {

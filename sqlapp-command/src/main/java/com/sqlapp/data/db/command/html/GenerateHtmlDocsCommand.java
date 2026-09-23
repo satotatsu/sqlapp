@@ -152,7 +152,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		return value;
 	}
 
-	private TableFileReader createTableFileReader() {
+	TableFileReader createTableFileReader() {
 		TableFileReader tableFileReader = new TableFileReader();
 		tableFileReader.setContext(this.getContext());
 		tableFileReader.setCsvEncoding(this.getCsvEncoding());
@@ -160,6 +160,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		tableFileReader.setFileDirectory(this.getFileDirectory());
 		tableFileReader.setFileFilter(this.getFileFilter());
 		tableFileReader.setJsonConverter(this.getJsonConverter());
+		tableFileReader.setYamlConverter(this.getYamlConverter());
 		tableFileReader.setPlaceholderPrefix(this.getPlaceholderPrefix());
 		tableFileReader.setPlaceholders(this.isPlaceholders());
 		tableFileReader.setPlaceholderSuffix(this.getPlaceholderSuffix());
