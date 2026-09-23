@@ -417,6 +417,25 @@ class ImportFileReadingTest {
 	}
 
 	@Test
+	void rejectsDirectoryWithoutSupportedDataFiles() throws Exception {
+		final Path input = Files.createDirectory(directory.resolve("input"));
+		Files.writeString(input.resolve("README.txt"), "no data");
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
+			connection.setAutoCommit(false);
+			final var error = assertThrows(IllegalArgumentException.class,
+					() -> command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+							table, List.of(input.toFile())));
+			assertEquals("At least one data file is required.", error.getMessage());
+		}
+	}
+
+	@Test
 	void tableReaderDecodesTomlAndJsonLinesInOrder() throws Exception {
 		final Path toml = Files.writeString(directory.resolve("items.toml"), "[[items]]\nID = 1\n");
 		final Path jsonl = Files.writeString(directory.resolve("items.jsonl"), "{\"ID\":2}\n{\"ID\":3}\n");

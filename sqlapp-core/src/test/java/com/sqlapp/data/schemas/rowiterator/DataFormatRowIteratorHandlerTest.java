@@ -62,6 +62,7 @@ class DataFormatRowIteratorHandlerTest {
 		assertThrows(NullPointerException.class, () -> FileRowIteratorFactory.create((List<File>) null));
 		assertThrows(NullPointerException.class,
 				() -> FileRowIteratorFactory.create(java.util.Arrays.asList(new File("items.csv"), null)));
+		assertThrows(IllegalArgumentException.class, () -> FileRowIteratorFactory.create(List.of()));
 	}
 
 	private static Object create(final DataFormat format) {
