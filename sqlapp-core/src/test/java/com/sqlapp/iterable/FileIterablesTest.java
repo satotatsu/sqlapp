@@ -148,6 +148,8 @@ class FileIterablesTest {
 		Files.writeString(toml, "[[items]]\nid = 1\n");
 
 		assertThrows(IllegalArgumentException.class, () -> FileIterables.readAsMap(toml));
+		assertThrows(IllegalArgumentException.class, () -> FileIterables.readAsMap((Path) null));
+		assertThrows(IllegalArgumentException.class, () -> FileIterables.readAsMap((File) null));
 		assertTrue(FileIterables.readAllAsMap(temporaryDirectory, path -> true).isEmpty());
 	}
 

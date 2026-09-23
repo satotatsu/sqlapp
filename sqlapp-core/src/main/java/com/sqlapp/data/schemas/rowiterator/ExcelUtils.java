@@ -58,7 +58,6 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StringUtils;
 
 /**
@@ -381,19 +380,14 @@ public class ExcelUtils {
 	 */
 	public static void readWorkbook(final File file, final WorkbookHandler workbookHandler)
 			throws FileNotFoundException {
-		FileInputStream in = null;
-		Workbook workbook = null;
-		try {
-			if (!file.exists()) {
-				throw new FileNotFoundException(file.getAbsolutePath());
-			}
-			in = new FileInputStream(file);
-			workbook = WorkbookFactory.create(in);
+		if (!file.exists()) {
+			throw new FileNotFoundException(file.getAbsolutePath());
+		}
+		try (final FileInputStream in = new FileInputStream(file);
+				final Workbook workbook = WorkbookFactory.create(in)) {
 			workbookHandler.handle(workbook);
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
-		} finally {
-			FileUtils.close(in);
 		}
 	}
 

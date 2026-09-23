@@ -47,6 +47,10 @@ class DataFormatRowIteratorHandlerTest {
 
 	@Test
 	void rejectsUnknownFileFormat() {
+		org.junit.jupiter.api.Assertions.assertTrue(FileRowIteratorFactory.supports(new File("items.toml")));
+		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports(new File("items.unknown")));
+		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports((File) null));
+		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports((Path) null));
 		assertThrows(IllegalArgumentException.class,
 				() -> FileRowIteratorFactory.create(new File("items.unknown")));
 	}

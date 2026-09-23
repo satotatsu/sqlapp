@@ -167,7 +167,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		if (!this.getFileFilter().test(file)) {
 			return false;
 		}
-		if (DataFormat.parse(file) == null) {
+		if (!FileRowIteratorFactory.supports(file)) {
 			return false;
 		}
 		return true;

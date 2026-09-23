@@ -19,6 +19,14 @@ public final class FileRowIteratorFactory {
 	private FileRowIteratorFactory() {
 	}
 
+	public static boolean supports(final File file) {
+		return file != null && DataFormat.parse(file) != null;
+	}
+
+	public static boolean supports(final Path path) {
+		return path != null && DataFormat.parse(path) != null;
+	}
+
 	public static RowIteratorHandler create(final List<File> files) {
 		return createCombined(files, FileRowIteratorFactory::create);
 	}

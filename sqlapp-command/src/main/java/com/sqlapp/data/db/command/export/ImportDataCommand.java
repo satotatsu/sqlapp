@@ -361,7 +361,11 @@ public class ImportDataCommand extends AbstractExportCommand
 				if (children == null) {
 					throw new IOException("Cannot list import directory: " + file);
 				}
-				java.util.Collections.addAll(targets, children);
+				for (final File child : children) {
+					if (child.isFile() && FileRowIteratorFactory.supports(child)) {
+						targets.add(child);
+					}
+				}
 			} else {
 				targets.add(file);
 			}

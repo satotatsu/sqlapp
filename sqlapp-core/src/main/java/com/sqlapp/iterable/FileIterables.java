@@ -49,17 +49,27 @@ public class FileIterables {
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
-		if (!supports(p)) {
-			throw new IllegalArgumentException("Unsupported data file format: " + p);
-		}
-		return DataFormat.parse(p).createMapIterable(p);
+		return requireMapFormat(p).createMapIterable(p);
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(File p) {
-		if (!supports(p)) {
-			throw new IllegalArgumentException("Unsupported data file format: " + p);
+		return requireMapFormat(p).createMapIterable(p);
+	}
+
+	private static DataFormat requireMapFormat(Path path) {
+		final DataFormat format = path == null ? null : DataFormat.parse(path);
+		if (!supports(format)) {
+			throw new IllegalArgumentException("Unsupported data file format: " + path);
 		}
-		return DataFormat.parse(p).createMapIterable(p);
+		return format;
+	}
+
+	private static DataFormat requireMapFormat(File file) {
+		final DataFormat format = file == null ? null : DataFormat.parse(file);
+		if (!supports(format)) {
+			throw new IllegalArgumentException("Unsupported data file format: " + file);
+		}
+		return format;
 	}
 
 	private static Iterable<Map<String, Object>> readSupportedAsMap(Path path) {

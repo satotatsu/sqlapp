@@ -123,6 +123,8 @@ class ImportFileReadingTest {
 		final Path input = Files.createDirectory(directory.resolve("input"));
 		Files.writeString(input.resolve("first.csv"), "ID\n@{value}\n");
 		Files.writeString(input.resolve("second.json"), "[{\"ID\":\"@{value + 1}\"}]");
+		Files.writeString(input.resolve("README.txt"), "not import data");
+		Files.createDirectory(input.resolve("nested"));
 		final var table = new Table("ITEMS");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
 		final var command = new ImportDataCommand();
