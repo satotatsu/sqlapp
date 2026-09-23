@@ -114,7 +114,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void preInitialize() throws Exception {
-			if (file.length() == 0L) {
+			if (java.nio.file.Files.size(file.toPath()) == 0L) {
 				list = java.util.Collections.emptyList();
 				iterator = list.iterator();
 				return;

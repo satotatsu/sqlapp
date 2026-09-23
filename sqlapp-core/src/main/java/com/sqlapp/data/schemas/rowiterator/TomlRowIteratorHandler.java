@@ -64,7 +64,7 @@ public class TomlRowIteratorHandler extends JsonRowIteratorHandler {
 		@SuppressWarnings("unchecked")
 		@Override
 		protected void preInitialize() throws Exception {
-			if (this.getFile().length() == 0L) {
+			if (java.nio.file.Files.size(this.getFile().toPath()) == 0L) {
 				List<Map<String, Object>> list = java.util.Collections.emptyList();
 				this.setList(list);
 				this.setIterator(list.iterator());

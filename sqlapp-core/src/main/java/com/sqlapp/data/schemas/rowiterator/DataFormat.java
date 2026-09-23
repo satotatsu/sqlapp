@@ -382,7 +382,7 @@ public enum DataFormat {
 	},;
 
 	public Iterable<Map<String, Object>> createMapIterable(File file) {
-		if (file != null && file.isFile() && file.length() == 0L && supportsEmptyTextData()) {
+		if (file != null && isEmptyRegularFile(file.toPath()) && supportsEmptyTextData()) {
 			return java.util.Collections.emptyList();
 		}
 		if (isJson()) {
@@ -402,7 +402,7 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Path path) {
-		if (path != null && Files.isRegularFile(path) && isEmpty(path) && supportsEmptyTextData()) {
+		if (path != null && isEmptyRegularFile(path) && supportsEmptyTextData()) {
 			return java.util.Collections.emptyList();
 		}
 		if (isJson()) {
@@ -425,7 +425,10 @@ public enum DataFormat {
 		return isCsv() || isJson() || isJsonl() || isYaml() || isToml();
 	}
 
-	private static boolean isEmpty(final Path path) {
+	private static boolean isEmptyRegularFile(final Path path) {
+		if (!Files.isRegularFile(path)) {
+			return false;
+		}
 		try {
 			return Files.size(path) == 0L;
 		} catch (final IOException e) {
