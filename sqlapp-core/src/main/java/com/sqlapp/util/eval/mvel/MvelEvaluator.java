@@ -21,52 +21,53 @@ package com.sqlapp.util.eval.mvel;
 
 import java.util.Map;
 
-import org.mvel2.MVEL;
-
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.util.eval.AbstractEvaluator;
 
 public class MvelEvaluator extends AbstractEvaluator {
+	private final MvelCompiledEvaluator delegate;
 
 	protected MvelEvaluator(String expression) {
 		super(expression);
+		this.delegate = new MvelCompiledEvaluator(expression,
+				SqlappParserContextFactory.getInstance().getParserContext());
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T eval(ParametersContext bindings) {
-		return (T) MVEL.eval(this.getExpression(), bindings);
+		return delegate.eval(bindings);
 	}
 
 	@Override
 	public <T> T eval(ParametersContext bindings, Class<T> clazz) {
-		return MVEL.eval(this.getExpression(), bindings, clazz);
+		return delegate.eval(bindings, clazz);
 	}
 
 	@Override
 	public boolean evalBoolean(ParametersContext bindings) {
-		return MVEL.eval(this.getExpression(), bindings, boolean.class);
+		return delegate.evalBoolean(bindings);
 	}
 
 	@Override
 	public boolean evalBoolean(Object val) {
-		return MVEL.eval(this.getExpression(), val, boolean.class);
+		return delegate.evalBoolean(val);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T eval(Object val) {
-		return (T) MVEL.eval(this.getExpression(), val);
+		return delegate.eval(val);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T eval(Map<?, ?> val) {
-		return (T) MVEL.eval(this.getExpression(), val);
+		return delegate.eval(val);
 	}
 
 	@Override
 	public boolean evalBoolean(Map<?, ?> val) {
-		return MVEL.eval(this.getExpression(), val, boolean.class);
+		return delegate.evalBoolean(val);
 	}
 }
