@@ -14,6 +14,8 @@ class ConfigFileTypeTest {
 	void parsesFilesWithTheSharedDataFormatRules() {
 		assertEquals(ConfigFileType.YAML, ConfigFileType.parse(new File("CONFIG.YML")));
 		assertEquals(ConfigFileType.JSON, ConfigFileType.parse(new File("config.JSON")));
+		assertEquals(ConfigFileType.TOML, ConfigFileType.parse(new File("config/directory/config.toml")));
 		assertNull(ConfigFileType.parse(new File("config.unknown")));
+		assertNull(ConfigFileType.parse((File) null));
 	}
 }

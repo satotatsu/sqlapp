@@ -58,12 +58,7 @@ public enum ConfigFileType {
 		if (CommonUtils.isEmpty(file)) {
 			return null;
 		}
-		for (ConfigFileType enm : ConfigFileType.values()) {
-			if (enm.getWorkbookFileType().match(file.getName())) {
-				return enm;
-			}
-		}
-		return null;
+		return parse(file.getName());
 	}
 
 	public static ConfigFileType parse(String value) {
