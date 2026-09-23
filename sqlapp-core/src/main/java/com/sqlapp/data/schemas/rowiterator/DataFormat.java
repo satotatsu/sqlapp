@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -730,34 +731,20 @@ public enum DataFormat {
 	}
 
 	public boolean match(final String text) {
-		if (text == null) {
-			return false;
-		}
-		final String lowername = text.toLowerCase();
-		if (lowername.endsWith("." + this.getFileExtension())) {
-			return true;
-		}
-		if (text.equalsIgnoreCase(this.toString())) {
-			return true;
-		}
-		for (String ext : this.getFileExtensions()) {
-			if (lowername.endsWith("." + ext)) {
-				return true;
-			}
-		}
-		return false;
+		return this == parse(text);
 	}
 
 	public static DataFormat parse(final String text) {
 		if (text == null) {
 			return null;
 		}
-		final String lowername = text.trim().toLowerCase();
+		final String normalized = text.trim();
+		final String lowername = normalized.toLowerCase(Locale.ROOT);
 		for (final DataFormat val : values()) {
 			if (lowername.endsWith("." + val.getFileExtension())) {
 				return val;
 			}
-			if (text.equalsIgnoreCase(val.toString())) {
+			if (normalized.equalsIgnoreCase(val.toString())) {
 				return val;
 			}
 		}
