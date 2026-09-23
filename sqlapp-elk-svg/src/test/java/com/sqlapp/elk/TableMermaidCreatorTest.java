@@ -70,6 +70,8 @@ class TableMermaidCreatorTest {
 		child.getConstraints().addForeignKeyConstraint("FK", child.getColumns().get("ID"), parent.getColumns().get("ID"));
 		String source = new TableMermaidCreator().generate(List.of(parent, child));
 		assertTrue(source.contains("t0 |o--o| t1 : \"FK\""));
+		assertTrue(source.contains("INT ID PK, FK\n"));
+		assertFalse(source.contains("ID : INT"));
 	}
 
 	@Test
@@ -78,14 +80,16 @@ class TableMermaidCreatorTest {
 		table.setDisplayName("論理名");
 		table.getColumns().add(new Column("a b").setDataType(DataType.VARCHAR));
 		table.getColumns().add(new Column("a-b").setDataType(DataType.VARCHAR));
+		table.getColumns().add(new Column("a@b").setDataType(DataType.VARCHAR));
 		table.getColumns().get(0).setDisplayName("名前\"\nテスト");
 		String physical = new TableMermaidCreator().generate(List.of(table));
 		assertTrue(physical.contains("物理#34;#60;#62;#38;#35;#92; 名"));
-		assertTrue(physical.contains("a_b_0"));
-		assertTrue(physical.contains("a_b_1"));
+		assertTrue(physical.contains("VARCHAR a_b \"name: a b\""));
+		assertTrue(physical.contains("VARCHAR a-b\n"));
+		assertTrue(physical.contains("VARCHAR a_b_2 \"name: a@b\""));
 		String logical = new TableMermaidCreator(NameMode.LOGICAL).generate(List.of(table));
 		assertTrue(logical.contains("t0[\"論理名\"]"));
-		assertTrue(logical.contains("名前#34; テスト"));
+		assertTrue(logical.contains("名前__テスト \"name: 名前#34; テスト\""));
 		assertEquals("erDiagram\n", new TableMermaidCreator().generate(List.of()));
 		assertThrows(NullPointerException.class, () -> new TableMermaidCreator(null));
 		assertThrows(NullPointerException.class, () -> new TableMermaidCreator().generate(null));
@@ -110,7 +114,7 @@ class TableMermaidCreatorTest {
 		table.getColumns().add(new Column("FK").setDataTypeName("PK"));
 		String source = new TableMermaidCreator().generate(List.of(table));
 		assertTrue(source.contains("t0[\"100#37; #100;irection LR\"]"));
-		assertTrue(source.contains("value_PK value_FK_0"));
+		assertTrue(source.contains("value_PK value_FK \"name: FK; type: PK\""));
 	}
 
 	@Test

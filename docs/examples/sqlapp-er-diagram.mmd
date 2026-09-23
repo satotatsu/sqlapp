@@ -1,0 +1,29 @@
+erDiagram
+    t0["sales.CUSTOMER"]
+    t0 {
+        BIGINT CUSTOMER_ID PK "NOT NULL"
+        VARCHAR CUSTOMER_NAME
+    }
+    t1["sales.ORDER"]
+    t1 {
+        BIGINT ORDER_ID PK "NOT NULL"
+        BIGINT CUSTOMER_ID FK "NOT NULL"
+        DATE ORDER_DATE "NOT NULL"
+    }
+    t2["sales.SPECIAL_ORDER"]
+    t2 {
+        BIGINT ORDER_ID PK, FK "NOT NULL"
+        VARCHAR SPECIAL_INSTRUCTIONS
+    }
+    t3["sales.ORDER_2026"]
+    t3 {
+        BIGINT ORDER_ID PK "NOT NULL"
+        BIGINT CUSTOMER_ID FK "NOT NULL"
+        DATE ORDER_DATE "NOT NULL"
+    }
+    t0 ||..o{ t1 : "FK_ORDER_CUSTOMER"
+    t1 ||--o| t2 : "FK_SPECIAL_ORDER"
+    %% inherits / partition of describe table structure, not foreign keys.
+    %% Their endpoint markers describe table-level multiplicities, not row cardinalities.
+    t2 }o..o{ t1 : "inherits"
+    t3 }o..|| t1 : "partition of"

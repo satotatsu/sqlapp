@@ -213,10 +213,14 @@ HTML continues to display SVG.
 
 Open the downloaded source with a Mermaid renderer supporting ER entity aliases
 (see the [Mermaid ER syntax](https://mermaid.js.org/syntax/entityRelationshipDiagram)).
+The repository includes a complete [Mermaid output sample](../examples/sqlapp-er-diagram.mmd)
+covering columns, key markers, foreign keys, inheritance and partition tables.
 Tables have generated IDs and qualified display labels so equal table names in
-different schemas remain distinct. Column tokens are normalized and suffixed
-with their ordinal to avoid collisions; comments retain the original names and
-type names. Primary, foreign and unique keys are marked. Foreign keys are emitted
+different schemas remain distinct. Column names remain unchanged when Mermaid
+syntax permits it. Normalized names receive a numeric suffix only when they would
+otherwise collide. Comments contain only details lost during normalization and
+`NOT NULL`, avoiding repetition of the displayed name and type. Primary, foreign
+and unique keys are marked. Foreign keys are emitted
 only when both tables are included, with nullability and uniqueness determining
 cardinality. Composite keys produce one relationship per constraint.
 

@@ -21,10 +21,13 @@ package com.sqlapp.elk;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -76,6 +79,7 @@ public class TableMermaidCreator {
 				continue;
 			}
 			result.append("    ").append(ids.get(table)).append(" {\n");
+			Set<String> attributeNames = new HashSet<>();
 			for (Column column : columns) {
 				String type = column.getDataTypeName();
 				if (type == null && column.getDataType() != null) {
@@ -83,8 +87,9 @@ public class TableMermaidCreator {
 				}
 				String name = nameMode.getName(column);
 				// Attribute tokens have stricter grammar than quoted entity aliases.
-				result.append("        ").append(token(type, "unknown")).append(' ')
-						.append(token(name, "column") + "_" + column.getOrdinal());
+				String typeToken = token(type, "unknown");
+				String nameToken = uniqueToken(token(name, "column"), attributeNames);
+				result.append("        ").append(typeToken).append(' ').append(nameToken);
 				List<String> keys = new ArrayList<>();
 				if (column.isPrimaryKey()) {
 					keys.add("PK");
@@ -99,8 +104,20 @@ public class TableMermaidCreator {
 				if (!keys.isEmpty()) {
 					result.append(' ').append(String.join(", ", keys));
 				}
-				result.append(" \"").append(escape(name)).append(" : ").append(escape(type))
-						.append(column.isNotNull() ? " NOT NULL" : "").append("\"\n");
+				List<String> details = new ArrayList<>();
+				if (!Objects.equals(nameToken, name)) {
+					details.add("name: " + name);
+				}
+				if (type != null && !Objects.equals(typeToken, type)) {
+					details.add("type: " + type);
+				}
+				if (column.isNotNull()) {
+					details.add("NOT NULL");
+				}
+				if (!details.isEmpty()) {
+					result.append(" \"").append(escape(String.join("; ", details))).append('"');
+				}
+				result.append('\n');
 			}
 			result.append("    }\n");
 		}
@@ -153,9 +170,18 @@ public class TableMermaidCreator {
 		if (value == null || value.isEmpty()) {
 			return fallback;
 		}
-		String token = value.replaceAll("[^\\p{L}\\p{N}_]", "_");
+		String token = value.replaceAll("[^\\p{L}\\p{N}_\\-\\[\\]\\(\\)\\.,]", "_");
 		boolean reserved = token.equalsIgnoreCase("PK") || token.equalsIgnoreCase("FK") || token.equalsIgnoreCase("UK");
 		return Character.isLetter(token.codePointAt(0)) && !reserved ? token : "value_" + token;
+	}
+
+	private static String uniqueToken(String candidate, Set<String> used) {
+		String value = candidate;
+		int suffix = 2;
+		while (!used.add(value.toLowerCase(Locale.ROOT))) {
+			value = candidate + "_" + suffix++;
+		}
+		return value;
 	}
 
 	private static String escape(String value) {
