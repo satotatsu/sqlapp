@@ -114,6 +114,11 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void preInitialize() throws Exception {
+			if (file.length() == 0L) {
+				list = java.util.Collections.emptyList();
+				iterator = list.iterator();
+				return;
+			}
 			final Object value = jsonConverter.fromJsonString(file, Object.class);
 			list = JsonMapIterable.getRows(value, file.getAbsolutePath());
 			iterator = list.iterator();

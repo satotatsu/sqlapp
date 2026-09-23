@@ -437,6 +437,23 @@ class ImportFileReadingTest {
 		}
 	}
 
+	@ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = { "csv", "json", "jsonl", "yaml", "toml" })
+	void treatsEmptyTextDataFileAsEmptyInput(final String extension) throws Exception {
+		final Path input = Files.createFile(directory.resolve("items." + extension));
+		final var table = new Table("ITEMS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final var command = new ImportDataCommand();
+		command.setSqlType(SqlType.INSERT);
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
+			connection.setAutoCommit(false);
+			assertEquals(0, command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table, List.of(input.toFile())));
+		}
+	}
+
 	@Test
 	void tableReaderDecodesTomlAndJsonLinesInOrder() throws Exception {
 		final Path toml = Files.writeString(directory.resolve("items.toml"), "[[items]]\nID = 1\n");

@@ -64,6 +64,12 @@ public class TomlRowIteratorHandler extends JsonRowIteratorHandler {
 		@SuppressWarnings("unchecked")
 		@Override
 		protected void preInitialize() throws Exception {
+			if (this.getFile().length() == 0L) {
+				List<Map<String, Object>> list = java.util.Collections.emptyList();
+				this.setList(list);
+				this.setIterator(list.iterator());
+				return;
+			}
 			Object obj = this.getJsonConverter().fromJsonString(this.getFile(), Object.class);
 			Object items = null;
 			if (obj instanceof Map) {
