@@ -417,7 +417,7 @@ class ImportFileReadingTest {
 	}
 
 	@Test
-	void rejectsDirectoryWithoutSupportedDataFiles() throws Exception {
+	void treatsDirectoryWithoutSupportedDataFilesAsEmptyInput() throws Exception {
 		final Path input = Files.createDirectory(directory.resolve("input"));
 		Files.writeString(input.resolve("README.txt"), "no data");
 		final var table = new Table("ITEMS");
@@ -428,10 +428,12 @@ class ImportFileReadingTest {
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
 			connection.setAutoCommit(false);
-			final var error = assertThrows(IllegalArgumentException.class,
-					() -> command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
-							table, List.of(input.toFile())));
-			assertEquals("At least one data file is required.", error.getMessage());
+			assertEquals(0, command.executeImport(connection,
+					DialectResolver.getInstance().getDialect(connection), table, List.of(input.toFile())));
+			try (var result = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
+				assertTrue(result.next());
+				assertEquals(0, result.getInt(1));
+			}
 		}
 	}
 

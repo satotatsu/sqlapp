@@ -80,9 +80,6 @@ public final class FileRowIteratorFactory {
 	private static RowIteratorHandler createCombined(final List<File> files,
 			final Function<File, RowIteratorHandler> factory) {
 		Objects.requireNonNull(files, "files");
-		if (files.isEmpty()) {
-			throw new IllegalArgumentException("At least one data file is required.");
-		}
 		final List<RowIteratorHandler> handlers = files.stream().map(factory).toList();
 		return handlers.size() == 1 ? handlers.get(0) : new CombinedRowIteratorHandler(handlers);
 	}

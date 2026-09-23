@@ -2,6 +2,7 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
@@ -46,6 +47,13 @@ class DataFormatRowIteratorHandlerTest {
 	}
 
 	@Test
+	void allowsAnEmptyFileListAsAnEmptyDataSet() {
+		final var handler = FileRowIteratorFactory.create(List.of());
+		assertInstanceOf(CombinedRowIteratorHandler.class, handler);
+		assertFalse(handler.iterator(new com.sqlapp.data.schemas.Table("ITEMS").getRows()).hasNext());
+	}
+
+	@Test
 	void rejectsUnknownFileFormat() {
 		org.junit.jupiter.api.Assertions.assertTrue(FileRowIteratorFactory.supports(new File("items.toml")));
 		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports(new File("items.unknown")));
@@ -62,7 +70,6 @@ class DataFormatRowIteratorHandlerTest {
 		assertThrows(NullPointerException.class, () -> FileRowIteratorFactory.create((List<File>) null));
 		assertThrows(NullPointerException.class,
 				() -> FileRowIteratorFactory.create(java.util.Arrays.asList(new File("items.csv"), null)));
-		assertThrows(IllegalArgumentException.class, () -> FileRowIteratorFactory.create(List.of()));
 	}
 
 	private static Object create(final DataFormat format) {
