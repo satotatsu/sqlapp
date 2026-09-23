@@ -89,9 +89,6 @@ public class ExpressionConverter {
 	 */
 	public void setFileDirectory(File fileDirectory) {
 		this.fileDirectory = fileDirectory;
-		if (fileDirectory != null) {
-			MvelUtils.setBasePath(fileDirectory.getAbsolutePath());
-		}
 	}
 
 	/**
@@ -126,8 +123,14 @@ public class ExpressionConverter {
 			if (text.endsWith(this.getPlaceholderSuffix())) {
 				String expression = text.substring(this.getPlaceholderPrefix().length(),
 						text.length() - this.getPlaceholderSuffix().length());
-				MvelUtils.setBasePath(fileDirectory == null ? null : fileDirectory.getAbsolutePath());
-				Object obj = cachedMvelEvaluator.eval(expression, context);
+				final String previousBasePath = MvelUtils.getBasePath();
+				final Object obj;
+				try {
+					MvelUtils.setBasePath(fileDirectory == null ? null : fileDirectory.getAbsolutePath());
+					obj = cachedMvelEvaluator.eval(expression, context);
+				} finally {
+					MvelUtils.setBasePath(previousBasePath);
+				}
 				if (obj instanceof File file) {
 					final File resolved = file.isAbsolute() || fileDirectory == null ? file
 							: new File(fileDirectory, file.getPath());

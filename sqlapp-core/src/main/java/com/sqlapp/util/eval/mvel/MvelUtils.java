@@ -525,12 +525,20 @@ public final class MvelUtils {
 		throw new IllegalArgumentException("date is not valid. " + date.getClass());
 	}
 
-	private static String basePath = null;
+	private static final ThreadLocal<String> basePath = new ThreadLocal<>();
 
 	private static String encoding = "UTF8";
 
 	public static void setBasePath(String basePath) {
-		MvelUtils.basePath = basePath;
+		if (basePath == null) {
+			MvelUtils.basePath.remove();
+		} else {
+			MvelUtils.basePath.set(basePath);
+		}
+	}
+
+	public static String getBasePath() {
+		return basePath.get();
 	}
 
 	public static void setDefaultEncoding(String encoding) {
@@ -555,10 +563,11 @@ public final class MvelUtils {
 	 */
 	public static byte[] readFileAsBytes(String filePath) throws FileNotFoundException, IOException {
 		File file;
-		if (basePath == null) {
+		final String currentBasePath = getBasePath();
+		if (currentBasePath == null) {
 			file = new File(filePath);
 		} else {
-			file = new File(basePath, filePath);
+			file = new File(currentBasePath, filePath);
 		}
 		try (FileInputStream fs = new FileInputStream(file); BufferedInputStream bis = new BufferedInputStream(fs)) {
 			byte[] buf = new byte[4096];
@@ -578,19 +587,21 @@ public final class MvelUtils {
 	 * @param encoding
 	 */
 	public static String readFileAsText(String filePath, String encoding) {
-		if (basePath == null) {
+		final String currentBasePath = getBasePath();
+		if (currentBasePath == null) {
 			return FileUtils.readText(filePath, encoding);
 		}
-		return FileUtils.readText(FileUtils.combinePath(basePath, filePath), encoding);
+		return FileUtils.readText(FileUtils.combinePath(currentBasePath, filePath), encoding);
 	}
 
 	public static String writeZip(String filePath, String zipFilePath, String encoding)
 			throws URISyntaxException, IOException {
 		final Path fromDir;
 		final Path zipPath;
-		if (basePath != null) {
-			filePath = FileUtils.combinePath(basePath, filePath);
-			zipFilePath = FileUtils.combinePath(basePath, zipFilePath);
+		final String currentBasePath = getBasePath();
+		if (currentBasePath != null) {
+			filePath = FileUtils.combinePath(currentBasePath, filePath);
+			zipFilePath = FileUtils.combinePath(currentBasePath, zipFilePath);
 			fromDir = Paths.get(filePath);
 			zipPath = Paths.get(zipFilePath);
 		} else {
@@ -720,10 +731,11 @@ public final class MvelUtils {
 	 * @throws FileNotFoundException
 	 */
 	public static InputStream getInputStream(String filePath) throws FileNotFoundException {
-		if (basePath == null) {
+		final String currentBasePath = getBasePath();
+		if (currentBasePath == null) {
 			return new FileInputStream(filePath);
 		}
-		return new FileInputStream(FileUtils.combinePath(basePath, filePath));
+		return new FileInputStream(FileUtils.combinePath(currentBasePath, filePath));
 	}
 
 	/**

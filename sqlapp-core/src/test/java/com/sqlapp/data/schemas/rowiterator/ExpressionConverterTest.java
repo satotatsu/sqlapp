@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.util.eval.mvel.MvelUtils;
 
 class ExpressionConverterTest {
 	@TempDir
@@ -36,6 +37,18 @@ class ExpressionConverterTest {
 		assertEquals("${number + 1}", converter.convert("${number + 1}", context));
 		converter.setPlaceholders(true);
 		assertEquals(4, converter.convert("${number + 1}", context));
+	}
+
+	@Test
+	void restoresPreviousMvelBasePathAfterEvaluation() throws Exception {
+		MvelUtils.setBasePath("previous");
+		try {
+			final var converter = converter();
+			assertEquals(2, converter.convert("${1 + 1}", new ParametersContext()));
+			assertEquals("previous", MvelUtils.getBasePath());
+		} finally {
+			MvelUtils.setBasePath(null);
+		}
 	}
 
 	@Test
