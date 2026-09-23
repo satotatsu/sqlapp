@@ -58,6 +58,14 @@ import com.sqlapp.util.OutputTextBuilder;
 
 public class DbVersionHandler {
 
+	public static final String CHECKSUM_COLUMN = "checksum";
+
+	private boolean withChecksum;
+
+	public void setWithChecksum(final boolean withChecksum) {
+		this.withChecksum = withChecksum;
+	}
+
 	private final Converters converters = Converters.getDefault();
 
 	private String schemaChangeLogTableName = "changelog";
@@ -198,6 +206,9 @@ public class DbVersionHandler {
 			table.getColumns().add(column);
 		}
 		table.getConstraints().addPrimaryKeyConstraint(name + "_PK", pkColumn);
+		if (withChecksum) {
+			table.getColumns().add(new Column(CHECKSUM_COLUMN).setDataType(DataType.NVARCHAR).setLength(71));
+		}
 		return table;
 	}
 
@@ -799,12 +810,18 @@ public class DbVersionHandler {
 			if (isWithSeriesNumber()) {
 				builder.comma().name(this.getSeriesNumberColumnName());
 			}
+			if (withChecksum) {
+				builder.comma().name(CHECKSUM_COLUMN);
+			}
 			builder._add(")").values();
 			builder.space()._add("(");
 			if (isWithSeriesNumber()) {
 				builder._add("?,?,?,?,?,?");
 			} else {
 				builder._add("?,?,?,?,?");
+			}
+			if (withChecksum) {
+				builder._add(",?");
 			}
 			builder._add(")");
 			stmt = connection.prepareStatement(builder.toString());
@@ -816,6 +833,9 @@ public class DbVersionHandler {
 			stmt.setString(i++, this.getDescription(row));
 			if (isWithSeriesNumber()) {
 				stmt.setLong(i++, seriesNumber);
+			}
+			if (withChecksum) {
+				stmt.setString(i++, (String) row.get(CHECKSUM_COLUMN));
 			}
 			return stmt.executeUpdate();
 		} finally {

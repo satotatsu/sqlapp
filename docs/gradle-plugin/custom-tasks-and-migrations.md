@@ -112,6 +112,7 @@ changes using the configured database and migration history.
 | `finalizeSqlDirectory` | `DirectoryProperty` | Optional SQL after version-up processing |
 | `lastChangeNumber` | `Property<String>` | Optional upper change number, converted to `Long` |
 | `showVersionOnly` | `Property<Boolean>` | Request version display instead of normal migration processing |
+| `checksumValidation` | `Property<Boolean>` | Default `false`; record up SQL checksums and validate completed migrations before execution |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
 | `dataSource` | Nested configuration | Target database connection |
@@ -140,6 +141,58 @@ recovered.
 Versioned SQL migration is separate from the YAML-driven bulk migration and
 SCD2 snapshot tasks. See the [task guide](README.md#executebulkmigrationjob)
 for source/target connections, checkpoints, leases and verification.
+
+### Optional checksum validation
+
+The default migration workflow does not record or validate checksums and needs
+no additional configuration. For projects that want immutable applied SQL:
+
+```groovy
+extensions.configure(MigrationExtension) {
+    checksumValidation = true
+}
+```
+
+The next `./gradlew migration` adds a nullable `checksum` column to the configured
+history table if necessary. It validates completed entries that already have a
+checksum before running setup, versioned, or finalize SQL, and records checksums
+for newly executed up migrations. Existing entries are never backfilled from
+today's SQL: they remain `UNVERIFIED` and do not block migration. History-only
+`migrationInsert` also leaves checksums null because it does not execute SQL.
+Disabling the option later preserves existing checksums; subsequent migrations
+run without automatic validation or new checksum recording.
+
+Run `./gradlew migrationValidate` whenever an explicit check is useful, including
+CI. This command validates recorded checksums even when `checksumValidation` is
+false. It requires an existing `sqlDirectory`, reads completed history entries,
+and does not create/upgrade the history table, run SQL scripts or hooks, or
+rewrite checksums. A database without a history table has no entries to validate.
+Validation checks all completed entries, independent of `lastChangeNumber` and
+`showVersionOnly`.
+
+| Result | Meaning |
+|---|---|
+| `VERIFIED` | Current up SQL source matches the recorded checksum |
+| `UNVERIFIED` | No historical checksum is available; this is not a failure or proof of a match |
+| `MISSING` | A checksummed migration no longer has a matching up SQL file |
+| `CHANGED` | Current source does not match its recorded checksum |
+
+`MISSING` and `CHANGED` fail the command. Restore the applied source or investigate
+the discrepancy; neither validation nor repair silently accepts a new checksum.
+This check does not verify database structure or diagnose incomplete migrations.
+
+Checksums use SHA-256 over the up file text decoded with `encoding`, read with the
+same line-ending normalization as SQL parsing, and encoded as UTF-8 for hashing.
+Comments, whitespace and inline `-- //@UNDO` content are included. File names,
+separate down files, setup/finalize files and expanded placeholder values are not
+included. The checksum uses the source snapshot parsed for execution.
+
+Java callers use `MigrationCommand.setChecksumValidation(true)` for the opt-in
+workflow or `MigrationValidateCommand` for the read-only check. After validation,
+`getValidationResult().entries()` provides version, state, expected checksum and
+actual checksum, including when a mismatch causes the command to throw. A null
+result means validation did not run; an empty result means there were no completed
+entries to check. No core Schema XML format changes are required.
 
 ## Additional task types
 

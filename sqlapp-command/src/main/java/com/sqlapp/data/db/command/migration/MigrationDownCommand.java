@@ -33,6 +33,11 @@ import com.sqlapp.data.schemas.Table;
 
 public class MigrationDownCommand extends MigrationCommand {
 
+	@Override
+	protected boolean recordsChecksum() {
+		return false;
+	}
+
 	public MigrationDownCommand() {
 		this.setLastChangeToApply(null);
 	}

@@ -23,6 +23,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -307,6 +311,24 @@ public class DbVersionFileHandler implements EncodingProperty {
 
 		private List<SplitResult> upSqls = null;
 
+		@Getter(lombok.AccessLevel.NONE)
+		@Setter(lombok.AccessLevel.NONE)
+		private String upSqlText;
+
+		/** SHA-256 of the decoded source text used to parse this up migration. */
+		public String getUpSqlChecksum() {
+			getUpSqls();
+			if (upSqlText == null) {
+				throw new IllegalStateException("SQL source unavailable for checksum: " + versionNumber);
+			}
+			try {
+				return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+						.digest(upSqlText.getBytes(StandardCharsets.UTF_8)));
+			} catch (final NoSuchAlgorithmException e) {
+				throw new IllegalStateException(e);
+			}
+		}
+
 		private List<SplitResult> downSqls = null;
 
 		private static final Pattern UNDO_PATTERN = Pattern.compile("--[\\s]*//@UNDO\\s*", Pattern.CASE_INSENSITIVE);
@@ -326,6 +348,7 @@ public class DbVersionFileHandler implements EncodingProperty {
 							new FileNotFoundException("file=" + this.getUpSqlFile().getAbsolutePath()));
 				}
 				final String text = FileUtils.readText(this.getUpSqlFile(), getEncoding());
+				upSqlText = text;
 				final List<SplitResult> splits = this.getSqlSplitter().parse(text);
 				boolean undo = false;
 				final List<SplitResult> up = CommonUtils.list();

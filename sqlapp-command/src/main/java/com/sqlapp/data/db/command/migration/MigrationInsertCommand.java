@@ -36,6 +36,11 @@ import com.sqlapp.jdbc.sql.SqlConverter;
 public class MigrationInsertCommand extends MigrationCommand {
 
 	@Override
+	protected boolean recordsChecksum() {
+		return false;
+	}
+
+	@Override
 	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles,
 			final DbVersionHandler dbVersionHandler) {
 		final List<Row> rows = dbVersionHandler.getRowsForVersionUp(table, getLastChangeToApply());

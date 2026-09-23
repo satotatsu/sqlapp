@@ -51,6 +51,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | SQL generation | `generateSql` | Generate SQL from Schema XML |
 | Documentation | `generateHtmlDocs` | Generate HTML documentation and ER diagrams |
 | Migration | `migration` | Apply versioned database migrations |
+| Migration | `migrationValidate` | Read-only validation of recorded up SQL checksums; missing checksums are unverified |
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |

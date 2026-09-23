@@ -101,6 +101,12 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	private boolean showVersionOnly = false;
 
+	/** Opt-in recording and validation of up SQL source checksums. */
+	private boolean checksumValidation = false;
+
+	@Setter(lombok.AccessLevel.NONE)
+	private MigrationValidationResult validationResult;
+
 	private boolean withSeriesNumber = true;
 
 	private String previousState = null;
@@ -117,6 +123,10 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	@Override
 	protected void doRun() {
+		resetValidationResult();
+		if (isChecksumValidation()) {
+			requireValidationDirectory();
+		}
 		final DbVersionHandler dbVersionHandler = createDbVersionHandler();
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
@@ -145,7 +155,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		});
 	}
 
-	private DbVersionHandler createDbVersionHandler() {
+	protected DbVersionHandler createDbVersionHandler() {
 		final DbVersionHandler dbVersionHandler = new DbVersionHandler();
 		dbVersionHandler.setIdColumnName(this.getIdColumnName());
 		dbVersionHandler.setAppliedAtColumnName(this.getAppliedAtColumnName());
@@ -154,7 +164,31 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		dbVersionHandler.setDescriptionColumnName(this.getDescriptionColumnName());
 		dbVersionHandler.setSeriesNumberColumnName(this.getSeriesNumberColumnName());
 		dbVersionHandler.setWithSeriesNumber(this.withSeriesNumber);
+		dbVersionHandler.setWithChecksum(this.checksumValidation);
 		return dbVersionHandler;
+	}
+
+	protected void validateChecksums(final Table history, final DbVersionHandler handler,
+			final List<SqlFile> files) {
+		validationResult = MigrationChecksumValidator.validate(history, handler, files);
+		for (final MigrationValidationResult.Entry entry : validationResult.entries()) {
+			info("Migration " + entry.version() + ": " + entry.state());
+		}
+		if (validationResult.hasFailures()) {
+			throw new IllegalStateException("Migration validation failed: " + validationResult.entries()
+					+ ". Restore the applied SQL source; "
+					+ "checksums are never automatically rewritten.");
+		}
+	}
+
+	protected void resetValidationResult() {
+		validationResult = null;
+	}
+
+	protected void requireValidationDirectory() {
+		if (getSqlDirectory() == null || !getSqlDirectory().isDirectory()) {
+			throw new IllegalArgumentException("sqlDirectory must be an existing up SQL directory for validation.");
+		}
 	}
 
 	protected void executeEmptyVersion(final Dialect dialect, final Table table, final List<Row> rows,
@@ -202,6 +236,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		holder.table = dbVersionHandler.createVersionTableDefinition(schemaChangeLogTableName);
 		checkTable(connection, holder.dialect, holder.table, dbVersionHandler);
 		dbVersionHandler.load(connection, holder.dialect, holder.table);
+		if (target && isChecksumValidation()) {
+			validateChecksums(holder.table, dbVersionHandler, holder.sqlFiles);
+		}
 		dbVersionHandler.mergeSqlFiles(holder.sqlFiles, holder.table);
 		if (target) {
 			holder.rows = getVersionRows(holder.table, holder.sqlFiles, dbVersionHandler);
@@ -229,6 +266,11 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				return;
 			}
 		} else {
+			// Disabling validation must not discard previously recorded checksums.
+			if (!table.getColumns().contains(DbVersionHandler.CHECKSUM_COLUMN)
+					&& currentTable.getColumns().contains(DbVersionHandler.CHECKSUM_COLUMN)) {
+				table.getColumns().add(currentTable.getColumns().get(DbVersionHandler.CHECKSUM_COLUMN).clone());
+			}
 			final DefaultSchemaEqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
 			equalsHandler.setReferenceEqualsPredicate((object1, object2) -> {
 				if (object1 instanceof IndexCollection || object2 instanceof IndexCollection) {
@@ -380,6 +422,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				sqlFile[0] = sqlFileMap.get(id);
 				executor.execute(ddlAutoCommitOffSqlList);
 				executor.execute(lockTableSqlList);
+				if (isChecksumValidation() && recordsChecksum() && sqlFile[0] != null) {
+					row.put(DbVersionHandler.CHECKSUM_COLUMN, sqlFile[0].getUpSqlChecksum());
+				}
 				if (!startVersion(connection, dialect, table, row, seriesNumber != null ? seriesNumber : id,
 						dbVersionHandler)) {
 					return;
@@ -400,6 +445,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 					} else {
 						executeSql(connection, sqlConverter, sqlFile[0]);
 					}
+				} else if (isChecksumValidation() && recordsChecksum()) {
+					throw new IllegalStateException("Migration SQL source disappeared before execution: " + file);
 				}
 				finalizeVersion(connection, dialect, table, row, id, dbVersionHandler);
 				commit(connection);
@@ -449,6 +496,10 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	private boolean isNoTransaction(final SqlFile sqlFile) {
 		return this.getNoTransactionFileFilter().test(getFile(sqlFile));
+	}
+
+	protected boolean recordsChecksum() {
+		return true;
 	}
 
 	protected File getFile(final SqlFile sqlFile) {

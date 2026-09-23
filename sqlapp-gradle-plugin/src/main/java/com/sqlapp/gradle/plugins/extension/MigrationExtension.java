@@ -44,6 +44,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	public MigrationExtension(ObjectFactory objects) {
 		super(objects);
 		this.setDataSource(objects.newInstance((DataSourceExtension.class)));
+		getChecksumValidation().convention(false);
 	}
 
 	public void call(Action<MigrationExtension> cons) {
@@ -86,6 +87,10 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract Property<Boolean> getShowVersionOnly();
 
+	/** Optional checksum recording and validation; disabled by default. */
+	@Input
+	public abstract Property<Boolean> getChecksumValidation();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -103,6 +108,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 		super.initializeCommand(command);
 		if (command instanceof MigrationCommand) {
 			MigrationCommand com = (MigrationCommand) command;
+			com.setChecksumValidation(getChecksumValidation().get());
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());
 			}

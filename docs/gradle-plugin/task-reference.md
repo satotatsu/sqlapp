@@ -17,6 +17,7 @@ task can issue DDL or DML and must be configured with the intended target.
 |---|---|---|---|---|
 | `countAllTables` | `CountAllTableTask` | `dataSource`, schema/table filters, `outputFormatType` | Row counts on console/output | Read-only |
 | `migration` | `MigrationTask` | Shared `migration` extension | Applies pending versioned SQL | Mutates target |
+| `migrationValidate` | `MigrationValidateTask` | Shared `migration` extension; existing `sqlDirectory` | Checks recorded up SQL checksums; reports unverified legacy entries | Reads history only; no DDL/DML |
 | `migrationInsert` | `MigrationInsertTask` | Shared `migration` extension | Inserts migration-history state | Mutates history table |
 | `migrationRepair` | `MigrationRepairTask` | Shared `migration` extension | Repairs migration-history state | Mutates history table |
 | `generateBulkMigrationOperationalReport` | `GenerateBulkMigrationOperationalReportTask` | `plan`, `status`, optional maintenance/progress state, `targetFile` | JSON operational report | No database access by the task |
@@ -235,6 +236,7 @@ The registered `migration` task reads the project extension of the same name.
 | `withSeriesNumber` | `Property<Boolean>` | Enable series-number behavior |
 | `placeholders`, `placeholderPrefix`, `placeholderSuffix` | Properties | Placeholder processing |
 | `changeTable` | Nested configuration | Migration-history table and column names |
+| `checksumValidation` | `Property<Boolean>` | Default `false`; opt-in checksum recording and validation during migration. Explicit `migrationValidate` checks regardless of this setting |
 
 Custom `MigrationDownTask` and `MigrationSeriesDownTask` instances reuse this
 extension. See [Custom tasks and versioned migrations](custom-tasks-and-migrations.md).
