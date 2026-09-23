@@ -104,6 +104,14 @@ class FileIterablesTest {
 	}
 
 	@Test
+	void readsEmptyTextDataFilesAsEmptyDataSets() throws Exception {
+		for (final String extension : List.of("csv", "json", "jsonl", "yaml")) {
+			final Path file = Files.createFile(temporaryDirectory.resolve("empty." + extension));
+			assertFalse(FileIterables.readAsMap(file).iterator().hasNext());
+		}
+	}
+
+	@Test
 	void preservesJsonlAndYamlScalarTypes() throws Exception {
 		final Path jsonl = temporaryDirectory.resolve("items.jsonl");
 		Files.writeString(jsonl, "{\"id\":1,\"active\":true}\n");

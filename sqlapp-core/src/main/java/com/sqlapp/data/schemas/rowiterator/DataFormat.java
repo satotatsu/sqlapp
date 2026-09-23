@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
@@ -381,6 +382,9 @@ public enum DataFormat {
 	},;
 
 	public Iterable<Map<String, Object>> createMapIterable(File file) {
+		if (file != null && file.isFile() && file.length() == 0L && supportsEmptyTextData()) {
+			return java.util.Collections.emptyList();
+		}
 		if (isJson()) {
 			return new JsonMapIterable(file);
 		}
@@ -398,6 +402,9 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Path path) {
+		if (path != null && Files.isRegularFile(path) && isEmpty(path) && supportsEmptyTextData()) {
+			return java.util.Collections.emptyList();
+		}
 		if (isJson()) {
 			return new JsonMapIterable(path);
 		}
@@ -412,6 +419,18 @@ public enum DataFormat {
 			return new ExcelIterable(path, this);
 		}
 		return null;
+	}
+
+	private boolean supportsEmptyTextData() {
+		return isCsv() || isJson() || isJsonl() || isYaml() || isToml();
+	}
+
+	private static boolean isEmpty(final Path path) {
+		try {
+			return Files.size(path) == 0L;
+		} catch (final IOException e) {
+			return false;
+		}
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
