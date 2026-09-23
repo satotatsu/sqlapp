@@ -21,6 +21,7 @@ package com.sqlapp.util.eval.mvel;
 
 import static com.sqlapp.util.CommonUtils.list;
 
+import java.io.File;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Clock;
@@ -69,6 +70,7 @@ public class SqlappParserContextFactory {
 
 	protected void addImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {
 		addPackageImports(parserContext);
+		addImport(parserContext, File.class);
 		addAllStaticMethodsImport(parserContext, MvelUtils.class);
 		addDateUtilsImports(parserContext);
 		addAllStaticMethodsImport(parserContext, Iterators.class);

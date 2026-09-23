@@ -28,10 +28,6 @@ import com.sqlapp.util.eval.mvel.MvelUtils;
 
 public class ExpressionConverter {
 
-	public ExpressionConverter() {
-		cachedMvelEvaluator.addImport(File.class);
-	}
-
 	private String placeholderPrefix = "${";
 
 	private String placeholderSuffix = "}";
