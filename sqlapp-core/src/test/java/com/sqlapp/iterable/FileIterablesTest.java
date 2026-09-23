@@ -112,6 +112,19 @@ class FileIterablesTest {
 	}
 
 	@Test
+	void doesNotTreatNonArrayJsonOrEmptyXmlAsEmptyData() throws Exception {
+		for (final String content : List.of("null", "{\"id\":1}")) {
+			final Path json = Files.writeString(temporaryDirectory.resolve("invalid-" + content.length() + ".json"),
+					content);
+			final IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+					() -> FileIterables.readAsMap(json).iterator());
+			assertTrue(error.getMessage().contains("array of objects"));
+		}
+		final Path xml = Files.createFile(temporaryDirectory.resolve("empty.xml"));
+		assertThrows(RuntimeException.class, () -> FileIterables.readAsMap(xml).iterator().hasNext());
+	}
+
+	@Test
 	void preservesJsonlAndYamlScalarTypes() throws Exception {
 		final Path jsonl = temporaryDirectory.resolve("items.jsonl");
 		Files.writeString(jsonl, "{\"id\":1,\"active\":true}\n");
