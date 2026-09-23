@@ -3,6 +3,21 @@
 This document records deferred features that need cross-database design or a
 larger extension of the shared Schema model. It is not a release commitment.
 
+## Excel schema-documentation export
+
+An Excel workbook generated from the Schema model is a candidate for future
+work. It would support users who prefer spreadsheet-based filtering, review,
+comments and handoff, while Schema XML remains the canonical machine-readable
+representation and HTML remains the complete documentation format.
+
+The workbook should focus on information that works well as tables, such as
+object and column dictionaries, constraints, indexes and documentation gaps.
+Relationships, inheritance, partitioning, viewpoints and database-specific
+DDL should continue to use HTML, SVG, Mermaid and DDL outputs rather than being
+flattened into a spreadsheet. Before implementation, define stable worksheets,
+identifier and hyperlink conventions, large-schema limits and whether edited
+workbooks are output-only artifacts or supported inputs.
+
 ## Collation schema objects
 
 Columns and catalogs currently retain a collation name, but the shared Schema

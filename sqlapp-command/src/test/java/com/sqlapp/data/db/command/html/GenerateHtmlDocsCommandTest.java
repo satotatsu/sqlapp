@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.html;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,6 +94,7 @@ public class GenerateHtmlDocsCommandTest {
 		command.setMultiThread(true);
 		command.run();
 		assertMermaidDownloads(outputDir.toPath());
+		assertTableDetailsHaveDdlAndNoRelations(outputDir.toPath());
 	}
 
 	@Test
@@ -125,14 +127,17 @@ public class GenerateHtmlDocsCommandTest {
 					.orElseThrow();
 		}
 		String tableHtml = java.nio.file.Files.readString(invoicePath);
-		assertTrue(tableHtml.contains("Viewpoints"));
-		assertTrue(tableHtml.contains("viewpoint-sales.svg"));
+		assertTrue(tableHtml.contains("href=\"#DDL\""));
+		assertTrue(tableHtml.contains("CREATE"));
+		assertFalse(tableHtml.contains("id=\"Relationships\""));
+		assertFalse(tableHtml.contains("id=\"Viewpoints\""));
+		assertFalse(tableHtml.contains("viewpoint-sales.svg"));
 		String relationshipsHtml = java.nio.file.Files.readString(new File(outputDir, "relationships.html").toPath());
 		assertTrue(relationshipsHtml.contains("AllRelationships"));
 		assertTrue(relationshipsHtml.contains("Viewpoint_sales"));
 		assertTrue(relationshipsHtml.contains("viewpoint-sales.svg"));
 		assertTrue(relationshipsHtml.contains("viewpoint-sales.mmd"));
-		assertTrue(tableHtml.contains("viewpoint-sales.mmd"));
+		assertFalse(tableHtml.contains("viewpoint-sales.mmd"));
 		assertMermaidDownloads(outputDir.toPath());
 		try (var paths = java.nio.file.Files.list(new File(outputDir, "tables").toPath())) {
 			assertTrue(paths.anyMatch(path -> path.getFileName().toString().contains("CUSTOMERS")));
@@ -156,6 +161,7 @@ public class GenerateHtmlDocsCommandTest {
 		child.getInherits().add(parent);
 		child.getInherits().add(inheritanceOnlyParent);
 		partition.setPartitionParent(parent, "1", "10");
+		parent.getColumns().get("ID").setDefaultValue("'<unsafe>'");
 		Path xml = testProjectDir.toPath().resolve("hierarchy.xml");
 		try (var stream = Files.newOutputStream(xml)) {
 			catalog.writeXml(stream);
@@ -180,16 +186,43 @@ public class GenerateHtmlDocsCommandTest {
 			String all = Files.readString(output.resolve("diagrams/_summary_relations_large" + suffix + ".mmd"));
 			assertTrue(all.contains(": \"inherits\""));
 			assertTrue(all.contains(": \"partition of\""));
-			String parentSource = Files.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + suffix + ".mmd"));
-			assertTrue(parentSource.contains(": \"inherits\""));
-			assertTrue(parentSource.contains(": \"partition of\""));
-			String inheritanceOnlySource = Files.readString(output.resolve("diagrams/"
-					+ HtmlUtils.objectFullPath(inheritanceOnlyParent) + suffix + ".mmd"));
-			assertTrue(inheritanceOnlySource.contains(": \"inherits\""));
-			String childSource = Files.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(child) + suffix + ".mmd"));
-			assertTrue(childSource.contains(": \"inherits\""));
-			String partitionSource = Files.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(partition) + suffix + ".mmd"));
-			assertTrue(partitionSource.contains(": \"partition of\""));
+		}
+		assertTableDetailsHaveDdlAndNoRelations(output);
+		String parentHtml = Files.readString(
+				output.resolve("tables/" + HtmlUtils.objectFullPath(parent) + ".html"));
+		assertTrue(parentHtml.contains("&lt;unsafe&gt;"));
+		assertFalse(parentHtml.contains("<unsafe>"));
+		assertFalse(Files.exists(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + ".svg")));
+	}
+
+	@Test
+	void createsDdlWithoutDatabaseProductMetadata() {
+		Catalog catalog = new Catalog("CAT");
+		Schema schema = new Schema("PUBLIC");
+		Table table = new Table("SAMPLE");
+		catalog.getSchemas().add(schema);
+		schema.getTables().add(table);
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("VALUE").setDataType(DataType.VARCHAR).setLength(30));
+		table.setPrimaryKey("PK_SAMPLE", table.getColumns().get("ID"));
+
+		String ddl = new GenerateHtmlDocsCommand().createTableDdl(table);
+
+		assertTrue(ddl.contains("CREATE TABLE"));
+		assertTrue(ddl.contains("SAMPLE"));
+		assertTrue(ddl.contains("PRIMARY KEY"));
+	}
+
+	private void assertTableDetailsHaveDdlAndNoRelations(Path output) throws IOException {
+		try (var paths = Files.list(output.resolve("tables"))) {
+			for (Path html : paths.filter(path -> path.toString().endsWith(".html")).toList()) {
+				String content = Files.readString(html);
+				assertTrue(content.contains("href=\"#DDL\""), html.toString());
+				assertTrue(content.contains("<div id=\"DDL\">"), html.toString());
+				assertTrue(content.contains("CREATE"), html.toString());
+				assertFalse(content.contains("id=\"Relationships\""), html.toString());
+				assertFalse(content.contains("id=\"Viewpoints\""), html.toString());
+			}
 		}
 	}
 

@@ -9,14 +9,9 @@ boolean first=true;
 	<div class="tabs">
 		<ul class="nav">
 			<li class="active default"><a href="#Base">@{getMessage("Base")}</a></li>
+			<li><a href="#DDL">@{getMessage("DDL")}</a></li>
 			@if{!obj.isDefaultRowIteratorHandler()||obj.rows.size()>0}
 			<li><a href="#Rows">@{getMessage("Rows")}</a></li>
-			@end{}
-			@if{relations!=null||relations_logical!=null}
-			<li><a href="#Relationships">@{getMessage("Relationships")}</a></li>
-			@end{}
-			@if{viewpointDocuments!=null&&viewpointDocuments.size()>0}
-			<li><a href="#Viewpoints">@{getMessage("Viewpoints")}</a></li>
 			@end{}
 			@if{obj.partitioning!=null}
 			<li><a href="#Partitioning">@{getMessage("Partitioning")}</a></li>
@@ -442,6 +437,15 @@ boolean first=true;
 			<!-- include(incStatement.html) -->
 			<!-- include(incDefinition.html) -->
 		</div>
+
+		<div id="DDL">
+			<div class="panel panel-default">
+				<div class="header">@{getMessage("DDL")}</div>
+				<div class="body" style="overflow:auto">
+					<pre @{renderOptions.highlightPreClass}><code class="@{renderOptions.getLanguage(ddl)}">@{escape(ddl)}</code></pre>
+				</div>
+			</div>
+		</div>
 	
 		@if{!obj.isDefaultRowIteratorHandler()||obj.rows.size()>0}
 		@code{
@@ -467,27 +471,6 @@ boolean first=true;
 					@end{}</tr>
 				</tbody>
 			</table>
-		</div>
-		@end{}
-	
-		<!-- include(incDetailRelations.html) -->
-
-		@if{viewpointDocuments!=null&&viewpointDocuments.size()>0}
-		<div id="Viewpoints">
-			@foreach{viewpoint : viewpointDocuments}
-			<div class="panel panel-default">
-				<div class="header">@{escape(coalesce(viewpoint.name, viewpoint.id))}</div>
-				<div class="body">
-					@if{viewpoint.description!=null}
-					<p>@{escape(viewpoint.description)}</p>
-					@end{}
-					<div class="diagram-container">
-						<p><a href="../diagrams/@{viewpoint.image.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
-						<iframe class="diagram-frame" loading="lazy" src="../diagrams/@{viewpoint.diagramFileName}" style="@{viewpoint.image.iframeStyle}"></iframe>
-					</div>
-				</div>
-			</div>
-			@end{}
 		</div>
 		@end{}
 	

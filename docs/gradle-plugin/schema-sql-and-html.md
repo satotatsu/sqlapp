@@ -209,7 +209,8 @@ SVG in `diagrams/`. Use the **Mermaid (.mmd)** download link above an ER diagram
 to retrieve its source. This applies to catalog, schema, table and viewpoint
 diagrams, including physical/logical names and compact/detail column selections.
 No additional configuration or Mermaid installation is needed to generate files;
-HTML continues to display SVG.
+relationship pages and schema details continue to display SVG. Table detail pages
+do not embed relationship or viewpoint diagrams.
 
 Open the downloaded source with a Mermaid renderer supporting ER entity aliases
 (see the [Mermaid ER syntax](https://mermaid.js.org/syntax/entityRelationshipDiagram)).
@@ -232,7 +233,7 @@ row cardinalities. Inheritance allows multiple parents; a partition table has on
 immediate partition parent. Generated source includes this explanation as comments.
 When the same parent is recorded as both inheritance and partition metadata, only
 `partition of` is emitted. Multi-level partitions emit each selected child/parent
-pair. Table detail diagrams include direct inheritance parents and children.
+pair.
 Partitions that are not modeled as separate Schema tables are not synthesized
 as entities. SVG layout/style information is not exported.
 
@@ -241,6 +242,15 @@ generates source directly from Schema tables. Pass `NameMode.LOGICAL` to its
 constructor for logical names. `TableSvgCreator.generateMermaid(tables)` additionally
 uses that SVG creator's column selection and table overrides. These are additive
 APIs; existing task properties and SVG output formats are unchanged.
+
+### Table DDL
+
+Each table detail page has a **DDL** tab containing escaped, SQL-highlighted
+`CREATE` DDL generated from the same Schema table. The generator selects the
+database dialect from the catalog product metadata. Schema XML without product
+metadata uses sqlapp's default dialect, allowing standalone documentation
+generation without a database connection. DDL generation failures fail the HTML
+command instead of producing an empty or misleading tab.
 
 ## Implementation and test references
 
