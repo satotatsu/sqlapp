@@ -61,6 +61,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	 */
 	public void setParserContext(ParserContext parserContext) {
 		this.parserContext = parserContext;
+		clearCache();
 	}
 
 	public void addImport(String clazzName) throws ClassNotFoundException {
@@ -69,6 +70,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 
 	public void addImport(Class<?> clazz) {
 		parserContext.addImport(clazz);
+		clearCache();
 	}
 
 	@Deprecated
@@ -87,6 +89,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 
 	public void addPackageImport(String packageName) {
 		parserContext.addPackageImport(packageName);
+		clearCache();
 	}
 
 	/**
@@ -109,6 +112,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 		for (Method method : methods) {
 			addImport(parserContext, method);
 		}
+		clearCache();
 	}
 
 	/**

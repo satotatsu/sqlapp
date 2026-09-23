@@ -36,6 +36,10 @@ public abstract class AbstractCachedEvaluator implements CachedEvaluator {
 		return evaluatorMap;
 	}
 
+	public void clearCache() {
+		evaluatorMap.clear();
+	}
+
 	protected abstract Evaluator createEvalExecutor(String expression);
 
 	@Override
@@ -99,7 +103,7 @@ public abstract class AbstractCachedEvaluator implements CachedEvaluator {
 		final String key = getCacheKey(expression, context);
 		Evaluator evaluator = getEvaluatorMap().get(key);
 		if (evaluator == null) {
-			return putIfAbsent(expression, expression).evalBoolean(context);
+			return putIfAbsent(expression, key).evalBoolean(context);
 		}
 		return evaluator.evalBoolean(context);
 	}
