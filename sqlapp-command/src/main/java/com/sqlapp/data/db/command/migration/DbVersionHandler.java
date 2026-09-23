@@ -24,7 +24,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Collections;
@@ -674,25 +673,18 @@ public class DbVersionHandler {
 		final List<SqlOperation> sqlOperations = dialect.createSqlFactoryRegistry().createSql(table, SqlType.SELECT);
 		final SqlOperation sqlOperation = sqlOperations.get(0);
 		final String sql = sqlOperation.getSqlText();
-		final int transactionIsolation = connection.getTransactionIsolation();
-		try {
-			connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
-			final ParametersContext context = new ParametersContext();
-			try (Statement statement = connection.createStatement();) {
-				final SqlConverter sqlConverter = new SqlConverter();
-				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, sql);
-				context.put(this.getIdColumnName(), id);
-				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode) {
-					@Override
-					protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
-						cons.accept(resultSet);
-					}
-				};
-				jdbcHandler.execute(connection, context);
+		// Preserve the caller's isolation and any transaction-scoped locks.
+		final ParametersContext context = new ParametersContext();
+		final SqlConverter sqlConverter = new SqlConverter();
+		final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, sql);
+		context.put(this.getIdColumnName(), id);
+		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode) {
+			@Override
+			protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
+				cons.accept(resultSet);
 			}
-		} finally {
-			connection.setTransactionIsolation(transactionIsolation);
-		}
+		};
+		jdbcHandler.execute(connection, context);
 	}
 
 	/**

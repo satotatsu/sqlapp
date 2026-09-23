@@ -142,6 +142,25 @@ Versioned SQL migration is separate from the YAML-driven bulk migration and
 SCD2 snapshot tasks. See the [task guide](README.md#executebulkmigrationjob)
 for source/target connections, checkpoints, leases and verification.
 
+### Concurrent migration execution
+
+For each selected version, migration acquires the dialect's history-table lock
+before rechecking whether that version exists. The lookup preserves the
+connection's transaction isolation. If another invocation has changed the
+history so that the selected version can no longer be started, the command fails
+with `DbConcurrencyException` instead of returning as if it completed. Stop
+competing invocations, inspect the current history, and rerun from the resulting
+state. Earlier versions committed by this invocation remain applied.
+
+This uses the existing per-version locks and commit boundaries; it does not add
+configuration or history columns. It is not a command-wide distributed lock:
+setup/finalize SQL, history-table creation/upgrades, and DDL that implicitly
+commits are not protected for the full invocation. Non-transactional SQL runs on
+a separate connection, while the history connection's lock follows the database's
+transaction semantics. Serialize deployments externally when command-wide
+exclusion is required. Lock support and wait behavior remain dialect/driver
+dependent; these checks do not introduce a lease, automatic retry, or timeout.
+
 ### Optional checksum validation
 
 The default migration workflow does not record or validate checksums and needs

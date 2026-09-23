@@ -45,6 +45,7 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.DbObjectDifference;
+import com.sqlapp.data.schemas.DbConcurrencyException;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexCollection;
@@ -416,18 +417,19 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				if (id == null) {
 					continue;
 				}
-				if (!preCheck(connection, dialect, table, id, row, dbVersionHandler)) {
-					return;
-				}
 				sqlFile[0] = sqlFileMap.get(id);
 				executor.execute(ddlAutoCommitOffSqlList);
 				executor.execute(lockTableSqlList);
+				// Recheck history only after acquiring this change's transaction lock.
+				if (!preCheck(connection, dialect, table, id, row, dbVersionHandler)) {
+					throw concurrentHistoryChange(id);
+				}
 				if (isChecksumValidation() && recordsChecksum() && sqlFile[0] != null) {
 					row.put(DbVersionHandler.CHECKSUM_COLUMN, sqlFile[0].getUpSqlChecksum());
 				}
 				if (!startVersion(connection, dialect, table, row, seriesNumber != null ? seriesNumber : id,
 						dbVersionHandler)) {
-					return;
+					throw concurrentHistoryChange(id);
 				}
 				if (seriesNumber == null) {
 					seriesNumber = id;
@@ -500,6 +502,12 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	protected boolean recordsChecksum() {
 		return true;
+	}
+
+	private DbConcurrencyException concurrentHistoryChange(final Long id) {
+		return new DbConcurrencyException("Migration history changed concurrently for version " + id
+				+ " in " + getSchemaChangeLogTableName()
+				+ ". Stop competing migrations, inspect the current history, then retry.");
 	}
 
 	protected File getFile(final SqlFile sqlFile) {
