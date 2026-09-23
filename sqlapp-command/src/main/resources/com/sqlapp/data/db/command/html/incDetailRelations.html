@@ -14,6 +14,7 @@
 			@if{relations!=null}
 			<div id="Compact" data-default="true">
 				<div class="diagram-container">
+					<p><a href="../diagrams/@{relations.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 					<iframe class="diagram-frame" loading="lazy" src="../diagrams/@{objectFullPath(obj)}.@{_diagramExtension}" style="@{relations.iframeStyle}"></iframe>
 				</div>
 			</div>
@@ -21,6 +22,7 @@
 			@if{relations_logical!=null}
 			<div id="LogicalCompact">
 				<div class="diagram-container">
+					<p><a href="../diagrams/@{relations_logical.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 					<iframe class="diagram-frame" loading="lazy" src="../diagrams/@{objectFullPath(obj)}_logical.@{_diagramExtension}" style="@{relations_logical.iframeStyle}"></iframe>
 				</div>
 			</div>

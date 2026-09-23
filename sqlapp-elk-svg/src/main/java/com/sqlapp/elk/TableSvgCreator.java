@@ -277,6 +277,15 @@ public class TableSvgCreator {
 		ForeignKeyConstraint foreignKeyConstraint;
 	}
 
+	/** Generates Mermaid source using this creator's names and column selection. */
+	public String generateMermaid(Collection<Table> tables) {
+		return new TableMermaidCreator(nameMode).generate(tables, table -> {
+			ElkNode root = ElkGraphUtil.createGraph();
+			TableNode node = createTableNode(table, root, createElkNode(root, table));
+			return node::test;
+		});
+	}
+
 	public SVGResult generateSchemaSvg(List<Schema> schemas) {
 		resetRelationRenderingState();
 		List<SchemaNode> schemaNodes = CommonUtils.list();

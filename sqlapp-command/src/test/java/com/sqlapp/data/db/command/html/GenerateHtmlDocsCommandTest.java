@@ -55,6 +55,13 @@ public class GenerateHtmlDocsCommandTest {
 	// protected File testProjectDir = new File("./");
 
 	@Test
+	void encodesMermaidDownloadFileNames() {
+		RelationImageHolder holder = new RelationImageHolder(new File("diagram.svg"), "", "");
+		holder.setMermaidFile(new File("図 & 100%+#.mmd"));
+		assertEquals("%E5%9B%B3%20%26%20100%25%2B%23.mmd", holder.getMermaidFileUrl());
+	}
+
+	@Test
 	void passesTheConfiguredYamlConverterToTheSharedTableReader() {
 		final var converter = new YamlConverter();
 		final var command = new GenerateHtmlDocsCommand();
@@ -85,6 +92,7 @@ public class GenerateHtmlDocsCommandTest {
 		command.setPlaceholders(true);
 		command.setMultiThread(true);
 		command.run();
+		assertMermaidDownloads(outputDir.toPath());
 	}
 
 	@Test
@@ -123,9 +131,88 @@ public class GenerateHtmlDocsCommandTest {
 		assertTrue(relationshipsHtml.contains("AllRelationships"));
 		assertTrue(relationshipsHtml.contains("Viewpoint_sales"));
 		assertTrue(relationshipsHtml.contains("viewpoint-sales.svg"));
+		assertTrue(relationshipsHtml.contains("viewpoint-sales.mmd"));
+		assertTrue(tableHtml.contains("viewpoint-sales.mmd"));
+		assertMermaidDownloads(outputDir.toPath());
 		try (var paths = java.nio.file.Files.list(new File(outputDir, "tables").toPath())) {
 			assertTrue(paths.anyMatch(path -> path.getFileName().toString().contains("CUSTOMERS")));
 		}
+	}
+
+	@Test
+	void downloadsInheritanceAndPartitionRelationsFromXml() throws Exception {
+		Catalog catalog = new Catalog("CAT");
+		Schema schema = new Schema("PUBLIC");
+		catalog.getSchemas().add(schema);
+		Table parent = new Table("BASE");
+		Table inheritanceOnlyParent = new Table("OTHER_BASE");
+		Table child = new Table("DERIVED");
+		Table partition = new Table("PARTITION");
+		for (Table table : java.util.List.of(parent, inheritanceOnlyParent, child, partition)) {
+			schema.getTables().add(table);
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			table.setDisplayName("論理_" + table.getName());
+		}
+		child.getInherits().add(parent);
+		child.getInherits().add(inheritanceOnlyParent);
+		partition.setPartitionParent(parent, "1", "10");
+		Path xml = testProjectDir.toPath().resolve("hierarchy.xml");
+		try (var stream = Files.newOutputStream(xml)) {
+			catalog.writeXml(stream);
+		}
+		Path dictionaries = Files.createDirectory(testProjectDir.toPath().resolve("hierarchy-dictionaries"));
+		var names = new java.util.Properties();
+		for (Table table : schema.getTables()) {
+			names.setProperty(table.getName() + ".displayName", table.getDisplayName());
+		}
+		try (var stream = Files.newOutputStream(dictionaries.resolve("tables.xml"))) {
+			names.storeToXML(stream, "Logical names", java.nio.charset.StandardCharsets.UTF_8);
+		}
+		Path output = testProjectDir.toPath().resolve("hierarchy-html");
+		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
+		command.setTargetFile(xml.toFile());
+		command.setDictionaryFileDirectory(dictionaries.toFile());
+		command.setOutputDirectory(output.toFile());
+		command.setMultiThread(false);
+		command.run();
+		assertMermaidDownloads(output);
+		for (String suffix : java.util.List.of("", "_logical")) {
+			String all = Files.readString(output.resolve("diagrams/_summary_relations_large" + suffix + ".mmd"));
+			assertTrue(all.contains(": \"inherits\""));
+			assertTrue(all.contains(": \"partition of\""));
+			String parentSource = Files.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + suffix + ".mmd"));
+			assertTrue(parentSource.contains(": \"inherits\""));
+			assertTrue(parentSource.contains(": \"partition of\""));
+			String inheritanceOnlySource = Files.readString(output.resolve("diagrams/"
+					+ HtmlUtils.objectFullPath(inheritanceOnlyParent) + suffix + ".mmd"));
+			assertTrue(inheritanceOnlySource.contains(": \"inherits\""));
+			String childSource = Files.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(child) + suffix + ".mmd"));
+			assertTrue(childSource.contains(": \"inherits\""));
+			String partitionSource = Files.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(partition) + suffix + ".mmd"));
+			assertTrue(partitionSource.contains(": \"partition of\""));
+		}
+	}
+
+	private void assertMermaidDownloads(Path output) throws IOException {
+		try (var paths = Files.walk(output.resolve("diagrams"))) {
+			for (Path svg : paths.filter(path -> path.toString().endsWith(".svg")).toList()) {
+				Path mmd = svg.resolveSibling(svg.getFileName().toString().replaceFirst("\\.svg$", ".mmd"));
+				assertTrue(Files.readString(mmd).startsWith("erDiagram\n"), mmd.toString());
+			}
+		}
+		int links = 0;
+		var pattern = java.util.regex.Pattern.compile("href=\"([^\"]+\\.mmd)\" download");
+		try (var paths = Files.walk(output)) {
+			for (Path html : paths.filter(path -> path.toString().endsWith(".html")).toList()) {
+				var matcher = pattern.matcher(Files.readString(html));
+				while (matcher.find()) {
+					String target = java.net.URLDecoder.decode(matcher.group(1), java.nio.charset.StandardCharsets.UTF_8);
+					assertTrue(Files.isRegularFile(html.getParent().resolve(target)), target);
+					links++;
+				}
+			}
+		}
+		assertTrue(links > 0);
 	}
 
 	@Test

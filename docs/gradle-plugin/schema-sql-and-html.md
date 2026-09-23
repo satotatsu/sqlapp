@@ -202,6 +202,42 @@ See [Schema viewpoints](../schema-viewpoints.md) for the YAML format, table
 resolution rules, and reuse with Loader generation. A viewpoint can include
 tables from the shared Schema model without changing the underlying XML.
 
+### Downloading Mermaid ER diagrams
+
+HTML generation also writes UTF-8 Mermaid ER source (`.mmd`) next to every
+SVG in `diagrams/`. Use the **Mermaid (.mmd)** download link above an ER diagram
+to retrieve its source. This applies to catalog, schema, table and viewpoint
+diagrams, including physical/logical names and compact/detail column selections.
+No additional configuration or Mermaid installation is needed to generate files;
+HTML continues to display SVG.
+
+Open the downloaded source with a Mermaid renderer supporting ER entity aliases
+(see the [Mermaid ER syntax](https://mermaid.js.org/syntax/entityRelationshipDiagram)).
+Tables have generated IDs and qualified display labels so equal table names in
+different schemas remain distinct. Column tokens are normalized and suffixed
+with their ordinal to avoid collisions; comments retain the original names and
+type names. Primary, foreign and unique keys are marked. Foreign keys are emitted
+only when both tables are included, with nullability and uniqueness determining
+cardinality. Composite keys produce one relationship per constraint.
+
+Inheritance and partition-table relationships are also emitted when both endpoints
+are selected, using `child }o..o{ parent : "inherits"` and
+`child }o..|| parent : "partition of"`. These labels describe table structure, not
+foreign keys: their endpoint markers represent table-level multiplicities, not
+row cardinalities. Inheritance allows multiple parents; a partition table has one
+immediate partition parent. Generated source includes this explanation as comments.
+When the same parent is recorded as both inheritance and partition metadata, only
+`partition of` is emitted. Multi-level partitions emit each selected child/parent
+pair. Table detail diagrams include direct inheritance parents and children.
+Partitions that are not modeled as separate Schema tables are not synthesized
+as entities. SVG layout/style information is not exported.
+
+For Java callers, `new TableMermaidCreator().generate(tables)` in `sqlapp-elk-svg`
+generates source directly from Schema tables. Pass `NameMode.LOGICAL` to its
+constructor for logical names. `TableSvgCreator.generateMermaid(tables)` additionally
+uses that SVG creator's column selection and table overrides. These are additive
+APIs; existing task properties and SVG output formats are unchanged.
+
 ## Implementation and test references
 
 - [ExportSchemaXmlTask](../../sqlapp-gradle-plugin/src/main/java/com/sqlapp/gradle/plugins/ExportSchemaXmlTask.java)

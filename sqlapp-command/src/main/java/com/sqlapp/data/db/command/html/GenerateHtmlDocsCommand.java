@@ -528,6 +528,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
 		String iframeStyle = toIframeStyle(svgResult);
 		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
+		holder.setMermaidFile(writeMermaid(name, catalog.getSchemas().stream()
+				.flatMap(schema -> schema.getTables().stream()).toList(), svgCreator));
 		return holder;
 	}
 
@@ -548,7 +550,14 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
 		String iframeStyle = toIframeStyle(svgResult);
 		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
+		holder.setMermaidFile(writeMermaid(name, list, svgCreator));
 		return holder;
+	}
+
+	private File writeMermaid(String name, Collection<Table> tables, TableSvgCreator creator) {
+		File file = new File(diagramsPath, name + ".mmd");
+		FileUtils.writeText(file.getAbsolutePath(), "UTF8", creator.generateMermaid(tables));
+		return file;
 	}
 
 	private TableSvgCreator createCreateSvgCreator(SVGDrawMode svgDrawMode, NameMode nameMode, String path,
@@ -607,22 +616,22 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 			Table val = (Table) obj;
 			con.put("viewpointDocuments",
 					viewpointDocuments.stream().filter(viewpoint -> viewpoint.contains(val)).toList());
-			if (!hasRelation(val)) {
+			if (!hasRelation(val, catalog)) {
 				return;
 			}
-			RelationImageHolder holder = createTableRelationImage(val, false, "../tables/");
+			RelationImageHolder holder = createTableRelationImage(val, catalog, false, "../tables/");
 			if (holder != null) {
 				con.put("relations", holder);
 			}
 			//
-			holder = createTableRelationImage(val, true, "../tables/");
+			holder = createTableRelationImage(val, catalog, true, "../tables/");
 			if (holder != null) {
 				con.put("relations_logical", holder);
 			}
 		}, futures);
 	}
 
-	private boolean hasRelation(Table table) {
+	private boolean hasRelation(Table table, Catalog catalog) {
 		if (!CommonUtils.isEmpty(table.getChildRelations())) {
 			return true;
 		}
@@ -638,7 +647,12 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		if (table.getPartitioning() != null && !CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
 			return true;
 		}
-		return false;
+		return !getInheritanceChildren(table, catalog).isEmpty();
+	}
+
+	private List<Table> getInheritanceChildren(Table table, Catalog catalog) {
+		return catalog.getSchemas().stream().flatMap(schema -> schema.getTables().stream())
+				.filter(child -> child.getInherits().stream().anyMatch(parent -> parent == table)).toList();
 	}
 
 	private void outputMenuDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
@@ -739,9 +753,11 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 	}
 
-	private RelationImageHolder createTableRelationImage(Table table, boolean logical, String path) {
+	private RelationImageHolder createTableRelationImage(Table table, Catalog catalog, boolean logical, String path) {
 		Set<Table> tables = CommonUtils.set();
 		tables.add(table);
+		tables.addAll(table.getInherits());
+		tables.addAll(getInheritanceChildren(table, catalog));
 		table.getChildRelations().forEach(fk -> {
 			tables.add(fk.getTable());
 		});

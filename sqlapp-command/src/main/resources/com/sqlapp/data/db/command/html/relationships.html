@@ -21,6 +21,7 @@
 					<p>@{escape(viewpoint.description)}</p>
 					@end{}
 					<div class="diagram-container">
+						<p><a href="diagrams/@{viewpoint.image.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 						<iframe class="diagram-frame" loading="lazy" src="diagrams/@{viewpoint.diagramFileName}" style="@{viewpoint.image.iframeStyle}"></iframe>
 					</div>
 				</div>
