@@ -179,6 +179,8 @@ tasks.named('generateHtmlDocs') {
 
 Run `./gradlew generateHtmlDocs`, then inspect the HTML output directory.
 This task consumes saved metadata and can run independently of the database.
+See [HTML database documentation](../html-documentation.md) for the generated
+site's pages, table details, ER navigation and output layout.
 
 | Property | Type | Purpose |
 |---|---|---|
@@ -206,8 +208,8 @@ tables from the shared Schema model without changing the underlying XML.
 
 HTML generation also writes UTF-8 Mermaid ER source (`.mmd`) next to every
 SVG in `diagrams/`. Use the **Mermaid (.mmd)** download link above an ER diagram
-to retrieve its source. This applies to catalog, schema, table and viewpoint
-diagrams, including physical/logical names and compact/detail column selections.
+to retrieve its source. This applies to catalog, schema and viewpoint diagrams,
+including physical/logical names and compact/detail column selections.
 No additional configuration or Mermaid installation is needed to generate files;
 relationship pages and schema details continue to display SVG. Table detail pages
 do not embed relationship or viewpoint diagrams.

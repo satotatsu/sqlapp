@@ -37,6 +37,9 @@ for `com.sqlapp.db`. The focused guides are:
   and DataSource configuration files.
 - [Schema XML, SQL, and HTML](gradle-plugin/schema-sql-and-html.md): metadata
   export, comparison, DDL generation, dictionaries, and documentation.
+- [HTML database documentation](html-documentation.md): generated pages,
+  table DDL, clickable ER diagrams, Mermaid downloads, viewpoints, and output
+  layout.
 - [Custom tasks and versioned migrations](gradle-plugin/custom-tasks-and-migrations.md):
   registering task types that have no fixed task name, plus the migration
   extension.
