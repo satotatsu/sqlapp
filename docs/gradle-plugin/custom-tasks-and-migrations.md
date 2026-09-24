@@ -350,7 +350,9 @@ To bind execution to a reviewed plan, point `expectedPlanFile` at the JSON
 created by `migrationPlan`. Before setup SQL runs, `migration` compares the
 current version, target, setup/finalize statement counts, pending order, source
 SHA-256, transaction mode, rollback availability and database identity. A changed SQL file or
-database state stops execution. Artifacts containing blockers are rejected.
+database state stops execution. The database-history comparison is repeated
+after acquiring the migration lock, closing the race between the initial plan
+check and setup SQL. Artifacts containing blockers are rejected.
 
 ## Additional task types
 

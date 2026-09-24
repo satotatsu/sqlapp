@@ -544,6 +544,14 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		try {
 			final SqlConverter sqlConverter = getSqlConverter();
 			connection.setAutoCommit(false);
+			final List<SqlOperation> ddlAutoCommitOffSqlList = dialect.createSqlFactoryRegistry()
+					.createSql(SqlType.DDL_AUTOCOMMIT_OFF);
+			final List<SqlOperation> lockTableSqlList = dialect.createSqlFactoryRegistry().createSql(table,
+					SqlType.LOCK);
+			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
+			executor.execute(ddlAutoCommitOffSqlList);
+			executor.execute(lockTableSqlList);
+			validateExpectedPlanAfterLock(connection, dialect, sqlFiles, dbVersionHandler);
 			final List<SplitResult> setupSqls = read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)) {
 				this.info("********************** execute setup sql. **********************");
@@ -552,11 +560,6 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			if (!CommonUtils.isEmpty(setupSqls)) {
 				this.info("******************************************************************");
 			}
-			final List<SqlOperation> ddlAutoCommitOffSqlList = dialect.createSqlFactoryRegistry()
-					.createSql(SqlType.DDL_AUTOCOMMIT_OFF);
-			final List<SqlOperation> lockTableSqlList = dialect.createSqlFactoryRegistry().createSql(table,
-					SqlType.LOCK);
-			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
 			if (!CommonUtils.isEmpty(rows)) {
 				this.info("********************** execute version sql. **********************");
 			}
@@ -698,6 +701,30 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			throw new CommandException("Non-transactional migrations are rejected: " + rejected
 					+ ". Disable rejectNonTransactional only after reviewing partial-failure recovery.");
 		}
+	}
+
+	/**
+	 * Rebuilds the selected plan while holding the migration-history lock. This is
+	 * deliberately done before setup SQL so an approved plan cannot become stale in
+	 * the interval between its initial check and the first migration side effect.
+	 */
+	protected void validateExpectedPlanAfterLock(final Connection connection, final Dialect dialect,
+			final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler) throws SQLException {
+		if (expectedPlanFile == null) {
+			return;
+		}
+		final DialectTableHolder locked = new DialectTableHolder();
+		locked.dialect = dialect;
+		locked.sqlFiles = sqlFiles;
+		locked.table = dbVersionHandler.createVersionTableDefinition(schemaChangeLogTableName);
+		dbVersionHandler.load(connection, dialect, locked.table);
+		if (isChecksumValidation()) {
+			validateChecksums(locked.table, dbVersionHandler, sqlFiles);
+		}
+		dbVersionHandler.mergeSqlFiles(sqlFiles, locked.table);
+		validateOutOfOrder(locked.table, dbVersionHandler);
+		locked.rows = getVersionRows(locked.table, sqlFiles, dbVersionHandler);
+		validateExpectedPlan(connection, locked, dbVersionHandler);
 	}
 
 	protected void validateRollbackPolicy(final List<Row> rows, final Map<Long, SqlFile> sqlFiles,
