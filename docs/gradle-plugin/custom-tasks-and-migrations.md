@@ -388,6 +388,7 @@ tasks.named('verifyMigrationExecutionReport') {
     expectedReportFingerprint = providers.environmentVariable('APPROVED_MIGRATION_REPORT_SHA256')
     expectedPlanFingerprint = providers.environmentVariable('APPROVED_MIGRATION_PLAN_SHA256')
     expectedDatabaseConnectionFingerprint = providers.environmentVariable('EXPECTED_DATABASE_SHA256')
+    maxReportAgeSeconds = 3600
     requireSuccessful = true
     requireAllSelectedCommitted = true
 }
@@ -399,6 +400,10 @@ exact fingerprint retained by the external CI or audit system.
 earlier. `expectedDatabaseConnectionFingerprint` verifies the sanitized
 connection identity recorded in the report, allowing CI to reject a report
 from a different target database. Both are optional lowercase `sha256:` values.
+`maxReportAgeSeconds` optionally rejects an otherwise valid report after its
+recorded completion time becomes too old, preventing reuse of a stale result.
+When enabled, it also rejects future completion times; synchronize the clocks
+of the execution and verification hosts. Omit it to disable freshness checks.
 `requireAllSelectedCommitted` additionally rejects `showVersionOnly` reports
 and partial executions where the committed sequence differs from the selected
 sequence. Execution reports use format version 2 and record whether SQL

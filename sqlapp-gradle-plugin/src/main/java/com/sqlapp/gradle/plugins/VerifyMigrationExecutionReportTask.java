@@ -40,6 +40,10 @@ public abstract class VerifyMigrationExecutionReportTask extends AbstractTask<Ve
 	public abstract Property<String> getExpectedDatabaseConnectionFingerprint();
 
 	@Input
+	@Optional
+	public abstract Property<Long> getMaxReportAgeSeconds();
+
+	@Input
 	public abstract Property<Boolean> getRequireSuccessful();
 
 	@Input
@@ -56,6 +60,9 @@ public abstract class VerifyMigrationExecutionReportTask extends AbstractTask<Ve
 		}
 		if (getExpectedDatabaseConnectionFingerprint().isPresent()) {
 			command.setExpectedDatabaseConnectionFingerprint(getExpectedDatabaseConnectionFingerprint().get());
+		}
+		if (getMaxReportAgeSeconds().isPresent()) {
+			command.setMaxReportAgeSeconds(getMaxReportAgeSeconds().get());
 		}
 		command.setRequireSuccessful(getRequireSuccessful().get());
 		command.setRequireAllSelectedCommitted(getRequireAllSelectedCommitted().get());

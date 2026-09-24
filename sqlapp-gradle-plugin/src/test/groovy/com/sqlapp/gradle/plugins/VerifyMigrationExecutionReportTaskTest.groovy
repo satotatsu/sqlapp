@@ -19,6 +19,7 @@ class VerifyMigrationExecutionReportTaskTest extends AbstractTaskTest {
 		assertFalse(task.expectedReportFingerprint.isPresent())
 		assertFalse(task.expectedPlanFingerprint.isPresent())
 		assertFalse(task.expectedDatabaseConnectionFingerprint.isPresent())
+		assertFalse(task.maxReportAgeSeconds.isPresent())
 		assertFalse(task.requireSuccessful.get())
 		assertFalse(task.requireAllSelectedCommitted.get())
 	}
