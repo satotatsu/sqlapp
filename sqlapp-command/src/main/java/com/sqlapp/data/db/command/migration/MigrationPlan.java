@@ -34,10 +34,15 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 	}
 
 	public record Entry(long version, String description, String source, int statements,
-			boolean transactional, boolean checksumWillBeRecorded, boolean rollbackAvailable) {
+			boolean transactional, boolean checksumWillBeRecorded, boolean rollbackAvailable, String sourceChecksum) {
+		public Entry(final long version, final String description, final String source, final int statements,
+				final boolean transactional, final boolean checksumWillBeRecorded, final boolean rollbackAvailable) {
+			this(version, description, source, statements, transactional, checksumWillBeRecorded, rollbackAvailable, null);
+		}
+
 		public Entry(final long version, final String description, final String source, final int statements,
 				final boolean transactional, final boolean checksumWillBeRecorded) {
-			this(version, description, source, statements, transactional, checksumWillBeRecorded, false);
+			this(version, description, source, statements, transactional, checksumWillBeRecorded, false, null);
 		}
 	}
 

@@ -79,7 +79,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 				final boolean transactional = !getNoTransactionFileFilter().test(source);
 				pending.add(new MigrationPlan.Entry(version, source == null ? null : source.getName(),
 						source == null ? null : source.getAbsolutePath(), file.getUpSqls().size(), transactional,
-						isChecksumValidation(), file.getDownSqls() != null && !file.getDownSqls().isEmpty()));
+						isChecksumValidation(), file.getDownSqls() != null && !file.getDownSqls().isEmpty(),
+						file.getUpSqlChecksum()));
 				if (current != null && version < current) {
 					outOfOrder.add(version);
 				}

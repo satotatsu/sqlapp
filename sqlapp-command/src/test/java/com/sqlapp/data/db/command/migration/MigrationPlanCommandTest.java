@@ -92,7 +92,7 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 4"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 5"));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
 	}
 
@@ -105,6 +105,35 @@ class MigrationPlanCommandTest {
 		command.run();
 		assertTrue(command.getPlan().pending().get(0).rollbackAvailable());
 		assertFalse(command.getPlan().hasBlockers());
+	}
+
+	@Test
+	void expectedPlanDetectsSameStatementCountContentChangeBeforeSetup() throws Exception {
+		final Path migrationFile = up.resolve("1_create.sql");
+		final String reviewedSql = "CREATE TABLE sample(id INT);";
+		Files.writeString(migrationFile, reviewedSql);
+		final Path setup = Files.createDirectory(directory.resolve("approval-setup"));
+		Files.writeString(setup.resolve("setup.sql"), "CREATE TABLE setup_marker(id INT);");
+		final Path artifact = directory.resolve("reviewed-plan.json");
+		final var planner = configure(new MigrationPlanCommand());
+		planner.setSetupSqlDirectory(setup.toFile());
+		planner.setOutputFile(artifact.toFile());
+		planner.run();
+		assertTrue(planner.getPlan().pending().get(0).sourceChecksum().startsWith("sha256:"));
+		Files.writeString(migrationFile, "CREATE TABLE sample(id BIGINT);");
+		final var changed = configure(new MigrationCommand());
+		changed.setSetupSqlDirectory(setup.toFile());
+		changed.setExpectedPlanFile(artifact.toFile());
+		assertThrows(RuntimeException.class, changed::run);
+		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME IN ('SAMPLE','SETUP_MARKER')"));
+		Files.writeString(migrationFile, reviewedSql);
+		final var approved = configure(new MigrationCommand());
+		approved.setSetupSqlDirectory(setup.toFile());
+		approved.setExpectedPlanFile(artifact.toFile());
+		approved.run();
+		assertEquals(2, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME IN ('SAMPLE','SETUP_MARKER')"));
 	}
 
 	@Test

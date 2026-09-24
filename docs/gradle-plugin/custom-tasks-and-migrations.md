@@ -116,6 +116,7 @@ changes using the configured database and migration history.
 | `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions lower than the latest completed version |
 | `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject selected migrations that bypass transactions |
 | `requireDownMigration` | `Property<Boolean>` | Default `false`; require rollback SQL for every selected migration |
+| `expectedPlanFile` | `RegularFileProperty` | Optional reviewed plan JSON that must match execution |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -327,7 +328,7 @@ tasks.named('migrationPlan') {
 }
 ```
 
-The format-version 4 artifact contains pending files and statement counts,
+The format-version 5 artifact contains pending files, source SHA-256 values and statement counts,
 transaction mode, history and checksum issues, and the optional schema-drift
 report. It also records out-of-order versions and whether the configured policy
 rejects them. The file is replaced atomically. Omitting `outputFile` keeps the
@@ -337,6 +338,12 @@ issue, checksum failure, breaking schema drift, or rejected out-of-order
 migration. Rejected non-transactional entries and missing required down SQL are
 also blockers. The report
 remains available for diagnosis.
+
+To bind execution to a reviewed plan, point `expectedPlanFile` at the JSON
+created by `migrationPlan`. Before setup SQL runs, `migration` compares the
+current version, target, setup/finalize statement counts, pending order, source
+SHA-256, transaction mode and rollback availability. A changed SQL file or
+database state stops execution. Artifacts containing blockers are rejected.
 
 ## Additional task types
 

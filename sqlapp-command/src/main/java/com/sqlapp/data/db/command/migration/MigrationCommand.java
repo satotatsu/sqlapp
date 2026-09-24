@@ -122,6 +122,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional requirement that every selected migration has down SQL. */
 	private boolean requireDownMigration = false;
 
+	/** Optional reviewed plan that must match the selected execution. */
+	private File expectedPlanFile;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -179,6 +182,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
 			dbVersionFileHandler.setEncoding(this.getEncoding());
 			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
+			validateExpectedPlan(holder, dbVersionHandler);
 			previousTable = holder.table;
 			previousState = lastState;
 			if (!isShowVersionOnly()) {
@@ -208,6 +212,56 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		dbVersionHandler.setWithSeriesNumber(this.withSeriesNumber);
 		dbVersionHandler.setWithChecksum(this.checksumValidation);
 		return dbVersionHandler;
+	}
+
+	protected void validateExpectedPlan(final DialectTableHolder holder, final DbVersionHandler handler) {
+		if (expectedPlanFile == null) {
+			return;
+		}
+		final MigrationPlan expected = new MigrationPlanIO().read(expectedPlanFile.toPath()).plan();
+		if (expected.hasBlockers()) {
+			throw new CommandException("expectedPlanFile contains blockers: " + expectedPlanFile);
+		}
+		Long current = null;
+		for (final Row row : holder.table.getRows()) {
+			final Long version = handler.getId(row);
+			if (version != null && handler.getStatus(row).isCompleted()
+					&& (current == null || version > current)) {
+				current = version;
+			}
+		}
+		final Map<Long, SqlFile> files = CommonUtils.map();
+		for (final SqlFile file : holder.sqlFiles) {
+			files.put(file.getVersionNumber(), file);
+		}
+		final List<MigrationPlan.Entry> pending = new ArrayList<>();
+		for (final Row row : holder.rows) {
+			final Long version = handler.getId(row);
+			if (version == null) {
+				continue;
+			}
+			final SqlFile file = files.get(version);
+			final File source = file == null ? null : file.getUpSqlFile();
+			pending.add(new MigrationPlan.Entry(version, source == null ? null : source.getName(), null,
+					file == null ? 0 : file.getUpSqls().size(),
+					file != null && !getNoTransactionFileFilter().test(source), isChecksumValidation(),
+					file != null && !CommonUtils.isEmpty(file.getDownSqls()),
+					file == null ? null : file.getUpSqlChecksum()));
+		}
+		final List<MigrationPlan.Entry> reviewed = expected.pending().stream()
+				.map(entry -> new MigrationPlan.Entry(entry.version(), entry.description(), null, entry.statements(),
+						entry.transactional(), entry.checksumWillBeRecorded(), entry.rollbackAvailable(),
+						entry.sourceChecksum()))
+				.toList();
+		final long target = getLastChangeToApply() != null ? getLastChangeToApply()
+				: current != null ? current : Long.MAX_VALUE;
+		if (!java.util.Objects.equals(expected.currentVersion(), current) || expected.targetVersion() != target
+				|| expected.setupStatements() != read(holder.dialect, getSetupSqlDirectory()).size()
+				|| expected.finalizeStatements() != read(holder.dialect, getFinalizeSqlDirectory()).size()
+				|| !reviewed.equals(pending)) {
+			throw new CommandException("Current migration execution does not match expectedPlanFile: "
+					+ expectedPlanFile);
+		}
 	}
 
 	protected SchemaCompatibilityReport assessPreMigrationDrift(final Connection connection) throws SQLException {

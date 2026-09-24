@@ -113,6 +113,11 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract RegularFileProperty getPreMigrationSchemaFile();
 
+	/** Optional reviewed migration-plan JSON required to match execution. */
+	@InputFile
+	@Optional
+	public abstract RegularFileProperty getExpectedPlanFile();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -136,6 +141,9 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			com.setRequireDownMigration(getRequireDownMigration().get());
 			if (getPreMigrationSchemaFile().isPresent()) {
 				com.setPreMigrationSchemaFile(getPreMigrationSchemaFile().get().getAsFile());
+			}
+			if (getExpectedPlanFile().isPresent()) {
+				com.setExpectedPlanFile(getExpectedPlanFile().get().getAsFile());
 			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());

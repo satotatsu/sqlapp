@@ -47,5 +47,9 @@ class MigrationValidateTaskTest {
 		extension.getPreMigrationSchemaFile().set(expected);
 		extension.initializeCommand(command);
 		assertEquals(expected, command.getPreMigrationSchemaFile());
+		final File plan = new File(project.getProjectDir(), "expected-plan.json");
+		extension.getExpectedPlanFile().set(plan);
+		extension.initializeCommand(command);
+		assertEquals(plan, command.getExpectedPlanFile());
 	}
 }
