@@ -11,8 +11,8 @@ import java.io.File;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.migration.MigrationCommand;
-import com.sqlapp.data.db.command.migration.MigrationValidateCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationValidateCommand;
 import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 
 class MigrationValidateTaskTest {

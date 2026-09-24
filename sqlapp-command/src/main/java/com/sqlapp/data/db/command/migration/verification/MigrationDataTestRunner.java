@@ -5,7 +5,7 @@
  */
 package com.sqlapp.data.db.command.migration.verification;
 
-import com.sqlapp.data.db.command.migration.Status;
+import com.sqlapp.data.db.command.migration.schema.Status;
 
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;

@@ -38,11 +38,12 @@ transitively. See [Maven getting started](maven-getting-started.md) or
 
 ## Migration packages
 
-Schema migration commands and their plan, validation, execution-report, and
-environment-comparison types remain in
-`com.sqlapp.data.db.command.migration`. Related workflows use focused
-subpackages:
+Migration commands use focused subpackages under
+`com.sqlapp.data.db.command.migration`:
 
+- `migration.schema` for versioned and repeatable schema migration, planning,
+  validation, history, and execution reports;
+- `migration.environment` for capturing and comparing migration environments;
 - `migration.bulk` for bulk data migration;
 - `migration.snapshot` for Type 2 snapshot execution;
 - `migration.legacy` for legacy hierarchy, mapping, and loader generation; and

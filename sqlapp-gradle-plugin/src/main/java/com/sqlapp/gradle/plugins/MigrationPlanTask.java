@@ -8,8 +8,8 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.MigrationCommand;
-import com.sqlapp.data.db.command.migration.MigrationPlanCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationPlanCommand;
 
 @DisableCachingByDefault
 public abstract class MigrationPlanTask extends MigrationTask {

@@ -36,7 +36,7 @@ import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;

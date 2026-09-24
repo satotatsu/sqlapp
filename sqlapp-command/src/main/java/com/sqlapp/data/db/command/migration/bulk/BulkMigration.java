@@ -7,10 +7,10 @@ import com.sqlapp.data.db.command.migration.verification.MigrationDataTestPlanne
 import com.sqlapp.data.db.command.migration.verification.MigrationDataTestResult;
 import com.sqlapp.data.db.command.migration.verification.MigrationDataTestRunner;
 import com.sqlapp.data.db.command.migration.verification.MigrationNodeManifestIO;
-import com.sqlapp.data.db.command.migration.MigrationSchemaDriftAssessor;
+import com.sqlapp.data.db.command.migration.schema.MigrationSchemaDriftAssessor;
 import com.sqlapp.data.db.command.migration.verification.MigrationTransformationTestResult;
 import com.sqlapp.data.db.command.migration.verification.MigrationTransformationTestRunner;
-import com.sqlapp.data.db.command.migration.Status;
+import com.sqlapp.data.db.command.migration.schema.Status;
 
 import java.nio.file.Path;
 import java.sql.Connection;

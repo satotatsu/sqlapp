@@ -14,7 +14,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.CompareMigrationEnvironmentsCommand;
+import com.sqlapp.data.db.command.migration.environment.CompareMigrationEnvironmentsCommand;
 
 /** Compares migration snapshots without connecting to their databases. */
 @DisableCachingByDefault(because = "Comparison reports may be used as CI gate evidence")

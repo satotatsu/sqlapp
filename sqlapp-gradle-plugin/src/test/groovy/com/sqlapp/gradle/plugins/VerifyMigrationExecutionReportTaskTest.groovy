@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertThrows
 import static org.junit.jupiter.api.Assertions.assertTrue
 
-import com.sqlapp.data.db.command.migration.MigrationExecutionReport
-import com.sqlapp.data.db.command.migration.MigrationExecutionReportIO
-import com.sqlapp.data.db.command.migration.MigrationPlan
+import com.sqlapp.data.db.command.migration.schema.MigrationExecutionReport
+import com.sqlapp.data.db.command.migration.schema.MigrationExecutionReportIO
+import com.sqlapp.data.db.command.migration.schema.MigrationPlan
 import com.sqlapp.exceptions.CommandException
 
 import org.gradle.api.Project

@@ -36,9 +36,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
-import com.sqlapp.data.db.command.migration.DbVersionFileHandler;
-import com.sqlapp.data.db.command.migration.DbVersionHandler;
-import com.sqlapp.data.db.command.migration.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.DbVersionFileHandler;
+import com.sqlapp.data.db.command.migration.schema.DbVersionHandler;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;

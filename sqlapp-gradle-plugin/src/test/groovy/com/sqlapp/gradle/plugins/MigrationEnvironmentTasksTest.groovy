@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull
 import org.gradle.api.Project
 import org.junit.jupiter.api.Test
 
-import com.sqlapp.data.db.command.migration.MigrationEnvironmentSnapshot
-import com.sqlapp.data.db.command.migration.MigrationEnvironmentSnapshotIO
-import com.sqlapp.data.db.command.migration.MigrationPlan
+import com.sqlapp.data.db.command.migration.environment.MigrationEnvironmentSnapshot
+import com.sqlapp.data.db.command.migration.environment.MigrationEnvironmentSnapshotIO
+import com.sqlapp.data.db.command.migration.schema.MigrationPlan
 
 class MigrationEnvironmentTasksTest extends AbstractTaskTest {
 	private File snapshot(String environment) {

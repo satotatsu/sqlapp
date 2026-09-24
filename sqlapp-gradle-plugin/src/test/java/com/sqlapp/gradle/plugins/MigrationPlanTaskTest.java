@@ -11,7 +11,7 @@ import java.io.File;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.migration.MigrationPlanCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationPlanCommand;
 import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 import com.zaxxer.hikari.HikariDataSource;
 

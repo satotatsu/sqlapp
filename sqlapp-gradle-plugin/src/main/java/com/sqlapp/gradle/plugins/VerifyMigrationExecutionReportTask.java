@@ -10,7 +10,7 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
-import com.sqlapp.data.db.command.migration.VerifyMigrationExecutionReportCommand;
+import com.sqlapp.data.db.command.migration.schema.VerifyMigrationExecutionReportCommand;
 
 /** Verifies a migration execution report without opening a database connection. */
 public abstract class VerifyMigrationExecutionReportTask extends AbstractTask<VerifyMigrationExecutionReportCommand> {

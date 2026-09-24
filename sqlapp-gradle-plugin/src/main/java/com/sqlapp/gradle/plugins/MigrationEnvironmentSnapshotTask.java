@@ -7,8 +7,8 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.MigrationCommand;
-import com.sqlapp.data.db.command.migration.MigrationEnvironmentSnapshotCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
+import com.sqlapp.data.db.command.migration.environment.MigrationEnvironmentSnapshotCommand;
 
 /** Captures the migration state of one configured database. */
 @DisableCachingByDefault(because = "Migration state is read from an external database")

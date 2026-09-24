@@ -27,8 +27,8 @@ import java.util.List;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.DbVersionFileHandler;
-import com.sqlapp.data.db.command.migration.DbVersionFileHandler.SqlFile;
+import com.sqlapp.data.db.command.migration.schema.DbVersionFileHandler;
+import com.sqlapp.data.db.command.migration.schema.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.sql.SqlExecutor;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
