@@ -7,6 +7,7 @@ import java.util.HashMap;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.CommandException;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +18,8 @@ import lombok.Setter;
 public class MigrationPlanCommand extends MigrationCommand {
 	/** Optional JSON artifact destination. */
 	private File outputFile;
+	/** Whether a plan containing known blockers should fail the command. */
+	private boolean failOnBlockers;
 
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationPlan plan;
@@ -87,6 +90,27 @@ public class MigrationPlanCommand extends MigrationCommand {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
 			info(plan);
+			if (failOnBlockers && plan.hasBlockers()) {
+				throw new CommandException("Migration plan contains blockers: " + blockerSummary(plan));
+			}
 		});
+	}
+
+	private static String blockerSummary(final MigrationPlan plan) {
+		final var blockers = new ArrayList<String>();
+		if (!plan.historyIssues().isEmpty()) {
+			blockers.add("historyIssues=" + plan.historyIssues().size());
+		}
+		if (plan.checksumValidation() != null && plan.checksumValidation().hasFailures()) {
+			final long failures = plan.checksumValidation().entries().stream()
+					.filter(entry -> entry.state() == MigrationValidationResult.State.MISSING
+							|| entry.state() == MigrationValidationResult.State.CHANGED)
+					.count();
+			blockers.add("checksumFailures=" + failures);
+		}
+		if (plan.schemaDrift() != null && !plan.schemaDrift().isCompatible()) {
+			blockers.add("schemaDrift=" + plan.schemaDrift().compatibility());
+		}
+		return String.join(", ", blockers);
 	}
 }

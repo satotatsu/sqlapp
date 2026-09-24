@@ -2,6 +2,8 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.work.DisableCachingByDefault;
@@ -11,9 +13,16 @@ import com.sqlapp.data.db.command.migration.MigrationPlanCommand;
 
 @DisableCachingByDefault
 public abstract class MigrationPlanTask extends MigrationTask {
+	public MigrationPlanTask() {
+		getFailOnBlockers().convention(false);
+	}
+
 	@OutputFile
 	@Optional
 	public abstract RegularFileProperty getOutputFile();
+
+	@Input
+	public abstract Property<Boolean> getFailOnBlockers();
 
 	@Override
 	protected MigrationCommand createCommand() {
@@ -26,5 +35,6 @@ public abstract class MigrationPlanTask extends MigrationTask {
 		if (getOutputFile().isPresent()) {
 			((MigrationPlanCommand) command).setOutputFile(getOutputFile().get().getAsFile());
 		}
+		((MigrationPlanCommand) command).setFailOnBlockers(getFailOnBlockers().get());
 	}
 }

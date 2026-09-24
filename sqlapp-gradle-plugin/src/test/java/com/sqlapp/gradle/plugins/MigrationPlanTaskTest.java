@@ -2,7 +2,9 @@
 package com.sqlapp.gradle.plugins;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 
@@ -21,13 +23,16 @@ class MigrationPlanTaskTest {
 		final var task = assertInstanceOf(MigrationPlanTask.class,
 				project.getTasks().getByName("migrationPlan"));
 		final var command = assertInstanceOf(MigrationPlanCommand.class, task.createCommand());
+		assertFalse(task.getFailOnBlockers().get());
 		final File output = new File(project.getProjectDir(), "build/migration-plan.json");
 		task.getOutputFile().set(output);
+		task.getFailOnBlockers().set(true);
 		final var extension = project.getExtensions().getByType(MigrationExtension.class);
 		extension.getDataSource().getJdbcUrl().set("jdbc:hsqldb:mem:plan_task");
 		try {
 			task.initializeCommand(command);
 			assertEquals(output, command.getOutputFile());
+			assertTrue(command.isFailOnBlockers());
 		} finally {
 			((HikariDataSource) command.getDataSource()).close();
 		}

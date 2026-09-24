@@ -302,13 +302,17 @@ The plan can also be retained as versioned JSON for CI review:
 ```groovy
 tasks.named('migrationPlan') {
     outputFile = layout.buildDirectory.file('reports/migration-plan.json')
+    failOnBlockers = true
 }
 ```
 
 The artifact contains `formatVersion`, pending files and statement counts,
 transaction mode, history and checksum issues, and the optional schema-drift
 report. The file is replaced atomically. Omitting `outputFile` keeps the
-console-only behavior.
+console-only behavior. `failOnBlockers` defaults to `false`. When enabled, the
+task writes the artifact first and then fails if the plan contains a history
+issue, checksum failure, or breaking schema drift, leaving the report available
+for diagnosis.
 
 ## Additional task types
 

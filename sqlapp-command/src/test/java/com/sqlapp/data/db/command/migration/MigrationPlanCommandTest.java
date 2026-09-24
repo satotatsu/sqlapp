@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -162,6 +163,29 @@ class MigrationPlanCommandTest {
 		command.run();
 		assertEquals(SchemaCompatibility.BREAKING, command.getPlan().schemaDrift().compatibility());
 		assertTrue(command.getPlan().hasBlockers());
+		assertEquals(0, count("SELECT COUNT(*) FROM PRESENT"));
+	}
+
+	@Test
+	void failOnBlockersFailsAfterWritingTheReviewArtifact() throws Exception {
+		try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE PRESENT(NAME VARCHAR(20))");
+		}
+		Files.writeString(up.resolve("1_change.sql"), "INSERT INTO PRESENT VALUES('ok');");
+		final Schema expected = new Schema("PUBLIC");
+		final Table table = new Table("PRESENT");
+		table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100L));
+		expected.getTables().add(table);
+		final Path schemaFile = directory.resolve("expected-gate.xml");
+		expected.writeXml(schemaFile.toFile());
+		final Path output = directory.resolve("reports/blocked-plan.json");
+		final var command = configure(new MigrationPlanCommand());
+		command.setPreMigrationSchemaFile(schemaFile.toFile());
+		command.setOutputFile(output.toFile());
+		command.setFailOnBlockers(true);
+		assertThrows(RuntimeException.class, command::run);
+		assertTrue(Files.isRegularFile(output));
+		assertTrue(new MigrationPlanIO().read(output).plan().hasBlockers());
 		assertEquals(0, count("SELECT COUNT(*) FROM PRESENT"));
 	}
 
