@@ -79,7 +79,7 @@ public class MigrationPlanCommand extends MigrationCommand {
 				final boolean transactional = !getNoTransactionFileFilter().test(source);
 				pending.add(new MigrationPlan.Entry(version, source == null ? null : source.getName(),
 						source == null ? null : source.getAbsolutePath(), file.getUpSqls().size(), transactional,
-						isChecksumValidation()));
+						isChecksumValidation(), file.getDownSqls() != null && !file.getDownSqls().isEmpty()));
 				if (current != null && version < current) {
 					outOfOrder.add(version);
 				}
@@ -89,7 +89,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 			final var drift = getPreMigrationSchemaFile() == null ? null : assessPreMigrationDrift(connection);
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
-					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder(), isRejectNonTransactional());
+					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder(), isRejectNonTransactional(),
+					isRequireDownMigration());
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
@@ -120,6 +121,9 @@ public class MigrationPlanCommand extends MigrationCommand {
 		}
 		if (plan.nonTransactionalRejected() && plan.pending().stream().anyMatch(entry -> !entry.transactional())) {
 			blockers.add("nonTransactional=true");
+		}
+		if (plan.downMigrationRequired() && plan.pending().stream().anyMatch(entry -> !entry.rollbackAvailable())) {
+			blockers.add("missingDownMigration=true");
 		}
 		return String.join(", ", blockers);
 	}

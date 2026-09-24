@@ -10,7 +10,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 		int setupStatements, int finalizeStatements, List<Entry> pending,
 		List<HistoryIssue> historyIssues, MigrationValidationResult checksumValidation,
 		SchemaCompatibilityReport schemaDrift, List<Long> outOfOrderVersions, boolean outOfOrderRejected,
-		boolean nonTransactionalRejected) {
+		boolean nonTransactionalRejected, boolean downMigrationRequired) {
 	public MigrationPlan {
 		pending = List.copyOf(pending);
 		historyIssues = List.copyOf(historyIssues);
@@ -22,7 +22,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 			final List<HistoryIssue> historyIssues, final MigrationValidationResult checksumValidation,
 			final SchemaCompatibilityReport schemaDrift) {
 		this(historyExists, currentVersion, targetVersion, setupStatements, finalizeStatements, pending,
-				historyIssues, checksumValidation, schemaDrift, List.of(), false, false);
+				historyIssues, checksumValidation, schemaDrift, List.of(), false, false, false);
 	}
 
 	/** Retains the constructor used before schema-drift reporting was added. */
@@ -34,7 +34,11 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 	}
 
 	public record Entry(long version, String description, String source, int statements,
-			boolean transactional, boolean checksumWillBeRecorded) {
+			boolean transactional, boolean checksumWillBeRecorded, boolean rollbackAvailable) {
+		public Entry(final long version, final String description, final String source, final int statements,
+				final boolean transactional, final boolean checksumWillBeRecorded) {
+			this(version, description, source, statements, transactional, checksumWillBeRecorded, false);
+		}
 	}
 
 	public record HistoryIssue(long version, Status status) {
@@ -45,6 +49,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 				|| checksumValidation != null && checksumValidation.hasFailures()
 				|| schemaDrift != null && !schemaDrift.isCompatible()
 				|| outOfOrderRejected && !outOfOrderVersions.isEmpty()
-				|| nonTransactionalRejected && pending.stream().anyMatch(entry -> !entry.transactional());
+				|| nonTransactionalRejected && pending.stream().anyMatch(entry -> !entry.transactional())
+				|| downMigrationRequired && pending.stream().anyMatch(entry -> !entry.rollbackAvailable());
 	}
 }

@@ -119,6 +119,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional rejection of selected migration files that bypass transactions. */
 	private boolean rejectNonTransactional = false;
 
+	/** Optional requirement that every selected migration has down SQL. */
+	private boolean requireDownMigration = false;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -473,6 +476,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			sqlFileMap.put(sqlFile.getVersionNumber(), sqlFile);
 		}
 		validateTransactionPolicy(rows, sqlFileMap, dbVersionHandler);
+		validateRollbackPolicy(rows, sqlFileMap, dbVersionHandler);
 		Long seriesNumber = null;
 		Long id = null;
 		Row currentRow = null;
@@ -637,6 +641,24 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (!rejected.isEmpty()) {
 			throw new CommandException("Non-transactional migrations are rejected: " + rejected
 					+ ". Disable rejectNonTransactional only after reviewing partial-failure recovery.");
+		}
+	}
+
+	protected void validateRollbackPolicy(final List<Row> rows, final Map<Long, SqlFile> sqlFiles,
+			final DbVersionHandler handler) {
+		if (!requireDownMigration) {
+			return;
+		}
+		final List<Long> missing = new ArrayList<>();
+		for (final Row row : rows) {
+			final Long version = handler.getId(row);
+			final SqlFile sqlFile = sqlFiles.get(version);
+			if (sqlFile != null && CommonUtils.isEmpty(sqlFile.getDownSqls())) {
+				missing.add(version);
+			}
+		}
+		if (!missing.isEmpty()) {
+			throw new CommandException("Down migration SQL is required for versions: " + missing);
 		}
 	}
 

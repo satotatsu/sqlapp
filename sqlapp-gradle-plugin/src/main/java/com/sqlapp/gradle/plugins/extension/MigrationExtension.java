@@ -49,6 +49,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 		getChecksumValidation().convention(false);
 		getRejectOutOfOrder().convention(false);
 		getRejectNonTransactional().convention(false);
+		getRequireDownMigration().convention(false);
 	}
 
 	public void call(Action<MigrationExtension> cons) {
@@ -103,6 +104,10 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Input
 	public abstract Property<Boolean> getRejectNonTransactional();
 
+	/** Optional requirement that each selected up migration has down SQL. */
+	@Input
+	public abstract Property<Boolean> getRequireDownMigration();
+
 	/** Optional expected live Schema XML immediately before migration. */
 	@InputFile
 	@Optional
@@ -128,6 +133,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			com.setChecksumValidation(getChecksumValidation().get());
 			com.setRejectOutOfOrder(getRejectOutOfOrder().get());
 			com.setRejectNonTransactional(getRejectNonTransactional().get());
+			com.setRequireDownMigration(getRequireDownMigration().get());
 			if (getPreMigrationSchemaFile().isPresent()) {
 				com.setPreMigrationSchemaFile(getPreMigrationSchemaFile().get().getAsFile());
 			}
