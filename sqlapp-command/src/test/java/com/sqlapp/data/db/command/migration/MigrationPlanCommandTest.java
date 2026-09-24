@@ -92,7 +92,13 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 5"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 7"));
+		assertTrue(artifact.planFingerprint().matches("sha256:[0-9a-f]{64}"));
+		final Path tampered = directory.resolve("reports/tampered-plan.json");
+		Files.writeString(tampered, Files.readString(output).replace(
+				artifact.plan().pending().get(0).sourceChecksum(),
+				"sha256:0000000000000000000000000000000000000000000000000000000000000000"));
+		assertThrows(RuntimeException.class, () -> new MigrationPlanIO().read(tampered));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
 	}
 
@@ -134,6 +140,31 @@ class MigrationPlanCommandTest {
 		approved.run();
 		assertEquals(2, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
 				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME IN ('SAMPLE','SETUP_MARKER')"));
+	}
+
+	@Test
+	void expectedPlanCannotBeAppliedToAnotherDatabaseWithTheSameVersion() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		final Path artifact = directory.resolve("database-bound-plan.json");
+		final var planner = configure(new MigrationPlanCommand());
+		planner.setOutputFile(artifact.toFile());
+		planner.run();
+		assertTrue(planner.getPlan().databaseIdentity().connectionFingerprint().startsWith("sha256:"));
+		final var other = new JDBCDataSource();
+		other.setUrl("jdbc:hsqldb:mem:other_plan_target_" + UUID.randomUUID());
+		other.setUser("SA");
+		final var migration = new MigrationCommand();
+		migration.setDataSource(other);
+		migration.setCloseDataSource(false);
+		migration.setSqlDirectory(up.toFile());
+		migration.setExpectedPlanFile(artifact.toFile());
+		assertThrows(RuntimeException.class, migration::run);
+		try (var connection = other.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+						+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME='SAMPLE'")) {
+			assertTrue(rows.next());
+			assertEquals(0, rows.getInt(1));
+		}
 	}
 
 	@Test

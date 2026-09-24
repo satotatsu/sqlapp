@@ -328,7 +328,7 @@ tasks.named('migrationPlan') {
 }
 ```
 
-The format-version 5 artifact contains pending files, source SHA-256 values and statement counts,
+The format-version 7 artifact contains pending files, source SHA-256 values and statement counts,
 transaction mode, history and checksum issues, and the optional schema-drift
 report. It also records out-of-order versions and whether the configured policy
 rejects them. The file is replaced atomically. Omitting `outputFile` keeps the
@@ -339,10 +339,17 @@ migration. Rejected non-transactional entries and missing required down SQL are
 also blockers. The report
 remains available for diagnosis.
 
+The artifact also contains `planFingerprint`, a SHA-256 over the portable plan
+content. Absolute source paths are excluded. Reading an accidentally edited or
+partially replaced artifact fails before it can be used as `expectedPlanFile`.
+It also stores the database product and a SHA-256 of the JDBC URL, catalog and
+schema. The raw connection URL and credentials are not written. This binds an
+approved plan to the database location where it was created.
+
 To bind execution to a reviewed plan, point `expectedPlanFile` at the JSON
 created by `migrationPlan`. Before setup SQL runs, `migration` compares the
 current version, target, setup/finalize statement counts, pending order, source
-SHA-256, transaction mode and rollback availability. A changed SQL file or
+SHA-256, transaction mode, rollback availability and database identity. A changed SQL file or
 database state stops execution. Artifacts containing blockers are rejected.
 
 ## Additional task types

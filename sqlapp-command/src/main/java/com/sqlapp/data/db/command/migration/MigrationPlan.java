@@ -10,7 +10,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 		int setupStatements, int finalizeStatements, List<Entry> pending,
 		List<HistoryIssue> historyIssues, MigrationValidationResult checksumValidation,
 		SchemaCompatibilityReport schemaDrift, List<Long> outOfOrderVersions, boolean outOfOrderRejected,
-		boolean nonTransactionalRejected, boolean downMigrationRequired) {
+		boolean nonTransactionalRejected, boolean downMigrationRequired, DatabaseIdentity databaseIdentity) {
 	public MigrationPlan {
 		pending = List.copyOf(pending);
 		historyIssues = List.copyOf(historyIssues);
@@ -22,7 +22,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 			final List<HistoryIssue> historyIssues, final MigrationValidationResult checksumValidation,
 			final SchemaCompatibilityReport schemaDrift) {
 		this(historyExists, currentVersion, targetVersion, setupStatements, finalizeStatements, pending,
-				historyIssues, checksumValidation, schemaDrift, List.of(), false, false, false);
+				historyIssues, checksumValidation, schemaDrift, List.of(), false, false, false, null);
 	}
 
 	/** Retains the constructor used before schema-drift reporting was added. */
@@ -47,6 +47,10 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 	}
 
 	public record HistoryIssue(long version, Status status) {
+	}
+
+	/** Non-secret identity of the database used to create the plan. */
+	public record DatabaseIdentity(String productName, String productVersion, String connectionFingerprint) {
 	}
 
 	public boolean hasBlockers() {

@@ -2,8 +2,12 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HexFormat;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -91,7 +95,7 @@ public class MigrationPlanCommand extends MigrationCommand {
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
 					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder(), isRejectNonTransactional(),
-					isRequireDownMigration());
+					isRequireDownMigration(), databaseIdentity(connection));
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
@@ -100,6 +104,21 @@ public class MigrationPlanCommand extends MigrationCommand {
 				throw new CommandException("Migration plan contains blockers: " + blockerSummary(plan));
 			}
 		});
+	}
+
+	static MigrationPlan.DatabaseIdentity databaseIdentity(final java.sql.Connection connection)
+			throws java.sql.SQLException {
+		final var metadata = connection.getMetaData();
+		final String location = String.valueOf(metadata.getURL()) + "\n" + String.valueOf(connection.getCatalog())
+				+ "\n" + String.valueOf(connection.getSchema());
+		try {
+			final String fingerprint = "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+					.digest(location.getBytes(StandardCharsets.UTF_8)));
+			return new MigrationPlan.DatabaseIdentity(metadata.getDatabaseProductName(),
+					metadata.getDatabaseProductVersion(), fingerprint);
+		} catch (final NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	private static String blockerSummary(final MigrationPlan plan) {

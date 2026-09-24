@@ -182,7 +182,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
 			dbVersionFileHandler.setEncoding(this.getEncoding());
 			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
-			validateExpectedPlan(holder, dbVersionHandler);
+			validateExpectedPlan(connection, holder, dbVersionHandler);
 			previousTable = holder.table;
 			previousState = lastState;
 			if (!isShowVersionOnly()) {
@@ -214,7 +214,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		return dbVersionHandler;
 	}
 
-	protected void validateExpectedPlan(final DialectTableHolder holder, final DbVersionHandler handler) {
+	protected void validateExpectedPlan(final Connection connection, final DialectTableHolder holder,
+			final DbVersionHandler handler) throws SQLException {
 		if (expectedPlanFile == null) {
 			return;
 		}
@@ -255,7 +256,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				.toList();
 		final long target = getLastChangeToApply() != null ? getLastChangeToApply()
 				: current != null ? current : Long.MAX_VALUE;
-		if (!java.util.Objects.equals(expected.currentVersion(), current) || expected.targetVersion() != target
+		if (!java.util.Objects.equals(expected.databaseIdentity(), MigrationPlanCommand.databaseIdentity(connection))
+				|| !java.util.Objects.equals(expected.currentVersion(), current) || expected.targetVersion() != target
 				|| expected.setupStatements() != read(holder.dialect, getSetupSqlDirectory()).size()
 				|| expected.finalizeStatements() != read(holder.dialect, getFinalizeSqlDirectory()).size()
 				|| !reviewed.equals(pending)) {
