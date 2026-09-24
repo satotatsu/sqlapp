@@ -67,6 +67,7 @@ public class MigrationPlanCommand extends MigrationCommand {
 			}
 
 			final var pending = new ArrayList<MigrationPlan.Entry>();
+			final var outOfOrder = new ArrayList<Long>();
 			final long target = getLastChangeToApply() != null ? getLastChangeToApply()
 					: current != null ? current : Long.MAX_VALUE;
 			for (final var file : files) {
@@ -79,13 +80,16 @@ public class MigrationPlanCommand extends MigrationCommand {
 				pending.add(new MigrationPlan.Entry(version, source == null ? null : source.getName(),
 						source == null ? null : source.getAbsolutePath(), file.getUpSqls().size(), transactional,
 						isChecksumValidation()));
+				if (current != null && version < current) {
+					outOfOrder.add(version);
+				}
 			}
 
 			final MigrationValidationResult validation = MigrationChecksumValidator.validate(history, handler, files);
 			final var drift = getPreMigrationSchemaFile() == null ? null : assessPreMigrationDrift(connection);
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
-					pending, issues, validation, drift);
+					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder());
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
@@ -110,6 +114,9 @@ public class MigrationPlanCommand extends MigrationCommand {
 		}
 		if (plan.schemaDrift() != null && !plan.schemaDrift().isCompatible()) {
 			blockers.add("schemaDrift=" + plan.schemaDrift().compatibility());
+		}
+		if (plan.outOfOrderRejected() && !plan.outOfOrderVersions().isEmpty()) {
+			blockers.add("outOfOrder=" + plan.outOfOrderVersions());
 		}
 		return String.join(", ", blockers);
 	}

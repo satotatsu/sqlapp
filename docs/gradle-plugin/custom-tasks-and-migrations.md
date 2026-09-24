@@ -127,7 +127,9 @@ tasks' similarly named property has different typing and numbering semantics.
 Set `rejectOutOfOrder = true` when version numbers must increase monotonically.
 This catches a newly added migration such as version 20 when version 30 is
 already completed, before setup or version SQL runs. The default remains
-permissive for compatibility with existing sqlapp projects.
+permissive for compatibility with existing sqlapp projects. `migrationPlan`
+always reports late versions; they become blockers when `rejectOutOfOrder` is
+enabled.
 
 `migrationInsert` and `migrationRepair` are registered separately for history
 operations. They are not substitutes for applying reviewed schema changes.
@@ -312,13 +314,14 @@ tasks.named('migrationPlan') {
 }
 ```
 
-The artifact contains `formatVersion`, pending files and statement counts,
+The format-version 2 artifact contains pending files and statement counts,
 transaction mode, history and checksum issues, and the optional schema-drift
-report. The file is replaced atomically. Omitting `outputFile` keeps the
+report. It also records out-of-order versions and whether the configured policy
+rejects them. The file is replaced atomically. Omitting `outputFile` keeps the
 console-only behavior. `failOnBlockers` defaults to `false`. When enabled, the
 task writes the artifact first and then fails if the plan contains a history
-issue, checksum failure, or breaking schema drift, leaving the report available
-for diagnosis.
+issue, checksum failure, breaking schema drift, or rejected out-of-order
+migration, leaving the report available for diagnosis.
 
 ## Additional task types
 

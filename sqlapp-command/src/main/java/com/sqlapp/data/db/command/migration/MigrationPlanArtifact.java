@@ -5,7 +5,7 @@ import java.util.Objects;
 
 /** Versioned machine-readable wrapper for a migration plan. */
 public record MigrationPlanArtifact(int formatVersion, MigrationPlan plan) {
-	public static final int CURRENT_FORMAT_VERSION = 1;
+	public static final int CURRENT_FORMAT_VERSION = 2;
 
 	public MigrationPlanArtifact {
 		if (formatVersion != CURRENT_FORMAT_VERSION) {

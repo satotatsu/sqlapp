@@ -86,7 +86,7 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 1"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 2"));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
 	}
 
@@ -144,6 +144,26 @@ class MigrationPlanCommandTest {
 		command.run();
 		assertEquals(1L, command.getPlan().targetVersion());
 		assertTrue(command.getPlan().pending().isEmpty());
+	}
+
+	@Test
+	void reportsOutOfOrderVersionsAndOnlyBlocksWhenStrictModeIsEnabled() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		Files.writeString(up.resolve("3_change.sql"), "INSERT INTO sample VALUES(3);");
+		configure(new MigrationCommand()).run();
+		Files.writeString(up.resolve("2_late.sql"), "INSERT INTO sample VALUES(2);");
+		final var permissive = configure(new MigrationPlanCommand());
+		permissive.run();
+		assertEquals(java.util.List.of(2L), permissive.getPlan().outOfOrderVersions());
+		assertFalse(permissive.getPlan().outOfOrderRejected());
+		assertFalse(permissive.getPlan().hasBlockers());
+		final var strict = configure(new MigrationPlanCommand());
+		strict.setRejectOutOfOrder(true);
+		strict.run();
+		assertEquals(java.util.List.of(2L), strict.getPlan().outOfOrderVersions());
+		assertTrue(strict.getPlan().outOfOrderRejected());
+		assertTrue(strict.getPlan().hasBlockers());
+		assertEquals(1, count("SELECT COUNT(*) FROM sample"));
 	}
 
 	@Test
