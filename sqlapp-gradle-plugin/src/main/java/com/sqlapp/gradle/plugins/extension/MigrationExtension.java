@@ -48,6 +48,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 		this.setDataSource(objects.newInstance((DataSourceExtension.class)));
 		getChecksumValidation().convention(false);
 		getRejectOutOfOrder().convention(false);
+		getRejectNonTransactional().convention(false);
 	}
 
 	public void call(Action<MigrationExtension> cons) {
@@ -98,6 +99,10 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Input
 	public abstract Property<Boolean> getRejectOutOfOrder();
 
+	/** Optional rejection of migrations selected for non-transactional execution. */
+	@Input
+	public abstract Property<Boolean> getRejectNonTransactional();
+
 	/** Optional expected live Schema XML immediately before migration. */
 	@InputFile
 	@Optional
@@ -122,6 +127,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			MigrationCommand com = (MigrationCommand) command;
 			com.setChecksumValidation(getChecksumValidation().get());
 			com.setRejectOutOfOrder(getRejectOutOfOrder().get());
+			com.setRejectNonTransactional(getRejectNonTransactional().get());
 			if (getPreMigrationSchemaFile().isPresent()) {
 				com.setPreMigrationSchemaFile(getPreMigrationSchemaFile().get().getAsFile());
 			}

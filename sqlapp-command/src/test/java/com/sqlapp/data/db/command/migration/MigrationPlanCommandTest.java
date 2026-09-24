@@ -86,7 +86,7 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 2"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 3"));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
 	}
 
@@ -112,6 +112,12 @@ class MigrationPlanCommandTest {
 		assertTrue(plan.pending().get(0).checksumWillBeRecorded());
 		assertEquals(State.VERIFIED, plan.checksumValidation().entries().get(0).state());
 		assertFalse(plan.hasBlockers());
+		final var strict = configure(new MigrationPlanCommand());
+		strict.setLastChangeToApply(2L);
+		strict.setRejectNonTransactional(true);
+		strict.run();
+		assertTrue(strict.getPlan().nonTransactionalRejected());
+		assertTrue(strict.getPlan().hasBlockers());
 		assertEquals(0, count("SELECT COUNT(*) FROM sample"));
 	}
 

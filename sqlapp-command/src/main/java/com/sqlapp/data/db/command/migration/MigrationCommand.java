@@ -116,6 +116,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional strict rejection of pending versions below the latest completed version. */
 	private boolean rejectOutOfOrder = false;
 
+	/** Optional rejection of selected migration files that bypass transactions. */
+	private boolean rejectNonTransactional = false;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -469,6 +472,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		for (final SqlFile sqlFile : sqlFiles) {
 			sqlFileMap.put(sqlFile.getVersionNumber(), sqlFile);
 		}
+		validateTransactionPolicy(rows, sqlFileMap, dbVersionHandler);
 		Long seriesNumber = null;
 		Long id = null;
 		Row currentRow = null;
@@ -615,6 +619,25 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	private boolean isNoTransaction(final SqlFile sqlFile) {
 		return this.getNoTransactionFileFilter().test(getFile(sqlFile));
+	}
+
+	protected void validateTransactionPolicy(final List<Row> rows, final Map<Long, SqlFile> sqlFiles,
+			final DbVersionHandler handler) {
+		if (!rejectNonTransactional) {
+			return;
+		}
+		final List<Long> rejected = new ArrayList<>();
+		for (final Row row : rows) {
+			final Long version = handler.getId(row);
+			final SqlFile sqlFile = sqlFiles.get(version);
+			if (sqlFile != null && getNoTransactionFileFilter().test(sqlFile.getUpSqlFile())) {
+				rejected.add(version);
+			}
+		}
+		if (!rejected.isEmpty()) {
+			throw new CommandException("Non-transactional migrations are rejected: " + rejected
+					+ ". Disable rejectNonTransactional only after reviewing partial-failure recovery.");
+		}
 	}
 
 	protected boolean recordsChecksum() {

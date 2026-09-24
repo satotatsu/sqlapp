@@ -89,7 +89,7 @@ public class MigrationPlanCommand extends MigrationCommand {
 			final var drift = getPreMigrationSchemaFile() == null ? null : assessPreMigrationDrift(connection);
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
-					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder());
+					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder(), isRejectNonTransactional());
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
@@ -117,6 +117,9 @@ public class MigrationPlanCommand extends MigrationCommand {
 		}
 		if (plan.outOfOrderRejected() && !plan.outOfOrderVersions().isEmpty()) {
 			blockers.add("outOfOrder=" + plan.outOfOrderVersions());
+		}
+		if (plan.nonTransactionalRejected() && plan.pending().stream().anyMatch(entry -> !entry.transactional())) {
+			blockers.add("nonTransactional=true");
 		}
 		return String.join(", ", blockers);
 	}

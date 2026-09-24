@@ -239,6 +239,7 @@ The registered `migration` task reads the project extension of the same name.
 | `changeTable` | Nested configuration | Migration-history table and column names |
 | `checksumValidation` | `Property<Boolean>` | Default `false`; opt-in checksum recording and validation during migration. Explicit `migrationValidate` checks regardless of this setting |
 | `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions below the latest completed migration |
+| `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject migration files selected for non-transactional execution |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML; `migration` blocks on breaking drift and `migrationPlan` reports it |
 
 Custom `MigrationDownTask` and `MigrationSeriesDownTask` instances reuse this

@@ -9,7 +9,8 @@ import com.sqlapp.data.schemas.migration.SchemaCompatibilityReport;
 public record MigrationPlan(boolean historyExists, Long currentVersion, Long targetVersion,
 		int setupStatements, int finalizeStatements, List<Entry> pending,
 		List<HistoryIssue> historyIssues, MigrationValidationResult checksumValidation,
-		SchemaCompatibilityReport schemaDrift, List<Long> outOfOrderVersions, boolean outOfOrderRejected) {
+		SchemaCompatibilityReport schemaDrift, List<Long> outOfOrderVersions, boolean outOfOrderRejected,
+		boolean nonTransactionalRejected) {
 	public MigrationPlan {
 		pending = List.copyOf(pending);
 		historyIssues = List.copyOf(historyIssues);
@@ -21,7 +22,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 			final List<HistoryIssue> historyIssues, final MigrationValidationResult checksumValidation,
 			final SchemaCompatibilityReport schemaDrift) {
 		this(historyExists, currentVersion, targetVersion, setupStatements, finalizeStatements, pending,
-				historyIssues, checksumValidation, schemaDrift, List.of(), false);
+				historyIssues, checksumValidation, schemaDrift, List.of(), false, false);
 	}
 
 	/** Retains the constructor used before schema-drift reporting was added. */
@@ -43,6 +44,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 		return !historyIssues.isEmpty()
 				|| checksumValidation != null && checksumValidation.hasFailures()
 				|| schemaDrift != null && !schemaDrift.isCompatible()
-				|| outOfOrderRejected && !outOfOrderVersions.isEmpty();
+				|| outOfOrderRejected && !outOfOrderVersions.isEmpty()
+				|| nonTransactionalRejected && pending.stream().anyMatch(entry -> !entry.transactional());
 	}
 }

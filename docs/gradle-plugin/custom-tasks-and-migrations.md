@@ -114,6 +114,7 @@ changes using the configured database and migration history.
 | `showVersionOnly` | `Property<Boolean>` | Request version display instead of normal migration processing |
 | `checksumValidation` | `Property<Boolean>` | Default `false`; record up SQL checksums and validate completed migrations before execution |
 | `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions lower than the latest completed version |
+| `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject selected migrations that bypass transactions |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -130,6 +131,12 @@ already completed, before setup or version SQL runs. The default remains
 permissive for compatibility with existing sqlapp projects. `migrationPlan`
 always reports late versions; they become blockers when `rejectOutOfOrder` is
 enabled.
+
+Set `rejectNonTransactional = true` when every selected migration must run in a
+transaction. A file selected by the existing no-transaction filename filter is
+then rejected before setup SQL runs. The default remains `false` because some
+database DDL cannot run transactionally. `migrationPlan` marks such entries as
+blockers when this policy is enabled.
 
 `migrationInsert` and `migrationRepair` are registered separately for history
 operations. They are not substitutes for applying reviewed schema changes.
@@ -314,14 +321,15 @@ tasks.named('migrationPlan') {
 }
 ```
 
-The format-version 2 artifact contains pending files and statement counts,
+The format-version 3 artifact contains pending files and statement counts,
 transaction mode, history and checksum issues, and the optional schema-drift
 report. It also records out-of-order versions and whether the configured policy
 rejects them. The file is replaced atomically. Omitting `outputFile` keeps the
 console-only behavior. `failOnBlockers` defaults to `false`. When enabled, the
 task writes the artifact first and then fails if the plan contains a history
 issue, checksum failure, breaking schema drift, or rejected out-of-order
-migration, leaving the report available for diagnosis.
+migration. A rejected non-transactional entry is also a blocker. The report
+remains available for diagnosis.
 
 ## Additional task types
 
