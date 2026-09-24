@@ -27,6 +27,7 @@ class MigrationValidateTaskTest {
 		assertFalse(extension.getChecksumValidation().get());
 		assertFalse(extension.getRejectOutOfOrder().get());
 		assertFalse(extension.getRejectNonTransactional().get());
+		assertFalse(extension.getRequireDownMigration().get());
 		final var command = new MigrationCommand();
 		extension.initializeCommand(command);
 		assertFalse(command.isChecksumValidation());
@@ -39,6 +40,9 @@ class MigrationValidateTaskTest {
 		extension.getRejectNonTransactional().set(true);
 		extension.initializeCommand(command);
 		assertTrue(command.isRejectNonTransactional());
+		extension.getRequireDownMigration().set(true);
+		extension.initializeCommand(command);
+		assertTrue(command.isRequireDownMigration());
 		final File expected = new File(project.getProjectDir(), "expected.xml");
 		extension.getPreMigrationSchemaFile().set(expected);
 		extension.initializeCommand(command);

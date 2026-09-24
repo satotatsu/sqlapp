@@ -43,4 +43,31 @@ class MigrationTransactionPolicyTest {
 			assertEquals(0, rows.getInt(1));
 		}
 	}
+
+	@Test
+	void requiresDownSqlBeforeSetupOrVersionSql() throws Exception {
+		final Path up = Files.createDirectory(directory.resolve("up-rollback"));
+		final Path setup = Files.createDirectory(directory.resolve("setup-rollback"));
+		Files.writeString(up.resolve("1_change.sql"), "INSERT INTO GUARD VALUES(2);");
+		Files.writeString(setup.resolve("setup.sql"), "INSERT INTO GUARD VALUES(1);");
+		final var dataSource = new JDBCDataSource();
+		dataSource.setUrl("jdbc:hsqldb:mem:rollback_policy_" + UUID.randomUUID());
+		dataSource.setUser("SA");
+		try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE GUARD(ID INT)");
+		}
+		final var command = new MigrationCommand();
+		command.setDataSource(dataSource);
+		command.setCloseDataSource(false);
+		command.setSqlDirectory(up.toFile());
+		command.setSetupSqlDirectory(setup.toFile());
+		command.setRequireDownMigration(true);
+		final RuntimeException failure = assertThrows(RuntimeException.class, command::run);
+		assertTrue(failure.getMessage().contains("Down migration SQL is required"));
+		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*) FROM GUARD")) {
+			assertTrue(rows.next());
+			assertEquals(0, rows.getInt(1));
+		}
+	}
 }

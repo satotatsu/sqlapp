@@ -72,7 +72,13 @@ class MigrationPlanCommandTest {
 		assertEquals(1, plan.pending().get(0).statements());
 		assertTrue(plan.pending().get(0).transactional());
 		assertFalse(plan.pending().get(0).checksumWillBeRecorded());
+		assertFalse(plan.pending().get(0).rollbackAvailable());
 		assertFalse(plan.hasBlockers());
+		final var strict = configure(new MigrationPlanCommand());
+		strict.setRequireDownMigration(true);
+		strict.run();
+		assertTrue(strict.getPlan().downMigrationRequired());
+		assertTrue(strict.getPlan().hasBlockers());
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
 	}
 
@@ -86,8 +92,19 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 3"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 4"));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
+	}
+
+	@Test
+	void embeddedUndoSatisfiesRequiredRollbackPolicy() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"),
+				"CREATE TABLE sample(id INT);\n-- //@UNDO\nDROP TABLE sample;");
+		final var command = configure(new MigrationPlanCommand());
+		command.setRequireDownMigration(true);
+		command.run();
+		assertTrue(command.getPlan().pending().get(0).rollbackAvailable());
+		assertFalse(command.getPlan().hasBlockers());
 	}
 
 	@Test
