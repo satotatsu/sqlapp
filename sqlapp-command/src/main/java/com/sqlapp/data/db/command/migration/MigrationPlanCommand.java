@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -14,6 +15,9 @@ import lombok.Setter;
 @Getter
 @Setter
 public class MigrationPlanCommand extends MigrationCommand {
+	/** Optional JSON artifact destination. */
+	private File outputFile;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationPlan plan;
 
@@ -79,6 +83,9 @@ public class MigrationPlanCommand extends MigrationCommand {
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
 					pending, issues, validation, drift);
+			if (outputFile != null) {
+				new MigrationPlanIO().write(outputFile.toPath(), plan);
+			}
 			info(plan);
 		});
 	}

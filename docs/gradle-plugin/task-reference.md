@@ -18,7 +18,7 @@ task can issue DDL or DML and must be configured with the intended target.
 | `countAllTables` | `CountAllTableTask` | `dataSource`, schema/table filters, `outputFormatType` | Row counts on console/output | Read-only |
 | `migration` | `MigrationTask` | Shared `migration` extension | Applies pending versioned SQL | Mutates target |
 | `migrationValidate` | `MigrationValidateTask` | Shared `migration` extension; existing `sqlDirectory` | Checks recorded up SQL checksums; reports unverified legacy entries | Reads history only; no DDL/DML |
-| `migrationPlan` | `MigrationPlanTask` | Shared `migration` extension; existing `sqlDirectory` | Lists pending versions, boundaries and known blockers | Reads history and SQL files only |
+| `migrationPlan` | `MigrationPlanTask` | Shared `migration` extension; existing `sqlDirectory`; optional `outputFile` | Lists pending versions, boundaries and known blockers; optionally writes versioned JSON | Reads history and SQL files only |
 | `migrationInsert` | `MigrationInsertTask` | Shared `migration` extension | Inserts migration-history state | Mutates history table |
 | `migrationRepair` | `MigrationRepairTask` | Shared `migration` extension | Repairs migration-history state | Mutates history table |
 | `generateBulkMigrationOperationalReport` | `GenerateBulkMigrationOperationalReportTask` | `plan`, `status`, optional maintenance/progress state, `targetFile` | JSON operational report | No database access by the task |

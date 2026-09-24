@@ -297,6 +297,19 @@ as a deployment gate. The comparison is table-oriented and limited to objects
 represented by the existing schema compatibility analyzer. Tables omitted from
 the expected file are outside this check.
 
+The plan can also be retained as versioned JSON for CI review:
+
+```groovy
+tasks.named('migrationPlan') {
+    outputFile = layout.buildDirectory.file('reports/migration-plan.json')
+}
+```
+
+The artifact contains `formatVersion`, pending files and statement counts,
+transaction mode, history and checksum issues, and the optional schema-drift
+report. The file is replaced atomically. Omitting `outputFile` keeps the
+console-only behavior.
+
 ## Additional task types
 
 These classes are not registered under fixed names by `DbPlugin`:

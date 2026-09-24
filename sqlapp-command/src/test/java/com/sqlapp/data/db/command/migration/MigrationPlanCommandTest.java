@@ -76,6 +76,20 @@ class MigrationPlanCommandTest {
 	}
 
 	@Test
+	void writesVersionedJsonArtifactWhenRequested() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		final Path output = directory.resolve("reports/migration-plan.json");
+		final var command = configure(new MigrationPlanCommand());
+		command.setOutputFile(output.toFile());
+		command.run();
+		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
+		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
+		assertEquals(command.getPlan(), artifact.plan());
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 1"));
+		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
+	}
+
+	@Test
 	void planUsesHistoryTargetTransactionModeAndRecordedChecksums() throws Exception {
 		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
 		final var migration = configure(new MigrationCommand());
