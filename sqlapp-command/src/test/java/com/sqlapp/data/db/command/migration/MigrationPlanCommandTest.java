@@ -105,6 +105,29 @@ class MigrationPlanCommandTest {
 	}
 
 	@Test
+	void writesSelectedSqlInExecutionOrderWithoutChangingTheDatabase() throws Exception {
+		final var setup = Files.createDirectory(directory.resolve("dry-setup"));
+		final var finalizeDirectory = Files.createDirectory(directory.resolve("dry-finalize"));
+		Files.writeString(setup.resolve("setup.sql"), "CREATE TABLE setup_marker(id INT);");
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		Files.writeString(finalizeDirectory.resolve("finish.sql"), "CREATE TABLE finish_marker(id INT);");
+		final Path dryRun = directory.resolve("reports/migration-plan.sql");
+		final var command = configure(new MigrationPlanCommand());
+		command.setSetupSqlDirectory(setup.toFile());
+		command.setFinalizeSqlDirectory(finalizeDirectory.toFile());
+		command.setDryRunOutputFile(dryRun.toFile());
+		command.run();
+		final String sql = Files.readString(dryRun);
+		final int setupAt = sql.indexOf("CREATE TABLE setup_marker");
+		final int migrationAt = sql.indexOf("CREATE TABLE sample");
+		final int finalizeAt = sql.indexOf("CREATE TABLE finish_marker");
+		assertTrue(setupAt >= 0 && setupAt < migrationAt && migrationAt < finalizeAt);
+		assertTrue(sql.contains("-- migration 1: 1_create.sql [transactional]"));
+		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME IN ('SETUP_MARKER','SAMPLE','FINISH_MARKER')"));
+	}
+
+	@Test
 	void expectedPlanCanRequireARecentReview() throws Exception {
 		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
 		final Path artifact = directory.resolve("expiring-plan.json");

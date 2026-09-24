@@ -2,15 +2,19 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.List;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.exceptions.CommandException;
 
 import lombok.Getter;
@@ -22,6 +26,8 @@ import lombok.Setter;
 public class MigrationPlanCommand extends MigrationCommand {
 	/** Optional JSON artifact destination. */
 	private File outputFile;
+	/** Optional reviewable SQL destination; never executed by this command. */
+	private File dryRunOutputFile;
 	/** Whether a plan containing known blockers should fail the command. */
 	private boolean failOnBlockers;
 
@@ -99,11 +105,68 @@ public class MigrationPlanCommand extends MigrationCommand {
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
+			if (dryRunOutputFile != null) {
+				writeDryRun(dryRunOutputFile, dialect, files, plan);
+			}
 			info(plan);
 			if (failOnBlockers && plan.hasBlockers()) {
 				throw new CommandException("Migration plan contains blockers: " + blockerSummary(plan));
 			}
 		});
+	}
+
+	private void writeDryRun(final File destination, final com.sqlapp.data.db.dialect.Dialect dialect,
+			final List<DbVersionFileHandler.SqlFile> files, final MigrationPlan migrationPlan) {
+		final var selected = new java.util.HashSet<Long>();
+		migrationPlan.pending().forEach(entry -> selected.add(entry.version()));
+		final StringBuilder sql = new StringBuilder();
+		sql.append("-- sqlapp migration dry run; review artifact only\n");
+		appendSection(sql, "setup", read(dialect, getSetupSqlDirectory()));
+		for (final var file : files) {
+			if (!selected.contains(file.getVersionNumber())) {
+				continue;
+			}
+			final String name = file.getUpSqlFile() == null ? "" : file.getUpSqlFile().getName()
+					.replace('\r', '_').replace('\n', '_');
+			sql.append("\n-- migration ").append(file.getVersionNumber()).append(": ").append(name)
+					.append(isNoTransactionFile(file) ? " [non-transactional]" : " [transactional]").append('\n');
+			appendStatements(sql, file.getUpSqls());
+		}
+		appendSection(sql, "finalize", read(dialect, getFinalizeSqlDirectory()));
+		final var absolute = destination.toPath().toAbsolutePath().normalize();
+		try {
+			AtomicMigrationFile.write(absolute,
+					temporary -> Files.writeString(temporary, sql.toString(), StandardCharsets.UTF_8));
+		} catch (final IOException | RuntimeException e) {
+			if (e instanceof CommandException commandException) {
+				throw commandException;
+			}
+			throw new CommandException("Failed to write migration dry-run SQL: " + absolute, e);
+		}
+	}
+
+	private boolean isNoTransactionFile(final DbVersionFileHandler.SqlFile file) {
+		return file.getUpSqlFile() != null && getNoTransactionFileFilter().test(file.getUpSqlFile());
+	}
+
+	private static void appendSection(final StringBuilder sql, final String name,
+			final List<SplitResult> statements) {
+		if (statements == null || statements.isEmpty()) {
+			return;
+		}
+		sql.append("\n-- ").append(name).append('\n');
+		appendStatements(sql, statements);
+	}
+
+	private static void appendStatements(final StringBuilder sql, final List<SplitResult> statements) {
+		for (final SplitResult statement : statements) {
+			final String text = statement.getText().stripTrailing();
+			sql.append(text);
+			if (!text.endsWith(";")) {
+				sql.append(';');
+			}
+			sql.append('\n');
+		}
 	}
 
 	static MigrationPlan.DatabaseIdentity databaseIdentity(final java.sql.Connection connection)

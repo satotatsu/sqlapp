@@ -18,7 +18,7 @@ task can issue DDL or DML and must be configured with the intended target.
 | `countAllTables` | `CountAllTableTask` | `dataSource`, schema/table filters, `outputFormatType` | Row counts on console/output | Read-only |
 | `migration` | `MigrationTask` | Shared `migration` extension | Applies pending versioned SQL | Mutates target |
 | `migrationValidate` | `MigrationValidateTask` | Shared `migration` extension; existing `sqlDirectory` | Checks recorded up SQL checksums; reports unverified legacy entries | Reads history only; no DDL/DML |
-| `migrationPlan` | `MigrationPlanTask` | Shared `migration` extension; existing `sqlDirectory`; optional `outputFile`; `failOnBlockers` defaults to `false` | Lists pending versions and known blockers; optionally writes versioned JSON and fails as a CI gate | Reads history and SQL files only |
+| `migrationPlan` | `MigrationPlanTask` | Shared `migration` extension; existing `sqlDirectory`; optional `outputFile` and `dryRunOutputFile`; `failOnBlockers` defaults to `false` | Lists pending versions and known blockers; optionally writes versioned JSON/review SQL and fails as a CI gate | Reads history and SQL files only |
 | `migrationInsert` | `MigrationInsertTask` | Shared `migration` extension | Inserts migration-history state | Mutates history table |
 | `migrationRepair` | `MigrationRepairTask` | Shared `migration` extension | Repairs migration-history state | Mutates history table |
 | `generateBulkMigrationOperationalReport` | `GenerateBulkMigrationOperationalReportTask` | `plan`, `status`, optional maintenance/progress state, `targetFile` | JSON operational report | No database access by the task |
@@ -244,6 +244,7 @@ The registered `migration` task reads the project extension of the same name.
 | `expectedPlanFile` | `RegularFileProperty` | Optional `migrationPlan` JSON that must match the execution selected by `migration` |
 | `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of `expectedPlanFile`; unlimited when omitted |
 | `expectedPlanFingerprint` | `Property<String>` | Optional approved SHA-256 fingerprint required to match `expectedPlanFile` |
+| `lockTimeoutSeconds` | `Property<Integer>` | Optional timeout for migration-history lock acquisition |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML; `migration` blocks on breaking drift and `migrationPlan` reports it |
 
 Custom `MigrationDownTask` and `MigrationSeriesDownTask` instances reuse this

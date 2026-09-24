@@ -25,13 +25,16 @@ class MigrationPlanTaskTest {
 		final var command = assertInstanceOf(MigrationPlanCommand.class, task.createCommand());
 		assertFalse(task.getFailOnBlockers().get());
 		final File output = new File(project.getProjectDir(), "build/migration-plan.json");
+		final File dryRun = new File(project.getProjectDir(), "build/migration-plan.sql");
 		task.getOutputFile().set(output);
+		task.getDryRunOutputFile().set(dryRun);
 		task.getFailOnBlockers().set(true);
 		final var extension = project.getExtensions().getByType(MigrationExtension.class);
 		extension.getDataSource().getJdbcUrl().set("jdbc:hsqldb:mem:plan_task");
 		try {
 			task.initializeCommand(command);
 			assertEquals(output, command.getOutputFile());
+			assertEquals(dryRun, command.getDryRunOutputFile());
 			assertTrue(command.isFailOnBlockers());
 		} finally {
 			((HikariDataSource) command.getDataSource()).close();

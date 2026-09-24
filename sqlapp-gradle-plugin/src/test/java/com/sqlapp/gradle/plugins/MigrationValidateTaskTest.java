@@ -52,9 +52,11 @@ class MigrationValidateTaskTest {
 		extension.getExpectedPlanMaxAgeSeconds().set(3600L);
 		final String fingerprint = "sha256:" + "a".repeat(64);
 		extension.getExpectedPlanFingerprint().set(fingerprint);
+		extension.getLockTimeoutSeconds().set(30);
 		extension.initializeCommand(command);
 		assertEquals(plan, command.getExpectedPlanFile());
 		assertEquals(java.time.Duration.ofHours(1), command.getExpectedPlanMaxAge());
 		assertEquals(fingerprint, command.getExpectedPlanFingerprint());
+		assertEquals(30, command.getLockTimeoutSeconds());
 	}
 }

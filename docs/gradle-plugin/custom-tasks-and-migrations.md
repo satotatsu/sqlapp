@@ -119,6 +119,7 @@ changes using the configured database and migration history.
 | `expectedPlanFile` | `RegularFileProperty` | Optional reviewed plan JSON that must match execution |
 | `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of the reviewed plan; no limit by default |
 | `expectedPlanFingerprint` | `Property<String>` | Optional approved `sha256:...` value that the plan artifact must match |
+| `lockTimeoutSeconds` | `Property<Integer>` | Optional JDBC timeout while acquiring the migration-history lock |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -326,11 +327,12 @@ The plan can also be retained as versioned JSON for CI review:
 ```groovy
 tasks.named('migrationPlan') {
     outputFile = layout.buildDirectory.file('reports/migration-plan.json')
+    dryRunOutputFile = layout.buildDirectory.file('reports/migration-plan.sql')
     failOnBlockers = true
 }
 ```
 
-The format-version 7 artifact contains pending files, source SHA-256 values and statement counts,
+The format-version 8 artifact contains pending files, source SHA-256 values and statement counts,
 transaction mode, history and checksum issues, and the optional schema-drift
 report. It also records out-of-order versions and whether the configured policy
 rejects them. The file is replaced atomically. Omitting `outputFile` keeps the
@@ -340,6 +342,10 @@ issue, checksum failure, breaking schema drift, or rejected out-of-order
 migration. Rejected non-transactional entries and missing required down SQL are
 also blockers. The report
 remains available for diagnosis.
+
+Set `migrationPlan.dryRunOutputFile` to write the selected setup, versioned and
+finalize statements in execution order as UTF-8 SQL. The file is an atomic,
+review-only artifact and `migrationPlan` never executes it.
 
 The artifact also contains `planFingerprint`, a SHA-256 over the portable plan
 content. Absolute source paths are excluded. Reading an accidentally edited or
@@ -363,6 +369,9 @@ age check.
 For CI approval workflows, copy the artifact's `planFingerprint` into
 `expectedPlanFingerprint`. Execution then rejects even a structurally valid
 replacement plan unless it has the exact reviewed fingerprint.
+Set `lockTimeoutSeconds` in CI when a competing migration should fail within a
+bounded time. It is passed to JDBC only for migration-lock statements; omitting
+it retains the driver's existing wait behavior.
 
 ## Additional task types
 

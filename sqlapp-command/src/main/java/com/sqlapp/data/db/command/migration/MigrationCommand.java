@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.Collections;
@@ -131,6 +132,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	/** Optional externally approved fingerprint of the reviewed plan. */
 	private String expectedPlanFingerprint;
+
+	/** Optional JDBC timeout for acquiring the migration-history lock. */
+	private Integer lockTimeoutSeconds;
 
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
@@ -289,6 +293,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (expectedPlanFingerprint != null
 				&& !expectedPlanFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("expectedPlanFingerprint must be a lowercase SHA-256 value");
+		}
+		if (lockTimeoutSeconds != null && lockTimeoutSeconds <= 0) {
+			throw new CommandException("lockTimeoutSeconds must be greater than zero");
 		}
 	}
 
@@ -594,7 +601,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 					SqlType.LOCK);
 			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
 			executor.execute(ddlAutoCommitOffSqlList);
-			executor.execute(lockTableSqlList);
+			executeMigrationLock(connection, lockTableSqlList);
 			validateExpectedPlanAfterLock(connection, dialect, sqlFiles, dbVersionHandler);
 			final List<SplitResult> setupSqls = read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)) {
@@ -619,7 +626,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				sqlFile[0] = sqlFileMap.get(id);
 				source = sqlFile[0] == null ? null : getFile(sqlFile[0]);
 				executor.execute(ddlAutoCommitOffSqlList);
-				executor.execute(lockTableSqlList);
+				executeMigrationLock(connection, lockTableSqlList);
 				// Recheck history only after acquiring this change's transaction lock.
 				if (!preCheck(connection, dialect, table, id, row, dbVersionHandler)) {
 					throw concurrentHistoryChange(id);
@@ -726,6 +733,27 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	private boolean isNoTransaction(final SqlFile sqlFile) {
 		return this.getNoTransactionFileFilter().test(getFile(sqlFile));
+	}
+
+	protected void executeMigrationLock(final Connection connection, final List<SqlOperation> operations)
+			throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			if (lockTimeoutSeconds != null) {
+				statement.setQueryTimeout(lockTimeoutSeconds);
+			}
+			for (final SqlOperation operation : operations) {
+				if (!CommonUtils.isEmpty(operation.getSqlText())) {
+					debug(operation.getSqlText());
+					statement.execute(operation.getSqlText());
+				}
+			}
+		} catch (final SQLTimeoutException e) {
+			final DbConcurrencyException failure = new DbConcurrencyException(
+					"Could not acquire migration history lock within " + lockTimeoutSeconds
+							+ " seconds. Stop competing migrations or increase lockTimeoutSeconds.");
+			failure.initCause(e);
+			throw failure;
+		}
 	}
 
 	protected void validateTransactionPolicy(final List<Row> rows, final Map<Long, SqlFile> sqlFiles,

@@ -21,6 +21,10 @@ public abstract class MigrationPlanTask extends MigrationTask {
 	@Optional
 	public abstract RegularFileProperty getOutputFile();
 
+	@OutputFile
+	@Optional
+	public abstract RegularFileProperty getDryRunOutputFile();
+
 	@Input
 	public abstract Property<Boolean> getFailOnBlockers();
 
@@ -34,6 +38,9 @@ public abstract class MigrationPlanTask extends MigrationTask {
 		super.initializeCommand(command);
 		if (getOutputFile().isPresent()) {
 			((MigrationPlanCommand) command).setOutputFile(getOutputFile().get().getAsFile());
+		}
+		if (getDryRunOutputFile().isPresent()) {
+			((MigrationPlanCommand) command).setDryRunOutputFile(getDryRunOutputFile().get().getAsFile());
 		}
 		((MigrationPlanCommand) command).setFailOnBlockers(getFailOnBlockers().get());
 	}

@@ -13,11 +13,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hsqldb.jdbc.JDBCDataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.db.command.migration.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbConcurrencyException;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -133,6 +136,40 @@ class MigrationConcurrencyTest {
 			connection.rollback();
 		}
 		assertEquals(0, count("SELECT COUNT(*) FROM audit_log"));
+	}
+
+	@Test
+	void configuredLockTimeoutIsAppliedAndReportedAsConcurrencyFailure() throws Exception {
+		final var timeout = new AtomicInteger();
+		final var command = configure(new MigrationCommand());
+		command.setLockTimeoutSeconds(7);
+		try (var connection = dataSource.getConnection()) {
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var table = new DbVersionHandler().createVersionTableDefinition("changelog");
+			final var operations = dialect.createSqlFactoryRegistry().createSql(table, SqlType.LOCK);
+			final Connection timingOut = (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+					new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+						final Object value = invoke(connection, method, args);
+						if (!method.getName().equals("createStatement")) {
+							return value;
+						}
+						return Proxy.newProxyInstance(Statement.class.getClassLoader(),
+								new Class<?>[] { Statement.class }, (statementProxy, statementMethod, statementArgs) -> {
+									if (statementMethod.getName().equals("setQueryTimeout")) {
+										timeout.set((Integer) statementArgs[0]);
+									}
+									if (statementMethod.getName().equals("execute")) {
+										throw new SQLTimeoutException("busy");
+									}
+									return invoke(value, statementMethod, statementArgs);
+								});
+					});
+			final var failure = assertThrows(DbConcurrencyException.class,
+					() -> command.executeMigrationLock(timingOut, operations));
+			assertEquals(7, timeout.get());
+			assertTrue(failure.getMessage().contains("7 seconds"));
+			assertTrue(failure.getCause() instanceof SQLTimeoutException);
+		}
 	}
 
 	/** Complete the competing transaction immediately before the real LOCK statement. */

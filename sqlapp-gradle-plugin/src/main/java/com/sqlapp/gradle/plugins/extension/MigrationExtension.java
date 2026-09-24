@@ -130,6 +130,11 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract Property<String> getExpectedPlanFingerprint();
 
+	/** Optional JDBC timeout for acquiring the migration-history lock. */
+	@Input
+	@Optional
+	public abstract Property<Integer> getLockTimeoutSeconds();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -162,6 +167,9 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			}
 			if (getExpectedPlanFingerprint().isPresent()) {
 				com.setExpectedPlanFingerprint(getExpectedPlanFingerprint().get());
+			}
+			if (getLockTimeoutSeconds().isPresent()) {
+				com.setLockTimeoutSeconds(getLockTimeoutSeconds().get());
 			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());
