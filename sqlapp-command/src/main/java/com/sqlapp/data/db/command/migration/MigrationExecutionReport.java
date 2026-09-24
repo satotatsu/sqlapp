@@ -11,9 +11,10 @@ import java.util.Objects;
 
 /** Machine-readable audit result for one migration command invocation. */
 public record MigrationExecutionReport(int formatVersion, String reportFingerprint, long startedAtEpochMillis,
-		long finishedAtEpochMillis, boolean successful, MigrationPlan.DatabaseIdentity databaseIdentity, String planFingerprint,
+		long finishedAtEpochMillis, boolean successful, boolean executionRequested,
+		MigrationPlan.DatabaseIdentity databaseIdentity, String planFingerprint,
 		List<Long> selectedVersions, List<Long> committedVersions, MigrationExecutionFailure failure) {
-	public static final int CURRENT_FORMAT_VERSION = 1;
+	public static final int CURRENT_FORMAT_VERSION = 2;
 
 	public MigrationExecutionReport {
 		if (formatVersion != CURRENT_FORMAT_VERSION) {
@@ -29,30 +30,36 @@ public record MigrationExecutionReport(int formatVersion, String reportFingerpri
 				|| !selectedVersions.containsAll(committedVersions)) {
 			throw new IllegalArgumentException("Invalid selected or committed migration versions");
 		}
+		if (!executionRequested && !committedVersions.isEmpty()) {
+			throw new IllegalArgumentException("A non-executing report cannot contain committed versions");
+		}
+		if (successful && executionRequested && !selectedVersions.equals(committedVersions)) {
+			throw new IllegalArgumentException("A successful execution must commit every selected version in order");
+		}
 		if (successful && failure != null) {
 			throw new IllegalArgumentException("A successful migration report cannot contain failure details");
 		}
 		final String expected = fingerprint(formatVersion, startedAtEpochMillis, finishedAtEpochMillis, successful,
-				databaseIdentity, planFingerprint, selectedVersions, committedVersions, failure);
+				executionRequested, databaseIdentity, planFingerprint, selectedVersions, committedVersions, failure);
 		if (!expected.equals(reportFingerprint)) {
 			throw new IllegalArgumentException("Migration execution report fingerprint mismatch");
 		}
 	}
 
 	public MigrationExecutionReport(final int formatVersion, final long startedAtEpochMillis,
-			final long finishedAtEpochMillis, final boolean successful,
+			final long finishedAtEpochMillis, final boolean successful, final boolean executionRequested,
 			final MigrationPlan.DatabaseIdentity databaseIdentity, final String planFingerprint,
 			final List<Long> selectedVersions, final List<Long> committedVersions,
 			final MigrationExecutionFailure failure) {
 		this(formatVersion,
-				fingerprint(formatVersion, startedAtEpochMillis, finishedAtEpochMillis, successful, databaseIdentity,
-						planFingerprint, selectedVersions, committedVersions, failure),
-				startedAtEpochMillis, finishedAtEpochMillis, successful, databaseIdentity, planFingerprint,
+				fingerprint(formatVersion, startedAtEpochMillis, finishedAtEpochMillis, successful, executionRequested,
+						databaseIdentity, planFingerprint, selectedVersions, committedVersions, failure),
+				startedAtEpochMillis, finishedAtEpochMillis, successful, executionRequested, databaseIdentity, planFingerprint,
 				selectedVersions, committedVersions, failure);
 	}
 
 	public static String fingerprint(final int formatVersion, final long startedAtEpochMillis,
-			final long finishedAtEpochMillis, final boolean successful,
+			final long finishedAtEpochMillis, final boolean successful, final boolean executionRequested,
 			final MigrationPlan.DatabaseIdentity databaseIdentity, final String planFingerprint,
 			final List<Long> selectedVersions, final List<Long> committedVersions,
 			final MigrationExecutionFailure failure) {
@@ -63,6 +70,7 @@ public record MigrationExecutionReport(int formatVersion, String reportFingerpri
 		add(value, startedAtEpochMillis);
 		add(value, finishedAtEpochMillis);
 		add(value, successful);
+		add(value, executionRequested);
 		add(value, databaseIdentity);
 		add(value, planFingerprint);
 		add(value, selectedVersions);

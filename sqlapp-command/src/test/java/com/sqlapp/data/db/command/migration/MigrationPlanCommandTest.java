@@ -174,6 +174,7 @@ class MigrationPlanCommandTest {
 		migration.run();
 		final var report = new MigrationExecutionReportIO().read(reportFile);
 		assertTrue(report.successful());
+		assertTrue(report.executionRequested());
 		assertEquals(java.util.List.of(1L), report.selectedVersions());
 		assertEquals(java.util.List.of(1L), report.committedVersions());
 		assertNull(report.failure());
@@ -183,6 +184,25 @@ class MigrationPlanCommandTest {
 		Files.writeString(tampered, Files.readString(reportFile).replace("\"successful\" : true",
 				"\"successful\" : false"));
 		assertThrows(RuntimeException.class, () -> new MigrationExecutionReportIO().read(tampered));
+	}
+
+	@Test
+	void showVersionOnlyIsNotReportedAsApplied() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		final Path reportFile = directory.resolve("reports/show-version-execution.json");
+		final var migration = configure(new MigrationCommand());
+		migration.setShowVersionOnly(true);
+		migration.setExecutionReportFile(reportFile.toFile());
+		migration.run();
+		final var report = new MigrationExecutionReportIO().read(reportFile);
+		assertTrue(report.successful());
+		assertFalse(report.executionRequested());
+		assertEquals(java.util.List.of(1L), report.selectedVersions());
+		assertTrue(report.committedVersions().isEmpty());
+		final var verifier = new VerifyMigrationExecutionReportCommand();
+		verifier.setReportFile(reportFile.toFile());
+		verifier.setRequireAllSelectedCommitted(true);
+		assertThrows(RuntimeException.class, verifier::run);
 	}
 
 	@Test

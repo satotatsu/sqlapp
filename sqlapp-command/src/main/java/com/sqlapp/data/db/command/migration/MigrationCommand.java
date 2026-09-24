@@ -244,7 +244,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			throw e;
 		} finally {
 			executionReport = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, startedAt,
-					System.currentTimeMillis(), runFailure == null, databaseIdentity[0], validatedPlanFingerprint,
+					System.currentTimeMillis(), runFailure == null, !isShowVersionOnly(), databaseIdentity[0],
+					validatedPlanFingerprint,
 					selectedVersions, appliedVersions, executionFailure);
 			if (executionReportFile != null) {
 				try {

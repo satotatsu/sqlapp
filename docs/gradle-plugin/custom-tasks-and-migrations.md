@@ -386,12 +386,23 @@ Verify the report later without database access:
 tasks.named('verifyMigrationExecutionReport') {
     reportFile = layout.buildDirectory.file('reports/migration-execution.json')
     expectedReportFingerprint = providers.environmentVariable('APPROVED_MIGRATION_REPORT_SHA256')
+    expectedPlanFingerprint = providers.environmentVariable('APPROVED_MIGRATION_PLAN_SHA256')
+    expectedDatabaseConnectionFingerprint = providers.environmentVariable('EXPECTED_DATABASE_SHA256')
     requireSuccessful = true
+    requireAllSelectedCommitted = true
 }
 ```
 
 `expectedReportFingerprint` is optional. Supplying it binds verification to the
 exact fingerprint retained by the external CI or audit system.
+`expectedPlanFingerprint` verifies that the executed plan is the plan approved
+earlier. `expectedDatabaseConnectionFingerprint` verifies the sanitized
+connection identity recorded in the report, allowing CI to reject a report
+from a different target database. Both are optional lowercase `sha256:` values.
+`requireAllSelectedCommitted` additionally rejects `showVersionOnly` reports
+and partial executions where the committed sequence differs from the selected
+sequence. Execution reports use format version 2 and record whether SQL
+execution was requested separately from command success.
 
 ## Additional task types
 

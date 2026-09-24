@@ -15,7 +15,10 @@ import lombok.Setter;
 public class VerifyMigrationExecutionReportCommand extends AbstractCommand {
 	private File reportFile;
 	private String expectedReportFingerprint;
+	private String expectedPlanFingerprint;
+	private String expectedDatabaseConnectionFingerprint;
 	private boolean requireSuccessful;
+	private boolean requireAllSelectedCommitted;
 	private MigrationExecutionReport report;
 
 	@Override
@@ -24,19 +27,39 @@ public class VerifyMigrationExecutionReportCommand extends AbstractCommand {
 		if (reportFile == null) {
 			throw new CommandException("Migration execution report file is required.");
 		}
-		if (expectedReportFingerprint != null
-				&& !expectedReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
-			throw new CommandException("expectedReportFingerprint must be a lowercase SHA-256 value");
-		}
+		validateFingerprint("expectedReportFingerprint", expectedReportFingerprint);
+		validateFingerprint("expectedPlanFingerprint", expectedPlanFingerprint);
+		validateFingerprint("expectedDatabaseConnectionFingerprint", expectedDatabaseConnectionFingerprint);
 		report = new MigrationExecutionReportIO().read(reportFile.toPath());
 		if (expectedReportFingerprint != null
 				&& !expectedReportFingerprint.equals(report.reportFingerprint())) {
 			throw new CommandException("Migration execution report does not match expectedReportFingerprint: "
 					+ reportFile);
 		}
+		if (expectedPlanFingerprint != null && !expectedPlanFingerprint.equals(report.planFingerprint())) {
+			throw new CommandException("Migration execution report does not match expectedPlanFingerprint: "
+					+ reportFile);
+		}
+		if (expectedDatabaseConnectionFingerprint != null
+				&& (report.databaseIdentity() == null || !expectedDatabaseConnectionFingerprint
+						.equals(report.databaseIdentity().connectionFingerprint()))) {
+			throw new CommandException(
+					"Migration execution report does not match expectedDatabaseConnectionFingerprint: " + reportFile);
+		}
 		if (requireSuccessful && !report.successful()) {
 			throw new CommandException("Migration execution report records a failed migration: " + reportFile);
 		}
+		if (requireAllSelectedCommitted
+				&& (!report.executionRequested() || !report.selectedVersions().equals(report.committedVersions()))) {
+			throw new CommandException("Migration execution report does not show all selected versions committed: "
+					+ reportFile);
+		}
 		info("Migration execution report verified: ", reportFile.getAbsolutePath());
+	}
+
+	private static void validateFingerprint(final String property, final String fingerprint) {
+		if (fingerprint != null && !fingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException(property + " must be a lowercase SHA-256 value");
+		}
 	}
 }
