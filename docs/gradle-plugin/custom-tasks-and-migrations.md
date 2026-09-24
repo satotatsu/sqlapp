@@ -118,6 +118,7 @@ changes using the configured database and migration history.
 | `requireDownMigration` | `Property<Boolean>` | Default `false`; require rollback SQL for every selected migration |
 | `expectedPlanFile` | `RegularFileProperty` | Optional reviewed plan JSON that must match execution |
 | `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of the reviewed plan; no limit by default |
+| `expectedPlanFingerprint` | `Property<String>` | Optional approved `sha256:...` value that the plan artifact must match |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -359,6 +360,9 @@ generated and reviewed plan. It is optional; omitting it preserves the casual
 plan-and-apply workflow. Existing format-version 7 plans remain readable when
 no maximum age is configured; generate a version 8 plan before enabling the
 age check.
+For CI approval workflows, copy the artifact's `planFingerprint` into
+`expectedPlanFingerprint`. Execution then rejects even a structurally valid
+replacement plan unless it has the exact reviewed fingerprint.
 
 ## Additional task types
 

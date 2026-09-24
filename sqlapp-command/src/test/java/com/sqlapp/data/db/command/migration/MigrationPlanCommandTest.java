@@ -121,6 +121,35 @@ class MigrationPlanCommandTest {
 	}
 
 	@Test
+	void expectedPlanCanBePinnedToAnExternallyApprovedFingerprint() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		final Path planFile = directory.resolve("pinned-plan.json");
+		final var planner = configure(new MigrationPlanCommand());
+		planner.setOutputFile(planFile.toFile());
+		planner.run();
+		final var artifact = new MigrationPlanIO().read(planFile);
+		final var replaced = configure(new MigrationCommand());
+		replaced.setExpectedPlanFile(planFile.toFile());
+		replaced.setExpectedPlanFingerprint("sha256:" + "0".repeat(64));
+		assertThrows(RuntimeException.class, replaced::run);
+		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME='SAMPLE'"));
+		final var approved = configure(new MigrationCommand());
+		approved.setExpectedPlanFile(planFile.toFile());
+		approved.setExpectedPlanFingerprint(artifact.planFingerprint());
+		approved.run();
+		assertEquals(1, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME='SAMPLE'"));
+	}
+
+	@Test
+	void planGuardsRequireAnExpectedPlanFile() {
+		final var command = configure(new MigrationCommand());
+		command.setExpectedPlanMaxAge(Duration.ofMinutes(5));
+		assertThrows(RuntimeException.class, command::run);
+	}
+
+	@Test
 	void embeddedUndoSatisfiesRequiredRollbackPolicy() throws Exception {
 		Files.writeString(up.resolve("1_create.sql"),
 				"CREATE TABLE sample(id INT);\n-- //@UNDO\nDROP TABLE sample;");

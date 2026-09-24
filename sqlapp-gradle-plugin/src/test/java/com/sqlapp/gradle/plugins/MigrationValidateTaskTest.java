@@ -50,8 +50,11 @@ class MigrationValidateTaskTest {
 		final File plan = new File(project.getProjectDir(), "expected-plan.json");
 		extension.getExpectedPlanFile().set(plan);
 		extension.getExpectedPlanMaxAgeSeconds().set(3600L);
+		final String fingerprint = "sha256:" + "a".repeat(64);
+		extension.getExpectedPlanFingerprint().set(fingerprint);
 		extension.initializeCommand(command);
 		assertEquals(plan, command.getExpectedPlanFile());
 		assertEquals(java.time.Duration.ofHours(1), command.getExpectedPlanMaxAge());
+		assertEquals(fingerprint, command.getExpectedPlanFingerprint());
 	}
 }

@@ -125,6 +125,11 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract Property<Long> getExpectedPlanMaxAgeSeconds();
 
+	/** Optional externally approved SHA-256 fingerprint of the reviewed plan. */
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedPlanFingerprint();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -154,6 +159,9 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			}
 			if (getExpectedPlanMaxAgeSeconds().isPresent()) {
 				com.setExpectedPlanMaxAge(Duration.ofSeconds(getExpectedPlanMaxAgeSeconds().get()));
+			}
+			if (getExpectedPlanFingerprint().isPresent()) {
+				com.setExpectedPlanFingerprint(getExpectedPlanFingerprint().get());
 			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());

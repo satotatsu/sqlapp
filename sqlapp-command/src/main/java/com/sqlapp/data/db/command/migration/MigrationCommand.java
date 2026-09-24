@@ -129,6 +129,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional maximum age of the reviewed plan. */
 	private Duration expectedPlanMaxAge;
 
+	/** Optional externally approved fingerprint of the reviewed plan. */
+	private String expectedPlanFingerprint;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -169,6 +172,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (isChecksumValidation()) {
 			requireValidationDirectory();
 		}
+		validateExpectedPlanConfiguration();
 		final DbVersionHandler dbVersionHandler = createDbVersionHandler();
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
@@ -224,6 +228,11 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			return;
 		}
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(expectedPlanFile.toPath());
+		if (expectedPlanFingerprint != null
+				&& !expectedPlanFingerprint.equals(artifact.planFingerprint())) {
+			throw new CommandException("expectedPlanFile fingerprint does not match expectedPlanFingerprint: "
+					+ expectedPlanFile);
+		}
 		validateExpectedPlanAge(artifact);
 		final MigrationPlan expected = artifact.plan();
 		if (expected.hasBlockers()) {
@@ -269,6 +278,17 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				|| !reviewed.equals(pending)) {
 			throw new CommandException("Current migration execution does not match expectedPlanFile: "
 					+ expectedPlanFile);
+		}
+	}
+
+	protected void validateExpectedPlanConfiguration() {
+		if (expectedPlanFile == null && (expectedPlanMaxAge != null || expectedPlanFingerprint != null)) {
+			throw new CommandException(
+					"expectedPlanFile is required when expectedPlanMaxAge or expectedPlanFingerprint is configured");
+		}
+		if (expectedPlanFingerprint != null
+				&& !expectedPlanFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedPlanFingerprint must be a lowercase SHA-256 value");
 		}
 	}
 
