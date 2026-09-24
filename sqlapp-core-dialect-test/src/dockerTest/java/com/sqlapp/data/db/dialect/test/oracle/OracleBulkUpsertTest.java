@@ -22,7 +22,7 @@ import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
-import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
+import com.sqlapp.data.db.command.migration.bulk.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;

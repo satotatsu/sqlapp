@@ -36,6 +36,21 @@ to a database. `sqlapp-command` exposes the core Schema model and ELK renderer
 transitively. See [Maven getting started](maven-getting-started.md) or
 [Published artifacts](artifacts.md) for complete dependency examples.
 
+## Migration packages
+
+Schema migration commands and their plan, validation, execution-report, and
+environment-comparison types remain in
+`com.sqlapp.data.db.command.migration`. Related workflows use focused
+subpackages:
+
+- `migration.bulk` for bulk data migration;
+- `migration.snapshot` for Type 2 snapshot execution;
+- `migration.legacy` for legacy hierarchy, mapping, and loader generation; and
+- `migration.verification` for data, transformation, and cutover checks.
+
+`migration.internal` contains shared implementation helpers and is not a
+supported application API.
+
 ## Export database metadata to Schema XML
 
 Supply an application-created `DataSource`, select metadata, configure the
@@ -251,11 +266,12 @@ constructor method calls work with `ParametersContext`, while omitted SQL
 parameters still resolve to null. Generator file data-source expressions are
 evaluated once per load.
 
-Use `BulkMigration` when checkpointing, resume, verification and repair are
-required. File Import does not require migration job configuration. The two
-entry points retain their own transaction and execution policies. Their JDBC
-parameter binding is shared through `JdbcParameterBinder` for the portable
-batch-insert path; vendor-native bulk loaders retain their own implementations.
+Use `com.sqlapp.data.db.command.migration.bulk.BulkMigration` when
+checkpointing, resume, verification and repair are required. File Import does
+not require migration job configuration. The two entry points retain their own
+transaction and execution policies. Their JDBC parameter binding is shared
+through `JdbcParameterBinder` for the portable batch-insert path; vendor-native
+bulk loaders retain their own implementations.
 
 ### Integration checks
 

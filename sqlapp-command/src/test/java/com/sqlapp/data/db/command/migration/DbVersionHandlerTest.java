@@ -29,9 +29,6 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.migration.DbVersionFileHandler;
-import com.sqlapp.data.db.command.migration.DbVersionHandler;
-import com.sqlapp.data.db.command.migration.Status;
 import com.sqlapp.data.db.command.migration.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.command.test.AbstractTest;
 import com.sqlapp.data.schemas.Row;

@@ -1,0 +1,180 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.snapshot;
+
+import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Objects;
+
+import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLease;
+import com.sqlapp.util.JsonConverter;
+
+/** Reads and atomically writes completed SCD2 execution reports. */
+public final class MigrationSnapshotExecutionReportIO {
+	public void write(final Path file, final MigrationSnapshotExecutionReport report) {
+		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
+		validate(report);
+		try {
+			final var converter = converter();
+			AtomicMigrationFile.write(absolute, temporary -> converter.writeJsonValue(temporary.toFile(), report));
+		} catch (IOException | RuntimeException e) {
+			if (e instanceof CommandException commandException)
+				throw commandException;
+			throw new CommandException("Failed to write migration snapshot report: " + absolute, e);
+		}
+	}
+
+	public MigrationSnapshotExecutionReport read(final Path file) {
+		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
+		if (!Files.isRegularFile(absolute)) {
+			throw new CommandException("Migration snapshot report does not exist: " + absolute);
+		}
+		try {
+			return validate(converter().fromJsonString(absolute.toFile(), MigrationSnapshotExecutionReport.class));
+		} catch (RuntimeException e) {
+			if (e instanceof CommandException commandException)
+				throw commandException;
+			throw new CommandException("Failed to read migration snapshot report: " + absolute, e);
+		}
+	}
+
+	public MigrationSnapshotExecutionReport read(final Path file, final String expectedConfigurationFingerprint) {
+		nonBlank(expectedConfigurationFingerprint, "expectedConfigurationFingerprint");
+		final MigrationSnapshotExecutionReport report = read(file);
+		if (!expectedConfigurationFingerprint.equals(report.configurationFingerprint())) {
+			throw new CommandException("Migration snapshot report configuration fingerprint mismatch");
+		}
+		return report;
+	}
+
+	public MigrationSnapshotExecutionReport verifyApproval(final Path reportFile, final Path approvalFile) {
+		final MigrationSnapshotExecutionReport report = read(reportFile);
+		verifyApproval(report, approvalFile);
+		return report;
+	}
+
+	public void verifyConfiguration(final MigrationSnapshotExecutionReport report,
+			final MigrationSnapshotConfigurationResolver.Resolution expected) {
+		validate(report);
+		Objects.requireNonNull(expected, "expected");
+		if (!Objects.equals(expected.configurationFingerprint(), report.configurationFingerprint())) {
+			throw new CommandException("Migration snapshot report configuration fingerprint mismatch");
+		}
+		if (!Objects.equals(MigrationSnapshotLeaseEvidence.from(expected.leaseConfiguration()), report.lease())) {
+			throw new CommandException("Migration snapshot report lease mismatch");
+		}
+	}
+
+	public MigrationSnapshotApprovalReport verifyApproval(final MigrationSnapshotExecutionReport report,
+			final Path approvalFile) {
+		validate(report);
+		if (report.approvalGeneratedAt() == null || report.approvalArtifactFingerprint() == null) {
+			throw new CommandException("Migration snapshot report does not contain approval evidence");
+		}
+		final var artifact = new MigrationSnapshotApprovalReportIO().readArtifact(approvalFile);
+		final MigrationSnapshotApprovalReport approval = artifact.report();
+		matches(artifact.artifactFingerprint(), report.approvalArtifactFingerprint(), "artifact fingerprint");
+		matches(approval.generatedAt(), report.approvalGeneratedAt(), "generatedAt");
+		matches(approval.configurationFingerprint(), report.configurationFingerprint(), "configuration fingerprint");
+		matches(approval.snapshotId(), report.snapshotId(), "snapshotId");
+		matches(approval.sourceTable(), report.sourceTable(), "sourceTable");
+		matches(approval.targetTable(), report.targetTable(), "targetTable");
+		matches(approval.keyColumns(), report.keyColumns(), "keyColumns");
+		matches(approval.trackedColumns(), report.trackedColumns(), "trackedColumns");
+		matches(approval.expireMissingRows(), report.expireMissingRows(), "expireMissingRows");
+		matches(approval.effectiveAt(), report.effectiveAt(), "effectiveAt");
+		matches(approval.fetchSize(), report.fetchSize(), "fetchSize");
+		matches(approval.batchSize(), report.batchSize(), "batchSize");
+		matches(approval.approvalValidFor(), report.approvalValidFor(), "approvalValidFor");
+		return approval;
+	}
+
+	private static JsonConverter converter() {
+		final var converter = new JsonConverter();
+		converter.setIndentOutput(true);
+		return converter;
+	}
+
+	static MigrationSnapshotExecutionReport validate(final MigrationSnapshotExecutionReport report) {
+		if (report == null || report.formatVersion() != MigrationSnapshotExecutionReport.CURRENT_FORMAT_VERSION) {
+			throw new CommandException("Unsupported or missing migration snapshot report formatVersion");
+		}
+		required(report.generatedAt(), "generatedAt");
+		required(report.startedAt(), "startedAt");
+		required(report.effectiveAt(), "effectiveAt");
+		if (report.generatedAt().isBefore(report.startedAt())) {
+			throw new CommandException("Migration snapshot report generatedAt precedes startedAt");
+		}
+		nonBlank(report.snapshotId(), "snapshotId");
+		if (report.configurationFingerprint() == null
+				|| !report.configurationFingerprint().matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("Migration snapshot report contains invalid configurationFingerprint");
+		}
+		if (report.approvalValidFor() != null
+				&& (report.approvalValidFor().isZero() || report.approvalValidFor().isNegative())) {
+			throw new CommandException("Migration snapshot report contains invalid approvalValidFor");
+		}
+		if ((report.approvalGeneratedAt() == null) != (report.approvalArtifactFingerprint() == null)
+				|| report.approvalArtifactFingerprint() != null
+						&& !report.approvalArtifactFingerprint().matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("Migration snapshot report contains invalid approval evidence");
+		}
+		if (report.approvalGeneratedAt() != null) {
+			if (report.approvalGeneratedAt().isAfter(report.startedAt())) {
+				throw new CommandException("Migration snapshot report approval postdates execution start");
+			}
+			if (report.approvalValidFor() != null
+					&& !report.approvalGeneratedAt().plus(report.approvalValidFor()).isAfter(report.startedAt())) {
+				throw new CommandException("Migration snapshot report approval was expired at execution start");
+			}
+		}
+		if ((report.lease() == null) != (report.leaseAcquisitionId() == null)) {
+			throw new CommandException("Migration snapshot report contains inconsistent lease acquisition evidence");
+		}
+		if (report.leaseAcquisitionId() != null) {
+			nonBlank(report.leaseAcquisitionId(), "leaseAcquisitionId");
+			if (report.leaseAcquisitionId().length() > BulkMigrationJobLease.ID_MAX_LENGTH) {
+				throw new CommandException("Migration snapshot report leaseAcquisitionId is too long");
+			}
+		}
+		nonBlank(report.sourceTable(), "sourceTable");
+		nonBlank(report.targetTable(), "targetTable");
+		nonBlank(report.databaseProductName(), "databaseProductName");
+		nonBlank(report.databaseProductVersion(), "databaseProductVersion");
+		nonBlank(report.executorClassName(), "executorClassName");
+		columns(report.keyColumns(), "keyColumns");
+		columns(report.trackedColumns(), "trackedColumns");
+		if (report.fetchSize() <= 0 || report.batchSize() <= 0 || report.expiredRows() < 0 || report.insertedRows() < 0
+				|| report.unchangedRows() < 0) {
+			throw new CommandException("Migration snapshot report contains invalid sizes or counts");
+		}
+		return report;
+	}
+
+	private static void columns(final java.util.List<String> values, final String name) {
+		if (values == null || values.isEmpty() || values.stream().anyMatch(x -> x == null || x.isBlank())
+				|| new HashSet<>(values).size() != values.size()) {
+			throw new CommandException("Migration snapshot report contains invalid " + name);
+		}
+	}
+
+	private static void required(final Object value, final String name) {
+		if (value == null)
+			throw new CommandException("Migration snapshot report requires " + name);
+	}
+
+	private static void nonBlank(final String value, final String name) {
+		if (value == null || value.isBlank())
+			throw new CommandException("Migration snapshot report requires " + name);
+	}
+
+	private static void matches(final Object approval, final Object execution, final String name) {
+		if (!Objects.equals(approval, execution)) {
+			throw new CommandException("Migration snapshot approval evidence " + name + " mismatch");
+		}
+	}
+}

@@ -9,7 +9,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.ExecuteMigrationSnapshotCommand;
+import com.sqlapp.data.db.command.migration.snapshot.ExecuteMigrationSnapshotCommand;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 
 /** Executes one YAML-defined atomic SCD2 snapshot. */

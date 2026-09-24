@@ -20,8 +20,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingIO;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;

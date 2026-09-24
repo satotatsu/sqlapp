@@ -377,6 +377,8 @@ sources, dependency sorting, checkpoint stores, verification tasks, and repair
 planner wiring:
 
 ```java
+import com.sqlapp.data.db.command.migration.bulk.BulkMigration;
+
 BulkMigration migration = BulkMigration.of(sourceDataSource, targetDataSource, schema);
 BulkMigration.Execution execution = migration.run();
 ```
@@ -1321,9 +1323,10 @@ values. Marker consistency and current-key uniqueness are checked again after
 the set-based or batched DML and before commit. These are scalar or
 bounded-result SQL checks rather than per-row JDBC operations.
 For declarative execution, use the Gradle `executeMigrationSnapshot` task or
-`ExecuteMigrationSnapshotCommand` with the same YAML configuration. Snapshot
-execution is atomic and intentionally not split into resumable migration
-chunks, because per-chunk missing-row expiry would be incorrect.
+`com.sqlapp.data.db.command.migration.snapshot.ExecuteMigrationSnapshotCommand`
+with the same YAML configuration. Snapshot execution is atomic and
+intentionally not split into resumable migration chunks, because per-chunk
+missing-row expiry would be incorrect.
 An optional `lease` block prevents concurrent processes from applying the same
 snapshot ID and configuration fingerprint. `FILE` mode coordinates processes
 sharing a filesystem directory; `DATABASE` mode uses a dedicated auto-commit

@@ -1,6 +1,8 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration;
 
+import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -27,7 +27,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingIO;
 import com.sqlapp.exceptions.CommandException;
 
 class CompositePrimaryKeyToSurrogateKeyCommandTest {

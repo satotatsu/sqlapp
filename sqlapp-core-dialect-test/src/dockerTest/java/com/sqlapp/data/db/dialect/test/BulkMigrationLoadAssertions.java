@@ -11,7 +11,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.UUID;
 
-import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
+import com.sqlapp.data.db.command.migration.bulk.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;

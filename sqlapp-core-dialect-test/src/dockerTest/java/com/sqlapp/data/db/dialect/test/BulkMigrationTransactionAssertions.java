@@ -11,7 +11,7 @@ import java.sql.SQLException;
 import java.nio.file.Path;
 import java.time.Instant;
 
-import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
+import com.sqlapp.data.db.command.migration.bulk.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;

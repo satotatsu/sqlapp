@@ -16,7 +16,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.GenerateLegacyRdbLoaderCommand;
+import com.sqlapp.data.db.command.migration.legacy.GenerateLegacyRdbLoaderCommand;
 
 /**
  * Gradle task for generating restartable legacy RDB loader artifacts.

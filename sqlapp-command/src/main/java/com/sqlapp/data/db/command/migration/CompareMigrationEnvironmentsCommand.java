@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
 

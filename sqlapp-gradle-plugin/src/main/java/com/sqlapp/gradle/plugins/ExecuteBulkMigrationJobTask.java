@@ -12,8 +12,8 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.BulkMigrationJobLeaseConfiguration;
-import com.sqlapp.data.db.command.migration.ExecuteBulkMigrationJobCommand;
+import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobLeaseConfiguration;
+import com.sqlapp.data.db.command.migration.bulk.ExecuteBulkMigrationJobCommand;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;

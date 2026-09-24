@@ -22,7 +22,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.command.migration.FileBulkMigrationCheckpointStore;
+import com.sqlapp.data.db.command.migration.bulk.FileBulkMigrationCheckpointStore;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;

@@ -26,7 +26,6 @@ import java.text.ParseException;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.migration.MigrationCommand;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.SqlappDataSource;
 

@@ -28,9 +28,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.migration.DbVersionFileHandler;
-import com.sqlapp.data.db.command.migration.DbVersionHandler;
-import com.sqlapp.data.db.command.migration.MigrationSeriesDownCommand;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.DateUtils;
 import com.sqlapp.util.OutputTextBuilder;

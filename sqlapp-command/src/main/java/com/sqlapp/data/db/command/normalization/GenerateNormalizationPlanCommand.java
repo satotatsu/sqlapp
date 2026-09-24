@@ -20,7 +20,7 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingValidator;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingValidator;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;

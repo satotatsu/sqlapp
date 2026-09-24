@@ -8,7 +8,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.GenerateBulkMigrationOperationalReportCommand;
+import com.sqlapp.data.db.command.migration.bulk.GenerateBulkMigrationOperationalReportCommand;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobStatus;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;

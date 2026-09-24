@@ -8,7 +8,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.migration.VerifyMigrationSnapshotReportCommand;
+import com.sqlapp.data.db.command.migration.snapshot.VerifyMigrationSnapshotReportCommand;
 
 /** Verifies an SCD2 success report against its exact approval artifact. */
 public abstract class VerifyMigrationSnapshotReportTask extends AbstractTask<VerifyMigrationSnapshotReportCommand> {

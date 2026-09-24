@@ -1,0 +1,200 @@
+/*
+ * Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com>
+ *
+ * This file is part of sqlapp-command.
+ */
+package com.sqlapp.data.db.command.migration.legacy;
+
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.File;
+import java.nio.file.Files;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnDefinition;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnPair;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.IndexedSourceColumn;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.RelationshipMapping;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TableMapping;
+import com.sqlapp.exceptions.CommandException;
+
+class GenerateLegacyMigrationContractCommandTest {
+
+	@TempDir
+	File temporaryDirectory;
+
+	@Test
+	void testGenerateCsvStagingAndHierarchyContract() throws Exception {
+		File mappingFile = new File(temporaryDirectory, "company-legacy-migration.yaml");
+		LegacyMigrationMapping mapping = mapping();
+		new LegacyMigrationMappingIO().write(mappingFile, mapping);
+		File output = new File(temporaryDirectory, "contract");
+
+		GenerateLegacyMigrationContractCommand command = new GenerateLegacyMigrationContractCommand();
+		command.setMappingFile(mappingFile);
+		command.setOutputDirectory(output);
+		command.setEncoding("MS932");
+		command.setNullValue("\\N");
+		command.run();
+
+		File contractFile = new File(output, "company-contract.yaml");
+		assertTrue(contractFile.isFile());
+		var contract = new LegacyMigrationContractIO().read(contractFile);
+		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
+		assertEquals("sqlapp-legacy-migration-contract", contract.getFormat());
+		assertEquals("MS932", contract.getCsv().getEncoding());
+		assertEquals("\\N", contract.getCsv().getNullValue());
+		assertEquals(2, contract.getDataSets().size());
+		var child = contract.getDataSets().get(1);
+		assertEquals("table-department", child.getParentDataSetId());
+		assertEquals("employee_list.csv", child.getFileName());
+		assertEquals("TMP_EMPLOYEE_LIST", child.getStagingTable());
+		assertEquals(2, child.getHierarchyDepth());
+		assertEquals(50, child.getMaximumOccurrences());
+		assertTrue(child.getFields().stream().anyMatch(field -> "EMP_ID".equals(field.getTargetColumn())
+				&& field.isExtracted() && field.getSourcePath().endsWith(".EMP_ID")));
+		assertTrue(child.getFields().stream().anyMatch(
+				field -> "ID".equals(field.getTargetColumn()) && field.isGenerated() && !field.isExtracted()));
+		assertTrue(child.getFields().stream().anyMatch(field -> "COMPANY_ID".equals(field.getStagingColumn())
+				&& field.getAction() == LegacyMigrationMapping.ColumnAction.DROP && field.isExtracted()));
+		assertTrue(child.getFields().stream().anyMatch(field -> field.isOccurrenceIndex() && field.isExtracted()
+				&& "EMPLOYEE_LIST_NO".equals(field.getTargetColumn())));
+		assertEquals("table-department", child.getAncestorKeys().getFirst().getAncestorDataSetId());
+		assertEquals("COMPANY_ID", child.getAncestorKeys().getFirst().getColumns().getFirst().getSourceColumn());
+		assertFalse(new File(output, "company-contract.yaml.tmp").exists());
+		contract.getDataSets().getLast().setTargetTable("OTHER_TABLE");
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile));
+		contract.getDataSets().getLast().setTargetTable("EMPLOYEE_LIST");
+		contract.getDataSets().getLast().getTargetPrimaryKey().set(0, "OTHER_ID");
+		assertThrows(CommandException.class,
+				() -> new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile));
+		contract.getDataSets().getLast().getTargetPrimaryKey().set(0, "ID");
+		contract.getDataSets().getLast().setFileName("custom-employee.csv");
+		contract.getDataSets().getLast().setStagingTable("CUSTOM_EMPLOYEE_STAGE");
+		new LegacyMigrationContractValidator().validateReferencedMapping(contract, contractFile);
+		String yaml = Files.readString(contractFile.toPath());
+		assertTrue(yaml.contains("action: \"COPY\"") || yaml.contains("action: COPY"));
+		assertTrue(yaml.contains("occurrenceSourceMode: \"NUMBERED_COLUMNS\"")
+				|| yaml.contains("occurrenceSourceMode: NUMBERED_COLUMNS"));
+		assertTrue(yaml.contains("recordSeparator: \"CRLF\"") || yaml.contains("recordSeparator: CRLF"));
+		File unknownAction = new File(output, "unknown-action.yaml");
+		Files.writeString(unknownAction.toPath(), yaml.replace("action: \"COPY\"", "action: \"UNKNOWN_ACTION\"")
+				.replace("action: COPY", "action: \"UNKNOWN_ACTION\""));
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownAction));
+		File unknownOccurrenceMode = new File(output, "unknown-occurrence-mode.yaml");
+		Files.writeString(unknownOccurrenceMode.toPath(),
+				yaml.replace("occurrenceSourceMode: \"NUMBERED_COLUMNS\"", "occurrenceSourceMode: \"UNKNOWN_MODE\"")
+						.replace("occurrenceSourceMode: NUMBERED_COLUMNS", "occurrenceSourceMode: \"UNKNOWN_MODE\""));
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownOccurrenceMode));
+		File unknownRecordSeparator = new File(output, "unknown-record-separator.yaml");
+		Files.writeString(unknownRecordSeparator.toPath(),
+				yaml.replace("recordSeparator: \"CRLF\"", "recordSeparator: \"CR\"").replace("recordSeparator: CRLF",
+						"recordSeparator: \"CR\""));
+		assertThrows(CommandException.class, () -> new LegacyMigrationContractIO().read(unknownRecordSeparator));
+	}
+
+	@Test
+	void testRejectMissingMappingFile() {
+		GenerateLegacyMigrationContractCommand command = new GenerateLegacyMigrationContractCommand();
+		command.setMappingFile(new File(temporaryDirectory, "missing.yaml"));
+		command.setOutputDirectory(temporaryDirectory);
+		assertThrows(CommandException.class, command::run);
+	}
+
+	@Test
+	void testRejectUnknownRecordSeparatorAtCommandBoundary() {
+		File mappingFile = new File(temporaryDirectory, "company-legacy-migration.yaml");
+		new LegacyMigrationMappingIO().write(mappingFile, mapping());
+		GenerateLegacyMigrationContractCommand command = new GenerateLegacyMigrationContractCommand();
+		command.setMappingFile(mappingFile);
+		command.setOutputDirectory(new File(temporaryDirectory, "contract"));
+		command.setRecordSeparator("CR");
+		assertThrows(CommandException.class, command::run);
+	}
+
+	private LegacyMigrationMapping mapping() {
+		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		mapping.getMigration().setId("company-migration");
+		mapping.getMigration().setGeneratedAt("2026-01-01T00:00:00Z");
+		mapping.getSource().setSchemaFile("legacy.xml");
+		mapping.getSource().setSchemaFingerprint("source");
+		mapping.getTarget().setSchemaFile("company.xml");
+		mapping.getTarget().setSchemaFingerprint("target");
+		TableMapping department = table("table-department", "DEPARTMENT_GROUP", "COMPANY_MASTER.DEPARTMENT_GROUP");
+		department.getKeys().getTargetPrimaryKey().add("ID");
+		department.getColumns()
+				.add(column("COMPANY_ID", "COMPANY_MASTER.COMPANY_ID", "COMPANY_ID", ColumnAction.COPY, "VARCHAR"));
+		mapping.getTables().add(department);
+
+		TableMapping employee = table("table-employee", "EMPLOYEE_LIST",
+				"COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST");
+		employee.getKeys().getTargetPrimaryKey().add("ID");
+		employee.getKeys().getBusinessKey().add("EMP_ID");
+		employee.getColumns().add(column("EMP_ID", "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID", "EMP_ID",
+				ColumnAction.COPY, "VARCHAR"));
+		employee.getColumns().getLast().getSourceColumns().add(indexedSource(1, "EMP_ID_1"));
+		employee.getColumns().getLast().getSourceColumns().add(indexedSource(2, "EMP_ID_2"));
+		employee.getColumns().add(column(null, "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.$index",
+				"EMPLOYEE_LIST_NO", ColumnAction.GENERATE, "INT"));
+		employee.getColumns().getLast().getConversion().put("type", "OCCURRENCE_NUMBER");
+		employee.getColumns().add(column(null, null, "ID", ColumnAction.GENERATE, "INT"));
+		employee.getColumns().add(
+				column("COMPANY_ID", "COMPANY_MASTER.DEPARTMENT_GROUP.COMPANY_ID", null, ColumnAction.DROP, "VARCHAR"));
+		employee.getDetails().put("occurrence", java.util.Map.of("column", "EMPLOYEE_LIST_NO", "maximum", 50));
+		mapping.getTables().add(employee);
+
+		RelationshipMapping relationship = new RelationshipMapping();
+		relationship.setId("rel-department-employee");
+		relationship.setParentMappingId(department.getId());
+		relationship.setChildMappingId(employee.getId());
+		relationship.setDepth(2);
+		relationship.setLoadOrder(2);
+		relationship.getSourceKeys().add(new ColumnPair("COMPANY_ID", "COMPANY_ID"));
+		relationship.getTargetKeys().add(new ColumnPair("ID", "PARENT_ID"));
+		employee.setParent(new LegacyMigrationMapping.ParentMapping());
+		employee.getParent().setMappingId(department.getId());
+		employee.getParent().getSourceReference().add(new ColumnPair("COMPANY_ID", "COMPANY_ID"));
+		employee.getParent().getResolvedReference().add(new ColumnPair("ID", "PARENT_ID"));
+		mapping.getRelationships().add(relationship);
+		return mapping;
+	}
+
+	private TableMapping table(String id, String name, String path) {
+		TableMapping table = new TableMapping();
+		table.setId(id);
+		table.getSource().setPath(path);
+		table.getTarget().setSchema("COMPANY");
+		table.getTarget().setTable(name);
+		return table;
+	}
+
+	private ColumnMapping column(String source, String sourcePath, String target, ColumnAction action,
+			String dataType) {
+		ColumnMapping column = new ColumnMapping();
+		column.setSource(source);
+		column.setSourcePath(sourcePath);
+		column.setTarget(target);
+		column.setAction(action);
+		ColumnDefinition definition = new ColumnDefinition();
+		definition.setDataType(dataType);
+		column.setTargetDefinition(definition);
+		return column;
+	}
+
+	private IndexedSourceColumn indexedSource(int index, String column) {
+		IndexedSourceColumn source = new IndexedSourceColumn();
+		source.setIndex(index);
+		source.setColumn(column);
+		return source;
+	}
+}

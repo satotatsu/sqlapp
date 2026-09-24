@@ -8,7 +8,7 @@ import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
-import com.sqlapp.data.db.command.migration.GenerateMigrationSnapshotApprovalReportCommand;
+import com.sqlapp.data.db.command.migration.snapshot.GenerateMigrationSnapshotApprovalReportCommand;
 
 /** Generates a connection-free approval artifact for one SCD2 snapshot. */
 public abstract class GenerateMigrationSnapshotApprovalReportTask

@@ -16,7 +16,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.GeneratePliCsvExtractorCommand;
+import com.sqlapp.data.db.command.migration.legacy.GeneratePliCsvExtractorCommand;
 
 /**
  * Gradle task for generating PL/I CSV extraction artifacts.

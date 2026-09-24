@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.util.JsonConverter;
 
 /** Reads and atomically writes migration environment snapshots. */
