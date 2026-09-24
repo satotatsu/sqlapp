@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.migration;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
@@ -47,6 +48,7 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.DbConcurrencyException;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
@@ -56,6 +58,9 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.migration.SchemaCompatibilityReport;
+import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -114,6 +119,12 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationExecutionFailure executionFailure;
 
+	/** Optional expected live schema immediately before migration SQL runs. */
+	private File preMigrationSchemaFile;
+
+	@Setter(lombok.AccessLevel.NONE)
+	private SchemaCompatibilityReport schemaDriftReport;
+
 	@Getter(lombok.AccessLevel.NONE)
 	@Setter(lombok.AccessLevel.NONE)
 	private int attemptedStatement;
@@ -135,6 +146,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	@Override
 	protected void doRun() {
 		executionFailure = null;
+		schemaDriftReport = null;
 		attemptedStatement = 0;
 		executedSqlCount.set(0);
 		resetValidationResult();
@@ -148,6 +160,13 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		dbVersionFileHandler.setRecursive(this.isRecursive());
 		execute(getDataSource(), connection -> {
 			Dialect dialect = this.getDialect(connection);
+			if (preMigrationSchemaFile != null) {
+				schemaDriftReport = assessPreMigrationDrift(connection);
+				if (!schemaDriftReport.isCompatible()) {
+					throw new CommandException("Breaking pre-migration schema drift detected: "
+							+ schemaDriftReport.changes());
+				}
+			}
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
 			dbVersionFileHandler.setEncoding(this.getEncoding());
 			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
@@ -180,6 +199,22 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		dbVersionHandler.setWithSeriesNumber(this.withSeriesNumber);
 		dbVersionHandler.setWithChecksum(this.checksumValidation);
 		return dbVersionHandler;
+	}
+
+	protected SchemaCompatibilityReport assessPreMigrationDrift(final Connection connection) throws SQLException {
+		if (preMigrationSchemaFile == null || !preMigrationSchemaFile.isFile()) {
+			throw new CommandException("preMigrationSchemaFile does not exist: " + preMigrationSchemaFile);
+		}
+		try {
+			final DbCommonObject<?> root = SchemaUtils.readXml(preMigrationSchemaFile);
+			final List<Table> tables = SchemaUtils.toTables(root);
+			if (tables.isEmpty()) {
+				throw new CommandException("preMigrationSchemaFile contains no tables: " + preMigrationSchemaFile);
+			}
+			return MigrationSchemaDriftAssessor.assess(connection, tables);
+		} catch (final IOException e) {
+			throw new CommandException("Failed to read preMigrationSchemaFile: " + preMigrationSchemaFile, e);
+		}
 	}
 
 	protected void validateChecksums(final Table history, final DbVersionHandler handler,

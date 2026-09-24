@@ -238,6 +238,7 @@ The registered `migration` task reads the project extension of the same name.
 | `placeholders`, `placeholderPrefix`, `placeholderSuffix` | Properties | Placeholder processing |
 | `changeTable` | Nested configuration | Migration-history table and column names |
 | `checksumValidation` | `Property<Boolean>` | Default `false`; opt-in checksum recording and validation during migration. Explicit `migrationValidate` checks regardless of this setting |
+| `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML; `migration` blocks on breaking drift and `migrationPlan` reports it |
 
 Custom `MigrationDownTask` and `MigrationSeriesDownTask` instances reuse this
 extension. See [Custom tasks and versioned migrations](custom-tasks-and-migrations.md).

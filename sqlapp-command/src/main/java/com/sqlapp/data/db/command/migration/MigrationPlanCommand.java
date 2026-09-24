@@ -75,9 +75,10 @@ public class MigrationPlanCommand extends MigrationCommand {
 			}
 
 			final MigrationValidationResult validation = MigrationChecksumValidator.validate(history, handler, files);
+			final var drift = getPreMigrationSchemaFile() == null ? null : assessPreMigrationDrift(connection);
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
-					pending, issues, validation);
+					pending, issues, validation, drift);
 			info(plan);
 		});
 	}

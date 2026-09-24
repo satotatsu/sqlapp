@@ -23,10 +23,12 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
@@ -91,6 +93,11 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Input
 	public abstract Property<Boolean> getChecksumValidation();
 
+	/** Optional expected live Schema XML immediately before migration. */
+	@InputFile
+	@Optional
+	public abstract RegularFileProperty getPreMigrationSchemaFile();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -109,6 +116,9 @@ public abstract class MigrationExtension extends AbstractDbExtension
 		if (command instanceof MigrationCommand) {
 			MigrationCommand com = (MigrationCommand) command;
 			com.setChecksumValidation(getChecksumValidation().get());
+			if (getPreMigrationSchemaFile().isPresent()) {
+				com.setPreMigrationSchemaFile(getPreMigrationSchemaFile().get().getAsFile());
+			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());
 			}

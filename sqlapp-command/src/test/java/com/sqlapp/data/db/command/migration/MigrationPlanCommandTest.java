@@ -16,6 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.migration.MigrationValidationResult.State;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.migration.SchemaCompatibility;
 
 class MigrationPlanCommandTest {
 	@TempDir
@@ -124,6 +129,26 @@ class MigrationPlanCommandTest {
 		command.run();
 		assertEquals(1L, command.getPlan().targetVersion());
 		assertTrue(command.getPlan().pending().isEmpty());
+	}
+
+	@Test
+	void planReportsBreakingPreMigrationDriftWithoutChangingTheDatabase() throws Exception {
+		try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE PRESENT(NAME VARCHAR(20))");
+		}
+		Files.writeString(up.resolve("1_change.sql"), "INSERT INTO PRESENT VALUES('ok');");
+		final Schema expected = new Schema("PUBLIC");
+		final Table table = new Table("PRESENT");
+		table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100L));
+		expected.getTables().add(table);
+		final Path schemaFile = directory.resolve("expected.xml");
+		expected.writeXml(schemaFile.toFile());
+		final var command = configure(new MigrationPlanCommand());
+		command.setPreMigrationSchemaFile(schemaFile.toFile());
+		command.run();
+		assertEquals(SchemaCompatibility.BREAKING, command.getPlan().schemaDrift().compatibility());
+		assertTrue(command.getPlan().hasBlockers());
+		assertEquals(0, count("SELECT COUNT(*) FROM PRESENT"));
 	}
 
 	private Object scalar(final String query) throws Exception {

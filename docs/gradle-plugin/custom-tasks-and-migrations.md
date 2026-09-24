@@ -113,6 +113,7 @@ changes using the configured database and migration history.
 | `lastChangeNumber` | `Property<String>` | Optional upper change number, converted to `Long` |
 | `showVersionOnly` | `Property<Boolean>` | Request version display instead of normal migration processing |
 | `checksumValidation` | `Property<Boolean>` | Default `false`; record up SQL checksums and validate completed migrations before execution |
+| `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
 | `dataSource` | Nested configuration | Target database connection |
@@ -271,6 +272,30 @@ workflow or `MigrationValidateCommand` for the read-only check. After validation
 actual checksum, including when a mismatch causes the command to throw. A null
 result means validation did not run; an empty result means there were no completed
 entries to check. No core Schema XML format changes are required.
+
+### Check the live schema before migration
+
+Set `preMigrationSchemaFile` when a migration assumes a specific starting
+schema and should stop if the database has drifted from it:
+
+```groovy
+extensions.configure(MigrationExtension) {
+    preMigrationSchemaFile = layout.projectDirectory.file('schema/before-migration.xml')
+}
+```
+
+The file describes the expected schema immediately before the pending SQL is
+applied. It is not the desired schema after migration. The check is disabled by
+default. When enabled, `migration` reads the listed tables through the shared
+Schema model before creating or updating migration history and before setup SQL.
+A breaking difference stops execution; compatible or conditional differences
+remain available in `MigrationCommand.getSchemaDriftReport()`.
+
+`migrationPlan` runs the same metadata comparison without changing the database.
+Its `schemaDrift` report contributes to `hasBlockers()`, so the plan can be used
+as a deployment gate. The comparison is table-oriented and limited to objects
+represented by the existing schema compatibility analyzer. Tables omitted from
+the expected file are outside this check.
 
 ## Additional task types
 

@@ -2,8 +2,11 @@
 package com.sqlapp.gradle.plugins;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.File;
 
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
@@ -28,5 +31,9 @@ class MigrationValidateTaskTest {
 		extension.getChecksumValidation().set(true);
 		extension.initializeCommand(command);
 		assertTrue(command.isChecksumValidation());
+		final File expected = new File(project.getProjectDir(), "expected.xml");
+		extension.getPreMigrationSchemaFile().set(expected);
+		extension.initializeCommand(command);
+		assertEquals(expected, command.getPreMigrationSchemaFile());
 	}
 }
