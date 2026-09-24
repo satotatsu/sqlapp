@@ -419,6 +419,41 @@ sequence. Execution reports use format version 3, record whether SQL execution
 was requested separately from command success, and retain selected and
 committed repeatable migration names.
 
+## Compare migration state across environments
+
+Capture each environment through the shared `migration` configuration. The
+capture task reads versioned history and the latest checksum for every
+repeatable migration. It does not run SQL files or change history tables.
+
+```groovy
+tasks.named('migrationEnvironmentSnapshot') {
+    environmentId = 'staging'
+    outputFile = layout.buildDirectory.file('migration-state/staging.json')
+}
+```
+
+Run the capture against each target database, retain the generated files as CI
+artifacts, then compare them without database access:
+
+```groovy
+tasks.named('compareMigrationEnvironments') {
+    snapshotFiles.from(
+        layout.projectDirectory.file('approved/production.json'),
+        layout.buildDirectory.file('migration-state/staging.json')
+    )
+    baselineEnvironmentId = 'production'
+    outputFile = layout.buildDirectory.file('reports/migration-environments.json')
+    failOnDifferences = true
+}
+```
+
+Each snapshot has a SHA-256 fingerprint over its environment ID, capture time,
+sanitized database identity, versioned history and repeatable history. Editing
+the JSON invalidates it. Comparison reports missing, extra or changed migration
+entries and database product/version differences. The database connection
+fingerprint remains in the snapshot for audit but is not compared, so separate
+environments with equivalent migration state can match.
+
 ## Additional task types
 
 These classes are not registered under fixed names by `DbPlugin`:

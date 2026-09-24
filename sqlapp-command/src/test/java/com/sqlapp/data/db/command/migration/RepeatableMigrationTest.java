@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -92,5 +93,24 @@ class RepeatableMigrationTest {
 		assertEquals("refresh", entry.name());
 		assertNull(entry.previousChecksum());
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='CHANGELOG_REPEATABLE'"));
+	}
+
+	@Test
+	void capturesVersionedAndRepeatableStateWithoutChangingDatabase() throws Exception {
+		Files.writeString(sql.resolve("1_create.sql"), "CREATE TABLE snapshot_test(value INT);");
+		Files.writeString(sql.resolve("R__view.sql"), "INSERT INTO snapshot_test VALUES(1);");
+		configure(new MigrationCommand()).run();
+		final long historyRows = count("SELECT COUNT(*) FROM \"changelog\"");
+		final long repeatableRows = count("SELECT COUNT(*) FROM \"changelog_repeatable\"");
+		final var snapshot = configure(new MigrationEnvironmentSnapshotCommand());
+		snapshot.setEnvironmentId("test");
+		snapshot.setOutputFile(directory.resolve("test-environment.json").toFile());
+		snapshot.run();
+		assertEquals(List.of(1L), snapshot.getSnapshot().versioned().stream()
+				.map(MigrationEnvironmentSnapshot.VersionedEntry::version).toList());
+		assertEquals(List.of("view"), snapshot.getSnapshot().repeatables().stream()
+				.map(MigrationEnvironmentSnapshot.RepeatableEntry::name).toList());
+		assertEquals(historyRows, count("SELECT COUNT(*) FROM \"changelog\""));
+		assertEquals(repeatableRows, count("SELECT COUNT(*) FROM \"changelog_repeatable\""));
 	}
 }
