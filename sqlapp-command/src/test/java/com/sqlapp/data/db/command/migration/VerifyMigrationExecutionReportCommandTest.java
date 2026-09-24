@@ -15,6 +15,16 @@ class VerifyMigrationExecutionReportCommandTest {
 	Path directory;
 
 	@Test
+	void readsPreviousFormatWithoutRepeatableFields() {
+		final long now = System.currentTimeMillis();
+		final var report = new MigrationExecutionReport(2, now, now, true, true, null, null,
+				List.of(1L), List.of(1L), null);
+		final Path file = directory.resolve("version-2.json");
+		new MigrationExecutionReportIO().write(file, report);
+		assertEquals(report, new MigrationExecutionReportIO().read(file));
+	}
+
+	@Test
 	void freshnessIsOptionalAndRejectsFutureCompletionTimes() {
 		final long future = System.currentTimeMillis() + 120_000;
 		final var report = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION,

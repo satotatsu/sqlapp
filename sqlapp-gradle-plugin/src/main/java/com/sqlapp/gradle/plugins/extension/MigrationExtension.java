@@ -52,6 +52,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 		getRejectOutOfOrder().convention(false);
 		getRejectNonTransactional().convention(false);
 		getRequireDownMigration().convention(false);
+		getRepeatableMigrations().convention(false);
 	}
 
 	public void call(Action<MigrationExtension> cons) {
@@ -110,6 +111,10 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Input
 	public abstract Property<Boolean> getRequireDownMigration();
 
+	/** Enables R__*.sql migrations that rerun when their checksum changes. */
+	@Input
+	public abstract Property<Boolean> getRepeatableMigrations();
+
 	/** Optional expected live Schema XML immediately before migration. */
 	@InputFile
 	@Optional
@@ -160,6 +165,7 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			com.setRejectOutOfOrder(getRejectOutOfOrder().get());
 			com.setRejectNonTransactional(getRejectNonTransactional().get());
 			com.setRequireDownMigration(getRequireDownMigration().get());
+			com.setRepeatableMigrations(getRepeatableMigrations().get());
 			if (getPreMigrationSchemaFile().isPresent()) {
 				com.setPreMigrationSchemaFile(getPreMigrationSchemaFile().get().getAsFile());
 			}

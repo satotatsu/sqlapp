@@ -48,6 +48,9 @@ public class MigrationPlanCommand extends MigrationCommand {
 			reader.setEncoding(getEncoding());
 			reader.setSqlSplitter(dialect.createSqlSplitter());
 			final var files = reader.read();
+			final List<RepeatableMigrationFile> repeatableFiles = isRepeatableMigrations()
+					? RepeatableMigrationFile.read(getSqlDirectory(), isRecursive(), getEncoding(), dialect.createSqlSplitter())
+					: List.of();
 			final Table definition = handler.createVersionTableDefinition(getSchemaChangeLogTableName());
 			final Table existing = handler.getTable(connection, dialect, definition);
 			final Table history;
@@ -98,15 +101,31 @@ public class MigrationPlanCommand extends MigrationCommand {
 
 			final MigrationValidationResult validation = MigrationChecksumValidator.validate(history, handler, files);
 			final var drift = getPreMigrationSchemaFile() == null ? null : assessPreMigrationDrift(connection);
+			final var repeatablePending = new ArrayList<MigrationPlan.RepeatableEntry>();
+			if (!repeatableFiles.isEmpty()) {
+				final var repeatableHandler = new RepeatableMigrationHandler();
+				final Table repeatableDefinition = repeatableHandler.definition(getSchemaChangeLogTableName());
+				final Table repeatableExisting = handler.getTable(connection, dialect, repeatableDefinition);
+				final var appliedRepeatables = repeatableExisting == null ? java.util.Map.<String, String>of()
+						: repeatableHandler.load(connection, dialect, repeatableExisting);
+				for (final var repeatable : repeatableFiles) {
+					final String previous = appliedRepeatables.get(repeatable.name());
+					if (!repeatable.checksum().equals(previous)) {
+						repeatablePending.add(new MigrationPlan.RepeatableEntry(repeatable.name(),
+								repeatable.source().getAbsolutePath(), repeatable.statements().size(),
+								!getNoTransactionFileFilter().test(repeatable.source()), repeatable.checksum(), previous));
+					}
+				}
+			}
 			plan = new MigrationPlan(existing != null, current, target,
 					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
 					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder(), isRejectNonTransactional(),
-					isRequireDownMigration(), databaseIdentity(connection));
+					isRequireDownMigration(), databaseIdentity(connection), repeatablePending);
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
 			if (dryRunOutputFile != null) {
-				writeDryRun(dryRunOutputFile, dialect, files, plan);
+				writeDryRun(dryRunOutputFile, dialect, files, repeatableFiles, plan);
 			}
 			info(plan);
 			if (failOnBlockers && plan.hasBlockers()) {
@@ -116,7 +135,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 	}
 
 	private void writeDryRun(final File destination, final com.sqlapp.data.db.dialect.Dialect dialect,
-			final List<DbVersionFileHandler.SqlFile> files, final MigrationPlan migrationPlan) {
+			final List<DbVersionFileHandler.SqlFile> files, final List<RepeatableMigrationFile> repeatableFiles,
+			final MigrationPlan migrationPlan) {
 		final var selected = new java.util.HashSet<Long>();
 		migrationPlan.pending().forEach(entry -> selected.add(entry.version()));
 		final StringBuilder sql = new StringBuilder();
@@ -131,6 +151,17 @@ public class MigrationPlanCommand extends MigrationCommand {
 			sql.append("\n-- migration ").append(file.getVersionNumber()).append(": ").append(name)
 					.append(isNoTransactionFile(file) ? " [non-transactional]" : " [transactional]").append('\n');
 			appendStatements(sql, file.getUpSqls());
+		}
+		final var selectedRepeatables = migrationPlan.pendingRepeatables().stream()
+				.map(MigrationPlan.RepeatableEntry::name).collect(java.util.stream.Collectors.toSet());
+		for (final var repeatable : repeatableFiles) {
+			if (!selectedRepeatables.contains(repeatable.name())) {
+				continue;
+			}
+			sql.append("\n-- repeatable ").append(repeatable.name())
+					.append(getNoTransactionFileFilter().test(repeatable.source())
+							? " [non-transactional]" : " [transactional]").append('\n');
+			appendStatements(sql, repeatable.statements());
 		}
 		appendSection(sql, "finalize", read(dialect, getFinalizeSqlDirectory()));
 		final var absolute = destination.toPath().toAbsolutePath().normalize();
@@ -202,7 +233,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 		if (plan.outOfOrderRejected() && !plan.outOfOrderVersions().isEmpty()) {
 			blockers.add("outOfOrder=" + plan.outOfOrderVersions());
 		}
-		if (plan.nonTransactionalRejected() && plan.pending().stream().anyMatch(entry -> !entry.transactional())) {
+		if (plan.nonTransactionalRejected() && (plan.pending().stream().anyMatch(entry -> !entry.transactional())
+				|| plan.pendingRepeatables().stream().anyMatch(entry -> !entry.transactional()))) {
 			blockers.add("nonTransactional=true");
 		}
 		if (plan.downMigrationRequired() && plan.pending().stream().anyMatch(entry -> !entry.rollbackAvailable())) {

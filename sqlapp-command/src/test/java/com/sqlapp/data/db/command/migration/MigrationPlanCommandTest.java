@@ -93,7 +93,7 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 8"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 9"));
 		assertTrue(artifact.createdAtEpochMillis() > 0);
 		assertTrue(artifact.planFingerprint().matches("sha256:[0-9a-f]{64}"));
 		final Path tampered = directory.resolve("reports/tampered-plan.json");

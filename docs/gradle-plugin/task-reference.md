@@ -242,6 +242,7 @@ The registered `migration` task reads the project extension of the same name.
 | `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions below the latest completed migration |
 | `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject migration files selected for non-transactional execution |
 | `requireDownMigration` | `Property<Boolean>` | Default `false`; require down SQL for every selected migration |
+| `repeatableMigrations` | `Property<Boolean>` | Default `false`; process `R__name.sql` after versioned migrations and rerun it when its checksum changes |
 | `expectedPlanFile` | `RegularFileProperty` | Optional `migrationPlan` JSON that must match the execution selected by `migration` |
 | `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of `expectedPlanFile`; unlimited when omitted |
 | `expectedPlanFingerprint` | `Property<String>` | Optional approved SHA-256 fingerprint required to match `expectedPlanFile` |

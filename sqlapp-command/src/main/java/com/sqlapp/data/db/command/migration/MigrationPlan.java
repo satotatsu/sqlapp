@@ -10,11 +10,25 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 		int setupStatements, int finalizeStatements, List<Entry> pending,
 		List<HistoryIssue> historyIssues, MigrationValidationResult checksumValidation,
 		SchemaCompatibilityReport schemaDrift, List<Long> outOfOrderVersions, boolean outOfOrderRejected,
-		boolean nonTransactionalRejected, boolean downMigrationRequired, DatabaseIdentity databaseIdentity) {
+		boolean nonTransactionalRejected, boolean downMigrationRequired, DatabaseIdentity databaseIdentity,
+		List<RepeatableEntry> pendingRepeatables) {
 	public MigrationPlan {
 		pending = List.copyOf(pending);
 		historyIssues = List.copyOf(historyIssues);
 		outOfOrderVersions = List.copyOf(outOfOrderVersions);
+		pendingRepeatables = pendingRepeatables == null ? List.of() : List.copyOf(pendingRepeatables);
+	}
+
+	/** Retains the constructor used before repeatable migrations were added. */
+	public MigrationPlan(final boolean historyExists, final Long currentVersion, final Long targetVersion,
+			final int setupStatements, final int finalizeStatements, final List<Entry> pending,
+			final List<HistoryIssue> historyIssues, final MigrationValidationResult checksumValidation,
+			final SchemaCompatibilityReport schemaDrift, final List<Long> outOfOrderVersions,
+			final boolean outOfOrderRejected, final boolean nonTransactionalRejected,
+			final boolean downMigrationRequired, final DatabaseIdentity databaseIdentity) {
+		this(historyExists, currentVersion, targetVersion, setupStatements, finalizeStatements, pending,
+				historyIssues, checksumValidation, schemaDrift, outOfOrderVersions, outOfOrderRejected,
+				nonTransactionalRejected, downMigrationRequired, databaseIdentity, List.of());
 	}
 
 	public MigrationPlan(final boolean historyExists, final Long currentVersion, final Long targetVersion,
@@ -22,7 +36,7 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 			final List<HistoryIssue> historyIssues, final MigrationValidationResult checksumValidation,
 			final SchemaCompatibilityReport schemaDrift) {
 		this(historyExists, currentVersion, targetVersion, setupStatements, finalizeStatements, pending,
-				historyIssues, checksumValidation, schemaDrift, List.of(), false, false, false, null);
+				historyIssues, checksumValidation, schemaDrift, List.of(), false, false, false, null, List.of());
 	}
 
 	/** Retains the constructor used before schema-drift reporting was added. */
@@ -49,6 +63,10 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 	public record HistoryIssue(long version, Status status) {
 	}
 
+	public record RepeatableEntry(String name, String source, int statements, boolean transactional,
+			String sourceChecksum, String previousChecksum) {
+	}
+
 	/** Non-secret identity of the database used to create the plan. */
 	public record DatabaseIdentity(String productName, String productVersion, String connectionFingerprint) {
 	}
@@ -58,7 +76,8 @@ public record MigrationPlan(boolean historyExists, Long currentVersion, Long tar
 				|| checksumValidation != null && checksumValidation.hasFailures()
 				|| schemaDrift != null && !schemaDrift.isCompatible()
 				|| outOfOrderRejected && !outOfOrderVersions.isEmpty()
-				|| nonTransactionalRejected && pending.stream().anyMatch(entry -> !entry.transactional())
+				|| nonTransactionalRejected && (pending.stream().anyMatch(entry -> !entry.transactional())
+						|| pendingRepeatables.stream().anyMatch(entry -> !entry.transactional()))
 				|| downMigrationRequired && pending.stream().anyMatch(entry -> !entry.rollbackAvailable());
 	}
 }

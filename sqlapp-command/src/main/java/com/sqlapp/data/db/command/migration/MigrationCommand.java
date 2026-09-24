@@ -124,6 +124,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional requirement that every selected migration has down SQL. */
 	private boolean requireDownMigration = false;
 
+	/** Opt-in support for R__*.sql migrations reapplied when their content changes. */
+	private boolean repeatableMigrations = false;
+
 	/** Optional reviewed plan that must match the selected execution. */
 	private File expectedPlanFile;
 
@@ -144,6 +147,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	@Setter(lombok.AccessLevel.NONE)
 	private List<Long> appliedVersions = List.of();
+
+	@Setter(lombok.AccessLevel.NONE)
+	private List<String> appliedRepeatables = List.of();
 
 	@Setter(lombok.AccessLevel.NONE)
 	private String validatedPlanFingerprint;
@@ -178,16 +184,29 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	private Predicate<File> noTransactionFileFilter = new DefaultNoTransactionFileFilter();
 
+	@Setter(lombok.AccessLevel.NONE)
+	private List<RepeatableMigrationFile> pendingRepeatables = List.of();
+	private Map<String, String> repeatablePreviousChecksums = Map.of();
+	private List<String> selectedRepeatableNames = List.of();
+	private Table repeatableHistoryTable;
+	private RepeatableMigrationHandler repeatableMigrationHandler;
+
 	@Override
 	protected void doRun() {
 		final long startedAt = System.currentTimeMillis();
 		executionFailure = null;
 		executionReport = null;
 		appliedVersions = new ArrayList<>();
+		appliedRepeatables = new ArrayList<>();
 		validatedPlanFingerprint = null;
 		schemaDriftReport = null;
 		attemptedStatement = 0;
 		executedSqlCount.set(0);
+		repeatableHistoryTable = null;
+		repeatableMigrationHandler = null;
+		pendingRepeatables = List.of();
+		repeatablePreviousChecksums = Map.of();
+		selectedRepeatableNames = List.of();
 		resetValidationResult();
 		if (isChecksumValidation()) {
 			requireValidationDirectory();
@@ -215,6 +234,22 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
 			dbVersionFileHandler.setEncoding(this.getEncoding());
 			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
+			final RepeatableMigrationHandler repeatableHandler = new RepeatableMigrationHandler();
+			Table repeatableTable = null;
+			pendingRepeatables = List.of();
+			repeatablePreviousChecksums = Map.of();
+			if (repeatableMigrations) {
+				final List<RepeatableMigrationFile> repeatables = RepeatableMigrationFile.read(sqlDirectory, recursive,
+						getEncoding(), dialect.createSqlSplitter());
+				repeatableTable = repeatableHandler.definition(schemaChangeLogTableName);
+				if (!repeatables.isEmpty()) {
+					final Table existingRepeatableTable = dbVersionHandler.getTable(connection, dialect, repeatableTable);
+					repeatablePreviousChecksums = existingRepeatableTable == null ? Map.of()
+							: repeatableHandler.load(connection, dialect, existingRepeatableTable);
+					pendingRepeatables = selectPendingRepeatables(repeatables, repeatablePreviousChecksums);
+					selectedRepeatableNames = pendingRepeatables.stream().map(RepeatableMigrationFile::name).toList();
+				}
+			}
 			selectedVersions.clear();
 			for (final Row row : holder.rows) {
 				final Long version = dbVersionHandler.getId(row);
@@ -226,8 +261,10 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			previousTable = holder.table;
 			previousState = lastState;
 			if (!isShowVersionOnly()) {
-				if (!holder.rows.isEmpty()) {
+				if (!holder.rows.isEmpty() || !pendingRepeatables.isEmpty()) {
 					this.info("");
+					repeatableHistoryTable = repeatableTable;
+					repeatableMigrationHandler = repeatableHandler;
 					executeChangeVersion(connection, holder.dialect, holder.table, holder.rows, holder.sqlFiles,
 							dbVersionHandler);
 					holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
@@ -246,7 +283,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			executionReport = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, startedAt,
 					System.currentTimeMillis(), runFailure == null, !isShowVersionOnly(), databaseIdentity[0],
 					validatedPlanFingerprint,
-					selectedVersions, appliedVersions, executionFailure);
+					selectedVersions, appliedVersions, selectedRepeatableNames, appliedRepeatables, executionFailure);
 			if (executionReportFile != null) {
 				try {
 					new MigrationExecutionReportIO().write(executionReportFile.toPath(), executionReport);
@@ -272,6 +309,11 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		dbVersionHandler.setWithSeriesNumber(this.withSeriesNumber);
 		dbVersionHandler.setWithChecksum(this.checksumValidation);
 		return dbVersionHandler;
+	}
+
+	private List<RepeatableMigrationFile> selectPendingRepeatables(final List<RepeatableMigrationFile> files,
+			final Map<String, String> appliedChecksums) {
+		return files.stream().filter(file -> !file.checksum().equals(appliedChecksums.get(file.name()))).toList();
 	}
 
 	protected void validateExpectedPlan(final Connection connection, final DialectTableHolder holder,
@@ -322,13 +364,22 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 						entry.transactional(), entry.checksumWillBeRecorded(), entry.rollbackAvailable(),
 						entry.sourceChecksum()))
 				.toList();
+		final List<MigrationPlan.RepeatableEntry> reviewedRepeatables = expected.pendingRepeatables().stream()
+				.map(entry -> new MigrationPlan.RepeatableEntry(entry.name(), null, entry.statements(),
+						entry.transactional(), entry.sourceChecksum(), entry.previousChecksum()))
+				.toList();
+		final List<MigrationPlan.RepeatableEntry> currentRepeatables = pendingRepeatables.stream()
+				.map(file -> new MigrationPlan.RepeatableEntry(file.name(), null, file.statements().size(),
+						!getNoTransactionFileFilter().test(file.source()), file.checksum(),
+						repeatablePreviousChecksums.get(file.name())))
+				.toList();
 		final long target = getLastChangeToApply() != null ? getLastChangeToApply()
 				: current != null ? current : Long.MAX_VALUE;
 		if (!java.util.Objects.equals(expected.databaseIdentity(), MigrationPlanCommand.databaseIdentity(connection))
 				|| !java.util.Objects.equals(expected.currentVersion(), current) || expected.targetVersion() != target
 				|| expected.setupStatements() != read(holder.dialect, getSetupSqlDirectory()).size()
 				|| expected.finalizeStatements() != read(holder.dialect, getFinalizeSqlDirectory()).size()
-				|| !reviewed.equals(pending)) {
+				|| !reviewed.equals(pending) || !reviewedRepeatables.equals(currentRepeatables)) {
 			throw new CommandException("Current migration execution does not match expectedPlanFile: "
 					+ expectedPlanFile);
 		}
@@ -627,6 +678,14 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	protected void executeChangeVersion(final Connection connection, final Dialect dialect, final Table table,
 			final List<Row> rows, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler)
 			throws SQLException {
+		executeChangeVersion(connection, dialect, table, rows, sqlFiles, dbVersionHandler, repeatableHistoryTable,
+				repeatableMigrationHandler);
+	}
+
+	private void executeChangeVersion(final Connection connection, final Dialect dialect, final Table table,
+			final List<Row> rows, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler,
+			final Table repeatableTable, final RepeatableMigrationHandler repeatableHandler)
+			throws SQLException {
 		final Map<Long, SqlFile> sqlFileMap = CommonUtils.map();
 		for (final SqlFile sqlFile : sqlFiles) {
 			sqlFileMap.put(sqlFile.getVersionNumber(), sqlFile);
@@ -651,7 +710,13 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
 			executor.execute(ddlAutoCommitOffSqlList);
 			executeMigrationLock(connection, lockTableSqlList);
+			refreshRepeatablesAfterLock(connection, dialect, dbVersionHandler);
 			validateExpectedPlanAfterLock(connection, dialect, sqlFiles, dbVersionHandler);
+			final List<RepeatableMigrationFile> repeatablesToRun = pendingRepeatables;
+			if (!repeatablesToRun.isEmpty() && dbVersionHandler.getTable(connection, dialect, repeatableTable) == null) {
+				dbVersionHandler.createTable(connection, dialect, repeatableTable);
+				info("New repeatable migration history table [" + getName(repeatableTable) + "] was created.");
+			}
 			final List<SplitResult> setupSqls = read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)) {
 				this.info("********************** execute setup sql. **********************");
@@ -717,6 +782,36 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				currentRow = null;
 			}
 			if (!CommonUtils.isEmpty(rows)) {
+				this.info("******************************************************************");
+			}
+			if (!repeatablesToRun.isEmpty()) {
+				this.info("********************** execute repeatable sql. **********************");
+			}
+			id = null;
+			sqlFile[0] = null;
+			for (final RepeatableMigrationFile repeatable : repeatablesToRun) {
+				phase = Phase.REPEATABLE;
+				source = repeatable.source();
+				nonTransactional = getNoTransactionFileFilter().test(source);
+				executedSqlCount.set(0);
+				attemptedStatement = 0;
+				if (rejectNonTransactional && nonTransactional) {
+					throw new CommandException("Non-transactional repeatable migration is rejected: " + source);
+				}
+				if (nonTransactional) {
+					executeNoTran(getDataSource(), inner -> {
+						inner.setAutoCommit(true);
+						executeSql(inner, sqlConverter, new ParametersContext(), repeatable.statements());
+					});
+				} else {
+					executeSql(connection, sqlConverter, new ParametersContext(), repeatable.statements());
+				}
+				repeatableHandler.record(connection, dialect, repeatableTable, repeatable);
+				commit(connection);
+				appliedRepeatables.add(repeatable.name());
+				info("repeatable=" + repeatable.name());
+			}
+			if (!repeatablesToRun.isEmpty()) {
 				this.info("******************************************************************");
 			}
 			phase = Phase.FINALIZE;
@@ -847,6 +942,26 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		validateOutOfOrder(locked.table, dbVersionHandler);
 		locked.rows = getVersionRows(locked.table, sqlFiles, dbVersionHandler);
 		validateExpectedPlan(connection, locked, dbVersionHandler);
+	}
+
+	private void refreshRepeatablesAfterLock(final Connection connection, final Dialect dialect,
+			final DbVersionHandler dbVersionHandler) throws SQLException {
+		if (!repeatableMigrations) {
+			return;
+		}
+		final List<RepeatableMigrationFile> files = RepeatableMigrationFile.read(sqlDirectory, recursive,
+				getEncoding(), dialect.createSqlSplitter());
+		if (files.isEmpty()) {
+			pendingRepeatables = List.of();
+			repeatablePreviousChecksums = Map.of();
+		} else {
+			final RepeatableMigrationHandler handler = new RepeatableMigrationHandler();
+			final Table definition = handler.definition(schemaChangeLogTableName);
+			final Table existing = dbVersionHandler.getTable(connection, dialect, definition);
+			repeatablePreviousChecksums = existing == null ? Map.of() : handler.load(connection, dialect, existing);
+			pendingRepeatables = selectPendingRepeatables(files, repeatablePreviousChecksums);
+		}
+		selectedRepeatableNames = pendingRepeatables.stream().map(RepeatableMigrationFile::name).toList();
 	}
 
 	protected void validateRollbackPolicy(final List<Row> rows, final Map<Long, SqlFile> sqlFiles,

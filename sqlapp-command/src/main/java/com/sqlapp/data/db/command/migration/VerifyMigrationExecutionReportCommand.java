@@ -65,7 +65,8 @@ public class VerifyMigrationExecutionReportCommand extends AbstractCommand {
 			throw new CommandException("Migration execution report records a failed migration: " + reportFile);
 		}
 		if (requireAllSelectedCommitted
-				&& (!report.executionRequested() || !report.selectedVersions().equals(report.committedVersions()))) {
+				&& (!report.executionRequested() || !report.selectedVersions().equals(report.committedVersions())
+						|| !report.selectedRepeatables().equals(report.committedRepeatables()))) {
 			throw new CommandException("Migration execution report does not show all selected versions committed: "
 					+ reportFile);
 		}

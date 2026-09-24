@@ -13,7 +13,7 @@ public record MigrationExecutionFailure(Phase phase, Long version, String source
 	}
 
 	public enum Phase {
-		SETUP, PRECHECK, MIGRATION, HISTORY_COMPLETION, VERSION_COMMIT, FINALIZE, FINAL_COMMIT
+		SETUP, PRECHECK, MIGRATION, HISTORY_COMPLETION, VERSION_COMMIT, REPEATABLE, FINALIZE, FINAL_COMMIT
 	}
 
 	/** RETURNED means the operation returned normally, not that all effects were reversed. */

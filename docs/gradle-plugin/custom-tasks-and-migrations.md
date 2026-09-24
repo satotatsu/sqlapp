@@ -116,6 +116,7 @@ changes using the configured database and migration history.
 | `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions lower than the latest completed version |
 | `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject selected migrations that bypass transactions |
 | `requireDownMigration` | `Property<Boolean>` | Default `false`; require rollback SQL for every selected migration |
+| `repeatableMigrations` | `Property<Boolean>` | Default `false`; enable `R__name.sql` files that rerun after their content checksum changes |
 | `expectedPlanFile` | `RegularFileProperty` | Optional reviewed plan JSON that must match execution |
 | `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of the reviewed plan; no limit by default |
 | `expectedPlanFingerprint` | `Property<String>` | Optional approved `sha256:...` value that the plan artifact must match |
@@ -148,6 +149,14 @@ Set `requireDownMigration = true` when every selected up migration must have a
 rollback path. A matching file in `downSqlDirectory` or an embedded `//@UNDO`
 section satisfies the policy. Missing rollback SQL is rejected before setup SQL
 runs. `migrationPlan` exposes `rollbackAvailable` per pending version.
+
+Set `repeatableMigrations = true` to enable repeatable SQL in the regular
+`sqlDirectory`. Name files `R__description.sql`. Pending repeatables run in
+filename order after pending versioned migrations and before finalize SQL.
+Their SHA-256 history is appended to `<change-table>_repeatable`; unchanged
+files are skipped and previous executions remain available for audit. A
+repeatable script must be safe to execute again, for example by using
+`CREATE OR REPLACE` or an idempotent data refresh.
 
 `migrationInsert` and `migrationRepair` are registered separately for history
 operations. They are not substitutes for applying reviewed schema changes.
@@ -406,8 +415,9 @@ When enabled, it also rejects future completion times; synchronize the clocks
 of the execution and verification hosts. Omit it to disable freshness checks.
 `requireAllSelectedCommitted` additionally rejects `showVersionOnly` reports
 and partial executions where the committed sequence differs from the selected
-sequence. Execution reports use format version 2 and record whether SQL
-execution was requested separately from command success.
+sequence. Execution reports use format version 3, record whether SQL execution
+was requested separately from command success, and retain selected and
+committed repeatable migration names.
 
 ## Additional task types
 

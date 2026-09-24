@@ -10,11 +10,13 @@ import java.util.Objects;
 /** Versioned machine-readable wrapper for a migration plan. */
 public record MigrationPlanArtifact(int formatVersion, long createdAtEpochMillis, String planFingerprint,
 		MigrationPlan plan) {
-	public static final int CURRENT_FORMAT_VERSION = 8;
+	public static final int CURRENT_FORMAT_VERSION = 9;
+	private static final int PREVIOUS_FORMAT_VERSION = 8;
 	private static final int LEGACY_FORMAT_VERSION = 7;
 
 	public MigrationPlanArtifact {
-		if (formatVersion != LEGACY_FORMAT_VERSION && formatVersion != CURRENT_FORMAT_VERSION) {
+		if (formatVersion != LEGACY_FORMAT_VERSION && formatVersion != PREVIOUS_FORMAT_VERSION
+				&& formatVersion != CURRENT_FORMAT_VERSION) {
 			throw new IllegalArgumentException("Unsupported migration plan formatVersion: " + formatVersion);
 		}
 		Objects.requireNonNull(plan, "plan");
@@ -24,14 +26,19 @@ public record MigrationPlanArtifact(int formatVersion, long createdAtEpochMillis
 			}
 		} else if (createdAtEpochMillis <= 0) {
 			throw new IllegalArgumentException("Migration plan createdAtEpochMillis must be positive");
-		} else if (!fingerprint(createdAtEpochMillis, plan).equals(planFingerprint)) {
+		} else if (!(formatVersion == PREVIOUS_FORMAT_VERSION
+				? fingerprint(createdAtEpochMillis, plan, false) : fingerprint(createdAtEpochMillis, plan))
+				.equals(planFingerprint)) {
 			throw new IllegalArgumentException("Migration plan fingerprint mismatch");
 		}
 	}
 
 	public MigrationPlanArtifact(final int formatVersion, final long createdAtEpochMillis, final MigrationPlan plan) {
 		this(formatVersion, createdAtEpochMillis,
-				formatVersion == LEGACY_FORMAT_VERSION ? fingerprint(plan) : fingerprint(createdAtEpochMillis, plan), plan);
+				formatVersion == LEGACY_FORMAT_VERSION ? fingerprint(plan)
+						: formatVersion == PREVIOUS_FORMAT_VERSION ? fingerprint(createdAtEpochMillis, plan, false)
+								: fingerprint(createdAtEpochMillis, plan),
+				plan);
 	}
 
 	/** Retains the constructor used by format-version 7 callers. */
@@ -52,6 +59,11 @@ public record MigrationPlanArtifact(int formatVersion, long createdAtEpochMillis
 	}
 
 	private static String fingerprint(final Long createdAtEpochMillis, final MigrationPlan plan) {
+		return fingerprint(createdAtEpochMillis, plan, true);
+	}
+
+	private static String fingerprint(final Long createdAtEpochMillis, final MigrationPlan plan,
+			final boolean includeRepeatables) {
 		Objects.requireNonNull(plan, "plan");
 		final StringBuilder value = new StringBuilder();
 		if (createdAtEpochMillis != null) {
@@ -89,6 +101,15 @@ public record MigrationPlanArtifact(int formatVersion, long createdAtEpochMillis
 		add(value, plan.nonTransactionalRejected());
 		add(value, plan.downMigrationRequired());
 		add(value, plan.databaseIdentity());
+		if (includeRepeatables) {
+			for (final var entry : plan.pendingRepeatables()) {
+				add(value, entry.name());
+				add(value, entry.statements());
+				add(value, entry.transactional());
+				add(value, entry.sourceChecksum());
+				add(value, entry.previousChecksum());
+			}
+		}
 		try {
 			return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
 					.digest(value.toString().getBytes(StandardCharsets.UTF_8)));
