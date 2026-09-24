@@ -112,7 +112,13 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand
 			commit(connection, lastCommitHandler);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
-			rollback(connection);
+			try {
+				rollback(connection);
+			} catch (RuntimeException rollbackFailure) {
+				if (e != rollbackFailure) {
+					e.addSuppressed(rollbackFailure);
+				}
+			}
 			getExceptionHandler().handle(e);
 		} finally {
 			execute(() -> {

@@ -138,6 +138,22 @@ rollback task. Configure and review the down SQL before executing it;
 generated reverse DDL does not establish that deleted business data can be
 recovered.
 
+Run `./gradlew migrationPlan` to inspect the next invocation without modifying
+the database. It works when the history table does not exist and does not create
+or upgrade it, execute setup/version/finalize SQL, acquire migration locks, or
+write checksums. The returned `MigrationPlan` contains the current and target
+versions, setup/finalize statement counts, ordered pending files, statement
+counts, transaction classification, whether new checksums would be recorded,
+failed/in-progress history entries, and validation state for previously recorded
+checksums. `lastChangeNumber`, encoding, recursion, history-table names and the
+non-transaction file filter use the same configuration as `migration`.
+
+`hasBlockers()` reports known failed/in-progress history and checksum mismatches,
+but the plan is observational: it does not reserve the versions, prove SQL will
+succeed, expand and expose final SQL text, or predict database-specific implicit
+commits. Database state may change after planning. Java callers use
+`MigrationPlanCommand.getPlan()`; a null result means planning did not complete.
+
 Versioned SQL migration is separate from the YAML-driven bulk migration and
 SCD2 snapshot tasks. See the [task guide](README.md#executebulkmigrationjob)
 for source/target connections, checkpoints, leases and verification.
@@ -160,6 +176,49 @@ a separate connection, while the history connection's lock follows the database'
 transaction semantics. Serialize deployments externally when command-wide
 exclusion is required. Lock support and wait behavior remain dialect/driver
 dependent; these checks do not introduce a lease, automatic retry, or timeout.
+
+### Failure diagnosis and recovery
+
+Migration execution failures automatically log a `MigrationExecutionFailure`
+summary and recovery guidance; no additional configuration is required. Java
+callers can inspect `command.getExecutionFailure()` after catching the original
+exception. The result is reset for each invocation and includes:
+
+- Execution phase: setup, precheck, migration SQL, history completion, version
+  commit, finalize, or final commit.
+- Version and source file for versioned SQL, or source directory without a
+  version for setup/finalize SQL.
+- The one-based most recently attempted statement index (zero before any
+  attempt), number of statements that returned normally in this phase/version,
+  and whether the separate non-transactional connection was used.
+- Versions whose commit calls returned normally earlier in this invocation.
+  A failing commit's version is excluded because its outcome may be uncertain.
+- SQLState/vendor error code when available, and the outcome of rollback and
+  history recovery calls (`NOT_ATTEMPTED`, `RETURNED`, or `FAILED`).
+
+The result is an in-memory/log diagnostic, not a durable restart checkpoint.
+It covers failures within change execution; initial connection, file discovery,
+validation and history preparation failures can occur before this result exists.
+SQL text and parameter values are not included in the diagnostic record.
+
+Statement completion does not prove that data was committed, and a returned
+rollback does not prove that DDL or non-transactional effects were undone.
+Inspect the real schema/data and history before deciding how to recover. A
+connection error during commit can leave the commit outcome unknown.
+
+Both checked SQL exceptions and runtime exceptions enter failure handling.
+Rollback or history recovery failures are attached as suppressed exceptions to
+the original cause. History recovery is not attempted after rollback fails.
+When SQL was attempted during an up migration, failure handling preserves an
+`Errored` entry if possible, including when rollback removed the initial
+`Started` entry. An already completed entry is not overwritten. Down failures
+retain previously applied history. No new history columns are required.
+
+`migrationRepair` removes a failed history entry; it does not undo SQL or restore
+data. Resolve partial database changes first, inspect the failed history, then
+use repair and rerun only when the SQL is appropriate for the resulting state.
+Even a failed transaction that rolled back successfully can retain an error
+marker requiring this explicit history repair.
 
 ### Optional checksum validation
 

@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,6 +33,8 @@ import java.util.function.Predicate;
 
 import com.sqlapp.data.db.command.AbstractSqlCommand;
 import com.sqlapp.data.db.command.migration.DbVersionFileHandler.SqlFile;
+import com.sqlapp.data.db.command.migration.MigrationExecutionFailure.Phase;
+import com.sqlapp.data.db.command.migration.MigrationExecutionFailure.RecoveryOutcome;
 import com.sqlapp.data.db.command.properties.DefaultNoTransactionFileFilter;
 import com.sqlapp.data.db.command.properties.NoTransactionFileFilterProperty;
 import com.sqlapp.data.db.command.properties.RecursiveProperty;
@@ -108,6 +111,13 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
+	@Setter(lombok.AccessLevel.NONE)
+	private MigrationExecutionFailure executionFailure;
+
+	@Getter(lombok.AccessLevel.NONE)
+	@Setter(lombok.AccessLevel.NONE)
+	private int attemptedStatement;
+
 	private boolean withSeriesNumber = true;
 
 	private String previousState = null;
@@ -124,6 +134,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	@Override
 	protected void doRun() {
+		executionFailure = null;
+		attemptedStatement = 0;
+		executedSqlCount.set(0);
 		resetValidationResult();
 		if (isChecksumValidation()) {
 			requireValidationDirectory();
@@ -202,7 +215,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	 * 
 	 * @return SQL
 	 */
-	private List<SplitResult> read(final Dialect dialect, final File directory) {
+	protected List<SplitResult> read(final Dialect dialect, final File directory) {
 		if (directory == null) {
 			return Collections.emptyList();
 		}
@@ -393,6 +406,10 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		Long id = null;
 		Row currentRow = null;
 		final SqlFile[] sqlFile = new SqlFile[1];
+		final List<Long> committedVersions = new ArrayList<>();
+		Phase phase = Phase.SETUP;
+		File source = getSetupSqlDirectory();
+		boolean nonTransactional = false;
 		try {
 			final SqlConverter sqlConverter = getSqlConverter();
 			connection.setAutoCommit(false);
@@ -413,11 +430,16 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				this.info("********************** execute version sql. **********************");
 			}
 			for (final Row row : rows) {
+				phase = Phase.PRECHECK;
+				executedSqlCount.set(0);
+				attemptedStatement = 0;
+				nonTransactional = false;
 				id = dbVersionHandler.getId(row);
 				if (id == null) {
 					continue;
 				}
 				sqlFile[0] = sqlFileMap.get(id);
+				source = sqlFile[0] == null ? null : getFile(sqlFile[0]);
 				executor.execute(ddlAutoCommitOffSqlList);
 				executor.execute(lockTableSqlList);
 				// Recheck history only after acquiring this change's transaction lock.
@@ -438,6 +460,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				File file = getFile(sqlFile[0]);
 				if (file != null && file.exists()) {
 					boolean autoCommit = isNoTransaction(sqlFile[0]);
+					nonTransactional = autoCommit;
+					phase = Phase.MIGRATION;
 					if (autoCommit) {
 						executeNoTran(getDataSource(), connInner -> {
 							connInner.setAutoCommit(true);
@@ -450,13 +474,22 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				} else if (isChecksumValidation() && recordsChecksum()) {
 					throw new IllegalStateException("Migration SQL source disappeared before execution: " + file);
 				}
+				phase = Phase.HISTORY_COMPLETION;
 				finalizeVersion(connection, dialect, table, row, id, dbVersionHandler);
+				phase = Phase.VERSION_COMMIT;
 				commit(connection);
+				committedVersions.add(id);
 				currentRow = null;
 			}
 			if (!CommonUtils.isEmpty(rows)) {
 				this.info("******************************************************************");
 			}
+			phase = Phase.FINALIZE;
+			id = null;
+			source = getFinalizeSqlDirectory();
+			nonTransactional = false;
+			executedSqlCount.set(0);
+			attemptedStatement = 0;
 			final List<SplitResult> finalizeSqls = read(dialect, this.getFinalizeSqlDirectory());
 			if (!CommonUtils.isEmpty(finalizeSqls)) {
 				this.info("********************** execute finalize sql. **********************");
@@ -465,33 +498,50 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			if (!CommonUtils.isEmpty(finalizeSqls)) {
 				this.info("******************************************************************");
 			}
+			phase = Phase.FINAL_COMMIT;
 			commit(connection);
-		} catch (final RuntimeException e) {
-			if (sqlFile[0] != null) {
+		} catch (final SQLException | RuntimeException e) {
+			if (sqlFile[0] != null && id != null) {
 				error(sqlFile[0]);
 			}
-			if (connection != null) {
+			RecoveryOutcome rollbackOutcome = RecoveryOutcome.NOT_ATTEMPTED;
+			RecoveryOutcome historyOutcome = RecoveryOutcome.NOT_ATTEMPTED;
+			try {
 				rollback(connection);
-				if (currentRow != null && id != null) {
-					if (executedSqlCount.get() > 0) {
-						try {
-							connection.setAutoCommit(false);
-							errorVersion(connection, dialect, table, currentRow, id, dbVersionHandler);
-							commit(connection);
-						} catch (final SQLException e1) {
-							logger.error("set error " + currentRow + " status failed.", e);
-						}
-					} else {
-						try {
-							connection.setAutoCommit(false);
-							deleteVersion(connection, dialect, table, currentRow, dbVersionHandler);
-							commit(connection);
-						} catch (final SQLException e1) {
-							logger.error(this.getSchemaChangeLogTableName() + " recovery failed.", e);
-						}
+				rollbackOutcome = RecoveryOutcome.RETURNED;
+			} catch (final RuntimeException recoveryFailure) {
+				rollbackOutcome = RecoveryOutcome.FAILED;
+				if (e != recoveryFailure) {
+					e.addSuppressed(recoveryFailure);
+				}
+			}
+			if (rollbackOutcome == RecoveryOutcome.RETURNED && currentRow != null && id != null
+					&& attemptedStatement > 0) {
+				try {
+					connection.setAutoCommit(false);
+					errorVersion(connection, dialect, table, currentRow, id, dbVersionHandler);
+					commit(connection);
+					historyOutcome = RecoveryOutcome.RETURNED;
+				} catch (final SQLException | RuntimeException recoveryFailure) {
+					historyOutcome = RecoveryOutcome.FAILED;
+					if (e != recoveryFailure) {
+						e.addSuppressed(recoveryFailure);
 					}
 				}
 			}
+			SQLException sqlFailure = null;
+			for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+				if (cause instanceof SQLException sqlException) {
+					sqlFailure = sqlException;
+					break;
+				}
+			}
+			executionFailure = new MigrationExecutionFailure(phase, id,
+					source == null ? null : source.getAbsolutePath(), attemptedStatement, executedSqlCount.get(),
+					nonTransactional, committedVersions, sqlFailure == null ? null : sqlFailure.getSQLState(),
+					sqlFailure == null ? null : sqlFailure.getErrorCode(), rollbackOutcome, historyOutcome);
+			error(executionFailure);
+			error(executionFailure.recoveryAdvice());
 			throw e;
 		}
 	}
@@ -526,6 +576,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (!CommonUtils.isEmpty(sqls)) {
 			this.info("versionNumber=" + sqlFile.getVersionNumber());
 			for (final SplitResult splitResult : sqls) {
+				attemptedStatement = executedSqlCount.get() + 1;
 				executeSql(connection, dialect, sqlConverter, context, splitResult);
 				executedSqlCount.incrementAndGet();
 			}
@@ -536,7 +587,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			final ParametersContext context, final List<SplitResult> splitResults) throws SQLException {
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		for (SplitResult splitResult : splitResults) {
+			attemptedStatement = executedSqlCount.get() + 1;
 			executeSql(connection, dialect, sqlConverter, context, splitResult);
+			executedSqlCount.incrementAndGet();
 		}
 	}
 
@@ -574,7 +627,11 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,
 			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
-		dbVersionHandler.updateVersion(connection, dialect, table, row, id, Status.Started, Status.Errored);
+		if (dbVersionHandler.updateVersion(connection, dialect, table, row, id, Status.Started, Status.Errored) == 0
+				&& !dbVersionHandler.exists(dialect, connection, table, id)) {
+			// Rollback may have removed Started even when SQL on another connection committed.
+			dbVersionHandler.insertVersion(connection, dialect, table, row, id, Status.Errored);
+		}
 	}
 
 	protected void deleteVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,

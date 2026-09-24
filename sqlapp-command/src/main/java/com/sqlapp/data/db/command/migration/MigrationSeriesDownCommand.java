@@ -34,6 +34,12 @@ import com.sqlapp.data.schemas.Table;
 public class MigrationSeriesDownCommand extends MigrationCommand {
 
 	@Override
+	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,
+			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
+		// A failed down migration must retain its previously applied history.
+	}
+
+	@Override
 	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles,
 			final DbVersionHandler dbVersionHandler) {
 		final List<Row> rows = dbVersionHandler.getRowsForVersionDownSeries(table);

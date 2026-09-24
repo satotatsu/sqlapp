@@ -52,6 +52,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Documentation | `generateHtmlDocs` | Generate HTML documentation and ER diagrams |
 | Migration | `migration` | Apply versioned database migrations |
 | Migration | `migrationValidate` | Read-only validation of recorded up SQL checksums; missing checksums are unverified |
+| Migration | `migrationPlan` | Read-only plan of pending versioned SQL and known blockers |
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
