@@ -120,6 +120,7 @@ changes using the configured database and migration history.
 | `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of the reviewed plan; no limit by default |
 | `expectedPlanFingerprint` | `Property<String>` | Optional approved `sha256:...` value that the plan artifact must match |
 | `lockTimeoutSeconds` | `Property<Integer>` | Optional JDBC timeout while acquiring the migration-history lock |
+| `executionReportFile` | `RegularFileProperty` | Optional atomic JSON audit report for migration execution |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -372,6 +373,25 @@ replacement plan unless it has the exact reviewed fingerprint.
 Set `lockTimeoutSeconds` in CI when a competing migration should fail within a
 bounded time. It is passed to JDBC only for migration-lock statements; omitting
 it retains the driver's existing wait behavior.
+Set `executionReportFile` to retain the selected and committed versions,
+timestamps, database identity, reviewed-plan fingerprint and structured failure
+details. A failed migration still attempts to write the report without masking
+the original migration exception if report writing also fails. The report has
+its own SHA-256 fingerprint and is rejected when any recorded execution detail
+is edited afterward.
+
+Verify the report later without database access:
+
+```groovy
+tasks.named('verifyMigrationExecutionReport') {
+    reportFile = layout.buildDirectory.file('reports/migration-execution.json')
+    expectedReportFingerprint = providers.environmentVariable('APPROVED_MIGRATION_REPORT_SHA256')
+    requireSuccessful = true
+}
+```
+
+`expectedReportFingerprint` is optional. Supplying it binds verification to the
+exact fingerprint retained by the external CI or audit system.
 
 ## Additional task types
 

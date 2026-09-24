@@ -83,11 +83,19 @@ class MigrationExecutionFailureTest {
 	void checkedSqlFailureReportsPositionAndKeepsAnErrorMarkerAfterRollback() throws Exception {
 		Files.writeString(up.resolve("1_change.sql"), "INSERT INTO sample VALUES(1); INSERT INTO sample VALUES(999);");
 		final var command = checkedFailureCommand();
+		final Path reportFile = directory.resolve("migration-failure.json");
+		command.setExecutionReportFile(reportFile.toFile());
 		assertThrows(RuntimeException.class, command::run);
 		final var failure = command.getExecutionFailure();
 		assertEquals(Phase.MIGRATION, failure.phase());
 		assertEquals(1L, failure.version());
 		assertEquals(2, failure.attemptedStatement());
+		final var report = new MigrationExecutionReportIO().read(reportFile);
+		assertFalse(report.successful());
+		assertEquals(List.of(1L), report.selectedVersions());
+		assertTrue(report.committedVersions().isEmpty());
+		assertEquals(Phase.MIGRATION, report.failure().phase());
+		assertTrue(report.reportFingerprint().matches("sha256:[0-9a-f]{64}"));
 		assertEquals(1, failure.completedStatements());
 		assertEquals("42000", failure.sqlState());
 		assertEquals(123, failure.vendorErrorCode());

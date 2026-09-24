@@ -166,6 +166,26 @@ class MigrationPlanCommandTest {
 	}
 
 	@Test
+	void successfulMigrationWritesAnExecutionAuditReport() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		final Path reportFile = directory.resolve("reports/migration-execution.json");
+		final var migration = configure(new MigrationCommand());
+		migration.setExecutionReportFile(reportFile.toFile());
+		migration.run();
+		final var report = new MigrationExecutionReportIO().read(reportFile);
+		assertTrue(report.successful());
+		assertEquals(java.util.List.of(1L), report.selectedVersions());
+		assertEquals(java.util.List.of(1L), report.committedVersions());
+		assertNull(report.failure());
+		assertTrue(report.reportFingerprint().matches("sha256:[0-9a-f]{64}"));
+		assertEquals(report, migration.getExecutionReport());
+		final Path tampered = directory.resolve("reports/tampered-execution.json");
+		Files.writeString(tampered, Files.readString(reportFile).replace("\"successful\" : true",
+				"\"successful\" : false"));
+		assertThrows(RuntimeException.class, () -> new MigrationExecutionReportIO().read(tampered));
+	}
+
+	@Test
 	void planGuardsRequireAnExpectedPlanFile() {
 		final var command = configure(new MigrationCommand());
 		command.setExpectedPlanMaxAge(Duration.ofMinutes(5));

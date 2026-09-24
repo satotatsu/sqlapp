@@ -135,6 +135,10 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract Property<Integer> getLockTimeoutSeconds();
 
+	/** Optional machine-readable migration execution report destination. */
+	@Internal
+	public abstract RegularFileProperty getExecutionReportFile();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -170,6 +174,9 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			}
 			if (getLockTimeoutSeconds().isPresent()) {
 				com.setLockTimeoutSeconds(getLockTimeoutSeconds().get());
+			}
+			if (getExecutionReportFile().isPresent()) {
+				com.setExecutionReportFile(getExecutionReportFile().get().getAsFile());
 			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());

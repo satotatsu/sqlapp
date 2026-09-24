@@ -136,6 +136,18 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional JDBC timeout for acquiring the migration-history lock. */
 	private Integer lockTimeoutSeconds;
 
+	/** Optional machine-readable audit report destination. */
+	private File executionReportFile;
+
+	@Setter(lombok.AccessLevel.NONE)
+	private MigrationExecutionReport executionReport;
+
+	@Setter(lombok.AccessLevel.NONE)
+	private List<Long> appliedVersions = List.of();
+
+	@Setter(lombok.AccessLevel.NONE)
+	private String validatedPlanFingerprint;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -168,7 +180,11 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	@Override
 	protected void doRun() {
+		final long startedAt = System.currentTimeMillis();
 		executionFailure = null;
+		executionReport = null;
+		appliedVersions = new ArrayList<>();
+		validatedPlanFingerprint = null;
 		schemaDriftReport = null;
 		attemptedStatement = 0;
 		executedSqlCount.set(0);
@@ -182,7 +198,12 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
 		dbVersionFileHandler.setRecursive(this.isRecursive());
+		final MigrationPlan.DatabaseIdentity[] databaseIdentity = new MigrationPlan.DatabaseIdentity[1];
+		final List<Long> selectedVersions = new ArrayList<>();
+		RuntimeException runFailure = null;
+		try {
 		execute(getDataSource(), connection -> {
+			databaseIdentity[0] = MigrationPlanCommand.databaseIdentity(connection);
 			Dialect dialect = this.getDialect(connection);
 			if (preMigrationSchemaFile != null) {
 				schemaDriftReport = assessPreMigrationDrift(connection);
@@ -194,6 +215,13 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
 			dbVersionFileHandler.setEncoding(this.getEncoding());
 			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
+			selectedVersions.clear();
+			for (final Row row : holder.rows) {
+				final Long version = dbVersionHandler.getId(row);
+				if (version != null) {
+					selectedVersions.add(version);
+				}
+			}
 			validateExpectedPlan(connection, holder, dbVersionHandler);
 			previousTable = holder.table;
 			previousState = lastState;
@@ -211,6 +239,25 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				}
 			}
 		});
+		} catch (final RuntimeException e) {
+			runFailure = e;
+			throw e;
+		} finally {
+			executionReport = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, startedAt,
+					System.currentTimeMillis(), runFailure == null, databaseIdentity[0], validatedPlanFingerprint,
+					selectedVersions, appliedVersions, executionFailure);
+			if (executionReportFile != null) {
+				try {
+					new MigrationExecutionReportIO().write(executionReportFile.toPath(), executionReport);
+				} catch (final RuntimeException reportFailure) {
+					if (runFailure != null) {
+						runFailure.addSuppressed(reportFailure);
+					} else {
+						throw reportFailure;
+					}
+				}
+			}
+		}
 	}
 
 	protected DbVersionHandler createDbVersionHandler() {
@@ -232,6 +279,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			return;
 		}
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(expectedPlanFile.toPath());
+		validatedPlanFingerprint = artifact.planFingerprint();
 		if (expectedPlanFingerprint != null
 				&& !expectedPlanFingerprint.equals(artifact.planFingerprint())) {
 			throw new CommandException("expectedPlanFile fingerprint does not match expectedPlanFingerprint: "
@@ -664,6 +712,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				phase = Phase.VERSION_COMMIT;
 				commit(connection);
 				committedVersions.add(id);
+				appliedVersions.add(id);
 				currentRow = null;
 			}
 			if (!CommonUtils.isEmpty(rows)) {
