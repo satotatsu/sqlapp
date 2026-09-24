@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,6 +126,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional reviewed plan that must match the selected execution. */
 	private File expectedPlanFile;
 
+	/** Optional maximum age of the reviewed plan. */
+	private Duration expectedPlanMaxAge;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -219,7 +223,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (expectedPlanFile == null) {
 			return;
 		}
-		final MigrationPlan expected = new MigrationPlanIO().read(expectedPlanFile.toPath()).plan();
+		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(expectedPlanFile.toPath());
+		validateExpectedPlanAge(artifact);
+		final MigrationPlan expected = artifact.plan();
 		if (expected.hasBlockers()) {
 			throw new CommandException("expectedPlanFile contains blockers: " + expectedPlanFile);
 		}
@@ -263,6 +269,24 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				|| !reviewed.equals(pending)) {
 			throw new CommandException("Current migration execution does not match expectedPlanFile: "
 					+ expectedPlanFile);
+		}
+	}
+
+	protected void validateExpectedPlanAge(final MigrationPlanArtifact artifact) {
+		if (expectedPlanMaxAge == null) {
+			return;
+		}
+		if (expectedPlanMaxAge.isZero() || expectedPlanMaxAge.isNegative()) {
+			throw new CommandException("expectedPlanMaxAge must be greater than zero");
+		}
+		if (artifact.createdAtEpochMillis() <= 0) {
+			throw new CommandException("expectedPlanFile does not contain a creation time: " + expectedPlanFile
+					+ ". Generate and review a new migration plan.");
+		}
+		final long ageMillis = System.currentTimeMillis() - artifact.createdAtEpochMillis();
+		if (ageMillis < 0 || ageMillis > expectedPlanMaxAge.toMillis()) {
+			throw new CommandException("expectedPlanFile has expired: " + expectedPlanFile
+					+ ". Generate and review a new migration plan.");
 		}
 	}
 

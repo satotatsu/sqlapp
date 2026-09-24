@@ -242,6 +242,7 @@ The registered `migration` task reads the project extension of the same name.
 | `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject migration files selected for non-transactional execution |
 | `requireDownMigration` | `Property<Boolean>` | Default `false`; require down SQL for every selected migration |
 | `expectedPlanFile` | `RegularFileProperty` | Optional `migrationPlan` JSON that must match the execution selected by `migration` |
+| `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of `expectedPlanFile`; unlimited when omitted |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML; `migration` blocks on breaking drift and `migrationPlan` reports it |
 
 Custom `MigrationDownTask` and `MigrationSeriesDownTask` instances reuse this

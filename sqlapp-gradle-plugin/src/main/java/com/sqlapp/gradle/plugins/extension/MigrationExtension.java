@@ -19,6 +19,8 @@
 
 package com.sqlapp.gradle.plugins.extension;
 
+import java.time.Duration;
+
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
@@ -118,6 +120,11 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract RegularFileProperty getExpectedPlanFile();
 
+	/** Optional maximum age, in seconds, of the reviewed migration plan. */
+	@Input
+	@Optional
+	public abstract Property<Long> getExpectedPlanMaxAgeSeconds();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -144,6 +151,9 @@ public abstract class MigrationExtension extends AbstractDbExtension
 			}
 			if (getExpectedPlanFile().isPresent()) {
 				com.setExpectedPlanFile(getExpectedPlanFile().get().getAsFile());
+			}
+			if (getExpectedPlanMaxAgeSeconds().isPresent()) {
+				com.setExpectedPlanMaxAge(Duration.ofSeconds(getExpectedPlanMaxAgeSeconds().get()));
 			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());

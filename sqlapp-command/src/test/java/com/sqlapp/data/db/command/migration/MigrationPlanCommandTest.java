@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
 
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -92,7 +93,8 @@ class MigrationPlanCommandTest {
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(output);
 		assertEquals(MigrationPlanArtifact.CURRENT_FORMAT_VERSION, artifact.formatVersion());
 		assertEquals(command.getPlan(), artifact.plan());
-		assertTrue(Files.readString(output).contains("\"formatVersion\" : 7"));
+		assertTrue(Files.readString(output).contains("\"formatVersion\" : 8"));
+		assertTrue(artifact.createdAtEpochMillis() > 0);
 		assertTrue(artifact.planFingerprint().matches("sha256:[0-9a-f]{64}"));
 		final Path tampered = directory.resolve("reports/tampered-plan.json");
 		Files.writeString(tampered, Files.readString(output).replace(
@@ -100,6 +102,22 @@ class MigrationPlanCommandTest {
 				"sha256:0000000000000000000000000000000000000000000000000000000000000000"));
 		assertThrows(RuntimeException.class, () -> new MigrationPlanIO().read(tampered));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
+	}
+
+	@Test
+	void expectedPlanCanRequireARecentReview() throws Exception {
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);");
+		final Path artifact = directory.resolve("expiring-plan.json");
+		final var planner = configure(new MigrationPlanCommand());
+		planner.setOutputFile(artifact.toFile());
+		planner.run();
+		final var migration = configure(new MigrationCommand());
+		migration.setExpectedPlanFile(artifact.toFile());
+		migration.setExpectedPlanMaxAge(Duration.ofMillis(1));
+		Thread.sleep(5L);
+		assertThrows(RuntimeException.class, migration::run);
+		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+				+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME='SAMPLE'"));
 	}
 
 	@Test

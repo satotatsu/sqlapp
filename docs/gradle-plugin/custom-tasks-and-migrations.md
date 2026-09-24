@@ -117,6 +117,7 @@ changes using the configured database and migration history.
 | `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject selected migrations that bypass transactions |
 | `requireDownMigration` | `Property<Boolean>` | Default `false`; require rollback SQL for every selected migration |
 | `expectedPlanFile` | `RegularFileProperty` | Optional reviewed plan JSON that must match execution |
+| `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of the reviewed plan; no limit by default |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -353,6 +354,11 @@ SHA-256, transaction mode, rollback availability and database identity. A change
 database state stops execution. The database-history comparison is repeated
 after acquiring the migration lock, closing the race between the initial plan
 check and setup SQL. Artifacts containing blockers are rejected.
+Set `expectedPlanMaxAgeSeconds` when deployment policy requires a recently
+generated and reviewed plan. It is optional; omitting it preserves the casual
+plan-and-apply workflow. Existing format-version 7 plans remain readable when
+no maximum age is configured; generate a version 8 plan before enabling the
+age check.
 
 ## Additional task types
 
