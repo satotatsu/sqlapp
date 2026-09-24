@@ -113,6 +113,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Opt-in recording and validation of up SQL source checksums. */
 	private boolean checksumValidation = false;
 
+	/** Optional strict rejection of pending versions below the latest completed version. */
+	private boolean rejectOutOfOrder = false;
+
 	@Setter(lombok.AccessLevel.NONE)
 	private MigrationValidationResult validationResult;
 
@@ -289,6 +292,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			validateChecksums(holder.table, dbVersionHandler, holder.sqlFiles);
 		}
 		dbVersionHandler.mergeSqlFiles(holder.sqlFiles, holder.table);
+		validateOutOfOrder(holder.table, dbVersionHandler);
 		if (target) {
 			holder.rows = getVersionRows(holder.table, holder.sqlFiles, dbVersionHandler);
 		} else {
@@ -296,6 +300,34 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		}
 		lastState = outputCurrent(holder.table, dbVersionHandler);
 		return holder;
+	}
+
+	protected void validateOutOfOrder(final Table history, final DbVersionHandler handler) {
+		if (!rejectOutOfOrder) {
+			return;
+		}
+		Long latestCompleted = null;
+		for (final Row row : history.getRows()) {
+			final Long version = handler.getId(row);
+			if (version != null && handler.getStatus(row).isCompleted()
+					&& (latestCompleted == null || version > latestCompleted)) {
+				latestCompleted = version;
+			}
+		}
+		if (latestCompleted == null) {
+			return;
+		}
+		final List<Long> outOfOrder = new ArrayList<>();
+		for (final Row row : history.getRows()) {
+			final Long version = handler.getId(row);
+			if (version != null && version < latestCompleted && handler.getStatus(row).isPending()) {
+				outOfOrder.add(version);
+			}
+		}
+		if (!outOfOrder.isEmpty()) {
+			throw new CommandException("Out-of-order migrations precede completed version " + latestCompleted
+					+ ": " + outOfOrder + ". Disable rejectOutOfOrder only after reviewing them.");
+		}
 	}
 
 	static class DialectTableHolder {

@@ -113,6 +113,7 @@ changes using the configured database and migration history.
 | `lastChangeNumber` | `Property<String>` | Optional upper change number, converted to `Long` |
 | `showVersionOnly` | `Property<Boolean>` | Request version display instead of normal migration processing |
 | `checksumValidation` | `Property<Boolean>` | Default `false`; record up SQL checksums and validate completed migrations before execution |
+| `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions lower than the latest completed version |
 | `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
 | `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
 | `changeTable` | Nested configuration | Migration history table settings |
@@ -122,6 +123,11 @@ Only configure optional directories that exist and are part of your workflow.
 The rollback directory is named `downSqlDirectory`, not `sqlDownDirectory`.
 The migration extension's `lastChangeNumber` is a string; the SQL generation
 tasks' similarly named property has different typing and numbering semantics.
+
+Set `rejectOutOfOrder = true` when version numbers must increase monotonically.
+This catches a newly added migration such as version 20 when version 30 is
+already completed, before setup or version SQL runs. The default remains
+permissive for compatibility with existing sqlapp projects.
 
 `migrationInsert` and `migrationRepair` are registered separately for history
 operations. They are not substitutes for applying reviewed schema changes.

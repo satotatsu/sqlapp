@@ -25,12 +25,16 @@ class MigrationValidateTaskTest {
 		assertInstanceOf(MigrationValidateCommand.class, task.createCommand());
 		final var extension = project.getExtensions().getByType(MigrationExtension.class);
 		assertFalse(extension.getChecksumValidation().get());
+		assertFalse(extension.getRejectOutOfOrder().get());
 		final var command = new MigrationCommand();
 		extension.initializeCommand(command);
 		assertFalse(command.isChecksumValidation());
 		extension.getChecksumValidation().set(true);
 		extension.initializeCommand(command);
 		assertTrue(command.isChecksumValidation());
+		extension.getRejectOutOfOrder().set(true);
+		extension.initializeCommand(command);
+		assertTrue(command.isRejectOutOfOrder());
 		final File expected = new File(project.getProjectDir(), "expected.xml");
 		extension.getPreMigrationSchemaFile().set(expected);
 		extension.initializeCommand(command);
