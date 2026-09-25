@@ -117,6 +117,48 @@ tasks.named('assessMigration') {
 }
 ```
 
+A complete two-phase configuration can keep full data scans disabled until an
+approved run. Supply the Oracle JDBC driver version approved for the build:
+
+```groovy
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment
+
+dependencies {
+    runtimeOnly 'com.sqlapp:sqlapp-core-oracle:<sqlapp-version>'
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:<approved-driver-version>'
+}
+
+tasks.named('assessMigration') {
+    schemaFile = layout.projectDirectory.file('schemas/oracle10g-source.xml')
+    outputFile = layout.buildDirectory.file('reports/migration/oracle-al32utf8.json')
+    targetVersion = '26ai'
+    migrationMethod = MigrationAssessment.Method.LOGICAL_MIGRATION
+    targetCharacterSet = 'AL32UTF8'
+
+    dataSource {
+        jdbcUrl = providers.environmentVariable('SQLAPP_JDBC_URL')
+        username = providers.environmentVariable('SQLAPP_JDBC_USER')
+        password = providers.environmentVariable('SQLAPP_JDBC_PASSWORD')
+    }
+
+    scanCharacterData = providers.gradleProperty('scanCharacterData')
+        .map { it.toBoolean() }.orElse(false)
+    scanQueryTimeoutSeconds = providers.gradleProperty('scanQueryTimeoutSeconds')
+        .map { it.toInteger() }.orElse(300)
+}
+```
+
+Run `gradlew.bat assessMigration` first for metadata-only online assessment.
+After approving the source load and diagnostic window, collect aggregate scan
+evidence with:
+
+```text
+gradlew.bat assessMigration -PscanCharacterData=true -PscanQueryTimeoutSeconds=600
+```
+
+Keep credentials in environment variables or the existing secret provider
+rather than Gradle files or command-line properties.
+
 To read the missing facts from the source Oracle database, add the normal
 `dataSource` configuration. Its presence enables online assessment; omitting it
 keeps the task fully offline. The connection is marked read-only before queries.
@@ -148,9 +190,10 @@ Online evidence includes `SYS_CONTEXT('USERENV','DB_NAME')` as
 Pump export source. If the value cannot be read, the report retains
 `oracle.source.database-identity-unavailable` instead of silently omitting the
 identity check.
-The JDBC database major version is also compared with the version captured in
-each Schema. A difference produces `oracle.source.version-mismatch`, which
-normally indicates a stale Schema snapshot or the wrong source DataSource.
+The JDBC database major version, and the minor version when captured in the
+Schema, are compared with the source snapshot. A difference produces
+`oracle.source.version-mismatch`, which normally indicates a stale Schema
+snapshot or the wrong source DataSource.
 
 `NLS_LENGTH_SEMANTICS` is recorded as the database default, but it is never
 used to infer an existing column's semantics. Existing columns are assessed

@@ -77,11 +77,17 @@ final class OracleOnlineMigrationAssessment {
 			if (schema.getName() == null || schema.getName().isBlank()) {
 				throw new IllegalArgumentException("Online assessment requires every Schema to have an Oracle owner name");
 			}
-			if (schema.getProductMajorVersion() != null && databaseMajorVersion > 0
-					&& schema.getProductMajorVersion().intValue() != databaseMajorVersion) {
+			final boolean majorVersionMismatch = schema.getProductMajorVersion() != null && databaseMajorVersion > 0
+					&& schema.getProductMajorVersion().intValue() != databaseMajorVersion;
+			final boolean minorVersionMismatch = !majorVersionMismatch && schema.getProductMajorVersion() != null
+					&& schema.getProductMajorVersion().intValue() == databaseMajorVersion
+					&& schema.getProductMinorVersion() != null && databaseMinorVersion >= 0
+					&& schema.getProductMinorVersion().intValue() != databaseMinorVersion;
+			if (majorVersionMismatch || minorVersionMismatch) {
 				findings.add(new Finding("oracle.source.version-mismatch", Severity.WARNING, Evidence.DATABASE,
 						new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
-						"Schema evidence reports Oracle major version=" + schema.getProductMajorVersion()
+						"Schema evidence reports Oracle version=" + schema.getProductMajorVersion() + "."
+								+ (schema.getProductMinorVersion() == null ? "UNKNOWN" : schema.getProductMinorVersion())
 								+ "; connected database reports JDBC version=" + databaseMajorVersion + "."
 								+ databaseMinorVersion + ".",
 						"Verify that the DataSource is the database represented by this Schema XML and used for the Data Pump export.",

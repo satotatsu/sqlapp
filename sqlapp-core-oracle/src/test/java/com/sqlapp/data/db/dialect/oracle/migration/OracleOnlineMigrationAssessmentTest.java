@@ -113,7 +113,16 @@ class OracleOnlineMigrationAssessmentTest {
 				List.of("COL"), "SOURCE19", false, false, 19), List.of(schema()), "26ai",
 				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.version-mismatch")
-				&& f.reason().contains("major version=10") && f.reason().contains("version=19.2")));
+				&& f.reason().contains("version=10.UNKNOWN") && f.reason().contains("version=19.2")));
+	}
+
+	@Test
+	void warnsWhenSchemaAndConnectedOracleMinorVersionsDiffer() {
+		final var schema = schema().setProductMinorVersion(1);
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.version-mismatch")
+				&& f.reason().contains("version=10.1") && f.reason().contains("version=10.2")));
 	}
 
 	@Test
