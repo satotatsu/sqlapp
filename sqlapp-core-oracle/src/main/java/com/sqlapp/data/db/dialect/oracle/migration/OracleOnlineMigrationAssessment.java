@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.CharacterSemantics;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
@@ -25,12 +26,13 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Severity
 /** Read-only Oracle catalog and optional character-data scanner. */
 final class OracleOnlineMigrationAssessment {
 	private static final String REFERENCE = "https://docs.oracle.com/en/database/oracle/dmu/23.1/dumag/ch1_overview.html";
-	private record ColumnMetadata(String semantics, long characterLength, long byteLength) { }
+	private record ColumnMetadata(String type, String semantics, long characterLength, long byteLength) { }
 
 	private OracleOnlineMigrationAssessment() { }
 
 	static MigrationAssessment assess(final Connection connection, final List<Schema> schemas,
-			final MigrationAssessment offline, final boolean scanCharacterData) throws SQLException {
+			final MigrationAssessment offline, final boolean scanCharacterData, final int scanQueryTimeoutSeconds)
+			throws SQLException {
 		final String product = connection.getMetaData().getDatabaseProductName();
 		if (product == null || !product.toLowerCase(Locale.ROOT).contains("oracle")) {
 			throw new IllegalArgumentException("Online Oracle assessment requires an Oracle JDBC connection; found " + product);
@@ -59,7 +61,7 @@ final class OracleOnlineMigrationAssessment {
 						"Regenerate or correct the Schema snapshot and verify that the DataSource points to the intended export database before relying on this assessment.",
 						REFERENCE));
 			}
-			assessColumns(connection, schema, sourceCharacterSet, scanCharacterData, findings);
+			assessColumns(connection, schema, sourceCharacterSet, scanCharacterData, scanQueryTimeoutSeconds, findings);
 		}
 		return new MigrationAssessment(findings, offline.inventory());
 	}
@@ -78,7 +80,7 @@ final class OracleOnlineMigrationAssessment {
 	}
 
 	private static void assessColumns(final Connection connection, final Schema schema, final String sourceCharacterSet,
-			final boolean scanCharacterData, final List<Finding> findings) throws SQLException {
+			final boolean scanCharacterData, final int scanQueryTimeoutSeconds, final List<Finding> findings) throws SQLException {
 		final Set<String> selectedTables = schema.getTables().stream().map(table -> table.getName())
 				.collect(Collectors.toSet());
 		final Set<String> availableTables = readTableNames(connection, schema.getName());
@@ -143,7 +145,7 @@ final class OracleOnlineMigrationAssessment {
 					final long charLength = rs.getLong("CHAR_LENGTH");
 					final long byteLength = rs.getLong("DATA_LENGTH");
 					databaseColumns.computeIfAbsent(table, key -> new LinkedHashMap<>()).put(column,
-							new ColumnMetadata(semantics, charLength, byteLength));
+							new ColumnMetadata(type, semantics, charLength, byteLength));
 					final var id = new ObjectId(schema.getCatalogName(), schema.getName(), "column", column, table);
 					findings.add(new Finding("oracle.charset.database-column", Severity.REVIEW, Evidence.DATABASE, id,
 							"Source metadata: dataType=" + type + "; CHAR_USED="
@@ -155,7 +157,7 @@ final class OracleOnlineMigrationAssessment {
 						if (!scanCharacterData) {
 							continue;
 						}
-						if (scanColumn(connection, id, sourceCharacterSet, byteLength, findings)) {
+						if (scanColumn(connection, id, sourceCharacterSet, byteLength, scanQueryTimeoutSeconds, findings)) {
 							successfulScans++;
 						} else {
 							failedScans++;
@@ -169,6 +171,7 @@ final class OracleOnlineMigrationAssessment {
 		int ambiguousColumns = 0;
 		int semanticsMismatches = 0;
 		int lengthMismatches = 0;
+		int typeMismatches = 0;
 		for (final var modeledTable : schema.getTables()) {
 			final String databaseTable = resolvedTableNames.get(modeledTable.getName());
 			if (databaseTable == null) {
@@ -211,6 +214,18 @@ final class OracleOnlineMigrationAssessment {
 							REFERENCE));
 				} else {
 					final ColumnMetadata actual = availableColumnMetadata.get(databaseColumn);
+					final boolean nationalMismatch = isNational(modeledColumn.getDataType()) != isNational(actual.type());
+					final boolean largeTypeMismatch = isLargeCharacter(modeledColumn.getDataType())
+							!= isLargeCharacter(actual.type());
+					if (nationalMismatch || largeTypeMismatch) {
+						typeMismatches++;
+						findings.add(new Finding("oracle.charset.source-character-type-mismatch", Severity.WARNING,
+								Evidence.DATABASE, id,
+								"Schema evidence reports character type=" + modeledColumn.getDataType()
+										+ "; connected database reports DATA_TYPE=" + actual.type() + ".",
+								"Refresh the Schema snapshot and evaluate the live database or national character set and LOB handling before migration.",
+								REFERENCE));
+					}
 					final String actualSemantics = actual.semantics();
 					final CharacterSemantics modeledSemantics = modeledColumn.getCharacterSemantics();
 					final boolean mismatch = (modeledSemantics == CharacterSemantics.Byte
@@ -250,7 +265,8 @@ final class OracleOnlineMigrationAssessment {
 						+ "; modeled character columns=" + modeledCharacterColumns + "; database character columns="
 						+ characterColumns + "; missing columns=" + missingColumns + "; ambiguous columns="
 						+ ambiguousColumns + "; semantics mismatches=" + semanticsMismatches + "; length mismatches="
-						+ lengthMismatches + "; scan candidates=" + scanCandidates + "; successful scans="
+						+ lengthMismatches + "; character type mismatches=" + typeMismatches + "; scan candidates="
+						+ scanCandidates + "; successful scans="
 						+ successfulScans + "; failed scans=" + failedScans + ".",
 				"Confirm the selected Schema XML scope and retain this coverage with the migration evidence.", REFERENCE));
 		if (!scanCharacterData) {
@@ -259,6 +275,24 @@ final class OracleOnlineMigrationAssessment {
 					"Connected metadata was read, but character data was not scanned.",
 					"Set scanCharacterData=true only in an approved window after evaluating full-scan load, or use Oracle DMU/scanner evidence.", REFERENCE));
 		}
+	}
+
+	private static boolean isNational(final DataType type) {
+		return type == DataType.NCHAR || type == DataType.NVARCHAR || type == DataType.NCLOB
+				|| type == DataType.LONGNVARCHAR;
+	}
+
+	private static boolean isNational(final String type) {
+		return "NCHAR".equals(type) || "NVARCHAR2".equals(type) || "NCLOB".equals(type);
+	}
+
+	private static boolean isLargeCharacter(final DataType type) {
+		return type == DataType.CLOB || type == DataType.NCLOB || type == DataType.LONGVARCHAR
+				|| type == DataType.LONGNVARCHAR;
+	}
+
+	private static boolean isLargeCharacter(final String type) {
+		return "CLOB".equals(type) || "NCLOB".equals(type) || "LONG".equals(type);
 	}
 
 	private static Set<String> readTableNames(final Connection connection, final String owner) throws SQLException {
@@ -278,12 +312,14 @@ final class OracleOnlineMigrationAssessment {
 	}
 
 	private static boolean scanColumn(final Connection connection, final ObjectId id, final String sourceCharacterSet,
-			final long byteLimit, final List<Finding> findings) {
+			final long byteLimit, final int queryTimeoutSeconds, final List<Finding> findings) {
 		final String expression = "LENGTHB(CONVERT(" + identifier(id.name()) + ", 'AL32UTF8', '"
 				+ sourceCharacterSet.replace("'", "''") + "'))";
 		final String sql = "SELECT MAX(" + expression + "), SUM(CASE WHEN " + expression + " > " + byteLimit
 				+ " THEN 1 ELSE 0 END) FROM " + identifier(id.schema()) + "." + identifier(id.table());
-		try (PreparedStatement statement = connection.prepareStatement(sql); ResultSet rs = statement.executeQuery()) {
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setQueryTimeout(queryTimeoutSeconds);
+			try (ResultSet rs = statement.executeQuery()) {
 			rs.next();
 			final long maximum = rs.getLong(1);
 			final boolean noValues = rs.wasNull();
@@ -297,6 +333,7 @@ final class OracleOnlineMigrationAssessment {
 							: "Retain the scan evidence and still validate invalid source bytes, target DDL, indexes and application buffers.",
 					REFERENCE));
 			return true;
+			}
 		} catch (SQLException e) {
 			findings.add(new Finding("oracle.charset.data-scan-failed", Severity.WARNING, Evidence.DATABASE, id,
 					"Character data scan failed with Oracle error code " + e.getErrorCode() + " and SQLState " + e.getSQLState() + ".",

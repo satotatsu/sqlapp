@@ -9,6 +9,7 @@ import com.sqlapp.data.schemas.Schema;
 
 /** Dialect-owned assessment; implementations must not mutate the Schema input. */
 public interface MigrationAssessmentProvider {
+	int DEFAULT_SCAN_QUERY_TIMEOUT_SECONDS = 300;
 	boolean supports(String product, String targetVersion);
 
 	MigrationAssessment assess(List<Schema> schemas, String targetVersion, MigrationAssessment.Method method);
@@ -27,6 +28,13 @@ public interface MigrationAssessmentProvider {
 			final String targetVersion, final MigrationAssessment.Method method, final String targetCharacterSet,
 			final boolean scanCharacterData) {
 		throw new IllegalArgumentException("Online migration assessment is not supported by this provider");
+	}
+
+	/** Online assessment with an explicit timeout for character-data scan statements. */
+	default MigrationAssessment assess(final Connection connection, final List<Schema> schemas,
+			final String targetVersion, final MigrationAssessment.Method method, final String targetCharacterSet,
+			final boolean scanCharacterData, final int scanQueryTimeoutSeconds) {
+		return assess(connection, schemas, targetVersion, method, targetCharacterSet, scanCharacterData);
 	}
 
 	static MigrationAssessmentProvider resolve(final String product, final String targetVersion) {

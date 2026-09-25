@@ -33,6 +33,7 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 	private MigrationAssessment.Method migrationMethod;
 	private boolean failOnBlockers = true;
 	private boolean scanCharacterData;
+	private int scanQueryTimeoutSeconds = MigrationAssessmentProvider.DEFAULT_SCAN_QUERY_TIMEOUT_SECONDS;
 	@Setter(lombok.AccessLevel.NONE)
 	private Report report;
 
@@ -41,18 +42,26 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 	public record Report(int formatVersion, String schemaFingerprint, String targetVersion,
 			MigrationAssessment.Method migrationMethod, List<Source> sources, String status,
 			MigrationAssessment assessment, String targetCharacterSet, String databaseProductName,
-			String databaseProductVersion) {
+			String databaseProductVersion, boolean onlineAssessment, boolean scanCharacterData,
+			Integer scanQueryTimeoutSeconds) {
 		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
 				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
 				final MigrationAssessment assessment) {
 			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment, null,
-					null, null);
+					null, null, false, false, null);
 		}
 		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
 				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
 				final MigrationAssessment assessment, final String targetCharacterSet) {
 			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment,
-					targetCharacterSet, null, null);
+					targetCharacterSet, null, null, false, false, null);
+		}
+		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
+				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
+				final MigrationAssessment assessment, final String targetCharacterSet, final String databaseProductName,
+				final String databaseProductVersion) {
+			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment,
+					targetCharacterSet, databaseProductName, databaseProductVersion, databaseProductName != null, false, null);
 		}
 	}
 
@@ -67,6 +76,9 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 		}
 		if (scanCharacterData && getDataSource() == null) {
 			throw new CommandException("scanCharacterData=true requires a configured dataSource");
+		}
+		if (scanCharacterData && scanQueryTimeoutSeconds <= 0) {
+			throw new CommandException("scanQueryTimeoutSeconds must be greater than zero when scanCharacterData=true");
 		}
 		try {
 			final var input = schemaFile.toPath().toRealPath();
@@ -99,7 +111,7 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 					databaseProduct[0] = connection.getMetaData().getDatabaseProductName();
 					databaseProduct[1] = connection.getMetaData().getDatabaseProductVersion();
 					holder[0] = provider.assess(connection, List.copyOf(schemas), targetVersion, migrationMethod,
-							targetCharacterSet, scanCharacterData);
+							targetCharacterSet, scanCharacterData, scanQueryTimeoutSeconds);
 				});
 				assessment = holder[0];
 				if (assessment == null) {
@@ -114,7 +126,8 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 					schema.getProductRevision())).toList();
 			report = new Report(1, fingerprint, targetVersion, migrationMethod, sources,
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, targetCharacterSet,
-					databaseProduct[0], databaseProduct[1]);
+					databaseProduct[0], databaseProduct[1], getDataSource() != null, scanCharacterData,
+					scanCharacterData ? scanQueryTimeoutSeconds : null);
 			final var converter = new JsonConverter();
 			converter.setIndentOutput(true);
 			AtomicMigrationFile.write(output, temporary -> converter.writeJsonValue(temporary.toFile(), report));

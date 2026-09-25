@@ -15,6 +15,7 @@ class AssessMigrationTaskTest extends AbstractTaskTest {
 		def task = project.tasks.named('assessMigration', AssessMigrationTask).get()
 		assertTrue(task.failOnBlockers.get())
 		assertFalse(task.scanCharacterData.get())
+		assertEquals(300, task.scanQueryTimeoutSeconds.get())
 		assertFalse(task.targetVersion.isPresent())
 		assertFalse(task.targetCharacterSet.isPresent())
 		assertFalse(task.migrationMethod.isPresent())
@@ -27,6 +28,7 @@ class AssessMigrationTaskTest extends AbstractTaskTest {
 		task.migrationMethod.set(MigrationAssessment.Method.LOGICAL_MIGRATION)
 		task.failOnBlockers.set(false)
 		task.scanCharacterData.set(true)
+		task.scanQueryTimeoutSeconds.set(45)
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals(input, command.schemaFile)
@@ -36,6 +38,7 @@ class AssessMigrationTaskTest extends AbstractTaskTest {
 		assertEquals(MigrationAssessment.Method.LOGICAL_MIGRATION, command.migrationMethod)
 		assertFalse(command.failOnBlockers)
 		assertTrue(command.scanCharacterData)
+		assertEquals(45, command.scanQueryTimeoutSeconds)
 		assertNull(command.dataSource)
 	}
 

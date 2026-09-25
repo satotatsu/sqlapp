@@ -13,6 +13,7 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.migration.assessment.AssessMigrationCommand;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentProvider;
 import com.sqlapp.gradle.plugins.properties.OptionalDataSourceTaskProperty;
 
 /** Offline or optional read-only online migration preflight. */
@@ -22,6 +23,7 @@ public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCo
 	public AssessMigrationTask() {
 		getFailOnBlockers().convention(true);
 		getScanCharacterData().convention(false);
+		getScanQueryTimeoutSeconds().convention(MigrationAssessmentProvider.DEFAULT_SCAN_QUERY_TIMEOUT_SECONDS);
 		getOutputs().upToDateWhen(task -> false);
 	}
 	@InputFile
@@ -40,6 +42,8 @@ public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCo
 	public abstract Property<Boolean> getFailOnBlockers();
 	@Input
 	public abstract Property<Boolean> getScanCharacterData();
+	@Input
+	public abstract Property<Integer> getScanQueryTimeoutSeconds();
 
 	@Override
 	protected AssessMigrationCommand createCommand() {
@@ -54,5 +58,6 @@ public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCo
 		command.setMigrationMethod(getMigrationMethod().get());
 		command.setFailOnBlockers(getFailOnBlockers().get());
 		command.setScanCharacterData(getScanCharacterData().get());
+		command.setScanQueryTimeoutSeconds(getScanQueryTimeoutSeconds().get());
 	}
 }

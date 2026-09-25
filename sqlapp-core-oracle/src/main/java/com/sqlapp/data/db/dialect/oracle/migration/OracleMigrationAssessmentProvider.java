@@ -122,13 +122,24 @@ public final class OracleMigrationAssessmentProvider implements MigrationAssessm
 	public MigrationAssessment assess(final Connection connection, final List<Schema> schemas,
 			final String targetVersion, final Method method, final String targetCharacterSet,
 			final boolean scanCharacterData) {
+		return assess(connection, schemas, targetVersion, method, targetCharacterSet, scanCharacterData,
+				DEFAULT_SCAN_QUERY_TIMEOUT_SECONDS);
+	}
+
+	@Override
+	public MigrationAssessment assess(final Connection connection, final List<Schema> schemas,
+			final String targetVersion, final Method method, final String targetCharacterSet,
+			final boolean scanCharacterData, final int scanQueryTimeoutSeconds) {
 		if (!"AL32UTF8".equalsIgnoreCase(targetCharacterSet)) {
 			throw new IllegalArgumentException("Online Oracle character assessment requires targetCharacterSet=AL32UTF8");
+		}
+		if (scanCharacterData && scanQueryTimeoutSeconds <= 0) {
+			throw new IllegalArgumentException("scanQueryTimeoutSeconds must be greater than zero when scanning character data");
 		}
 		final MigrationAssessment offline = assess(schemas, targetVersion, method, targetCharacterSet);
 		try {
 			return OracleOnlineMigrationAssessment.assess(Objects.requireNonNull(connection, "connection"), schemas,
-					offline, scanCharacterData);
+					offline, scanCharacterData, scanQueryTimeoutSeconds);
 		} catch (SQLException e) {
 			throw new IllegalStateException("Failed to read Oracle source metadata for migration assessment", e);
 		}

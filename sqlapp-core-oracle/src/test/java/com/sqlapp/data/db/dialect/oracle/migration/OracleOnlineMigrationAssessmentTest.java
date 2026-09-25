@@ -48,7 +48,7 @@ class OracleOnlineMigrationAssessmentTest {
 	void scansByteColumnsAndReportsOnlyAggregates() {
 		final var executed = new ArrayList<String>();
 		final var result = provider.assess(connection("Oracle Database", executed, false), List.of(schema()), "26ai",
-				Method.LOGICAL_MIGRATION, "AL32UTF8", true);
+				Method.LOGICAL_MIGRATION, "AL32UTF8", true, 17);
 		final var finding = result.findings().stream().filter(f -> f.ruleId().equals("oracle.charset.data-overflow"))
 				.findFirst().orElseThrow();
 		assertTrue(finding.reason().contains("maximum converted bytes=31"));
@@ -58,7 +58,11 @@ class OracleOnlineMigrationAssessmentTest {
 				&& f.reason().contains("failed scans=0")));
 		assertTrue(executed.stream().anyMatch(sql -> sql.contains("\"APP\".\"T\"\"ABLE\"")
 				&& sql.contains("CONVERT(\"COL\", 'AL32UTF8', 'JA16SJIS')")));
+		assertTrue(executed.contains("TIMEOUT=17"));
 		assertFalse(result.toString().contains("actual-value"));
+		assertThrows(IllegalArgumentException.class, () -> provider.assess(
+				connection("Oracle", new ArrayList<>(), false), List.of(schema()), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", true, 0));
 	}
 
 	@Test
@@ -165,6 +169,18 @@ class OracleOnlineMigrationAssessmentTest {
 	}
 
 	@Test
+	void warnsWhenModeledAndDatabaseCharacterTypeFamiliesDiffer() {
+		final var schema = schema();
+		schema.getTables().getFirst().getColumns().add(new Column("COL").setDataType(DataType.NVARCHAR));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-character-type-mismatch")
+				&& f.reason().contains("NVARCHAR") && f.reason().contains("VARCHAR2")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("character type mismatches=1")));
+	}
+
+	@Test
 	void doesNotGuessWhenCaseInsensitiveTableMatchIsAmbiguous() {
 		final var schema = new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
 		schema.getTables().add(new Table("TaBlE"));
@@ -202,15 +218,19 @@ class OracleOnlineMigrationAssessmentTest {
 			if ("prepareStatement".equals(method)) {
 				final String sql = (String) args.values()[0];
 				executed.add(sql);
-				return statement(sql, failScan, tableNames, columnNames);
+				return statement(sql, failScan, tableNames, columnNames, executed);
 			}
 			return defaultValue(args.returnType());
 		});
 	}
 
 	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames,
-			final List<String> columnNames) {
+			final List<String> columnNames, final List<String> executed) {
 		return proxy(PreparedStatement.class, (method, args) -> {
+			if ("setQueryTimeout".equals(method)) {
+				executed.add("TIMEOUT=" + args.values()[0]);
+				return null;
+			}
 			if ("executeQuery".equals(method)) {
 				if (sql.contains("MAX(") && failScan) throw new SQLException("hidden", "08006", 17002);
 				if (sql.contains("nls_database_parameters")) return resultSet(List.of(

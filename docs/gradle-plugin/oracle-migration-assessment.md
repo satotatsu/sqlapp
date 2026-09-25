@@ -56,6 +56,7 @@ For inventory collection without a blocking exit, optionally set
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; warnings/reviews do not fail the task |
 | `dataSource` | `DataSourceExtension` | Optional; when configured, reads the source Oracle database with SELECT statements |
 | `scanCharacterData` | `Property<Boolean>` | Defaults to `false`; enables aggregate full scans of BYTE `CHAR`/`VARCHAR2` columns and requires `dataSource` |
+| `scanQueryTimeoutSeconds` | `Property<Integer>` | Defaults to `300`; positive JDBC query timeout applied to each character-data aggregate scan |
 
 The task always reruns so an existing report cannot bypass the failure policy.
 The XML must carry the Oracle product name and supported major version, either
@@ -133,7 +134,9 @@ tasks.named('assessMigration') {
 Online assessment reads `NLS_DATABASE_PARAMETERS` and `ALL_TAB_COLUMNS` for the
 owners present in the reviewed Schema XML. The report records database-derived
 evidence separately from Schema evidence, together with JDBC database product
-name and version. Credentials, connection strings, and row values are never
+name and version. The report also records whether online assessment and data
+scanning were enabled and, when scanning, the per-statement query timeout.
+Credentials, connection strings, and row values are never
 written to the report. The connected JDBC product must be Oracle, and every
 Schema must have an owner name. Use a source account limited to the required
 `SELECT` privileges: JDBC read-only mode is a driver hint and is not a database
@@ -161,6 +164,9 @@ in online coverage.
 Differences between modeled `length`/`octetLength` and live
 `CHAR_LENGTH`/`DATA_LENGTH` produce `oracle.charset.source-length-mismatch`.
 Missing modeled values are treated as unknown rather than mismatches.
+Differences between database and national character types, or bounded and
+LOB/LONG types, produce `oracle.charset.source-character-type-mismatch` because
+they change which character set or migration handling applies.
 
 If the Schema XML or captured Catalog settings name a source character set that
 differs from the connected database's `NLS_CHARACTERSET`, the report adds an
@@ -174,6 +180,9 @@ the maximum converted byte length and overflow row count. Quoted identifiers
 are preserved. A failed column scan is retained as a warning with Oracle error
 code and SQLState; it is never reported as a successful scan. This scan can be
 expensive and does not replace invalid-byte checks with Oracle DMU.
+Each aggregate statement uses `scanQueryTimeoutSeconds` (300 seconds by
+default). A timeout is recorded as `oracle.charset.data-scan-failed`; increase
+it only after reviewing source load and the diagnostic window.
 
 The source character set and length semantics are not supplied speculatively.
 Suspected `JA16SJIS` is not recorded as fact. The source character set is read

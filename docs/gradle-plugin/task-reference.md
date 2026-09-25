@@ -15,7 +15,7 @@ task can issue DDL or DML and must be configured with the intended target.
 
 | Task name | Task class | Primary configuration | Result | Database effect |
 |---|---|---|---|---|
-| `assessMigration` | `AssessMigrationTask` | Required `schemaFile`, `targetVersion`, `migrationMethod`, `outputFile`; optional `targetCharacterSet`, `dataSource`; `scanCharacterData` defaults to `false`; `failOnBlockers` defaults to `true` | [Oracle migration assessment](oracle-migration-assessment.md): inventory, database evidence and review actions as JSON; writes report before blocker failure | File-only when no DataSource; otherwise reads Oracle metadata and optionally character aggregates |
+| `assessMigration` | `AssessMigrationTask` | Required `schemaFile`, `targetVersion`, `migrationMethod`, `outputFile`; optional `targetCharacterSet`, `dataSource`; `scanCharacterData` defaults to `false`; scan timeout defaults to 300 seconds; `failOnBlockers` defaults to `true` | [Oracle migration assessment](oracle-migration-assessment.md): inventory, database evidence and review actions as JSON; writes report before blocker failure | File-only when no DataSource; otherwise reads Oracle metadata and optionally character aggregates |
 | `countAllTables` | `CountAllTableTask` | `dataSource`, schema/table filters, `outputFormatType` | Row counts on console/output | Read-only |
 | `migration` | `MigrationTask` | Shared `migration` extension | Applies pending versioned SQL | Mutates target |
 | `migrationValidate` | `MigrationValidateTask` | Shared `migration` extension; existing `sqlDirectory` | Checks recorded up SQL checksums; reports unverified legacy entries | Reads history only; no DDL/DML |

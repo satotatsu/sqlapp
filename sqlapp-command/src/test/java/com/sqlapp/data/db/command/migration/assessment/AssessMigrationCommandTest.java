@@ -102,6 +102,9 @@ class AssessMigrationCommandTest {
 		command.setTargetCharacterSet("AL32UTF8");
 		command.run();
 		assertEquals("AL32UTF8", command.getReport().targetCharacterSet());
+		assertFalse(command.getReport().onlineAssessment());
+		assertFalse(command.getReport().scanCharacterData());
+		assertNull(command.getReport().scanQueryTimeoutSeconds());
 		final String json = Files.readString(command.getOutputFile().toPath());
 		assertTrue(json.contains("oracle.charset.source-unknown"));
 		assertTrue(json.contains("oracle.charset.semantics-unknown"));
@@ -119,6 +122,10 @@ class AssessMigrationCommandTest {
 		command.setScanCharacterData(true);
 		assertThrows(CommandException.class, command::run);
 		assertFalse(command.getOutputFile().exists());
+		command.setDataSource((DataSource) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { DataSource.class }, (proxy, method, args) -> null));
+		command.setScanQueryTimeoutSeconds(0);
+		assertThrows(CommandException.class, command::run);
 	}
 
 	@Test
@@ -180,15 +187,21 @@ class AssessMigrationCommandTest {
 				new Class<?>[] { DataSource.class }, (proxy, method, args) ->
 						"getConnection".equals(method.getName()) ? connection : defaultValue(method.getReturnType()));
 		command.setDataSource(dataSource);
+		command.setScanCharacterData(true);
+		command.setScanQueryTimeoutSeconds(45);
 		command.run();
 		assertTrue(readOnly[0]);
 		assertTrue(closed[0]);
 		assertEquals("Oracle Database", command.getReport().databaseProductName());
 		assertEquals("10.2.0.5.0", command.getReport().databaseProductVersion());
+		assertTrue(command.getReport().onlineAssessment());
+		assertTrue(command.getReport().scanCharacterData());
+		assertEquals(45, command.getReport().scanQueryTimeoutSeconds());
 		final String json = Files.readString(command.getOutputFile().toPath());
 		assertTrue(json.contains("oracle.charset.database-settings"));
 		assertTrue(json.contains("JA16SJIS"));
 		assertTrue(json.contains("Oracle Database"));
+		assertTrue(json.contains("\"scanQueryTimeoutSeconds\" : 45"));
 	}
 
 	private PreparedStatement statement(final String sql) {
