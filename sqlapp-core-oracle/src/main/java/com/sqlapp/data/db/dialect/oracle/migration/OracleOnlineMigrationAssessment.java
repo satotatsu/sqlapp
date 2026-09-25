@@ -38,6 +38,7 @@ final class OracleOnlineMigrationAssessment {
 			throw new IllegalArgumentException("Online Oracle assessment requires an Oracle JDBC connection; found " + product);
 		}
 		final Map<String, String> nls = readNls(connection);
+		final String databaseName = readDatabaseName(connection);
 		final String sourceCharacterSet = nls.get("NLS_CHARACTERSET");
 		if (sourceCharacterSet == null || sourceCharacterSet.isBlank()) {
 			throw new SQLException("NLS_DATABASE_PARAMETERS did not return NLS_CHARACTERSET");
@@ -45,8 +46,28 @@ final class OracleOnlineMigrationAssessment {
 		final var findings = new ArrayList<>(offline.findings());
 		findings.add(new Finding("oracle.charset.database-settings", Severity.REVIEW, Evidence.DATABASE, null,
 				"Connected source reports NLS_CHARACTERSET=" + sourceCharacterSet + "; NLS_NCHAR_CHARACTERSET="
-						+ nls.getOrDefault("NLS_NCHAR_CHARACTERSET", "UNKNOWN") + ".",
+						+ nls.getOrDefault("NLS_NCHAR_CHARACTERSET", "UNKNOWN") + "; NLS_LENGTH_SEMANTICS="
+						+ nls.getOrDefault("NLS_LENGTH_SEMANTICS", "UNKNOWN") + ".",
 				"Preserve these captured values with the assessment and compare them with the target before import.", REFERENCE));
+		final String lengthSemantics = nls.get("NLS_LENGTH_SEMANTICS");
+		findings.add(new Finding(lengthSemantics == null ? "oracle.charset.database-length-semantics-unavailable"
+				: "oracle.charset.database-length-semantics",
+				lengthSemantics == null ? Severity.WARNING : Severity.REVIEW, Evidence.DATABASE, null,
+				lengthSemantics == null ? "Connected source did not report NLS_LENGTH_SEMANTICS."
+						: "Connected source reports NLS_LENGTH_SEMANTICS=" + lengthSemantics
+								+ "; this is a default and does not establish existing column semantics.",
+				"Use each column's ALL_TAB_COLUMNS.CHAR_USED for existing objects and emit explicit BYTE or CHAR semantics in reviewed target DDL.",
+				REFERENCE));
+		if (databaseName == null || databaseName.isBlank()) {
+			findings.add(new Finding("oracle.source.database-identity-unavailable", Severity.WARNING, Evidence.DATABASE,
+					null, "Connected source DB_NAME could not be read.",
+					"Record the source database identity independently and verify that this DataSource is the database used for the Data Pump export.",
+					REFERENCE));
+		} else {
+			findings.add(new Finding("oracle.source.database-identity", Severity.REVIEW, Evidence.DATABASE, null,
+					"Connected source DB_NAME=" + databaseName + ".",
+					"Compare this identity with the approved Data Pump export source and retain it with the assessment.", REFERENCE));
+		}
 		for (final Schema schema : schemas) {
 			if (schema.getName() == null || schema.getName().isBlank()) {
 				throw new IllegalArgumentException("Online assessment requires every Schema to have an Oracle owner name");
@@ -70,13 +91,22 @@ final class OracleOnlineMigrationAssessment {
 		final var values = new LinkedHashMap<String, String>();
 		try (PreparedStatement statement = connection.prepareStatement("""
 				SELECT parameter, value FROM nls_database_parameters
-				WHERE parameter IN ('NLS_CHARACTERSET', 'NLS_NCHAR_CHARACTERSET')
+				WHERE parameter IN ('NLS_CHARACTERSET', 'NLS_NCHAR_CHARACTERSET', 'NLS_LENGTH_SEMANTICS')
 				"""); ResultSet rs = statement.executeQuery()) {
 			while (rs.next()) {
 				values.put(rs.getString(1).toUpperCase(Locale.ROOT), rs.getString(2));
 			}
 		}
 		return values;
+	}
+
+	private static String readDatabaseName(final Connection connection) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT SYS_CONTEXT('USERENV', 'DB_NAME') FROM dual"); ResultSet rs = statement.executeQuery()) {
+			return rs.next() ? rs.getString(1) : null;
+		} catch (SQLException e) {
+			return null;
+		}
 	}
 
 	private static void assessColumns(final Connection connection, final Schema schema, final String sourceCharacterSet,

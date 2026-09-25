@@ -131,7 +131,8 @@ tasks.named('assessMigration') {
 }
 ```
 
-Online assessment reads `NLS_DATABASE_PARAMETERS` and `ALL_TAB_COLUMNS` for the
+Online assessment reads `NLS_CHARACTERSET`, `NLS_NCHAR_CHARACTERSET`, and
+`NLS_LENGTH_SEMANTICS` from `NLS_DATABASE_PARAMETERS`, plus `ALL_TAB_COLUMNS` for the
 owners present in the reviewed Schema XML. The report records database-derived
 evidence separately from Schema evidence, together with JDBC database product
 name and version. The report also records whether online assessment and data
@@ -141,6 +142,17 @@ written to the report. The connected JDBC product must be Oracle, and every
 Schema must have an owner name. Use a source account limited to the required
 `SELECT` privileges: JDBC read-only mode is a driver hint and is not a database
 authorization boundary.
+
+Online evidence includes `SYS_CONTEXT('USERENV','DB_NAME')` as
+`oracle.source.database-identity` so it can be compared with the approved Data
+Pump export source. If the value cannot be read, the report retains
+`oracle.source.database-identity-unavailable` instead of silently omitting the
+identity check.
+
+`NLS_LENGTH_SEMANTICS` is recorded as the database default, but it is never
+used to infer an existing column's semantics. Existing columns are assessed
+from `ALL_TAB_COLUMNS.CHAR_USED`; reviewed target DDL should state BYTE or CHAR
+explicitly.
 
 Each owner also receives an `oracle.charset.online-coverage` finding with the
 number of selected, matched and missing tables, modeled and database character
@@ -218,7 +230,8 @@ read-only metadata queries. `:owner` is the exact Oracle schema name.
 ```sql
 SELECT parameter, value
 FROM nls_database_parameters
-WHERE parameter IN ('NLS_CHARACTERSET', 'NLS_NCHAR_CHARACTERSET');
+WHERE parameter IN ('NLS_CHARACTERSET', 'NLS_NCHAR_CHARACTERSET',
+                    'NLS_LENGTH_SEMANTICS');
 
 SELECT owner, table_name, column_name, data_type,
        char_used, char_length, data_length

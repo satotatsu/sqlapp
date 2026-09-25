@@ -32,7 +32,12 @@ class OracleOnlineMigrationAssessmentTest {
 		final var result = provider.assess(connection("Oracle", executed, false), List.of(schema()), "26ai",
 				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.database-settings")
-				&& f.reason().contains("JA16SJIS") && f.evidence().name().equals("DATABASE")));
+				&& f.reason().contains("JA16SJIS") && f.reason().contains("NLS_LENGTH_SEMANTICS=BYTE")
+				&& f.evidence().name().equals("DATABASE")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.database-length-semantics")
+				&& f.reason().contains("does not establish existing column semantics")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.database-identity")
+				&& f.reason().contains("SOURCE10G")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.database-column")
 				&& "T\"ABLE".equals(f.object().table()) && "COL".equals(f.object().name())));
 		assertFalse(result.findings().stream().anyMatch(f -> f.object() != null && "OUTSIDE_SCOPE".equals(f.object().table())));
@@ -87,6 +92,15 @@ class OracleOnlineMigrationAssessmentTest {
 		assertEquals("WARNING", mismatch.severity().name());
 		assertTrue(mismatch.reason().contains("JA16EUC"));
 		assertTrue(mismatch.reason().contains("JA16SJIS"));
+	}
+
+	@Test
+	void retainsWarningWhenDatabaseNameCannotBeRead() {
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false, List.of("T\"ABLE"),
+				List.of("COL"), null), List.of(schema()), "26ai", Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(
+				f -> f.ruleId().equals("oracle.source.database-identity-unavailable")));
+		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.database-identity")));
 	}
 
 	@Test
@@ -211,6 +225,11 @@ class OracleOnlineMigrationAssessmentTest {
 
 	private Connection connection(final String product, final List<String> executed, final boolean failScan,
 			final List<String> tableNames, final List<String> columnNames) {
+		return connection(product, executed, failScan, tableNames, columnNames, "SOURCE10G");
+	}
+
+	private Connection connection(final String product, final List<String> executed, final boolean failScan,
+			final List<String> tableNames, final List<String> columnNames, final String databaseName) {
 		final DatabaseMetaData metadata = proxy(DatabaseMetaData.class, (method, args) ->
 				"getDatabaseProductName".equals(method) ? product : defaultValue(args.returnType()));
 		return proxy(Connection.class, (method, args) -> {
@@ -218,14 +237,14 @@ class OracleOnlineMigrationAssessmentTest {
 			if ("prepareStatement".equals(method)) {
 				final String sql = (String) args.values()[0];
 				executed.add(sql);
-				return statement(sql, failScan, tableNames, columnNames, executed);
+				return statement(sql, failScan, tableNames, columnNames, databaseName, executed);
 			}
 			return defaultValue(args.returnType());
 		});
 	}
 
 	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames,
-			final List<String> columnNames, final List<String> executed) {
+			final List<String> columnNames, final String databaseName, final List<String> executed) {
 		return proxy(PreparedStatement.class, (method, args) -> {
 			if ("setQueryTimeout".equals(method)) {
 				executed.add("TIMEOUT=" + args.values()[0]);
@@ -235,7 +254,12 @@ class OracleOnlineMigrationAssessmentTest {
 				if (sql.contains("MAX(") && failScan) throw new SQLException("hidden", "08006", 17002);
 				if (sql.contains("nls_database_parameters")) return resultSet(List.of(
 						row("PARAMETER", "NLS_CHARACTERSET", "VALUE", "JA16SJIS"),
-						row("PARAMETER", "NLS_NCHAR_CHARACTERSET", "VALUE", "AL16UTF16")));
+						row("PARAMETER", "NLS_NCHAR_CHARACTERSET", "VALUE", "AL16UTF16"),
+						row("PARAMETER", "NLS_LENGTH_SEMANTICS", "VALUE", "BYTE")));
+				if (sql.contains("SYS_CONTEXT")) {
+					if (databaseName == null) throw new SQLException("identity unavailable", "42000", 1031);
+					return resultSet(List.of(row("1", databaseName)));
+				}
 				if (sql.contains("all_tables")) return resultSet(tableNames.stream().map(name -> row("1", name)).toList());
 				if (sql.contains("all_tab_columns")) {
 					final var rows = new ArrayList<Map<String, Object>>();
