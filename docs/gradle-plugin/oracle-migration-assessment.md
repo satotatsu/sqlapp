@@ -140,8 +140,13 @@ Schema must have an owner name. Use a source account limited to the required
 authorization boundary.
 
 Each owner also receives an `oracle.charset.online-coverage` finding with the
-number of selected tables, character columns, scan candidates, successful
-scans, and failed scans. Use it to verify that the report covers the intended
+number of selected, matched and missing tables, character columns, scan
+candidates, successful scans, and failed scans. A selected table that is not
+visible in `ALL_TABLES` produces an `oracle.charset.source-table-missing`
+warning. Exact identifier spelling is preferred; otherwise a unique
+case-insensitive match is accepted for ordinary unquoted Oracle names. Multiple
+case-sensitive matches produce `oracle.charset.source-table-ambiguous` and are
+not scanned. Use these results to verify that the report covers the intended
 Schema XML scope; a successful command alone does not imply that every data
 column was scanned.
 

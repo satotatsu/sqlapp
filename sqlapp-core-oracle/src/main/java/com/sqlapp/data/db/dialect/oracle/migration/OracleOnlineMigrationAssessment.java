@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -78,6 +79,41 @@ final class OracleOnlineMigrationAssessment {
 			final boolean scanCharacterData, final List<Finding> findings) throws SQLException {
 		final Set<String> selectedTables = schema.getTables().stream().map(table -> table.getName())
 				.collect(Collectors.toSet());
+		final Set<String> availableTables = readTableNames(connection, schema.getName());
+		final var resolvedTables = new LinkedHashSet<String>();
+		final var missingTables = new ArrayList<String>();
+		final var ambiguousTables = new ArrayList<String>();
+		for (final String selected : selectedTables) {
+			if (availableTables.contains(selected)) {
+				resolvedTables.add(selected);
+				continue;
+			}
+			final var matches = availableTables.stream().filter(table -> table.equalsIgnoreCase(selected)).toList();
+			if (matches.size() == 1) {
+				resolvedTables.add(matches.getFirst());
+			} else if (matches.isEmpty()) {
+				missingTables.add(selected);
+			} else {
+				ambiguousTables.add(selected);
+			}
+		}
+		missingTables.sort(String::compareTo);
+		ambiguousTables.sort(String::compareTo);
+		for (final String table : missingTables) {
+			findings.add(new Finding("oracle.charset.source-table-missing", Severity.WARNING, Evidence.DATABASE,
+					new ObjectId(schema.getCatalogName(), schema.getName(), "table", table),
+					"The table selected by the Schema XML was not visible in ALL_TABLES for owner " + schema.getName() + ".",
+					"Verify the DataSource, owner name, object name and SELECT catalog privileges before relying on column or data-scan coverage.",
+					REFERENCE));
+		}
+		for (final String table : ambiguousTables) {
+			findings.add(new Finding("oracle.charset.source-table-ambiguous", Severity.WARNING, Evidence.DATABASE,
+					new ObjectId(schema.getCatalogName(), schema.getName(), "table", table),
+					"The table selected by the Schema XML matched multiple case-sensitive names in ALL_TABLES for owner "
+							+ schema.getName() + ".",
+					"Use the exact Oracle identifier spelling in the Schema XML; no table was selected for column or data scanning.",
+					REFERENCE));
+		}
 		int characterColumns = 0;
 		int scanCandidates = 0;
 		int successfulScans = 0;
@@ -94,7 +130,7 @@ final class OracleOnlineMigrationAssessment {
 				while (rs.next()) {
 					final String table = rs.getString("TABLE_NAME");
 					final String column = rs.getString("COLUMN_NAME");
-					if (!selectedTables.contains(table)) {
+					if (!resolvedTables.contains(table)) {
 						continue;
 					}
 					characterColumns++;
@@ -124,7 +160,10 @@ final class OracleOnlineMigrationAssessment {
 		}
 		findings.add(new Finding("oracle.charset.online-coverage", Severity.REVIEW, Evidence.DATABASE,
 				new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
-				"Online assessment coverage: selected tables=" + selectedTables.size() + "; character columns="
+				"Online assessment coverage: selected tables=" + selectedTables.size() + "; matched tables="
+						+ resolvedTables.size() + "; missing tables=" + missingTables.size() + "; ambiguous tables="
+						+ ambiguousTables.size()
+						+ "; character columns="
 						+ characterColumns + "; scan candidates=" + scanCandidates + "; successful scans="
 						+ successfulScans + "; failed scans=" + failedScans + ".",
 				"Confirm the selected Schema XML scope and retain this coverage with the migration evidence.", REFERENCE));
@@ -134,6 +173,22 @@ final class OracleOnlineMigrationAssessment {
 					"Connected metadata was read, but character data was not scanned.",
 					"Set scanCharacterData=true only in an approved window after evaluating full-scan load, or use Oracle DMU/scanner evidence.", REFERENCE));
 		}
+	}
+
+	private static Set<String> readTableNames(final Connection connection, final String owner) throws SQLException {
+		final var names = new LinkedHashSet<String>();
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT table_name FROM all_tables
+				WHERE owner = ?
+				""")) {
+			statement.setString(1, owner);
+			try (ResultSet rs = statement.executeQuery()) {
+				while (rs.next()) {
+					names.add(rs.getString(1));
+				}
+			}
+		}
+		return names;
 	}
 
 	private static boolean scanColumn(final Connection connection, final ObjectId id, final String sourceCharacterSet,

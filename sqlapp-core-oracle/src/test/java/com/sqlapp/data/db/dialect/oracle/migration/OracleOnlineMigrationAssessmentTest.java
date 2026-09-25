@@ -35,7 +35,8 @@ class OracleOnlineMigrationAssessmentTest {
 		assertFalse(result.findings().stream().anyMatch(f -> f.object() != null && "OUTSIDE_SCOPE".equals(f.object().table())));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-disabled")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
-				&& f.reason().contains("selected tables=1") && f.reason().contains("character columns=1")
+				&& f.reason().contains("selected tables=1") && f.reason().contains("matched tables=1")
+				&& f.reason().contains("missing tables=0") && f.reason().contains("character columns=1")
 				&& f.reason().contains("scan candidates=1") && f.reason().contains("successful scans=0")));
 		assertFalse(executed.stream().anyMatch(sql -> sql.contains("MAX(")));
 	}
@@ -81,6 +82,44 @@ class OracleOnlineMigrationAssessmentTest {
 		assertTrue(mismatch.reason().contains("JA16SJIS"));
 	}
 
+	@Test
+	void warnsWhenSelectedTableIsNotVisibleOnConnectedSource() {
+		final var schema = schema();
+		schema.getTables().add(new Table("MISSING"));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-table-missing")
+				&& "MISSING".equals(f.object().name())));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("selected tables=2") && f.reason().contains("matched tables=1")
+				&& f.reason().contains("missing tables=1")));
+	}
+
+	@Test
+	void resolvesAnUnquotedStyleTableNameCaseInsensitivelyWhenUnique() {
+		final var schema = new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
+		schema.getTables().add(new Table("t\"able"));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-table-missing")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("matched tables=1") && f.reason().contains("ambiguous tables=0")));
+	}
+
+	@Test
+	void doesNotGuessWhenCaseInsensitiveTableMatchIsAmbiguous() {
+		final var schema = new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
+		schema.getTables().add(new Table("TaBlE"));
+		final var result = provider.assess(
+				connection("Oracle", new ArrayList<>(), false, List.of("TABLE", "table")), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", true);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-table-ambiguous")
+				&& "TaBlE".equals(f.object().name())));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("matched tables=0") && f.reason().contains("ambiguous tables=1")
+				&& f.reason().contains("successful scans=0")));
+	}
+
 	private Schema schema() {
 		final var schema = new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
 		schema.getTables().add(new Table("T\"ABLE"));
@@ -88,6 +127,11 @@ class OracleOnlineMigrationAssessmentTest {
 	}
 
 	private Connection connection(final String product, final List<String> executed, final boolean failScan) {
+		return connection(product, executed, failScan, List.of("T\"ABLE"));
+	}
+
+	private Connection connection(final String product, final List<String> executed, final boolean failScan,
+			final List<String> tableNames) {
 		final DatabaseMetaData metadata = proxy(DatabaseMetaData.class, (method, args) ->
 				"getDatabaseProductName".equals(method) ? product : defaultValue(args.returnType()));
 		return proxy(Connection.class, (method, args) -> {
@@ -95,19 +139,20 @@ class OracleOnlineMigrationAssessmentTest {
 			if ("prepareStatement".equals(method)) {
 				final String sql = (String) args.values()[0];
 				executed.add(sql);
-				return statement(sql, failScan);
+				return statement(sql, failScan, tableNames);
 			}
 			return defaultValue(args.returnType());
 		});
 	}
 
-	private PreparedStatement statement(final String sql, final boolean failScan) {
+	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames) {
 		return proxy(PreparedStatement.class, (method, args) -> {
 			if ("executeQuery".equals(method)) {
 				if (sql.contains("MAX(") && failScan) throw new SQLException("hidden", "08006", 17002);
 				if (sql.contains("nls_database_parameters")) return resultSet(List.of(
 						row("PARAMETER", "NLS_CHARACTERSET", "VALUE", "JA16SJIS"),
 						row("PARAMETER", "NLS_NCHAR_CHARACTERSET", "VALUE", "AL16UTF16")));
+				if (sql.contains("all_tables")) return resultSet(tableNames.stream().map(name -> row("1", name)).toList());
 				if (sql.contains("all_tab_columns")) return resultSet(List.of(
 						row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", "COL", "DATA_TYPE", "VARCHAR2",
 								"CHAR_USED", "B", "CHAR_LENGTH", 20L, "DATA_LENGTH", 20L),
