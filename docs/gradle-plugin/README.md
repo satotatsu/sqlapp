@@ -24,6 +24,7 @@ use a plugin release that contains the tasks you need.
 | [Schema, SQL and HTML](schema-sql-and-html.md) | XML export, comparison, SQL generation, documentation properties and outputs |
 | [Custom tasks and versioned migrations](custom-tasks-and-migrations.md) | Data export, file conversion, SQL execution, migration extension and task types |
 | [Normalization and legacy migration](normalization-and-legacy-migration.md) | Normalization, PL/I import, extraction contracts and hierarchy loading |
+| [Oracle migration assessment](oracle-migration-assessment.md) | Offline preflight, object inventory, evidence and manual checks for a 26ai target |
 
 Bulk migration and SCD2 snapshot configuration are covered below.
 
@@ -51,6 +52,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | SQL generation | `generateSql` | Generate SQL from Schema XML |
 | Documentation | `generateHtmlDocs` | Generate HTML documentation and ER diagrams |
 | Migration | `migration` | Apply versioned database migrations |
+| Migration | `assessMigration` | Assess a Schema XML snapshot offline and write a migration preflight JSON report |
 | Migration | `migrationValidate` | Read-only validation of recorded up SQL checksums; missing checksums are unverified |
 | Migration | `migrationPlan` | Read-only plan of pending versioned SQL and known blockers |
 | Migration | `migrationInsert` | Insert migration history |

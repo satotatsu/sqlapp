@@ -40,6 +40,7 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "migrationPlan", MigrationPlanTask.class);
 		registerTask(project, "migrationEnvironmentSnapshot", MigrationEnvironmentSnapshotTask.class);
 		registerTask(project, "compareMigrationEnvironments", CompareMigrationEnvironmentsTask.class);
+		registerTask(project, "assessMigration", AssessMigrationTask.class);
 		registerTask(project, "verifyMigrationExecutionReport", VerifyMigrationExecutionReportTask.class);
 		registerTask(project, "generateBulkMigrationOperationalReport",
 				GenerateBulkMigrationOperationalReportTask.class);

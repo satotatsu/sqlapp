@@ -24,6 +24,9 @@ module com.sqlapp.core.oracle {
 	requires com.sqlapp.core;
 
 	exports com.sqlapp.data.db.dialect.oracle;
+	exports com.sqlapp.data.db.dialect.oracle.migration;
+	provides com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentProvider with
+		com.sqlapp.data.db.dialect.oracle.migration.OracleMigrationAssessmentProvider;
 	exports com.sqlapp.data.db.dialect.oracle.metadata;
 	exports com.sqlapp.data.db.dialect.oracle.resolver;
 	exports com.sqlapp.data.db.dialect.oracle.sql to com.sqlapp.core;

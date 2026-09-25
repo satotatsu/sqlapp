@@ -36,6 +36,7 @@ dependencies {
 
 	testImplementation('org.hsqldb:hsqldb:2.7.3')
 	testImplementation project(':sqlapp-core-hsql')
+	testRuntimeOnly project(':sqlapp-core-oracle')
 	testImplementation('io.github.spannm:ucanaccess:5.1.6')
 	
 	//JUnit

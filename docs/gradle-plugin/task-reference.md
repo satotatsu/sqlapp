@@ -15,6 +15,7 @@ task can issue DDL or DML and must be configured with the intended target.
 
 | Task name | Task class | Primary configuration | Result | Database effect |
 |---|---|---|---|---|
+| `assessMigration` | `AssessMigrationTask` | Required `schemaFile`, `targetVersion`, `migrationMethod`, `outputFile`; `failOnBlockers` defaults to `true` | [Oracle migration assessment](oracle-migration-assessment.md): inventory, evidence and review actions as JSON; writes report before blocker failure | File-only; no database access |
 | `countAllTables` | `CountAllTableTask` | `dataSource`, schema/table filters, `outputFormatType` | Row counts on console/output | Read-only |
 | `migration` | `MigrationTask` | Shared `migration` extension | Applies pending versioned SQL | Mutates target |
 | `migrationValidate` | `MigrationValidateTask` | Shared `migration` extension; existing `sqlDirectory` | Checks recorded up SQL checksums; reports unverified legacy entries | Reads history only; no DDL/DML |
