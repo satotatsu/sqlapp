@@ -195,6 +195,16 @@ Schema, are compared with the source snapshot. A difference produces
 `oracle.source.version-mismatch`, which normally indicates a stale Schema
 snapshot or the wrong source DataSource.
 
+The report records `DatabaseMetaData.getDriverName()` and
+`getDriverVersion()` as `oracle.source.jdbc-driver`. An Oracle 10g connection
+also produces `oracle.source.jdbc-driver-compatibility`, because connectivity
+alone does not prove a vendor-certified driver/JDK/database combination. The
+repository Docker test uses `ojdbc11:23.26.2.0.0`; Oracle documents current
+23/26ai JDBC drivers for supported 19c, 21c and 23/26ai databases, not 10g.
+Use the exact driver approved for the legacy environment and retain a successful
+connection rehearsal. See the
+[Oracle JDBC downloads and supported database versions](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html).
+
 `NLS_LENGTH_SEMANTICS` is recorded as the database default, but it is never
 used to infer an existing column's semantics. Existing columns are assessed
 from `ALL_TAB_COLUMNS.CHAR_USED`; reviewed target DDL should state BYTE or CHAR
@@ -212,6 +222,11 @@ the internal column exposed by `ALL_IND_COLUMNS` cannot safely attribute the
 expression-derived key to one source column. Review its expression through
 `ALL_IND_EXPRESSIONS` and rehearse target index creation. Failure to read this
 inventory produces `oracle.charset.function-index-metadata-unavailable`.
+These views and function-based-index metadata are documented for
+[Oracle Database 10g Release 2 ALL_INDEXES](https://docs.oracle.com/cd/B19306_01/server.102/b14237/statviews_1069.htm)
+and the
+[10g index-management views](https://docs.oracle.com/cd/B19306_01/server.102/b14231/indexes.htm#i1006714),
+so this inventory query does not require a post-10g dictionary column.
 
 Each owner also receives an `oracle.charset.online-coverage` finding with the
 number of selected, matched and missing tables, modeled and database character
@@ -425,16 +440,18 @@ gradlew.bat assessMigration
 Do not proceed to data scanning until the report satisfies all of these checks:
 
 1. `oracle.source.database-identity` names the approved Data Pump source.
-2. No `oracle.source.version-mismatch` or `oracle.charset.source-mismatch` is
+2. `oracle.source.jdbc-driver` records the approved and connection-tested
+   driver; any `oracle.source.jdbc-driver-compatibility` warning is resolved.
+3. No `oracle.source.version-mismatch` or `oracle.charset.source-mismatch` is
    present.
-3. Every intended table is matched; missing or ambiguous table counts are zero.
-4. Modeled character columns have no unexplained missing, ambiguous, type,
+4. Every intended table is matched; missing or ambiguous table counts are zero.
+5. Modeled character columns have no unexplained missing, ambiguous, type,
    semantics, or length mismatch.
-5. `NLS_CHARACTERSET`, `NLS_NCHAR_CHARACTERSET`, and
+6. `NLS_CHARACTERSET`, `NLS_NCHAR_CHARACTERSET`, and
    `NLS_LENGTH_SEMANTICS` have been copied into the change evidence.
-6. Any `oracle.charset.indexed-byte-column` findings have named owners for
+7. Any `oracle.charset.indexed-byte-column` findings have named owners for
    target index-key validation.
-7. No catalog-visibility warning remains unexplained.
+8. No catalog-visibility warning remains unexplained.
 
 The version and character-set comparisons are independent safeguards. For
 example, using a Schema XML that records Oracle 10.2 and `JA16SJIS` against an

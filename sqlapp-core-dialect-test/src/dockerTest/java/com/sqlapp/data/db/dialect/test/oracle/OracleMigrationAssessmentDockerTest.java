@@ -116,6 +116,10 @@ class OracleMigrationAssessmentDockerTest {
 			assertTrue(report.assessment().findings().stream()
 					.anyMatch(finding -> finding.ruleId().equals("oracle.source.database-identity")));
 			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
+					finding.ruleId().equals("oracle.source.jdbc-driver")
+							&& finding.reason().contains("Oracle JDBC driver")
+							&& finding.reason().contains("23.")));
+			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
 					finding.ruleId().equals("oracle.charset.database-settings")
 							&& finding.reason().contains("NLS_CHARACTERSET=AL32UTF8")));
 			assertTrue(report.assessment().findings().stream().anyMatch(finding ->

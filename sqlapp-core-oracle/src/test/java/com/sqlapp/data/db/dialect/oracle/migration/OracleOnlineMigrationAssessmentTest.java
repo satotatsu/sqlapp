@@ -39,6 +39,10 @@ class OracleOnlineMigrationAssessmentTest {
 				&& f.reason().contains("does not establish existing column semantics")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.database-identity")
 				&& f.reason().contains("SOURCE10G")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.jdbc-driver")
+				&& f.reason().contains("Oracle JDBC test driver") && f.reason().contains("23.test")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.jdbc-driver-compatibility")
+				&& f.reason().contains("major version=10")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.database-column")
 				&& "T\"ABLE".equals(f.object().table()) && "COL".equals(f.object().name())));
 		assertFalse(result.findings().stream().anyMatch(f -> f.object() != null && "OUTSIDE_SCOPE".equals(f.object().table())));
@@ -295,6 +299,8 @@ class OracleOnlineMigrationAssessmentTest {
 		final DatabaseMetaData metadata = proxy(DatabaseMetaData.class, (method, args) ->
 				switch (method) {
 				case "getDatabaseProductName" -> product;
+				case "getDriverName" -> "Oracle JDBC test driver";
+				case "getDriverVersion" -> "23.test";
 				case "getDatabaseMajorVersion" -> databaseMajorVersion;
 				case "getDatabaseMinorVersion" -> 2;
 				default -> defaultValue(args.returnType());

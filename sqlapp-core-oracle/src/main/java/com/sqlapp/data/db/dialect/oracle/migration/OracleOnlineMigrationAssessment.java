@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.oracle.migration;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,19 +38,35 @@ final class OracleOnlineMigrationAssessment {
 	static MigrationAssessment assess(final Connection connection, final List<Schema> schemas,
 			final MigrationAssessment offline, final boolean scanCharacterData, final int scanQueryTimeoutSeconds)
 			throws SQLException {
-		final String product = connection.getMetaData().getDatabaseProductName();
+		final DatabaseMetaData databaseMetaData = connection.getMetaData();
+		final String product = databaseMetaData.getDatabaseProductName();
 		if (product == null || !product.toLowerCase(Locale.ROOT).contains("oracle")) {
 			throw new IllegalArgumentException("Online Oracle assessment requires an Oracle JDBC connection; found " + product);
 		}
 		final Map<String, String> nls = readNls(connection);
 		final String databaseName = readDatabaseName(connection);
-		final int databaseMajorVersion = connection.getMetaData().getDatabaseMajorVersion();
-		final int databaseMinorVersion = connection.getMetaData().getDatabaseMinorVersion();
+		final int databaseMajorVersion = databaseMetaData.getDatabaseMajorVersion();
+		final int databaseMinorVersion = databaseMetaData.getDatabaseMinorVersion();
 		final String sourceCharacterSet = nls.get("NLS_CHARACTERSET");
 		if (sourceCharacterSet == null || sourceCharacterSet.isBlank()) {
 			throw new SQLException("NLS_DATABASE_PARAMETERS did not return NLS_CHARACTERSET");
 		}
 		final var findings = new ArrayList<>(offline.findings());
+		final String driverName = databaseMetaData.getDriverName();
+		final String driverVersion = databaseMetaData.getDriverVersion();
+		findings.add(new Finding("oracle.source.jdbc-driver", Severity.REVIEW, Evidence.DATABASE, null,
+				"Connected with JDBC driver=" + valueOrUnknown(driverName) + "; version="
+						+ valueOrUnknown(driverVersion) + ".",
+				"Retain the driver identity with the assessment and verify its database and JDK interoperability before the migration rehearsal.",
+				REFERENCE));
+		if (databaseMajorVersion > 0 && databaseMajorVersion <= 10) {
+			findings.add(new Finding("oracle.source.jdbc-driver-compatibility", Severity.WARNING, Evidence.DATABASE, null,
+					"Connected source reports Oracle major version=" + databaseMajorVersion + "; JDBC driver="
+							+ valueOrUnknown(driverName) + "; version=" + valueOrUnknown(driverVersion)
+							+ ". A successful connection does not establish vendor certification for this legacy combination.",
+					"Confirm the exact driver, JDK, authentication and Oracle Net combination in the approved environment before relying on online assessment results.",
+					REFERENCE));
+		}
 		findings.add(new Finding("oracle.charset.database-settings", Severity.REVIEW, Evidence.DATABASE, null,
 				"Connected source reports NLS_CHARACTERSET=" + sourceCharacterSet + "; NLS_NCHAR_CHARACTERSET="
 						+ nls.getOrDefault("NLS_NCHAR_CHARACTERSET", "UNKNOWN") + "; NLS_LENGTH_SEMANTICS="
@@ -486,5 +503,9 @@ final class OracleOnlineMigrationAssessment {
 			throw new IllegalArgumentException("Oracle identifier must not be null");
 		}
 		return '"' + value.replace("\"", "\"\"") + '"';
+	}
+
+	private static String valueOrUnknown(final String value) {
+		return value == null || value.isBlank() ? "UNKNOWN" : value;
 	}
 }
