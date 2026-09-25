@@ -14,6 +14,7 @@ class AssessMigrationTaskTest extends AbstractTaskTest {
 		project.plugins.apply(DbPlugin)
 		def task = project.tasks.named('assessMigration', AssessMigrationTask).get()
 		assertTrue(task.failOnBlockers.get())
+		assertFalse(task.scanCharacterData.get())
 		assertFalse(task.targetVersion.isPresent())
 		assertFalse(task.targetCharacterSet.isPresent())
 		assertFalse(task.migrationMethod.isPresent())
@@ -25,6 +26,7 @@ class AssessMigrationTaskTest extends AbstractTaskTest {
 		task.targetCharacterSet.set('AL32UTF8')
 		task.migrationMethod.set(MigrationAssessment.Method.LOGICAL_MIGRATION)
 		task.failOnBlockers.set(false)
+		task.scanCharacterData.set(true)
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals(input, command.schemaFile)
@@ -33,6 +35,8 @@ class AssessMigrationTaskTest extends AbstractTaskTest {
 		assertEquals('AL32UTF8', command.targetCharacterSet)
 		assertEquals(MigrationAssessment.Method.LOGICAL_MIGRATION, command.migrationMethod)
 		assertFalse(command.failOnBlockers)
+		assertTrue(command.scanCharacterData)
+		assertNull(command.dataSource)
 	}
 
 	@Test

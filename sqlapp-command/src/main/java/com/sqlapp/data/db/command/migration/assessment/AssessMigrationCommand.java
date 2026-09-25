@@ -4,33 +4,35 @@ package com.sqlapp.data.db.command.migration.assessment;
 import java.io.File;
 import java.nio.file.Files;
 import java.security.MessageDigest;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 
-import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentProvider;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
-import com.sqlapp.data.schemas.SchemaUtils;
 
 import lombok.Getter;
 import lombok.Setter;
 
-/** One offline entry point: inspect Schema XML and write a reviewable JSON report. */
+/** Inspects Schema XML and optionally its source database, then writes a reviewable JSON report. */
 @Getter
 @Setter
-public class AssessMigrationCommand extends AbstractCommand {
+public class AssessMigrationCommand extends AbstractDataSourceCommand {
 	private File schemaFile;
 	private File outputFile;
 	private String targetVersion;
 	private String targetCharacterSet;
 	private MigrationAssessment.Method migrationMethod;
 	private boolean failOnBlockers = true;
+	private boolean scanCharacterData;
 	@Setter(lombok.AccessLevel.NONE)
 	private Report report;
 
@@ -55,6 +57,9 @@ public class AssessMigrationCommand extends AbstractCommand {
 		if (outputFile == null || targetVersion == null || targetVersion.isBlank() || migrationMethod == null) {
 			throw new CommandException("outputFile, targetVersion and migrationMethod (DIRECT_UPGRADE or LOGICAL_MIGRATION) are required");
 		}
+		if (scanCharacterData && getDataSource() == null) {
+			throw new CommandException("scanCharacterData=true requires a configured dataSource");
+		}
 		try {
 			final var input = schemaFile.toPath().toRealPath();
 			final var output = outputFile.toPath().toAbsolutePath().normalize();
@@ -75,7 +80,21 @@ public class AssessMigrationCommand extends AbstractCommand {
 				throw new CommandException("schemaFile must contain at least one Schema");
 			}
 			final var provider = MigrationAssessmentProvider.resolve(schemas.getFirst().getProductName(), targetVersion);
-			final var assessment = provider.assess(List.copyOf(schemas), targetVersion, migrationMethod, targetCharacterSet);
+			final MigrationAssessment assessment;
+			if (getDataSource() == null) {
+				assessment = provider.assess(List.copyOf(schemas), targetVersion, migrationMethod, targetCharacterSet);
+			} else {
+				final MigrationAssessment[] holder = new MigrationAssessment[1];
+				executeNoTranAndClose(getDataSource(), connection -> {
+					makeReadOnly(connection);
+					holder[0] = provider.assess(connection, List.copyOf(schemas), targetVersion, migrationMethod,
+							targetCharacterSet, scanCharacterData);
+				});
+				assessment = holder[0];
+				if (assessment == null) {
+					throw new CommandException("Online migration assessment did not produce a result");
+				}
+			}
 			if (!fingerprint.equals(fingerprint(schemaFile))) {
 				throw new CommandException("schemaFile changed during assessment; retry with a stable snapshot");
 			}
@@ -94,6 +113,12 @@ public class AssessMigrationCommand extends AbstractCommand {
 		info("Migration assessment: ", report.status());
 		if (failOnBlockers && report.assessment().hasBlockers()) {
 			throw new CommandException("Migration blockers found; review report: " + outputFile);
+		}
+	}
+
+	private static void makeReadOnly(final Connection connection) throws Exception {
+		if (!connection.isReadOnly()) {
+			connection.setReadOnly(true);
 		}
 	}
 

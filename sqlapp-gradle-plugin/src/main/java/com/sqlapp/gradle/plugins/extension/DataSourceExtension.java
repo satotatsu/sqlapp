@@ -53,6 +53,12 @@ public abstract class DataSourceExtension {
 		return ds;
 	}
 
+	/** Whether enough intent exists to create an optional task DataSource. */
+	public boolean isConfigured() {
+		return getJdbcUrl().isPresent() || getDataSourceClassName().isPresent()
+				|| getDriverClassName().isPresent() || !getProperties().isEmpty();
+	}
+
 	public HikariConfig toConfig() {
 		final HikariConfig config = new HikariConfig();
 		setConfig(config);

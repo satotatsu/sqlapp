@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import com.sqlapp.data.schemas.AbstractSchemaObject;
 import com.sqlapp.data.schemas.Schema;
@@ -114,6 +116,22 @@ public final class OracleMigrationAssessmentProvider implements MigrationAssessm
 
 	private static boolean hasText(final List<String> lines) {
 		return lines != null && lines.stream().anyMatch(line -> line != null && !line.isBlank());
+	}
+
+	@Override
+	public MigrationAssessment assess(final Connection connection, final List<Schema> schemas,
+			final String targetVersion, final Method method, final String targetCharacterSet,
+			final boolean scanCharacterData) {
+		if (!"AL32UTF8".equalsIgnoreCase(targetCharacterSet)) {
+			throw new IllegalArgumentException("Online Oracle character assessment requires targetCharacterSet=AL32UTF8");
+		}
+		final MigrationAssessment offline = assess(schemas, targetVersion, method, targetCharacterSet);
+		try {
+			return OracleOnlineMigrationAssessment.assess(Objects.requireNonNull(connection, "connection"), schemas,
+					offline, scanCharacterData);
+		} catch (SQLException e) {
+			throw new IllegalStateException("Failed to read Oracle source metadata for migration assessment", e);
+		}
 	}
 
 	private static String action(final String type) {

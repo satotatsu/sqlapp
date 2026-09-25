@@ -13,12 +13,15 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.migration.assessment.AssessMigrationCommand;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
+import com.sqlapp.gradle.plugins.properties.OptionalDataSourceTaskProperty;
 
-/** Offline migration preflight. Add the source dialect provider to runtimeClasspath. */
+/** Offline or optional read-only online migration preflight. */
 @DisableCachingByDefault(because = "Assessment is review evidence and must rerun its failure policy")
-public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCommand> {
+public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCommand>
+		implements OptionalDataSourceTaskProperty {
 	public AssessMigrationTask() {
 		getFailOnBlockers().convention(true);
+		getScanCharacterData().convention(false);
 		getOutputs().upToDateWhen(task -> false);
 	}
 	@InputFile
@@ -35,6 +38,8 @@ public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCo
 	public abstract Property<MigrationAssessment.Method> getMigrationMethod();
 	@Input
 	public abstract Property<Boolean> getFailOnBlockers();
+	@Input
+	public abstract Property<Boolean> getScanCharacterData();
 
 	@Override
 	protected AssessMigrationCommand createCommand() {
@@ -48,5 +53,6 @@ public abstract class AssessMigrationTask extends AbstractTask<AssessMigrationCo
 		command.setTargetCharacterSet(getTargetCharacterSet().getOrNull());
 		command.setMigrationMethod(getMigrationMethod().get());
 		command.setFailOnBlockers(getFailOnBlockers().get());
+		command.setScanCharacterData(getScanCharacterData().get());
 	}
 }

@@ -12,7 +12,7 @@ public record MigrationAssessment(List<Finding> findings, List<Inventory> invent
 	}
 
 	public enum Severity { BLOCKER, WARNING, REVIEW }
-	public enum Evidence { SCHEMA, DOCUMENTED_RULE, MANUAL_CHECK }
+	public enum Evidence { SCHEMA, DATABASE, DOCUMENTED_RULE, MANUAL_CHECK }
 	public enum Method { DIRECT_UPGRADE, LOGICAL_MIGRATION }
 
 	/** Structured identity avoids ambiguity in names containing dots or quotes. */

@@ -105,4 +105,12 @@ class AssessMigrationCommandTest {
 		assertNull(command.getReport());
 		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
 	}
+
+	@Test
+	void rejectsDataScanWithoutDataSource() throws Exception {
+		final var command = command();
+		command.setScanCharacterData(true);
+		assertThrows(CommandException.class, command::run);
+		assertFalse(command.getOutputFile().exists());
+	}
 }
