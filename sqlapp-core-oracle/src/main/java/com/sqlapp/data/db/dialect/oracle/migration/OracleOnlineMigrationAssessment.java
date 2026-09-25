@@ -27,6 +27,8 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Severity
 final class OracleOnlineMigrationAssessment {
 	private static final String REFERENCE = "https://docs.oracle.com/en/database/oracle/dmu/23.1/dumag/ch1_overview.html";
 	private record ColumnMetadata(String type, String semantics, long characterLength, long byteLength) { }
+	private record IndexedColumn(String table, String column) { }
+	private record IndexMetadata(Map<IndexedColumn, List<String>> names, boolean readable) { }
 
 	private OracleOnlineMigrationAssessment() { }
 
@@ -132,6 +134,14 @@ final class OracleOnlineMigrationAssessment {
 			}
 		}
 		final Set<String> resolvedTables = new LinkedHashSet<>(resolvedTableNames.values());
+		final IndexMetadata indexes = readIndexes(connection, schema.getName(), resolvedTables);
+		if (!indexes.readable()) {
+			findings.add(new Finding("oracle.charset.index-metadata-unavailable", Severity.WARNING, Evidence.DATABASE,
+					new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
+					"ALL_IND_COLUMNS could not be read for the selected owner.",
+					"Grant read access to the applicable index metadata or review indexed character columns independently before import.",
+					REFERENCE));
+		}
 		missingTables.sort(String::compareTo);
 		ambiguousTables.sort(String::compareTo);
 		for (final String table : missingTables) {
@@ -153,6 +163,7 @@ final class OracleOnlineMigrationAssessment {
 		int scanCandidates = 0;
 		int successfulScans = 0;
 		int failedScans = 0;
+		int indexedByteColumns = 0;
 		final var databaseColumns = new LinkedHashMap<String, Map<String, ColumnMetadata>>();
 		try (PreparedStatement statement = connection.prepareStatement("""
 				SELECT table_name, column_name, data_type, char_used, char_length, data_length
@@ -184,6 +195,16 @@ final class OracleOnlineMigrationAssessment {
 							"Compare this authoritative source metadata with generated import DDL and the target definition.", REFERENCE));
 					if ("B".equalsIgnoreCase(semantics) && ("CHAR".equals(type) || "VARCHAR2".equals(type))) {
 						scanCandidates++;
+						final List<String> indexNames = indexes.names().get(new IndexedColumn(table, column));
+						if (indexNames != null && !indexNames.isEmpty()) {
+							indexedByteColumns++;
+							findings.add(new Finding("oracle.charset.indexed-byte-column", Severity.WARNING,
+									Evidence.DATABASE, id,
+									"BYTE-semantics character column participates in indexes " + indexNames
+											+ "; AL32UTF8 expansion can increase index key bytes.",
+									"Validate converted key lengths and rehearse target index creation with the actual target block size and index definition.",
+									REFERENCE));
+						}
 						if (!scanCharacterData) {
 							continue;
 						}
@@ -296,7 +317,7 @@ final class OracleOnlineMigrationAssessment {
 						+ characterColumns + "; missing columns=" + missingColumns + "; ambiguous columns="
 						+ ambiguousColumns + "; semantics mismatches=" + semanticsMismatches + "; length mismatches="
 						+ lengthMismatches + "; character type mismatches=" + typeMismatches + "; scan candidates="
-						+ scanCandidates + "; successful scans="
+						+ scanCandidates + "; indexed BYTE columns=" + indexedByteColumns + "; successful scans="
 						+ successfulScans + "; failed scans=" + failedScans + ".",
 				"Confirm the selected Schema XML scope and retain this coverage with the migration evidence.", REFERENCE));
 		if (!scanCharacterData) {
@@ -304,6 +325,31 @@ final class OracleOnlineMigrationAssessment {
 					new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
 					"Connected metadata was read, but character data was not scanned.",
 					"Set scanCharacterData=true only in an approved window after evaluating full-scan load, or use Oracle DMU/scanner evidence.", REFERENCE));
+		}
+	}
+
+	private static IndexMetadata readIndexes(final Connection connection, final String owner,
+			final Set<String> selectedTables) {
+		final var indexes = new LinkedHashMap<IndexedColumn, List<String>>();
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT table_name, column_name, index_name FROM all_ind_columns
+				WHERE table_owner = ?
+				ORDER BY table_name, column_name, index_name
+				""")) {
+			statement.setString(1, owner);
+			try (ResultSet rs = statement.executeQuery()) {
+				while (rs.next()) {
+					final String table = rs.getString("TABLE_NAME");
+					if (!selectedTables.contains(table)) {
+						continue;
+					}
+					final var key = new IndexedColumn(table, rs.getString("COLUMN_NAME"));
+					indexes.computeIfAbsent(key, ignored -> new ArrayList<>()).add(rs.getString("INDEX_NAME"));
+				}
+			}
+			return new IndexMetadata(indexes, true);
+		} catch (SQLException e) {
+			return new IndexMetadata(Map.of(), false);
 		}
 	}
 

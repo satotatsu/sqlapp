@@ -154,6 +154,13 @@ used to infer an existing column's semantics. Existing columns are assessed
 from `ALL_TAB_COLUMNS.CHAR_USED`; reviewed target DDL should state BYTE or CHAR
 explicitly.
 
+Online assessment also reads `ALL_IND_COLUMNS`. A BYTE-semantics `CHAR` or
+`VARCHAR2` column used by an index produces
+`oracle.charset.indexed-byte-column`, because AL32UTF8 expansion can exceed an
+index key limit even when the target column definition itself is valid. If
+index metadata cannot be read, the report emits
+`oracle.charset.index-metadata-unavailable` rather than claiming index coverage.
+
 Each owner also receives an `oracle.charset.online-coverage` finding with the
 number of selected, matched and missing tables, modeled and database character
 columns, missing or ambiguous columns, scan candidates, successful scans, and

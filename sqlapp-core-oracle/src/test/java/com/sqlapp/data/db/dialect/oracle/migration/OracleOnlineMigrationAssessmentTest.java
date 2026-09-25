@@ -42,6 +42,8 @@ class OracleOnlineMigrationAssessmentTest {
 				&& "T\"ABLE".equals(f.object().table()) && "COL".equals(f.object().name())));
 		assertFalse(result.findings().stream().anyMatch(f -> f.object() != null && "OUTSIDE_SCOPE".equals(f.object().table())));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-disabled")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.indexed-byte-column")
+				&& f.reason().contains("IDX_TEXT")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
 				&& f.reason().contains("selected tables=1") && f.reason().contains("matched tables=1")
 				&& f.reason().contains("missing tables=0") && f.reason().contains("character columns=1")
@@ -101,6 +103,16 @@ class OracleOnlineMigrationAssessmentTest {
 		assertTrue(result.findings().stream().anyMatch(
 				f -> f.ruleId().equals("oracle.source.database-identity-unavailable")));
 		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.database-identity")));
+	}
+
+	@Test
+	void retainsWarningWhenIndexMetadataCannotBeRead() {
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false, List.of("T\"ABLE"),
+				List.of("COL"), "SOURCE10G", true), List.of(schema()), "26ai", Method.LOGICAL_MIGRATION,
+				"AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(
+				f -> f.ruleId().equals("oracle.charset.index-metadata-unavailable")));
+		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.indexed-byte-column")));
 	}
 
 	@Test
@@ -230,6 +242,12 @@ class OracleOnlineMigrationAssessmentTest {
 
 	private Connection connection(final String product, final List<String> executed, final boolean failScan,
 			final List<String> tableNames, final List<String> columnNames, final String databaseName) {
+		return connection(product, executed, failScan, tableNames, columnNames, databaseName, false);
+	}
+
+	private Connection connection(final String product, final List<String> executed, final boolean failScan,
+			final List<String> tableNames, final List<String> columnNames, final String databaseName,
+			final boolean failIndexes) {
 		final DatabaseMetaData metadata = proxy(DatabaseMetaData.class, (method, args) ->
 				"getDatabaseProductName".equals(method) ? product : defaultValue(args.returnType()));
 		return proxy(Connection.class, (method, args) -> {
@@ -237,14 +255,15 @@ class OracleOnlineMigrationAssessmentTest {
 			if ("prepareStatement".equals(method)) {
 				final String sql = (String) args.values()[0];
 				executed.add(sql);
-				return statement(sql, failScan, tableNames, columnNames, databaseName, executed);
+				return statement(sql, failScan, tableNames, columnNames, databaseName, failIndexes, executed);
 			}
 			return defaultValue(args.returnType());
 		});
 	}
 
 	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames,
-			final List<String> columnNames, final String databaseName, final List<String> executed) {
+			final List<String> columnNames, final String databaseName, final boolean failIndexes,
+			final List<String> executed) {
 		return proxy(PreparedStatement.class, (method, args) -> {
 			if ("setQueryTimeout".equals(method)) {
 				executed.add("TIMEOUT=" + args.values()[0]);
@@ -252,6 +271,7 @@ class OracleOnlineMigrationAssessmentTest {
 			}
 			if ("executeQuery".equals(method)) {
 				if (sql.contains("MAX(") && failScan) throw new SQLException("hidden", "08006", 17002);
+				if (sql.contains("all_ind_columns") && failIndexes) throw new SQLException("denied", "42000", 942);
 				if (sql.contains("nls_database_parameters")) return resultSet(List.of(
 						row("PARAMETER", "NLS_CHARACTERSET", "VALUE", "JA16SJIS"),
 						row("PARAMETER", "NLS_NCHAR_CHARACTERSET", "VALUE", "AL16UTF16"),
@@ -261,6 +281,8 @@ class OracleOnlineMigrationAssessmentTest {
 					return resultSet(List.of(row("1", databaseName)));
 				}
 				if (sql.contains("all_tables")) return resultSet(tableNames.stream().map(name -> row("1", name)).toList());
+				if (sql.contains("all_ind_columns")) return resultSet(List.of(
+						row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", "COL", "INDEX_NAME", "IDX_TEXT")));
 				if (sql.contains("all_tab_columns")) {
 					final var rows = new ArrayList<Map<String, Object>>();
 					for (final String column : columnNames) rows.add(row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", column,
