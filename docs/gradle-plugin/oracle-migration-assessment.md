@@ -148,6 +148,9 @@ Online evidence includes `SYS_CONTEXT('USERENV','DB_NAME')` as
 Pump export source. If the value cannot be read, the report retains
 `oracle.source.database-identity-unavailable` instead of silently omitting the
 identity check.
+The JDBC database major version is also compared with the version captured in
+each Schema. A difference produces `oracle.source.version-mismatch`, which
+normally indicates a stale Schema snapshot or the wrong source DataSource.
 
 `NLS_LENGTH_SEMANTICS` is recorded as the database default, but it is never
 used to infer an existing column's semantics. Existing columns are assessed
@@ -200,8 +203,10 @@ are preserved. A failed column scan is retained as a warning with Oracle error
 code and SQLState; it is never reported as a successful scan. This scan can be
 expensive and does not replace invalid-byte checks with Oracle DMU.
 Each aggregate statement uses `scanQueryTimeoutSeconds` (300 seconds by
-default). A timeout is recorded as `oracle.charset.data-scan-failed`; increase
-it only after reviewing source load and the diagnostic window.
+default). A timeout is recorded separately as
+`oracle.charset.data-scan-timeout`; increase it only after reviewing source
+load and the diagnostic window. Other SQL failures remain
+`oracle.charset.data-scan-failed`.
 
 The source character set and length semantics are not supplied speculatively.
 Suspected `JA16SJIS` is not recorded as fact. The source character set is read

@@ -9,6 +9,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -85,6 +86,16 @@ class OracleOnlineMigrationAssessmentTest {
 	}
 
 	@Test
+	void distinguishesScanTimeoutFromOtherSqlFailures() {
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false, List.of("T\"ABLE"),
+				List.of("COL"), "SOURCE10G", false, true), List.of(schema()), "26ai", Method.LOGICAL_MIGRATION,
+				"AL32UTF8", true, 17);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-timeout")
+				&& f.reason().contains("timeout=17 seconds")));
+		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-failed")));
+	}
+
+	@Test
 	void warnsWhenSchemaCharacterSetDoesNotMatchConnectedDatabase() {
 		final var schema = schema().setCharacterSet("JA16EUC");
 		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
@@ -94,6 +105,15 @@ class OracleOnlineMigrationAssessmentTest {
 		assertEquals("WARNING", mismatch.severity().name());
 		assertTrue(mismatch.reason().contains("JA16EUC"));
 		assertTrue(mismatch.reason().contains("JA16SJIS"));
+	}
+
+	@Test
+	void warnsWhenSchemaAndConnectedOracleMajorVersionsDiffer() {
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false, List.of("T\"ABLE"),
+				List.of("COL"), "SOURCE19", false, false, 19), List.of(schema()), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.source.version-mismatch")
+				&& f.reason().contains("major version=10") && f.reason().contains("version=19.2")));
 	}
 
 	@Test
@@ -248,14 +268,32 @@ class OracleOnlineMigrationAssessmentTest {
 	private Connection connection(final String product, final List<String> executed, final boolean failScan,
 			final List<String> tableNames, final List<String> columnNames, final String databaseName,
 			final boolean failIndexes) {
+		return connection(product, executed, failScan, tableNames, columnNames, databaseName, failIndexes, false);
+	}
+
+	private Connection connection(final String product, final List<String> executed, final boolean failScan,
+			final List<String> tableNames, final List<String> columnNames, final String databaseName,
+			final boolean failIndexes, final boolean timeoutScan) {
+		return connection(product, executed, failScan, tableNames, columnNames, databaseName, failIndexes,
+				timeoutScan, 10);
+	}
+
+	private Connection connection(final String product, final List<String> executed, final boolean failScan,
+			final List<String> tableNames, final List<String> columnNames, final String databaseName,
+			final boolean failIndexes, final boolean timeoutScan, final int databaseMajorVersion) {
 		final DatabaseMetaData metadata = proxy(DatabaseMetaData.class, (method, args) ->
-				"getDatabaseProductName".equals(method) ? product : defaultValue(args.returnType()));
+				switch (method) {
+				case "getDatabaseProductName" -> product;
+				case "getDatabaseMajorVersion" -> databaseMajorVersion;
+				case "getDatabaseMinorVersion" -> 2;
+				default -> defaultValue(args.returnType());
+				});
 		return proxy(Connection.class, (method, args) -> {
 			if ("getMetaData".equals(method)) return metadata;
 			if ("prepareStatement".equals(method)) {
 				final String sql = (String) args.values()[0];
 				executed.add(sql);
-				return statement(sql, failScan, tableNames, columnNames, databaseName, failIndexes, executed);
+				return statement(sql, failScan, tableNames, columnNames, databaseName, failIndexes, timeoutScan, executed);
 			}
 			return defaultValue(args.returnType());
 		});
@@ -263,13 +301,14 @@ class OracleOnlineMigrationAssessmentTest {
 
 	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames,
 			final List<String> columnNames, final String databaseName, final boolean failIndexes,
-			final List<String> executed) {
+			final boolean timeoutScan, final List<String> executed) {
 		return proxy(PreparedStatement.class, (method, args) -> {
 			if ("setQueryTimeout".equals(method)) {
 				executed.add("TIMEOUT=" + args.values()[0]);
 				return null;
 			}
 			if ("executeQuery".equals(method)) {
+				if (sql.contains("MAX(") && timeoutScan) throw new SQLTimeoutException("timeout", "HYT00");
 				if (sql.contains("MAX(") && failScan) throw new SQLException("hidden", "08006", 17002);
 				if (sql.contains("all_ind_columns") && failIndexes) throw new SQLException("denied", "42000", 942);
 				if (sql.contains("nls_database_parameters")) return resultSet(List.of(

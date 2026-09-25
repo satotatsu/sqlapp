@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -41,6 +42,8 @@ final class OracleOnlineMigrationAssessment {
 		}
 		final Map<String, String> nls = readNls(connection);
 		final String databaseName = readDatabaseName(connection);
+		final int databaseMajorVersion = connection.getMetaData().getDatabaseMajorVersion();
+		final int databaseMinorVersion = connection.getMetaData().getDatabaseMinorVersion();
 		final String sourceCharacterSet = nls.get("NLS_CHARACTERSET");
 		if (sourceCharacterSet == null || sourceCharacterSet.isBlank()) {
 			throw new SQLException("NLS_DATABASE_PARAMETERS did not return NLS_CHARACTERSET");
@@ -73,6 +76,16 @@ final class OracleOnlineMigrationAssessment {
 		for (final Schema schema : schemas) {
 			if (schema.getName() == null || schema.getName().isBlank()) {
 				throw new IllegalArgumentException("Online assessment requires every Schema to have an Oracle owner name");
+			}
+			if (schema.getProductMajorVersion() != null && databaseMajorVersion > 0
+					&& schema.getProductMajorVersion().intValue() != databaseMajorVersion) {
+				findings.add(new Finding("oracle.source.version-mismatch", Severity.WARNING, Evidence.DATABASE,
+						new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
+						"Schema evidence reports Oracle major version=" + schema.getProductMajorVersion()
+								+ "; connected database reports JDBC version=" + databaseMajorVersion + "."
+								+ databaseMinorVersion + ".",
+						"Verify that the DataSource is the database represented by this Schema XML and used for the Data Pump export.",
+						REFERENCE));
 			}
 			final String modeledCharacterSet = OracleCharacterSetAssessment.sourceCharacterSet(schema);
 			if (modeledCharacterSet != null && !modeledCharacterSet.isBlank()
@@ -408,8 +421,15 @@ final class OracleOnlineMigrationAssessment {
 							? "Revise the target column definition or cleanse data, then repeat the scan and Data Pump rehearsal."
 							: "Retain the scan evidence and still validate invalid source bytes, target DDL, indexes and application buffers.",
 					REFERENCE));
-			return true;
+				return true;
 			}
+		} catch (SQLTimeoutException e) {
+			findings.add(new Finding("oracle.charset.data-scan-timeout", Severity.WARNING, Evidence.DATABASE, id,
+					"Character data scan exceeded query timeout=" + queryTimeoutSeconds + " seconds; SQLState="
+							+ e.getSQLState() + ".",
+					"Review source load and the diagnostic window, then rerun with an approved timeout. No successful scan is claimed for this column.",
+					REFERENCE));
+			return false;
 		} catch (SQLException e) {
 			findings.add(new Finding("oracle.charset.data-scan-failed", Severity.WARNING, Evidence.DATABASE, id,
 					"Character data scan failed with Oracle error code " + e.getErrorCode() + " and SQLState " + e.getSQLState() + ".",
