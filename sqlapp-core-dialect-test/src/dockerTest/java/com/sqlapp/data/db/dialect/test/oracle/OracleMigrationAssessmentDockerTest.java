@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -36,6 +38,8 @@ import com.zaxxer.hikari.HikariDataSource;
 class OracleMigrationAssessmentDockerTest {
 	private static final String ASSESSOR = "MIGRATION_ASSESSOR";
 	private static final String ASSESSOR_PASSWORD = "migration-assessor-password";
+	private static final String NO_ACCESS_ASSESSOR = "MIGRATION_NO_ACCESS";
+	private static final String NO_ACCESS_PASSWORD = "migration-no-access-password";
 	private static final OracleContainer ORACLE = ReusableTestcontainers
 			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
@@ -62,11 +66,18 @@ class OracleMigrationAssessmentDockerTest {
 			statement.executeUpdate("""
 					CREATE TABLE MIGRATION_CHARSET_TEST (
 					  ID NUMBER PRIMARY KEY,
-					  TEXT_VALUE VARCHAR2(20 BYTE)
+					  TEXT_VALUE VARCHAR2(20 BYTE),
+					  TEXT_CHAR_VALUE VARCHAR2(20 CHAR),
+					  NATIONAL_VALUE NVARCHAR2(20)
 					)
 					""");
 			statement.executeUpdate("CREATE INDEX IDX_MIGRATION_CHARSET_TEXT ON MIGRATION_CHARSET_TEST (TEXT_VALUE)");
-			statement.executeUpdate("INSERT INTO MIGRATION_CHARSET_TEST (ID, TEXT_VALUE) VALUES (1, '日本語')");
+			statement.executeUpdate("CREATE INDEX IDX_MIGRATION_CHARSET_UPPER ON MIGRATION_CHARSET_TEST (UPPER(TEXT_VALUE))");
+			statement.executeUpdate("""
+					INSERT INTO MIGRATION_CHARSET_TEST
+					  (ID, TEXT_VALUE, TEXT_CHAR_VALUE, NATIONAL_VALUE)
+					VALUES (1, '日本語', '日本語', N'日本語')
+					""");
 			createAssessor();
 			statement.executeUpdate("GRANT SELECT ON MIGRATION_CHARSET_TEST TO " + ASSESSOR);
 
@@ -76,6 +87,10 @@ class OracleMigrationAssessmentDockerTest {
 			final var table = new Table("MIGRATION_CHARSET_TEST");
 			table.getColumns().add(new Column("TEXT_VALUE").setDataType(DataType.VARCHAR).setLength(20)
 					.setOctetLength(20).setCharacterSemantics(CharacterSemantics.Byte));
+			table.getColumns().add(new Column("TEXT_CHAR_VALUE").setDataType(DataType.VARCHAR).setLength(20)
+					.setOctetLength(80).setCharacterSemantics(CharacterSemantics.Char));
+			table.getColumns().add(new Column("NATIONAL_VALUE").setDataType(DataType.NVARCHAR).setLength(20)
+					.setOctetLength(40).setCharacterSemantics(CharacterSemantics.Char));
 			schema.getTables().add(table);
 			final var schemaFile = directory.resolve("oracle-source.xml").toFile();
 			schema.writeXml(schemaFile);
@@ -105,10 +120,22 @@ class OracleMigrationAssessmentDockerTest {
 							&& finding.reason().contains("NLS_CHARACTERSET=AL32UTF8")));
 			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
 					finding.ruleId().equals("oracle.charset.database-column")
+							&& finding.object().name().equals("TEXT_VALUE")
 							&& finding.reason().contains("CHAR_USED=B")
 							&& finding.reason().contains("DATA_LENGTH=20")));
+			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
+					finding.ruleId().equals("oracle.charset.database-column")
+							&& finding.object().name().equals("TEXT_CHAR_VALUE")
+							&& finding.reason().contains("CHAR_USED=C")));
+			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
+					finding.ruleId().equals("oracle.charset.database-column")
+							&& finding.object().name().equals("NATIONAL_VALUE")
+							&& finding.reason().contains("dataType=NVARCHAR2")));
 			assertTrue(report.assessment().findings().stream()
 					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.indexed-byte-column")));
+			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
+					finding.ruleId().equals("oracle.charset.function-based-index")
+							&& finding.reason().contains("IDX_MIGRATION_CHARSET_UPPER")));
 			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
 					finding.ruleId().equals("oracle.charset.data-scan")
 							&& finding.reason().contains("maximum converted bytes=9")
@@ -116,8 +143,73 @@ class OracleMigrationAssessmentDockerTest {
 			assertFalse(report.assessment().findings().stream()
 					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.data-scan-failed")
 							|| finding.ruleId().equals("oracle.charset.data-scan-timeout")));
+			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
+					finding.ruleId().equals("oracle.charset.online-coverage")
+							&& finding.reason().contains("database character columns=3")
+							&& finding.reason().contains("scan candidates=1")
+							&& finding.reason().contains("successful scans=1")));
 			assertTrue(command.getOutputFile().isFile());
+			final String json = Files.readString(command.getOutputFile().toPath(), StandardCharsets.UTF_8);
+			assertTrue(json.contains("maximum converted bytes=9"));
+			assertTrue(json.contains("overflow rows=0"));
+			assertFalse(json.contains("日本語"));
+			assertFalse(json.contains(ASSESSOR));
+			assertFalse(json.contains(ASSESSOR_PASSWORD));
+
+			assertWrongSourceIsReported(owner);
+			assertMissingGrantIsReported(schemaFile);
 		}
+	}
+
+	private void assertWrongSourceIsReported(final String owner) throws Exception {
+		final var schema = new Schema(owner).setProductName("Oracle").setProductMajorVersion(10)
+				.setProductMinorVersion(2).setCharacterSet("JA16SJIS");
+		final var table = new Table("MIGRATION_CHARSET_TEST");
+		table.getColumns().add(new Column("TEXT_VALUE").setDataType(DataType.VARCHAR).setLength(20)
+				.setOctetLength(20).setCharacterSemantics(CharacterSemantics.Byte));
+		schema.getTables().add(table);
+		final var schemaFile = directory.resolve("oracle-10g-ja16sjis-source.xml").toFile();
+		schema.writeXml(schemaFile);
+
+		final var command = new AssessMigrationCommand();
+		try (HikariDataSource dataSource = dataSource(ASSESSOR, ASSESSOR_PASSWORD)) {
+			command.setSchemaFile(schemaFile);
+			command.setOutputFile(directory.resolve("assessment-wrong-source.json").toFile());
+			command.setTargetVersion("26ai");
+			command.setMigrationMethod(Method.LOGICAL_MIGRATION);
+			command.setTargetCharacterSet("AL32UTF8");
+			command.setDataSource(dataSource);
+			command.run();
+		}
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
+				finding.ruleId().equals("oracle.source.version-mismatch")
+						&& finding.reason().contains("version=10.2")
+						&& finding.reason().contains("version=23")));
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
+				finding.ruleId().equals("oracle.charset.source-mismatch")
+						&& finding.reason().contains("JA16SJIS")
+						&& finding.reason().contains("NLS_CHARACTERSET=AL32UTF8")));
+	}
+
+	private void assertMissingGrantIsReported(final java.io.File schemaFile) throws Exception {
+		createUser(NO_ACCESS_ASSESSOR, NO_ACCESS_PASSWORD);
+		final var command = new AssessMigrationCommand();
+		try (HikariDataSource dataSource = dataSource(NO_ACCESS_ASSESSOR, NO_ACCESS_PASSWORD)) {
+			command.setSchemaFile(schemaFile);
+			command.setOutputFile(directory.resolve("assessment-no-access.json").toFile());
+			command.setTargetVersion("26ai");
+			command.setMigrationMethod(Method.LOGICAL_MIGRATION);
+			command.setTargetCharacterSet("AL32UTF8");
+			command.setDataSource(dataSource);
+			command.run();
+		}
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
+				finding.ruleId().equals("oracle.charset.source-table-missing")
+						&& finding.reason().contains("not visible in ALL_TABLES")));
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
+				finding.ruleId().equals("oracle.charset.online-coverage")
+						&& finding.reason().contains("matched tables=0")
+						&& finding.reason().contains("missing tables=1")));
 	}
 
 	private static void assertSelectOnly(final HikariDataSource dataSource) throws SQLException {
@@ -137,17 +229,21 @@ class OracleMigrationAssessmentDockerTest {
 	}
 
 	private static void createAssessor() throws SQLException {
+		createUser(ASSESSOR, ASSESSOR_PASSWORD);
+	}
+
+	private static void createUser(final String username, final String password) throws SQLException {
 		try (Connection connection = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
 				Statement statement = connection.createStatement()) {
 			try {
-				statement.executeUpdate("DROP USER " + ASSESSOR + " CASCADE");
+				statement.executeUpdate("DROP USER " + username + " CASCADE");
 			} catch (SQLException e) {
 				if (e.getErrorCode() != 1918) {
 					throw e;
 				}
 			}
-			statement.executeUpdate("CREATE USER " + ASSESSOR + " IDENTIFIED BY \"" + ASSESSOR_PASSWORD + "\"");
-			statement.executeUpdate("GRANT CREATE SESSION TO " + ASSESSOR);
+			statement.executeUpdate("CREATE USER " + username + " IDENTIFIED BY \"" + password + "\"");
+			statement.executeUpdate("GRANT CREATE SESSION TO " + username);
 		}
 	}
 

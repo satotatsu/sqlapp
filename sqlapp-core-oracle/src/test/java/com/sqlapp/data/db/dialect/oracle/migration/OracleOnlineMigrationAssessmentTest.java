@@ -45,6 +45,8 @@ class OracleOnlineMigrationAssessmentTest {
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-disabled")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.indexed-byte-column")
 				&& f.reason().contains("IDX_TEXT")));
+		assertTrue(executed.stream().anyMatch(sql -> sql.contains("all_indexes")
+				&& sql.contains("FUNCTION-BASED%")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
 				&& f.reason().contains("selected tables=1") && f.reason().contains("matched tables=1")
 				&& f.reason().contains("missing tables=0") && f.reason().contains("character columns=1")
@@ -331,6 +333,7 @@ class OracleOnlineMigrationAssessmentTest {
 				if (sql.contains("all_tables")) return resultSet(tableNames.stream().map(name -> row("1", name)).toList());
 				if (sql.contains("all_ind_columns")) return resultSet(List.of(
 						row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", "COL", "INDEX_NAME", "IDX_TEXT")));
+				if (sql.contains("all_indexes")) return resultSet(List.of());
 				if (sql.contains("all_tab_columns")) {
 					final var rows = new ArrayList<Map<String, Object>>();
 					for (final String column : columnNames) rows.add(row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", column,

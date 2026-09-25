@@ -29,7 +29,8 @@ final class OracleOnlineMigrationAssessment {
 	private static final String REFERENCE = "https://docs.oracle.com/en/database/oracle/dmu/23.1/dumag/ch1_overview.html";
 	private record ColumnMetadata(String type, String semantics, long characterLength, long byteLength) { }
 	private record IndexedColumn(String table, String column) { }
-	private record IndexMetadata(Map<IndexedColumn, List<String>> names, boolean readable) { }
+	private record IndexMetadata(Map<IndexedColumn, List<String>> names, boolean readable,
+			Map<String, List<String>> functionBasedNames, boolean functionBasedReadable) { }
 
 	private OracleOnlineMigrationAssessment() { }
 
@@ -160,6 +161,20 @@ final class OracleOnlineMigrationAssessment {
 					"ALL_IND_COLUMNS could not be read for the selected owner.",
 					"Grant read access to the applicable index metadata or review indexed character columns independently before import.",
 					REFERENCE));
+		}
+		if (!indexes.functionBasedReadable()) {
+			findings.add(new Finding("oracle.charset.function-index-metadata-unavailable", Severity.WARNING,
+					Evidence.DATABASE, new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
+					"ALL_INDEXES could not be read for function-based indexes on the selected owner.",
+					"Grant access to applicable index metadata or review function-based indexes independently before import.",
+					REFERENCE));
+		}
+		for (final var entry : indexes.functionBasedNames().entrySet()) {
+			findings.add(new Finding("oracle.charset.function-based-index", Severity.WARNING, Evidence.DATABASE,
+					new ObjectId(schema.getCatalogName(), schema.getName(), "table", entry.getKey()),
+					"Selected table has function-based indexes " + entry.getValue()
+							+ "; expression-derived keys are not attributable to a single source column by ALL_IND_COLUMNS.",
+					"Review ALL_IND_EXPRESSIONS and rehearse index creation after character-set conversion.", REFERENCE));
 		}
 		missingTables.sort(String::compareTo);
 		ambiguousTables.sort(String::compareTo);
@@ -350,6 +365,7 @@ final class OracleOnlineMigrationAssessment {
 	private static IndexMetadata readIndexes(final Connection connection, final String owner,
 			final Set<String> selectedTables) {
 		final var indexes = new LinkedHashMap<IndexedColumn, List<String>>();
+		boolean readable = true;
 		try (PreparedStatement statement = connection.prepareStatement("""
 				SELECT table_name, column_name, index_name FROM all_ind_columns
 				WHERE table_owner = ?
@@ -366,10 +382,31 @@ final class OracleOnlineMigrationAssessment {
 					indexes.computeIfAbsent(key, ignored -> new ArrayList<>()).add(rs.getString("INDEX_NAME"));
 				}
 			}
-			return new IndexMetadata(indexes, true);
 		} catch (SQLException e) {
-			return new IndexMetadata(Map.of(), false);
+			readable = false;
 		}
+		final var functionBasedIndexes = new LinkedHashMap<String, List<String>>();
+		boolean functionBasedReadable = true;
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT table_name, index_name FROM all_indexes
+				WHERE table_owner = ?
+				  AND index_type LIKE 'FUNCTION-BASED%'
+				ORDER BY table_name, index_name
+				""")) {
+			statement.setString(1, owner);
+			try (ResultSet rs = statement.executeQuery()) {
+				while (rs.next()) {
+					final String table = rs.getString("TABLE_NAME");
+					if (selectedTables.contains(table)) {
+						functionBasedIndexes.computeIfAbsent(table, ignored -> new ArrayList<>())
+								.add(rs.getString("INDEX_NAME"));
+					}
+				}
+			}
+		} catch (SQLException e) {
+			functionBasedReadable = false;
+		}
+		return new IndexMetadata(indexes, readable, functionBasedIndexes, functionBasedReadable);
 	}
 
 	private static boolean isNational(final DataType type) {

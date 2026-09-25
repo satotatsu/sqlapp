@@ -206,6 +206,12 @@ Online assessment also reads `ALL_IND_COLUMNS`. A BYTE-semantics `CHAR` or
 index key limit even when the target column definition itself is valid. If
 index metadata cannot be read, the report emits
 `oracle.charset.index-metadata-unavailable` rather than claiming index coverage.
+The assessment also reads `ALL_INDEXES.INDEX_TYPE`. A selected table with a
+`FUNCTION-BASED%` index produces `oracle.charset.function-based-index`, because
+the internal column exposed by `ALL_IND_COLUMNS` cannot safely attribute the
+expression-derived key to one source column. Review its expression through
+`ALL_IND_EXPRESSIONS` and rehearse target index creation. Failure to read this
+inventory produces `oracle.charset.function-index-metadata-unavailable`.
 
 Each owner also receives an `oracle.charset.online-coverage` finding with the
 number of selected, matched and missing tables, modeled and database character
@@ -300,6 +306,12 @@ FROM all_ind_columns
 WHERE table_owner = :owner
 ORDER BY table_name, column_name, index_name;
 
+SELECT table_name, index_name
+FROM all_indexes
+WHERE table_owner = :owner
+  AND index_type LIKE 'FUNCTION-BASED%'
+ORDER BY table_name, index_name;
+
 SELECT table_name, column_name, data_type, char_used, char_length, data_length
 FROM all_tab_columns
 WHERE owner = :owner
@@ -323,10 +335,10 @@ FROM "OWNER"."TABLE";
 ```
 
 The database account must be able to connect, execute these `SELECT` statements,
-and see the reviewed owners' rows through `ALL_TABLES`, `ALL_TAB_COLUMNS`, and
-`ALL_IND_COLUMNS`. Missing catalog visibility is reported as missing scope or
-unavailable index evidence; grant only the access required by the approved
-source schemas. The task issues no DDL or DML.
+and see the reviewed owners' rows through `ALL_TABLES`, `ALL_TAB_COLUMNS`,
+`ALL_IND_COLUMNS`, and `ALL_INDEXES`. Missing catalog visibility is reported as
+missing scope or unavailable index evidence; grant only the access required by
+the approved source schemas. The task issues no DDL or DML.
 
 For a separate assessment account, start with `CREATE SESSION` and object-level
 `SELECT` grants for only the tables in scope. Oracle exposes metadata for
@@ -340,10 +352,26 @@ GRANT CREATE SESSION TO migration_assessor;
 GRANT SELECT ON app_owner.example_table TO migration_assessor;
 ```
 
+Run the metadata-only assessment immediately after provisioning the account.
+An account with `CREATE SESSION` but without the object grant can still connect
+and produce a report, but the report contains `oracle.charset.source-table-missing`
+and coverage such as `matched tables=0; missing tables=1`. Treat either result
+as an incomplete assessment and correct the object grants before enabling data
+scanning.
+
 `CHAR_USED` identifies B (BYTE) or C (CHAR) where applicable. Changing target
 `NLS_LENGTH_SEMANTICS` alone does not override explicitly BYTE-qualified DDL.
 See [Oracle length semantics](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/NLS_LENGTH_SEMANTICS.html)
 and [Unicode migration considerations](https://docs.oracle.com/en/database/oracle/dmu/23.1/dumag/ch1_overview.html).
+
+The aggregate AL32UTF8 scan is limited to bounded `CHAR` and `VARCHAR2`
+columns whose live `CHAR_USED` value is `B`. `CHAR_USED=C` columns remain in
+the metadata findings but are not compared with their source `DATA_LENGTH` as
+an unchanged BYTE declaration. `NCHAR`, `NVARCHAR2`, `NCLOB`, LOB and LONG
+columns require their separately reported national-character-set or type-specific
+review. The Oracle Docker test exercises BYTE `VARCHAR2`, CHAR `VARCHAR2` and
+`NVARCHAR2` together and verifies that only the BYTE column becomes a scan
+candidate.
 
 Report format version 1 uses additive fields for `targetCharacterSet`, database
 product identity, online/scan flags, scan timeout and structured table identity.
@@ -408,6 +436,13 @@ Do not proceed to data scanning until the report satisfies all of these checks:
    target index-key validation.
 7. No catalog-visibility warning remains unexplained.
 
+The version and character-set comparisons are independent safeguards. For
+example, using a Schema XML that records Oracle 10.2 and `JA16SJIS` against an
+Oracle 23 `AL32UTF8` DataSource produces both
+`oracle.source.version-mismatch` and `oracle.charset.source-mismatch`. Treat
+either finding as evidence that the snapshot or DataSource may represent the
+wrong Data Pump source; do not continue based only on a matching owner name.
+
 After the database owner approves the expected full-table read load, run the
 aggregate character scan in the agreed window:
 
@@ -422,6 +457,12 @@ findings. Every `oracle.charset.data-overflow` finding requires a reviewed
 target-column change or data-cleansing decision followed by another scan.
 Indexed BYTE columns still require target index creation rehearsal even when
 their individual data scan reports no overflow.
+
+The JSON report records aggregate maximum converted byte lengths and overflow
+row counts. It does not record scanned column values or DataSource credentials.
+It does contain database identity, schema and object names, version information
+and structural findings, so store it as migration evidence with access suitable
+for system metadata.
 
 Archive the exact Schema XML and JSON report together. Then perform a Data Pump
 export/import rehearsal into an isolated AL32UTF8 target and validate import
@@ -445,7 +486,17 @@ Japanese data, and writes the assessment report. It also asks Oracle to convert
 `日本語` from `JA16SJIS` to `AL32UTF8` and verifies the expansion from 6 to 9
 bytes. The test confirms that the assessment account cannot update the source
 table and that its row count and Japanese value remain unchanged after the
-assessment.
+assessment. It also verifies that the JSON contains only the expected aggregate
+scan evidence and does not contain the Japanese source value, assessment login
+name or password. A second login with no table grant verifies that missing
+visibility is reported as `oracle.charset.source-table-missing` with zero
+matched tables rather than being accepted as complete coverage. A mismatched
+Oracle 10.2/`JA16SJIS` snapshot verifies that an Oracle 23/`AL32UTF8` connection
+is identified by both version and character-set mismatch findings. The fixture
+also verifies Oracle's live `CHAR_USED` distinction for BYTE and CHAR columns
+and keeps `NVARCHAR2` outside the database-character-set byte scan. Its
+`UPPER(TEXT_VALUE)` function-based index verifies the separate index-expression
+review finding.
 
 Oracle Free itself uses `AL32UTF8`. This test therefore verifies the current
 Oracle JDBC, SQL and report path, but it does not reproduce an Oracle 10g
