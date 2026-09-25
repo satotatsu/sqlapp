@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.sqlapp.data.schemas.CharacterSemantics;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Evidence;
@@ -24,6 +25,7 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Severity
 /** Read-only Oracle catalog and optional character-data scanner. */
 final class OracleOnlineMigrationAssessment {
 	private static final String REFERENCE = "https://docs.oracle.com/en/database/oracle/dmu/23.1/dumag/ch1_overview.html";
+	private record ColumnMetadata(String semantics, long characterLength, long byteLength) { }
 
 	private OracleOnlineMigrationAssessment() { }
 
@@ -80,23 +82,24 @@ final class OracleOnlineMigrationAssessment {
 		final Set<String> selectedTables = schema.getTables().stream().map(table -> table.getName())
 				.collect(Collectors.toSet());
 		final Set<String> availableTables = readTableNames(connection, schema.getName());
-		final var resolvedTables = new LinkedHashSet<String>();
+		final var resolvedTableNames = new LinkedHashMap<String, String>();
 		final var missingTables = new ArrayList<String>();
 		final var ambiguousTables = new ArrayList<String>();
 		for (final String selected : selectedTables) {
 			if (availableTables.contains(selected)) {
-				resolvedTables.add(selected);
+				resolvedTableNames.put(selected, selected);
 				continue;
 			}
 			final var matches = availableTables.stream().filter(table -> table.equalsIgnoreCase(selected)).toList();
 			if (matches.size() == 1) {
-				resolvedTables.add(matches.getFirst());
+				resolvedTableNames.put(selected, matches.getFirst());
 			} else if (matches.isEmpty()) {
 				missingTables.add(selected);
 			} else {
 				ambiguousTables.add(selected);
 			}
 		}
+		final Set<String> resolvedTables = new LinkedHashSet<>(resolvedTableNames.values());
 		missingTables.sort(String::compareTo);
 		ambiguousTables.sort(String::compareTo);
 		for (final String table : missingTables) {
@@ -118,6 +121,7 @@ final class OracleOnlineMigrationAssessment {
 		int scanCandidates = 0;
 		int successfulScans = 0;
 		int failedScans = 0;
+		final var databaseColumns = new LinkedHashMap<String, Map<String, ColumnMetadata>>();
 		try (PreparedStatement statement = connection.prepareStatement("""
 				SELECT table_name, column_name, data_type, char_used, char_length, data_length
 				FROM all_tab_columns
@@ -138,6 +142,8 @@ final class OracleOnlineMigrationAssessment {
 					final String semantics = rs.getString("CHAR_USED");
 					final long charLength = rs.getLong("CHAR_LENGTH");
 					final long byteLength = rs.getLong("DATA_LENGTH");
+					databaseColumns.computeIfAbsent(table, key -> new LinkedHashMap<>()).put(column,
+							new ColumnMetadata(semantics, charLength, byteLength));
 					final var id = new ObjectId(schema.getCatalogName(), schema.getName(), "column", column, table);
 					findings.add(new Finding("oracle.charset.database-column", Severity.REVIEW, Evidence.DATABASE, id,
 							"Source metadata: dataType=" + type + "; CHAR_USED="
@@ -158,13 +164,93 @@ final class OracleOnlineMigrationAssessment {
 				}
 			}
 		}
+		int modeledCharacterColumns = 0;
+		int missingColumns = 0;
+		int ambiguousColumns = 0;
+		int semanticsMismatches = 0;
+		int lengthMismatches = 0;
+		for (final var modeledTable : schema.getTables()) {
+			final String databaseTable = resolvedTableNames.get(modeledTable.getName());
+			if (databaseTable == null) {
+				continue;
+			}
+			final Map<String, ColumnMetadata> availableColumnMetadata = databaseColumns.getOrDefault(databaseTable, Map.of());
+			final Set<String> availableColumns = availableColumnMetadata.keySet();
+			for (final var modeledColumn : modeledTable.getColumns()) {
+				if (modeledColumn.getDataType() == null || !modeledColumn.getDataType().isCharacter()) {
+					continue;
+				}
+				modeledCharacterColumns++;
+				final String databaseColumn;
+				if (availableColumns.contains(modeledColumn.getName())) {
+					databaseColumn = modeledColumn.getName();
+				} else {
+					final var matches = availableColumns.stream()
+							.filter(column -> column.equalsIgnoreCase(modeledColumn.getName())).toList();
+					databaseColumn = matches.size() == 1 ? matches.getFirst() : null;
+					if (matches.isEmpty()) {
+						missingColumns++;
+					} else if (matches.size() > 1) {
+						ambiguousColumns++;
+					}
+				}
+				final var id = new ObjectId(schema.getCatalogName(), schema.getName(), "column",
+						modeledColumn.getName(), modeledTable.getName());
+				if (databaseColumn == null && availableColumns.stream()
+						.noneMatch(column -> column.equalsIgnoreCase(modeledColumn.getName()))) {
+					findings.add(new Finding("oracle.charset.source-column-missing", Severity.WARNING,
+							Evidence.DATABASE, id,
+							"The character column selected by the Schema XML was not visible as a character column in ALL_TAB_COLUMNS.",
+							"Verify the source column name and type, refresh the Schema snapshot, and confirm catalog privileges before relying on scan coverage.",
+							REFERENCE));
+				} else if (databaseColumn == null) {
+					findings.add(new Finding("oracle.charset.source-column-ambiguous", Severity.WARNING,
+							Evidence.DATABASE, id,
+							"The character column selected by the Schema XML matched multiple case-sensitive column names.",
+							"Use the exact Oracle identifier spelling in the Schema XML; no unique column match was assumed.",
+							REFERENCE));
+				} else {
+					final ColumnMetadata actual = availableColumnMetadata.get(databaseColumn);
+					final String actualSemantics = actual.semantics();
+					final CharacterSemantics modeledSemantics = modeledColumn.getCharacterSemantics();
+					final boolean mismatch = (modeledSemantics == CharacterSemantics.Byte
+							&& "C".equalsIgnoreCase(actualSemantics))
+							|| (modeledSemantics == CharacterSemantics.Char && "B".equalsIgnoreCase(actualSemantics));
+					if (mismatch) {
+						semanticsMismatches++;
+						findings.add(new Finding("oracle.charset.source-semantics-mismatch", Severity.WARNING,
+								Evidence.DATABASE, id,
+								"Schema evidence reports " + modeledSemantics + " semantics; connected database CHAR_USED="
+										+ actualSemantics + ".",
+								"Refresh the Schema snapshot and use the connected database semantics when reviewing target DDL and AL32UTF8 expansion risk.",
+								REFERENCE));
+					}
+					final boolean characterLengthMismatch = modeledColumn.getLength() != null
+							&& modeledColumn.getLength().longValue() != actual.characterLength();
+					final boolean byteLengthMismatch = modeledColumn.getOctetLength() != null
+							&& modeledColumn.getOctetLength().longValue() != actual.byteLength();
+					if (characterLengthMismatch || byteLengthMismatch) {
+						lengthMismatches++;
+						findings.add(new Finding("oracle.charset.source-length-mismatch", Severity.WARNING,
+								Evidence.DATABASE, id,
+								"Schema evidence reports length=" + modeledColumn.getLength() + "; octetLength="
+										+ modeledColumn.getOctetLength() + "; connected database reports CHAR_LENGTH="
+										+ actual.characterLength() + "; DATA_LENGTH=" + actual.byteLength() + ".",
+								"Refresh the Schema snapshot and use live lengths when evaluating AL32UTF8 expansion, target DDL and index limits.",
+								REFERENCE));
+					}
+				}
+			}
+		}
 		findings.add(new Finding("oracle.charset.online-coverage", Severity.REVIEW, Evidence.DATABASE,
 				new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
 				"Online assessment coverage: selected tables=" + selectedTables.size() + "; matched tables="
 						+ resolvedTables.size() + "; missing tables=" + missingTables.size() + "; ambiguous tables="
 						+ ambiguousTables.size()
-						+ "; character columns="
-						+ characterColumns + "; scan candidates=" + scanCandidates + "; successful scans="
+						+ "; modeled character columns=" + modeledCharacterColumns + "; database character columns="
+						+ characterColumns + "; missing columns=" + missingColumns + "; ambiguous columns="
+						+ ambiguousColumns + "; semantics mismatches=" + semanticsMismatches + "; length mismatches="
+						+ lengthMismatches + "; scan candidates=" + scanCandidates + "; successful scans="
 						+ successfulScans + "; failed scans=" + failedScans + ".",
 				"Confirm the selected Schema XML scope and retain this coverage with the migration evidence.", REFERENCE));
 		if (!scanCharacterData) {

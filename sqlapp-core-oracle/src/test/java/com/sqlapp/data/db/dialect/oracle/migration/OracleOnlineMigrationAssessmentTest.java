@@ -16,6 +16,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.CharacterSemantics;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Method;
@@ -98,12 +101,67 @@ class OracleOnlineMigrationAssessmentTest {
 	@Test
 	void resolvesAnUnquotedStyleTableNameCaseInsensitivelyWhenUnique() {
 		final var schema = new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
-		schema.getTables().add(new Table("t\"able"));
+		final var table = new Table("t\"able");
+		table.getColumns().add(new Column("col").setDataType(DataType.VARCHAR));
+		schema.getTables().add(table);
 		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
 				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
 		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-table-missing")));
+		assertFalse(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-column-missing")));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
-				&& f.reason().contains("matched tables=1") && f.reason().contains("ambiguous tables=0")));
+				&& f.reason().contains("matched tables=1") && f.reason().contains("ambiguous tables=0")
+				&& f.reason().contains("modeled character columns=1") && f.reason().contains("missing columns=0")));
+	}
+
+	@Test
+	void warnsWhenModeledCharacterColumnIsNotVisibleAsCharacterData() {
+		final var schema = schema();
+		schema.getTables().getFirst().getColumns().add(new Column("MISSING").setDataType(DataType.VARCHAR));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-column-missing")
+				&& "MISSING".equals(f.object().name())));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("modeled character columns=1") && f.reason().contains("missing columns=1")));
+	}
+
+	@Test
+	void doesNotGuessWhenCaseInsensitiveColumnMatchIsAmbiguous() {
+		final var schema = schema();
+		schema.getTables().getFirst().getColumns().add(new Column("Col").setDataType(DataType.VARCHAR));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false, List.of("T\"ABLE"),
+				List.of("COL", "col")), List.of(schema), "26ai", Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-column-ambiguous")
+				&& "Col".equals(f.object().name())));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("ambiguous columns=1")));
+	}
+
+	@Test
+	void warnsWhenModeledAndDatabaseLengthSemanticsDiffer() {
+		final var schema = schema();
+		schema.getTables().getFirst().getColumns().add(new Column("COL").setDataType(DataType.VARCHAR)
+				.setCharacterSemantics(CharacterSemantics.Char));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-semantics-mismatch")
+				&& f.reason().contains("Char") && f.reason().contains("CHAR_USED=B")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("semantics mismatches=1")));
+	}
+
+	@Test
+	void warnsWhenModeledAndDatabaseColumnLengthsDiffer() {
+		final var schema = schema();
+		schema.getTables().getFirst().getColumns().add(new Column("COL").setDataType(DataType.VARCHAR)
+				.setLength(10).setOctetLength(10));
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.source-length-mismatch")
+				&& f.reason().contains("length=10") && f.reason().contains("CHAR_LENGTH=20")
+				&& f.reason().contains("DATA_LENGTH=20")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("length mismatches=1")));
 	}
 
 	@Test
@@ -127,11 +185,16 @@ class OracleOnlineMigrationAssessmentTest {
 	}
 
 	private Connection connection(final String product, final List<String> executed, final boolean failScan) {
-		return connection(product, executed, failScan, List.of("T\"ABLE"));
+		return connection(product, executed, failScan, List.of("T\"ABLE"), List.of("COL"));
 	}
 
 	private Connection connection(final String product, final List<String> executed, final boolean failScan,
 			final List<String> tableNames) {
+		return connection(product, executed, failScan, tableNames, List.of("COL"));
+	}
+
+	private Connection connection(final String product, final List<String> executed, final boolean failScan,
+			final List<String> tableNames, final List<String> columnNames) {
 		final DatabaseMetaData metadata = proxy(DatabaseMetaData.class, (method, args) ->
 				"getDatabaseProductName".equals(method) ? product : defaultValue(args.returnType()));
 		return proxy(Connection.class, (method, args) -> {
@@ -139,13 +202,14 @@ class OracleOnlineMigrationAssessmentTest {
 			if ("prepareStatement".equals(method)) {
 				final String sql = (String) args.values()[0];
 				executed.add(sql);
-				return statement(sql, failScan, tableNames);
+				return statement(sql, failScan, tableNames, columnNames);
 			}
 			return defaultValue(args.returnType());
 		});
 	}
 
-	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames) {
+	private PreparedStatement statement(final String sql, final boolean failScan, final List<String> tableNames,
+			final List<String> columnNames) {
 		return proxy(PreparedStatement.class, (method, args) -> {
 			if ("executeQuery".equals(method)) {
 				if (sql.contains("MAX(") && failScan) throw new SQLException("hidden", "08006", 17002);
@@ -153,11 +217,14 @@ class OracleOnlineMigrationAssessmentTest {
 						row("PARAMETER", "NLS_CHARACTERSET", "VALUE", "JA16SJIS"),
 						row("PARAMETER", "NLS_NCHAR_CHARACTERSET", "VALUE", "AL16UTF16")));
 				if (sql.contains("all_tables")) return resultSet(tableNames.stream().map(name -> row("1", name)).toList());
-				if (sql.contains("all_tab_columns")) return resultSet(List.of(
-						row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", "COL", "DATA_TYPE", "VARCHAR2",
-								"CHAR_USED", "B", "CHAR_LENGTH", 20L, "DATA_LENGTH", 20L),
-						row("TABLE_NAME", "OUTSIDE_SCOPE", "COLUMN_NAME", "SECRET", "DATA_TYPE", "VARCHAR2",
-								"CHAR_USED", "B", "CHAR_LENGTH", 20L, "DATA_LENGTH", 20L)));
+				if (sql.contains("all_tab_columns")) {
+					final var rows = new ArrayList<Map<String, Object>>();
+					for (final String column : columnNames) rows.add(row("TABLE_NAME", "T\"ABLE", "COLUMN_NAME", column,
+							"DATA_TYPE", "VARCHAR2", "CHAR_USED", "B", "CHAR_LENGTH", 20L, "DATA_LENGTH", 20L));
+					rows.add(row("TABLE_NAME", "OUTSIDE_SCOPE", "COLUMN_NAME", "SECRET", "DATA_TYPE", "VARCHAR2",
+							"CHAR_USED", "B", "CHAR_LENGTH", 20L, "DATA_LENGTH", 20L));
+					return resultSet(rows);
+				}
 				return resultSet(List.of(row("1", 31L, "2", 2L)));
 			}
 			return defaultValue(args.returnType());
