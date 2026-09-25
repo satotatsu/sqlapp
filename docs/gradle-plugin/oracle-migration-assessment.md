@@ -288,24 +288,57 @@ FROM nls_database_parameters
 WHERE parameter IN ('NLS_CHARACTERSET', 'NLS_NCHAR_CHARACTERSET',
                     'NLS_LENGTH_SEMANTICS');
 
-SELECT owner, table_name, column_name, data_type,
-       char_used, char_length, data_length
+SELECT SYS_CONTEXT('USERENV', 'DB_NAME')
+FROM dual;
+
+SELECT table_name
+FROM all_tables
+WHERE owner = :owner;
+
+SELECT table_name, column_name, index_name
+FROM all_ind_columns
+WHERE table_owner = :owner
+ORDER BY table_name, column_name, index_name;
+
+SELECT table_name, column_name, data_type, char_used, char_length, data_length
 FROM all_tab_columns
 WHERE owner = :owner
   AND data_type IN ('CHAR', 'VARCHAR2', 'NCHAR', 'NVARCHAR2', 'CLOB', 'NCLOB', 'LONG')
 ORDER BY table_name, column_id;
 ```
 
+With `scanCharacterData=true`, each selected BYTE-semantics bounded character
+column additionally runs an aggregate shaped as follows. Identifiers are quoted
+from resolved catalog metadata, and the source character set comes from
+`NLS_DATABASE_PARAMETERS`:
+
+```sql
+SELECT MAX(LENGTHB(CONVERT("COLUMN", 'AL32UTF8', 'SOURCE_CHARSET'))),
+       SUM(CASE
+             WHEN LENGTHB(CONVERT("COLUMN", 'AL32UTF8', 'SOURCE_CHARSET'))
+                    > :source_data_length
+             THEN 1 ELSE 0
+           END)
+FROM "OWNER"."TABLE";
+```
+
+The database account must be able to connect, execute these `SELECT` statements,
+and see the reviewed owners' rows through `ALL_TABLES`, `ALL_TAB_COLUMNS`, and
+`ALL_IND_COLUMNS`. Missing catalog visibility is reported as missing scope or
+unavailable index evidence; grant only the access required by the approved
+source schemas. The task issues no DDL or DML.
+
 `CHAR_USED` identifies B (BYTE) or C (CHAR) where applicable. Changing target
 `NLS_LENGTH_SEMANTICS` alone does not override explicitly BYTE-qualified DDL.
 See [Oracle length semantics](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/NLS_LENGTH_SEMANTICS.html)
 and [Unicode migration considerations](https://docs.oracle.com/en/database/oracle/dmu/23.1/dumag/ch1_overview.html).
 
-Report format version 1 gains optional `targetCharacterSet` and object identity
-`table` fields. Existing Java constructors and the three-argument provider entry
-point remain available. Omitting the option retains the earlier checks. A
-provider that does not implement character-set assessment rejects the explicit
-option rather than silently ignoring it. Existing Schema XML is unchanged.
+Report format version 1 uses additive fields for `targetCharacterSet`, database
+product identity, online/scan flags, scan timeout and structured table identity.
+Existing Java constructors and provider entry points remain available. Omitting
+the character-set option retains the earlier offline checks. A provider that
+does not implement character-set assessment rejects the explicit option rather
+than silently ignoring it. Existing Schema XML is unchanged.
 
 ## Java entry point and extension boundary
 
