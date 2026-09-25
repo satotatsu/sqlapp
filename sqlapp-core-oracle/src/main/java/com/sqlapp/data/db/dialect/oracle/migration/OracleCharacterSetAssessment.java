@@ -77,7 +77,7 @@ final class OracleCharacterSetAssessment {
 		return value == null || value.isBlank();
 	}
 
-	private static String sourceCharacterSet(final Schema schema) {
+	static String sourceCharacterSet(final Schema schema) {
 		String value = schema.getCharacterSet();
 		final Catalog catalog = schema.getAncestor(Catalog.class);
 		if (catalog != null) {

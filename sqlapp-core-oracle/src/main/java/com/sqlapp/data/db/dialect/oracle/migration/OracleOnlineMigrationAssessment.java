@@ -46,6 +46,16 @@ final class OracleOnlineMigrationAssessment {
 			if (schema.getName() == null || schema.getName().isBlank()) {
 				throw new IllegalArgumentException("Online assessment requires every Schema to have an Oracle owner name");
 			}
+			final String modeledCharacterSet = OracleCharacterSetAssessment.sourceCharacterSet(schema);
+			if (modeledCharacterSet != null && !modeledCharacterSet.isBlank()
+					&& !modeledCharacterSet.equalsIgnoreCase(sourceCharacterSet)) {
+				findings.add(new Finding("oracle.charset.source-mismatch", Severity.WARNING, Evidence.DATABASE,
+						new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
+						"Schema evidence reports source character set=" + modeledCharacterSet
+								+ "; connected database reports NLS_CHARACTERSET=" + sourceCharacterSet + ".",
+						"Regenerate or correct the Schema snapshot and verify that the DataSource points to the intended export database before relying on this assessment.",
+						REFERENCE));
+			}
 			assessColumns(connection, schema, sourceCharacterSet, scanCharacterData, findings);
 		}
 		return new MigrationAssessment(findings, offline.inventory());

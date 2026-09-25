@@ -145,6 +145,11 @@ scans, and failed scans. Use it to verify that the report covers the intended
 Schema XML scope; a successful command alone does not imply that every data
 column was scanned.
 
+If the Schema XML or captured Catalog settings name a source character set that
+differs from the connected database's `NLS_CHARACTERSET`, the report adds an
+`oracle.charset.source-mismatch` warning. Treat this as a stale snapshot or a
+wrong DataSource until the source identity is verified.
+
 `scanCharacterData` defaults to `false`. Set it to `true` only for an approved
 diagnostic window. It runs one aggregate full-table query for each BYTE-semantics
 `CHAR`/`VARCHAR2` column, using Oracle `CONVERT` and `LENGTHB`, and records only

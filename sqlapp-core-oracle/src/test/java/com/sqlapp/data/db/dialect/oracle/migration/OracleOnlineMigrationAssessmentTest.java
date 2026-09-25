@@ -69,6 +69,18 @@ class OracleOnlineMigrationAssessmentTest {
 				List.of(schema()), "26ai", Method.LOGICAL_MIGRATION, "AL32UTF8", false));
 	}
 
+	@Test
+	void warnsWhenSchemaCharacterSetDoesNotMatchConnectedDatabase() {
+		final var schema = schema().setCharacterSet("JA16EUC");
+		final var result = provider.assess(connection("Oracle", new ArrayList<>(), false), List.of(schema), "26ai",
+				Method.LOGICAL_MIGRATION, "AL32UTF8", false);
+		final var mismatch = result.findings().stream()
+				.filter(f -> f.ruleId().equals("oracle.charset.source-mismatch")).findFirst().orElseThrow();
+		assertEquals("WARNING", mismatch.severity().name());
+		assertTrue(mismatch.reason().contains("JA16EUC"));
+		assertTrue(mismatch.reason().contains("JA16SJIS"));
+	}
+
 	private Schema schema() {
 		final var schema = new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
 		schema.getTables().add(new Table("T\"ABLE"));
