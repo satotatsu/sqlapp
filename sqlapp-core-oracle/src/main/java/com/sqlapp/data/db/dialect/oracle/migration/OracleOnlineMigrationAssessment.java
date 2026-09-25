@@ -68,6 +68,10 @@ final class OracleOnlineMigrationAssessment {
 			final boolean scanCharacterData, final List<Finding> findings) throws SQLException {
 		final Set<String> selectedTables = schema.getTables().stream().map(table -> table.getName())
 				.collect(Collectors.toSet());
+		int characterColumns = 0;
+		int scanCandidates = 0;
+		int successfulScans = 0;
+		int failedScans = 0;
 		try (PreparedStatement statement = connection.prepareStatement("""
 				SELECT table_name, column_name, data_type, char_used, char_length, data_length
 				FROM all_tab_columns
@@ -83,6 +87,7 @@ final class OracleOnlineMigrationAssessment {
 					if (!selectedTables.contains(table)) {
 						continue;
 					}
+					characterColumns++;
 					final String type = rs.getString("DATA_TYPE");
 					final String semantics = rs.getString("CHAR_USED");
 					final long charLength = rs.getLong("CHAR_LENGTH");
@@ -93,13 +98,26 @@ final class OracleOnlineMigrationAssessment {
 									+ (semantics == null ? "UNKNOWN" : semantics) + "; CHAR_LENGTH=" + charLength
 									+ "; DATA_LENGTH=" + byteLength + "; NLS_CHARACTERSET=" + sourceCharacterSet + ".",
 							"Compare this authoritative source metadata with generated import DDL and the target definition.", REFERENCE));
-					if (scanCharacterData && "B".equalsIgnoreCase(semantics)
-							&& ("CHAR".equals(type) || "VARCHAR2".equals(type))) {
-						scanColumn(connection, id, sourceCharacterSet, byteLength, findings);
+					if ("B".equalsIgnoreCase(semantics) && ("CHAR".equals(type) || "VARCHAR2".equals(type))) {
+						scanCandidates++;
+						if (!scanCharacterData) {
+							continue;
+						}
+						if (scanColumn(connection, id, sourceCharacterSet, byteLength, findings)) {
+							successfulScans++;
+						} else {
+							failedScans++;
+						}
 					}
 				}
 			}
 		}
+		findings.add(new Finding("oracle.charset.online-coverage", Severity.REVIEW, Evidence.DATABASE,
+				new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
+				"Online assessment coverage: selected tables=" + selectedTables.size() + "; character columns="
+						+ characterColumns + "; scan candidates=" + scanCandidates + "; successful scans="
+						+ successfulScans + "; failed scans=" + failedScans + ".",
+				"Confirm the selected Schema XML scope and retain this coverage with the migration evidence.", REFERENCE));
 		if (!scanCharacterData) {
 			findings.add(new Finding("oracle.charset.data-scan-disabled", Severity.REVIEW, Evidence.MANUAL_CHECK,
 					new ObjectId(schema.getCatalogName(), schema.getName(), "schema", schema.getName()),
@@ -108,7 +126,7 @@ final class OracleOnlineMigrationAssessment {
 		}
 	}
 
-	private static void scanColumn(final Connection connection, final ObjectId id, final String sourceCharacterSet,
+	private static boolean scanColumn(final Connection connection, final ObjectId id, final String sourceCharacterSet,
 			final long byteLimit, final List<Finding> findings) {
 		final String expression = "LENGTHB(CONVERT(" + identifier(id.name()) + ", 'AL32UTF8', '"
 				+ sourceCharacterSet.replace("'", "''") + "'))";
@@ -127,10 +145,12 @@ final class OracleOnlineMigrationAssessment {
 							? "Revise the target column definition or cleanse data, then repeat the scan and Data Pump rehearsal."
 							: "Retain the scan evidence and still validate invalid source bytes, target DDL, indexes and application buffers.",
 					REFERENCE));
+			return true;
 		} catch (SQLException e) {
 			findings.add(new Finding("oracle.charset.data-scan-failed", Severity.WARNING, Evidence.DATABASE, id,
 					"Character data scan failed with Oracle error code " + e.getErrorCode() + " and SQLState " + e.getSQLState() + ".",
 					"Resolve object access, unsupported conversion, or source-data issues and rerun. No successful scan is claimed for this column.", REFERENCE));
+			return false;
 		}
 	}
 

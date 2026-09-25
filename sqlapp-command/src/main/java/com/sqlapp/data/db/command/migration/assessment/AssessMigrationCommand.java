@@ -40,11 +40,19 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 			Integer revision) { }
 	public record Report(int formatVersion, String schemaFingerprint, String targetVersion,
 			MigrationAssessment.Method migrationMethod, List<Source> sources, String status,
-			MigrationAssessment assessment, String targetCharacterSet) {
+			MigrationAssessment assessment, String targetCharacterSet, String databaseProductName,
+			String databaseProductVersion) {
 		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
 				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
 				final MigrationAssessment assessment) {
-			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment, null);
+			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment, null,
+					null, null);
+		}
+		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
+				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
+				final MigrationAssessment assessment, final String targetCharacterSet) {
+			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment,
+					targetCharacterSet, null, null);
 		}
 	}
 
@@ -81,12 +89,15 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 			}
 			final var provider = MigrationAssessmentProvider.resolve(schemas.getFirst().getProductName(), targetVersion);
 			final MigrationAssessment assessment;
+			final String[] databaseProduct = new String[2];
 			if (getDataSource() == null) {
 				assessment = provider.assess(List.copyOf(schemas), targetVersion, migrationMethod, targetCharacterSet);
 			} else {
 				final MigrationAssessment[] holder = new MigrationAssessment[1];
 				executeNoTranAndClose(getDataSource(), connection -> {
 					makeReadOnly(connection);
+					databaseProduct[0] = connection.getMetaData().getDatabaseProductName();
+					databaseProduct[1] = connection.getMetaData().getDatabaseProductVersion();
 					holder[0] = provider.assess(connection, List.copyOf(schemas), targetVersion, migrationMethod,
 							targetCharacterSet, scanCharacterData);
 				});
@@ -102,7 +113,8 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 					schema.getProductName(), schema.getProductMajorVersion(), schema.getProductMinorVersion(),
 					schema.getProductRevision())).toList();
 			report = new Report(1, fingerprint, targetVersion, migrationMethod, sources,
-					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, targetCharacterSet);
+					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, targetCharacterSet,
+					databaseProduct[0], databaseProduct[1]);
 			final var converter = new JsonConverter();
 			converter.setIndentOutput(true);
 			AtomicMigrationFile.write(output, temporary -> converter.writeJsonValue(temporary.toFile(), report));

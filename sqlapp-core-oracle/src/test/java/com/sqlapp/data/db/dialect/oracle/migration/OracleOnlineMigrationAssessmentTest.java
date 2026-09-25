@@ -34,6 +34,9 @@ class OracleOnlineMigrationAssessmentTest {
 				&& "T\"ABLE".equals(f.object().table()) && "COL".equals(f.object().name())));
 		assertFalse(result.findings().stream().anyMatch(f -> f.object() != null && "OUTSIDE_SCOPE".equals(f.object().table())));
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-disabled")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("selected tables=1") && f.reason().contains("character columns=1")
+				&& f.reason().contains("scan candidates=1") && f.reason().contains("successful scans=0")));
 		assertFalse(executed.stream().anyMatch(sql -> sql.contains("MAX(")));
 	}
 
@@ -46,6 +49,9 @@ class OracleOnlineMigrationAssessmentTest {
 				.findFirst().orElseThrow();
 		assertTrue(finding.reason().contains("maximum converted bytes=31"));
 		assertTrue(finding.reason().contains("overflow rows=2"));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("scan candidates=1") && f.reason().contains("successful scans=1")
+				&& f.reason().contains("failed scans=0")));
 		assertTrue(executed.stream().anyMatch(sql -> sql.contains("\"APP\".\"T\"\"ABLE\"")
 				&& sql.contains("CONVERT(\"COL\", 'AL32UTF8', 'JA16SJIS')")));
 		assertFalse(result.toString().contains("actual-value"));
@@ -57,6 +63,8 @@ class OracleOnlineMigrationAssessmentTest {
 				Method.LOGICAL_MIGRATION, "AL32UTF8", true);
 		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.data-scan-failed")
 				&& f.reason().contains("17002")));
+		assertTrue(result.findings().stream().anyMatch(f -> f.ruleId().equals("oracle.charset.online-coverage")
+				&& f.reason().contains("successful scans=0") && f.reason().contains("failed scans=1")));
 		assertThrows(IllegalArgumentException.class, () -> provider.assess(connection("PostgreSQL", new ArrayList<>(), false),
 				List.of(schema()), "26ai", Method.LOGICAL_MIGRATION, "AL32UTF8", false));
 	}

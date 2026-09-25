@@ -3,8 +3,15 @@ package com.sqlapp.data.db.command.migration.assessment;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -112,5 +119,107 @@ class AssessMigrationCommandTest {
 		command.setScanCharacterData(true);
 		assertThrows(CommandException.class, command::run);
 		assertFalse(command.getOutputFile().exists());
+	}
+
+	@Test
+	void onlinePathMarksConnectionReadOnlyClosesItAndPreservesExistingReportOnFailure() throws Exception {
+		final var command = command();
+		command.setMigrationMethod(Method.LOGICAL_MIGRATION);
+		command.setTargetCharacterSet("AL32UTF8");
+		Files.writeString(command.getOutputFile().toPath(), "previous-report");
+		final boolean[] readOnly = { false };
+		final boolean[] closed = { false };
+		final DatabaseMetaData metadata = (DatabaseMetaData) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { DatabaseMetaData.class }, (proxy, method, args) -> switch (method.getName()) {
+				case "getDatabaseProductName" -> "PostgreSQL";
+				case "getDatabaseProductVersion" -> "test";
+				default -> defaultValue(method.getReturnType());
+				});
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> switch (method.getName()) {
+				case "getMetaData" -> metadata;
+				case "isReadOnly" -> readOnly[0];
+				case "setReadOnly" -> { readOnly[0] = (boolean) args[0]; yield null; }
+				case "close" -> { closed[0] = true; yield null; }
+				default -> defaultValue(method.getReturnType());
+				});
+		final DataSource dataSource = (DataSource) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { DataSource.class }, (proxy, method, args) ->
+						"getConnection".equals(method.getName()) ? connection : defaultValue(method.getReturnType()));
+		command.setDataSource(dataSource);
+		assertThrows(CommandException.class, command::run);
+		assertTrue(readOnly[0]);
+		assertTrue(closed[0]);
+		assertEquals("previous-report", Files.readString(command.getOutputFile().toPath()));
+		assertNull(command.getReport());
+	}
+
+	@Test
+	void onlinePathWritesDatabaseIdentityAndDatabaseEvidence() throws Exception {
+		final var command = command();
+		command.setMigrationMethod(Method.LOGICAL_MIGRATION);
+		command.setTargetCharacterSet("AL32UTF8");
+		final boolean[] readOnly = { false };
+		final boolean[] closed = { false };
+		final DatabaseMetaData metadata = (DatabaseMetaData) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { DatabaseMetaData.class }, (proxy, method, args) -> switch (method.getName()) {
+				case "getDatabaseProductName" -> "Oracle Database";
+				case "getDatabaseProductVersion" -> "10.2.0.5.0";
+				default -> defaultValue(method.getReturnType());
+				});
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> switch (method.getName()) {
+				case "getMetaData" -> metadata;
+				case "isReadOnly" -> readOnly[0];
+				case "setReadOnly" -> { readOnly[0] = (boolean) args[0]; yield null; }
+				case "prepareStatement" -> statement((String) args[0]);
+				case "close" -> { closed[0] = true; yield null; }
+				default -> defaultValue(method.getReturnType());
+				});
+		final DataSource dataSource = (DataSource) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { DataSource.class }, (proxy, method, args) ->
+						"getConnection".equals(method.getName()) ? connection : defaultValue(method.getReturnType()));
+		command.setDataSource(dataSource);
+		command.run();
+		assertTrue(readOnly[0]);
+		assertTrue(closed[0]);
+		assertEquals("Oracle Database", command.getReport().databaseProductName());
+		assertEquals("10.2.0.5.0", command.getReport().databaseProductVersion());
+		final String json = Files.readString(command.getOutputFile().toPath());
+		assertTrue(json.contains("oracle.charset.database-settings"));
+		assertTrue(json.contains("JA16SJIS"));
+		assertTrue(json.contains("Oracle Database"));
+	}
+
+	private PreparedStatement statement(final String sql) {
+		return (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { PreparedStatement.class }, (proxy, method, args) -> {
+					if (!"executeQuery".equals(method.getName())) return defaultValue(method.getReturnType());
+					if (sql.contains("nls_database_parameters")) {
+						return resultSet(new String[][] {
+							{ "NLS_CHARACTERSET", "JA16SJIS" },
+							{ "NLS_NCHAR_CHARACTERSET", "AL16UTF16" }
+						});
+					}
+					return resultSet(new String[0][]);
+				});
+	}
+
+	private ResultSet resultSet(final String[][] rows) {
+		final int[] index = { -1 };
+		return (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { ResultSet.class },
+				(proxy, method, args) -> switch (method.getName()) {
+				case "next" -> ++index[0] < rows.length;
+				case "getString" -> rows[index[0]][((Integer) args[0]) - 1];
+				default -> defaultValue(method.getReturnType());
+				});
+	}
+
+	private static Object defaultValue(final Class<?> type) {
+		if (!type.isPrimitive()) return null;
+		if (type == boolean.class) return false;
+		if (type == int.class) return 0;
+		if (type == long.class) return 0L;
+		return 0;
 	}
 }

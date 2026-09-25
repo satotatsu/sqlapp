@@ -132,9 +132,18 @@ tasks.named('assessMigration') {
 
 Online assessment reads `NLS_DATABASE_PARAMETERS` and `ALL_TAB_COLUMNS` for the
 owners present in the reviewed Schema XML. The report records database-derived
-evidence separately from Schema evidence. Credentials, connection strings, and
-row values are never written to the report. The connected JDBC product must be
-Oracle, and every Schema must have an owner name.
+evidence separately from Schema evidence, together with JDBC database product
+name and version. Credentials, connection strings, and row values are never
+written to the report. The connected JDBC product must be Oracle, and every
+Schema must have an owner name. Use a source account limited to the required
+`SELECT` privileges: JDBC read-only mode is a driver hint and is not a database
+authorization boundary.
+
+Each owner also receives an `oracle.charset.online-coverage` finding with the
+number of selected tables, character columns, scan candidates, successful
+scans, and failed scans. Use it to verify that the report covers the intended
+Schema XML scope; a successful command alone does not imply that every data
+column was scanned.
 
 `scanCharacterData` defaults to `false`. Set it to `true` only for an approved
 diagnostic window. It runs one aggregate full-table query for each BYTE-semantics
@@ -172,9 +181,8 @@ the destination limit. Index key lengths, byte-oriented SQL/PLSQL, client
 buffers, and invalid source bytes remain explicit validation items. No DDL or
 Schema data is transformed.
 
-Once authorized source access is available, these read-only queries identify
-the missing facts. The assessment does not execute them automatically.
-`:owner` is the exact Oracle schema name.
+When `dataSource` is configured, the assessment executes the following
+read-only metadata queries. `:owner` is the exact Oracle schema name.
 
 ```sql
 SELECT parameter, value
