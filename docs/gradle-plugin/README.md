@@ -53,6 +53,8 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Documentation | `generateHtmlDocs` | Generate HTML documentation and ER diagrams |
 | Migration | `migration` | Apply versioned database migrations |
 | Migration | `assessMigration` | Assess a Schema XML snapshot offline and write a migration preflight JSON report |
+| Migration | `assessDatabaseMigration` | [Assess a source file for an explicit target database/version](database-migration-assessment.md); initially Access to Oracle |
+| Migration | `assessAccessOracleMigration` | Compatibility alias with the Oracle target preset |
 | Migration | `migrationValidate` | Read-only validation of recorded up SQL checksums; missing checksums are unverified |
 | Migration | `migrationPlan` | Read-only plan of pending versioned SQL and known blockers |
 | Migration | `migrationInsert` | Insert migration history |

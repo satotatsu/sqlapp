@@ -41,8 +41,54 @@ import io.github.spannm.jackcess.query.Query;
 public final class MdbFileLoader {
 	/** Access index flag stored without converting it to a partial index. */
 	public static final String INDEX_IGNORE_NULLS = "IGNORE_NULLS";
+	/** Native type identity retained by the assessment snapshot. */
+	public static final String SOURCE_TYPE = "access.sourceType";
 
 	private MdbFileLoader() {
+	}
+
+	/** Metadata-only inventory. Linked databases are never opened. */
+	public static MdbAssessmentSnapshot loadForAssessment(final Path file) throws IOException {
+		final Schema schema = new Schema("").setProductName("Microsoft Access");
+		final List<String> links = new ArrayList<>();
+		final List<MdbAssessmentSnapshot.SavedQuery> queries = new ArrayList<>();
+		try (Database database = new DatabaseBuilder().withPath(file.toAbsolutePath().normalize())
+				.withReadOnly(true).open()) {
+			database.setLinkResolver((source, name) -> {
+				throw new IOException("Linked databases must not be opened during assessment");
+			});
+			for (final var metadata : database.newTableMetaDataIterable()) {
+				if (metadata.isSystem()) {
+					continue;
+				}
+				if (metadata.isLinked()) {
+					links.add(metadata.getName());
+				} else {
+					final var source = metadata.open(database);
+					final Table table = toTable(source);
+					for (final var column : source.getColumns()) {
+						table.getColumns().get(column.getName()).getSpecifics()
+							.put(SOURCE_TYPE, column.getType().name());
+					}
+					schema.getTables().add(table);
+				}
+			}
+			// getRelationships() may resolve linked tables. Do not follow those links.
+			if (links.isEmpty()) {
+				loadRelationships(database, schema);
+			}
+			queries.addAll(assessmentQueries(database.getQueries()));
+		}
+		return new MdbAssessmentSnapshot(schema, links, queries, links.isEmpty());
+	}
+
+	static List<MdbAssessmentSnapshot.SavedQuery> assessmentQueries(final Iterable<Query> source) {
+		final var queries = new ArrayList<MdbAssessmentSnapshot.SavedQuery>();
+		for (final Query query : source) {
+			queries.add(new MdbAssessmentSnapshot.SavedQuery(query.getName(), query.getType().name(),
+					query.isHidden(), !query.getParameters().isEmpty()));
+		}
+		return List.copyOf(queries);
 	}
 
 	public static Schema load(final Path file) throws IOException {

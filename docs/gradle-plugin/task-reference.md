@@ -15,6 +15,8 @@ task can issue DDL or DML and must be configured with the intended target.
 
 | Task name | Task class | Primary configuration | Result | Database effect |
 |---|---|---|---|---|
+| `assessDatabaseMigration` | `AssessDatabaseMigrationTask` | Required `inputFile`, `targetDatabase`, `targetVersion`, `outputFile`; `failOnBlockers` defaults to `true` | [Database migration assessment](database-migration-assessment.md): source inventory and target-specific findings as JSON; initially Access to Oracle 19c/21c/23ai/26ai | Offline; Access metadata only, no rows, linked sources or database connections |
+| `assessAccessOracleMigration` | `AssessAccessOracleMigrationTask` | Compatibility alias of `assessDatabaseMigration` with `targetDatabase=oracle` fixed; other properties unchanged | Same report and blocker policy as the generic task | Same read-only behavior |
 | `assessMigration` | `AssessMigrationTask` | Required `schemaFile`, `targetVersion`, `migrationMethod`, `outputFile`; optional `targetCharacterSet`, `dataSource`; `scanCharacterData` defaults to `false`; scan timeout defaults to 300 seconds; `failOnBlockers` defaults to `true` | [Oracle migration assessment](oracle-migration-assessment.md): inventory, database evidence and review actions as JSON; writes report before blocker failure | File-only when no DataSource; otherwise reads Oracle metadata and optionally character aggregates |
 | `countAllTables` | `CountAllTableTask` | `dataSource`, schema/table filters, `outputFormatType` | Row counts on console/output | Read-only |
 | `migration` | `MigrationTask` | Shared `migration` extension | Applies pending versioned SQL | Mutates target |

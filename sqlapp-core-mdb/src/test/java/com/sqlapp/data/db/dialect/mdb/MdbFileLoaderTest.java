@@ -250,6 +250,45 @@ class MdbFileLoaderTest {
 	}
 
 	@Test
+	void assessmentIncludesHiddenParameterizedAndActionQueriesWithoutSqlText() {
+		final var queries = MdbFileLoader.assessmentQueries(List.of(
+				query("hidden", Query.Type.SELECT, true, List.of(), "secret SQL"),
+				query("parameter", Query.Type.SELECT, false, List.of("p"), "secret SQL"),
+				query("action", Query.Type.UPDATE, false, List.of(), "secret SQL")));
+		assertEquals(3, queries.size());
+		assertTrue(queries.get(0).hidden());
+		assertTrue(queries.get(1).parameterized());
+		assertEquals("UPDATE", queries.get(2).type());
+		assertFalse(queries.toString().contains("secret SQL"));
+	}
+
+	@Test
+	void assessmentReadsMdbMetadataAndRelationshipsWithoutRows() throws Exception {
+		final Path file = tempDirectory.resolve("assessment.mdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2000, file.toFile())) {
+			final var parent = new TableBuilder("P")
+					.addColumn(new ColumnBuilder("ID", io.github.spannm.jackcess.DataType.LONG))
+					.addIndex(new IndexBuilder("PK_P").withColumns("ID").withPrimaryKey()).toTable(database);
+			final var child = new TableBuilder("C")
+					.addColumn(new ColumnBuilder("PID", io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new ColumnBuilder("Price", io.github.spannm.jackcess.DataType.MONEY)).toTable(database);
+			new RelationshipBuilder(parent, child).addColumns("ID", "PID").withReferentialIntegrity()
+					.withCascadeUpdates().withName("FK_C_P").toRelationship(database);
+			parent.addRow(1);
+			child.addRow(1, new BigDecimal("12.3400"));
+		}
+		final byte[] before = Files.readAllBytes(file);
+		final var snapshot = MdbFileLoader.loadForAssessment(file);
+		assertTrue(snapshot.relationshipsCollected());
+		assertEquals("Microsoft Access", snapshot.schema().getProductName());
+		final var child = snapshot.schema().getTables().get("C");
+		assertEquals("MONEY", child.getColumns().get("Price").getSpecifics().get(MdbFileLoader.SOURCE_TYPE, String.class));
+		assertEquals(CascadeRule.Cascade, ((ForeignKeyConstraint) child.getConstraints().get("FK_C_P")).getUpdateRule());
+		assertFalse(child.getRows().iterator().hasNext());
+		org.junit.jupiter.api.Assertions.assertArrayEquals(before, Files.readAllBytes(file));
+	}
+
+	@Test
 	void mapsCommonAccessTypesAndValues() throws Exception {
 		final Path file = tempDirectory.resolve("型対応.accdb");
 		final LocalDateTime timestamp = LocalDateTime.of(2026, 8, 25, 12,

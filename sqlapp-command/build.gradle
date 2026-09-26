@@ -10,6 +10,9 @@ dependencies {
 	api project(':sqlapp-core')
 	api project(':sqlapp-elk-svg')
 	testImplementation project(':sqlapp-core-test')
+	// Create local Access fixtures for offline assessment tests.
+	testRuntimeOnly project(':sqlapp-core-mdb')
+	testImplementation('io.github.spannm:ucanaccess:5.1.6')
 	//JDBC
 	api("com.zaxxer:HikariCP:7.0.2")
 	

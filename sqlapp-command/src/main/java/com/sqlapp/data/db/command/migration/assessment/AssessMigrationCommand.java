@@ -147,7 +147,7 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 		}
 	}
 
-	private static String fingerprint(final File file) throws Exception {
+	static String fingerprint(final File file) throws Exception {
 		final var digest = MessageDigest.getInstance("SHA-256");
 		try (final var stream = Files.newInputStream(file.toPath())) {
 			final byte[] buffer = new byte[8192];
