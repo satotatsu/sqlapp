@@ -37,6 +37,8 @@ dependencies {
 	testImplementation('org.hsqldb:hsqldb:2.7.3')
 	testImplementation project(':sqlapp-core-hsql')
 	testRuntimeOnly project(':sqlapp-core-oracle')
+	// Exercise SQL Server assessment discovery without adding a plugin runtime dependency.
+	testRuntimeOnly project(':sqlapp-core-sqlserver')
 	testImplementation('io.github.spannm:ucanaccess:5.1.6')
 	
 	//JUnit

@@ -42,5 +42,11 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		task.exec()
 		assertEquals('Oracle', task.internalCommand().report.targetProduct())
 		assertTrue(output.getText('UTF-8').contains('access.data-not-scanned'))
+		task.targetDatabase.set('sqlserver')
+		task.targetVersion.set('2022')
+		task.exec()
+		assertEquals('Microsoft SQL Server', task.internalCommand().report.targetProduct())
+		assertTrue(output.getText('UTF-8').contains('access.sqlserver.type'))
+		assertFalse(output.getText('UTF-8').contains('access.oracle.'))
 	}
 }
