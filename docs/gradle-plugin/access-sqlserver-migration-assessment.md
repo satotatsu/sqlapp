@@ -21,6 +21,7 @@ tasks.named('assessDatabaseMigration') {
     htmlOutputFile = layout.buildDirectory.file('reports/access-sqlserver.html')
     mappingFile = layout.projectDirectory.file('migration/access-sqlserver.yaml')
     mappingTemplateFile = layout.buildDirectory.file('reports/access-sqlserver-template.yaml')
+    // Set ddlOutputFile after supplying a reviewed mappingFile.
 }
 ```
 

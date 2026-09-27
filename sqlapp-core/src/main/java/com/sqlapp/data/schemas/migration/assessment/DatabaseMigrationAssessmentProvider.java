@@ -22,6 +22,11 @@ public interface DatabaseMigrationAssessmentProvider {
 	 * explicit extraction/conversion decision is required. */
 	default String suggestTargetType(final Column sourceColumn, final String targetVersion) { return null; }
 
+	/** Generates review-only target DDL after the mapping has been validated. */
+	default String generateTargetDdl(final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
+		throw new UnsupportedOperationException("Target DDL preview is not supported by this provider");
+	}
+
 	static DatabaseMigrationAssessmentProvider resolve(final String sourceProduct, final String targetDatabase,
 			final String targetVersion) {
 		return resolve(sourceProduct, targetDatabase, targetVersion,

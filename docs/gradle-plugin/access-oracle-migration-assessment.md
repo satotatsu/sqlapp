@@ -36,6 +36,7 @@ Oracle JDBC driver. Existing `assessMigration` Oracle-to-Oracle behavior is unch
 | `htmlOutputFile` | `RegularFileProperty` | Optional standalone HTML review report, distinct from input and JSON output |
 | `mappingFile` | `RegularFileProperty` | Optional fingerprint-bound target table/column/type mapping YAML |
 | `mappingTemplateFile` | `RegularFileProperty` | Optional complete editable mapping skeleton with Oracle type suggestions |
+| `ddlOutputFile` | `RegularFileProperty` | Optional review-only Oracle `CREATE TABLE` preview; requires `mappingFile` |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; report is written before failing on blockers |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; scans local scalar values when enabled |
 

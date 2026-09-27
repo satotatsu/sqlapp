@@ -15,6 +15,27 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
 
 /** Oracle logical migration diagnosis. Only Access sources are currently supported. */
 public final class OracleDatabaseMigrationAssessmentProvider implements DatabaseMigrationAssessmentProvider {
+	@Override
+	public String generateTargetDdl(final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
+		final var sql = new StringBuilder("-- Review-only table/column DDL; keys, indexes, defaults and conversions are not included.\n");
+		for (final var table : mapping.tables()) {
+			sql.append("CREATE TABLE ");
+			if (table.targetSchema() != null && !table.targetSchema().isBlank()) { sql.append(oracleName(table.targetSchema())).append('.'); }
+			sql.append(oracleName(table.targetTable())).append(" (\n");
+			for (int i = 0; i < table.columns().size(); i++) {
+				final var column = table.columns().get(i);
+				sql.append("  ").append(oracleName(column.targetColumn())).append(' ').append(column.targetType());
+				if (Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
+				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
+				if (i + 1 < table.columns().size()) { sql.append(','); }
+				sql.append('\n');
+			}
+			sql.append(");\n\n");
+		}
+		return sql.toString();
+	}
+
+	private static String oracleName(final String value) { return "\"" + value.replace("\"", "\"\"") + "\""; }
 	private static final Pattern NUMBER = Pattern.compile("NUMBER(?:\\((\\d+)(?:,(\\d+))?\\))?", Pattern.CASE_INSENSITIVE);
 	private static final Pattern TEXT = Pattern.compile("(VARCHAR2|NVARCHAR2|CHAR|NCHAR)\\((\\d+)(?:\\s+(CHAR|BYTE))?\\)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern TIMESTAMP = Pattern.compile("TIMESTAMP(?:\\((\\d)\\))?", Pattern.CASE_INSENSITIVE);

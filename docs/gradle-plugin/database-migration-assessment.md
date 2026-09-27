@@ -72,6 +72,7 @@ accepted by this provider. See [SQL Server diagnostic coverage](access-sqlserver
 | `htmlOutputFile` | `RegularFileProperty` | Optional standalone HTML review report, distinct from the input and JSON output |
 | `mappingFile` | `RegularFileProperty` | Optional version 1 target mapping YAML, bound to the source fingerprint and requested target |
 | `mappingTemplateFile` | `RegularFileProperty` | Optional generated YAML skeleton containing every local table/column and target-specific suggested types |
+| `ddlOutputFile` | `RegularFileProperty` | Optional review-only target `CREATE TABLE` SQL; requires `mappingFile` |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; blockers fail the task after publishing the report |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; opt in to local Access scalar data profiling |
 
@@ -157,9 +158,19 @@ tables:
 ```groovy
 tasks.named('assessDatabaseMigration') {
     mappingFile = layout.projectDirectory.file('migration/access-target.yaml')
+    ddlOutputFile = layout.buildDirectory.file('reports/access-target.sql')
     scanData = true
 }
 ```
+
+`ddlOutputFile` optionally writes an atomic, review-only `CREATE TABLE` preview
+from a valid `mappingFile`. Oracle identifiers are double-quoted and SQL Server
+identifiers are bracket-quoted. The preview contains mapped tables, columns,
+target types and explicit nullability. It deliberately excludes keys, indexes,
+defaults and conversion expressions and starts with a comment stating that
+scope. The command never executes this SQL. If mapping validation finds an
+invalid target type or another mapping blocker, the JSON/HTML evidence is
+published but an existing DDL preview is left unchanged.
 
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to

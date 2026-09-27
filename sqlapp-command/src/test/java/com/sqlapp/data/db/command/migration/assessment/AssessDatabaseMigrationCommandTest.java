@@ -42,8 +42,16 @@ class AssessDatabaseMigrationCommandTest {
 		command.run();
 		assertEquals(3, command.getReport().formatVersion());
 		assertEquals(3, command.getReport().targetMapping().tables().getFirst().columns().size());
+		final Path ddl = directory.resolve("target.sql");
+		command.setDdlOutputFile(ddl.toFile());
+		command.run();
+		String sql = Files.readString(ddl);
+		assertTrue(sql.contains("CREATE TABLE \"Orders\""));
+		assertTrue(sql.contains("\"Enabled\" NUMBER(1,0) NULL"));
+		assertTrue(sql.contains("keys, indexes, defaults and conversions are not included"));
 
 		command.setMappingFile(null);
+		command.setDdlOutputFile(null);
 		command.setTargetDatabase("sqlserver");
 		command.setTargetVersion("2022");
 		command.setMappingTemplateFile(template.toFile());
@@ -53,6 +61,23 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(yaml.contains("targetType: \"bit\""));
 		assertTrue(yaml.contains("targetType: \"nvarchar(80)\""));
 		assertTrue(yaml.contains("targetType: \"decimal(12,2)\""));
+		command.setMappingTemplateFile(null);
+		command.setMappingFile(template.toFile());
+		command.setDdlOutputFile(ddl.toFile());
+		command.run();
+		sql = Files.readString(ddl);
+		assertTrue(sql.contains("CREATE TABLE [Orders]"));
+		assertTrue(sql.contains("[Enabled] bit NULL"));
+		assertTrue(sql.contains("\nGO\n"));
+		command.setDdlOutputFile(template.toFile());
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("ddlOutputFile"));
+	}
+
+	@Test
+	void targetDdlRequiresAMapping() throws Exception {
+		final var command = command("ddl.accdb", "oracle", "19c");
+		command.setDdlOutputFile(directory.resolve("target.sql").toFile());
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("requires mappingFile"));
 	}
 
 	@Test
