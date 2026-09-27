@@ -20,6 +20,8 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		assertFalse(task.scanData.get())
 		assertFalse(task.targetVersion.isPresent())
 		assertFalse(task.targetDatabase.isPresent())
+		assertFalse(task.htmlOutputFile.isPresent())
+		assertFalse(task.mappingFile.isPresent())
 		def input = new File(testProjectDir, 'source.accdb')
 		def database = DatabaseBuilder.create(Database.FileFormat.V2010, input)
 		try {
@@ -28,8 +30,10 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 			database.close()
 		}
 		def output = new File(testProjectDir, 'assessment.json')
+		def htmlOutput = new File(testProjectDir, 'assessment.html')
 		task.inputFile.set(input)
 		task.outputFile.set(output)
+		task.htmlOutputFile.set(htmlOutput)
 		task.targetVersion.set('19c')
 		task.targetDatabase.set('oracle')
 		task.failOnBlockers.set(false)
@@ -37,12 +41,14 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		task.beforeRun(command)
 		assertEquals(input, command.inputFile)
 		assertEquals(output, command.outputFile)
+		assertEquals(htmlOutput, command.htmlOutputFile)
 		assertEquals('19c', command.targetVersion)
 		assertEquals('oracle', command.targetDatabase)
 		assertFalse(command.failOnBlockers)
 		task.exec()
 		assertEquals('Oracle', task.internalCommand().report.targetProduct())
 		assertTrue(output.getText('UTF-8').contains('access.data-not-scanned'))
+		assertTrue(htmlOutput.getText('UTF-8').contains('Database migration assessment'))
 		task.targetDatabase.set('sqlserver')
 		task.targetVersion.set('2022')
 		task.exec()
@@ -56,5 +62,24 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		assertEquals(2, task.internalCommand().report.formatVersion())
 		assertEquals(0, task.internalCommand().report.dataProfile().tables().get(0).rowCount())
 		assertFalse(output.getText('UTF-8').contains('access.data-not-scanned'))
+		def mapping = new File(testProjectDir, 'mapping.yaml')
+		mapping.setText("""format: sqlapp-database-migration-mapping
+version: 1
+sourceFingerprint: ${task.internalCommand().report.sourceFingerprint()}
+targetDatabase: sqlserver
+targetVersion: '2022'
+tables:
+  - sourceTable: T
+    targetTable: TARGET_T
+    columns:
+      - sourceColumn: C
+        targetColumn: TARGET_C
+        targetType: nvarchar(20)
+""", 'UTF-8')
+		task.mappingFile.set(mapping)
+		task.exec()
+		assertEquals(mapping, task.internalCommand().mappingFile)
+		assertEquals(3, task.internalCommand().report.formatVersion())
+		assertEquals('TARGET_T', task.internalCommand().report.targetMapping().tables().get(0).targetTable())
 	}
 }

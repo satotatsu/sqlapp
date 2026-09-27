@@ -16,6 +16,21 @@ import java.util.List;
 
 class AccessOracleMigrationAssessmentTest {
 	@Test
+	void mappedBooleanAndTypeBoundariesRespectOracleVersion() {
+		final var schema = schema("BOOLEAN");
+		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), false, true);
+		final var id = new MigrationAssessment.ObjectId(null, "source", "column", "値", "顧客");
+		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "顧客");
+		final var provider = new OracleDatabaseMigrationAssessmentProvider();
+		for (final var entry : java.util.Map.of("19c", "BOOLEAN", "23ai", "BOOLEAN", "26ai", "RAW(2001)").entrySet()) {
+			final var mapping = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping("fp", "oracle", entry.getKey(), List.of(
+					new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "T", List.of(
+							new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.ColumnMapping(id, "C", entry.getValue(), true, null)))));
+			final var result = provider.assessMapping(source, entry.getKey(), mapping);
+			assertEquals(!entry.getKey().equals("23ai"), result.hasBlockers(), entry.toString());
+		}
+	}
+	@Test
 	void observedEmptyStringsRespectRequiredColumnsAndQualifiedIdentity() {
 		final var schema = schema("TEXT");
 		final var id = new MigrationAssessment.ObjectId(null, "source", "column", "値", "顧客");

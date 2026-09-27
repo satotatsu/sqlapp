@@ -14,6 +14,7 @@ tasks.named('assessDatabaseMigration') {
     targetDatabase = 'oracle'
     targetVersion = '19c'
     outputFile = layout.buildDirectory.file('reports/access-oracle.json')
+    htmlOutputFile = layout.buildDirectory.file('reports/access-oracle.html')
 }
 ```
 
@@ -32,6 +33,8 @@ Oracle JDBC driver. Existing `assessMigration` Oracle-to-Oracle behavior is unch
 | `targetDatabase` | `Property<String>` | Required: `oracle` |
 | `targetVersion` | `Property<String>` | Required: `19c`, `21c`, `23ai` or `26ai` (case-insensitive); no guessed default |
 | `outputFile` | `RegularFileProperty` | Required JSON destination, distinct from the input |
+| `htmlOutputFile` | `RegularFileProperty` | Optional standalone HTML review report, distinct from input and JSON output |
+| `mappingFile` | `RegularFileProperty` | Optional fingerprint-bound target table/column/type mapping YAML |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; report is written before failing on blockers |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; scans local scalar values when enabled |
 
@@ -78,6 +81,10 @@ identities. It reports `BLOCKED` for complex or unknown native types and
   Long-text/LOB handling still needs a mapping decision. See
   [data preflight coverage](database-migration-assessment.md#optional-data-preflight),
   including excluded types and numeric/date extrema retained in the report.
+- The same scan checks supported declared keys and local relationships. Source
+  duplicate-key, orphan-row and primary-key-NULL blockers apply to Oracle too.
+  Text keys and checks exceeding the bounded key budget require separate review;
+  see [integrity coverage](database-migration-assessment.md#duplicate-keys-and-orphan-rows).
 - Forms, reports, VBA and macros are not inventoried. A permanent coverage
   finding calls for application inventory and frontend/cutover testing.
 
@@ -93,6 +100,8 @@ command.setInputFile(new File("input/customer.accdb"));
 command.setTargetDatabase("oracle");
 command.setTargetVersion("19c");
 command.setOutputFile(new File("reports/access-oracle.json"));
+command.setHtmlOutputFile(new File("reports/access-oracle.html")); // optional
+command.setMappingFile(new File("migration/access-oracle.yaml")); // optional
 command.run();
 var report = command.getReport();
 ```

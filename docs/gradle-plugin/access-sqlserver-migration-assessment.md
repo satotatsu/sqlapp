@@ -18,6 +18,8 @@ tasks.named('assessDatabaseMigration') {
     targetDatabase = 'sqlserver'
     targetVersion = '2022'
     outputFile = layout.buildDirectory.file('reports/access-sqlserver.json')
+    htmlOutputFile = layout.buildDirectory.file('reports/access-sqlserver.html')
+    mappingFile = layout.projectDirectory.file('migration/access-sqlserver.yaml')
 }
 ```
 
@@ -85,6 +87,10 @@ including numeric/date extrema, and required-NULL blockers. The additional
 dates before 1753; check `datetime2` instead of assuming legacy `datetime` fits.
 See [data preflight coverage](database-migration-assessment.md#optional-data-preflight)
 for supported fields, excluded types and checks still requiring manual review.
+The scan also adds source duplicate-key, orphan-row and primary-key-NULL
+blockers for supported declared keys and relationships. See
+[integrity coverage](database-migration-assessment.md#duplicate-keys-and-orphan-rows)
+for NULL handling, text-key exclusions and bounded-memory limits.
 
 The supported target versions describe diagnostic coverage, not Microsoft
 support lifecycle or an upgrade recommendation. The existing DialectResolver,

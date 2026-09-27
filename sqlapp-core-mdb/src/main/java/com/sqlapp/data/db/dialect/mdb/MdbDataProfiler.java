@@ -20,7 +20,8 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.*;
 import io.github.spannm.jackcess.DatabaseBuilder;
 import io.github.spannm.jackcess.DateTimeType;
 
-/** One-pass local scalar profiling. Only explicitly selected columns are decoded. */
+/** One-pass local scalar profiling followed by bounded key checks.
+ * Only explicitly selected columns are decoded. */
 final class MdbDataProfiler {
 	private static final Set<String> TEXT = Set.of("TEXT", "MEMO", "GUID");
 	private static final Set<String> NUMBER = Set.of("BYTE", "INT", "LONG", "BIG_INT", "MONEY", "NUMERIC", "FLOAT", "DOUBLE");
@@ -32,6 +33,7 @@ final class MdbDataProfiler {
 	static Result scan(final Path file, final Schema schema) throws IOException {
 		final var tables = new ArrayList<TableProfile>();
 		final var findings = new ArrayList<Finding>();
+		final var integrityChecks = new ArrayList<IntegrityCheck>();
 		try (final var database = new DatabaseBuilder().withPath(file).withReadOnly(true).open()) {
 			database.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
 			database.setEvaluateExpressions(false);
@@ -76,8 +78,11 @@ final class MdbDataProfiler {
 				}
 				tables.add(new TableProfile(new ObjectId(schema.getCatalogName(), schema.getName(), "table", table.getName()), rows, columns));
 			}
+			final var integrity = MdbIntegrityProfiler.scan(database, schema, MdbIntegrityProfiler.MAX_DISTINCT_KEYS);
+			integrityChecks.addAll(integrity.checks());
+			findings.addAll(integrity.findings());
 		}
-		return new Result(new MigrationDataProfile(tables), List.copyOf(findings));
+		return new Result(new MigrationDataProfile(tables, integrityChecks), List.copyOf(findings));
 	}
 
 	private static final class ColumnState {

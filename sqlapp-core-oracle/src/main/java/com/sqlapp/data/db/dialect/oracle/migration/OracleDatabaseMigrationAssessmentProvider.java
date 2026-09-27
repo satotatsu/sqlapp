@@ -3,7 +3,10 @@ package com.sqlapp.data.db.dialect.oracle.migration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile;
+import com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping;
 
 import com.sqlapp.data.schemas.migration.assessment.DatabaseMigrationAssessmentProvider;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
@@ -12,6 +15,10 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
 
 /** Oracle logical migration diagnosis. Only Access sources are currently supported. */
 public final class OracleDatabaseMigrationAssessmentProvider implements DatabaseMigrationAssessmentProvider {
+	private static final Pattern NUMBER = Pattern.compile("NUMBER(?:\\((\\d+)(?:,(\\d+))?\\))?", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TEXT = Pattern.compile("(VARCHAR2|NVARCHAR2|CHAR|NCHAR)\\((\\d+)(?:\\s+(CHAR|BYTE))?\\)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TIMESTAMP = Pattern.compile("TIMESTAMP(?:\\((\\d)\\))?", Pattern.CASE_INSENSITIVE);
+	private static final Pattern RAW = Pattern.compile("RAW\\((\\d+)\\)", Pattern.CASE_INSENSITIVE);
 	@Override
 	public boolean supports(final String sourceProduct, final String targetDatabase, final String targetVersion) {
 		return "Microsoft Access".equals(sourceProduct) && "oracle".equalsIgnoreCase(targetDatabase)
@@ -61,5 +68,119 @@ public final class OracleDatabaseMigrationAssessmentProvider implements Database
 				"The Oracle environment and client compatibility were not checked.",
 				"Verify exact Oracle release, COMPATIBLE, character sets, identifier lengths/reserved words, collation, privileges and ODBC/JDBC support; rehearse cutover and recovery.", null));
 		return new MigrationAssessment(findings, inventory);
+	}
+
+	@Override
+	public MigrationAssessment assessMapping(final MigrationAssessmentSource source, final String targetVersion,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var findings = new ArrayList<Finding>();
+		final var profiles = profiles(source);
+		int columns = 0;
+		for (final var table : mapping.tables()) {
+			targetIdentifier(findings, table.sourceTable(), "schema", table.targetSchema());
+			targetIdentifier(findings, table.sourceTable(), "table", table.targetTable());
+			for (final var column : table.columns()) {
+				columns++;
+				targetIdentifier(findings, column.sourceColumn(), "column", column.targetColumn());
+				final String type = column.targetType().trim().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
+				final var profile = profiles.get(column.sourceColumn());
+				if (!supported(type, targetVersion)) {
+					findings.add(mappingFinding("type", Severity.BLOCKER, column.sourceColumn(), "Unsupported or invalid Oracle target type: " + column.targetType(),
+							"Use an Oracle type supported by this assessment and specify length/precision explicitly."));
+					continue;
+				}
+				nullability(findings, column, profile);
+				capacity(findings, column, profile, type);
+			}
+		}
+		findings.add(mappingFinding("coverage", Severity.REVIEW, null,
+				"The mapping resolves " + mapping.tables().size() + " tables and " + columns + " columns; conversion expressions were recorded but not executed.",
+				"Review unmapped objects, generate and inspect DDL/load transformations, then validate converted values and constraints on Oracle."));
+		return new MigrationAssessment(findings, java.util.List.of(new Inventory(null, "", "mappedTables", mapping.tables().size()),
+				new Inventory(null, "", "mappedColumns", columns)));
+	}
+
+	private static HashMap<ObjectId, ColumnProfile> profiles(final MigrationAssessmentSource source) {
+		final var result = new HashMap<ObjectId, ColumnProfile>();
+		if (source.dataProfile() != null) { source.dataProfile().tables().forEach(t -> t.columns().forEach(c -> result.put(c.column(), c))); }
+		return result;
+	}
+	private static boolean supported(final String type, final String version) {
+		final var number = NUMBER.matcher(type);
+		if (number.matches()) {
+			if (number.group(1) == null) { return true; }
+			final int precision = Integer.parseInt(number.group(1));
+			final int scale = number.group(2) == null ? 0 : Integer.parseInt(number.group(2));
+			return precision >= 1 && precision <= 38 && scale <= precision;
+		}
+		final var text = TEXT.matcher(type);
+		if (text.matches() && Integer.parseInt(text.group(2)) > 0) { return true; }
+		final var timestamp = TIMESTAMP.matcher(type);
+		if (timestamp.matches()) { return timestamp.group(1) == null || Integer.parseInt(timestamp.group(1)) <= 9; }
+		final var raw = RAW.matcher(type);
+		if (raw.matches()) { return Integer.parseInt(raw.group(1)) >= 1 && Integer.parseInt(raw.group(1)) <= 2000; }
+		if (java.util.Set.of("CLOB", "NCLOB", "DATE", "BLOB", "BINARY_FLOAT", "BINARY_DOUBLE").contains(type)) { return true; }
+		return "BOOLEAN".equals(type) && ("23ai".equals(version) || "26ai".equals(version));
+	}
+	private static void nullability(final java.util.List<Finding> findings,
+			final ResolvedMigrationTargetMapping.ColumnMapping column, final ColumnProfile profile) {
+		if (!Boolean.FALSE.equals(column.nullable())) { return; }
+		if (profile == null || profile.nullCount() == null) {
+			findings.add(mappingFinding("nullability-unverified", Severity.REVIEW, column.sourceColumn(),
+					"The target is NOT NULL but source NULL values were not completely scanned.", "Run with scanData=true and resolve excluded column coverage before creating the constraint."));
+		} else if (profile.nullCount() > 0) {
+			findings.add(mappingFinding("observed-null", Severity.BLOCKER, column.sourceColumn(), profile.nullCount()
+					+ " source NULL values do not fit the mapped NOT NULL target.", "Clean or convert these values before loading and creating the constraint."));
+		}
+	}
+	private static void capacity(final java.util.List<Finding> findings,
+			final ResolvedMigrationTargetMapping.ColumnMapping column, final ColumnProfile profile, final String type) {
+		if (profile == null) { return; }
+		final var number = NUMBER.matcher(type);
+		if (number.matches() && number.group(1) != null && profile.numeric() != null && profile.numeric().maximumIntegerDigits() != null) {
+			final int precision = Integer.parseInt(number.group(1));
+			final int scale = number.group(2) == null ? 0 : Integer.parseInt(number.group(2));
+			if (profile.numeric().maximumIntegerDigits() > precision - scale || profile.numeric().maximumScale() > scale) {
+				findings.add(mappingFinding("observed-number-overflow", Severity.BLOCKER, column.sourceColumn(),
+						"Observed numeric digits do not fit " + type + ".", "Increase precision/scale or define and test an explicit rounding/conversion rule."));
+			}
+		}
+		final var text = TEXT.matcher(type);
+		if (text.matches() && profile.text() != null) {
+			final long limit = Long.parseLong(text.group(2));
+			final boolean bytes = "BYTE".equals(text.group(3));
+			final Long observed = bytes ? profile.text().maximumUtf8Bytes() : profile.text().maximumCodePoints();
+			if (observed != null && observed > limit) {
+				findings.add(mappingFinding("observed-text-overflow", Severity.BLOCKER, column.sourceColumn(),
+						"Observed text length " + observed + " exceeds mapped " + type + " limit " + limit + ".",
+						bytes ? "Choose a larger type and validate against the actual Oracle database character set; UTF-8 is only the reference measurement."
+								: "Choose a larger character length or LOB mapping and test client behavior."));
+			}
+		}
+		final var timestamp = TIMESTAMP.matcher(type);
+		if (timestamp.matches() && profile.dateTime() != null && profile.dateTime().maximumFractionalDigits() != null) {
+			final int precision = timestamp.group(1) == null ? 6 : Integer.parseInt(timestamp.group(1));
+			if (profile.dateTime().maximumFractionalDigits() > precision) {
+				findings.add(mappingFinding("observed-time-precision", Severity.WARNING, column.sourceColumn(),
+						"Observed fractional precision exceeds " + type + ".", "Choose sufficient precision or test and approve rounding."));
+			}
+		}
+	}
+	private static Finding mappingFinding(final String rule, final Severity severity, final ObjectId id,
+			final String reason, final String action) {
+		return new Finding("access.oracle.mapping." + rule, severity, Evidence.DOCUMENTED_RULE, id, reason, action, null);
+	}
+	private static void targetIdentifier(final java.util.List<Finding> findings, final ObjectId source,
+			final String kind, final String name) {
+		if (name == null || name.isBlank()) { return; }
+		if (name.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 128) {
+			findings.add(mappingFinding("identifier-length", Severity.BLOCKER, source,
+					"Mapped target " + kind + " name exceeds 128 UTF-8 bytes: " + name,
+					"Choose a shorter name and validate its encoded byte length in the actual Oracle database character set."));
+		} else if (!name.matches("[A-Za-z][A-Za-z0-9_$#]*")) {
+			findings.add(mappingFinding("identifier", Severity.REVIEW, source,
+					"Mapped target " + kind + " name requires quoted-identifier review: " + name,
+					"Confirm casing, escaping, reserved words and every application reference."));
+		}
 	}
 }

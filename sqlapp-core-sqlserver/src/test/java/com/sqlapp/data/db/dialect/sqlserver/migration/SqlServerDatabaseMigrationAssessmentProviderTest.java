@@ -12,6 +12,34 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.*;
 
 class SqlServerDatabaseMigrationAssessmentProviderTest {
 	@Test
+	void mappedTypesAreValidatedAgainstObservedValuesAndSqlServerLimits() {
+		final var schema = schema("TEXT", "NUMERIC", "SHORT_DATE_TIME", "TEXT");
+		final var ids = java.util.stream.IntStream.range(0, 4)
+				.mapToObj(i -> new ObjectId(null, "source", "column", "C" + i, "顧客")).toList();
+		final var profile = new MigrationDataProfile(List.of(new TableProfile(new ObjectId(null, "source", "table", "顧客"), 1, List.of(
+				new ColumnProfile(ids.get(0), "TEXT", Coverage.SCANNED, 1L, new TextStatistics(0, 2L, 3L, 7L), null, null),
+				new ColumnProfile(ids.get(1), "NUMERIC", Coverage.SCANNED, 0L, null, new NumericStatistics(new java.math.BigDecimal("123.45"), new java.math.BigDecimal("123.45"), 3, 2, 0), null),
+				new ColumnProfile(ids.get(2), "SHORT_DATE_TIME", Coverage.SCANNED, 0L, null, null, new DateTimeStatistics("1600-01-01T00:00", "1600-01-01T00:00", 0)),
+				new ColumnProfile(ids.get(3), "TEXT", Coverage.SCANNED, 0L, new TextStatistics(0, 1L, 1L, 1L), null, null)))));
+		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true, profile);
+		final var columns = List.of(
+				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(0), "C0", "nvarchar(2)", false, null),
+				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(1), "C1", "decimal(4,2)", true, null),
+				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(2), "C2", "datetime", true, null),
+				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(3), "C3", "nvarchar(5000)", true, null),
+				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(3), "F", "float(53)", true, null));
+		final var mapping = new ResolvedMigrationTargetMapping("fp", "sqlserver", "2022", List.of(
+				new ResolvedMigrationTargetMapping.TableMapping(new ObjectId(null, "source", "table", "顧客"), "dbo", "A".repeat(129), columns)));
+		final var result = provider.assessMapping(source, "2022", mapping);
+		assertTrue(result.hasBlockers());
+		final var rules = result.findings().stream().map(Finding::ruleId).toList();
+		assertTrue(rules.containsAll(List.of("access.sqlserver.mapping.observed-null", "access.sqlserver.mapping.observed-text-overflow",
+				"access.sqlserver.mapping.observed-number-overflow", "access.sqlserver.mapping.observed-datetime-range",
+				"access.sqlserver.mapping.type", "access.sqlserver.mapping.identifier-length")));
+		assertEquals(1, result.findings().stream().filter(f -> f.ruleId().equals("access.sqlserver.mapping.type")).count());
+		assertEquals(5, result.inventory().stream().filter(i -> i.type().equals("mappedColumns")).findFirst().orElseThrow().count());
+	}
+	@Test
 	void observedDatesWarnAboutLegacyDatetimeOnlyBelowItsBoundary() {
 		for (final String date : List.of("1752-12-31T23:59:59", "1753-01-01T00:00:00")) {
 			final var column = new ColumnProfile(new ObjectId(null, "source", "column", "C0", "顧客"),

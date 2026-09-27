@@ -9,9 +9,40 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.ObjectId
 
 /** Aggregate evidence for local tables only. No row samples or text values are retained.
  * Numeric and date extrema are aggregate values and may still be sensitive.
- * A scan does not verify keys, relationships or a resolved target mapping. */
-public record MigrationDataProfile(List<TableProfile> tables) {
-	public MigrationDataProfile { tables = List.copyOf(tables); }
+ * Integrity coverage is explicit; a scan does not certify a resolved target mapping. */
+public record MigrationDataProfile(List<TableProfile> tables, List<IntegrityCheck> integrityChecks) {
+	public MigrationDataProfile {
+		tables = List.copyOf(tables);
+		// Older version 2 reports have no integrityChecks property.
+		integrityChecks = integrityChecks == null ? List.of() : List.copyOf(integrityChecks);
+	}
+	public MigrationDataProfile(final List<TableProfile> tables) { this(tables, List.of()); }
+
+	public enum IntegrityKind { PRIMARY_KEY, UNIQUE_KEY, FOREIGN_KEY }
+	public enum IntegrityCoverage { CHECKED, UNSUPPORTED, LIMIT_EXCEEDED }
+	/** Counts apply only to completed checks. checkedRows excludes rows with any NULL
+	 * key component; violationRows counts duplicate rows beyond the first or orphan rows.
+	 * NULL semantics and comparison rules are explained by the provider in reason. */
+	public record IntegrityCheck(ObjectId object, IntegrityKind kind, IntegrityCoverage coverage,
+			List<String> columns, ObjectId relatedTable, List<String> relatedColumns,
+			Long checkedRows, Long nullRows, Long violationRows, String reason) {
+		public IntegrityCheck {
+			Objects.requireNonNull(object, "object");
+			Objects.requireNonNull(kind, "kind");
+			Objects.requireNonNull(coverage, "coverage");
+			Objects.requireNonNull(reason, "reason");
+			columns = List.copyOf(columns);
+			relatedColumns = List.copyOf(relatedColumns);
+			if (coverage == IntegrityCoverage.CHECKED) {
+				if (checkedRows == null || nullRows == null || violationRows == null
+						|| checkedRows < 0 || nullRows < 0 || violationRows < 0 || violationRows > checkedRows) {
+					throw new IllegalArgumentException("Completed integrity checks require valid nonnegative counts");
+				}
+			} else if (checkedRows != null || nullRows != null || violationRows != null) {
+				throw new IllegalArgumentException("Incomplete integrity checks must not claim complete counts");
+			}
+		}
+	}
 
 	public enum Coverage { SCANNED, UNSUPPORTED }
 

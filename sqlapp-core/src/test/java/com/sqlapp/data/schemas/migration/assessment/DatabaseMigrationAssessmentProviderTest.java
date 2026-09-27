@@ -11,6 +11,26 @@ import com.sqlapp.data.schemas.Schema;
 
 class DatabaseMigrationAssessmentProviderTest {
 	@Test
+	void existingTargetProvidersRemainCompatibleWithResolvedMappings() throws Exception {
+		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", null);
+		assertTrue(mapping.tables().isEmpty());
+		assertTrue(TARGET.assessMapping(SOURCE.load(Path.of("input.fixture")), "1", mapping).findings().isEmpty());
+		final var configured = new MigrationTargetMapping(MigrationTargetMapping.FORMAT, 1, "source", "target", "1", null);
+		assertTrue(configured.tables().isEmpty());
+	}
+	@Test
+	void integrityResultsDistinguishUnperformedChecksFromZeroViolations() {
+		final var id = new MigrationAssessment.ObjectId(null, "s", "key", "pk", "t");
+		assertTrue(new MigrationDataProfile(List.of()).integrityChecks().isEmpty());
+		assertTrue(new com.sqlapp.util.JsonConverter().fromJsonString("{\"tables\":[]}", MigrationDataProfile.class).integrityChecks().isEmpty());
+		assertThrows(IllegalArgumentException.class, () -> new MigrationDataProfile.IntegrityCheck(id,
+				MigrationDataProfile.IntegrityKind.PRIMARY_KEY, MigrationDataProfile.IntegrityCoverage.UNSUPPORTED,
+				List.of("id"), null, List.of(), 0L, 0L, 0L, "unsupported"));
+		assertThrows(IllegalArgumentException.class, () -> new MigrationDataProfile.IntegrityCheck(id,
+				MigrationDataProfile.IntegrityKind.PRIMARY_KEY, MigrationDataProfile.IntegrityCoverage.CHECKED,
+				List.of("id"), null, List.of(), 1L, 0L, 2L, "invalid"));
+	}
+	@Test
 	void existingProvidersRejectScansInsteadOfIgnoringTheOption() throws Exception {
 		assertFalse(SOURCE.load(Path.of("input.fixture"), false).dataScanned());
 		assertThrows(IllegalArgumentException.class, () -> SOURCE.load(Path.of("input.fixture"), true));

@@ -60,7 +60,7 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 		} else {
 			findings.addAll(scan.findings());
 			manual(findings, "access.data-scan-coverage", "Local scalar values were profiled; this is not a full integrity or migration verification.",
-					"Check duplicate keys, orphans, excluded columns and linked sources separately. Validate target encoding, precision, collation and post-load reconciliation.");
+					"Review integrityChecks for completed and omitted key checks. Inspect nullable uniqueness, excluded columns and linked sources separately. Validate target encoding, precision, collation and post-load reconciliation.");
 		}
 		return new MigrationAssessmentSource(List.of(snapshot.schema()), new MigrationAssessment(findings, inventory),
 				scanData, snapshot.relationshipsCollected(), scan == null ? null : scan.profile());

@@ -14,6 +14,126 @@ class AssessDatabaseMigrationCommandTest {
 	@TempDir Path directory;
 
 	@Test
+	void resolvesFingerprintBoundMappingAndValidatesObservedOracleCapacity() throws Exception {
+		final var command = command("mapping.accdb", "oracle", "19c");
+		Files.delete(command.getInputFile().toPath());
+		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, command.getInputFile())) {
+			final var table = new io.github.spannm.jackcess.TableBuilder("顧客")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("名前", io.github.spannm.jackcess.DataType.TEXT))
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("金額", io.github.spannm.jackcess.DataType.NUMERIC).withPrecision(10).withScale(2))
+					.toTable(database);
+			table.addRow("長い名前", new java.math.BigDecimal("123.45"));
+			table.addRow(null, null);
+		}
+		final String fingerprint = AssessMigrationCommand.fingerprint(command.getInputFile());
+		final Path mapping = directory.resolve("mapping.yaml");
+		Files.writeString(mapping, ("""
+				format: sqlapp-database-migration-mapping
+				version: 1
+				sourceFingerprint: %s
+				targetDatabase: oracle
+				targetVersion: 19c
+				tables:
+				  - sourceTable: 顧客
+				    targetSchema: APP
+				    targetTable: CUSTOMERS
+				    columns:
+				      - sourceColumn: 名前
+				        targetColumn: NAME
+				        targetType: VARCHAR2(2 CHAR)
+				        nullable: false
+				        conversion: preserve Unicode text
+				      - sourceColumn: 金額
+				        targetColumn: AMOUNT
+				        targetType: NUMBER(4,2)
+				""").formatted(fingerprint));
+		command.setMappingFile(mapping.toFile());
+		command.setHtmlOutputFile(directory.resolve("mapping.html").toFile());
+		command.setScanData(true);
+		assertThrows(CommandException.class, command::run);
+		assertEquals(3, command.getReport().formatVersion());
+		assertEquals("oracle", command.getReport().targetMapping().targetDatabase());
+		assertEquals("顧客", command.getReport().targetMapping().tables().getFirst().sourceTable().name());
+		assertEquals("CUSTOMERS", command.getReport().targetMapping().tables().getFirst().targetTable());
+		assertEquals(AssessMigrationCommand.fingerprint(mapping.toFile()), command.getReport().mappingFingerprint());
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.mapping.observed-text-overflow")));
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.mapping.observed-number-overflow")));
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.mapping.observed-null")));
+		final String json = Files.readString(command.getOutputFile().toPath());
+		assertTrue(json.contains("mappingFingerprint"));
+		assertTrue(json.contains("targetMapping"));
+		assertTrue(Files.readString(command.getHtmlOutputFile().toPath()).contains("Resolved target mapping"));
+
+		Files.writeString(mapping, Files.readString(mapping).replace(fingerprint, "wrong"));
+		assertThrows(CommandException.class, command::run);
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+		assertNull(command.getReport());
+		Files.writeString(mapping, Files.readString(mapping).replace("wrong", fingerprint) + "unknownTypo: true\n");
+		assertThrows(CommandException.class, command::run);
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+	}
+
+	@Test
+	void writesOptionalHtmlReviewAtomicallyAndRejectsPathCollisions() throws Exception {
+		final var command = command("html.accdb", "oracle", "19c");
+		Files.delete(command.getInputFile().toPath());
+		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, command.getInputFile())) {
+			new io.github.spannm.jackcess.TableBuilder("T")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("C", io.github.spannm.jackcess.DataType.TEXT))
+					.toTable(database);
+		}
+		final var html = directory.resolve("assessment.html").toFile();
+		command.setHtmlOutputFile(html);
+		command.setFailOnBlockers(false);
+		command.run();
+		final String text = Files.readString(html.toPath());
+		assertTrue(text.startsWith("<!doctype html>"));
+		assertTrue(text.contains("Database migration assessment"));
+		assertTrue(text.contains("Oracle 19c"));
+		assertTrue(Files.readString(command.getOutputFile().toPath()).startsWith("{"));
+
+		command.setHtmlOutputFile(command.getOutputFile());
+		final String json = Files.readString(command.getOutputFile().toPath());
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("distinct"));
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+		command.setHtmlOutputFile(command.getInputFile());
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("distinct"));
+	}
+
+	@Test
+	void publishesOrphanBlockersAndStructuredCountsForBothTargets() throws Exception {
+		final var command = command("orphan.accdb", "oracle", "19c");
+		final var html = directory.resolve("orphan.html").toFile();
+		command.setHtmlOutputFile(html);
+		Files.delete(command.getInputFile().toPath());
+		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, command.getInputFile())) {
+			final var parent = new io.github.spannm.jackcess.TableBuilder("Parent")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("ID", io.github.spannm.jackcess.DataType.LONG)).toTable(database);
+			final var child = new io.github.spannm.jackcess.TableBuilder("Child")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("PID", io.github.spannm.jackcess.DataType.LONG)).toTable(database);
+			new io.github.spannm.jackcess.RelationshipBuilder(parent, child).addColumns("ID", "PID").withName("FK_child").toRelationship(database);
+			child.addRow(123);
+		}
+		command.run();
+		assertEquals("REVIEW_REQUIRED", command.getReport().status());
+		command.setScanData(true);
+		for (final String target : new String[] { "oracle", "sqlserver" }) {
+			command.setTargetDatabase(target);
+			command.setTargetVersion(target.equals("oracle") ? "19c" : "2022");
+			assertThrows(CommandException.class, command::run);
+			assertEquals("BLOCKED", command.getReport().status());
+			assertTrue(Files.readString(html.toPath()).contains("access.data.orphan-key"));
+			assertEquals(1L, command.getReport().dataProfile().integrityChecks().getFirst().violationRows());
+			final var json = Files.readString(command.getOutputFile().toPath());
+			assertTrue(json.contains("integrityChecks"));
+			assertTrue(json.contains("access.data.orphan-key"));
+		}
+		command.setFailOnBlockers(false);
+		command.run();
+		assertEquals("BLOCKED", command.getReport().status());
+	}
+
+	@Test
 	void optInScanWritesVersionedAggregatesAndPublishesObservedOracleBlocker() throws Exception {
 		final var command = command("scan.accdb", "oracle", "19c");
 		Files.delete(command.getInputFile().toPath());

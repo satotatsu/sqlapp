@@ -34,6 +34,7 @@ tasks.named('assessDatabaseMigration') {
     targetDatabase = 'oracle'
     targetVersion = '19c'
     outputFile = layout.buildDirectory.file('reports/migration.json')
+    htmlOutputFile = layout.buildDirectory.file('reports/migration.html')
 }
 ```
 
@@ -68,6 +69,8 @@ accepted by this provider. See [SQL Server diagnostic coverage](access-sqlserver
 | `targetDatabase` | `Property<String>` | Required: `oracle` or `sqlserver` (case-insensitive) |
 | `targetVersion` | `Property<String>` | Required: an explicit version from the supported targets table; Oracle version names are case-insensitive |
 | `outputFile` | `RegularFileProperty` | Required JSON path distinct from the input |
+| `htmlOutputFile` | `RegularFileProperty` | Optional standalone HTML review report, distinct from the input and JSON output |
+| `mappingFile` | `RegularFileProperty` | Optional version 1 target mapping YAML, bound to the source fingerprint and requested target |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; blockers fail the task after publishing the report |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; opt in to local Access scalar data profiling |
 
@@ -83,6 +86,86 @@ coverage flags, inventory and findings from both providers. A source blocker
 cannot be hidden by a target assessment. Results are `BLOCKED` or
 `REVIEW_REQUIRED`, never a readiness certification. No target is inferred.
 
+When `htmlOutputFile` is set, the task also writes a self-contained UTF-8 HTML
+review report. It summarizes status and evidence counts, orders blockers before
+warnings and review items, and shows inventory, column aggregates and integrity
+checks when present. It has no external CSS, JavaScript or network dependency,
+and all source-derived text is HTML-escaped. The JSON report remains the
+machine-readable evidence and the HTML contains no additional source values.
+Both files are replaced atomically as individual files. If optional HTML
+publication fails after JSON publication, the command fails but the new JSON
+report and `getReport()` remain available; regenerate the HTML before treating
+the pair as matching artifacts.
+
+## Target table and column mapping
+
+Set `mappingFile` after reviewing an initial report. Copy its
+`sourceFingerprint` into a concise YAML file so a mapping cannot silently be
+used with a different Access file. The configured target database and normalized
+version must also match the task. A mapping-enabled run writes report format 3,
+including the mapping file fingerprint and fully resolved source identifiers.
+
+```yaml
+format: sqlapp-database-migration-mapping
+version: 1
+sourceFingerprint: sha256:0123456789abcdef... # copy the complete value from the JSON report
+targetDatabase: oracle
+targetVersion: 19c
+tables:
+  - sourceTable: 顧客
+    targetSchema: APP
+    targetTable: CUSTOMERS
+    columns:
+      - sourceColumn: 顧客ID
+        targetColumn: CUSTOMER_ID
+        targetType: NUMBER(10,0)
+        nullable: false
+      - sourceColumn: 顧客名
+        targetColumn: CUSTOMER_NAME
+        targetType: VARCHAR2(200 CHAR)
+        nullable: false
+        conversion: preserve Unicode text and reject empty required values
+```
+
+```groovy
+tasks.named('assessDatabaseMigration') {
+    mappingFile = layout.projectDirectory.file('migration/access-target.yaml')
+    scanData = true
+}
+```
+
+Only `sourceTable` and `sourceColumn` are required for source identity in the
+common case. Matching is case-insensitive. A short table name must resolve to
+exactly one local table; add `sourceSchema` and, when needed, `sourceCatalog`
+to disambiguate it. `targetTable` and `targetColumn` default to their resolved
+source names. `targetType` is required for every mapped column. Target table
+and column identities must be unique under case-insensitive comparison.
+Each table must map at least one column. Partial mappings are accepted so teams
+can review difficult objects incrementally; the coverage finding reminds the
+reviewer that unmapped objects still need decisions.
+
+`nullable` is optional. When it is `false`, `scanData=true` turns observed
+source NULLs into blockers; without complete scalar coverage it produces a
+review item rather than asserting there are no NULLs. `conversion` records the
+chosen conversion intent in JSON and HTML. It is descriptive text: this task
+does not execute it, parse SQL expressions, generate DDL or transform values.
+
+Oracle validation accepts explicit `NUMBER`, character types with lengths,
+`DATE`, `TIMESTAMP`, LOBs, `RAW`, binary floating types and version-appropriate
+`BOOLEAN`. SQL Server validation accepts explicit decimal/numeric, sized
+character and binary types, integer/floating types, `date`, `datetime`,
+`datetime2`, `bit` and `uniqueidentifier`. Invalid or unsupported target type
+spelling is a blocker. With data scanning, the providers also check observed
+text length, decimal integer/scale requirements, fractional date precision,
+NOT NULL compatibility, and SQL Server `datetime`'s 1753 lower bound. A
+`VARCHAR2(... BYTE)` check uses observed UTF-8 bytes only as a reference and
+still requires validation against the actual Oracle character set. SQL Server
+`varchar` similarly requires validation against the target collation/code page.
+
+Configuration errors, ambiguous or missing names, duplicate targets, fingerprint
+mismatches and target mismatches fail before replacing the report. The mapping
+file is fingerprinted again after assessment to detect concurrent edits.
+
 See [Access-to-Oracle coverage](access-oracle-migration-assessment.md) and
 [Access-to-SQL Server coverage](access-sqlserver-migration-assessment.md) for rules
 and limitations. Access files are read-only; rows are read only with `scanData=true`.
@@ -92,8 +175,8 @@ remain outside this assessment.
 ## Optional data preflight
 
 Add `scanData = true` to either task configuration above, or call
-`command.setScanData(true)` before `run()` in Java. This scans every local table
-once without sampling and emits a version 2 report with `dataProfile` and
+`command.setScanData(true)` before `run()` in Java. This profiles local tables
+without sampling and emits a version 2 report with `dataProfile` and
 `dataScanned=true`. The default remains version 1 without `dataProfile`.
 
 The profile contains row and NULL counts; empty-string counts and maximum text
@@ -110,13 +193,65 @@ warning). SQL Server warns about observed dates before 1753 when considering
 legacy `datetime`; this does not prohibit `datetime2`.
 
 Binary, OLE, complex and unknown columns are excluded and explicitly marked
-`UNSUPPORTED`; their NULL counts are unknown. Links are never followed. Duplicate
-keys, orphans, target sizing/mapping validation and reconciliation remain manual
-checks. `dataScanned=true` therefore means scalar profiling, not complete validation.
+`UNSUPPORTED`; their NULL counts are unknown. Links are never followed. Key checks
+have their own coverage below. Target sizing/mapping validation and reconciliation
+remain manual checks. `dataScanned=true` means profiling, not complete validation.
 The file is streamed by row, with no row samples or text contents retained in the
 report; numeric/date extrema are actual aggregate values and may be sensitive.
 Use a stable copy of the input. Read failures or a changed fingerprint fail without
 replacing the previous report. A full scan may take time on large files.
+
+### Duplicate keys and orphan rows
+
+The same `scanData=true` setting also checks declared primary keys, unique keys/
+indexes and collected local relationships. The canonical Schema determines the
+column order and parent identity; no business keys or undeclared relationships
+are inferred. Each key check reads local rows directly, independently of index
+contents, and may require another table scan. Parent-key values are held only
+for the duration of one relationship check; they are never added to the report.
+
+`dataProfile.integrityChecks` is an additive version 2 field. Each entry includes
+the key identity, ordered column names, related table/columns for foreign keys,
+coverage and an explanation. Older version 2 reports without this field remain
+readable, and the existing Java profile constructor remains available.
+
+| Field | Meaning |
+|---|---|
+| `kind` | `PRIMARY_KEY`, `UNIQUE_KEY` or `FOREIGN_KEY` |
+| `coverage` | `CHECKED`, `UNSUPPORTED` or `LIMIT_EXCEEDED` |
+| `checkedRows` | Rows with all key components non-NULL; child rows for foreign keys |
+| `nullRows` | Rows with at least one NULL key component, excluded from comparison |
+| `violationRows` | Duplicate rows beyond the first occurrence, or child rows without a parent |
+
+Completed checks report zero when no violations were found. Unsupported or
+limited checks report **null counts**, with `access.data.integrity-not-checked`
+review findings; incomplete results are never presented as zero violations.
+An empty check list means no checks were available, not proof of integrity.
+If links cause relationship collection to be skipped, orphan checks are also
+omitted and `relationshipsCollected=false` remains explicit.
+
+Supported comparisons cover exact numeric types (Byte, Integer, Long, Large
+Number, Currency and Decimal), local Date/Time and Date/Time Extended, GUID and
+Yes/No. Composite keys and self-references are supported. Numeric scale is
+normalized; unsigned Byte values and GUID case are normalized. Parent/child
+components must have compatible type families. Text, Single/Double floating
+point, binary, complex, unknown or unresolved keys are not checked. Text
+collation and floating-point conversion require explicit comparison rules.
+
+At most 100,000 distinct keys are retained per check, with at most 32 components
+per key. Exceeding the key count stops that check and reports `LIMIT_EXCEEDED`;
+other checks and scalar profiling continue. Wider keys are `UNSUPPORTED`.
+Violations already observed before the limit remain blockers, with their counts
+explicitly described as lower bounds in findings; complete structured counts stay null.
+These bounds are fixed in this release. Large-key checks require a separate
+validation process; no temporary file containing keys is created.
+
+Observed duplicates, orphan rows and primary-key NULLs produce source blockers
+(`access.data.duplicate-key`, `access.data.orphan-key`,
+`access.data.primary-key-null`) for both Oracle and SQL Server. They use the
+existing report-before-failure policy. NULL-containing unique/foreign keys are
+counted separately; target NULL uniqueness, target collation, conversions and
+post-load constraints are still unverified. No data is repaired automatically.
 
 ## Java entry point and compatibility
 
@@ -126,6 +261,8 @@ command.setInputFile(new File("input/customer.accdb"));
 command.setTargetDatabase("oracle");
 command.setTargetVersion("19c");
 command.setOutputFile(new File("reports/migration.json"));
+command.setHtmlOutputFile(new File("reports/migration.html")); // optional
+command.setMappingFile(new File("migration/access-target.yaml")); // optional
 command.run();
 var report = command.getReport();
 ```

@@ -12,6 +12,11 @@ public interface DatabaseMigrationAssessmentProvider {
 	String targetProduct();
 	default String normalizeTargetVersion(final String version) { return version; }
 	MigrationAssessment assess(MigrationAssessmentSource source, String targetVersion);
+	/** Optional validation of an already resolved user mapping. */
+	default MigrationAssessment assessMapping(final MigrationAssessmentSource source, final String targetVersion,
+			final ResolvedMigrationTargetMapping mapping) {
+		return new MigrationAssessment(List.of(), List.of());
+	}
 
 	static DatabaseMigrationAssessmentProvider resolve(final String sourceProduct, final String targetDatabase,
 			final String targetVersion) {

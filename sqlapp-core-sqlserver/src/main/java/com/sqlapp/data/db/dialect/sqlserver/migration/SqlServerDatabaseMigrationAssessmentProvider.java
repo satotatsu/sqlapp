@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.CheckConstraint;
@@ -17,9 +20,16 @@ import com.sqlapp.data.schemas.migration.assessment.DatabaseMigrationAssessmentP
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.*;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
+import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile;
+import com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping;
 
 /** Offline Access-to-SQL Server metadata diagnosis; never executes SQL or reads rows. */
 public final class SqlServerDatabaseMigrationAssessmentProvider implements DatabaseMigrationAssessmentProvider {
+	private static final Pattern DECIMAL = Pattern.compile("(?:DECIMAL|NUMERIC)\\((\\d+),(\\d+)\\)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TEXT_TYPE = Pattern.compile("(N?VARCHAR|N?CHAR)\\((MAX|\\d+)\\)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern DATETIME2 = Pattern.compile("DATETIME2(?:\\((\\d)\\))?", Pattern.CASE_INSENSITIVE);
+	private static final Pattern BINARY_TYPE = Pattern.compile("VARBINARY\\((MAX|\\d+)\\)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern FLOAT_TYPE = Pattern.compile("FLOAT(?:\\((\\d+)\\))?", Pattern.CASE_INSENSITIVE);
 	private static final Set<String> VERSIONS = Set.of("2016", "2017", "2019", "2022");
 	private static final String TYPES = "https://support.microsoft.com/en-us/access/comparing-access-and-sql-server-data-types";
 	private static final String COMPATIBILITY = "https://learn.microsoft.com/en-us/sql/ssma/access/incompatible-access-features-accesstosql";
@@ -110,6 +120,127 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 				"Target environment and application compatibility were not checked; no rows were inspected by this assessor.",
 				"Verify SQL Server release/edition, compatibility level, database/schema mapping, collation, reserved names, ODBC/JDBC support, permissions and cutover recovery. Test Access forms, queries and linked-table writes.", null));
 		return new MigrationAssessment(findings, inventory);
+	}
+
+	@Override
+	public MigrationAssessment assessMapping(final MigrationAssessmentSource source, final String targetVersion,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var findings = new ArrayList<Finding>();
+		final var profiles = new HashMap<ObjectId, ColumnProfile>();
+		if (source.dataProfile() != null) { source.dataProfile().tables().forEach(t -> t.columns().forEach(c -> profiles.put(c.column(), c))); }
+		int columns = 0;
+		for (final var table : mapping.tables()) {
+			targetIdentifier(findings, table.sourceTable(), "schema", table.targetSchema());
+			targetIdentifier(findings, table.sourceTable(), "table", table.targetTable());
+			for (final var column : table.columns()) {
+				columns++;
+				targetIdentifier(findings, column.sourceColumn(), "column", column.targetColumn());
+				final String type = column.targetType().trim().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
+				final var profile = profiles.get(column.sourceColumn());
+				if (!supportedMappingType(type)) {
+					findings.add(mappingFinding("type", Severity.BLOCKER, column.sourceColumn(), "Unsupported or invalid SQL Server target type: " + column.targetType(),
+							"Use a SQL Server type supported by this assessment and specify length/precision explicitly."));
+					continue;
+				}
+				nullability(findings, column, profile);
+				capacity(findings, column, profile, type);
+			}
+		}
+		findings.add(mappingFinding("coverage", Severity.REVIEW, null,
+				"The mapping resolves " + mapping.tables().size() + " tables and " + columns + " columns; conversion expressions were recorded but not executed.",
+				"Review unmapped objects, generate and inspect DDL/load transformations, then validate converted values and constraints on SQL Server."));
+		return new MigrationAssessment(findings, List.of(new Inventory(null, "", "mappedTables", mapping.tables().size()),
+				new Inventory(null, "", "mappedColumns", columns)));
+	}
+
+	private static boolean supportedMappingType(final String type) {
+		final var decimal = DECIMAL.matcher(type);
+		if (decimal.matches()) {
+			final int precision = Integer.parseInt(decimal.group(1));
+			final int scale = Integer.parseInt(decimal.group(2));
+			return precision >= 1 && precision <= 38 && scale <= precision;
+		}
+		final var text = TEXT_TYPE.matcher(type);
+		if (text.matches()) {
+			if ("MAX".equals(text.group(2))) { return !type.startsWith("NCHAR") && !type.startsWith("CHAR"); }
+			final int length = Integer.parseInt(text.group(2));
+			return length >= 1 && length <= (type.startsWith("N") ? 4000 : 8000);
+		}
+		final var dateTime = DATETIME2.matcher(type);
+		if (dateTime.matches()) { return dateTime.group(1) == null || Integer.parseInt(dateTime.group(1)) <= 7; }
+		final var binary = BINARY_TYPE.matcher(type);
+		if (binary.matches()) { return "MAX".equals(binary.group(1))
+				|| Integer.parseInt(binary.group(1)) >= 1 && Integer.parseInt(binary.group(1)) <= 8000; }
+		final var floating = FLOAT_TYPE.matcher(type);
+		if (floating.matches()) { return floating.group(1) == null
+				|| Integer.parseInt(floating.group(1)) >= 1 && Integer.parseInt(floating.group(1)) <= 53; }
+		return Set.of("BIT", "TINYINT", "SMALLINT", "INT", "BIGINT", "REAL",
+						"DATE", "DATETIME", "UNIQUEIDENTIFIER").contains(type);
+	}
+	private static void nullability(final List<Finding> findings,
+			final ResolvedMigrationTargetMapping.ColumnMapping column, final ColumnProfile profile) {
+		if (!Boolean.FALSE.equals(column.nullable())) { return; }
+		if (profile == null || profile.nullCount() == null) {
+			findings.add(mappingFinding("nullability-unverified", Severity.REVIEW, column.sourceColumn(),
+					"The target is NOT NULL but source NULL values were not completely scanned.", "Run with scanData=true and resolve excluded column coverage before creating the constraint."));
+		} else if (profile.nullCount() > 0) {
+			findings.add(mappingFinding("observed-null", Severity.BLOCKER, column.sourceColumn(), profile.nullCount()
+					+ " source NULL values do not fit the mapped NOT NULL target.", "Clean or convert these values before loading and creating the constraint."));
+		}
+	}
+	private static void capacity(final List<Finding> findings,
+			final ResolvedMigrationTargetMapping.ColumnMapping column, final ColumnProfile profile, final String type) {
+		if (profile == null) { return; }
+		final var decimal = DECIMAL.matcher(type);
+		if (decimal.matches() && profile.numeric() != null && profile.numeric().maximumIntegerDigits() != null) {
+			final int precision = Integer.parseInt(decimal.group(1));
+			final int scale = Integer.parseInt(decimal.group(2));
+			if (precision < 1 || precision > 38 || scale > precision || profile.numeric().maximumIntegerDigits() > precision - scale
+					|| profile.numeric().maximumScale() > scale) {
+				findings.add(mappingFinding("observed-number-overflow", Severity.BLOCKER, column.sourceColumn(),
+						"Mapped " + type + " is invalid or does not fit observed numeric digits.", "Choose decimal precision/scale up to 38 or define and test explicit rounding."));
+			}
+		}
+		final var text = TEXT_TYPE.matcher(type);
+		if (text.matches() && !"MAX".equals(text.group(2)) && profile.text() != null) {
+			final long limit = Long.parseLong(text.group(2));
+			final Long observed = type.startsWith("N") ? profile.text().maximumUtf16Units() : profile.text().maximumCodePoints();
+			if (observed != null && observed > limit) {
+				findings.add(mappingFinding("observed-text-overflow", Severity.BLOCKER, column.sourceColumn(),
+						"Observed text length " + observed + " exceeds mapped " + type + " limit " + limit + ".",
+						"Choose a larger type; for varchar also validate encoding against the actual target collation/code page."));
+			}
+		}
+		if ("DATETIME".equals(type) && profile.dateTime() != null && profile.dateTime().minimum() != null
+				&& LocalDateTime.parse(profile.dateTime().minimum()).isBefore(LocalDateTime.of(1753, 1, 1, 0, 0))) {
+			findings.add(mappingFinding("observed-datetime-range", Severity.BLOCKER, column.sourceColumn(),
+					"Observed dates before 1753-01-01 do not fit mapped datetime.", "Map to datetime2 with validated precision and client support."));
+		}
+		final var dateTime = DATETIME2.matcher(type);
+		if (dateTime.matches() && profile.dateTime() != null && profile.dateTime().maximumFractionalDigits() != null) {
+			final int precision = dateTime.group(1) == null ? 7 : Integer.parseInt(dateTime.group(1));
+			if (profile.dateTime().maximumFractionalDigits() > precision) {
+				findings.add(mappingFinding("observed-time-precision", Severity.WARNING, column.sourceColumn(),
+						"Observed fractional precision exceeds " + type + ".", "Choose sufficient precision or test and approve rounding."));
+			}
+		}
+	}
+	private static Finding mappingFinding(final String rule, final Severity severity, final ObjectId id,
+			final String reason, final String action) {
+		return new Finding("access.sqlserver.mapping." + rule, severity, Evidence.DOCUMENTED_RULE, id, reason, action, null);
+	}
+	private static void targetIdentifier(final List<Finding> findings, final ObjectId source,
+			final String kind, final String name) {
+		if (name == null || name.isBlank()) { return; }
+		if (name.codePointCount(0, name.length()) > 128) {
+			findings.add(mappingFinding("identifier-length", Severity.BLOCKER, source,
+					"Mapped target " + kind + " name exceeds 128 characters: " + name,
+					"Choose a shorter target name and preserve the mapping."));
+		} else if (!name.matches("[A-Za-z][A-Za-z0-9_]*")) {
+			findings.add(mappingFinding("identifier", Severity.REVIEW, source,
+					"Mapped target " + kind + " name requires bracket/quoted-identifier review: " + name,
+					"Confirm casing, escaping, reserved words, target collation and application references."));
+		}
 	}
 
 	private static void column(final List<Finding> findings, final Column column, final ObjectId id) {
