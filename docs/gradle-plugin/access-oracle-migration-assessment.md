@@ -35,6 +35,7 @@ Oracle JDBC driver. Existing `assessMigration` Oracle-to-Oracle behavior is unch
 | `outputFile` | `RegularFileProperty` | Required JSON destination, distinct from the input |
 | `htmlOutputFile` | `RegularFileProperty` | Optional standalone HTML review report, distinct from input and JSON output |
 | `mappingFile` | `RegularFileProperty` | Optional fingerprint-bound target table/column/type mapping YAML |
+| `mappingTemplateFile` | `RegularFileProperty` | Optional complete editable mapping skeleton with Oracle type suggestions |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; report is written before failing on blockers |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; scans local scalar values when enabled |
 
@@ -102,6 +103,7 @@ command.setTargetVersion("19c");
 command.setOutputFile(new File("reports/access-oracle.json"));
 command.setHtmlOutputFile(new File("reports/access-oracle.html")); // optional
 command.setMappingFile(new File("migration/access-oracle.yaml")); // optional
+command.setMappingTemplateFile(new File("reports/access-oracle-template.yaml")); // optional
 command.run();
 var report = command.getReport();
 ```

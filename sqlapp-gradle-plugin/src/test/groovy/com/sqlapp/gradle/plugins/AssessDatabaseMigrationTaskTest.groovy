@@ -22,6 +22,7 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		assertFalse(task.targetDatabase.isPresent())
 		assertFalse(task.htmlOutputFile.isPresent())
 		assertFalse(task.mappingFile.isPresent())
+		assertFalse(task.mappingTemplateFile.isPresent())
 		def input = new File(testProjectDir, 'source.accdb')
 		def database = DatabaseBuilder.create(Database.FileFormat.V2010, input)
 		try {
@@ -81,5 +82,10 @@ tables:
 		assertEquals(mapping, task.internalCommand().mappingFile)
 		assertEquals(3, task.internalCommand().report.formatVersion())
 		assertEquals('TARGET_T', task.internalCommand().report.targetMapping().tables().get(0).targetTable())
+		def template = new File(testProjectDir, 'mapping-template.yaml')
+		task.mappingTemplateFile.set(template)
+		task.exec()
+		assertEquals(template, task.internalCommand().mappingTemplateFile)
+		assertTrue(template.getText('UTF-8').contains('targetType: "nvarchar'))
 	}
 }

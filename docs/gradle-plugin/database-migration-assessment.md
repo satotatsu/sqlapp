@@ -71,6 +71,7 @@ accepted by this provider. See [SQL Server diagnostic coverage](access-sqlserver
 | `outputFile` | `RegularFileProperty` | Required JSON path distinct from the input |
 | `htmlOutputFile` | `RegularFileProperty` | Optional standalone HTML review report, distinct from the input and JSON output |
 | `mappingFile` | `RegularFileProperty` | Optional version 1 target mapping YAML, bound to the source fingerprint and requested target |
+| `mappingTemplateFile` | `RegularFileProperty` | Optional generated YAML skeleton containing every local table/column and target-specific suggested types |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; blockers fail the task after publishing the report |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; opt in to local Access scalar data profiling |
 
@@ -99,7 +100,33 @@ the pair as matching artifacts.
 
 ## Target table and column mapping
 
-Set `mappingFile` after reviewing an initial report. Copy its
+Generate a starting file directly when desired:
+
+```groovy
+tasks.named('assessDatabaseMigration') {
+    mappingTemplateFile = layout.buildDirectory.file('reports/access-target-template.yaml')
+}
+```
+
+The template contains every local table and column, the current source
+fingerprint, normalized target/version, source nullability and a target-specific
+type suggestion. Oracle suggestions account for the selected BOOLEAN version;
+SQL Server suggestions use its native scalar types. Source lengths and decimal
+precision/scale are used where available. Complex, unknown and other types that
+need an extraction decision have `targetType: null`, deliberately making the
+template invalid as an input until the user supplies a decision. Suggested
+types are reviewable starting points, not proof that observed values, clients,
+collations or target settings are compatible.
+
+The generated YAML is an atomic, standalone output and can be edited outside the
+build directory. Template generation does not require `scanData`; enabling the
+scan later lets the mapping validators compare the edited choices to actual
+aggregates. `mappingTemplateFile` must be distinct from the Access input, JSON,
+HTML and `mappingFile`. It can be used alongside `mappingFile` at a different
+path to refresh a comparison template. Generating a template alone does not
+change the JSON format version.
+
+Set `mappingFile` after reviewing the generated template or an initial report. Copy its
 `sourceFingerprint` into a concise YAML file so a mapping cannot silently be
 used with a different Access file. The configured target database and normalized
 version must also match the task. A mapping-enabled run writes report format 3,
@@ -141,8 +168,13 @@ to disambiguate it. `targetTable` and `targetColumn` default to their resolved
 source names. `targetType` is required for every mapped column. Target table
 and column identities must be unique under case-insensitive comparison.
 Each table must map at least one column. Partial mappings are accepted so teams
-can review difficult objects incrementally; the coverage finding reminds the
-reviewer that unmapped objects still need decisions.
+can review difficult objects incrementally. The report emits a
+`migration.mapping.unmapped-table` review finding for each omitted table and a
+`migration.mapping.unmapped-column` finding for each omitted column in a mapped
+table. Inventory entries `unmappedTables` and
+`unmappedColumnsInMappedTables` provide totals. Columns belonging to an omitted
+table are not repeated as individual findings. These findings do not block an
+intentional partial migration; record the scope decision during review.
 
 `nullable` is optional. When it is `false`, `scanData=true` turns observed
 source NULLs into blockers; without complete scalar coverage it produces a
@@ -263,6 +295,7 @@ command.setTargetVersion("19c");
 command.setOutputFile(new File("reports/migration.json"));
 command.setHtmlOutputFile(new File("reports/migration.html")); // optional
 command.setMappingFile(new File("migration/access-target.yaml")); // optional
+command.setMappingTemplateFile(new File("reports/access-target-template.yaml")); // optional
 command.run();
 var report = command.getReport();
 ```

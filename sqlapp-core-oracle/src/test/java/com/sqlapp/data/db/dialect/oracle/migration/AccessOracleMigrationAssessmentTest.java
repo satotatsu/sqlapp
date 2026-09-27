@@ -22,6 +22,8 @@ class AccessOracleMigrationAssessmentTest {
 		final var id = new MigrationAssessment.ObjectId(null, "source", "column", "値", "顧客");
 		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "顧客");
 		final var provider = new OracleDatabaseMigrationAssessmentProvider();
+		assertEquals("NUMBER(1,0)", provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "19c"));
+		assertEquals("BOOLEAN", provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "23ai"));
 		for (final var entry : java.util.Map.of("19c", "BOOLEAN", "23ai", "BOOLEAN", "26ai", "RAW(2001)").entrySet()) {
 			final var mapping = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping("fp", "oracle", entry.getKey(), List.of(
 					new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "T", List.of(

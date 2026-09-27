@@ -20,6 +20,7 @@ tasks.named('assessDatabaseMigration') {
     outputFile = layout.buildDirectory.file('reports/access-sqlserver.json')
     htmlOutputFile = layout.buildDirectory.file('reports/access-sqlserver.html')
     mappingFile = layout.projectDirectory.file('migration/access-sqlserver.yaml')
+    mappingTemplateFile = layout.buildDirectory.file('reports/access-sqlserver-template.yaml')
 }
 ```
 

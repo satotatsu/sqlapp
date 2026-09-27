@@ -33,6 +33,9 @@ public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDat
 	@InputFile
 	@PathSensitive(PathSensitivity.NONE)
 	public abstract RegularFileProperty getMappingFile();
+	@Optional
+	@OutputFile
+	public abstract RegularFileProperty getMappingTemplateFile();
 	@Input
 	public abstract Property<String> getTargetVersion();
 	@Input
@@ -52,6 +55,7 @@ public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDat
 		command.setOutputFile(getOutputFile().get().getAsFile());
 		command.setHtmlOutputFile(getHtmlOutputFile().isPresent() ? getHtmlOutputFile().get().getAsFile() : null);
 		command.setMappingFile(getMappingFile().isPresent() ? getMappingFile().get().getAsFile() : null);
+		command.setMappingTemplateFile(getMappingTemplateFile().isPresent() ? getMappingTemplateFile().get().getAsFile() : null);
 		command.setTargetVersion(getTargetVersion().get());
 		command.setTargetDatabase(getTargetDatabase().get());
 		command.setFailOnBlockers(getFailOnBlockers().get());

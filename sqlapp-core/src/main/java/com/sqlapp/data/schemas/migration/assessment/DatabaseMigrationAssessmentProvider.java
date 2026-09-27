@@ -3,6 +3,7 @@ package com.sqlapp.data.schemas.migration.assessment;
 
 import java.util.List;
 import java.util.ServiceLoader;
+import com.sqlapp.data.schemas.Column;
 
 /** Target-owned rules for an explicitly supported source/target/version combination.
  * A SQL dialect alone does not imply assessment support. Implementations must not
@@ -17,6 +18,9 @@ public interface DatabaseMigrationAssessmentProvider {
 			final ResolvedMigrationTargetMapping mapping) {
 		return new MigrationAssessment(List.of(), List.of());
 	}
+	/** Suggested editable target type for a mapping template, or null when an
+	 * explicit extraction/conversion decision is required. */
+	default String suggestTargetType(final Column sourceColumn, final String targetVersion) { return null; }
 
 	static DatabaseMigrationAssessmentProvider resolve(final String sourceProduct, final String targetDatabase,
 			final String targetVersion) {

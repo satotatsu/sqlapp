@@ -55,6 +55,37 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 	}
 
 	@Override
+	public String suggestTargetType(final Column column, final String targetVersion) {
+		final String type = column.getSpecifics().get("access.sourceType", String.class);
+		if (type == null) { return null; }
+		return switch (type) {
+		case "BOOLEAN" -> "bit";
+		case "BYTE" -> "tinyint";
+		case "INT" -> "smallint";
+		case "LONG" -> "int";
+		case "BIG_INT" -> "bigint";
+		case "MONEY" -> "decimal(19,4)";
+		case "NUMERIC" -> "decimal(" + precision(column, 38) + "," + Math.max(0, column.getScale() == null ? 0 : column.getScale()) + ")";
+		case "FLOAT" -> "real";
+		case "DOUBLE" -> "float(53)";
+		case "SHORT_DATE_TIME" -> "datetime2(3)";
+		case "EXT_DATE_TIME" -> "datetime2(7)";
+		case "TEXT" -> column.getLength() != null && column.getLength() > 4000 ? "nvarchar(max)" : "nvarchar(" + length(column, 255, 4000) + ")";
+		case "MEMO" -> "nvarchar(max)";
+		case "GUID" -> "uniqueidentifier";
+		case "BINARY" -> column.getLength() != null && column.getLength() > 8000 ? "varbinary(max)" : "varbinary(" + length(column, 255, 8000) + ")";
+		case "OLE" -> "varbinary(max)";
+		default -> null;
+		};
+	}
+	private static long length(final Column column, final long fallback, final long maximum) {
+		return Math.min(maximum, column.getLength() == null || column.getLength() < 1 ? fallback : column.getLength());
+	}
+	private static long precision(final Column column, final long fallback) {
+		return Math.min(38, column.getLength() == null || column.getLength() < 1 ? fallback : column.getLength());
+	}
+
+	@Override
 	public MigrationAssessment assess(final MigrationAssessmentSource source, final String targetVersion) {
 		if (source == null || !supports(source.sourceProduct(), "sqlserver", targetVersion)) {
 			throw new IllegalArgumentException("SQL Server assessment requires Access source metadata and targetVersion=2016, 2017, 2019 or 2022");

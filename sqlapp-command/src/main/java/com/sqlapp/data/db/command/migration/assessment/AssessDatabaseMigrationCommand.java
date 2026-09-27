@@ -28,6 +28,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 	private File outputFile;
 	private File htmlOutputFile;
 	private File mappingFile;
+	private File mappingTemplateFile;
 	private String targetVersion;
 	private String targetDatabase;
 	private boolean failOnBlockers = true;
@@ -73,6 +74,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 			final var output = outputFile.toPath().toAbsolutePath().normalize();
 			final var htmlOutput = htmlOutputFile == null ? null : htmlOutputFile.toPath().toAbsolutePath().normalize();
 			final var mappingPath = mappingFile == null ? null : mappingFile.toPath().toAbsolutePath().normalize();
+			final var templatePath = mappingTemplateFile == null ? null : mappingTemplateFile.toPath().toAbsolutePath().normalize();
 			if (mappingFile != null && !mappingFile.isFile()) { throw new CommandException("mappingFile must be an existing YAML file"); }
 			if (input.equals(output) || Files.exists(output) && Files.isSameFile(input, output)) {
 				throw new CommandException("outputFile must not overwrite inputFile");
@@ -88,6 +90,13 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 					|| htmlOutput != null && Files.exists(htmlOutput) && Files.isSameFile(htmlOutput, mappingPath))) {
 				throw new CommandException("mappingFile must be distinct from inputFile and output files");
 			}
+			if (templatePath != null && (input.equals(templatePath) || output.equals(templatePath)
+					|| htmlOutput != null && htmlOutput.equals(templatePath) || mappingPath != null && mappingPath.equals(templatePath)
+					|| Files.exists(templatePath) && (Files.exists(output) && Files.isSameFile(output, templatePath)
+							|| htmlOutput != null && Files.exists(htmlOutput) && Files.isSameFile(htmlOutput, templatePath)
+							|| mappingPath != null && Files.isSameFile(mappingPath, templatePath)))) {
+				throw new CommandException("mappingTemplateFile must be distinct from input and other output/configuration files");
+			}
 			final String fingerprint = AssessMigrationCommand.fingerprint(inputFile);
 			final var source = MigrationAssessmentSourceProvider.resolve(input).load(input, scanData);
 			if (scanData && (!source.dataScanned() || source.dataProfile() == null)) {
@@ -101,10 +110,14 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 					mappingFingerprint, fingerprint, targetDatabase, version, source);
 			final var mappingAssessment = targetMapping == null ? new MigrationAssessment(java.util.List.of(), java.util.List.of())
 					: target.assessMapping(source, version, targetMapping);
+			final var mappingCoverage = targetMapping == null ? new MigrationAssessment(java.util.List.of(), java.util.List.of())
+					: new MigrationTargetMappingCoverage().assess(source, targetMapping);
 			final var findings = new ArrayList<>(targetAssessment.findings());
 			final var inventory = new ArrayList<>(targetAssessment.inventory());
 			findings.addAll(mappingAssessment.findings());
 			inventory.addAll(mappingAssessment.inventory());
+			findings.addAll(mappingCoverage.findings());
+			inventory.addAll(mappingCoverage.inventory());
 			findings.addAll(source.assessment().findings());
 			inventory.addAll(source.assessment().inventory());
 			if (!fingerprint.equals(AssessMigrationCommand.fingerprint(inputFile))) {
@@ -118,7 +131,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 					Method.LOGICAL_MIGRATION, source.dataScanned(), source.relationshipsCollected(),
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, source.dataProfile(),
 					mappingFingerprint, targetMapping);
-			writeReport(result);
+			writeReport(result, source, target, fingerprint, version);
 		} catch (final Exception e) {
 			throw e instanceof CommandException commandException ? commandException
 					: new CommandException("Database migration assessment failed: " + e.getMessage(), e);
@@ -127,6 +140,13 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 
 	/** Publish evidence before applying the failure policy. */
 	void writeReport(final Report result) throws IOException {
+		writeReport(result, null, null, null, null);
+	}
+
+	private void writeReport(final Report result,
+			final com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource source,
+			final DatabaseMigrationAssessmentProvider target, final String sourceFingerprint,
+			final String normalizedTargetVersion) throws IOException {
 		final var converter = new JsonConverter();
 		converter.setIndentOutput(true);
 		AtomicMigrationFile.write(outputFile.toPath(), temporary -> converter.writeJsonValue(temporary.toFile(), result));
@@ -134,6 +154,10 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 		if (htmlOutputFile != null) {
 			final String html = DatabaseMigrationAssessmentHtml.render(result);
 			AtomicMigrationFile.write(htmlOutputFile.toPath(), temporary -> Files.writeString(temporary, html, StandardCharsets.UTF_8));
+		}
+		if (mappingTemplateFile != null) {
+			new MigrationTargetMappingTemplateWriter().write(mappingTemplateFile, sourceFingerprint, targetDatabase,
+					normalizedTargetVersion, source, target);
 		}
 		info("Database migration assessment: ", report.status());
 		if (failOnBlockers && report.assessment().hasBlockers()) {

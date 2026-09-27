@@ -14,6 +14,48 @@ class AssessDatabaseMigrationCommandTest {
 	@TempDir Path directory;
 
 	@Test
+	void generatesRoundTrippableMappingTemplatesForBothTargets() throws Exception {
+		final var command = command("template.accdb", "oracle", "19c");
+		Files.delete(command.getInputFile().toPath());
+		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, command.getInputFile())) {
+			new io.github.spannm.jackcess.TableBuilder("Orders")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("Enabled", io.github.spannm.jackcess.DataType.BOOLEAN))
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("Name", io.github.spannm.jackcess.DataType.TEXT).withLengthInUnits(80))
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("Amount", io.github.spannm.jackcess.DataType.NUMERIC).withPrecision(12).withScale(2))
+					.toTable(database);
+		}
+		final Path template = directory.resolve("target-template.yaml");
+		command.setMappingTemplateFile(template.toFile());
+		command.setFailOnBlockers(false);
+		command.run();
+		String yaml = Files.readString(template);
+		assertTrue(yaml.contains("sourceFingerprint: \"" + command.getReport().sourceFingerprint() + "\""));
+		assertTrue(yaml.contains("targetDatabase: \"oracle\""));
+		assertTrue(yaml.contains("targetType: \"NUMBER(1,0)\""));
+		assertTrue(yaml.contains("targetType: \"VARCHAR2(80 CHAR)\""));
+		assertTrue(yaml.contains("targetType: \"NUMBER(12,2)\""));
+		command.setMappingTemplateFile(null);
+		command.setMappingFile(template.toFile());
+		command.setMappingTemplateFile(template.toFile());
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("mappingTemplateFile"));
+		command.setMappingTemplateFile(null);
+		command.run();
+		assertEquals(3, command.getReport().formatVersion());
+		assertEquals(3, command.getReport().targetMapping().tables().getFirst().columns().size());
+
+		command.setMappingFile(null);
+		command.setTargetDatabase("sqlserver");
+		command.setTargetVersion("2022");
+		command.setMappingTemplateFile(template.toFile());
+		command.run();
+		yaml = Files.readString(template);
+		assertTrue(yaml.contains("targetDatabase: \"sqlserver\""));
+		assertTrue(yaml.contains("targetType: \"bit\""));
+		assertTrue(yaml.contains("targetType: \"nvarchar(80)\""));
+		assertTrue(yaml.contains("targetType: \"decimal(12,2)\""));
+	}
+
+	@Test
 	void resolvesFingerprintBoundMappingAndValidatesObservedOracleCapacity() throws Exception {
 		final var command = command("mapping.accdb", "oracle", "19c");
 		Files.delete(command.getInputFile().toPath());
@@ -71,6 +113,47 @@ class AssessDatabaseMigrationCommandTest {
 		Files.writeString(mapping, Files.readString(mapping).replace("wrong", fingerprint) + "unknownTypo: true\n");
 		assertThrows(CommandException.class, command::run);
 		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+	}
+
+	@Test
+	void reportsTablesAndColumnsOmittedFromAnOtherwiseValidMapping() throws Exception {
+		final var command = command("partial-mapping.accdb", "oracle", "19c");
+		Files.delete(command.getInputFile().toPath());
+		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, command.getInputFile())) {
+			new io.github.spannm.jackcess.TableBuilder("Mapped")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("Included", io.github.spannm.jackcess.DataType.LONG))
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("Omitted", io.github.spannm.jackcess.DataType.TEXT))
+					.toTable(database);
+			new io.github.spannm.jackcess.TableBuilder("OmittedTable")
+					.addColumn(new io.github.spannm.jackcess.ColumnBuilder("ID", io.github.spannm.jackcess.DataType.LONG))
+					.toTable(database);
+		}
+		final Path mapping = directory.resolve("partial-mapping.yaml");
+		Files.writeString(mapping, ("""
+				format: sqlapp-database-migration-mapping
+				version: 1
+				sourceFingerprint: %s
+				targetDatabase: oracle
+				targetVersion: 19c
+				tables:
+				  - sourceTable: Mapped
+				    columns:
+				      - sourceColumn: Included
+				        targetType: NUMBER(10,0)
+				""").formatted(AssessMigrationCommand.fingerprint(command.getInputFile())));
+		command.setMappingFile(mapping.toFile());
+		command.run();
+		assertEquals("REVIEW_REQUIRED", command.getReport().status());
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f ->
+				f.ruleId().equals("migration.mapping.unmapped-table") && f.object().name().equals("OmittedTable")));
+		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f ->
+				f.ruleId().equals("migration.mapping.unmapped-column") && f.object().name().equals("Omitted")));
+		assertEquals(1, command.getReport().assessment().inventory().stream()
+				.filter(i -> i.type().equals("unmappedTables")).findFirst().orElseThrow().count());
+		assertEquals(1, command.getReport().assessment().inventory().stream()
+				.filter(i -> i.type().equals("unmappedColumnsInMappedTables")).findFirst().orElseThrow().count());
+		assertFalse(command.getReport().assessment().findings().stream().anyMatch(f ->
+				f.ruleId().equals("migration.mapping.unmapped-column") && f.object().table().equals("OmittedTable")));
 	}
 
 	@Test

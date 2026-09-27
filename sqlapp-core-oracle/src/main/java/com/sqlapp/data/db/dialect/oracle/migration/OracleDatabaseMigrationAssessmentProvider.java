@@ -34,6 +34,37 @@ public final class OracleDatabaseMigrationAssessmentProvider implements Database
 	}
 
 	@Override
+	public String suggestTargetType(final com.sqlapp.data.schemas.Column column, final String targetVersion) {
+		final String type = column.getSpecifics().get("access.sourceType", String.class);
+		if (type == null) { return null; }
+		return switch (type) {
+		case "BOOLEAN" -> "19c".equalsIgnoreCase(targetVersion) || "21c".equalsIgnoreCase(targetVersion) ? "NUMBER(1,0)" : "BOOLEAN";
+		case "BYTE" -> "NUMBER(3,0)";
+		case "INT" -> "NUMBER(5,0)";
+		case "LONG" -> "NUMBER(10,0)";
+		case "BIG_INT" -> "NUMBER(19,0)";
+		case "MONEY" -> "NUMBER(19,4)";
+		case "NUMERIC" -> "NUMBER(" + precision(column, 38) + "," + Math.max(0, column.getScale() == null ? 0 : column.getScale()) + ")";
+		case "FLOAT" -> "BINARY_FLOAT";
+		case "DOUBLE" -> "BINARY_DOUBLE";
+		case "SHORT_DATE_TIME" -> "TIMESTAMP(3)";
+		case "EXT_DATE_TIME" -> "TIMESTAMP(9)";
+		case "TEXT" -> column.getLength() != null && column.getLength() > 4000 ? "CLOB" : "VARCHAR2(" + length(column, 255, 4000) + " CHAR)";
+		case "MEMO" -> "CLOB";
+		case "GUID" -> "VARCHAR2(38 CHAR)";
+		case "BINARY" -> column.getLength() != null && column.getLength() > 2000 ? "BLOB" : "RAW(" + length(column, 255, 2000) + ")";
+		case "OLE" -> "BLOB";
+		default -> null;
+		};
+	}
+	private static long length(final com.sqlapp.data.schemas.Column column, final long fallback, final long maximum) {
+		return Math.min(maximum, column.getLength() == null || column.getLength() < 1 ? fallback : column.getLength());
+	}
+	private static long precision(final com.sqlapp.data.schemas.Column column, final long fallback) {
+		return Math.min(38, column.getLength() == null || column.getLength() < 1 ? fallback : column.getLength());
+	}
+
+	@Override
 	public MigrationAssessment assess(final MigrationAssessmentSource source, final String targetVersion) {
 		if (!supports(source.sourceProduct(), "oracle", targetVersion)) {
 			throw new IllegalArgumentException("Oracle migration assessment supports Access sources and targets 19c, 21c, 23ai, 26ai only");

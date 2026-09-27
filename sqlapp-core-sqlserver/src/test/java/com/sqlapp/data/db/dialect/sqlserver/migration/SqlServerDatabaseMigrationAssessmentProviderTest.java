@@ -111,6 +111,7 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 			assertTrue(rule(assessment, "type").getFirst().action().contains(mapping.getValue()), mapping.getKey());
 			assertEquals(before, schema);
 			assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("columns")).findFirst().orElseThrow().count());
+			assertNotNull(provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "2022"), mapping.getKey());
 		}
 	}
 
