@@ -33,6 +33,7 @@ Oracle JDBC driver. Existing `assessMigration` Oracle-to-Oracle behavior is unch
 | `targetVersion` | `Property<String>` | Required: `19c`, `21c`, `23ai` or `26ai` (case-insensitive); no guessed default |
 | `outputFile` | `RegularFileProperty` | Required JSON destination, distinct from the input |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; report is written before failing on blockers |
+| `scanData` | `Property<Boolean>` | Defaults to `false`; scans local scalar values when enabled |
 
 The task always reruns its failure policy. `failOnBlockers = false` supports
 inventory collection but does not remove blockers from the report. Invalid
@@ -67,10 +68,16 @@ identities. It reports `BLOCKED` for complex or unknown native types and
   relationship collection is skipped** to avoid indirectly opening linked
   databases. `relationshipsCollected=false` and a finding explain this; a zero
   count is not evidence that the source has no relationships.
-- Row data is not scanned (`dataScanned=false`). Empty values, byte lengths,
+- By default row data is not scanned (`dataScanned=false`). Empty values, byte lengths,
   numeric/date ranges, duplicates, orphans and post-load reconciliation remain
   unverified. No row values, SQL text, connection strings or linked file paths
   are included in the report.
+- Optional `scanData=true` emits a version 2 aggregate profile, required-NULL
+  blockers and `access.oracle.observed-empty-string` findings for short text.
+  Empty short text in a required column is a blocker; otherwise it is a warning.
+  Long-text/LOB handling still needs a mapping decision. See
+  [data preflight coverage](database-migration-assessment.md#optional-data-preflight),
+  including excluded types and numeric/date extrema retained in the report.
 - Forms, reports, VBA and macros are not inventoried. A permanent coverage
   finding calls for application inventory and frontend/cutover testing.
 

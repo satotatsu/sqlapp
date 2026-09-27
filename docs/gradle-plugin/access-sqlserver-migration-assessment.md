@@ -73,11 +73,18 @@ Rule IDs begin with `access.sqlserver.`:
   mapping, collation, client support, permissions and cutover remain unverified.
 
 The report also retains the source provider's findings for linked tables,
-saved queries and omitted application assets. Source values, SQL bodies and
+saved queries and omitted application assets. Row samples, text contents, SQL bodies and
 linked connection details are not included. Links are not opened. If linked
 tables exist, relationship collection is skipped and reported explicitly.
-Rows, forms, reports, VBA and macros are not inspected; migration and
+Rows are not inspected by default. Forms, reports, VBA and macros are not inspected; migration and
 post-load reconciliation are not executed.
+
+Enable `scanData=true` for a version 2 report with shared scalar aggregates,
+including numeric/date extrema, and required-NULL blockers. The additional
+`access.sqlserver.observed-legacy-datetime-range` warning identifies observed
+dates before 1753; check `datetime2` instead of assuming legacy `datetime` fits.
+See [data preflight coverage](database-migration-assessment.md#optional-data-preflight)
+for supported fields, excluded types and checks still requiring manual review.
 
 The supported target versions describe diagnostic coverage, not Microsoft
 support lifecycle or an upgrade recommendation. The existing DialectResolver,

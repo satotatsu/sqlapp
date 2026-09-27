@@ -2,6 +2,8 @@
 package com.sqlapp.data.db.dialect.oracle.migration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile;
 
 import com.sqlapp.data.schemas.migration.assessment.DatabaseMigrationAssessmentProvider;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
@@ -31,10 +33,29 @@ public final class OracleDatabaseMigrationAssessmentProvider implements Database
 		}
 		final var findings = new ArrayList<Finding>();
 		final var inventory = new ArrayList<Inventory>();
+		final var profiles = new HashMap<ObjectId, ColumnProfile>();
+		if (source.dataProfile() != null) {
+			for (final var table : source.dataProfile().tables()) {
+				for (final var column : table.columns()) { profiles.put(column.column(), column); }
+			}
+		}
 		for (final var schema : source.schemas()) {
 			final var assessment = AccessOracleMigrationAssessment.assess(schema, targetVersion);
 			findings.addAll(assessment.findings());
 			inventory.addAll(assessment.inventory());
+			for (final var table : schema.getTables()) {
+				for (final var column : table.getColumns()) {
+					final var id = new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(), table.getName());
+					final var profile = profiles.get(id);
+					// MEMO may be mapped to a LOB, whose empty-value semantics differ from scalar text.
+					if (profile != null && "TEXT".equals(profile.sourceType()) && profile.text() != null && profile.text().emptyCount() > 0) {
+						findings.add(new Finding("access.oracle.observed-empty-string", column.isNotNull() ? Severity.BLOCKER : Severity.WARNING,
+								Evidence.DATABASE, id, profile.text().emptyCount() + " empty strings were observed in a Short Text column.",
+								"Choose an explicit representation before scalar Oracle loading; empty strings become NULL and may violate required-column semantics.",
+								"https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Nulls.html"));
+					}
+				}
+			}
 		}
 		findings.add(new Finding("access.oracle.environment", Severity.REVIEW, Evidence.MANUAL_CHECK, null,
 				"The Oracle environment and client compatibility were not checked.",

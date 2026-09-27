@@ -14,6 +14,14 @@ public interface MigrationAssessmentSourceProvider {
 	boolean supports(Path file);
 	MigrationAssessmentSource load(Path file) throws IOException;
 
+	/** Optional local-data scan. Existing providers must not silently ignore a scan request. */
+	default MigrationAssessmentSource load(final Path file, final boolean scanData) throws IOException {
+		if (scanData) {
+			throw new IllegalArgumentException("scanData is not supported by source provider " + getClass().getName());
+		}
+		return load(file);
+	}
+
 	static MigrationAssessmentSourceProvider resolve(final Path file) {
 		return resolve(file, ServiceLoader.load(MigrationAssessmentSourceProvider.class).stream()
 				.map(ServiceLoader.Provider::get).toList());

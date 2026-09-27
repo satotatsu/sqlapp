@@ -92,7 +92,7 @@ public final class AccessOracleMigrationAssessment {
 						action == null ? "Supply a supported native type and an explicit lossless conversion plan." : action);
 				if (Set.of("TEXT", "MEMO", "GUID").contains(nativeType == null ? "" : nativeType)) {
 					findings.add(new Finding("access.oracle.empty-string", Severity.WARNING, Evidence.DOCUMENTED_RULE,
-							columnId, "Oracle scalar character columns treat empty strings as NULL; source values were not scanned.",
+							columnId, "Oracle scalar character columns treat empty strings as NULL; this metadata rule alone does not establish whether empty values exist.",
 							"Count NULL and empty values, decide their intended meaning, and verify NOT NULL and unique constraints after conversion.", NULLS));
 				}
 				if (column.isIdentity()) {

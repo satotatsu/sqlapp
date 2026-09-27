@@ -22,6 +22,11 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 
 	@Override
 	public MigrationAssessmentSource load(final Path file) throws IOException {
+		return load(file, false);
+	}
+
+	@Override
+	public MigrationAssessmentSource load(final Path file, final boolean scanData) throws IOException {
 		if (!supports(file)) { throw new IllegalArgumentException("Access assessment requires an MDB/ACCDB file"); }
 		final var snapshot = MdbFileLoader.loadForAssessment(file);
 		final var findings = new ArrayList<Finding>();
@@ -48,10 +53,17 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 		}
 		manual(findings, "access.application-coverage", "Forms, reports, VBA, macros and application dependencies were not inspected.",
 				"Inventory application assets and decide whether Access remains the frontend; test linked-table CRUD, generated keys and business workflows.");
-		manual(findings, "access.data-not-scanned", "Row data was not read. Metadata findings do not certify lossless migration.",
-				"Use a stable source copy. Profile NULL/empty strings, encoded lengths, numeric/date ranges, duplicate keys and orphans; reconcile rows, values and totals after loading.");
+		final var scan = scanData ? MdbDataProfiler.scan(file, snapshot.schema()) : null;
+		if (scan == null) {
+			manual(findings, "access.data-not-scanned", "Row data was not read. Metadata findings do not certify lossless migration.",
+					"Use a stable source copy. Profile NULL/empty strings, encoded lengths, numeric/date ranges, duplicate keys and orphans; reconcile rows, values and totals after loading.");
+		} else {
+			findings.addAll(scan.findings());
+			manual(findings, "access.data-scan-coverage", "Local scalar values were profiled; this is not a full integrity or migration verification.",
+					"Check duplicate keys, orphans, excluded columns and linked sources separately. Validate target encoding, precision, collation and post-load reconciliation.");
+		}
 		return new MigrationAssessmentSource(List.of(snapshot.schema()), new MigrationAssessment(findings, inventory),
-				false, snapshot.relationshipsCollected());
+				scanData, snapshot.relationshipsCollected(), scan == null ? null : scan.profile());
 	}
 
 	private static void manual(final List<Finding> findings, final String rule, final String reason, final String action) {

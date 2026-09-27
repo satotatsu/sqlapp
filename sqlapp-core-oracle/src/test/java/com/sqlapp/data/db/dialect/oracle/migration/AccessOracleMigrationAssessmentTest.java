@@ -9,8 +9,28 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
+import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile;
+import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.*;
+import java.util.List;
 
 class AccessOracleMigrationAssessmentTest {
+	@Test
+	void observedEmptyStringsRespectRequiredColumnsAndQualifiedIdentity() {
+		final var schema = schema("TEXT");
+		final var id = new MigrationAssessment.ObjectId(null, "source", "column", "値", "顧客");
+		final var profile = new MigrationDataProfile(List.of(new TableProfile(
+				new MigrationAssessment.ObjectId(null, "source", "table", "顧客"), 1,
+				List.of(new ColumnProfile(id, "TEXT", Coverage.SCANNED, 0L, new TextStatistics(1, 0L, 0L, 0L), null, null)))));
+		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true, profile);
+		final var provider = new OracleDatabaseMigrationAssessmentProvider();
+		assertEquals(MigrationAssessment.Severity.WARNING, provider.assess(source, "19c").findings().stream()
+				.filter(f -> f.ruleId().equals("access.oracle.observed-empty-string")).findFirst().orElseThrow().severity());
+		schema.getTables().getFirst().getColumns().getFirst().setNotNull(true);
+		assertTrue(provider.assess(source, "19c").hasBlockers());
+		schema.setName("different-source");
+		assertFalse(provider.assess(source, "19c").findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.observed-empty-string")));
+	}
 	@Test
 	void serviceProviderRejectsUnimplementedPairsAndVersions() {
 		final var provider = com.sqlapp.data.schemas.migration.assessment.DatabaseMigrationAssessmentProvider

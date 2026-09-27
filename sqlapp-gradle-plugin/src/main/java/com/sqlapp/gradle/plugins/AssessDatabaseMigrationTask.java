@@ -17,6 +17,7 @@ import com.sqlapp.data.db.command.migration.assessment.AssessDatabaseMigrationCo
 public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDatabaseMigrationCommand> {
 	public AssessDatabaseMigrationTask() {
 		getFailOnBlockers().convention(true);
+		getScanData().convention(false);
 		getOutputs().upToDateWhen(task -> false);
 	}
 	@InputFile
@@ -30,6 +31,8 @@ public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDat
 	public abstract Property<String> getTargetDatabase();
 	@Input
 	public abstract Property<Boolean> getFailOnBlockers();
+	@Input
+	public abstract Property<Boolean> getScanData();
 
 	@Override
 	protected AssessDatabaseMigrationCommand createCommand() {
@@ -42,5 +45,6 @@ public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDat
 		command.setTargetVersion(getTargetVersion().get());
 		command.setTargetDatabase(getTargetDatabase().get());
 		command.setFailOnBlockers(getFailOnBlockers().get());
+		command.setScanData(getScanData().get());
 	}
 }

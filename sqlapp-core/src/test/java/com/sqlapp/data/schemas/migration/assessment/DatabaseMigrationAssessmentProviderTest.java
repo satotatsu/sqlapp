@@ -10,6 +10,22 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.schemas.Schema;
 
 class DatabaseMigrationAssessmentProviderTest {
+	@Test
+	void existingProvidersRejectScansInsteadOfIgnoringTheOption() throws Exception {
+		assertFalse(SOURCE.load(Path.of("input.fixture"), false).dataScanned());
+		assertThrows(IllegalArgumentException.class, () -> SOURCE.load(Path.of("input.fixture"), true));
+	}
+
+	@Test
+	void unsupportedColumnStatisticsCannotBeMisrepresentedAsZero() {
+		final var id = new MigrationAssessment.ObjectId(null, "s", "column", "c", "t");
+		assertThrows(IllegalArgumentException.class, () -> new MigrationDataProfile.ColumnProfile(id, "OLE",
+				MigrationDataProfile.Coverage.UNSUPPORTED, 0L, null, null, null));
+		assertThrows(IllegalArgumentException.class, () -> new MigrationDataProfile.ColumnProfile(id, "TEXT",
+				MigrationDataProfile.Coverage.SCANNED, null, null, null, null));
+		assertThrows(IllegalArgumentException.class, () -> new MigrationAssessmentSource(
+				List.of(new Schema("s").setProductName("source")), EMPTY, false, false, new MigrationDataProfile(List.of())));
+	}
 	private static final MigrationAssessment EMPTY = new MigrationAssessment(List.of(), List.of());
 	private static final DatabaseMigrationAssessmentProvider TARGET = new DatabaseMigrationAssessmentProvider() {
 		public boolean supports(String source, String target, String version) {

@@ -11,6 +11,7 @@ import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSourceProvider;
 import com.sqlapp.data.schemas.migration.assessment.DatabaseMigrationAssessmentProvider;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
+import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.*;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
@@ -27,12 +28,22 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 	private String targetVersion;
 	private String targetDatabase;
 	private boolean failOnBlockers = true;
+	private boolean scanData;
 	@Setter(lombok.AccessLevel.NONE)
 	private Report report;
 
 	public record Report(int formatVersion, String sourceFingerprint, String sourceProduct, String targetProduct,
 			String targetVersion, Method migrationMethod, boolean dataScanned, boolean relationshipsCollected,
-			String status, MigrationAssessment assessment) { }
+			String status, MigrationAssessment assessment,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			MigrationDataProfile dataProfile) {
+		public Report(final int formatVersion, final String sourceFingerprint, final String sourceProduct, final String targetProduct,
+				final String targetVersion, final Method migrationMethod, final boolean dataScanned, final boolean relationshipsCollected,
+				final String status, final MigrationAssessment assessment) {
+			this(formatVersion, sourceFingerprint, sourceProduct, targetProduct, targetVersion, migrationMethod,
+					dataScanned, relationshipsCollected, status, assessment, null);
+		}
+	}
 
 	@Override
 	protected void doRun() {
@@ -51,7 +62,10 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 				throw new CommandException("outputFile must not overwrite inputFile");
 			}
 			final String fingerprint = AssessMigrationCommand.fingerprint(inputFile);
-			final var source = MigrationAssessmentSourceProvider.resolve(input).load(input);
+			final var source = MigrationAssessmentSourceProvider.resolve(input).load(input, scanData);
+			if (scanData && (!source.dataScanned() || source.dataProfile() == null)) {
+				throw new CommandException("Source provider did not supply the requested data profile");
+			}
 			final var target = DatabaseMigrationAssessmentProvider.resolve(source.sourceProduct(), targetDatabase, targetVersion);
 			final String version = target.normalizeTargetVersion(targetVersion);
 			final var targetAssessment = target.assess(source, version);
@@ -63,9 +77,9 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 				throw new CommandException("inputFile changed during assessment; retry with a stable copy");
 			}
 			final var assessment = new MigrationAssessment(findings, inventory);
-			final var result = new Report(1, fingerprint, source.sourceProduct(), target.targetProduct(), version,
+			final var result = new Report(scanData ? 2 : 1, fingerprint, source.sourceProduct(), target.targetProduct(), version,
 					Method.LOGICAL_MIGRATION, source.dataScanned(), source.relationshipsCollected(),
-					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment);
+					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, source.dataProfile());
 			writeReport(result);
 		} catch (final Exception e) {
 			throw e instanceof CommandException commandException ? commandException

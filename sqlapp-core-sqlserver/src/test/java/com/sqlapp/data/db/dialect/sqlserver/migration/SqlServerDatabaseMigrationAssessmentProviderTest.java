@@ -8,8 +8,23 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.schemas.*;
 import com.sqlapp.data.schemas.migration.assessment.*;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.*;
+import com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.*;
 
 class SqlServerDatabaseMigrationAssessmentProviderTest {
+	@Test
+	void observedDatesWarnAboutLegacyDatetimeOnlyBelowItsBoundary() {
+		for (final String date : List.of("1752-12-31T23:59:59", "1753-01-01T00:00:00")) {
+			final var column = new ColumnProfile(new ObjectId(null, "source", "column", "C0", "顧客"),
+					"SHORT_DATE_TIME", Coverage.SCANNED, 0L, null, null, new DateTimeStatistics(date, date, 0));
+			final var profile = new MigrationDataProfile(List.of(new TableProfile(
+					new ObjectId(null, "source", "table", "顧客"), 1, List.of(column))));
+			final var source = new MigrationAssessmentSource(List.of(schema("SHORT_DATE_TIME")),
+					new MigrationAssessment(List.of(), List.of()), true, true, profile);
+			final var result = provider.assess(source, "2022");
+			assertEquals(date.startsWith("1752") ? 1 : 0, rule(result, "observed-legacy-datetime-range").size());
+			assertFalse(result.hasBlockers());
+		}
+	}
 	private final SqlServerDatabaseMigrationAssessmentProvider provider = new SqlServerDatabaseMigrationAssessmentProvider();
 
 	private Schema schema(String... types) {

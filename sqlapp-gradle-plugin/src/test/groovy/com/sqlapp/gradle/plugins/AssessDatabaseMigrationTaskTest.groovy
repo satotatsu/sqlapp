@@ -17,6 +17,7 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		project.plugins.apply(DbPlugin)
 		def task = project.tasks.named('assessDatabaseMigration', AssessDatabaseMigrationTask).get()
 		assertTrue(task.failOnBlockers.get())
+		assertFalse(task.scanData.get())
 		assertFalse(task.targetVersion.isPresent())
 		assertFalse(task.targetDatabase.isPresent())
 		def input = new File(testProjectDir, 'source.accdb')
@@ -48,5 +49,12 @@ class AssessDatabaseMigrationTaskTest extends AbstractTaskTest {
 		assertEquals('Microsoft SQL Server', task.internalCommand().report.targetProduct())
 		assertTrue(output.getText('UTF-8').contains('access.sqlserver.type'))
 		assertFalse(output.getText('UTF-8').contains('access.oracle.'))
+		task.scanData.set(true)
+		task.exec()
+		assertTrue(task.internalCommand().scanData)
+		assertTrue(task.internalCommand().report.dataScanned())
+		assertEquals(2, task.internalCommand().report.formatVersion())
+		assertEquals(0, task.internalCommand().report.dataProfile().tables().get(0).rowCount())
+		assertFalse(output.getText('UTF-8').contains('access.data-not-scanned'))
 	}
 }

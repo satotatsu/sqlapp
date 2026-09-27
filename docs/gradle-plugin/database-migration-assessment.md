@@ -69,6 +69,7 @@ accepted by this provider. See [SQL Server diagnostic coverage](access-sqlserver
 | `targetVersion` | `Property<String>` | Required: an explicit version from the supported targets table; Oracle version names are case-insensitive |
 | `outputFile` | `RegularFileProperty` | Required JSON path distinct from the input |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; blockers fail the task after publishing the report |
+| `scanData` | `Property<Boolean>` | Defaults to `false`; opt in to local Access scalar data profiling |
 
 Missing or ambiguous providers, unsupported combinations and invalid inputs
 fail without publishing a replacement report. An older report may remain, so
@@ -84,9 +85,38 @@ cannot be hidden by a target assessment. Results are `BLOCKED` or
 
 See [Access-to-Oracle coverage](access-oracle-migration-assessment.md) and
 [Access-to-SQL Server coverage](access-sqlserver-migration-assessment.md) for rules
-and limitations. Access files are read-only; rows and linked sources are not
-read. Forms, reports, VBA, macros, data reconciliation and migration execution
+and limitations. Access files are read-only; rows are read only with `scanData=true`.
+Linked sources are never read. Forms, reports, VBA, macros, data reconciliation and migration execution
 remain outside this assessment.
+
+## Optional data preflight
+
+Add `scanData = true` to either task configuration above, or call
+`command.setScanData(true)` before `run()` in Java. This scans every local table
+once without sampling and emits a version 2 report with `dataProfile` and
+`dataScanned=true`. The default remains version 1 without `dataProfile`.
+
+The profile contains row and NULL counts; empty-string counts and maximum text
+lengths in Unicode code points, UTF-16 units and UTF-8 bytes; finite numeric
+minima/maxima and normalized integer-digit/scale requirements; and local date/time
+minima/maxima and fractional precision. UTF-8 lengths are reference measurements,
+not a claim about the target character set. All-null and empty columns have null
+extrema/length maxima, rather than fabricated zero values. Boolean columns have
+NULL counts only. Non-finite numbers have a separate count and warning.
+
+Observed NULLs in required columns are blockers. Oracle additionally reports
+observed empty short-text values (a blocker for required columns, otherwise a
+warning). SQL Server warns about observed dates before 1753 when considering
+legacy `datetime`; this does not prohibit `datetime2`.
+
+Binary, OLE, complex and unknown columns are excluded and explicitly marked
+`UNSUPPORTED`; their NULL counts are unknown. Links are never followed. Duplicate
+keys, orphans, target sizing/mapping validation and reconciliation remain manual
+checks. `dataScanned=true` therefore means scalar profiling, not complete validation.
+The file is streamed by row, with no row samples or text contents retained in the
+report; numeric/date extrema are actual aggregate values and may be sensitive.
+Use a stable copy of the input. Read failures or a changed fingerprint fail without
+replacing the previous report. A full scan may take time on large files.
 
 ## Java entry point and compatibility
 
@@ -121,6 +151,10 @@ Common contracts live in `sqlapp-core` under
   explicit coverage. Source-specific details belong in Schema specifics when
   needed by target rules. Implementations must not connect to databases or
   follow external links. They must report omitted assets and unscanned data.
+  Optional `load(path, true)` returns a shared `MigrationDataProfile`; the default
+  implementation rejects scanning so existing providers cannot silently ignore it.
+  Existing constructors and metadata-only loading remain available; Schema XML
+  is unchanged.
 - `DatabaseMigrationAssessmentProvider` declares support for an exact source
   product, target database and target version, then assesses the source without
   modifying it or connecting to external resources. It returns target findings

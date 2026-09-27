@@ -4,6 +4,7 @@ package com.sqlapp.data.db.dialect.sqlserver.migration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.CheckConstraint;
@@ -93,6 +94,18 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 			inventory.add(new Inventory(schema.getCatalogName(), schema.getName(), "columns", columns));
 			inventory.add(new Inventory(schema.getCatalogName(), schema.getName(), "collectedRelationships", relationships));
 		}
+		if (source.dataProfile() != null) {
+			for (final var table : source.dataProfile().tables()) {
+				for (final var column : table.columns()) {
+					if (column.dateTime() != null && column.dateTime().minimum() != null
+							&& LocalDateTime.parse(column.dateTime().minimum()).isBefore(LocalDateTime.of(1753, 1, 1, 0, 0))) {
+						findings.add(new Finding("access.sqlserver.observed-legacy-datetime-range", Severity.WARNING, Evidence.DATABASE,
+								column.column(), "Observed dates include values before 1753-01-01, outside legacy datetime's range.",
+								"Use a validated datetime2 mapping and compatible clients; do not load these values unchanged into datetime.", DATETIME));
+					}
+				}
+			}
+		}
 		findings.add(new Finding("access.sqlserver.environment", Severity.REVIEW, Evidence.MANUAL_CHECK, null,
 				"Target environment and application compatibility were not checked; no rows were inspected by this assessor.",
 				"Verify SQL Server release/edition, compatibility level, database/schema mapping, collation, reserved names, ODBC/JDBC support, permissions and cutover recovery. Test Access forms, queries and linked-table writes.", null));
@@ -112,7 +125,7 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 				"Source type: " + (type == null ? "unknown" : type) + ". No values were converted.",
 				action == null ? "Supply a supported native type and an explicit lossless conversion plan." : action, TYPES);
 		if ("SHORT_DATE_TIME".equals(type) || "EXT_DATE_TIME".equals(type)) {
-			add(findings, "datetime", Severity.REVIEW, id, "Source dates and fractional precision were not profiled.",
+			add(findings, "datetime", Severity.REVIEW, id, "Validate date ranges and fractional precision against the chosen target mapping.",
 					"Consider datetime2 with explicit precision (0-7); it has no timezone. If choosing datetime, check its narrower date range and rounding.", DATETIME);
 		}
 		if ("TEXT".equals(type) || "MEMO".equals(type)) {
