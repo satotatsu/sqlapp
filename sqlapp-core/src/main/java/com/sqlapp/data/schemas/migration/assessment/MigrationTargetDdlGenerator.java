@@ -172,6 +172,7 @@ public final class MigrationTargetDdlGenerator {
 				.append(omittedForeignKeyComments(omittedForeignKeys))
 				.append(omittedSourceObjectComments(source, mappedTables))
 				.append(sourceTableAndColumnMappingComments(mapping))
+				.append(sourceColumnTypeMappingComments(sourceTables, mapping))
 				.append(names.mappingComments())
 				.append(names.fallbackComments()).toString();
 	}
@@ -220,6 +221,68 @@ public final class MigrationTargetDdlGenerator {
 			}
 		}
 		return sql.toString();
+	}
+
+	private static String sourceColumnTypeMappingComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
+		if (mapping.tables().isEmpty()) { return ""; }
+		final var sql = new StringBuilder("\n-- Source-to-target column type mapping:\n");
+		for (final var table : mapping.tables()) {
+			final Table sourceTable = sourceTables.get(table.sourceTable());
+			for (final var column : table.columns()) {
+				final var sourceColumn = sourceColumn(sourceTable, column.sourceColumn().name());
+				final String sourceName = qualified(column.sourceColumn().catalog(), column.sourceColumn().schema(),
+						column.sourceColumn().table() == null ? table.sourceTable().name() : column.sourceColumn().table(),
+						column.sourceColumn().name());
+				final String targetName = qualified(null, table.targetSchema(), table.targetTable(), column.targetColumn());
+				sql.append("-- ").append(NameRegistry.commentValue(sourceName)).append(" (")
+						.append(NameRegistry.commentValue(sourceType(sourceColumn))).append(") -> ")
+						.append(NameRegistry.commentValue(targetName)).append(" (")
+						.append(NameRegistry.commentValue(column.targetType())).append(')');
+				if (column.conversion() != null && !column.conversion().isBlank()) {
+					sql.append("; conversion ").append(NameRegistry.commentValue(column.conversion()));
+				}
+				sql.append("; nullability ").append(sourceColumn == null ? "<unknown>"
+						: sourceColumn.isNotNull() ? "required" : "nullable")
+						.append(" -> ").append(targetNullability(sourceTable, column))
+						.append("; identity ").append(sourceColumn == null ? "<unknown>" : sourceColumn.isIdentity())
+						.append(" -> ").append(column.identity() == null ? "unspecified" : column.identity())
+						.append("; default ").append(commentExpression(sourceColumn == null ? null : sourceColumn.getDefaultValue()))
+						.append(" -> ").append(commentExpression(column.defaultExpression()));
+				sql.append('\n');
+			}
+		}
+		return sql.toString();
+	}
+
+	private static String targetNullability(final Table sourceTable,
+			final ResolvedMigrationTargetMapping.ColumnMapping column) {
+		if (sourceTable != null && sourceTable.getConstraints().getPrimaryKeyConstraint() != null) {
+			for (final var primaryColumn : sourceTable.getConstraints().getPrimaryKeyConstraint().getColumns()) {
+				if (key(primaryColumn.getName()).equals(key(column.sourceColumn().name()))) { return "required"; }
+			}
+		}
+		if (column.nullable() == null) { return "unspecified"; }
+		return column.nullable() ? "nullable" : "required";
+	}
+
+	private static String commentExpression(final String expression) {
+		return expression == null || expression.isBlank() ? "<none>" : NameRegistry.commentValue(expression);
+	}
+
+	private static com.sqlapp.data.schemas.Column sourceColumn(final Table table, final String name) {
+		if (table == null) { return null; }
+		for (final var column : table.getColumns()) {
+			if (key(column.getName()).equals(key(name))) { return column; }
+		}
+		return null;
+	}
+
+	private static String sourceType(final com.sqlapp.data.schemas.Column column) {
+		if (column == null) { return "<unknown>"; }
+		final String accessType = column.getSpecifics().get("access.sourceType", String.class);
+		if (accessType != null && !accessType.isBlank()) { return accessType; }
+		return column.getDataType() == null ? "<unknown>" : column.getDataType().toString();
 	}
 
 	private static String qualified(final String... parts) {

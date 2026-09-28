@@ -197,7 +197,11 @@ also listed in a source-to-target name mapping, including Access names retained
 without change and deterministic generated names. A separate mapping lists every
 mapped Access table and column with its schema-qualified target name. Unmapped
 Access tables and columns in mapped tables are listed separately as omitted from
-the target DDL. Control characters are
+the target DDL. The DDL also lists each mapped column's Access native type (or
+the canonical Schema type when native evidence is unavailable), target type and
+explicit conversion expression. The same entry compares source and target
+nullability, identity generation and default expressions; absent target choices
+remain explicit as `unspecified` or `<none>`. Control characters are
 escaped in those comments. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
 Nullable unique keys remain review items because Access, Oracle and SQL Server

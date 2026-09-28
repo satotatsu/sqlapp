@@ -18,7 +18,7 @@ class DatabaseMigrationAssessmentProviderTest {
 	void targetDdlIncludesOnlySafeFullyMappedKeys() {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var parent = new Table("Parent");
-		final var parentId = new Column("ID");
+		final var parentId = new Column("ID").setIdentity(true);
 		final var parentAlt = new Column("Alt");
 		parent.getColumns().add(parentId);
 		parent.getColumns().add(parentAlt);
@@ -28,7 +28,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var childId = new Column("ID");
 		final var parentIdInChild = new Column("ParentID");
 		final var parentAltInChild = new Column("ParentAlt");
-		final var code = new Column("Code").setNotNull(true);
+		final var code = new Column("Code").setNotNull(true).setDefaultValue("7");
+		code.getSpecifics().put("access.sourceType", "LONG");
 		final var optionalCode = new Column("OptionalCode");
 		child.getColumns().add(childId);
 		child.getColumns().add(parentIdInChild);
@@ -58,7 +59,7 @@ class DatabaseMigrationAssessmentProviderTest {
 						column("source", "Child", "ParentAlt", "PARENT_ALT"),
 						new ResolvedMigrationTargetMapping.ColumnMapping(
 								new MigrationAssessment.ObjectId(null, "source", "column", "Code", "Child"),
-								"CODE", "int", false, null, "0", null),
+								"CODE", "int", false, null, "0", "normalize_code"),
 						column("source", "Child", "OptionalCode", "OPTIONAL_CODE")));
 		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, childMapping));
 		final String ddl = MigrationTargetDdlGenerator.generate(source, mapping, value -> "[" + value + "]", "GO\n",
@@ -84,6 +85,9 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- COLUMN \"source.Parent.Alt\" -> \"TARGET.PARENT_T.ALT\"\n"
 				+ "-- TABLE \"source.Child\" -> \"TARGET.CHILD_T\""));
 		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\" -> \"TARGET.CHILD_T.CODE\""));
+		assertTrue(ddl.contains("-- Source-to-target column type mapping:"));
+		assertTrue(ddl.contains("-- \"source.Child.Code\" (\"LONG\") -> \"TARGET.CHILD_T.CODE\" (\"int\"); conversion \"normalize_code\"; nullability required -> required; identity false -> unspecified; default \"7\" -> \"0\""));
+		assertTrue(ddl.contains("-- \"source.Parent.ID\" (\"<unknown>\") -> \"TARGET.PARENT_T.PARENT_ID\" (\"int\"); nullability required -> required; identity true -> unspecified; default <none> -> <none>"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertFalse(ddl.contains("ADD CONSTRAINT [FK_CHILD_ALT]"));
