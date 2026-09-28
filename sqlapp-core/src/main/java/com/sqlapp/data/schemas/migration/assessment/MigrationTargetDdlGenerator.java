@@ -4,7 +4,10 @@ package com.sqlapp.data.schemas.migration.assessment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.ObjectId;
 
@@ -26,8 +29,8 @@ public final class MigrationTargetDdlGenerator {
 		}
 		final var mappedTables = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
 		mapping.tables().forEach(table -> mappedTables.put(table.sourceTable(), table));
-		final var sql = new StringBuilder("-- Review-only DDL. Unnamed primary, required unique and foreign keys are emitted only when every participating object is mapped.\n")
-				.append("-- Indexes, defaults, conversion expressions and cascade rules are not included.\n");
+		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
+				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n");
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			final Map<String, String> columns = columns(mapped);
@@ -39,6 +42,9 @@ public final class MigrationTargetDdlGenerator {
 				final var column = mapped.columns().get(i);
 				sql.append("  ").append(quote.apply(column.targetColumn())).append(' ').append(column.targetType())
 						.append(Boolean.TRUE.equals(column.identity()) ? identityClause.apply(column) : "");
+				if (column.defaultExpression() != null && !column.defaultExpression().isBlank()) {
+					sql.append(" DEFAULT ").append(column.defaultExpression());
+				}
 				if (primaryKeyColumns.contains(key(column.sourceColumn().name())) || Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
 				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
 				if (i + 1 < mapped.columns().size() || primaryKey != null || !uniqueKeys.isEmpty()) { sql.append(','); }
@@ -52,7 +58,34 @@ public final class MigrationTargetDdlGenerator {
 				if (i + 1 < constraints.size()) { sql.append(','); }
 				sql.append('\n');
 			}
-			sql.append(");\n").append(batchSeparator);
+				sql.append(");\n").append(batchSeparator);
+		}
+		for (final var mapped : mapping.tables()) {
+			final Table sourceTable = sourceTables.get(mapped.sourceTable());
+			if (sourceTable == null) { continue; }
+			final Map<String, String> targetColumns = columns(mapped);
+			int ordinal = 0;
+			for (final var index : sourceTable.getIndexes()) {
+				if (index.isUnique() || index.getColumns().isEmpty()) { continue; }
+				ordinal++;
+				final var keyColumns = new StringBuilder();
+				boolean complete = true;
+				for (int i = 0; i < index.getColumns().size(); i++) {
+					final var sourceColumn = index.getColumns().get(i);
+					final String targetColumn = targetColumns.get(key(sourceColumn.getName()));
+					if (targetColumn == null) { complete = false; break; }
+					if (i > 0) { keyColumns.append(", "); }
+					keyColumns.append(quote.apply(targetColumn));
+					if (sourceColumn.getOrder() == Order.Desc) { keyColumns.append(" DESC"); }
+				}
+				if (complete) {
+					final String identity = mapped.targetSchema() + "." + mapped.targetTable() + "."
+							+ index.getName() + "." + ordinal;
+					sql.append("CREATE INDEX ").append(quote.apply(indexName(identity))).append(" ON ")
+							.append(name(mapped, quote)).append(" (").append(keyColumns).append(");\n")
+							.append(batchSeparator);
+				}
+			}
 		}
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
@@ -145,4 +178,13 @@ public final class MigrationTargetDdlGenerator {
 		return new ObjectId(table.getCatalogName(), table.getSchemaName(), "table", table.getName());
 	}
 	private static String key(final String value) { return value.toUpperCase(java.util.Locale.ROOT); }
+	private static String indexName(final String identity) {
+		try {
+			final byte[] digest = MessageDigest.getInstance("SHA-256").digest(identity.getBytes(StandardCharsets.UTF_8));
+			final var value = new StringBuilder("IX_");
+			for (int i = 0; i < 6; i++) { value.append(String.format("%02x", digest[i])); }
+			return value.toString();
+		}
+		catch (final java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+	}
 }

@@ -14,10 +14,14 @@ public record MigrationTargetMapping(String format, int version, String sourceFi
 		public TableMapping { columns = columns == null ? List.of() : List.copyOf(columns); }
 	}
 	public record ColumnMapping(String sourceColumn, String targetColumn, String targetType,
-			Boolean nullable, Boolean identity, String conversion) {
+			Boolean nullable, Boolean identity, String defaultExpression, String conversion) {
+		public ColumnMapping(final String sourceColumn, final String targetColumn, final String targetType,
+				final Boolean nullable, final Boolean identity, final String conversion) {
+			this(sourceColumn, targetColumn, targetType, nullable, identity, null, conversion);
+		}
 		public ColumnMapping(final String sourceColumn, final String targetColumn, final String targetType,
 				final Boolean nullable, final String conversion) {
-			this(sourceColumn, targetColumn, targetType, nullable, null, conversion);
+			this(sourceColumn, targetColumn, targetType, nullable, null, null, conversion);
 		}
 	}
 }

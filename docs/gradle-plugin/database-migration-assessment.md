@@ -157,6 +157,7 @@ tables:
         targetColumn: CUSTOMER_NAME
         targetType: VARCHAR2(200 CHAR)
         nullable: false
+        defaultExpression: "'unknown'"
         conversion: preserve Unicode text and reject empty required values
 ```
 
@@ -178,9 +179,12 @@ left to the target database so an Access name cannot violate target identifier
 rules. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
 Nullable unique keys remain review items because Access, Oracle and SQL Server
-do not share identical NULL uniqueness semantics. Secondary indexes, defaults,
-conversion expressions and cascade rules remain
-excluded, and the SQL starts with comments stating that scope. The command
+do not share identical NULL uniqueness semantics. Fully mapped non-unique
+secondary indexes are emitted after the tables, preserving column order and
+descending keys. Their target names use a deterministic ASCII hash so they fit
+both Oracle and SQL Server identifier limits without trusting Access names.
+Source defaults, conversion expressions and cascade rules remain excluded, and the
+SQL starts with comments stating that scope. The command
 never executes this SQL. If mapping validation finds an
 invalid target type or another mapping blocker, the JSON/HTML evidence is
 published but an existing DDL preview is left unchanged.
@@ -204,7 +208,15 @@ intentional partial migration; record the scope decision during review.
 source NULLs into blockers; without complete scalar coverage it produces a
 review item rather than asserting there are no NULLs. `conversion` records the
 chosen conversion intent in JSON and HTML. It is descriptive text: this task
-does not execute it, parse SQL expressions, generate DDL or transform values.
+does not execute it or transform values.
+
+`defaultExpression` is an optional, reviewed target SQL expression. Source
+defaults are not copied automatically because Access functions and expression
+syntax are not portable. The expression is retained in JSON/HTML and emitted
+after the target type in the DDL preview. It must be a single line without a
+semicolon or SQL comments, and cannot be combined with `identity`. This lexical
+guard prevents a mapping entry from adding another SQL statement; target syntax
+and semantics still require review.
 
 Oracle validation accepts explicit `NUMBER`, character types with lengths,
 `DATE`, `TIMESTAMP`, LOBs, `RAW`, binary floating types and version-appropriate

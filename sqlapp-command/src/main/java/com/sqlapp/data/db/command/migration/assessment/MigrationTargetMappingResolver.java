@@ -64,10 +64,12 @@ final class MigrationTargetMappingResolver {
 				if (configuredColumn.targetType() == null || configuredColumn.targetType().isBlank()) {
 					throw new CommandException("targetType is required for " + table.getName() + "." + column.getName());
 				}
+				final String defaultExpression = defaultExpression(configuredColumn.defaultExpression(), table, column,
+						configuredColumn.identity());
 				columns.add(new ResolvedMigrationTargetMapping.ColumnMapping(
 						new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(), table.getName()),
 						targetColumn, configuredColumn.targetType().trim(), configuredColumn.nullable(),
-						configuredColumn.identity(), configuredColumn.conversion()));
+						configuredColumn.identity(), defaultExpression, configuredColumn.conversion()));
 			}
 			if (columns.isEmpty()) { throw new CommandException("Mapping table must contain at least one column: " + table.getName()); }
 			tables.add(new ResolvedMigrationTargetMapping.TableMapping(tableId,
@@ -95,4 +97,18 @@ final class MigrationTargetMappingResolver {
 	private static String optional(final String value, final String fallback) { return blank(value) ? fallback : value.trim(); }
 	private static String canonical(final String value) { return blank(value) ? "" : value.trim().toUpperCase(Locale.ROOT); }
 	private static String text(final String value) { return value == null ? "" : value.trim(); }
+	private static String defaultExpression(final String value, final Table table, final Column column,
+			final Boolean identity) {
+		if (blank(value)) { return null; }
+		final String expression = value.trim();
+		if (Boolean.TRUE.equals(identity)) {
+			throw new CommandException("defaultExpression cannot be combined with identity: " + table.getName() + "." + column.getName());
+		}
+		if (expression.indexOf(';') >= 0 || expression.indexOf('\r') >= 0 || expression.indexOf('\n') >= 0
+				|| expression.contains("--") || expression.contains("/*") || expression.contains("*/")) {
+			throw new CommandException("defaultExpression must be one comment-free SQL expression: "
+					+ table.getName() + "." + column.getName());
+		}
+		return expression;
+	}
 }

@@ -65,10 +65,11 @@ final class DatabaseMigrationAssessmentHtml {
 			for (final var table : report.targetMapping().tables()) {
 				html.append("<article class=\"card\"><h3>").append(e(object(table.sourceTable()))).append(" → ")
 						.append(e((table.targetSchema() == null || table.targetSchema().isBlank() ? "" : table.targetSchema() + ".") + table.targetTable()))
-						.append("</h3><div class=\"scroll\"><table><thead><tr><th>Source column</th><th>Target column</th><th>Target type</th><th>Nullable</th><th>Identity</th><th>Conversion</th></tr></thead><tbody>");
+						.append("</h3><div class=\"scroll\"><table><thead><tr><th>Source column</th><th>Target column</th><th>Target type</th><th>Nullable</th><th>Identity</th><th>Default</th><th>Conversion</th></tr></thead><tbody>");
 				table.columns().forEach(c -> html.append("<tr><td>").append(e(object(c.sourceColumn()))).append("</td><td>").append(e(c.targetColumn()))
 						.append("</td><td>").append(e(c.targetType())).append("</td><td>").append(e(c.nullable())).append("</td><td>")
-						.append(e(c.identity())).append("</td><td>").append(e(c.conversion())).append("</td></tr>"));
+						.append(e(c.identity())).append("</td><td>").append(e(c.defaultExpression())).append("</td><td>")
+						.append(e(c.conversion())).append("</td></tr>"));
 				html.append("</tbody></table></div></article>");
 			}
 			html.append("</section>");
