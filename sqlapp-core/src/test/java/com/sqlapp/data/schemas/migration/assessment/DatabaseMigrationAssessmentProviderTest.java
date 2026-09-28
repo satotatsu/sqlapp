@@ -125,6 +125,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var id = new Column("ID");
 		final var optional = new Column("OptionalCode");
 		final var detail = new Column("Detail");
+		final var ignored = new Table("Ignored");
+		ignored.getColumns().add(new Column("Value"));
 		table.getColumns().add(id);
 		table.getColumns().add(optional);
 		table.getColumns().add(detail);
@@ -132,6 +134,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		table.getConstraints().addUniqueConstraint("UK_SAMPLE_OPTIONAL", optional);
 		table.getIndexes().add(new Index("IX_SAMPLE_DETAIL", optional, detail));
 		schema.getTables().add(table);
+		schema.getTables().add(ignored);
 		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(
 				new MigrationAssessment.ObjectId(null, "source", "table", "Sample"), null, "SAMPLE_T",
 				List.of(column("source", "Sample", "OptionalCode", "OPTIONAL_CODE")));
@@ -148,6 +151,10 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertFalse(ddl.contains("PRIMARY KEY ("));
 		assertFalse(ddl.contains(" UNIQUE ("));
 		assertFalse(ddl.contains("CREATE INDEX"));
+		assertTrue(ddl.contains("-- Source tables and columns omitted from the target DDL:\n"
+				+ "-- COLUMN \"source.Sample.ID\": not mapped\n"
+				+ "-- COLUMN \"source.Sample.Detail\": not mapped\n"
+				+ "-- TABLE \"source.Ignored\": not mapped"));
 	}
 
 	@Test

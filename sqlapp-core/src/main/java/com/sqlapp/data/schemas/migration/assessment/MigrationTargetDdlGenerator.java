@@ -170,9 +170,35 @@ public final class MigrationTargetDdlGenerator {
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
 				.append(omittedKeyAndIndexComments(omittedKeysAndIndexes))
 				.append(omittedForeignKeyComments(omittedForeignKeys))
+				.append(omittedSourceObjectComments(source, mappedTables))
 				.append(sourceTableAndColumnMappingComments(mapping))
 				.append(names.mappingComments())
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String omittedSourceObjectComments(final MigrationAssessmentSource source,
+			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables) {
+		final var omissions = new java.util.ArrayList<String>();
+		for (final var schema : source.schemas()) {
+			for (final var table : schema.getTables()) {
+				final var mapped = mappedTables.get(tableId(table));
+				if (mapped == null) {
+					omissions.add("-- TABLE " + NameRegistry.commentValue(qualified(table.getCatalogName(),
+							table.getSchemaName(), table.getName())) + ": not mapped\n");
+					continue;
+				}
+				final var mappedColumns = new java.util.HashSet<String>();
+				mapped.columns().forEach(column -> mappedColumns.add(key(column.sourceColumn().name())));
+				for (final var column : table.getColumns()) {
+					if (!mappedColumns.contains(key(column.getName()))) {
+						omissions.add("-- COLUMN " + NameRegistry.commentValue(qualified(table.getCatalogName(),
+								table.getSchemaName(), table.getName(), column.getName())) + ": not mapped\n");
+					}
+				}
+			}
+		}
+		return omissions.isEmpty() ? ""
+				: "\n-- Source tables and columns omitted from the target DDL:\n" + String.join("", omissions);
 	}
 
 	private static String sourceTableAndColumnMappingComments(final ResolvedMigrationTargetMapping mapping) {
