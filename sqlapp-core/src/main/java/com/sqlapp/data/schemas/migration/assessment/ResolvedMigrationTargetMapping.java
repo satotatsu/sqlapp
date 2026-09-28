@@ -17,7 +17,11 @@ public record ResolvedMigrationTargetMapping(String mappingFingerprint, String t
 		public TableMapping { Objects.requireNonNull(sourceTable, "sourceTable"); columns = List.copyOf(columns); }
 	}
 	public record ColumnMapping(ObjectId sourceColumn, String targetColumn, String targetType,
-			Boolean nullable, String conversion) {
+			Boolean nullable, Boolean identity, String conversion) {
+		public ColumnMapping(final ObjectId sourceColumn, final String targetColumn, final String targetType,
+				final Boolean nullable, final String conversion) {
+			this(sourceColumn, targetColumn, targetType, nullable, null, conversion);
+		}
 		public ColumnMapping { Objects.requireNonNull(sourceColumn, "sourceColumn"); }
 	}
 }

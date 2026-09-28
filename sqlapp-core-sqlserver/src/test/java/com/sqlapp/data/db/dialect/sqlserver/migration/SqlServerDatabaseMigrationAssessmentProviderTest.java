@@ -23,7 +23,7 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 				new ColumnProfile(ids.get(3), "TEXT", Coverage.SCANNED, 0L, new TextStatistics(0, 1L, 1L, 1L), null, null)))));
 		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true, profile);
 		final var columns = List.of(
-				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(0), "C0", "nvarchar(2)", false, null),
+				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(0), "C0", "nvarchar(2)", false, true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(1), "C1", "decimal(4,2)", true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(2), "C2", "datetime", true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(3), "C3", "nvarchar(5000)", true, null),
@@ -35,7 +35,7 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 		final var rules = result.findings().stream().map(Finding::ruleId).toList();
 		assertTrue(rules.containsAll(List.of("access.sqlserver.mapping.observed-null", "access.sqlserver.mapping.observed-text-overflow",
 				"access.sqlserver.mapping.observed-number-overflow", "access.sqlserver.mapping.observed-datetime-range",
-				"access.sqlserver.mapping.type", "access.sqlserver.mapping.identifier-length")));
+				"access.sqlserver.mapping.type", "access.sqlserver.mapping.identifier-length", "access.sqlserver.mapping.identity")));
 		assertEquals(1, result.findings().stream().filter(f -> f.ruleId().equals("access.sqlserver.mapping.type")).count());
 		assertEquals(5, result.inventory().stream().filter(i -> i.type().equals("mappedColumns")).findFirst().orElseThrow().count());
 	}

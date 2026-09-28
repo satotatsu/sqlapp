@@ -66,7 +66,8 @@ final class MigrationTargetMappingResolver {
 				}
 				columns.add(new ResolvedMigrationTargetMapping.ColumnMapping(
 						new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(), table.getName()),
-						targetColumn, configuredColumn.targetType().trim(), configuredColumn.nullable(), configuredColumn.conversion()));
+						targetColumn, configuredColumn.targetType().trim(), configuredColumn.nullable(),
+						configuredColumn.identity(), configuredColumn.conversion()));
 			}
 			if (columns.isEmpty()) { throw new CommandException("Mapping table must contain at least one column: " + table.getName()); }
 			tables.add(new ResolvedMigrationTargetMapping.TableMapping(tableId,

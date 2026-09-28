@@ -14,6 +14,12 @@ public final class MigrationTargetDdlGenerator {
 
 	public static String generate(final MigrationAssessmentSource source, final ResolvedMigrationTargetMapping mapping,
 			final Function<String, String> quote, final String batchSeparator) {
+		return generate(source, mapping, quote, batchSeparator, column -> "");
+	}
+
+	public static String generate(final MigrationAssessmentSource source, final ResolvedMigrationTargetMapping mapping,
+			final Function<String, String> quote, final String batchSeparator,
+			final Function<ResolvedMigrationTargetMapping.ColumnMapping, String> identityClause) {
 		final var sourceTables = new HashMap<ObjectId, Table>();
 		for (final var schema : source.schemas()) {
 			for (final var table : schema.getTables()) { sourceTables.put(tableId(table), table); }
@@ -30,7 +36,8 @@ public final class MigrationTargetDdlGenerator {
 			sql.append("CREATE TABLE ").append(name(mapped, quote)).append(" (\n");
 			for (int i = 0; i < mapped.columns().size(); i++) {
 				final var column = mapped.columns().get(i);
-				sql.append("  ").append(quote.apply(column.targetColumn())).append(' ').append(column.targetType());
+				sql.append("  ").append(quote.apply(column.targetColumn())).append(' ').append(column.targetType())
+						.append(Boolean.TRUE.equals(column.identity()) ? identityClause.apply(column) : "");
 				if (primaryKeyColumns.contains(key(column.sourceColumn().name())) || Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
 				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
 				if (i + 1 < mapped.columns().size() || primaryKey != null) { sql.append(','); }

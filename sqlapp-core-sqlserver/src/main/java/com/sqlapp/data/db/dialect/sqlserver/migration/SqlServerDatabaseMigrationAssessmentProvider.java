@@ -29,7 +29,8 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 	public String generateTargetDdl(final MigrationAssessmentSource source,
 			final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
 		return com.sqlapp.data.schemas.migration.assessment.MigrationTargetDdlGenerator
-				.generate(source, mapping, SqlServerDatabaseMigrationAssessmentProvider::sqlServerName, "GO\n\n");
+				.generate(source, mapping, SqlServerDatabaseMigrationAssessmentProvider::sqlServerName, "GO\n\n",
+						column -> " IDENTITY(1,1)");
 	}
 
 	private static String sqlServerName(final String value) { return "[" + value.replace("]", "]]") + "]"; }
@@ -169,6 +170,7 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 		if (source.dataProfile() != null) { source.dataProfile().tables().forEach(t -> t.columns().forEach(c -> profiles.put(c.column(), c))); }
 		int columns = 0;
 		for (final var table : mapping.tables()) {
+			int identities = 0;
 			targetIdentifier(findings, table.sourceTable(), "schema", table.targetSchema());
 			targetIdentifier(findings, table.sourceTable(), "table", table.targetTable());
 			for (final var column : table.columns()) {
@@ -181,8 +183,21 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 							"Use a SQL Server type supported by this assessment and specify length/precision explicitly."));
 					continue;
 				}
+				if (Boolean.TRUE.equals(column.identity())) {
+					identities++;
+					if (!sqlServerIdentityType(type)) {
+						findings.add(mappingFinding("identity", Severity.BLOCKER, column.sourceColumn(),
+								"SQL Server IDENTITY requires an integer or scale-zero decimal target type: " + column.targetType(),
+								"Use tinyint, smallint, int, bigint or decimal(p,0), or remove identity."));
+					}
+				}
 				nullability(findings, column, profile);
 				capacity(findings, column, profile, type);
+			}
+			if (identities > 1) {
+				findings.add(mappingFinding("identity", Severity.BLOCKER, table.sourceTable(),
+						"SQL Server permits only one IDENTITY column per table; mapping contains " + identities + ".",
+						"Keep one identity column and define explicit generation for the other columns."));
 			}
 		}
 		findings.add(mappingFinding("coverage", Severity.REVIEW, null,
@@ -215,6 +230,11 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 				|| Integer.parseInt(floating.group(1)) >= 1 && Integer.parseInt(floating.group(1)) <= 53; }
 		return Set.of("BIT", "TINYINT", "SMALLINT", "INT", "BIGINT", "REAL",
 						"DATE", "DATETIME", "UNIQUEIDENTIFIER").contains(type);
+	}
+	private static boolean sqlServerIdentityType(final String type) {
+		if (Set.of("TINYINT", "SMALLINT", "INT", "BIGINT").contains(type)) { return true; }
+		final var decimal = DECIMAL.matcher(type);
+		return decimal.matches() && Integer.parseInt(decimal.group(2)) == 0;
 	}
 	private static void nullability(final List<Finding> findings,
 			final ResolvedMigrationTargetMapping.ColumnMapping column, final ColumnProfile profile) {

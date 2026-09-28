@@ -31,6 +31,12 @@ class AccessOracleMigrationAssessmentTest {
 			final var result = provider.assessMapping(source, entry.getKey(), mapping);
 			assertEquals(!entry.getKey().equals("23ai"), result.hasBlockers(), entry.toString());
 		}
+		final var invalidIdentity = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping("fp", "oracle", "23ai", List.of(
+				new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "T", List.of(
+						new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.ColumnMapping(
+								id, "C", "BOOLEAN", true, true, null)))));
+		assertTrue(provider.assessMapping(source, "23ai", invalidIdentity).findings().stream()
+				.anyMatch(f -> f.ruleId().equals("access.oracle.mapping.identity")));
 	}
 	@Test
 	void observedEmptyStringsRespectRequiredColumnsAndQualifiedIdentity() {
