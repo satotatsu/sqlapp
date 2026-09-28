@@ -74,8 +74,10 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.matches("(?s).*-- IX source name \"X{129}\" -> IX_[0-9a-f]{12}.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
-		assertFalse(ddl.contains("FK_CHILD_ALT"));
+		assertFalse(ddl.contains("ADD CONSTRAINT [FK_CHILD_ALT]"));
 		assertFalse(ddl.contains("c.[PARENT_ALT]"));
+		assertTrue(ddl.contains("-- Source foreign keys omitted from the target DDL:\n"
+				+ "-- \"Child.FK_CHILD_ALT\": referenced primary or unique key is not emitted"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CHILD_ID], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CHILD_ID] HAVING COUNT(*) > 1;"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CODE], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CODE] HAVING COUNT(*) > 1;"));
 		assertTrue(ddl.contains("-- Verify target orphans: SELECT COUNT(*) FROM [TARGET].[CHILD_T] c LEFT JOIN [TARGET].[PARENT_T] p ON c.[PARENT_ID] = p.[PARENT_ID] WHERE c.[PARENT_ID] IS NOT NULL AND p.[PARENT_ID] IS NULL;"));

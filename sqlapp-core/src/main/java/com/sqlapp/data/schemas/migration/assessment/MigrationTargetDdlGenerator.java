@@ -38,6 +38,7 @@ public final class MigrationTargetDdlGenerator {
 		final var mappedTables = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
 		mapping.tables().forEach(table -> mappedTables.put(table.sourceTable(), table));
 		final var names = new NameRegistry(usableSourceName);
+		final var omittedForeignKeys = new java.util.ArrayList<String>();
 		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
 				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n");
 		for (final var mapped : mapping.tables()) {
@@ -116,9 +117,19 @@ public final class MigrationTargetDdlGenerator {
 				ordinal++;
 				final Table related = foreignKey.getRelatedTable();
 				final var parent = related == null ? null : mappedTables.get(tableId(related));
-				if (parent == null || foreignKey.getColumns().size() != foreignKey.getRelatedColumns().size()) { continue; }
+				if (parent == null) {
+					omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "referenced table is not mapped"));
+					continue;
+				}
+				if (foreignKey.getColumns().size() != foreignKey.getRelatedColumns().size()) {
+					omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "source relationship columns are inconsistent"));
+					continue;
+				}
 				final Map<String, String> parentColumns = columns(parent);
-				if (!referencedKeyEmitted(foreignKey, related, parent, parentColumns)) { continue; }
+				if (!referencedKeyEmitted(foreignKey, related, parent, parentColumns)) {
+					omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "referenced primary or unique key is not emitted"));
+					continue;
+				}
 				final var child = new StringBuilder();
 				final var referenced = new StringBuilder();
 				boolean complete = true;
@@ -137,12 +148,26 @@ public final class MigrationTargetDdlGenerator {
 							.append(child).append(") REFERENCES ").append(name(parent, quote)).append(" (")
 							.append(referenced).append(");\n").append(batchSeparator);
 				}
+				else { omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "one or more participating columns are not mapped")); }
 			}
 		}
 		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
 				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
+				.append(omittedForeignKeyComments(omittedForeignKeys))
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String omittedForeignKey(final Table table,
+			final com.sqlapp.data.schemas.ForeignKeyConstraint foreignKey, final String reason) {
+		final String name = foreignKey.getName() == null || foreignKey.getName().isBlank()
+				? "<blank>" : foreignKey.getName();
+		return "-- " + NameRegistry.commentValue(table.getName() + "." + name) + ": " + reason + "\n";
+	}
+
+	private static String omittedForeignKeyComments(final java.util.List<String> omissions) {
+		return omissions.isEmpty() ? ""
+				: "\n-- Source foreign keys omitted from the target DDL:\n" + String.join("", omissions);
 	}
 
 	private static String integrityVerificationComments(final Map<ObjectId, Table> sourceTables,

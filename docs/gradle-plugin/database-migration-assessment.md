@@ -182,7 +182,9 @@ of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped and its referenced key is
 an emitted primary key or safe non-nullable unique constraint. This prevents a
 foreign key from referencing a nullable unique key that the preview deliberately
-omits. Access constraint and
+omits. Every omitted source foreign key is listed in comments at the end of the
+DDL with its reason, including an unmapped referenced table, inconsistent or
+unmapped columns, and a referenced key that was not emitted. Access constraint and
 index names are preserved when they are nonblank, unique in the target schema,
 within the target identifier limit and contain no control characters. Quoting
 preserves spaces, Unicode and target delimiter characters. An unusable or
