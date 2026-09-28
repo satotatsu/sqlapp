@@ -221,6 +221,12 @@ DDL records the source minimum and maximum and provides a quoted target
 `SELECT MIN(...), MAX(...)` query. Comparing these extrema can expose range,
 sign or date conversion errors even when table and NULL counts match. Text
 extrema are excluded because target collation changes their ordering.
+For each primary key and emitted non-nullable unique constraint, the DDL adds a
+commented `GROUP BY ... HAVING COUNT(*) > 1` query. Each emitted foreign key
+gets a commented anti-join count that excludes child rows with any NULL key
+component, matching the preflight orphan-check scope. Run these after loading
+to detect target duplicates and orphan rows introduced by conversion or load
+behavior. Keys omitted from the DDL are omitted from these queries as well.
 
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to

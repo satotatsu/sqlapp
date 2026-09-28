@@ -66,6 +66,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.matches("(?s).*-- IX source name \"X{129}\" -> IX_[0-9a-f]{12}.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
+		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CHILD_ID], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CHILD_ID] HAVING COUNT(*) > 1;"));
+		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CODE], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CODE] HAVING COUNT(*) > 1;"));
+		assertTrue(ddl.contains("-- Verify target orphans: SELECT COUNT(*) FROM [TARGET].[CHILD_T] c LEFT JOIN [TARGET].[PARENT_T] p ON c.[PARENT_ID] = p.[PARENT_ID] WHERE c.[PARENT_ID] IS NOT NULL AND p.[PARENT_ID] IS NULL;"));
 		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:\n"
 				+ "-- 1. \"TARGET.PARENT_T\"\n-- 2. \"TARGET.CHILD_T\""));
 		assertTrue(ddl.contains("-- Post-load row-count baseline from the Access source:\n"
@@ -83,6 +86,7 @@ class DatabaseMigrationAssessmentProviderTest {
 				value -> "[" + value + "]", "GO\n", column -> "", name -> name.length() <= 128);
 		assertFalse(partial.contains("ADD FOREIGN KEY"));
 		assertFalse(partial.contains("CREATE INDEX"));
+		assertFalse(partial.contains("Verify target orphans"));
 		assertFalse(partial.contains("Source object names replaced"));
 	}
 

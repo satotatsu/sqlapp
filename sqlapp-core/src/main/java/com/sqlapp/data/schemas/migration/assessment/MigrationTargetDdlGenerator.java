@@ -140,7 +140,57 @@ public final class MigrationTargetDdlGenerator {
 		}
 		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
 				.append(rowCountBaselineComments(source, mapping, quote))
+				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String integrityVerificationComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping,
+			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables,
+			final Function<String, String> quote) {
+		final var sql = new StringBuilder("\n-- Post-load key integrity verification:\n");
+		boolean emitted = false;
+		for (final var mapped : mapping.tables()) {
+			final Table sourceTable = sourceTables.get(mapped.sourceTable());
+			if (sourceTable == null) { continue; }
+			final Map<String, String> targetColumns = columns(mapped);
+			final String primary = primaryKey(sourceTable, targetColumns, quote);
+			if (primary != null) {
+				emitted = true;
+				duplicateQuery(sql, name(mapped, quote), primary);
+			}
+			for (final var unique : uniqueKeys(sourceTable, mapped, targetColumns, quote)) {
+				emitted = true;
+				duplicateQuery(sql, name(mapped, quote), unique.columns());
+			}
+			for (final var foreignKey : sourceTable.getConstraints().getForeignKeyConstraints()) {
+				final Table related = foreignKey.getRelatedTable();
+				final var parent = related == null ? null : mappedTables.get(tableId(related));
+				if (parent == null || !foreignKeyComplete(foreignKey, targetColumns, columns(parent))) { continue; }
+				emitted = true;
+				sql.append("-- Verify target orphans: SELECT COUNT(*) FROM ").append(name(mapped, quote))
+						.append(" c LEFT JOIN ").append(name(parent, quote)).append(" p ON ");
+				for (int i = 0; i < foreignKey.getColumns().size(); i++) {
+					if (i > 0) { sql.append(" AND "); }
+					sql.append("c.").append(quote.apply(targetColumns.get(key(foreignKey.getColumns().get(i).getName()))))
+							.append(" = p.").append(quote.apply(columns(parent).get(key(foreignKey.getRelatedColumns().get(i).getName()))));
+				}
+				sql.append(" WHERE ");
+				for (int i = 0; i < foreignKey.getColumns().size(); i++) {
+					if (i > 0) { sql.append(" AND "); }
+					sql.append("c.").append(quote.apply(targetColumns.get(key(foreignKey.getColumns().get(i).getName())))).append(" IS NOT NULL");
+				}
+				sql.append(" AND p.").append(quote.apply(columns(parent).get(key(foreignKey.getRelatedColumns().getFirst().getName()))))
+						.append(" IS NULL;\n");
+			}
+		}
+		if (!emitted) { sql.append("-- no fully mapped emitted keys\n"); }
+		return sql.toString();
+	}
+
+	private static void duplicateQuery(final StringBuilder sql, final String table, final String columns) {
+		sql.append("-- Verify target duplicates: SELECT ").append(columns).append(", COUNT(*) FROM ")
+				.append(table).append(" GROUP BY ").append(columns).append(" HAVING COUNT(*) > 1;\n");
 	}
 
 	private static String rowCountBaselineComments(final MigrationAssessmentSource source,
