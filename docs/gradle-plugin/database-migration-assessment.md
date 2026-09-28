@@ -180,8 +180,9 @@ DDL file produced from stale or different inputs. The preview contains mapped ta
 target types and explicit nullability. A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped. Constraint names are
-left to the target database so an Access name cannot violate target identifier
-rules. A non-primary unique constraint is emitted only when every participating
+deterministic ASCII `PK_`, `UK_` and `FK_` hashes, so operational scripts can
+address them without trusting non-portable Access names or exceeding Oracle and
+SQL Server identifier limits. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
 Nullable unique keys remain review items because Access, Oracle and SQL Server
 do not share identical NULL uniqueness semantics. Fully mapped non-unique

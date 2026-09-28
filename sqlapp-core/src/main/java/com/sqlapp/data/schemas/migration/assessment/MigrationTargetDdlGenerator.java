@@ -52,8 +52,14 @@ public final class MigrationTargetDdlGenerator {
 				sql.append('\n');
 			}
 			final var constraints = new java.util.ArrayList<String>();
-			if (primaryKey != null) { constraints.add("PRIMARY KEY (" + primaryKey + ")"); }
-			uniqueKeys.forEach(key -> constraints.add("UNIQUE (" + key + ")"));
+			if (primaryKey != null) {
+				constraints.add("CONSTRAINT " + quote.apply(generatedName("PK", objectIdentity(mapped) + ".primary"))
+						+ " PRIMARY KEY (" + primaryKey + ")");
+			}
+			for (int i = 0; i < uniqueKeys.size(); i++) {
+				constraints.add("CONSTRAINT " + quote.apply(generatedName("UK", objectIdentity(mapped) + ".unique." + i))
+						+ " UNIQUE (" + uniqueKeys.get(i) + ")");
+			}
 			checks.forEach(expression -> constraints.add("CHECK (" + expression + ")"));
 			for (int i = 0; i < constraints.size(); i++) {
 				sql.append("  ").append(constraints.get(i));
@@ -81,9 +87,9 @@ public final class MigrationTargetDdlGenerator {
 					if (sourceColumn.getOrder() == Order.Desc) { keyColumns.append(" DESC"); }
 				}
 				if (complete) {
-					final String identity = mapped.targetSchema() + "." + mapped.targetTable() + "."
+					final String identity = objectIdentity(mapped) + "."
 							+ index.getName() + "." + ordinal;
-					sql.append("CREATE INDEX ").append(quote.apply(indexName(identity))).append(" ON ")
+					sql.append("CREATE INDEX ").append(quote.apply(generatedName("IX", identity))).append(" ON ")
 							.append(name(mapped, quote)).append(" (").append(keyColumns).append(");\n")
 							.append(batchSeparator);
 				}
@@ -93,7 +99,9 @@ public final class MigrationTargetDdlGenerator {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			if (sourceTable == null) { continue; }
 			final Map<String, String> childColumns = columns(mapped);
+			int ordinal = 0;
 			for (final var foreignKey : sourceTable.getConstraints().getForeignKeyConstraints()) {
+				ordinal++;
 				final Table related = foreignKey.getRelatedTable();
 				final var parent = related == null ? null : mappedTables.get(tableId(related));
 				if (parent == null || foreignKey.getColumns().size() != foreignKey.getRelatedColumns().size()) { continue; }
@@ -110,7 +118,9 @@ public final class MigrationTargetDdlGenerator {
 					referenced.append(quote.apply(parentName));
 				}
 				if (complete) {
-					sql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD FOREIGN KEY (")
+					final String identity = objectIdentity(mapped) + ".foreign." + ordinal + "." + objectIdentity(parent);
+					sql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD CONSTRAINT ")
+							.append(quote.apply(generatedName("FK", identity))).append(" FOREIGN KEY (")
 							.append(child).append(") REFERENCES ").append(name(parent, quote)).append(" (")
 							.append(referenced).append(");\n").append(batchSeparator);
 				}
@@ -180,10 +190,13 @@ public final class MigrationTargetDdlGenerator {
 		return new ObjectId(table.getCatalogName(), table.getSchemaName(), "table", table.getName());
 	}
 	private static String key(final String value) { return value.toUpperCase(java.util.Locale.ROOT); }
-	private static String indexName(final String identity) {
+	private static String objectIdentity(final ResolvedMigrationTargetMapping.TableMapping table) {
+		return (table.targetSchema() == null ? "" : table.targetSchema()) + "." + table.targetTable();
+	}
+	private static String generatedName(final String prefix, final String identity) {
 		try {
 			final byte[] digest = MessageDigest.getInstance("SHA-256").digest(identity.getBytes(StandardCharsets.UTF_8));
-			final var value = new StringBuilder("IX_");
+			final var value = new StringBuilder(prefix).append('_');
 			for (int i = 0; i < 6; i++) { value.append(String.format("%02x", digest[i])); }
 			return value.toString();
 		}
