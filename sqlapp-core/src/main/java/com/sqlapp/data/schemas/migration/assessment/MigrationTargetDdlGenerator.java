@@ -38,6 +38,7 @@ public final class MigrationTargetDdlGenerator {
 		final var mappedTables = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
 		mapping.tables().forEach(table -> mappedTables.put(table.sourceTable(), table));
 		final var names = new NameRegistry(usableSourceName);
+		final var omittedKeysAndIndexes = new java.util.ArrayList<String>();
 		final var omittedForeignKeys = new java.util.ArrayList<String>();
 		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
 				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n");
@@ -45,7 +46,12 @@ public final class MigrationTargetDdlGenerator {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			final Map<String, String> columns = columns(mapped);
 			final String primaryKey = primaryKey(sourceTable, columns, quote);
-			final var uniqueKeys = uniqueKeys(sourceTable, mapped, columns, quote);
+			if (primaryKey == null && hasPrimaryKey(sourceTable)) {
+				omittedKeysAndIndexes.add(omittedObject(sourceTable, "PRIMARY KEY",
+						sourceTable.getConstraints().getPrimaryKeyConstraint().getName(),
+						"one or more participating columns are not mapped"));
+			}
+			final var uniqueKeys = uniqueKeys(sourceTable, mapped, columns, quote, omittedKeysAndIndexes);
 			final var checks = mapped.checkExpressions();
 			final var primaryKeyColumns = primaryKeyColumns(sourceTable, primaryKey == null);
 			sql.append("CREATE TABLE ").append(name(mapped, quote)).append(" (\n");
@@ -87,7 +93,11 @@ public final class MigrationTargetDdlGenerator {
 			final Map<String, String> targetColumns = columns(mapped);
 			int ordinal = 0;
 			for (final var index : sourceTable.getIndexes()) {
-				if (index.isUnique() || index.getColumns().isEmpty()) { continue; }
+				if (index.isUnique()) { continue; }
+				if (index.getColumns().isEmpty()) {
+					omittedKeysAndIndexes.add(omittedObject(sourceTable, "INDEX", index.getName(), "source index has no columns"));
+					continue;
+				}
 				ordinal++;
 				final var keyColumns = new StringBuilder();
 				boolean complete = true;
@@ -105,6 +115,10 @@ public final class MigrationTargetDdlGenerator {
 					sql.append("CREATE INDEX ").append(quote.apply(names.choose(mapped.targetSchema(), "IX", index.getName(), identity))).append(" ON ")
 							.append(name(mapped, quote)).append(" (").append(keyColumns).append(");\n")
 							.append(batchSeparator);
+				}
+				else {
+					omittedKeysAndIndexes.add(omittedObject(sourceTable, "INDEX", index.getName(),
+							"one or more participating columns are not mapped"));
 				}
 			}
 		}
@@ -154,8 +168,20 @@ public final class MigrationTargetDdlGenerator {
 		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
 				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
+				.append(omittedKeyAndIndexComments(omittedKeysAndIndexes))
 				.append(omittedForeignKeyComments(omittedForeignKeys))
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String omittedObject(final Table table, final String kind, final String objectName,
+			final String reason) {
+		final String name = objectName == null || objectName.isBlank() ? "<blank>" : objectName;
+		return "-- " + kind + " " + NameRegistry.commentValue(table.getName() + "." + name) + ": " + reason + "\n";
+	}
+
+	private static String omittedKeyAndIndexComments(final java.util.List<String> omissions) {
+		return omissions.isEmpty() ? ""
+				: "\n-- Source keys and indexes omitted from the target DDL:\n" + String.join("", omissions);
 	}
 
 	private static String omittedForeignKey(final Table table,
@@ -185,7 +211,7 @@ public final class MigrationTargetDdlGenerator {
 				emitted = true;
 				duplicateQuery(sql, name(mapped, quote), primary);
 			}
-			for (final var unique : uniqueKeys(sourceTable, mapped, targetColumns, quote)) {
+			for (final var unique : uniqueKeys(sourceTable, mapped, targetColumns, quote, null)) {
 				emitted = true;
 				duplicateQuery(sql, name(mapped, quote), unique.columns());
 			}
@@ -387,6 +413,10 @@ public final class MigrationTargetDdlGenerator {
 		}
 		return value.toString();
 	}
+	private static boolean hasPrimaryKey(final Table table) {
+		return table != null && table.getConstraints().getPrimaryKeyConstraint() != null
+				&& !table.getConstraints().getPrimaryKeyConstraint().getColumns().isEmpty();
+	}
 	private static java.util.Set<String> primaryKeyColumns(final Table table, final boolean omitted) {
 		if (table == null || omitted || table.getConstraints().getPrimaryKeyConstraint() == null) { return java.util.Set.of(); }
 		final var result = new java.util.HashSet<String>();
@@ -395,28 +425,40 @@ public final class MigrationTargetDdlGenerator {
 	}
 	private static java.util.List<Key> uniqueKeys(final Table table,
 			final ResolvedMigrationTargetMapping.TableMapping mapped, final Map<String, String> columns,
-			final Function<String, String> quote) {
+			final Function<String, String> quote, final java.util.List<String> omissions) {
 		if (table == null) { return java.util.List.of(); }
 		final var nullable = new HashMap<String, Boolean>();
 		mapped.columns().forEach(column -> nullable.put(key(column.sourceColumn().name()), column.nullable()));
 		final var result = new java.util.ArrayList<Key>();
 		for (final var unique : table.getConstraints().getUniqueConstraints()) {
-			if (unique.isPrimaryKey() || unique.getColumns().isEmpty()) { continue; }
+			if (unique.isPrimaryKey()) { continue; }
+			if (unique.getColumns().isEmpty()) {
+				if (omissions != null) {
+					omissions.add(omittedObject(table, "UNIQUE", unique.getName(), "source constraint has no columns"));
+				}
+				continue;
+			}
 			final var value = new StringBuilder();
-			boolean completeAndRequired = true;
+			boolean complete = true;
+			boolean required = true;
 			for (int i = 0; i < unique.getColumns().size(); i++) {
 				final String sourceName = unique.getColumns().get(i).getName();
 				final String targetName = columns.get(key(sourceName));
 				final var sourceColumn = table.getColumns().get(sourceName);
-				if (targetName == null || sourceColumn == null || !sourceColumn.isNotNull()
-						|| !Boolean.FALSE.equals(nullable.get(key(sourceName)))) {
-					completeAndRequired = false;
+				if (targetName == null || sourceColumn == null) {
+					complete = false;
 					break;
 				}
+				if (!sourceColumn.isNotNull() || !Boolean.FALSE.equals(nullable.get(key(sourceName)))) { required = false; }
 				if (i > 0) { value.append(", "); }
 				value.append(quote.apply(targetName));
 			}
-			if (completeAndRequired) { result.add(new Key(unique.getName(), value.toString())); }
+			if (complete && required) { result.add(new Key(unique.getName(), value.toString())); }
+			else if (omissions != null) {
+				omissions.add(omittedObject(table, "UNIQUE", unique.getName(), complete
+						? "source or target columns allow NULL"
+						: "one or more participating columns are not mapped"));
+			}
 		}
 		return result;
 	}

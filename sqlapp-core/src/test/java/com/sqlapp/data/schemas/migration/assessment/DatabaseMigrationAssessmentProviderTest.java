@@ -103,6 +103,38 @@ class DatabaseMigrationAssessmentProviderTest {
 	}
 
 	@Test
+	void targetDdlExplainsOmittedPrimaryUniqueAndIndexObjects() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("Sample");
+		final var id = new Column("ID");
+		final var optional = new Column("OptionalCode");
+		final var detail = new Column("Detail");
+		table.getColumns().add(id);
+		table.getColumns().add(optional);
+		table.getColumns().add(detail);
+		table.setPrimaryKey("PK_SAMPLE", id);
+		table.getConstraints().addUniqueConstraint("UK_SAMPLE_OPTIONAL", optional);
+		table.getIndexes().add(new Index("IX_SAMPLE_DETAIL", optional, detail));
+		schema.getTables().add(table);
+		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "Sample"), null, "SAMPLE_T",
+				List.of(column("source", "Sample", "OptionalCode", "OPTIONAL_CODE")));
+
+		final String ddl = MigrationTargetDdlGenerator.generate(
+				new MigrationAssessmentSource(List.of(schema), EMPTY, false, true),
+				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)),
+				value -> "[" + value + "]", "GO\n", value -> "", name -> true);
+
+		assertTrue(ddl.contains("-- Source keys and indexes omitted from the target DDL:\n"
+				+ "-- PRIMARY KEY \"Sample.PK_SAMPLE\": one or more participating columns are not mapped\n"
+				+ "-- UNIQUE \"Sample.UK_SAMPLE_OPTIONAL\": source or target columns allow NULL\n"
+				+ "-- INDEX \"Sample.IX_SAMPLE_DETAIL\": one or more participating columns are not mapped"));
+		assertFalse(ddl.contains("PRIMARY KEY ("));
+		assertFalse(ddl.contains(" UNIQUE ("));
+		assertFalse(ddl.contains("CREATE INDEX"));
+	}
+
+	@Test
 	void targetDdlReportsCyclicLoadDependencies() {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var first = new Table("First");
