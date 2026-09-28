@@ -16,23 +16,10 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
 /** Oracle logical migration diagnosis. Only Access sources are currently supported. */
 public final class OracleDatabaseMigrationAssessmentProvider implements DatabaseMigrationAssessmentProvider {
 	@Override
-	public String generateTargetDdl(final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
-		final var sql = new StringBuilder("-- Review-only table/column DDL; keys, indexes, defaults and conversions are not included.\n");
-		for (final var table : mapping.tables()) {
-			sql.append("CREATE TABLE ");
-			if (table.targetSchema() != null && !table.targetSchema().isBlank()) { sql.append(oracleName(table.targetSchema())).append('.'); }
-			sql.append(oracleName(table.targetTable())).append(" (\n");
-			for (int i = 0; i < table.columns().size(); i++) {
-				final var column = table.columns().get(i);
-				sql.append("  ").append(oracleName(column.targetColumn())).append(' ').append(column.targetType());
-				if (Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
-				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
-				if (i + 1 < table.columns().size()) { sql.append(','); }
-				sql.append('\n');
-			}
-			sql.append(");\n\n");
-		}
-		return sql.toString();
+	public String generateTargetDdl(final MigrationAssessmentSource source,
+			final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
+		return com.sqlapp.data.schemas.migration.assessment.MigrationTargetDdlGenerator
+				.generate(source, mapping, OracleDatabaseMigrationAssessmentProvider::oracleName, "\n");
 	}
 
 	private static String oracleName(final String value) { return "\"" + value.replace("\"", "\"\"") + "\""; }

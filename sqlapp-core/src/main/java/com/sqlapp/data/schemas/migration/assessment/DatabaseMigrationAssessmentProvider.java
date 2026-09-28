@@ -27,6 +27,11 @@ public interface DatabaseMigrationAssessmentProvider {
 		throw new UnsupportedOperationException("Target DDL preview is not supported by this provider");
 	}
 
+	default String generateTargetDdl(final MigrationAssessmentSource source,
+			final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
+		return generateTargetDdl(mapping, targetVersion);
+	}
+
 	static DatabaseMigrationAssessmentProvider resolve(final String sourceProduct, final String targetDatabase,
 			final String targetVersion) {
 		return resolve(sourceProduct, targetDatabase, targetVersion,

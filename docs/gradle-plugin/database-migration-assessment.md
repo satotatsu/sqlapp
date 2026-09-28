@@ -166,9 +166,13 @@ tasks.named('assessDatabaseMigration') {
 `ddlOutputFile` optionally writes an atomic, review-only `CREATE TABLE` preview
 from a valid `mappingFile`. Oracle identifiers are double-quoted and SQL Server
 identifiers are bracket-quoted. The preview contains mapped tables, columns,
-target types and explicit nullability. It deliberately excludes keys, indexes,
-defaults and conversion expressions and starts with a comment stating that
-scope. The command never executes this SQL. If mapping validation finds an
+target types and explicit nullability. A source primary key is emitted when all
+of its columns are mapped. A foreign key is emitted after table creation when
+both tables and every participating column are mapped. Constraint names are
+left to the target database so an Access name cannot violate target identifier
+rules. Indexes, defaults, conversion expressions and cascade rules remain
+excluded, and the SQL starts with comments stating that scope. The command
+never executes this SQL. If mapping validation finds an
 invalid target type or another mapping blocker, the JSON/HTML evidence is
 published but an existing DDL preview is left unchanged.
 

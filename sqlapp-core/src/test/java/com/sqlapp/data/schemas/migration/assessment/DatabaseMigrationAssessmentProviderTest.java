@@ -8,8 +8,55 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 
 class DatabaseMigrationAssessmentProviderTest {
+	@Test
+	void targetDdlIncludesOnlyFullyMappedPrimaryAndForeignKeys() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var parent = new Table("Parent");
+		final var parentId = new Column("ID");
+		parent.getColumns().add(parentId);
+		parent.setPrimaryKey("PK_PARENT", parentId);
+		final var child = new Table("Child");
+		final var childId = new Column("ID");
+		final var parentIdInChild = new Column("ParentID");
+		child.getColumns().add(childId);
+		child.getColumns().add(parentIdInChild);
+		child.setPrimaryKey("PK_CHILD", childId);
+		schema.getTables().add(parent);
+		schema.getTables().add(child);
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", parentIdInChild, parentId);
+		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
+		final var parentMapping = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "Parent"), "TARGET", "PARENT_T",
+				List.of(column("source", "Parent", "ID", "PARENT_ID")));
+		final var childMapping = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "Child"), "TARGET", "CHILD_T",
+				List.of(column("source", "Child", "ID", "CHILD_ID"),
+						column("source", "Child", "ParentID", "PARENT_ID")));
+		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, childMapping));
+		final String ddl = MigrationTargetDdlGenerator.generate(source, mapping, value -> "[" + value + "]", "GO\n");
+		assertTrue(ddl.contains("PRIMARY KEY ([PARENT_ID])"));
+		assertTrue(ddl.contains("PRIMARY KEY ([CHILD_ID])"));
+		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
+		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
+		assertFalse(ddl.contains("FK_CHILD_PARENT"));
+
+		final var partialChild = new ResolvedMigrationTargetMapping.TableMapping(childMapping.sourceTable(), "TARGET", "CHILD_T",
+				List.of(column("source", "Child", "ID", "CHILD_ID")));
+		final String partial = MigrationTargetDdlGenerator.generate(source,
+				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, partialChild)),
+				value -> "[" + value + "]", "GO\n");
+		assertFalse(partial.contains("ADD FOREIGN KEY"));
+	}
+
+	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,
+			final String source, final String target) {
+		return new ResolvedMigrationTargetMapping.ColumnMapping(
+				new MigrationAssessment.ObjectId(null, schema, "column", source, table), target, "int", true, null);
+	}
 	@Test
 	void existingTargetProvidersRemainCompatibleWithResolvedMappings() throws Exception {
 		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", null);

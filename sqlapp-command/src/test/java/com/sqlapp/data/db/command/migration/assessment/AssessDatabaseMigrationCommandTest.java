@@ -48,7 +48,7 @@ class AssessDatabaseMigrationCommandTest {
 		String sql = Files.readString(ddl);
 		assertTrue(sql.contains("CREATE TABLE \"Orders\""));
 		assertTrue(sql.contains("\"Enabled\" NUMBER(1,0) NULL"));
-		assertTrue(sql.contains("keys, indexes, defaults and conversions are not included"));
+		assertTrue(sql.contains("Indexes, defaults, conversion expressions and cascade rules are not included"));
 
 		command.setMappingFile(null);
 		command.setDdlOutputFile(null);

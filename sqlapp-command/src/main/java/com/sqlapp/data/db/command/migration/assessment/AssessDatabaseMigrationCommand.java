@@ -144,7 +144,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, source.dataProfile(),
 					mappingFingerprint, targetMapping);
 			final String ddl = ddlOutputFile == null || mappingAssessment.hasBlockers() ? null
-					: target.generateTargetDdl(targetMapping, version);
+					: target.generateTargetDdl(source, targetMapping, version);
 			writeReport(result, source, target, fingerprint, version, ddl);
 		} catch (final Exception e) {
 			throw e instanceof CommandException commandException ? commandException
