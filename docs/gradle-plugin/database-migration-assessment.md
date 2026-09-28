@@ -171,7 +171,10 @@ tasks.named('assessDatabaseMigration') {
 
 `ddlOutputFile` optionally writes an atomic, review-only `CREATE TABLE` preview
 from a valid `mappingFile`. Oracle identifiers are double-quoted and SQL Server
-identifiers are bracket-quoted. The preview contains mapped tables, columns,
+identifiers are bracket-quoted. The first comments record the source file
+fingerprint, mapping file fingerprint, normalized target database and target
+version. Reviewers can compare these values with the JSON report and reject a
+DDL file produced from stale or different inputs. The preview contains mapped tables, columns,
 target types and explicit nullability. A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped. Constraint names are

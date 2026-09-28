@@ -144,12 +144,21 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, source.dataProfile(),
 					mappingFingerprint, targetMapping);
 			final String ddl = ddlOutputFile == null || mappingAssessment.hasBlockers() ? null
-					: target.generateTargetDdl(source, targetMapping, version);
+					: ddlWithProvenance(target.generateTargetDdl(source, targetMapping, version), fingerprint,
+							mappingFingerprint, targetMapping.targetDatabase(), version);
 			writeReport(result, source, target, fingerprint, version, ddl);
 		} catch (final Exception e) {
 			throw e instanceof CommandException commandException ? commandException
 					: new CommandException("Database migration assessment failed: " + e.getMessage(), e);
 		}
+	}
+
+	private static String ddlWithProvenance(final String ddl, final String sourceFingerprint,
+			final String mappingFingerprint, final String targetDatabase, final String targetVersion) {
+		return "-- sqlapp sourceFingerprint: " + sourceFingerprint + "\n"
+				+ "-- sqlapp mappingFingerprint: " + mappingFingerprint + "\n"
+				+ "-- sqlapp target: " + targetDatabase + " " + targetVersion + "\n"
+				+ ddl;
 	}
 
 	/** Publish evidence before applying the failure policy. */
