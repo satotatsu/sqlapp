@@ -64,6 +64,13 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, childMapping));
 		final String ddl = MigrationTargetDdlGenerator.generate(source, mapping, value -> "[" + value + "]", "GO\n",
 				column -> "", name -> name.length() <= 128);
+		assertTrue(ddl.contains("-- Mapping summary:\n"
+				+ "-- source tables: 2; mapped tables: 2; omitted tables: 0\n"
+				+ "-- source columns: 7; mapped columns: 7; omitted columns in mapped tables: 0\n"
+				+ "-- data profile scanned: false; relationships collected: true"));
+		assertTrue(ddl.contains("-- Target DDL object summary:\n"
+				+ "-- tables: 2; primary keys: 2; unique constraints: 1; checks: 1\n"
+				+ "-- indexes: 1; foreign keys: 1; omitted keys/indexes: 2; omitted foreign keys: 1"));
 		assertTrue(ddl.contains("CONSTRAINT [PK_PARENT] PRIMARY KEY ([PARENT_ID])"));
 		assertTrue(ddl.contains("CONSTRAINT [PK_CHILD] PRIMARY KEY ([CHILD_ID])"));
 		assertTrue(ddl.contains("CONSTRAINT [UK_CHILD_CODE] UNIQUE ([CODE])"));
@@ -88,8 +95,19 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Source-to-target column type mapping:"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\" (\"LONG\") -> \"TARGET.CHILD_T.CODE\" (\"int\"); conversion \"normalize_code\"; nullability required -> required; identity false -> unspecified; default \"7\" -> \"0\""));
 		assertTrue(ddl.contains("-- \"source.Parent.ID\" (\"<unknown>\") -> \"TARGET.PARENT_T.PARENT_ID\" (\"int\"); nullability required -> required; identity true -> unspecified; default <none> -> <none>"));
+		assertTrue(ddl.contains("-- Column semantic differences requiring review:"));
+		assertTrue(ddl.contains("-- \"source.Parent.ID\": identity true -> unspecified"));
+		assertTrue(ddl.contains("-- \"source.Parent.Alt\": nullability required -> nullable"));
+		assertTrue(ddl.contains("-- \"source.Child.Code\": default \"7\" -> \"0\""));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
+		assertTrue(ddl.contains("-- Phase 1: Create target tables."));
+		assertTrue(ddl.contains("-- Phase 2: Load data in the suggested order and run verification queries."));
+		assertTrue(ddl.contains("-- Phase 3: After loading and verifying data, create secondary indexes."));
+		assertTrue(ddl.contains("-- Phase 4: After loading and verifying data, apply foreign keys."));
+		assertTrue(ddl.indexOf("CREATE TABLE") < ddl.indexOf("-- Suggested data load order"));
+		assertTrue(ddl.indexOf("-- Post-load key integrity verification") < ddl.indexOf("CREATE INDEX"));
+		assertTrue(ddl.indexOf("CREATE INDEX") < ddl.indexOf("ALTER TABLE"));
 		assertFalse(ddl.contains("ADD CONSTRAINT [FK_CHILD_ALT]"));
 		assertFalse(ddl.contains("c.[PARENT_ALT]"));
 		assertTrue(ddl.contains("-- Source foreign keys omitted from the target DDL:\n"
@@ -159,6 +177,10 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- COLUMN \"source.Sample.ID\": not mapped\n"
 				+ "-- COLUMN \"source.Sample.Detail\": not mapped\n"
 				+ "-- TABLE \"source.Ignored\": not mapped"));
+		assertTrue(ddl.contains("-- source tables: 2; mapped tables: 1; omitted tables: 1\n"
+				+ "-- source columns: 4; mapped columns: 1; omitted columns in mapped tables: 2"));
+		assertTrue(ddl.contains("-- tables: 1; primary keys: 0; unique constraints: 0; checks: 0\n"
+				+ "-- indexes: 0; foreign keys: 0; omitted keys/indexes: 3; omitted foreign keys: 0"));
 	}
 
 	@Test

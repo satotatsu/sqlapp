@@ -177,7 +177,16 @@ identifiers are bracket-quoted. The first comments record the source file
 fingerprint, mapping file fingerprint, normalized target database and target
 version. Reviewers can compare these values with the JSON report and reject a
 DDL file produced from stale or different inputs. The preview contains mapped tables, columns,
-target types and explicit nullability. A source primary key is emitted when all
+target types and explicit nullability. Its opening mapping summary reports total,
+mapped and omitted Access tables and columns, plus data-profile and relationship
+collection status. A second summary reports how many target tables, primary keys,
+unique constraints, checks, indexes and foreign keys were emitted, with counts of
+omitted keys, indexes and foreign keys. Four phase markers separate table creation,
+data loading and verification, secondary-index creation, and final foreign-key
+application. Secondary indexes and foreign-key statements appear after the
+commented verification SQL so executing the phases independently avoids index
+maintenance during the initial load and does not constrain that load with foreign keys.
+A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped and its referenced key is
 an emitted primary key or safe non-nullable unique constraint. This prevents a
@@ -201,7 +210,14 @@ the target DDL. The DDL also lists each mapped column's Access native type (or
 the canonical Schema type when native evidence is unavailable), target type and
 explicit conversion expression. The same entry compares source and target
 nullability, identity generation and default expressions; absent target choices
-remain explicit as `unspecified` or `<none>`. Control characters are
+remain explicit as `unspecified` or `<none>`. Differences in these three column
+semantics are collected in a separate review section so relaxed constraints,
+new load restrictions and dropped or changed generation behavior are visible.
+The JSON and HTML reports expose the same cases as
+`migration.mapping.nullability-change`, `migration.mapping.identity-change` and
+`migration.mapping.default-change` review findings, with a
+`mappingSemanticDifferences` inventory total.
+Control characters are
 escaped in those comments. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
 Nullable unique keys remain review items because Access, Oracle and SQL Server

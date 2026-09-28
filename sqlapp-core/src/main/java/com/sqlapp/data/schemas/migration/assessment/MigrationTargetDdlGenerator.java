@@ -40,8 +40,17 @@ public final class MigrationTargetDdlGenerator {
 		final var names = new NameRegistry(usableSourceName);
 		final var omittedKeysAndIndexes = new java.util.ArrayList<String>();
 		final var omittedForeignKeys = new java.util.ArrayList<String>();
+		final var indexSql = new StringBuilder();
+		final var foreignKeySql = new StringBuilder();
+		int emittedPrimaryKeys = 0;
+		int emittedUniqueConstraints = 0;
+		int emittedChecks = 0;
+		int emittedIndexes = 0;
+		int emittedForeignKeys = 0;
 		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
-				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n");
+				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n")
+				.append(mappingSummaryComments(source, mapping, mappedTables))
+				.append("\n-- Phase 1: Create target tables.\n");
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			final Map<String, String> columns = columns(mapped);
@@ -69,11 +78,14 @@ public final class MigrationTargetDdlGenerator {
 			}
 			final var constraints = new java.util.ArrayList<String>();
 			if (primaryKey != null) {
+				emittedPrimaryKeys++;
 				final String sourceName = sourceTable.getConstraints().getPrimaryKeyConstraint().getName();
 				constraints.add("CONSTRAINT " + quote.apply(names.choose(mapped.targetSchema(), "PK", sourceName,
 						objectIdentity(mapped) + ".primary"))
 						+ " PRIMARY KEY (" + primaryKey + ")");
 			}
+			emittedUniqueConstraints += uniqueKeys.size();
+			emittedChecks += checks.size();
 			for (int i = 0; i < uniqueKeys.size(); i++) {
 				final var unique = uniqueKeys.get(i);
 				constraints.add("CONSTRAINT " + quote.apply(names.choose(mapped.targetSchema(), "UK", unique.sourceName(),
@@ -110,9 +122,10 @@ public final class MigrationTargetDdlGenerator {
 					if (sourceColumn.getOrder() == Order.Desc) { keyColumns.append(" DESC"); }
 				}
 				if (complete) {
+					emittedIndexes++;
 					final String identity = objectIdentity(mapped) + "."
 							+ index.getName() + "." + ordinal;
-					sql.append("CREATE INDEX ").append(quote.apply(names.choose(mapped.targetSchema(), "IX", index.getName(), identity))).append(" ON ")
+					indexSql.append("CREATE INDEX ").append(quote.apply(names.choose(mapped.targetSchema(), "IX", index.getName(), identity))).append(" ON ")
 							.append(name(mapped, quote)).append(" (").append(keyColumns).append(");\n")
 							.append(batchSeparator);
 				}
@@ -156,8 +169,9 @@ public final class MigrationTargetDdlGenerator {
 					referenced.append(quote.apply(parentName));
 				}
 				if (complete) {
+					emittedForeignKeys++;
 					final String identity = objectIdentity(mapped) + ".foreign." + ordinal + "." + objectIdentity(parent);
-					sql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD CONSTRAINT ")
+					foreignKeySql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD CONSTRAINT ")
 							.append(quote.apply(names.choose(mapped.targetSchema(), "FK", foreignKey.getName(), identity))).append(" FOREIGN KEY (")
 							.append(child).append(") REFERENCES ").append(name(parent, quote)).append(" (")
 							.append(referenced).append(");\n").append(batchSeparator);
@@ -165,16 +179,69 @@ public final class MigrationTargetDdlGenerator {
 				else { omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "one or more participating columns are not mapped")); }
 			}
 		}
-		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
+		return sql.append(ddlObjectSummaryComments(mapping.tables().size(), emittedPrimaryKeys,
+				emittedUniqueConstraints, emittedChecks, emittedIndexes, emittedForeignKeys,
+				omittedKeysAndIndexes.size(), omittedForeignKeys.size()))
+				.append("\n-- Phase 2: Load data in the suggested order and run verification queries.\n")
+				.append(loadOrderComments(sourceTables, mapping, mappedTables))
 				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
+				.append("\n-- Phase 3: After loading and verifying data, create secondary indexes.\n")
+				.append(indexSql)
+				.append("\n-- Phase 4: After loading and verifying data, apply foreign keys.\n")
+				.append(foreignKeySql)
 				.append(omittedKeyAndIndexComments(omittedKeysAndIndexes))
 				.append(omittedForeignKeyComments(omittedForeignKeys))
 				.append(omittedSourceObjectComments(source, mappedTables))
 				.append(sourceTableAndColumnMappingComments(mapping))
 				.append(sourceColumnTypeMappingComments(sourceTables, mapping))
+				.append(columnSemanticReviewComments(sourceTables, mapping))
 				.append(names.mappingComments())
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String ddlObjectSummaryComments(final int tables, final int primaryKeys,
+			final int uniqueConstraints, final int checks, final int indexes, final int foreignKeys,
+			final int omittedKeysAndIndexes, final int omittedForeignKeys) {
+		return "\n-- Target DDL object summary:\n"
+				+ "-- tables: " + tables + "; primary keys: " + primaryKeys
+				+ "; unique constraints: " + uniqueConstraints + "; checks: " + checks + "\n"
+				+ "-- indexes: " + indexes + "; foreign keys: " + foreignKeys
+				+ "; omitted keys/indexes: " + omittedKeysAndIndexes
+				+ "; omitted foreign keys: " + omittedForeignKeys + "\n";
+	}
+
+	private static String mappingSummaryComments(final MigrationAssessmentSource source,
+			final ResolvedMigrationTargetMapping mapping,
+			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables) {
+		int sourceTables = 0;
+		int sourceColumns = 0;
+		int omittedTables = 0;
+		int omittedColumns = 0;
+		for (final var schema : source.schemas()) {
+			for (final var table : schema.getTables()) {
+				sourceTables++;
+				sourceColumns += table.getColumns().size();
+				final var mapped = mappedTables.get(tableId(table));
+				if (mapped == null) {
+					omittedTables++;
+					continue;
+				}
+				final var mappedColumns = new java.util.HashSet<String>();
+				mapped.columns().forEach(column -> mappedColumns.add(key(column.sourceColumn().name())));
+				for (final var column : table.getColumns()) {
+					if (!mappedColumns.contains(key(column.getName()))) { omittedColumns++; }
+				}
+			}
+		}
+		final int mappedColumns = mapping.tables().stream().mapToInt(table -> table.columns().size()).sum();
+		return "-- Mapping summary:\n"
+				+ "-- source tables: " + sourceTables + "; mapped tables: " + mapping.tables().size()
+				+ "; omitted tables: " + omittedTables + "\n"
+				+ "-- source columns: " + sourceColumns + "; mapped columns: " + mappedColumns
+				+ "; omitted columns in mapped tables: " + omittedColumns + "\n"
+				+ "-- data profile scanned: " + source.dataScanned()
+				+ "; relationships collected: " + source.relationshipsCollected() + "\n";
 	}
 
 	private static String omittedSourceObjectComments(final MigrationAssessmentSource source,
@@ -253,6 +320,49 @@ public final class MigrationTargetDdlGenerator {
 			}
 		}
 		return sql.toString();
+	}
+
+	private static String columnSemanticReviewComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var reviews = new java.util.ArrayList<String>();
+		for (final var table : mapping.tables()) {
+			final Table sourceTable = sourceTables.get(table.sourceTable());
+			for (final var column : table.columns()) {
+				final var sourceColumn = sourceColumn(sourceTable, column.sourceColumn().name());
+				if (sourceColumn == null) { continue; }
+				final String sourceName = qualified(column.sourceColumn().catalog(), column.sourceColumn().schema(),
+						column.sourceColumn().table() == null ? table.sourceTable().name() : column.sourceColumn().table(),
+						column.sourceColumn().name());
+				final String targetNullability = targetNullability(sourceTable, column);
+				final String sourceNullability = sourceColumn.isNotNull() ? "required" : "nullable";
+				if ((!"unspecified".equals(targetNullability) && !sourceNullability.equals(targetNullability))
+						|| (sourceColumn.isNotNull() && "unspecified".equals(targetNullability))) {
+					reviews.add(semanticReview(sourceName, "nullability", sourceNullability, targetNullability));
+				}
+				if (sourceColumn.isIdentity() != Boolean.TRUE.equals(column.identity())) {
+					reviews.add(semanticReview(sourceName, "identity", Boolean.toString(sourceColumn.isIdentity()),
+							column.identity() == null ? "unspecified" : column.identity().toString()));
+				}
+				final String sourceDefault = normalizedExpression(sourceColumn.getDefaultValue());
+				final String targetDefault = normalizedExpression(column.defaultExpression());
+				if (!java.util.Objects.equals(sourceDefault, targetDefault)) {
+					reviews.add(semanticReview(sourceName, "default", commentExpression(sourceDefault),
+							commentExpression(targetDefault)));
+				}
+			}
+		}
+		return reviews.isEmpty() ? ""
+				: "\n-- Column semantic differences requiring review:\n" + String.join("", reviews);
+	}
+
+	private static String semanticReview(final String sourceName, final String property,
+			final String sourceValue, final String targetValue) {
+		return "-- " + NameRegistry.commentValue(sourceName) + ": " + property + " "
+				+ sourceValue + " -> " + targetValue + "\n";
+	}
+
+	private static String normalizedExpression(final String expression) {
+		return expression == null || expression.isBlank() ? null : expression.trim();
 	}
 
 	private static String targetNullability(final Table sourceTable,
