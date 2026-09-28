@@ -13,8 +13,16 @@ public record ResolvedMigrationTargetMapping(String mappingFingerprint, String t
 		tables = tables == null ? List.of() : List.copyOf(tables);
 	}
 	public record TableMapping(ObjectId sourceTable, String targetSchema, String targetTable,
-			List<ColumnMapping> columns) {
-		public TableMapping { Objects.requireNonNull(sourceTable, "sourceTable"); columns = List.copyOf(columns); }
+			List<String> checkExpressions, List<ColumnMapping> columns) {
+		public TableMapping(final ObjectId sourceTable, final String targetSchema, final String targetTable,
+				final List<ColumnMapping> columns) {
+			this(sourceTable, targetSchema, targetTable, List.of(), columns);
+		}
+		public TableMapping {
+			Objects.requireNonNull(sourceTable, "sourceTable");
+			checkExpressions = checkExpressions == null ? List.of() : List.copyOf(checkExpressions);
+			columns = List.copyOf(columns);
+		}
 	}
 	public record ColumnMapping(ObjectId sourceColumn, String targetColumn, String targetType,
 			Boolean nullable, Boolean identity, String defaultExpression, String conversion) {

@@ -45,6 +45,7 @@ class DatabaseMigrationAssessmentProviderTest {
 				List.of(column("source", "Parent", "ID", "PARENT_ID")));
 		final var childMapping = new ResolvedMigrationTargetMapping.TableMapping(
 				new MigrationAssessment.ObjectId(null, "source", "table", "Child"), "TARGET", "CHILD_T",
+				List.of("[CODE] >= 0"),
 				List.of(column("source", "Child", "ID", "CHILD_ID"),
 						column("source", "Child", "ParentID", "PARENT_ID"),
 						new ResolvedMigrationTargetMapping.ColumnMapping(
@@ -57,6 +58,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("PRIMARY KEY ([CHILD_ID])"));
 		assertTrue(ddl.contains("UNIQUE ([CODE])"));
 		assertTrue(ddl.contains("[CODE] int DEFAULT 0 NOT NULL"));
+		assertTrue(ddl.contains("CHECK ([CODE] >= 0)"));
 		assertFalse(ddl.contains("UNIQUE ([OPTIONAL_CODE])"));
 		assertTrue(ddl.matches("(?s).*CREATE INDEX \\[IX_[0-9a-f]{12}] ON \\[TARGET]\\.\\[CHILD_T] \\(\\[PARENT_ID], \\[CODE] DESC\\);.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));

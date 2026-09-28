@@ -147,6 +147,8 @@ tables:
   - sourceTable: 顧客
     targetSchema: APP
     targetTable: CUSTOMERS
+    checkExpressions:
+      - "CUSTOMER_NAME IS NOT NULL"
     columns:
       - sourceColumn: 顧客ID
         targetColumn: CUSTOMER_ID
@@ -220,6 +222,14 @@ after the target type in the DDL preview. It must be a single line without a
 semicolon or SQL comments, and cannot be combined with `identity`. This lexical
 guard prevents a mapping entry from adding another SQL statement; target syntax
 and semantics still require review.
+
+`checkExpressions` optionally records reviewed, table-level target SQL predicates.
+Each expression is retained in JSON/HTML and emitted as an unnamed `CHECK`
+constraint, avoiding non-portable Access constraint names. Access validation
+rules are never copied automatically. As with `defaultExpression`, every entry
+must be nonblank, single-line, comment-free and contain no semicolon. Column
+references use target names and their quoting is the mapping author's
+responsibility; the target database must still validate the expression.
 
 Oracle validation accepts explicit `NUMBER`, character types with lengths,
 `DATE`, `TIMESTAMP`, LOBs, `RAW`, binary floating types and version-appropriate

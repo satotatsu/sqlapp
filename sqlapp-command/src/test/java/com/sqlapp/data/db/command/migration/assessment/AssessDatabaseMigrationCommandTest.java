@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration.assessment;
 import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.exceptions.CommandException;
@@ -114,6 +115,8 @@ class AssessDatabaseMigrationCommandTest {
 				  - sourceTable: 顧客
 				    targetSchema: APP
 				    targetTable: CUSTOMERS
+				    checkExpressions:
+				      - "NAME IS NOT NULL"
 				    columns:
 				      - sourceColumn: 名前
 				        targetColumn: NAME
@@ -133,6 +136,7 @@ class AssessDatabaseMigrationCommandTest {
 		assertEquals("oracle", command.getReport().targetMapping().targetDatabase());
 		assertEquals("顧客", command.getReport().targetMapping().tables().getFirst().sourceTable().name());
 		assertEquals("CUSTOMERS", command.getReport().targetMapping().tables().getFirst().targetTable());
+		assertEquals(List.of("NAME IS NOT NULL"), command.getReport().targetMapping().tables().getFirst().checkExpressions());
 		assertEquals("'unknown'", command.getReport().targetMapping().tables().getFirst().columns().getFirst().defaultExpression());
 		assertEquals(AssessMigrationCommand.fingerprint(mapping.toFile()), command.getReport().mappingFingerprint());
 		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.mapping.observed-text-overflow")));
@@ -141,7 +145,9 @@ class AssessDatabaseMigrationCommandTest {
 		final String json = Files.readString(command.getOutputFile().toPath());
 		assertTrue(json.contains("mappingFingerprint"));
 		assertTrue(json.contains("targetMapping"));
-		assertTrue(Files.readString(command.getHtmlOutputFile().toPath()).contains("Resolved target mapping"));
+		final String html = Files.readString(command.getHtmlOutputFile().toPath());
+		assertTrue(html.contains("Resolved target mapping"));
+		assertTrue(html.contains("Target checks:</strong> NAME IS NOT NULL"));
 
 		Files.writeString(mapping, Files.readString(mapping).replace(fingerprint, "wrong"));
 		assertThrows(CommandException.class, command::run);
@@ -157,6 +163,11 @@ class AssessDatabaseMigrationCommandTest {
 		Files.writeString(mapping, Files.readString(mapping)
 				.replace("defaultExpression: \"0; DROP TABLE X\"", "identity: true\n        defaultExpression: \"0\""));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("cannot be combined"));
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+		Files.writeString(mapping, Files.readString(mapping)
+				.replace("identity: true\n        defaultExpression: \"0\"", "defaultExpression: \"0\"")
+				.replace("NAME IS NOT NULL", "NAME IS NOT NULL; DROP TABLE CUSTOMERS"));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("checkExpressions"));
 		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
 	}
 

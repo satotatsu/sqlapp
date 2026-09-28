@@ -72,8 +72,12 @@ final class MigrationTargetMappingResolver {
 						configuredColumn.identity(), defaultExpression, configuredColumn.conversion()));
 			}
 			if (columns.isEmpty()) { throw new CommandException("Mapping table must contain at least one column: " + table.getName()); }
+			final var checks = new ArrayList<String>();
+			for (final String expression : configured.checkExpressions()) {
+				checks.add(sqlExpression(expression, "checkExpressions", table, null));
+			}
 			tables.add(new ResolvedMigrationTargetMapping.TableMapping(tableId,
-					blank(configured.targetSchema()) ? null : configured.targetSchema().trim(), targetTable, columns));
+					blank(configured.targetSchema()) ? null : configured.targetSchema().trim(), targetTable, checks, columns));
 		}
 		return new ResolvedMigrationTargetMapping(fingerprint, targetDatabase.toLowerCase(Locale.ROOT), targetVersion, tables);
 	}
@@ -100,14 +104,18 @@ final class MigrationTargetMappingResolver {
 	private static String defaultExpression(final String value, final Table table, final Column column,
 			final Boolean identity) {
 		if (blank(value)) { return null; }
-		final String expression = value.trim();
 		if (Boolean.TRUE.equals(identity)) {
 			throw new CommandException("defaultExpression cannot be combined with identity: " + table.getName() + "." + column.getName());
 		}
+		return sqlExpression(value, "defaultExpression", table, column);
+	}
+	private static String sqlExpression(final String value, final String property, final Table table, final Column column) {
+		if (blank(value)) { throw new CommandException(property + " must not contain a blank expression: " + table.getName()); }
+		final String expression = value.trim();
 		if (expression.indexOf(';') >= 0 || expression.indexOf('\r') >= 0 || expression.indexOf('\n') >= 0
 				|| expression.contains("--") || expression.contains("/*") || expression.contains("*/")) {
-			throw new CommandException("defaultExpression must be one comment-free SQL expression: "
-					+ table.getName() + "." + column.getName());
+			throw new CommandException(property + " must contain only comment-free single-line SQL expressions: "
+					+ table.getName() + (column == null ? "" : "." + column.getName()));
 		}
 		return expression;
 	}

@@ -36,6 +36,7 @@ public final class MigrationTargetDdlGenerator {
 			final Map<String, String> columns = columns(mapped);
 			final String primaryKey = primaryKey(sourceTable, columns, quote);
 			final var uniqueKeys = uniqueKeys(sourceTable, mapped, columns, quote);
+			final var checks = mapped.checkExpressions();
 			final var primaryKeyColumns = primaryKeyColumns(sourceTable, primaryKey == null);
 			sql.append("CREATE TABLE ").append(name(mapped, quote)).append(" (\n");
 			for (int i = 0; i < mapped.columns().size(); i++) {
@@ -47,12 +48,13 @@ public final class MigrationTargetDdlGenerator {
 				}
 				if (primaryKeyColumns.contains(key(column.sourceColumn().name())) || Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
 				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
-				if (i + 1 < mapped.columns().size() || primaryKey != null || !uniqueKeys.isEmpty()) { sql.append(','); }
+				if (i + 1 < mapped.columns().size() || primaryKey != null || !uniqueKeys.isEmpty() || !checks.isEmpty()) { sql.append(','); }
 				sql.append('\n');
 			}
 			final var constraints = new java.util.ArrayList<String>();
 			if (primaryKey != null) { constraints.add("PRIMARY KEY (" + primaryKey + ")"); }
 			uniqueKeys.forEach(key -> constraints.add("UNIQUE (" + key + ")"));
+			checks.forEach(expression -> constraints.add("CHECK (" + expression + ")"));
 			for (int i = 0; i < constraints.size(); i++) {
 				sql.append("  ").append(constraints.get(i));
 				if (i + 1 < constraints.size()) { sql.append(','); }
