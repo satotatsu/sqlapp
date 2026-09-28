@@ -170,8 +170,40 @@ public final class MigrationTargetDdlGenerator {
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
 				.append(omittedKeyAndIndexComments(omittedKeysAndIndexes))
 				.append(omittedForeignKeyComments(omittedForeignKeys))
+				.append(sourceTableAndColumnMappingComments(mapping))
 				.append(names.mappingComments())
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String sourceTableAndColumnMappingComments(final ResolvedMigrationTargetMapping mapping) {
+		if (mapping.tables().isEmpty()) { return ""; }
+		final var sql = new StringBuilder("\n-- Source table and column name mapping:\n");
+		for (final var table : mapping.tables()) {
+			final String sourceTable = qualified(table.sourceTable().catalog(), table.sourceTable().schema(),
+					table.sourceTable().name());
+			final String targetTable = qualified(null, table.targetSchema(), table.targetTable());
+			sql.append("-- TABLE ").append(NameRegistry.commentValue(sourceTable)).append(" -> ")
+					.append(NameRegistry.commentValue(targetTable)).append('\n');
+			for (final var column : table.columns()) {
+				final String sourceColumn = qualified(column.sourceColumn().catalog(), column.sourceColumn().schema(),
+						column.sourceColumn().table() == null ? table.sourceTable().name() : column.sourceColumn().table(),
+						column.sourceColumn().name());
+				final String targetColumn = qualified(null, table.targetSchema(), table.targetTable(), column.targetColumn());
+				sql.append("-- COLUMN ").append(NameRegistry.commentValue(sourceColumn)).append(" -> ")
+						.append(NameRegistry.commentValue(targetColumn)).append('\n');
+			}
+		}
+		return sql.toString();
+	}
+
+	private static String qualified(final String... parts) {
+		final var name = new StringBuilder();
+		for (final String part : parts) {
+			if (part == null || part.isBlank()) { continue; }
+			if (!name.isEmpty()) { name.append('.'); }
+			name.append(part);
+		}
+		return name.toString();
 	}
 
 	private static String omittedObject(final Table table, final String kind, final String objectName,

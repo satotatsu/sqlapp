@@ -78,6 +78,12 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- UK \"UK_CHILD_CODE\" -> \"UK_CHILD_CODE\" (retained)"));
 		assertTrue(ddl.matches("(?s).*-- IX \"X{129}\" -> \"IX_[0-9a-f]{12}\" \\(generated\\).*"));
 		assertTrue(ddl.contains("-- FK \"FK_CHILD_PARENT\" -> \"FK_CHILD_PARENT\" (retained)"));
+		assertTrue(ddl.contains("-- Source table and column name mapping:\n"
+				+ "-- TABLE \"source.Parent\" -> \"TARGET.PARENT_T\"\n"
+				+ "-- COLUMN \"source.Parent.ID\" -> \"TARGET.PARENT_T.PARENT_ID\"\n"
+				+ "-- COLUMN \"source.Parent.Alt\" -> \"TARGET.PARENT_T.ALT\"\n"
+				+ "-- TABLE \"source.Child\" -> \"TARGET.CHILD_T\""));
+		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\" -> \"TARGET.CHILD_T.CODE\""));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertFalse(ddl.contains("ADD CONSTRAINT [FK_CHILD_ALT]"));
@@ -109,6 +115,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(partial.contains("-- Source object name mapping:\n"
 				+ "-- PK \"PK_PARENT\" -> \"PK_PARENT\" (retained)\n"
 				+ "-- PK \"PK_CHILD\" -> \"PK_CHILD\" (retained)"));
+		assertTrue(partial.contains("-- COLUMN \"source.Child.ID\" -> \"TARGET.CHILD_T.CHILD_ID\""));
 	}
 
 	@Test
