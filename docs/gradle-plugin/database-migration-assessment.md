@@ -179,7 +179,10 @@ version. Reviewers can compare these values with the JSON report and reject a
 DDL file produced from stale or different inputs. The preview contains mapped tables, columns,
 target types and explicit nullability. A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
-both tables and every participating column are mapped. Access constraint and
+both tables and every participating column are mapped and its referenced key is
+an emitted primary key or safe non-nullable unique constraint. This prevents a
+foreign key from referencing a nullable unique key that the preview deliberately
+omits. Access constraint and
 index names are preserved when they are nonblank, unique in the target schema,
 within the target identifier limit and contain no control characters. Quoting
 preserves spaces, Unicode and target delimiter characters. An unusable or

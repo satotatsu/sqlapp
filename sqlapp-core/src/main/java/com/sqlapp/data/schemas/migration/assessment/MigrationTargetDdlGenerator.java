@@ -118,6 +118,7 @@ public final class MigrationTargetDdlGenerator {
 				final var parent = related == null ? null : mappedTables.get(tableId(related));
 				if (parent == null || foreignKey.getColumns().size() != foreignKey.getRelatedColumns().size()) { continue; }
 				final Map<String, String> parentColumns = columns(parent);
+				if (!referencedKeyEmitted(foreignKey, related, parent, parentColumns)) { continue; }
 				final var child = new StringBuilder();
 				final var referenced = new StringBuilder();
 				boolean complete = true;
@@ -166,7 +167,8 @@ public final class MigrationTargetDdlGenerator {
 			for (final var foreignKey : sourceTable.getConstraints().getForeignKeyConstraints()) {
 				final Table related = foreignKey.getRelatedTable();
 				final var parent = related == null ? null : mappedTables.get(tableId(related));
-				if (parent == null || !foreignKeyComplete(foreignKey, targetColumns, columns(parent))) { continue; }
+				if (parent == null || !foreignKeyComplete(foreignKey, targetColumns, columns(parent))
+						|| !referencedKeyEmitted(foreignKey, related, parent, columns(parent))) { continue; }
 				emitted = true;
 				sql.append("-- Verify target orphans: SELECT COUNT(*) FROM ").append(name(mapped, quote))
 						.append(" c LEFT JOIN ").append(name(parent, quote)).append(" p ON ");
@@ -269,7 +271,8 @@ public final class MigrationTargetDdlGenerator {
 					final Table related = foreignKey.getRelatedTable();
 					final var parent = related == null ? null : mappedTables.get(tableId(related));
 					if (parent != null && !parent.sourceTable().equals(mapped.sourceTable())
-							&& foreignKeyComplete(foreignKey, childColumns, columns(parent))) {
+							&& foreignKeyComplete(foreignKey, childColumns, columns(parent))
+							&& referencedKeyEmitted(foreignKey, related, parent, columns(parent))) {
 						parents.add(parent.sourceTable());
 					}
 				}
@@ -302,6 +305,39 @@ public final class MigrationTargetDdlGenerator {
 		for (int i = 0; i < foreignKey.getColumns().size(); i++) {
 			if (!childColumns.containsKey(key(foreignKey.getColumns().get(i).getName()))
 					|| !parentColumns.containsKey(key(foreignKey.getRelatedColumns().get(i).getName()))) { return false; }
+		}
+		return true;
+	}
+
+	private static boolean referencedKeyEmitted(final com.sqlapp.data.schemas.ForeignKeyConstraint foreignKey,
+			final Table parentTable, final ResolvedMigrationTargetMapping.TableMapping parent,
+			final Map<String, String> parentColumns) {
+		if (parentTable == null || foreignKey.getRelatedColumns().isEmpty()) { return false; }
+		final var primary = parentTable.getConstraints().getPrimaryKeyConstraint();
+		if (primary != null && sameColumns(primary.getColumns(), foreignKey.getRelatedColumns())
+				&& primary.getColumns().stream().allMatch(column -> parentColumns.containsKey(key(column.getName())))) {
+			return true;
+		}
+		final var nullable = new HashMap<String, Boolean>();
+		parent.columns().forEach(column -> nullable.put(key(column.sourceColumn().name()), column.nullable()));
+		for (final var unique : parentTable.getConstraints().getUniqueConstraints()) {
+			if (unique.isPrimaryKey() || !sameColumns(unique.getColumns(), foreignKey.getRelatedColumns())) { continue; }
+			boolean emitted = true;
+			for (final var column : unique.getColumns()) {
+				final var sourceColumn = parentTable.getColumns().get(column.getName());
+				if (!parentColumns.containsKey(key(column.getName())) || sourceColumn == null || !sourceColumn.isNotNull()
+						|| !Boolean.FALSE.equals(nullable.get(key(column.getName())))) { emitted = false; break; }
+			}
+			if (emitted) { return true; }
+		}
+		return false;
+	}
+
+	private static boolean sameColumns(final java.util.List<? extends com.sqlapp.data.schemas.ReferenceColumn> left,
+			final java.util.List<? extends com.sqlapp.data.schemas.ReferenceColumn> right) {
+		if (left.size() != right.size()) { return false; }
+		for (int i = 0; i < left.size(); i++) {
+			if (!key(left.get(i).getName()).equals(key(right.get(i).getName()))) { return false; }
 		}
 		return true;
 	}

@@ -19,15 +19,20 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var parent = new Table("Parent");
 		final var parentId = new Column("ID");
+		final var parentAlt = new Column("Alt");
 		parent.getColumns().add(parentId);
+		parent.getColumns().add(parentAlt);
 		parent.setPrimaryKey("PK_PARENT", parentId);
+		parent.getConstraints().addUniqueConstraint("UK_PARENT_ALT", parentAlt);
 		final var child = new Table("Child");
 		final var childId = new Column("ID");
 		final var parentIdInChild = new Column("ParentID");
+		final var parentAltInChild = new Column("ParentAlt");
 		final var code = new Column("Code").setNotNull(true);
 		final var optionalCode = new Column("OptionalCode");
 		child.getColumns().add(childId);
 		child.getColumns().add(parentIdInChild);
+		child.getColumns().add(parentAltInChild);
 		child.getColumns().add(code);
 		child.getColumns().add(optionalCode);
 		child.setPrimaryKey("PK_CHILD", childId);
@@ -39,15 +44,18 @@ class DatabaseMigrationAssessmentProviderTest {
 		schema.getTables().add(parent);
 		schema.getTables().add(child);
 		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", parentIdInChild, parentId);
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_ALT", parentAltInChild, parentAlt);
 		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
 		final var parentMapping = new ResolvedMigrationTargetMapping.TableMapping(
 				new MigrationAssessment.ObjectId(null, "source", "table", "Parent"), "TARGET", "PARENT_T",
-				List.of(column("source", "Parent", "ID", "PARENT_ID")));
+				List.of(column("source", "Parent", "ID", "PARENT_ID"),
+						column("source", "Parent", "Alt", "ALT")));
 		final var childMapping = new ResolvedMigrationTargetMapping.TableMapping(
 				new MigrationAssessment.ObjectId(null, "source", "table", "Child"), "TARGET", "CHILD_T",
 				List.of("[CODE] >= 0"),
 				List.of(column("source", "Child", "ID", "CHILD_ID"),
 						column("source", "Child", "ParentID", "PARENT_ID"),
+						column("source", "Child", "ParentAlt", "PARENT_ALT"),
 						new ResolvedMigrationTargetMapping.ColumnMapping(
 								new MigrationAssessment.ObjectId(null, "source", "column", "Code", "Child"),
 								"CODE", "int", false, null, "0", null),
@@ -66,6 +74,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.matches("(?s).*-- IX source name \"X{129}\" -> IX_[0-9a-f]{12}.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
+		assertFalse(ddl.contains("FK_CHILD_ALT"));
+		assertFalse(ddl.contains("c.[PARENT_ALT]"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CHILD_ID], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CHILD_ID] HAVING COUNT(*) > 1;"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CODE], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CODE] HAVING COUNT(*) > 1;"));
 		assertTrue(ddl.contains("-- Verify target orphans: SELECT COUNT(*) FROM [TARGET].[CHILD_T] c LEFT JOIN [TARGET].[PARENT_T] p ON c.[PARENT_ID] = p.[PARENT_ID] WHERE c.[PARENT_ID] IS NOT NULL AND p.[PARENT_ID] IS NULL;"));
@@ -105,6 +115,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		second.getColumns().add(secondOther);
 		schema.getTables().add(first);
 		schema.getTables().add(second);
+		first.setPrimaryKey("PK_FIRST", firstId);
+		second.setPrimaryKey("PK_SECOND", secondId);
 		first.getConstraints().addForeignKeyConstraint("FK_FIRST_SECOND", firstOther, secondId);
 		second.getConstraints().addForeignKeyConstraint("FK_SECOND_FIRST", secondOther, firstId);
 		final var firstMapping = new ResolvedMigrationTargetMapping.TableMapping(
