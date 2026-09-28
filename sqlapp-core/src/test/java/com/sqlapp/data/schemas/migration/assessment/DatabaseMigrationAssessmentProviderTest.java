@@ -33,7 +33,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		child.setPrimaryKey("PK_CHILD", childId);
 		child.getConstraints().addUniqueConstraint("UK_CHILD_CODE", code);
 		child.getConstraints().addUniqueConstraint("UK_CHILD_OPTIONAL", optionalCode);
-		final var searchIndex = new Index("IDX_CHILD_PARENT", parentIdInChild, code);
+		final var searchIndex = new Index("X".repeat(129), parentIdInChild, code);
 		searchIndex.getColumns().getLast().setOrder(Order.Desc);
 		child.getIndexes().add(searchIndex);
 		schema.getTables().add(parent);
@@ -53,17 +53,17 @@ class DatabaseMigrationAssessmentProviderTest {
 								"CODE", "int", false, null, "0", null),
 						column("source", "Child", "OptionalCode", "OPTIONAL_CODE")));
 		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, childMapping));
-		final String ddl = MigrationTargetDdlGenerator.generate(source, mapping, value -> "[" + value + "]", "GO\n");
-		assertTrue(ddl.matches("(?s).*CONSTRAINT \\[PK_[0-9a-f]{12}] PRIMARY KEY \\(\\[PARENT_ID]\\).*"));
-		assertTrue(ddl.matches("(?s).*CONSTRAINT \\[PK_[0-9a-f]{12}] PRIMARY KEY \\(\\[CHILD_ID]\\).*"));
-		assertTrue(ddl.matches("(?s).*CONSTRAINT \\[UK_[0-9a-f]{12}] UNIQUE \\(\\[CODE]\\).*"));
+		final String ddl = MigrationTargetDdlGenerator.generate(source, mapping, value -> "[" + value + "]", "GO\n",
+				column -> "", name -> name.length() <= 128);
+		assertTrue(ddl.contains("CONSTRAINT [PK_PARENT] PRIMARY KEY ([PARENT_ID])"));
+		assertTrue(ddl.contains("CONSTRAINT [PK_CHILD] PRIMARY KEY ([CHILD_ID])"));
+		assertTrue(ddl.contains("CONSTRAINT [UK_CHILD_CODE] UNIQUE ([CODE])"));
 		assertTrue(ddl.contains("[CODE] int DEFAULT 0 NOT NULL"));
 		assertTrue(ddl.contains("CHECK ([CODE] >= 0)"));
 		assertFalse(ddl.contains("UNIQUE ([OPTIONAL_CODE])"));
 		assertTrue(ddl.matches("(?s).*CREATE INDEX \\[IX_[0-9a-f]{12}] ON \\[TARGET]\\.\\[CHILD_T] \\(\\[PARENT_ID], \\[CODE] DESC\\);.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
-		assertTrue(ddl.matches("(?s).*ALTER TABLE \\[TARGET]\\.\\[CHILD_T] ADD CONSTRAINT \\[FK_[0-9a-f]{12}] FOREIGN KEY \\(\\[PARENT_ID]\\) REFERENCES \\[TARGET]\\.\\[PARENT_T] \\(\\[PARENT_ID]\\);.*"));
-		assertFalse(ddl.contains("FK_CHILD_PARENT"));
+		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 
 		final var partialChild = new ResolvedMigrationTargetMapping.TableMapping(childMapping.sourceTable(), "TARGET", "CHILD_T",
 				List.of(column("source", "Child", "ID", "CHILD_ID")));

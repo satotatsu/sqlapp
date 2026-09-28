@@ -179,10 +179,12 @@ version. Reviewers can compare these values with the JSON report and reject a
 DDL file produced from stale or different inputs. The preview contains mapped tables, columns,
 target types and explicit nullability. A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
-both tables and every participating column are mapped. Constraint names are
-deterministic ASCII `PK_`, `UK_` and `FK_` hashes, so operational scripts can
-address them without trusting non-portable Access names or exceeding Oracle and
-SQL Server identifier limits. A non-primary unique constraint is emitted only when every participating
+both tables and every participating column are mapped. Access constraint and
+index names are preserved when they are nonblank, unique in the target schema,
+within the target identifier limit and contain no control characters. Quoting
+preserves spaces, Unicode and target delimiter characters. An unusable or
+duplicate name falls back to a deterministic ASCII `PK_`, `UK_`, `FK_` or `IX_`
+hash within both target limits. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
 Nullable unique keys remain review items because Access, Oracle and SQL Server
 do not share identical NULL uniqueness semantics. Fully mapped non-unique

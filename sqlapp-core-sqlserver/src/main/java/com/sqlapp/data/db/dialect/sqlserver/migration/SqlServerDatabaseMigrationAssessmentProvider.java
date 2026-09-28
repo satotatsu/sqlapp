@@ -30,10 +30,14 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 			final ResolvedMigrationTargetMapping mapping, final String targetVersion) {
 		return com.sqlapp.data.schemas.migration.assessment.MigrationTargetDdlGenerator
 				.generate(source, mapping, SqlServerDatabaseMigrationAssessmentProvider::sqlServerName, "GO\n\n",
-						column -> " IDENTITY(1,1)");
+						column -> " IDENTITY(1,1)", SqlServerDatabaseMigrationAssessmentProvider::usableObjectName);
 	}
 
 	private static String sqlServerName(final String value) { return "[" + value.replace("]", "]]") + "]"; }
+	private static boolean usableObjectName(final String value) {
+		return value.codePointCount(0, value.length()) <= 128
+				&& value.codePoints().noneMatch(Character::isISOControl);
+	}
 	private static final Pattern DECIMAL = Pattern.compile("(?:DECIMAL|NUMERIC)\\((\\d+),(\\d+)\\)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern TEXT_TYPE = Pattern.compile("(N?VARCHAR|N?CHAR)\\((MAX|\\d+)\\)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern DATETIME2 = Pattern.compile("DATETIME2(?:\\((\\d)\\))?", Pattern.CASE_INSENSITIVE);

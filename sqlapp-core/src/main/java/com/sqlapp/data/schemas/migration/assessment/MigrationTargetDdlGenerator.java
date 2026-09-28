@@ -4,6 +4,7 @@ package com.sqlapp.data.schemas.migration.assessment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
@@ -23,12 +24,20 @@ public final class MigrationTargetDdlGenerator {
 	public static String generate(final MigrationAssessmentSource source, final ResolvedMigrationTargetMapping mapping,
 			final Function<String, String> quote, final String batchSeparator,
 			final Function<ResolvedMigrationTargetMapping.ColumnMapping, String> identityClause) {
+		return generate(source, mapping, quote, batchSeparator, identityClause, name -> false);
+	}
+
+	public static String generate(final MigrationAssessmentSource source, final ResolvedMigrationTargetMapping mapping,
+			final Function<String, String> quote, final String batchSeparator,
+			final Function<ResolvedMigrationTargetMapping.ColumnMapping, String> identityClause,
+			final Predicate<String> usableSourceName) {
 		final var sourceTables = new HashMap<ObjectId, Table>();
 		for (final var schema : source.schemas()) {
 			for (final var table : schema.getTables()) { sourceTables.put(tableId(table), table); }
 		}
 		final var mappedTables = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
 		mapping.tables().forEach(table -> mappedTables.put(table.sourceTable(), table));
+		final var names = new NameRegistry(usableSourceName);
 		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
 				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n");
 		for (final var mapped : mapping.tables()) {
@@ -53,12 +62,15 @@ public final class MigrationTargetDdlGenerator {
 			}
 			final var constraints = new java.util.ArrayList<String>();
 			if (primaryKey != null) {
-				constraints.add("CONSTRAINT " + quote.apply(generatedName("PK", objectIdentity(mapped) + ".primary"))
+				final String sourceName = sourceTable.getConstraints().getPrimaryKeyConstraint().getName();
+				constraints.add("CONSTRAINT " + quote.apply(names.choose(mapped.targetSchema(), "PK", sourceName,
+						objectIdentity(mapped) + ".primary"))
 						+ " PRIMARY KEY (" + primaryKey + ")");
 			}
 			for (int i = 0; i < uniqueKeys.size(); i++) {
-				constraints.add("CONSTRAINT " + quote.apply(generatedName("UK", objectIdentity(mapped) + ".unique." + i))
-						+ " UNIQUE (" + uniqueKeys.get(i) + ")");
+				final var unique = uniqueKeys.get(i);
+				constraints.add("CONSTRAINT " + quote.apply(names.choose(mapped.targetSchema(), "UK", unique.sourceName(),
+						objectIdentity(mapped) + ".unique." + i)) + " UNIQUE (" + unique.columns() + ")");
 			}
 			checks.forEach(expression -> constraints.add("CHECK (" + expression + ")"));
 			for (int i = 0; i < constraints.size(); i++) {
@@ -89,7 +101,7 @@ public final class MigrationTargetDdlGenerator {
 				if (complete) {
 					final String identity = objectIdentity(mapped) + "."
 							+ index.getName() + "." + ordinal;
-					sql.append("CREATE INDEX ").append(quote.apply(generatedName("IX", identity))).append(" ON ")
+					sql.append("CREATE INDEX ").append(quote.apply(names.choose(mapped.targetSchema(), "IX", index.getName(), identity))).append(" ON ")
 							.append(name(mapped, quote)).append(" (").append(keyColumns).append(");\n")
 							.append(batchSeparator);
 				}
@@ -120,7 +132,7 @@ public final class MigrationTargetDdlGenerator {
 				if (complete) {
 					final String identity = objectIdentity(mapped) + ".foreign." + ordinal + "." + objectIdentity(parent);
 					sql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD CONSTRAINT ")
-							.append(quote.apply(generatedName("FK", identity))).append(" FOREIGN KEY (")
+							.append(quote.apply(names.choose(mapped.targetSchema(), "FK", foreignKey.getName(), identity))).append(" FOREIGN KEY (")
 							.append(child).append(") REFERENCES ").append(name(parent, quote)).append(" (")
 							.append(referenced).append(");\n").append(batchSeparator);
 				}
@@ -149,13 +161,13 @@ public final class MigrationTargetDdlGenerator {
 		table.getConstraints().getPrimaryKeyConstraint().getColumns().forEach(column -> result.add(key(column.getName())));
 		return result;
 	}
-	private static java.util.List<String> uniqueKeys(final Table table,
+	private static java.util.List<Key> uniqueKeys(final Table table,
 			final ResolvedMigrationTargetMapping.TableMapping mapped, final Map<String, String> columns,
 			final Function<String, String> quote) {
 		if (table == null) { return java.util.List.of(); }
 		final var nullable = new HashMap<String, Boolean>();
 		mapped.columns().forEach(column -> nullable.put(key(column.sourceColumn().name()), column.nullable()));
-		final var result = new java.util.ArrayList<String>();
+		final var result = new java.util.ArrayList<Key>();
 		for (final var unique : table.getConstraints().getUniqueConstraints()) {
 			if (unique.isPrimaryKey() || unique.getColumns().isEmpty()) { continue; }
 			final var value = new StringBuilder();
@@ -172,7 +184,7 @@ public final class MigrationTargetDdlGenerator {
 				if (i > 0) { value.append(", "); }
 				value.append(quote.apply(targetName));
 			}
-			if (completeAndRequired) { result.add(value.toString()); }
+			if (completeAndRequired) { result.add(new Key(unique.getName(), value.toString())); }
 		}
 		return result;
 	}
@@ -201,5 +213,21 @@ public final class MigrationTargetDdlGenerator {
 			return value.toString();
 		}
 		catch (final java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+	}
+	private record Key(String sourceName, String columns) { }
+	private static final class NameRegistry {
+		private final Predicate<String> usableSourceName;
+		private final java.util.Set<String> used = new java.util.HashSet<>();
+		private NameRegistry(final Predicate<String> usableSourceName) { this.usableSourceName = usableSourceName; }
+		private String choose(final String schema, final String prefix, final String sourceName, final String identity) {
+			if (sourceName != null && !sourceName.isBlank() && usableSourceName.test(sourceName)
+					&& used.add((schema == null ? "" : key(schema)) + "." + key(sourceName))) { return sourceName; }
+			int salt = 0;
+			while (true) {
+				final String generated = generatedName(prefix, identity + (salt == 0 ? "" : "." + salt));
+				if (used.add((schema == null ? "" : key(schema)) + "." + key(generated))) { return generated; }
+				salt++;
+			}
+		}
 	}
 }
