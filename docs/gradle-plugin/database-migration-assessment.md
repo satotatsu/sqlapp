@@ -192,7 +192,9 @@ within the target identifier limit and contain no control characters. Quoting
 preserves spaces, Unicode and target delimiter characters. An unusable or
 duplicate name falls back to a deterministic ASCII `PK_`, `UK_`, `FK_` or `IX_`
 hash within both target limits. Each fallback is listed in comments at the end
-of the DDL as an Access-name-to-target-name mapping. Control characters are
+of the DDL. Every emitted primary key, unique constraint, index and foreign key is
+also listed in a source-to-target name mapping, including Access names retained
+without change and deterministic generated names. Control characters are
 escaped in those comments. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
 Nullable unique keys remain review items because Access, Oracle and SQL Server

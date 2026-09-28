@@ -170,6 +170,7 @@ public final class MigrationTargetDdlGenerator {
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
 				.append(omittedKeyAndIndexComments(omittedKeysAndIndexes))
 				.append(omittedForeignKeyComments(omittedForeignKeys))
+				.append(names.mappingComments())
 				.append(names.fallbackComments()).toString();
 	}
 
@@ -492,20 +493,36 @@ public final class MigrationTargetDdlGenerator {
 	private static final class NameRegistry {
 		private final Predicate<String> usableSourceName;
 		private final java.util.Set<String> used = new java.util.HashSet<>();
+		private final java.util.List<NameMapping> mappings = new java.util.ArrayList<>();
 		private final java.util.List<String> fallbacks = new java.util.ArrayList<>();
 		private NameRegistry(final Predicate<String> usableSourceName) { this.usableSourceName = usableSourceName; }
 		private String choose(final String schema, final String prefix, final String sourceName, final String identity) {
 			if (sourceName != null && !sourceName.isBlank() && usableSourceName.test(sourceName)
-					&& used.add((schema == null ? "" : key(schema)) + "." + key(sourceName))) { return sourceName; }
+					&& used.add((schema == null ? "" : key(schema)) + "." + key(sourceName))) {
+				mappings.add(new NameMapping(prefix, sourceName, sourceName, true));
+				return sourceName;
+			}
 			int salt = 0;
 			while (true) {
 				final String generated = generatedName(prefix, identity + (salt == 0 ? "" : "." + salt));
 				if (used.add((schema == null ? "" : key(schema)) + "." + key(generated))) {
+					mappings.add(new NameMapping(prefix, sourceName, generated, false));
 					fallbacks.add("-- " + prefix + " source name " + commentValue(sourceName) + " -> " + generated + "\n");
 					return generated;
 				}
 				salt++;
 			}
+		}
+		private String mappingComments() {
+			if (mappings.isEmpty()) { return ""; }
+			final var sql = new StringBuilder("\n-- Source object name mapping:\n");
+			for (final var mapping : mappings) {
+				sql.append("-- ").append(mapping.kind()).append(' ')
+						.append(commentValue(mapping.sourceName())).append(" -> ")
+						.append(commentValue(mapping.targetName()))
+						.append(mapping.retained() ? " (retained)\n" : " (generated)\n");
+			}
+			return sql.toString();
 		}
 		private String fallbackComments() {
 			if (fallbacks.isEmpty()) { return ""; }
@@ -523,5 +540,6 @@ public final class MigrationTargetDdlGenerator {
 			});
 			return escaped.append('"').toString();
 		}
+		private record NameMapping(String kind, String sourceName, String targetName, boolean retained) { }
 	}
 }

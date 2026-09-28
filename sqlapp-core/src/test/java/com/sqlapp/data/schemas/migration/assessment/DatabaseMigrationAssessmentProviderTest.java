@@ -72,6 +72,12 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.matches("(?s).*CREATE INDEX \\[IX_[0-9a-f]{12}] ON \\[TARGET]\\.\\[CHILD_T] \\(\\[PARENT_ID], \\[CODE] DESC\\);.*"));
 		assertTrue(ddl.contains("-- Source object names replaced for target compatibility:"));
 		assertTrue(ddl.matches("(?s).*-- IX source name \"X{129}\" -> IX_[0-9a-f]{12}.*"));
+		assertTrue(ddl.contains("-- Source object name mapping:\n"
+				+ "-- PK \"PK_PARENT\" -> \"PK_PARENT\" (retained)\n"
+				+ "-- PK \"PK_CHILD\" -> \"PK_CHILD\" (retained)\n"
+				+ "-- UK \"UK_CHILD_CODE\" -> \"UK_CHILD_CODE\" (retained)"));
+		assertTrue(ddl.matches("(?s).*-- IX \"X{129}\" -> \"IX_[0-9a-f]{12}\" \\(generated\\).*"));
+		assertTrue(ddl.contains("-- FK \"FK_CHILD_PARENT\" -> \"FK_CHILD_PARENT\" (retained)"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertFalse(ddl.contains("ADD CONSTRAINT [FK_CHILD_ALT]"));
@@ -100,6 +106,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertFalse(partial.contains("CREATE INDEX"));
 		assertFalse(partial.contains("Verify target orphans"));
 		assertFalse(partial.contains("Source object names replaced"));
+		assertTrue(partial.contains("-- Source object name mapping:\n"
+				+ "-- PK \"PK_PARENT\" -> \"PK_PARENT\" (retained)\n"
+				+ "-- PK \"PK_CHILD\" -> \"PK_CHILD\" (retained)"));
 	}
 
 	@Test
