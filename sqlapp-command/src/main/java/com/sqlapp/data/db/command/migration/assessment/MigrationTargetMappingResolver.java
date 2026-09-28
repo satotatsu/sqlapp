@@ -50,7 +50,10 @@ final class MigrationTargetMappingResolver {
 			final Schema schema = table.getSchema();
 			final var tableId = new ObjectId(schema.getCatalogName(), schema.getName(), "table", table.getName());
 			if (!sourceTables.add(tableId)) { throw new CommandException("Duplicate source table mapping: " + table.getName()); }
-			final String targetTable = optional(configured.targetTable(), table.getName());
+			final String targetSchema = blank(configured.targetSchema()) ? null
+					: targetIdentifier(configured.targetSchema().trim(), "targetSchema", table.getName());
+			final String targetTable = targetIdentifier(optional(configured.targetTable(), table.getName()),
+					"targetTable", table.getName());
 			final String targetKey = canonical(configured.targetSchema()) + "." + canonical(targetTable);
 			if (!targets.add(targetKey)) { throw new CommandException("Duplicate target table mapping: " + targetKey); }
 			final var columns = new ArrayList<ResolvedMigrationTargetMapping.ColumnMapping>();
@@ -59,7 +62,8 @@ final class MigrationTargetMappingResolver {
 			for (final var configuredColumn : configured.columns()) {
 				final Column column = column(table, configuredColumn.sourceColumn());
 				if (!sourceColumns.add(canonical(column.getName()))) { throw new CommandException("Duplicate source column mapping: " + table.getName() + "." + column.getName()); }
-				final String targetColumn = optional(configuredColumn.targetColumn(), column.getName());
+				final String targetColumn = targetIdentifier(optional(configuredColumn.targetColumn(), column.getName()),
+						"targetColumn", table.getName() + "." + column.getName());
 				if (!targetColumns.add(canonical(targetColumn))) { throw new CommandException("Duplicate target column mapping: " + targetTable + "." + targetColumn); }
 				if (configuredColumn.targetType() == null || configuredColumn.targetType().isBlank()) {
 					throw new CommandException("targetType is required for " + table.getName() + "." + column.getName());
@@ -77,7 +81,7 @@ final class MigrationTargetMappingResolver {
 				checks.add(sqlExpression(expression, "checkExpressions", table, null));
 			}
 			tables.add(new ResolvedMigrationTargetMapping.TableMapping(tableId,
-					blank(configured.targetSchema()) ? null : configured.targetSchema().trim(), targetTable, checks, columns));
+					targetSchema, targetTable, checks, columns));
 		}
 		return new ResolvedMigrationTargetMapping(fingerprint, targetDatabase.toLowerCase(Locale.ROOT), targetVersion, tables);
 	}
@@ -101,6 +105,15 @@ final class MigrationTargetMappingResolver {
 	private static String optional(final String value, final String fallback) { return blank(value) ? fallback : value.trim(); }
 	private static String canonical(final String value) { return blank(value) ? "" : value.trim().toUpperCase(Locale.ROOT); }
 	private static String text(final String value) { return value == null ? "" : value.trim(); }
+	private static String targetIdentifier(final String value, final String property, final String sourceObject) {
+		if (value == null || value.isBlank()) {
+			throw new CommandException(property + " must not be blank for " + sourceObject);
+		}
+		if (value.codePoints().anyMatch(Character::isISOControl)) {
+			throw new CommandException(property + " must not contain control characters for " + sourceObject);
+		}
+		return value;
+	}
 	private static String defaultExpression(final String value, final Table table, final Column column,
 			final Boolean identity) {
 		if (blank(value)) { return null; }

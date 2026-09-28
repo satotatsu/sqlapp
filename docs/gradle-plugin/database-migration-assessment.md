@@ -207,8 +207,15 @@ staged load, deferred constraints or another reviewed loading strategy.
 The same section provides a post-load row-count baseline for every mapped
 table. With `scanData=true` it records the Access row count captured in the
 profile; otherwise it says `not scanned` instead of implying a zero-row source.
-Compare these baselines with target counts after loading. They do not replace
+Each baseline is followed by a commented, dialect-quoted `SELECT COUNT(*)`
+statement for the target table. Copy or uncomment it only after loading the
+data, then compare its result with the recorded source count. These checks do not replace
 key, orphan or value-level reconciliation.
+When column profiling is available, the DDL also records each mapped source
+column's NULL count and a quoted target `SELECT COUNT(*) ... WHERE ... IS NULL`
+query. An unscanned column says `not scanned`; a scanned but unsupported column
+says `unavailable`. This makes NULL changes caused by conversions, defaults or
+load behavior explicit during reconciliation.
 
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to
@@ -216,6 +223,9 @@ exactly one local table; add `sourceSchema` and, when needed, `sourceCatalog`
 to disambiguate it. `targetTable` and `targetColumn` default to their resolved
 source names. `targetType` is required for every mapped column. Target table
 and column identities must be unique under case-insensitive comparison.
+Target table and column identifiers, and a target schema when supplied, must be
+nonblank and cannot contain control characters such as line breaks; invalid identifiers fail before any
+existing report or DDL preview is replaced.
 Each table must map at least one column. Partial mappings are accepted so teams
 can review difficult objects incrementally. The report emits a
 `migration.mapping.unmapped-table` review finding for each omitted table and a

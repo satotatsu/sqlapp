@@ -169,6 +169,11 @@ class AssessDatabaseMigrationCommandTest {
 				.replace("NAME IS NOT NULL", "NAME IS NOT NULL; DROP TABLE CUSTOMERS"));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("checkExpressions"));
 		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+		Files.writeString(mapping, Files.readString(mapping)
+				.replace("NAME IS NOT NULL; DROP TABLE CUSTOMERS", "NAME IS NOT NULL")
+				.replace("targetTable: CUSTOMERS", "targetTable: \"CUSTOMERS\\nARCHIVE\""));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("targetTable"));
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
 	}
 
 	@Test

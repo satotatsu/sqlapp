@@ -139,12 +139,12 @@ public final class MigrationTargetDdlGenerator {
 			}
 		}
 		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
-				.append(rowCountBaselineComments(source, mapping))
+				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(names.fallbackComments()).toString();
 	}
 
 	private static String rowCountBaselineComments(final MigrationAssessmentSource source,
-			final ResolvedMigrationTargetMapping mapping) {
+			final ResolvedMigrationTargetMapping mapping, final Function<String, String> quote) {
 		final var counts = new HashMap<ObjectId, Long>();
 		if (source.dataProfile() != null) {
 			source.dataProfile().tables().forEach(table -> counts.put(table.table(), table.rowCount()));
@@ -155,7 +155,26 @@ public final class MigrationTargetDdlGenerator {
 			final Long count = counts.get(table.sourceTable());
 			if (count == null) { sql.append("not scanned"); }
 			else { sql.append(count).append(" rows"); }
-			sql.append('\n');
+			sql.append('\n').append("-- Verify target: SELECT COUNT(*) FROM ")
+					.append(name(table, quote)).append(";\n");
+		}
+		sql.append("\n-- Post-load NULL-count baseline from the Access source:\n");
+		final var profiles = new HashMap<ObjectId, MigrationDataProfile.ColumnProfile>();
+		if (source.dataProfile() != null) {
+			source.dataProfile().tables().forEach(table -> table.columns()
+					.forEach(column -> profiles.put(column.column(), column)));
+		}
+		for (final var table : mapping.tables()) {
+			for (final var column : table.columns()) {
+				final var profile = profiles.get(column.sourceColumn());
+				sql.append("-- ").append(commentName(table)).append('.').append(NameRegistry.commentValue(column.targetColumn()))
+						.append(": source NULLs ");
+				if (profile == null) { sql.append("not scanned"); }
+				else if (profile.nullCount() == null) { sql.append("unavailable"); }
+				else { sql.append(profile.nullCount()); }
+				sql.append('\n').append("-- Verify target: SELECT COUNT(*) FROM ").append(name(table, quote))
+						.append(" WHERE ").append(quote.apply(column.targetColumn())).append(" IS NULL;\n");
+			}
 		}
 		return sql.toString();
 	}

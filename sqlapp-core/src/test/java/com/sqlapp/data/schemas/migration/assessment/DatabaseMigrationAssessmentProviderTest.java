@@ -69,7 +69,12 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:\n"
 				+ "-- 1. \"TARGET.PARENT_T\"\n-- 2. \"TARGET.CHILD_T\""));
 		assertTrue(ddl.contains("-- Post-load row-count baseline from the Access source:\n"
-				+ "-- \"TARGET.PARENT_T\": not scanned\n-- \"TARGET.CHILD_T\": not scanned"));
+				+ "-- \"TARGET.PARENT_T\": not scanned\n"
+				+ "-- Verify target: SELECT COUNT(*) FROM [TARGET].[PARENT_T];\n"
+				+ "-- \"TARGET.CHILD_T\": not scanned\n"
+				+ "-- Verify target: SELECT COUNT(*) FROM [TARGET].[CHILD_T];"));
+		assertTrue(ddl.contains("-- \"TARGET.CHILD_T\".\"CODE\": source NULLs not scanned\n"
+				+ "-- Verify target: SELECT COUNT(*) FROM [TARGET].[CHILD_T] WHERE [CODE] IS NULL;"));
 
 		final var partialChild = new ResolvedMigrationTargetMapping.TableMapping(childMapping.sourceTable(), "TARGET", "CHILD_T",
 				List.of(column("source", "Child", "ID", "CHILD_ID")));
@@ -120,8 +125,11 @@ class DatabaseMigrationAssessmentProviderTest {
 		table.getColumns().add(new Column("ID"));
 		schema.getTables().add(table);
 		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "Orders");
+		final var columnId = new MigrationAssessment.ObjectId(null, "source", "column", "ID", "Orders");
 		final var profile = new MigrationDataProfile(List.of(
-				new MigrationDataProfile.TableProfile(tableId, 42, List.of())), List.of());
+				new MigrationDataProfile.TableProfile(tableId, 42, List.of(
+						new MigrationDataProfile.ColumnProfile(columnId, "LONG", MigrationDataProfile.Coverage.SCANNED,
+								3L, null, null, null)))), List.of());
 		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, true, true, profile);
 		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "ORDERS",
 				List.of(column("source", "Orders", "ID", "ORDER_ID")));
@@ -129,6 +137,9 @@ class DatabaseMigrationAssessmentProviderTest {
 				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)),
 				value -> "\"" + value + "\"", "\n", value -> "", name -> true);
 		assertTrue(ddl.contains("-- \"APP.ORDERS\": 42 rows"));
+		assertTrue(ddl.contains("-- Verify target: SELECT COUNT(*) FROM \"APP\".\"ORDERS\";"));
+		assertTrue(ddl.contains("-- \"APP.ORDERS\".\"ORDER_ID\": source NULLs 3\n"
+				+ "-- Verify target: SELECT COUNT(*) FROM \"APP\".\"ORDERS\" WHERE \"ORDER_ID\" IS NULL;"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,
