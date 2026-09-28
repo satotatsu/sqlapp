@@ -66,6 +66,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.matches("(?s).*-- IX source name \"X{129}\" -> IX_[0-9a-f]{12}.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
+		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:\n"
+				+ "-- 1. \"TARGET.PARENT_T\"\n-- 2. \"TARGET.CHILD_T\""));
 
 		final var partialChild = new ResolvedMigrationTargetMapping.TableMapping(childMapping.sourceTable(), "TARGET", "CHILD_T",
 				List.of(column("source", "Child", "ID", "CHILD_ID")));
@@ -75,6 +77,38 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertFalse(partial.contains("ADD FOREIGN KEY"));
 		assertFalse(partial.contains("CREATE INDEX"));
 		assertFalse(partial.contains("Source object names replaced"));
+	}
+
+	@Test
+	void targetDdlReportsCyclicLoadDependencies() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var first = new Table("First");
+		final var firstId = new Column("ID");
+		final var firstOther = new Column("OtherID");
+		first.getColumns().add(firstId);
+		first.getColumns().add(firstOther);
+		final var second = new Table("Second");
+		final var secondId = new Column("ID");
+		final var secondOther = new Column("OtherID");
+		second.getColumns().add(secondId);
+		second.getColumns().add(secondOther);
+		schema.getTables().add(first);
+		schema.getTables().add(second);
+		first.getConstraints().addForeignKeyConstraint("FK_FIRST_SECOND", firstOther, secondId);
+		second.getConstraints().addForeignKeyConstraint("FK_SECOND_FIRST", secondOther, firstId);
+		final var firstMapping = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "First"), null, "FIRST_T",
+				List.of(column("source", "First", "ID", "ID"), column("source", "First", "OtherID", "OTHER_ID")));
+		final var secondMapping = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "Second"), null, "SECOND_T",
+				List.of(column("source", "Second", "ID", "ID"), column("source", "Second", "OtherID", "OTHER_ID")));
+		final String ddl = MigrationTargetDdlGenerator.generate(
+				new MigrationAssessmentSource(List.of(schema), EMPTY, false, true),
+				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(firstMapping, secondMapping)),
+				value -> "[" + value + "]", "GO\n", value -> "", name -> true);
+		assertTrue(ddl.contains("-- Cyclic or cycle-dependent tables require staged loading or deferred constraints:\n"
+				+ "-- - \"FIRST_T\"\n-- - \"SECOND_T\""));
+		assertFalse(ddl.contains("-- 1."));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,

@@ -138,7 +138,64 @@ public final class MigrationTargetDdlGenerator {
 				}
 			}
 		}
-		return sql.append(names.fallbackComments()).toString();
+		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
+				.append(names.fallbackComments()).toString();
+	}
+
+	private static String loadOrderComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping,
+			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables) {
+		final var dependencies = new java.util.LinkedHashMap<ObjectId, java.util.Set<ObjectId>>();
+		for (final var mapped : mapping.tables()) {
+			final var parents = new java.util.LinkedHashSet<ObjectId>();
+			final Table sourceTable = sourceTables.get(mapped.sourceTable());
+			if (sourceTable != null) {
+				final Map<String, String> childColumns = columns(mapped);
+				for (final var foreignKey : sourceTable.getConstraints().getForeignKeyConstraints()) {
+					final Table related = foreignKey.getRelatedTable();
+					final var parent = related == null ? null : mappedTables.get(tableId(related));
+					if (parent != null && !parent.sourceTable().equals(mapped.sourceTable())
+							&& foreignKeyComplete(foreignKey, childColumns, columns(parent))) {
+						parents.add(parent.sourceTable());
+					}
+				}
+			}
+			dependencies.put(mapped.sourceTable(), parents);
+		}
+		final var ordered = new java.util.ArrayList<ObjectId>();
+		while (!dependencies.isEmpty()) {
+			final var ready = dependencies.entrySet().stream().filter(entry -> entry.getValue().isEmpty())
+					.map(Map.Entry::getKey).toList();
+			if (ready.isEmpty()) { break; }
+			ordered.addAll(ready);
+			ready.forEach(dependencies::remove);
+			dependencies.values().forEach(values -> values.removeAll(ready));
+		}
+		final var sql = new StringBuilder("\n-- Suggested data load order from emitted foreign keys:\n");
+		for (int i = 0; i < ordered.size(); i++) {
+			sql.append("-- ").append(i + 1).append(". ").append(commentName(mappedTables.get(ordered.get(i)))).append('\n');
+		}
+		if (!dependencies.isEmpty()) {
+			sql.append("-- Cyclic or cycle-dependent tables require staged loading or deferred constraints:\n");
+			dependencies.keySet().forEach(id -> sql.append("-- - ").append(commentName(mappedTables.get(id))).append('\n'));
+		}
+		return sql.toString();
+	}
+
+	private static boolean foreignKeyComplete(final com.sqlapp.data.schemas.ForeignKeyConstraint foreignKey,
+			final Map<String, String> childColumns, final Map<String, String> parentColumns) {
+		if (foreignKey.getColumns().size() != foreignKey.getRelatedColumns().size()) { return false; }
+		for (int i = 0; i < foreignKey.getColumns().size(); i++) {
+			if (!childColumns.containsKey(key(foreignKey.getColumns().get(i).getName()))
+					|| !parentColumns.containsKey(key(foreignKey.getRelatedColumns().get(i).getName()))) { return false; }
+		}
+		return true;
+	}
+
+	private static String commentName(final ResolvedMigrationTargetMapping.TableMapping table) {
+		final String name = (table.targetSchema() == null || table.targetSchema().isBlank() ? "" : table.targetSchema() + ".")
+				+ table.targetTable();
+		return NameRegistry.commentValue(name);
 	}
 
 	private static String primaryKey(final Table table, final Map<String, String> columns,

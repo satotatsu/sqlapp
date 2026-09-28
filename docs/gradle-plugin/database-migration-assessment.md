@@ -199,6 +199,12 @@ never executes this SQL. If mapping validation finds an
 invalid target type or another mapping blocker, the JSON/HTML evidence is
 published but an existing DDL preview is left unchanged.
 
+The DDL ends with a suggested data load order derived from the fully mapped
+foreign keys that it emits. Parent tables precede their children. Self
+references do not affect table order. Tables in a foreign-key cycle, along with
+tables that depend on that cycle, are listed separately because they require a
+staged load, deferred constraints or another reviewed loading strategy.
+
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to
 exactly one local table; add `sourceSchema` and, when needed, `sourceCatalog`
