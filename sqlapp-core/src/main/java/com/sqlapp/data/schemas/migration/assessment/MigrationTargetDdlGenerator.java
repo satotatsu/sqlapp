@@ -176,7 +176,34 @@ public final class MigrationTargetDdlGenerator {
 						.append(" WHERE ").append(quote.apply(column.targetColumn())).append(" IS NULL;\n");
 			}
 		}
+		sql.append("\n-- Post-load value-range baseline from the Access source:\n");
+		boolean hasRanges = false;
+		for (final var table : mapping.tables()) {
+			for (final var column : table.columns()) {
+				final var profile = profiles.get(column.sourceColumn());
+				final String range = observedRange(profile);
+				if (range == null) { continue; }
+				hasRanges = true;
+				sql.append("-- ").append(commentName(table)).append('.').append(NameRegistry.commentValue(column.targetColumn()))
+						.append(": source ").append(range).append('\n')
+						.append("-- Verify target: SELECT MIN(").append(quote.apply(column.targetColumn()))
+						.append("), MAX(").append(quote.apply(column.targetColumn())).append(") FROM ")
+						.append(name(table, quote)).append(";\n");
+			}
+		}
+		if (!hasRanges) { sql.append("-- unavailable\n"); }
 		return sql.toString();
+	}
+
+	private static String observedRange(final MigrationDataProfile.ColumnProfile profile) {
+		if (profile == null) { return null; }
+		if (profile.numeric() != null && (profile.numeric().minimum() != null || profile.numeric().maximum() != null)) {
+			return "min=" + profile.numeric().minimum() + ", max=" + profile.numeric().maximum();
+		}
+		if (profile.dateTime() != null && (profile.dateTime().minimum() != null || profile.dateTime().maximum() != null)) {
+			return "min=" + profile.dateTime().minimum() + ", max=" + profile.dateTime().maximum();
+		}
+		return null;
 	}
 
 	private static String loadOrderComments(final Map<ObjectId, Table> sourceTables,

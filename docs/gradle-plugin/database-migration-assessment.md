@@ -216,6 +216,11 @@ column's NULL count and a quoted target `SELECT COUNT(*) ... WHERE ... IS NULL`
 query. An unscanned column says `not scanned`; a scanned but unsupported column
 says `unavailable`. This makes NULL changes caused by conversions, defaults or
 load behavior explicit during reconciliation.
+For scanned numeric and date/time columns with observed non-NULL values, the
+DDL records the source minimum and maximum and provides a quoted target
+`SELECT MIN(...), MAX(...)` query. Comparing these extrema can expose range,
+sign or date conversion errors even when table and NULL counts match. Text
+extrema are excluded because target collation changes their ordering.
 
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to
