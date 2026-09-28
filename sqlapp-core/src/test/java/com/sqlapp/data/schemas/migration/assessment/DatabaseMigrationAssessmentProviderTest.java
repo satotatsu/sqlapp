@@ -68,6 +68,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:\n"
 				+ "-- 1. \"TARGET.PARENT_T\"\n-- 2. \"TARGET.CHILD_T\""));
+		assertTrue(ddl.contains("-- Post-load row-count baseline from the Access source:\n"
+				+ "-- \"TARGET.PARENT_T\": not scanned\n-- \"TARGET.CHILD_T\": not scanned"));
 
 		final var partialChild = new ResolvedMigrationTargetMapping.TableMapping(childMapping.sourceTable(), "TARGET", "CHILD_T",
 				List.of(column("source", "Child", "ID", "CHILD_ID")));
@@ -109,6 +111,24 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Cyclic or cycle-dependent tables require staged loading or deferred constraints:\n"
 				+ "-- - \"FIRST_T\"\n-- - \"SECOND_T\""));
 		assertFalse(ddl.contains("-- 1."));
+	}
+
+	@Test
+	void targetDdlRetainsScannedSourceRowCountsForReconciliation() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("Orders");
+		table.getColumns().add(new Column("ID"));
+		schema.getTables().add(table);
+		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "Orders");
+		final var profile = new MigrationDataProfile(List.of(
+				new MigrationDataProfile.TableProfile(tableId, 42, List.of())), List.of());
+		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, true, true, profile);
+		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "ORDERS",
+				List.of(column("source", "Orders", "ID", "ORDER_ID")));
+		final String ddl = MigrationTargetDdlGenerator.generate(source,
+				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)),
+				value -> "\"" + value + "\"", "\n", value -> "", name -> true);
+		assertTrue(ddl.contains("-- \"APP.ORDERS\": 42 rows"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,

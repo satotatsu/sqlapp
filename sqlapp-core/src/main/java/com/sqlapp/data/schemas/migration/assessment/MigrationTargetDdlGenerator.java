@@ -139,7 +139,25 @@ public final class MigrationTargetDdlGenerator {
 			}
 		}
 		return sql.append(loadOrderComments(sourceTables, mapping, mappedTables))
+				.append(rowCountBaselineComments(source, mapping))
 				.append(names.fallbackComments()).toString();
+	}
+
+	private static String rowCountBaselineComments(final MigrationAssessmentSource source,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var counts = new HashMap<ObjectId, Long>();
+		if (source.dataProfile() != null) {
+			source.dataProfile().tables().forEach(table -> counts.put(table.table(), table.rowCount()));
+		}
+		final var sql = new StringBuilder("\n-- Post-load row-count baseline from the Access source:\n");
+		for (final var table : mapping.tables()) {
+			sql.append("-- ").append(commentName(table)).append(": ");
+			final Long count = counts.get(table.sourceTable());
+			if (count == null) { sql.append("not scanned"); }
+			else { sql.append(count).append(" rows"); }
+			sql.append('\n');
+		}
+		return sql.toString();
 	}
 
 	private static String loadOrderComments(final Map<ObjectId, Table> sourceTables,

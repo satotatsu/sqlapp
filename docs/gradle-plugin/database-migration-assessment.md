@@ -204,6 +204,11 @@ foreign keys that it emits. Parent tables precede their children. Self
 references do not affect table order. Tables in a foreign-key cycle, along with
 tables that depend on that cycle, are listed separately because they require a
 staged load, deferred constraints or another reviewed loading strategy.
+The same section provides a post-load row-count baseline for every mapped
+table. With `scanData=true` it records the Access row count captured in the
+profile; otherwise it says `not scanned` instead of implying a zero-row source.
+Compare these baselines with target counts after loading. They do not replace
+key, orphan or value-level reconciliation.
 
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to
