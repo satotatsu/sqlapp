@@ -138,7 +138,7 @@ public final class MigrationTargetDdlGenerator {
 				}
 			}
 		}
-		return sql.toString();
+		return sql.append(names.fallbackComments()).toString();
 	}
 
 	private static String primaryKey(final Table table, final Map<String, String> columns,
@@ -218,6 +218,7 @@ public final class MigrationTargetDdlGenerator {
 	private static final class NameRegistry {
 		private final Predicate<String> usableSourceName;
 		private final java.util.Set<String> used = new java.util.HashSet<>();
+		private final java.util.List<String> fallbacks = new java.util.ArrayList<>();
 		private NameRegistry(final Predicate<String> usableSourceName) { this.usableSourceName = usableSourceName; }
 		private String choose(final String schema, final String prefix, final String sourceName, final String identity) {
 			if (sourceName != null && !sourceName.isBlank() && usableSourceName.test(sourceName)
@@ -225,9 +226,28 @@ public final class MigrationTargetDdlGenerator {
 			int salt = 0;
 			while (true) {
 				final String generated = generatedName(prefix, identity + (salt == 0 ? "" : "." + salt));
-				if (used.add((schema == null ? "" : key(schema)) + "." + key(generated))) { return generated; }
+				if (used.add((schema == null ? "" : key(schema)) + "." + key(generated))) {
+					fallbacks.add("-- " + prefix + " source name " + commentValue(sourceName) + " -> " + generated + "\n");
+					return generated;
+				}
 				salt++;
 			}
+		}
+		private String fallbackComments() {
+			if (fallbacks.isEmpty()) { return ""; }
+			return "\n-- Source object names replaced for target compatibility:\n" + String.join("", fallbacks);
+		}
+		private static String commentValue(final String value) {
+			if (value == null || value.isBlank()) { return "<blank>"; }
+			final var escaped = new StringBuilder("\"");
+			value.codePoints().forEach(c -> {
+				if (c == '\r') { escaped.append("\\r"); }
+				else if (c == '\n') { escaped.append("\\n"); }
+				else if (Character.isISOControl(c)) { escaped.append(String.format("\\u%04x", c)); }
+				else if (c == '\\' || c == '"') { escaped.append('\\').appendCodePoint(c); }
+				else { escaped.appendCodePoint(c); }
+			});
+			return escaped.append('"').toString();
 		}
 	}
 }

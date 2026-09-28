@@ -62,6 +62,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("CHECK ([CODE] >= 0)"));
 		assertFalse(ddl.contains("UNIQUE ([OPTIONAL_CODE])"));
 		assertTrue(ddl.matches("(?s).*CREATE INDEX \\[IX_[0-9a-f]{12}] ON \\[TARGET]\\.\\[CHILD_T] \\(\\[PARENT_ID], \\[CODE] DESC\\);.*"));
+		assertTrue(ddl.contains("-- Source object names replaced for target compatibility:"));
+		assertTrue(ddl.matches("(?s).*-- IX source name \"X{129}\" -> IX_[0-9a-f]{12}.*"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 
@@ -69,9 +71,10 @@ class DatabaseMigrationAssessmentProviderTest {
 				List.of(column("source", "Child", "ID", "CHILD_ID")));
 		final String partial = MigrationTargetDdlGenerator.generate(source,
 				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, partialChild)),
-				value -> "[" + value + "]", "GO\n");
+				value -> "[" + value + "]", "GO\n", column -> "", name -> name.length() <= 128);
 		assertFalse(partial.contains("ADD FOREIGN KEY"));
 		assertFalse(partial.contains("CREATE INDEX"));
+		assertFalse(partial.contains("Source object names replaced"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,
