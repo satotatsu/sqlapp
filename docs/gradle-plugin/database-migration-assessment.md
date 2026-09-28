@@ -175,7 +175,11 @@ target types and explicit nullability. A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped. Constraint names are
 left to the target database so an Access name cannot violate target identifier
-rules. Indexes, defaults, conversion expressions and cascade rules remain
+rules. A non-primary unique constraint is emitted only when every participating
+column is mapped and required in both the source Schema and target mapping.
+Nullable unique keys remain review items because Access, Oracle and SQL Server
+do not share identical NULL uniqueness semantics. Secondary indexes, defaults,
+conversion expressions and cascade rules remain
 excluded, and the SQL starts with comments stating that scope. The command
 never executes this SQL. If mapping validation finds an
 invalid target type or another mapping blocker, the JSON/HTML evidence is

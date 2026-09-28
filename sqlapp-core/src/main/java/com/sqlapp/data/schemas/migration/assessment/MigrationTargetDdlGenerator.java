@@ -26,12 +26,13 @@ public final class MigrationTargetDdlGenerator {
 		}
 		final var mappedTables = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
 		mapping.tables().forEach(table -> mappedTables.put(table.sourceTable(), table));
-		final var sql = new StringBuilder("-- Review-only DDL. Unnamed primary/foreign keys are emitted only when every participating object is mapped.\n")
+		final var sql = new StringBuilder("-- Review-only DDL. Unnamed primary, required unique and foreign keys are emitted only when every participating object is mapped.\n")
 				.append("-- Indexes, defaults, conversion expressions and cascade rules are not included.\n");
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			final Map<String, String> columns = columns(mapped);
 			final String primaryKey = primaryKey(sourceTable, columns, quote);
+			final var uniqueKeys = uniqueKeys(sourceTable, mapped, columns, quote);
 			final var primaryKeyColumns = primaryKeyColumns(sourceTable, primaryKey == null);
 			sql.append("CREATE TABLE ").append(name(mapped, quote)).append(" (\n");
 			for (int i = 0; i < mapped.columns().size(); i++) {
@@ -40,10 +41,17 @@ public final class MigrationTargetDdlGenerator {
 						.append(Boolean.TRUE.equals(column.identity()) ? identityClause.apply(column) : "");
 				if (primaryKeyColumns.contains(key(column.sourceColumn().name())) || Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
 				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
-				if (i + 1 < mapped.columns().size() || primaryKey != null) { sql.append(','); }
+				if (i + 1 < mapped.columns().size() || primaryKey != null || !uniqueKeys.isEmpty()) { sql.append(','); }
 				sql.append('\n');
 			}
-			if (primaryKey != null) { sql.append("  PRIMARY KEY (").append(primaryKey).append(")\n"); }
+			final var constraints = new java.util.ArrayList<String>();
+			if (primaryKey != null) { constraints.add("PRIMARY KEY (" + primaryKey + ")"); }
+			uniqueKeys.forEach(key -> constraints.add("UNIQUE (" + key + ")"));
+			for (int i = 0; i < constraints.size(); i++) {
+				sql.append("  ").append(constraints.get(i));
+				if (i + 1 < constraints.size()) { sql.append(','); }
+				sql.append('\n');
+			}
 			sql.append(");\n").append(batchSeparator);
 		}
 		for (final var mapped : mapping.tables()) {
@@ -94,6 +102,33 @@ public final class MigrationTargetDdlGenerator {
 		if (table == null || omitted || table.getConstraints().getPrimaryKeyConstraint() == null) { return java.util.Set.of(); }
 		final var result = new java.util.HashSet<String>();
 		table.getConstraints().getPrimaryKeyConstraint().getColumns().forEach(column -> result.add(key(column.getName())));
+		return result;
+	}
+	private static java.util.List<String> uniqueKeys(final Table table,
+			final ResolvedMigrationTargetMapping.TableMapping mapped, final Map<String, String> columns,
+			final Function<String, String> quote) {
+		if (table == null) { return java.util.List.of(); }
+		final var nullable = new HashMap<String, Boolean>();
+		mapped.columns().forEach(column -> nullable.put(key(column.sourceColumn().name()), column.nullable()));
+		final var result = new java.util.ArrayList<String>();
+		for (final var unique : table.getConstraints().getUniqueConstraints()) {
+			if (unique.isPrimaryKey() || unique.getColumns().isEmpty()) { continue; }
+			final var value = new StringBuilder();
+			boolean completeAndRequired = true;
+			for (int i = 0; i < unique.getColumns().size(); i++) {
+				final String sourceName = unique.getColumns().get(i).getName();
+				final String targetName = columns.get(key(sourceName));
+				final var sourceColumn = table.getColumns().get(sourceName);
+				if (targetName == null || sourceColumn == null || !sourceColumn.isNotNull()
+						|| !Boolean.FALSE.equals(nullable.get(key(sourceName)))) {
+					completeAndRequired = false;
+					break;
+				}
+				if (i > 0) { value.append(", "); }
+				value.append(quote.apply(targetName));
+			}
+			if (completeAndRequired) { result.add(value.toString()); }
+		}
 		return result;
 	}
 

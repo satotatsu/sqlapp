@@ -13,7 +13,7 @@ import com.sqlapp.data.schemas.Table;
 
 class DatabaseMigrationAssessmentProviderTest {
 	@Test
-	void targetDdlIncludesOnlyFullyMappedPrimaryAndForeignKeys() {
+	void targetDdlIncludesOnlySafeFullyMappedKeys() {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var parent = new Table("Parent");
 		final var parentId = new Column("ID");
@@ -22,9 +22,15 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var child = new Table("Child");
 		final var childId = new Column("ID");
 		final var parentIdInChild = new Column("ParentID");
+		final var code = new Column("Code").setNotNull(true);
+		final var optionalCode = new Column("OptionalCode");
 		child.getColumns().add(childId);
 		child.getColumns().add(parentIdInChild);
+		child.getColumns().add(code);
+		child.getColumns().add(optionalCode);
 		child.setPrimaryKey("PK_CHILD", childId);
+		child.getConstraints().addUniqueConstraint("UK_CHILD_CODE", code);
+		child.getConstraints().addUniqueConstraint("UK_CHILD_OPTIONAL", optionalCode);
 		schema.getTables().add(parent);
 		schema.getTables().add(child);
 		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", parentIdInChild, parentId);
@@ -35,11 +41,17 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var childMapping = new ResolvedMigrationTargetMapping.TableMapping(
 				new MigrationAssessment.ObjectId(null, "source", "table", "Child"), "TARGET", "CHILD_T",
 				List.of(column("source", "Child", "ID", "CHILD_ID"),
-						column("source", "Child", "ParentID", "PARENT_ID")));
+						column("source", "Child", "ParentID", "PARENT_ID"),
+						new ResolvedMigrationTargetMapping.ColumnMapping(
+								new MigrationAssessment.ObjectId(null, "source", "column", "Code", "Child"),
+								"CODE", "int", false, null),
+						column("source", "Child", "OptionalCode", "OPTIONAL_CODE")));
 		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(parentMapping, childMapping));
 		final String ddl = MigrationTargetDdlGenerator.generate(source, mapping, value -> "[" + value + "]", "GO\n");
 		assertTrue(ddl.contains("PRIMARY KEY ([PARENT_ID])"));
 		assertTrue(ddl.contains("PRIMARY KEY ([CHILD_ID])"));
+		assertTrue(ddl.contains("UNIQUE ([CODE])"));
+		assertFalse(ddl.contains("UNIQUE ([OPTIONAL_CODE])"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertFalse(ddl.contains("FK_CHILD_PARENT"));
