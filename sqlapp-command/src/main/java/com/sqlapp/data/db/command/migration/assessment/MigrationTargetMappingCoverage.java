@@ -9,6 +9,8 @@ import java.util.Objects;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Evidence;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Finding;
@@ -49,9 +51,36 @@ final class MigrationTargetMappingCoverage {
 						semanticDifferences++;
 						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
 								constraint.getName() == null ? "<unnamed validation>" : constraint.getName(), table.getName());
-						findings.add(semanticFinding("table-validation-expression", constraintId,
+						findings.add(semanticFinding("table-validation-expression", constraintId, "table",
 								"Access table validation expression", value(expression(check.getExpression())),
 								"mapped CHECK expressions require translation review"));
+					}
+					if (constraint instanceof ForeignKeyConstraint foreignKey
+							&& (foreignKey.getUpdateRule() == CascadeRule.Cascade
+									|| foreignKey.getDeleteRule() == CascadeRule.Cascade)) {
+						semanticDifferences++;
+						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
+								constraint.getName() == null ? "<unnamed relationship>" : constraint.getName(), table.getName());
+						final String relatedTable = foreignKey.getRelatedTable() == null
+								? "<unresolved>" : foreignKey.getRelatedTable().getName();
+						findings.add(semanticFinding("relationship-action", constraintId, "relationship",
+								"Access relationship actions to " + relatedTable, "update=" + foreignKey.getUpdateRule()
+										+ ", delete=" + foreignKey.getDeleteRule(), "target cascade clauses omitted"));
+					}
+				}
+				for (final var index : table.getIndexes()) {
+					final var indexId = new ObjectId(schema.getCatalogName(), schema.getName(), "index",
+							index.getName() == null ? "<unnamed index>" : index.getName(), table.getName());
+					if (Boolean.TRUE.equals(index.getSpecifics().get("IGNORE_NULLS", Boolean.class))) {
+						semanticDifferences++;
+						findings.add(semanticFinding("index-null-handling", indexId, "index",
+								"Access IgnoreNulls", "true", "target index design unspecified"));
+					}
+					if (index.isUnique()) {
+						semanticDifferences++;
+						findings.add(semanticFinding("unique-index-design", indexId, "index",
+								"Access standalone unique index", "present",
+								"target NULL and uniqueness design unspecified"));
 					}
 				}
 				final boolean primaryComplete = primaryComplete(table, tableMapping);
@@ -135,8 +164,13 @@ final class MigrationTargetMappingCoverage {
 
 	private static Finding semanticFinding(final String suffix, final ObjectId object, final String property,
 			final String sourceValue, final String targetValue) {
+		return semanticFinding(suffix, object, "column", property, sourceValue, targetValue);
+	}
+
+	private static Finding semanticFinding(final String suffix, final ObjectId object, final String objectKind,
+			final String property, final String sourceValue, final String targetValue) {
 		return new Finding("migration.mapping." + suffix, Severity.REVIEW, Evidence.SCHEMA, object,
-				"Mapped column changes " + property + " from " + sourceValue + " to " + targetValue + ".",
+				"Mapped " + objectKind + " changes " + property + " from " + sourceValue + " to " + targetValue + ".",
 				"Confirm the change is intentional and validate affected rows during a rehearsal migration.", null);
 	}
 

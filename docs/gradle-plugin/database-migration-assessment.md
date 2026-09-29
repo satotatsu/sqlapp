@@ -120,6 +120,23 @@ appendix for translation review; only target `checkExpressions` explicitly
 provided by the mapping are emitted as CHECK constraints. Source expressions
 in review comments escape newlines and control characters so they cannot create
 additional executable SQL lines.
+When mapped columns use these Access features, the phase 2 completion gate adds
+specific checks for calculated-value behavior and representative validation,
+empty-string, insert and update tests before phase 3 creates keys and indexes.
+The Access inventory also counts AutoNumber columns, columns with defaults,
+calculated columns, field validation rules and table validation rules. These
+overlapping counts provide an early estimate of mapping and regression-test
+work without reading row values.
+Relationship inventory separately counts all collected Access relationships,
+cascade-update relationships and cascade-delete relationships. The cascade
+counts can overlap and remain zero when relationship collection is intentionally
+skipped because linked tables are present.
+Mapped cascade relationships produce `migration.mapping.relationship-action`.
+The DDL appendix lists the Access update/delete action and confirms that target
+cascade clauses were omitted, requiring an Oracle- or SQL Server-specific
+design before phase 4 applies foreign keys. When any mapped relationship uses a
+cascade action, the phase 4 script repeats this approval requirement immediately
+before its foreign-key statements.
 
 When `htmlOutputFile` is set, the task also writes a self-contained UTF-8 HTML
 review report. It summarizes status and evidence counts, orders blockers before
@@ -294,7 +311,12 @@ an emitted primary key or safe non-nullable unique constraint. This prevents a
 foreign key from referencing a nullable unique key that the preview deliberately
 omits. Omitted source primary keys, unique constraints and indexes are listed in
 comments at the end of the DDL with their reasons, such as an unmapped participating
-column or nullable unique column. Every omitted source foreign key is also listed
+column or nullable unique column. Access `IgnoreNulls` indexes and standalone
+unique indexes are not silently converted to ordinary target indexes: they are
+listed for target-specific null and uniqueness design. `IgnoreNulls` also produces
+a `migration.mapping.index-null-handling` review finding, while each standalone
+unique index produces `migration.mapping.unique-index-design`. Every omitted
+source foreign key is also listed
 with its reason, including an unmapped referenced table, inconsistent or
 unmapped columns, and a referenced key that was not emitted. Access constraint and
 index names are preserved when they are nonblank, unique in the target schema,
@@ -307,7 +329,10 @@ also listed in a source-to-target name mapping, including Access names retained
 without change and deterministic generated names. A separate mapping lists every
 mapped Access table and column with its schema-qualified target name. Unmapped
 Access tables and columns in mapped tables are listed separately as omitted from
-the target DDL. The DDL also lists each mapped column's Access native type (or
+the target DDL. Access table and field descriptions are retained as sanitized
+comments in the DDL appendix for migration review. The report inventories their
+presence as `accessTablesWithDescriptions` and `accessColumnsWithDescriptions`
+without copying the description text. The DDL also lists each mapped column's Access native type (or
 the canonical Schema type when native evidence is unavailable), target type and
 explicit conversion expression. The same entry compares source and target
 nullability, identity generation and default expressions; absent target choices

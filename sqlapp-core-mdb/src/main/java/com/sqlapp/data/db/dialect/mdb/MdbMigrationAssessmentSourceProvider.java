@@ -35,6 +35,9 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 		inventory.add(new Inventory(null, "", "savedQueries", snapshot.savedQueries().size()));
 		inventory.addAll(savedQueryInventory(snapshot.savedQueries()));
 		inventory.addAll(indexInventory(snapshot.schema()));
+		inventory.addAll(columnSemanticsInventory(snapshot.schema()));
+		inventory.addAll(descriptionInventory(snapshot.schema()));
+		inventory.addAll(relationshipInventory(snapshot.schema()));
 		int allowZeroLengthColumns = 0;
 		for (final var table : snapshot.schema().getTables()) {
 			for (final var column : table.getColumns()) {
@@ -125,6 +128,65 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 				new Inventory(schema.getCatalogName(), schema.getName(), "accessIndexes", indexes),
 				new Inventory(schema.getCatalogName(), schema.getName(), "accessUniqueIndexes", unique),
 				new Inventory(schema.getCatalogName(), schema.getName(), "accessIgnoreNullsIndexes", ignoreNulls));
+	}
+
+	static List<Inventory> columnSemanticsInventory(final com.sqlapp.data.schemas.Schema schema) {
+		int autoNumbers = 0;
+		int defaults = 0;
+		int calculated = 0;
+		int columnValidation = 0;
+		int tableValidation = 0;
+		for (final var table : schema.getTables()) {
+			tableValidation += (int) table.getConstraints().stream()
+					.filter(com.sqlapp.data.schemas.CheckConstraint.class::isInstance).count();
+			for (final var column : table.getColumns()) {
+				if (column.isIdentity()) { autoNumbers++; }
+				if (hasText(column.getDefaultValue())) { defaults++; }
+				if (hasText(column.getFormula())) { calculated++; }
+				if (hasText(column.getCheck())) { columnValidation++; }
+			}
+		}
+		return List.of(
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessAutoNumberColumns", autoNumbers),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessColumnsWithDefaults", defaults),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessCalculatedColumns", calculated),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessColumnValidationRules", columnValidation),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessTableValidationRules", tableValidation));
+	}
+
+	static List<Inventory> relationshipInventory(final com.sqlapp.data.schemas.Schema schema) {
+		int relationships = 0;
+		int cascadeUpdates = 0;
+		int cascadeDeletes = 0;
+		for (final var table : schema.getTables()) {
+			for (final var foreignKey : table.getConstraints().getForeignKeyConstraints()) {
+				relationships++;
+				if (foreignKey.getUpdateRule() == com.sqlapp.data.schemas.CascadeRule.Cascade) { cascadeUpdates++; }
+				if (foreignKey.getDeleteRule() == com.sqlapp.data.schemas.CascadeRule.Cascade) { cascadeDeletes++; }
+			}
+		}
+		return List.of(
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessRelationships", relationships),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessCascadeUpdateRelationships", cascadeUpdates),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessCascadeDeleteRelationships", cascadeDeletes));
+	}
+
+	static List<Inventory> descriptionInventory(final com.sqlapp.data.schemas.Schema schema) {
+		int tables = 0;
+		int columns = 0;
+		for (final var table : schema.getTables()) {
+			if (hasText(table.getRemarks())) { tables++; }
+			for (final var column : table.getColumns()) {
+				if (hasText(column.getRemarks())) { columns++; }
+			}
+		}
+		return List.of(
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessTablesWithDescriptions", tables),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessColumnsWithDescriptions", columns));
+	}
+
+	private static boolean hasText(final String value) {
+		return value != null && !value.isBlank();
 	}
 
 	private static void manual(final List<Finding> findings, final String rule, final String reason, final String action) {

@@ -24,11 +24,12 @@ class DatabaseMigrationAssessmentProviderTest {
 		parent.getColumns().add(parentAlt);
 		parent.setPrimaryKey("PK_PARENT", parentId);
 		parent.getConstraints().addUniqueConstraint("UK_PARENT_ALT", parentAlt);
-		final var child = new Table("Child");
+		final var child = new Table("Child").setRemarks("Access child records\nDROP TABLE injected;");
 		final var childId = new Column("ID");
 		final var parentIdInChild = new Column("ParentID");
 		final var parentAltInChild = new Column("ParentAlt");
-		final var code = new Column("Code").setNotNull(true).setDefaultValue("7");
+		final var code = new Column("Code").setNotNull(true).setDefaultValue("7")
+				.setRemarks("Calculated display value\r\nDROP TABLE injected;");
 		code.setFormula("[ParentID] + 1");
 		code.setCheck(">= 0\r\nDROP TABLE injected;");
 		code.getSpecifics().put("access.sourceType", "LONG");
@@ -49,6 +50,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		schema.getTables().add(parent);
 		schema.getTables().add(child);
 		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", parentIdInChild, parentId);
+		((com.sqlapp.data.schemas.ForeignKeyConstraint) child.getConstraints().get("FK_CHILD_PARENT"))
+				.setUpdateRule(com.sqlapp.data.schemas.CascadeRule.Cascade)
+				.setDeleteRule(com.sqlapp.data.schemas.CascadeRule.Cascade);
 		child.getConstraints().addForeignKeyConstraint("FK_CHILD_ALT", parentAltInChild, parentAlt);
 		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
 		final var parentMapping = new ResolvedMigrationTargetMapping.TableMapping(
@@ -96,6 +100,9 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- COLUMN \"source.Parent.Alt\" -> \"TARGET.PARENT_T.ALT\"\n"
 				+ "-- TABLE \"source.Child\" -> \"TARGET.CHILD_T\""));
 		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\" -> \"TARGET.CHILD_T.CODE\""));
+		assertTrue(ddl.contains("-- Access table and field descriptions retained for migration review:"));
+		assertTrue(ddl.contains("-- TABLE \"source.Child\": \"Access child records\\nDROP TABLE injected;\""));
+		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\": \"Calculated display value\\r\\nDROP TABLE injected;\""));
 		assertTrue(ddl.contains("-- Source-to-target column type mapping:"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\" (\"LONG\") -> \"TARGET.CHILD_T.CODE\" (\"int\"); conversion \"normalize_code\"; nullability required -> required; identity false -> unspecified; default \"7\" -> \"0\""));
 		assertTrue(ddl.contains("; Access AllowZeroLength true -> target validation unspecified"));
@@ -111,6 +118,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- TABLE \"source.Child\": \"[Code] >= 0\\nDROP TABLE injected;\""));
 		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\": \">= 0\\r\\nDROP TABLE injected;\""));
 		assertFalse(ddl.contains("\nDROP TABLE injected;"));
+		assertTrue(ddl.contains("-- Access relationship actions requiring target-specific design:"));
+		assertTrue(ddl.contains("-- FK \"Child.FK_CHILD_PARENT\": update=Cascade, delete=Cascade -> target cascade clauses omitted"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertTrue(ddl.contains("-- Phase 1: Create target tables."));
@@ -118,8 +127,11 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):"));
 		assertTrue(ddl.contains("-- - Target row counts and available null-count/value-range baselines match the Access source."));
 		assertTrue(ddl.contains("-- - Every duplicate query returns no rows and every orphan count is 0."));
+		assertTrue(ddl.contains("-- - Every Access calculated field matches the approved materialization or target recalculation behavior."));
+		assertTrue(ddl.contains("-- - Translated Access validation and empty-string behavior passes representative insert and update tests."));
 		assertTrue(ddl.contains("-- Phase 3: After loading and verifying data, create keys and secondary indexes."));
 		assertTrue(ddl.contains("-- Phase 4: After loading and verifying data, apply foreign keys."));
+		assertTrue(ddl.contains("-- Before executing Phase 4, approve the target-specific replacement for every Access cascade action listed in the appendix."));
 		for (int phase = 1; phase <= 4; phase++) {
 			final String begin = "-- sqlapp:phase-" + phase + ":begin";
 			final String end = "-- sqlapp:phase-" + phase + ":end";
@@ -188,6 +200,10 @@ class DatabaseMigrationAssessmentProviderTest {
 		table.setPrimaryKey("PK_SAMPLE", id);
 		table.getConstraints().addUniqueConstraint("UK_SAMPLE_OPTIONAL", optional);
 		table.getIndexes().add(new Index("IX_SAMPLE_DETAIL", optional, detail));
+		final var ignoreNulls = new Index("IX_SAMPLE_OPTIONAL", optional);
+		ignoreNulls.getSpecifics().put("IGNORE_NULLS", "true");
+		table.getIndexes().add(ignoreNulls);
+		table.getIndexes().add(new Index("UX_SAMPLE_DETAIL", detail).setUnique(true));
 		schema.getTables().add(table);
 		schema.getTables().add(ignored);
 		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(
@@ -202,7 +218,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Source keys and indexes omitted from the target DDL:\n"
 				+ "-- PRIMARY KEY \"Sample.PK_SAMPLE\": one or more participating columns are not mapped\n"
 				+ "-- UNIQUE \"Sample.UK_SAMPLE_OPTIONAL\": source or target columns allow NULL\n"
-				+ "-- INDEX \"Sample.IX_SAMPLE_DETAIL\": one or more participating columns are not mapped"));
+				+ "-- INDEX \"Sample.IX_SAMPLE_DETAIL\": one or more participating columns are not mapped\n"
+				+ "-- INDEX \"Sample.IX_SAMPLE_OPTIONAL\": Access IgnoreNulls semantics require target-specific index design\n"
+				+ "-- UNIQUE INDEX \"Sample.UX_SAMPLE_DETAIL\": source unique index requires target-specific NULL and uniqueness design"));
 		assertFalse(ddl.contains("PRIMARY KEY ("));
 		assertFalse(ddl.contains(" UNIQUE ("));
 		assertFalse(ddl.contains("CREATE INDEX"));
@@ -213,7 +231,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- source tables: 2; mapped tables: 1; omitted tables: 1\n"
 				+ "-- source columns: 4; mapped columns: 1; omitted columns in mapped tables: 2"));
 		assertTrue(ddl.contains("-- tables: 1; primary keys: 0; unique constraints: 0; checks: 0\n"
-				+ "-- indexes: 0; foreign keys: 0; omitted keys/indexes: 3; omitted foreign keys: 0"));
+				+ "-- indexes: 0; foreign keys: 0; omitted keys/indexes: 5; omitted foreign keys: 0"));
 	}
 
 	@Test

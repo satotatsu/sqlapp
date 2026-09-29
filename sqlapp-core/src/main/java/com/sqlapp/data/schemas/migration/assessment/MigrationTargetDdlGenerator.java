@@ -117,7 +117,16 @@ public final class MigrationTargetDdlGenerator {
 			final Map<String, String> targetColumns = columns(mapped);
 			int ordinal = 0;
 			for (final var index : sourceTable.getIndexes()) {
-				if (index.isUnique()) { continue; }
+				if (Boolean.TRUE.equals(index.getSpecifics().get("IGNORE_NULLS", Boolean.class))) {
+					omittedKeysAndIndexes.add(omittedObject(sourceTable, "INDEX", index.getName(),
+							"Access IgnoreNulls semantics require target-specific index design"));
+					continue;
+				}
+				if (index.isUnique()) {
+					omittedKeysAndIndexes.add(omittedObject(sourceTable, "UNIQUE INDEX", index.getName(),
+							"source unique index requires target-specific NULL and uniqueness design"));
+					continue;
+				}
 				if (index.getColumns().isEmpty()) {
 					omittedKeysAndIndexes.add(omittedObject(sourceTable, "INDEX", index.getName(), "source index has no columns"));
 					continue;
@@ -199,13 +208,14 @@ public final class MigrationTargetDdlGenerator {
 				.append(loadOrderComments(sourceTables, mapping, mappedTables, identityLoadGuidance, quote))
 				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
-				.append(phaseTwoCompletionGateComments(mapping))
+				.append(phaseTwoCompletionGateComments(sourceTables, mapping))
 				.append("-- sqlapp:phase-2:end\n")
 				.append("\n-- sqlapp:phase-3:begin\n-- Phase 3: After loading and verifying data, create keys and secondary indexes.\n")
 				.append(keySql)
 				.append(indexSql)
 				.append("-- sqlapp:phase-3:end\n")
 				.append("\n-- sqlapp:phase-4:begin\n-- Phase 4: After loading and verifying data, apply foreign keys.\n")
+				.append(phaseFourRelationshipGuidance(sourceTables, mapping))
 				.append(foreignKeySql)
 				.append("-- sqlapp:phase-4:end\n")
 				.append("\n-- sqlapp:appendix:begin\n")
@@ -213,22 +223,57 @@ public final class MigrationTargetDdlGenerator {
 				.append(omittedForeignKeyComments(omittedForeignKeys))
 				.append(omittedSourceObjectComments(source, mappedTables))
 				.append(sourceTableAndColumnMappingComments(mapping))
+				.append(sourceDescriptionComments(sourceTables, mapping))
 				.append(sourceColumnTypeMappingComments(sourceTables, mapping))
 				.append(columnSemanticReviewComments(sourceTables, mapping))
 				.append(sourceValidationReviewComments(sourceTables, mapping))
+				.append(sourceRelationshipActionReviewComments(sourceTables, mapping))
 				.append(names.mappingComments())
 				.append(names.fallbackComments())
 				.append("-- sqlapp:appendix:end\n").toString();
 	}
 
-	private static String phaseTwoCompletionGateComments(final ResolvedMigrationTargetMapping mapping) {
+	private static String phaseTwoCompletionGateComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
 		final boolean hasIdentity = mapping.tables().stream().flatMap(table -> table.columns().stream())
 				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
+		boolean hasCalculated = false;
+		boolean hasValidationOrEmptyStringPolicy = false;
+		for (final var mapped : mapping.tables()) {
+			final Table sourceTable = sourceTables.get(mapped.sourceTable());
+			if (sourceTable == null) { continue; }
+			hasValidationOrEmptyStringPolicy |= sourceTable.getConstraints().stream()
+					.anyMatch(constraint -> constraint instanceof com.sqlapp.data.schemas.CheckConstraint);
+			for (final var mappedColumn : mapped.columns()) {
+				final var sourceColumn = sourceColumn(sourceTable, mappedColumn.sourceColumn().name());
+				if (sourceColumn == null) { continue; }
+				hasCalculated |= normalizedExpression(sourceColumn.getFormula()) != null;
+				hasValidationOrEmptyStringPolicy |= normalizedExpression(sourceColumn.getCheck()) != null
+						|| Boolean.TRUE.equals(sourceColumn.getSpecifics().get("access.allowZeroLength", Boolean.class));
+			}
+		}
 		return "\n-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):\n"
 				+ "-- - Target row counts and available null-count/value-range baselines match the Access source.\n"
 				+ "-- - Every duplicate query returns no rows and every orphan count is 0.\n"
 				+ (hasIdentity ? "-- - Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready for new inserts.\n" : "")
+				+ (hasCalculated ? "-- - Every Access calculated field matches the approved materialization or target recalculation behavior.\n" : "")
+				+ (hasValidationOrEmptyStringPolicy ? "-- - Translated Access validation and empty-string behavior passes representative insert and update tests.\n" : "")
 				+ "-- Record reviewed exceptions explicitly before continuing.\n";
+	}
+
+	private static String phaseFourRelationshipGuidance(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
+		for (final var mapped : mapping.tables()) {
+			final Table table = sourceTables.get(mapped.sourceTable());
+			if (table == null) { continue; }
+			for (final var foreignKey : table.getConstraints().getForeignKeyConstraints()) {
+				if (foreignKey.getUpdateRule() == com.sqlapp.data.schemas.CascadeRule.Cascade
+						|| foreignKey.getDeleteRule() == com.sqlapp.data.schemas.CascadeRule.Cascade) {
+					return "-- Before executing Phase 4, approve the target-specific replacement for every Access cascade action listed in the appendix.\n";
+				}
+			}
+		}
+		return "";
 	}
 
 	private static String ddlObjectSummaryComments(final int tables, final int primaryKeys,
@@ -434,6 +479,48 @@ public final class MigrationTargetDdlGenerator {
 		}
 		return reviews.isEmpty() ? "" : "\n-- Access validation expressions requiring translation review; only mapped CHECK expressions are emitted:\n"
 				+ String.join("", reviews);
+	}
+
+	private static String sourceRelationshipActionReviewComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var reviews = new java.util.ArrayList<String>();
+		for (final var mapped : mapping.tables()) {
+			final Table table = sourceTables.get(mapped.sourceTable());
+			if (table == null) { continue; }
+			for (final var foreignKey : table.getConstraints().getForeignKeyConstraints()) {
+				if (foreignKey.getUpdateRule() != com.sqlapp.data.schemas.CascadeRule.Cascade
+						&& foreignKey.getDeleteRule() != com.sqlapp.data.schemas.CascadeRule.Cascade) { continue; }
+				reviews.add("-- FK " + NameRegistry.commentValue(table.getName() + "." + foreignKey.getName())
+						+ ": update=" + foreignKey.getUpdateRule() + ", delete=" + foreignKey.getDeleteRule()
+						+ " -> target cascade clauses omitted\n");
+			}
+		}
+		return reviews.isEmpty() ? "" : "\n-- Access relationship actions requiring target-specific design:\n"
+				+ String.join("", reviews);
+	}
+
+	private static String sourceDescriptionComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var descriptions = new java.util.ArrayList<String>();
+		for (final var mapped : mapping.tables()) {
+			final Table table = sourceTables.get(mapped.sourceTable());
+			if (table == null) { continue; }
+			final String tableName = qualified(mapped.sourceTable().catalog(), mapped.sourceTable().schema(),
+					mapped.sourceTable().name());
+			if (normalizedExpression(table.getRemarks()) != null) {
+				descriptions.add("-- TABLE " + NameRegistry.commentValue(tableName) + ": "
+						+ NameRegistry.commentValue(table.getRemarks()) + "\n");
+			}
+			for (final var mappedColumn : mapped.columns()) {
+				final var column = sourceColumn(table, mappedColumn.sourceColumn().name());
+				if (column != null && normalizedExpression(column.getRemarks()) != null) {
+					descriptions.add("-- COLUMN " + NameRegistry.commentValue(tableName + "." + column.getName())
+							+ ": " + NameRegistry.commentValue(column.getRemarks()) + "\n");
+				}
+			}
+		}
+		return descriptions.isEmpty() ? "" : "\n-- Access table and field descriptions retained for migration review:\n"
+				+ String.join("", descriptions);
 	}
 
 	private static String normalizedExpression(final String expression) {

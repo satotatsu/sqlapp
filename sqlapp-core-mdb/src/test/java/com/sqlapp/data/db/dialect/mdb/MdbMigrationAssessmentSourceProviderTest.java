@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
@@ -48,5 +50,59 @@ class MdbMigrationAssessmentSourceProviderTest {
 		assertEquals(3, counts.get("accessIndexes"));
 		assertEquals(1, counts.get("accessUniqueIndexes"));
 		assertEquals(1, counts.get("accessIgnoreNullsIndexes"));
+	}
+
+	@Test
+	void countsAccessColumnAndValidationSemantics() {
+		final var schema = new Schema("access");
+		final var table = new Table("orders");
+		table.getColumns().add(new com.sqlapp.data.schemas.Column("ID").setIdentity(true));
+		table.getColumns().add(new com.sqlapp.data.schemas.Column("Created").setDefaultValue("Now()"));
+		table.getColumns().add(new com.sqlapp.data.schemas.Column("Total").setFormula("[Qty] * [Price]").setCheck(">= 0"));
+		table.getConstraints().addCheckConstraint("CK_ORDERS", "[Qty] >= 0");
+		schema.getTables().add(table);
+		final Map<String, Integer> counts = MdbMigrationAssessmentSourceProvider.columnSemanticsInventory(schema).stream()
+				.collect(Collectors.toMap(item -> item.type(), item -> item.count()));
+		assertEquals(1, counts.get("accessAutoNumberColumns"));
+		assertEquals(1, counts.get("accessColumnsWithDefaults"));
+		assertEquals(1, counts.get("accessCalculatedColumns"));
+		assertEquals(1, counts.get("accessColumnValidationRules"));
+		assertEquals(1, counts.get("accessTableValidationRules"));
+	}
+
+	@Test
+	void countsAccessRelationshipCascadeSemantics() {
+		final var schema = new Schema("access");
+		final var parent = new Table("parent");
+		final var parentId = new Column("ID");
+		parent.getColumns().add(parentId);
+		final var child = new Table("child");
+		final var childParentId = new Column("ParentID");
+		child.getColumns().add(childParentId);
+		schema.getTables().add(parent);
+		schema.getTables().add(child);
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", childParentId, parentId)
+				.setUpdateRule(CascadeRule.Cascade).setDeleteRule(CascadeRule.Cascade);
+		final Map<String, Integer> counts = MdbMigrationAssessmentSourceProvider.relationshipInventory(schema).stream()
+				.collect(Collectors.toMap(item -> item.type(), item -> item.count()));
+		assertEquals(1, counts.get("accessRelationships"));
+		assertEquals(1, counts.get("accessCascadeUpdateRelationships"));
+		assertEquals(1, counts.get("accessCascadeDeleteRelationships"));
+	}
+
+	@Test
+	void countsAccessTableAndColumnDescriptionsWithoutCopyingTheirText() {
+		final var schema = new Schema("access");
+		final var documented = new Table("documented").setRemarks("Business description");
+		documented.getColumns().add(new Column("ID").setRemarks("Identifier"));
+		documented.getColumns().add(new Column("Value"));
+		schema.getTables().add(documented);
+		schema.getTables().add(new Table("undocumented"));
+		final var inventory = MdbMigrationAssessmentSourceProvider.descriptionInventory(schema);
+		final Map<String, Integer> counts = inventory.stream()
+				.collect(Collectors.toMap(item -> item.type(), item -> item.count()));
+		assertEquals(1, counts.get("accessTablesWithDescriptions"));
+		assertEquals(1, counts.get("accessColumnsWithDescriptions"));
+		assertEquals(2, inventory.size());
 	}
 }

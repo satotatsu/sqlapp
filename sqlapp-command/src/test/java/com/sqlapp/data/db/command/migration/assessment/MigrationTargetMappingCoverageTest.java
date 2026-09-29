@@ -9,6 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
@@ -27,6 +29,12 @@ class MigrationTargetMappingCoverageTest {
 		sourceValue.getSpecifics().put("access.allowZeroLength", "true");
 		table.getColumns().add(sourceValue);
 		table.getConstraints().addCheckConstraint("CK_SAMPLE", "[Value] >= 0");
+		table.getConstraints().addForeignKeyConstraint("FK_SAMPLE_SELF", sourceValue, sourceValue)
+				.setUpdateRule(CascadeRule.Cascade).setDeleteRule(CascadeRule.Cascade);
+		final var ignoreNulls = new Index("IX_SAMPLE_VALUE", sourceValue);
+		ignoreNulls.getSpecifics().put("IGNORE_NULLS", "true");
+		table.getIndexes().add(ignoreNulls);
+		table.getIndexes().add(new Index("UX_SAMPLE_VALUE", sourceValue).setUnique(true));
 		schema.getTables().add(table);
 		final var tableId = new ObjectId(null, "source", "table", "Sample");
 		final var id = new ObjectId(null, "source", "column", "ID", "Sample");
@@ -45,7 +53,16 @@ class MigrationTargetMappingCoverageTest {
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.calculated-expression")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.column-validation-expression")));
-		assertEquals(7, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")
+				&& f.reason().startsWith("Mapped table changes")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.relationship-action")
+				&& f.reason().startsWith("Mapped relationship changes")
+				&& f.reason().contains("Access relationship actions to Sample")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.index-null-handling")
+				&& f.reason().contains("Access IgnoreNulls")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.unique-index-design")
+				&& f.reason().contains("Access standalone unique index")));
+		assertEquals(10, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
 				.findFirst().orElseThrow().count());
 	}
 }
