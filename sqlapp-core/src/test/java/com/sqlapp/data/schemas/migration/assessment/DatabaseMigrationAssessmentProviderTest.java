@@ -30,7 +30,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var parentAltInChild = new Column("ParentAlt");
 		final var code = new Column("Code").setNotNull(true).setDefaultValue("7");
 		code.setFormula("[ParentID] + 1");
-		code.setCheck(">= 0");
+		code.setCheck(">= 0\r\nDROP TABLE injected;");
 		code.getSpecifics().put("access.sourceType", "LONG");
 		code.getSpecifics().put("access.allowZeroLength", "true");
 		final var optionalCode = new Column("OptionalCode");
@@ -40,7 +40,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		child.getColumns().add(code);
 		child.getColumns().add(optionalCode);
 		child.setPrimaryKey("PK_CHILD", childId);
-		child.getConstraints().addCheckConstraint("CK_CHILD_ACCESS", "[Code] >= 0");
+		child.getConstraints().addCheckConstraint("CK_CHILD_ACCESS", "[Code] >= 0\nDROP TABLE injected;");
 		child.getConstraints().addUniqueConstraint("UK_CHILD_CODE", code);
 		child.getConstraints().addUniqueConstraint("UK_CHILD_OPTIONAL", optionalCode);
 		final var searchIndex = new Index("X".repeat(129), parentIdInChild, code);
@@ -108,8 +108,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- \"source.Child.Code\": empty-string policy Access AllowZeroLength=true -> target validation unspecified"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\": calculated expression \"[ParentID] + 1\" -> materialized; load conversion=\"normalize_code\""));
 		assertTrue(ddl.contains("-- Access validation expressions requiring translation review; only mapped CHECK expressions are emitted:"));
-		assertTrue(ddl.contains("-- TABLE \"source.Child\": \"[Code] >= 0\""));
-		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\": \">= 0\""));
+		assertTrue(ddl.contains("-- TABLE \"source.Child\": \"[Code] >= 0\\nDROP TABLE injected;\""));
+		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\": \">= 0\\r\\nDROP TABLE injected;\""));
+		assertFalse(ddl.contains("\nDROP TABLE injected;"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertTrue(ddl.contains("-- Phase 1: Create target tables."));

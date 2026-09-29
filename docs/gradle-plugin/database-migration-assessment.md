@@ -117,7 +117,9 @@ Access table and field validation rules produce
 `migration.mapping.table-validation-expression` and
 `migration.mapping.column-validation-expression`. They are listed in the DDL
 appendix for translation review; only target `checkExpressions` explicitly
-provided by the mapping are emitted as CHECK constraints.
+provided by the mapping are emitted as CHECK constraints. Source expressions
+in review comments escape newlines and control characters so they cannot create
+additional executable SQL lines.
 
 When `htmlOutputFile` is set, the task also writes a self-contained UTF-8 HTML
 review report. It summarizes status and evidence counts, orders blockers before
