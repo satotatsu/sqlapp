@@ -251,7 +251,9 @@ remains available when the optional source data scan was not run. When it
 was run, compare this result with the source range baseline emitted later in the
 same phase. Access GUID AutoNumber columns do not receive a numeric maximum
 query; the DDL states that their preserved values must instead be checked with
-row-count and duplicate verification.
+row-count and duplicate verification. Every mapped Access AutoNumber column
+receives a duplicate query even when it is not part of an emitted primary or
+unique key; an equivalent key query is emitted only once.
 The end of phase 2 contains a completion gate: reconcile every generated target
 count and range query with its displayed Access baseline, obtain and approve
 baselines marked `not scanned` or `unavailable`, require every generated

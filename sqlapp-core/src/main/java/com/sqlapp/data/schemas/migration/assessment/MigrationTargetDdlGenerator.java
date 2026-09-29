@@ -202,6 +202,9 @@ public final class MigrationTargetDdlGenerator {
 				else { omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "one or more participating columns are not mapped")); }
 			}
 		}
+		final String integrityVerification = integrityVerificationComments(sourceTables, mapping, mappedTables, quote);
+		final boolean hasIntegrityVerification = integrityVerification.contains("-- Verify target duplicates:")
+				|| integrityVerification.contains("-- Verify target orphans:");
 		return sql.append("-- sqlapp:phase-1:end\n")
 				.append(ddlObjectSummaryComments(mapping.tables().size(), emittedPrimaryKeys,
 				emittedUniqueConstraints, emittedChecks, emittedIndexes, emittedForeignKeys,
@@ -209,9 +212,8 @@ public final class MigrationTargetDdlGenerator {
 				.append("\n-- sqlapp:phase-2:begin\n-- Phase 2: Load data in the suggested order and run verification queries.\n")
 				.append(loadOrderComments(sourceTables, mapping, mappedTables, identityLoadGuidance, quote))
 				.append(rowCountBaselineComments(source, mapping, quote))
-				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
-				.append(phaseTwoCompletionGateComments(sourceTables, mapping,
-						emittedPrimaryKeys + emittedUniqueConstraints + emittedForeignKeys > 0))
+				.append(integrityVerification)
+				.append(phaseTwoCompletionGateComments(sourceTables, mapping, hasIntegrityVerification))
 				.append("-- sqlapp:phase-2:end\n")
 				.append("\n-- sqlapp:phase-3:begin\n-- Phase 3: After loading and verifying data, create keys and secondary indexes.\n")
 				.append(phaseThreeObjectGuidance(omittedKeysAndIndexes))
@@ -642,14 +644,24 @@ public final class MigrationTargetDdlGenerator {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			if (sourceTable == null) { continue; }
 			final Map<String, String> targetColumns = columns(mapped);
+			final var verifiedDuplicates = new java.util.HashSet<String>();
 			final String primary = primaryKey(sourceTable, targetColumns, quote);
-			if (primary != null) {
+			if (primary != null && verifiedDuplicates.add(primary)) {
 				emitted = true;
 				duplicateQuery(sql, name(mapped, quote), primary);
 			}
 			for (final var unique : uniqueKeys(sourceTable, mapped, targetColumns, quote, null)) {
+				if (!verifiedDuplicates.add(unique.columns())) { continue; }
 				emitted = true;
 				duplicateQuery(sql, name(mapped, quote), unique.columns());
+			}
+			for (final var mappedColumn : mapped.columns()) {
+				final var sourceColumn = sourceColumn(sourceTable, mappedColumn.sourceColumn().name());
+				if (sourceColumn == null || !sourceColumn.isIdentity()) { continue; }
+				final String identityColumn = quote.apply(mappedColumn.targetColumn());
+				if (!verifiedDuplicates.add(identityColumn)) { continue; }
+				emitted = true;
+				duplicateQuery(sql, name(mapped, quote), identityColumn);
 			}
 			for (final var foreignKey : sourceTable.getConstraints().getForeignKeyConstraints()) {
 				final Table related = foreignKey.getRelatedTable();

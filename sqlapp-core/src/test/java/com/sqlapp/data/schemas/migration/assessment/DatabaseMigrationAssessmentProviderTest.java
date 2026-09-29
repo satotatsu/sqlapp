@@ -360,6 +360,9 @@ class DatabaseMigrationAssessmentProviderTest {
 				value -> "\"" + value + "\"", "\n", value -> "", name -> true);
 		assertTrue(ddl.contains("--    Access GUID AutoNumber has no meaningful maximum; verify preserved values with row-count and duplicate checks."));
 		assertFalse(ddl.contains("Verify loaded Access AutoNumber maximum"));
+		assertTrue(ddl.contains("-- Verify target duplicates: SELECT \"TOKEN_ID\", COUNT(*) FROM \"APP\".\"TOKENS\" GROUP BY \"TOKEN_ID\" HAVING COUNT(*) > 1;"));
+		assertEquals(1, occurrences(ddl, "-- Verify target duplicates:"));
+		assertTrue(ddl.contains("Every generated duplicate query returns no rows"));
 		assertTrue(ddl.contains("Every mapped Access AutoNumber value is preserved"));
 	}
 
