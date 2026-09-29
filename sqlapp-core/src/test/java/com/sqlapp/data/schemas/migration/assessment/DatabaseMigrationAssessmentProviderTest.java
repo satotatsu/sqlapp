@@ -29,6 +29,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var parentIdInChild = new Column("ParentID");
 		final var parentAltInChild = new Column("ParentAlt");
 		final var code = new Column("Code").setNotNull(true).setDefaultValue("7");
+		code.setFormula("[ParentID] + 1");
+		code.setCheck(">= 0");
 		code.getSpecifics().put("access.sourceType", "LONG");
 		code.getSpecifics().put("access.allowZeroLength", "true");
 		final var optionalCode = new Column("OptionalCode");
@@ -38,6 +40,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		child.getColumns().add(code);
 		child.getColumns().add(optionalCode);
 		child.setPrimaryKey("PK_CHILD", childId);
+		child.getConstraints().addCheckConstraint("CK_CHILD_ACCESS", "[Code] >= 0");
 		child.getConstraints().addUniqueConstraint("UK_CHILD_CODE", code);
 		child.getConstraints().addUniqueConstraint("UK_CHILD_OPTIONAL", optionalCode);
 		final var searchIndex = new Index("X".repeat(129), parentIdInChild, code);
@@ -96,12 +99,17 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Source-to-target column type mapping:"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\" (\"LONG\") -> \"TARGET.CHILD_T.CODE\" (\"int\"); conversion \"normalize_code\"; nullability required -> required; identity false -> unspecified; default \"7\" -> \"0\""));
 		assertTrue(ddl.contains("; Access AllowZeroLength true -> target validation unspecified"));
+		assertTrue(ddl.contains("; calculated \"[ParentID] + 1\" -> materialized target column"));
 		assertTrue(ddl.contains("-- \"source.Parent.ID\" (\"<unknown>\") -> \"TARGET.PARENT_T.PARENT_ID\" (\"int\"); nullability required -> required; identity true -> unspecified; default <none> -> <none>"));
 		assertTrue(ddl.contains("-- Column semantic differences requiring review:"));
 		assertTrue(ddl.contains("-- \"source.Parent.ID\": identity true -> unspecified"));
 		assertTrue(ddl.contains("-- \"source.Parent.Alt\": nullability required -> nullable"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\": default \"7\" -> \"0\""));
 		assertTrue(ddl.contains("-- \"source.Child.Code\": empty-string policy Access AllowZeroLength=true -> target validation unspecified"));
+		assertTrue(ddl.contains("-- \"source.Child.Code\": calculated expression \"[ParentID] + 1\" -> materialized; load conversion=\"normalize_code\""));
+		assertTrue(ddl.contains("-- Access validation expressions requiring translation review; only mapped CHECK expressions are emitted:"));
+		assertTrue(ddl.contains("-- TABLE \"source.Child\": \"[Code] >= 0\""));
+		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\": \">= 0\""));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertTrue(ddl.contains("-- Phase 1: Create target tables."));

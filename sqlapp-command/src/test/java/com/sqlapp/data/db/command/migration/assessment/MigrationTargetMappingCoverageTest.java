@@ -22,9 +22,11 @@ class MigrationTargetMappingCoverageTest {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var table = new Table("Sample");
 		table.getColumns().add(new Column("ID").setIdentity(true));
-		final var sourceValue = new Column("Value").setDefaultValue("7");
+		final var sourceValue = new Column("Value").setDefaultValue("7").setFormula("[ID] + 1");
+		sourceValue.setCheck(">= 0");
 		sourceValue.getSpecifics().put("access.allowZeroLength", "true");
 		table.getColumns().add(sourceValue);
+		table.getConstraints().addCheckConstraint("CK_SAMPLE", "[Value] >= 0");
 		schema.getTables().add(table);
 		final var tableId = new ObjectId(null, "source", "table", "Sample");
 		final var id = new ObjectId(null, "source", "column", "ID", "Sample");
@@ -40,7 +42,10 @@ class MigrationTargetMappingCoverageTest {
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.default-change")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.allow-zero-length")));
-		assertEquals(4, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.calculated-expression")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.column-validation-expression")));
+		assertEquals(7, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
 				.findFirst().orElseThrow().count());
 	}
 }

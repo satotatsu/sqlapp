@@ -108,6 +108,16 @@ and an empty string explicit before Oracle conversion or client validation is
 designed. Mapped columns retain the same issue as
 `migration.mapping.allow-zero-length`, and generated DDL review comments state
 that target validation remains unspecified.
+Mapped Access calculated fields produce
+`migration.mapping.calculated-expression`. The DDL review records the Access
+formula, notes that the generated target column is materialized, and shows the
+configured load conversion so reviewers must choose between recalculation and
+preserving loaded values.
+Access table and field validation rules produce
+`migration.mapping.table-validation-expression` and
+`migration.mapping.column-validation-expression`. They are listed in the DDL
+appendix for translation review; only target `checkExpressions` explicitly
+provided by the mapping are emitted as CHECK constraints.
 
 When `htmlOutputFile` is set, the task also writes a self-contained UTF-8 HTML
 review report. It summarizes status and evidence counts, orders blockers before

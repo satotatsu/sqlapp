@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Evidence;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Finding;
@@ -43,6 +44,16 @@ final class MigrationTargetMappingCoverage {
 					continue;
 				}
 				final var tableMapping = mappingsByTable.get(tableId);
+				for (final var constraint : table.getConstraints()) {
+					if (constraint instanceof CheckConstraint check && expression(check.getExpression()) != null) {
+						semanticDifferences++;
+						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
+								constraint.getName() == null ? "<unnamed validation>" : constraint.getName(), table.getName());
+						findings.add(semanticFinding("table-validation-expression", constraintId,
+								"Access table validation expression", value(expression(check.getExpression())),
+								"mapped CHECK expressions require translation review"));
+					}
+				}
 				final boolean primaryComplete = primaryComplete(table, tableMapping);
 				for (final var column : table.getColumns()) {
 					final var columnId = new ObjectId(schema.getCatalogName(), schema.getName(), "column",
@@ -81,6 +92,20 @@ final class MigrationTargetMappingCoverage {
 						semanticDifferences++;
 						findings.add(semanticFinding("allow-zero-length", columnId, "empty-string policy",
 								"Access AllowZeroLength=true", "target validation unspecified"));
+					}
+					final String sourceFormula = expression(column.getFormula());
+					if (sourceFormula != null) {
+						semanticDifferences++;
+						findings.add(semanticFinding("calculated-expression", columnId, "calculated expression",
+								value(sourceFormula), "materialized target column; load conversion="
+										+ value(expression(columnMapping.conversion()))));
+					}
+					final String sourceValidation = expression(column.getCheck());
+					if (sourceValidation != null) {
+						semanticDifferences++;
+						findings.add(semanticFinding("column-validation-expression", columnId,
+								"Access field validation expression", value(sourceValidation),
+								"mapped CHECK expressions require translation review"));
 					}
 				}
 			}

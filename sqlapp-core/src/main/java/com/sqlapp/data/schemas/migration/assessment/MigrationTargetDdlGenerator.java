@@ -215,6 +215,7 @@ public final class MigrationTargetDdlGenerator {
 				.append(sourceTableAndColumnMappingComments(mapping))
 				.append(sourceColumnTypeMappingComments(sourceTables, mapping))
 				.append(columnSemanticReviewComments(sourceTables, mapping))
+				.append(sourceValidationReviewComments(sourceTables, mapping))
 				.append(names.mappingComments())
 				.append(names.fallbackComments())
 				.append("-- sqlapp:appendix:end\n").toString();
@@ -350,6 +351,10 @@ public final class MigrationTargetDdlGenerator {
 						sourceColumn.getSpecifics().get("access.allowZeroLength", Boolean.class))) {
 					sql.append("; Access AllowZeroLength true -> target validation unspecified");
 				}
+				if (sourceColumn != null && normalizedExpression(sourceColumn.getFormula()) != null) {
+					sql.append("; calculated ").append(commentExpression(sourceColumn.getFormula()))
+							.append(" -> materialized target column");
+				}
 				sql.append('\n');
 			}
 		}
@@ -387,6 +392,11 @@ public final class MigrationTargetDdlGenerator {
 					reviews.add(semanticReview(sourceName, "empty-string policy", "Access AllowZeroLength=true",
 							"target validation unspecified"));
 				}
+				final String sourceFormula = normalizedExpression(sourceColumn.getFormula());
+				if (sourceFormula != null) {
+					reviews.add(semanticReview(sourceName, "calculated expression", commentExpression(sourceFormula),
+							"materialized; load conversion=" + commentExpression(column.conversion())));
+				}
 			}
 		}
 		return reviews.isEmpty() ? ""
@@ -397,6 +407,33 @@ public final class MigrationTargetDdlGenerator {
 			final String sourceValue, final String targetValue) {
 		return "-- " + NameRegistry.commentValue(sourceName) + ": " + property + " "
 				+ sourceValue + " -> " + targetValue + "\n";
+	}
+
+	private static String sourceValidationReviewComments(final Map<ObjectId, Table> sourceTables,
+			final ResolvedMigrationTargetMapping mapping) {
+		final var reviews = new java.util.ArrayList<String>();
+		for (final var mapped : mapping.tables()) {
+			final Table table = sourceTables.get(mapped.sourceTable());
+			if (table == null) { continue; }
+			final String tableName = qualified(mapped.sourceTable().catalog(), mapped.sourceTable().schema(),
+					mapped.sourceTable().name());
+			for (final var constraint : table.getConstraints()) {
+				if (constraint instanceof com.sqlapp.data.schemas.CheckConstraint check
+						&& normalizedExpression(check.getExpression()) != null) {
+					reviews.add("-- TABLE " + NameRegistry.commentValue(tableName) + ": "
+							+ commentExpression(check.getExpression()) + "\n");
+				}
+			}
+			for (final var column : mapped.columns()) {
+				final var sourceColumn = sourceColumn(table, column.sourceColumn().name());
+				if (sourceColumn != null && normalizedExpression(sourceColumn.getCheck()) != null) {
+					reviews.add("-- COLUMN " + NameRegistry.commentValue(tableName + "." + sourceColumn.getName())
+							+ ": " + commentExpression(sourceColumn.getCheck()) + "\n");
+				}
+			}
+		}
+		return reviews.isEmpty() ? "" : "\n-- Access validation expressions requiring translation review; only mapped CHECK expressions are emitted:\n"
+				+ String.join("", reviews);
 	}
 
 	private static String normalizedExpression(final String expression) {
