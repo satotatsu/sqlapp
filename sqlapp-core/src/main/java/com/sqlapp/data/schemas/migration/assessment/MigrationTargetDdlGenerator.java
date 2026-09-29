@@ -346,6 +346,10 @@ public final class MigrationTargetDdlGenerator {
 						.append(" -> ").append(column.identity() == null ? "unspecified" : column.identity())
 						.append("; default ").append(commentExpression(sourceColumn == null ? null : sourceColumn.getDefaultValue()))
 						.append(" -> ").append(commentExpression(column.defaultExpression()));
+				if (sourceColumn != null && Boolean.TRUE.equals(
+						sourceColumn.getSpecifics().get("access.allowZeroLength", Boolean.class))) {
+					sql.append("; Access AllowZeroLength true -> target validation unspecified");
+				}
 				sql.append('\n');
 			}
 		}
@@ -378,6 +382,10 @@ public final class MigrationTargetDdlGenerator {
 				if (!java.util.Objects.equals(sourceDefault, targetDefault)) {
 					reviews.add(semanticReview(sourceName, "default", commentExpression(sourceDefault),
 							commentExpression(targetDefault)));
+				}
+				if (Boolean.TRUE.equals(sourceColumn.getSpecifics().get("access.allowZeroLength", Boolean.class))) {
+					reviews.add(semanticReview(sourceName, "empty-string policy", "Access AllowZeroLength=true",
+							"target validation unspecified"));
 				}
 			}
 		}

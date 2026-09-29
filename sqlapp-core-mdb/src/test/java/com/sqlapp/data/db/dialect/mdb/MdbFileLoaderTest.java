@@ -71,6 +71,7 @@ class MdbFileLoaderTest {
 							io.github.spannm.jackcess.DataType.TEXT)
 							.withLengthInUnits(100)
 							.withProperty(PropertyMap.REQUIRED_PROP, true)
+							.withProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, true)
 							.withProperty(PropertyMap.DEFAULT_VALUE_PROP, "未設定")
 							.withProperty(PropertyMap.DESCRIPTION_PROP, "顧客の表示名")
 							.withProperty(PropertyMap.VALIDATION_RULE_PROP,
@@ -128,6 +129,8 @@ class MdbFileLoaderTest {
 		assertTrue(table.getColumns().get("顧客ID").isIdentity());
 		assertEquals(100L, table.getColumns().get("顧客名").getLength());
 		assertTrue(table.getColumns().get("顧客名").isNotNull());
+		assertEquals(Boolean.TRUE, table.getColumns().get("顧客名").getSpecifics()
+				.get(MdbFileLoader.ALLOW_ZERO_LENGTH, Boolean.class));
 		assertEquals("未設定",
 				table.getColumns().get("顧客名").getDefaultValue());
 		assertEquals("顧客の表示名",
@@ -279,6 +282,8 @@ class MdbFileLoaderTest {
 		}
 		final byte[] before = Files.readAllBytes(file);
 		final var snapshot = MdbFileLoader.loadForAssessment(file);
+		assertEquals("V2000", snapshot.schema().getSpecifics()
+				.get(MdbFileLoader.SOURCE_FILE_FORMAT, String.class));
 		assertTrue(snapshot.relationshipsCollected());
 		assertEquals("Microsoft Access", snapshot.schema().getProductName());
 		final var child = snapshot.schema().getTables().get("C");

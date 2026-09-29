@@ -34,6 +34,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 	private File assessmentReportFile;
 	private File verificationReportFile;
 	private VerificationReport verificationReport;
+	private String expectedManifestFingerprint;
 	private String expectedAssessmentReportFingerprint;
 	private String expectedSourceFingerprint;
 	private String expectedMappingFingerprint;
@@ -65,6 +66,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		}
 		validateFingerprint("expectedSourceFingerprint", expectedSourceFingerprint);
 		validateFingerprint("expectedMappingFingerprint", expectedMappingFingerprint);
+		validateFingerprint("expectedManifestFingerprint", expectedManifestFingerprint);
 		validateFingerprint("expectedAssessmentReportFingerprint", expectedAssessmentReportFingerprint);
 		if (expectedTargetDatabase != null && expectedTargetDatabase.isBlank()) {
 			throw new CommandException("expectedTargetDatabase must not be blank");
@@ -76,6 +78,10 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 			final var manifestPath = directory.toPath().resolve("manifest.sha256");
 			if (!Files.isRegularFile(manifestPath)) { throw new CommandException("manifest.sha256 is missing: " + directory); }
 			final byte[] manifestBytes = Files.readAllBytes(manifestPath);
+			final String manifestFingerprint = "sha256:" + sha256(manifestBytes);
+			if (expectedManifestFingerprint != null && !expectedManifestFingerprint.equals(manifestFingerprint)) {
+				throw new CommandException("manifest.sha256 does not match expectedManifestFingerprint");
+			}
 			final var entries = new LinkedHashMap<String, String>();
 			String manifestReportFingerprint = null;
 			for (final String line : new String(manifestBytes, StandardCharsets.UTF_8).lines().toList()) {
@@ -145,7 +151,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 				}
 				verifyAssessmentReport(identity);
 			}
-			verificationReport = new VerificationReport(1, "VERIFIED", "sha256:" + sha256(manifestBytes), manifestReportFingerprint,
+			verificationReport = new VerificationReport(1, "VERIFIED", manifestFingerprint, manifestReportFingerprint,
 					identity.sourceFingerprint(), identity.mappingFingerprint(), identity.targetDatabase(),
 					identity.targetVersion(), java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries)));
 			if (verificationReportFile != null) {

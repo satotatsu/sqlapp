@@ -77,6 +77,11 @@ final class MigrationTargetMappingCoverage {
 						findings.add(semanticFinding("default-change", columnId, "default expression",
 								value(sourceDefault), value(targetDefault)));
 					}
+					if (Boolean.TRUE.equals(column.getSpecifics().get("access.allowZeroLength", Boolean.class))) {
+						semanticDifferences++;
+						findings.add(semanticFinding("allow-zero-length", columnId, "empty-string policy",
+								"Access AllowZeroLength=true", "target validation unspecified"));
+					}
 				}
 			}
 		}

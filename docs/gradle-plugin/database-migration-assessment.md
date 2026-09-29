@@ -89,6 +89,26 @@ coverage flags, inventory and findings from both providers. A source blocker
 cannot be hidden by a target assessment. Results are `BLOCKED` or
 `REVIEW_REQUIRED`, never a readiness certification. No target is inferred.
 
+The Access inventory reports every saved query and separates non-hidden,
+non-parameterized SELECT/UNION view candidates from queries requiring manual
+porting. It also counts hidden, parameterized and action or special queries.
+Those category counts can overlap. Query SQL and connection details are not
+copied into the assessment report.
+The same source inventory counts all Access secondary indexes, unique indexes
+and indexes using Access `IgnoreNulls`. Target-specific findings still explain
+the Oracle or SQL Server uniqueness, NULL and collation review required for
+each affected index.
+An `access.file-format` finding records the actual Jet/ACE format recognized
+from the file rather than inferring it from the MDB/ACCDB extension. Use it to
+confirm driver bitness, deployment support and any retained Access frontend.
+Access text columns with `AllowZeroLength=true` are retained in Schema
+specifics, counted as `accessAllowZeroLengthColumns`, and reported individually
+as `access.allow-zero-length`. This makes the Access distinction between NULL
+and an empty string explicit before Oracle conversion or client validation is
+designed. Mapped columns retain the same issue as
+`migration.mapping.allow-zero-length`, and generated DDL review comments state
+that target validation remains unspecified.
+
 When `htmlOutputFile` is set, the task also writes a self-contained UTF-8 HTML
 review report. It summarizes status and evidence counts, orders blockers before
 warnings and review items, and shows inventory, column aggregates and integrity
@@ -225,6 +245,7 @@ tasks.named('verifyDatabaseMigrationDdlPhases') {
     directory = layout.buildDirectory.dir('reports/access-target-phases')
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     expectedAssessmentReportFingerprint = 'sha256:...'
+    expectedManifestFingerprint = 'sha256:...'
     verificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
 }
 ```
@@ -251,7 +272,9 @@ the values inside it. Optional `verificationReportFile` is atomically written
 only after successful verification and records the assessment report, source,
 mapping, target, manifest and five DDL fingerprints for CI or deployment
 evidence. It must be outside the phase directory and must not overwrite the
-assessment report. Verification does not open a database connection.
+assessment report. Pass its `manifestFingerprint` back as
+`expectedManifestFingerprint` during deployment to require the exact approved
+manifest and DDL set. Verification does not open a database connection.
 A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped and its referenced key is

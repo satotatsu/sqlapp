@@ -61,6 +61,12 @@ class MdbDataProfilerTest {
 		final var metadata = provider.load(file);
 		assertFalse(metadata.dataScanned());
 		assertNull(metadata.dataProfile());
+		assertTrue(metadata.assessment().findings().stream()
+				.anyMatch(finding -> finding.ruleId().equals("access.allow-zero-length")
+						&& finding.object().name().equals("Text")));
+		assertEquals(1, metadata.assessment().inventory().stream()
+				.filter(item -> item.type().equals("accessAllowZeroLengthColumns"))
+				.findFirst().orElseThrow().count());
 		final var result = provider.load(file, true);
 		assertTrue(result.dataScanned());
 		assertFalse(result.relationshipsCollected());

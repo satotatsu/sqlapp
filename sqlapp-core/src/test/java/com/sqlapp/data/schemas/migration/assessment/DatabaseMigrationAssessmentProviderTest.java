@@ -30,6 +30,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var parentAltInChild = new Column("ParentAlt");
 		final var code = new Column("Code").setNotNull(true).setDefaultValue("7");
 		code.getSpecifics().put("access.sourceType", "LONG");
+		code.getSpecifics().put("access.allowZeroLength", "true");
 		final var optionalCode = new Column("OptionalCode");
 		child.getColumns().add(childId);
 		child.getColumns().add(parentIdInChild);
@@ -94,11 +95,13 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- COLUMN \"source.Child.Code\" -> \"TARGET.CHILD_T.CODE\""));
 		assertTrue(ddl.contains("-- Source-to-target column type mapping:"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\" (\"LONG\") -> \"TARGET.CHILD_T.CODE\" (\"int\"); conversion \"normalize_code\"; nullability required -> required; identity false -> unspecified; default \"7\" -> \"0\""));
+		assertTrue(ddl.contains("; Access AllowZeroLength true -> target validation unspecified"));
 		assertTrue(ddl.contains("-- \"source.Parent.ID\" (\"<unknown>\") -> \"TARGET.PARENT_T.PARENT_ID\" (\"int\"); nullability required -> required; identity true -> unspecified; default <none> -> <none>"));
 		assertTrue(ddl.contains("-- Column semantic differences requiring review:"));
 		assertTrue(ddl.contains("-- \"source.Parent.ID\": identity true -> unspecified"));
 		assertTrue(ddl.contains("-- \"source.Parent.Alt\": nullability required -> nullable"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\": default \"7\" -> \"0\""));
+		assertTrue(ddl.contains("-- \"source.Child.Code\": empty-string policy Access AllowZeroLength=true -> target validation unspecified"));
 		assertTrue(ddl.contains("[PARENT_ID] int NOT NULL"));
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertTrue(ddl.contains("-- Phase 1: Create target tables."));

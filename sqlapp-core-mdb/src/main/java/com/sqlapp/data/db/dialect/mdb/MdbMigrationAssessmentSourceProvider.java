@@ -33,6 +33,28 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 		final var inventory = new ArrayList<Inventory>();
 		inventory.add(new Inventory(null, "", "linkedTables", snapshot.linkedTables().size()));
 		inventory.add(new Inventory(null, "", "savedQueries", snapshot.savedQueries().size()));
+		inventory.addAll(savedQueryInventory(snapshot.savedQueries()));
+		inventory.addAll(indexInventory(snapshot.schema()));
+		int allowZeroLengthColumns = 0;
+		for (final var table : snapshot.schema().getTables()) {
+			for (final var column : table.getColumns()) {
+				if (Boolean.TRUE.equals(column.getSpecifics().get(MdbFileLoader.ALLOW_ZERO_LENGTH, Boolean.class))) {
+					allowZeroLengthColumns++;
+					findings.add(new Finding("access.allow-zero-length", Severity.REVIEW, Evidence.SCHEMA,
+							new ObjectId(snapshot.schema().getCatalogName(), snapshot.schema().getName(),
+									"column", column.getName(), table.getName()),
+							"The Access text column permits a zero-length string distinct from NULL.",
+							"Preserve and test empty-string semantics; Oracle converts scalar empty strings to NULL, while other targets and clients may apply different validation.", null));
+				}
+			}
+		}
+		inventory.add(new Inventory(snapshot.schema().getCatalogName(), snapshot.schema().getName(),
+				"accessAllowZeroLengthColumns", allowZeroLengthColumns));
+		final String fileFormat = snapshot.schema().getSpecifics().get(MdbFileLoader.SOURCE_FILE_FORMAT, String.class);
+		findings.add(new Finding("access.file-format", Severity.REVIEW, Evidence.SCHEMA,
+				new ObjectId(null, "", "databaseFile", fileFormat),
+				"Access file format=" + fileFormat + ".",
+				"Confirm the selected Access driver, deployment architecture and retained frontend support this file format.", null));
 		for (final String linkedTable : snapshot.linkedTables()) {
 			findings.add(new Finding("access.linked-table", Severity.WARNING, Evidence.SCHEMA,
 					new ObjectId(null, "", "linkedTable", linkedTable),
@@ -64,6 +86,45 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 		}
 		return new MigrationAssessmentSource(List.of(snapshot.schema()), new MigrationAssessment(findings, inventory),
 				scanData, snapshot.relationshipsCollected(), scan == null ? null : scan.profile());
+	}
+
+	static List<Inventory> savedQueryInventory(final List<MdbAssessmentSnapshot.SavedQuery> queries) {
+		int viewCandidates = 0;
+		int hidden = 0;
+		int parameterized = 0;
+		int actionOrSpecial = 0;
+		for (final var query : queries) {
+			final boolean selectLike = "SELECT".equals(query.type()) || "UNION".equals(query.type());
+			if (!query.hidden() && !query.parameterized() && selectLike) { viewCandidates++; }
+			if (query.hidden()) { hidden++; }
+			if (query.parameterized()) { parameterized++; }
+			if (!selectLike) { actionOrSpecial++; }
+		}
+		return List.of(
+				new Inventory(null, "", "savedQueryViewCandidates", viewCandidates),
+				new Inventory(null, "", "savedQueryManualPorts", queries.size() - viewCandidates),
+				new Inventory(null, "", "savedQueryHidden", hidden),
+				new Inventory(null, "", "savedQueryParameterized", parameterized),
+				new Inventory(null, "", "savedQueryActionOrSpecial", actionOrSpecial));
+	}
+
+	static List<Inventory> indexInventory(final com.sqlapp.data.schemas.Schema schema) {
+		int indexes = 0;
+		int unique = 0;
+		int ignoreNulls = 0;
+		for (final var table : schema.getTables()) {
+			for (final var index : table.getIndexes()) {
+				indexes++;
+				if (index.isUnique()) { unique++; }
+				if (Boolean.TRUE.equals(index.getSpecifics().get(MdbFileLoader.INDEX_IGNORE_NULLS, Boolean.class))) {
+					ignoreNulls++;
+				}
+			}
+		}
+		return List.of(
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessIndexes", indexes),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessUniqueIndexes", unique),
+				new Inventory(schema.getCatalogName(), schema.getName(), "accessIgnoreNullsIndexes", ignoreNulls));
 	}
 
 	private static void manual(final List<Finding> findings, final String rule, final String reason, final String action) {

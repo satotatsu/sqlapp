@@ -43,6 +43,10 @@ public final class MdbFileLoader {
 	public static final String INDEX_IGNORE_NULLS = "IGNORE_NULLS";
 	/** Native type identity retained by the assessment snapshot. */
 	public static final String SOURCE_TYPE = "access.sourceType";
+	/** Native Jet/ACE file format retained by the assessment snapshot. */
+	public static final String SOURCE_FILE_FORMAT = "access.fileFormat";
+	/** Access text-column empty-string policy retained by the assessment snapshot. */
+	public static final String ALLOW_ZERO_LENGTH = "access.allowZeroLength";
 
 	private MdbFileLoader() {
 	}
@@ -54,6 +58,7 @@ public final class MdbFileLoader {
 		final List<MdbAssessmentSnapshot.SavedQuery> queries = new ArrayList<>();
 		try (Database database = new DatabaseBuilder().withPath(file.toAbsolutePath().normalize())
 				.withReadOnly(true).open()) {
+			schema.getSpecifics().put(SOURCE_FILE_FORMAT, database.getFileFormat().name());
 			database.setLinkResolver((source, name) -> {
 				throw new IOException("Linked databases must not be opened during assessment");
 			});
@@ -185,6 +190,10 @@ public final class MdbFileLoader {
 					.getValue(PropertyMap.DESCRIPTION_PROP)));
 			column.setCheck(toString(properties
 					.getValue(PropertyMap.VALIDATION_RULE_PROP)));
+			final Object allowZeroLength = properties.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP);
+			if (allowZeroLength instanceof Boolean) {
+				column.getSpecifics().put(ALLOW_ZERO_LENGTH, allowZeroLength.toString());
+			}
 			if (sourceColumn.isCalculated()) {
 				column.setFormula(toString(properties
 						.getValue(PropertyMap.EXPRESSION_PROP)));

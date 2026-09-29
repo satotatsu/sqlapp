@@ -25,6 +25,8 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 	@OutputFile @Optional
 	public abstract RegularFileProperty getVerificationReportFile();
 	@Input @Optional
+	public abstract Property<String> getExpectedManifestFingerprint();
+	@Input @Optional
 	public abstract Property<String> getExpectedAssessmentReportFingerprint();
 	@Input @Optional
 	public abstract Property<String> getExpectedSourceFingerprint();
@@ -45,6 +47,9 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		command.setDirectory(getDirectory().get().getAsFile());
 		if (getAssessmentReportFile().isPresent()) { command.setAssessmentReportFile(getAssessmentReportFile().get().getAsFile()); }
 		if (getVerificationReportFile().isPresent()) { command.setVerificationReportFile(getVerificationReportFile().get().getAsFile()); }
+		if (getExpectedManifestFingerprint().isPresent()) {
+			command.setExpectedManifestFingerprint(getExpectedManifestFingerprint().get());
+		}
 		if (getExpectedAssessmentReportFingerprint().isPresent()) {
 			command.setExpectedAssessmentReportFingerprint(getExpectedAssessmentReportFingerprint().get());
 		}

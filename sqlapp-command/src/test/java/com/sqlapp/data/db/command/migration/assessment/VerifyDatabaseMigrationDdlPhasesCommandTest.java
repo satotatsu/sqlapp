@@ -41,6 +41,7 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		final var command = new VerifyDatabaseMigrationDdlPhasesCommand();
 		command.setDirectory(directory.toFile());
 		command.setAssessmentReportFile(report.toFile());
+		command.setExpectedManifestFingerprint("sha256:" + sha256(Files.readString(directory.resolve("manifest.sha256"))));
 		command.setExpectedAssessmentReportFingerprint(AssessMigrationCommand.fingerprint(report.toFile()));
 		command.setExpectedSourceFingerprint("sha256:" + "1".repeat(64));
 		command.setExpectedMappingFingerprint("sha256:" + "2".repeat(64));
@@ -60,6 +61,9 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertEquals(successfulVerification, Files.readString(verificationReport));
 		assertNull(command.getVerificationReport());
 		command.setExpectedAssessmentReportFingerprint(AssessMigrationCommand.fingerprint(report.toFile()));
+		command.setExpectedManifestFingerprint("sha256:" + "5".repeat(64));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("expectedManifestFingerprint"));
+		command.setExpectedManifestFingerprint("sha256:" + sha256(Files.readString(directory.resolve("manifest.sha256"))));
 		command.setExpectedSourceFingerprint("sha256:" + "3".repeat(64));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("expectedSourceFingerprint"));
 		command.setExpectedSourceFingerprint("invalid");
@@ -73,6 +77,7 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("checksum mismatch"));
 		Files.writeString(directory.resolve("phase-2.sql"), provenance
 				+ "-- sqlapp:phase-2:begin\n-- content\n-- sqlapp:phase-2:end\n");
+		command.setExpectedManifestFingerprint(null);
 		Files.writeString(directory.resolve("manifest.sha256"), manifest + "bad entry\n");
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("Invalid manifest"));
 		Files.writeString(directory.resolve("manifest.sha256"), manifest.toString()
