@@ -126,7 +126,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Phase 2: Load data in the suggested order and run verification queries."));
 		assertTrue(ddl.contains("-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):"));
 		assertTrue(ddl.contains("-- - Target row counts and available null-count/value-range baselines match the Access source."));
-		assertTrue(ddl.contains("-- - Every duplicate query returns no rows and every orphan count is 0."));
+		assertTrue(ddl.contains("-- - Every generated duplicate query returns no rows and every generated orphan count is 0."));
 		assertTrue(ddl.contains("-- - Every changed or omitted Access default produces the approved value for target-side inserts."));
 		assertTrue(ddl.contains("-- - Every mapped conversion matches approved representative, boundary and NULL source values."));
 		assertTrue(ddl.contains("-- - Every Access calculated field matches the approved materialization or target recalculation behavior."));
@@ -145,6 +145,15 @@ class DatabaseMigrationAssessmentProviderTest {
 		}
 		assertTrue(ddl.indexOf("-- sqlapp:phase-4:end") < ddl.indexOf("-- sqlapp:appendix:begin"));
 		assertTrue(ddl.indexOf("-- sqlapp:appendix:begin") < ddl.indexOf("-- sqlapp:appendix:end"));
+		assertAppendixEvidenceAfterGate(ddl,
+				"-- Before executing Phase 3, approve the replacement or exclusion",
+				"-- Source keys and indexes omitted from the target DDL:");
+		assertAppendixEvidenceAfterGate(ddl,
+				"-- Before executing Phase 4, approve the replacement or exclusion",
+				"-- Source foreign keys omitted from the target DDL:");
+		assertAppendixEvidenceAfterGate(ddl,
+				"-- Before executing Phase 4, approve the target-specific replacement",
+				"-- Access relationship actions requiring target-specific design:");
 		assertTrue(ddl.indexOf("CREATE TABLE") < ddl.indexOf("-- Suggested data load order"));
 		assertTrue(ddl.indexOf("-- Post-load key integrity verification") < ddl.indexOf("CREATE INDEX"));
 		assertTrue(ddl.indexOf("-- Phase 2 completion gate") < ddl.indexOf("-- Phase 3:"));
@@ -182,7 +191,20 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- PK \"PK_CHILD\" -> \"PK_CHILD\" (retained)"));
 		assertTrue(partial.contains("-- COLUMN \"source.Child.ID\" -> \"TARGET.CHILD_T.CHILD_ID\""));
 		assertTrue(partial.contains("-- Before executing Phase 1, approve every Access table and field omitted from the migration scope and listed in the appendix."));
+		assertAppendixEvidenceAfterGate(partial,
+				"-- Before executing Phase 1, approve every Access table and field omitted",
+				"-- Source tables and columns omitted from the target DDL:");
 		assertFalse(ddl.contains("-- Before executing Phase 1, approve every Access table and field omitted"));
+	}
+
+	private static void assertAppendixEvidenceAfterGate(final String ddl, final String gate,
+			final String evidenceHeading) {
+		final int gateIndex = ddl.indexOf(gate);
+		final int appendixBegin = ddl.indexOf("-- sqlapp:appendix:begin");
+		final int evidenceIndex = ddl.indexOf(evidenceHeading);
+		final int appendixEnd = ddl.indexOf("-- sqlapp:appendix:end");
+		assertTrue(gateIndex >= 0 && gateIndex < appendixBegin);
+		assertTrue(appendixBegin < evidenceIndex && evidenceIndex < appendixEnd);
 	}
 
 	private static int occurrences(final String text, final String value) {
@@ -311,6 +333,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertFalse(ddl.contains("-- Before executing Phase 3, approve the replacement or exclusion"));
 		assertFalse(ddl.contains("-- Before executing Phase 4, approve the replacement or exclusion"));
 		assertFalse(ddl.contains("-- Before executing Phase 4, approve the target-specific replacement"));
+		assertFalse(ddl.contains("Every generated duplicate query"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,

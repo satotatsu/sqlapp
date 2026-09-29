@@ -210,7 +210,8 @@ public final class MigrationTargetDdlGenerator {
 				.append(loadOrderComments(sourceTables, mapping, mappedTables, identityLoadGuidance, quote))
 				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
-				.append(phaseTwoCompletionGateComments(sourceTables, mapping))
+				.append(phaseTwoCompletionGateComments(sourceTables, mapping,
+						emittedPrimaryKeys + emittedUniqueConstraints + emittedForeignKeys > 0))
 				.append("-- sqlapp:phase-2:end\n")
 				.append("\n-- sqlapp:phase-3:begin\n-- Phase 3: After loading and verifying data, create keys and secondary indexes.\n")
 				.append(phaseThreeObjectGuidance(omittedKeysAndIndexes))
@@ -237,7 +238,7 @@ public final class MigrationTargetDdlGenerator {
 	}
 
 	private static String phaseTwoCompletionGateComments(final Map<ObjectId, Table> sourceTables,
-			final ResolvedMigrationTargetMapping mapping) {
+			final ResolvedMigrationTargetMapping mapping, final boolean hasIntegrityVerification) {
 		final boolean hasIdentity = mapping.tables().stream().flatMap(table -> table.columns().stream())
 				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
 		boolean hasCalculated = false;
@@ -262,7 +263,7 @@ public final class MigrationTargetDdlGenerator {
 		}
 		return "\n-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):\n"
 				+ "-- - Target row counts and available null-count/value-range baselines match the Access source.\n"
-				+ "-- - Every duplicate query returns no rows and every orphan count is 0.\n"
+				+ (hasIntegrityVerification ? "-- - Every generated duplicate query returns no rows and every generated orphan count is 0.\n" : "")
 				+ (hasIdentity ? "-- - Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready for new inserts.\n" : "")
 				+ (hasDefaultDifference ? "-- - Every changed or omitted Access default produces the approved value for target-side inserts.\n" : "")
 				+ (hasConversion ? "-- - Every mapped conversion matches approved representative, boundary and NULL source values.\n" : "")

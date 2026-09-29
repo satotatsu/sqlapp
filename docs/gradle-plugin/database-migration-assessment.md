@@ -250,8 +250,8 @@ which remains available when the optional source data scan was not run. When it
 was run, compare this result with the source range baseline emitted later in the
 same phase.
 The end of phase 2 contains a completion gate: reconcile target row counts and
-available null-count and value-range baselines with Access, require duplicate
-queries to return no rows and orphan counts to be zero, and confirm AutoNumber
+available null-count and value-range baselines with Access, require every generated
+duplicate query to return no rows and every generated orphan count to be zero, and confirm AutoNumber
 maximums and target generators when applicable. It instructs reviewers to stop
 before key and index creation until these checks pass or an exception is
 explicitly recorded.
