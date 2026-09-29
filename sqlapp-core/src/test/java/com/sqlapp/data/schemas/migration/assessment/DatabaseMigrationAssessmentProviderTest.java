@@ -103,11 +103,26 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("ALTER TABLE [TARGET].[CHILD_T] ADD CONSTRAINT [FK_CHILD_PARENT] FOREIGN KEY ([PARENT_ID]) REFERENCES [TARGET].[PARENT_T] ([PARENT_ID]);"));
 		assertTrue(ddl.contains("-- Phase 1: Create target tables."));
 		assertTrue(ddl.contains("-- Phase 2: Load data in the suggested order and run verification queries."));
-		assertTrue(ddl.contains("-- Phase 3: After loading and verifying data, create secondary indexes."));
+		assertTrue(ddl.contains("-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):"));
+		assertTrue(ddl.contains("-- - Target row counts and available null-count/value-range baselines match the Access source."));
+		assertTrue(ddl.contains("-- - Every duplicate query returns no rows and every orphan count is 0."));
+		assertTrue(ddl.contains("-- Phase 3: After loading and verifying data, create keys and secondary indexes."));
 		assertTrue(ddl.contains("-- Phase 4: After loading and verifying data, apply foreign keys."));
+		for (int phase = 1; phase <= 4; phase++) {
+			final String begin = "-- sqlapp:phase-" + phase + ":begin";
+			final String end = "-- sqlapp:phase-" + phase + ":end";
+			assertEquals(1, occurrences(ddl, begin));
+			assertEquals(1, occurrences(ddl, end));
+			assertTrue(ddl.indexOf(begin) < ddl.indexOf(end));
+		}
+		assertTrue(ddl.indexOf("-- sqlapp:phase-4:end") < ddl.indexOf("-- sqlapp:appendix:begin"));
+		assertTrue(ddl.indexOf("-- sqlapp:appendix:begin") < ddl.indexOf("-- sqlapp:appendix:end"));
 		assertTrue(ddl.indexOf("CREATE TABLE") < ddl.indexOf("-- Suggested data load order"));
 		assertTrue(ddl.indexOf("-- Post-load key integrity verification") < ddl.indexOf("CREATE INDEX"));
-		assertTrue(ddl.indexOf("CREATE INDEX") < ddl.indexOf("ALTER TABLE"));
+		assertTrue(ddl.indexOf("-- Phase 2 completion gate") < ddl.indexOf("-- Phase 3:"));
+		assertTrue(ddl.indexOf("-- Post-load key integrity verification") < ddl.indexOf("ADD CONSTRAINT [PK_PARENT]"));
+		assertTrue(ddl.indexOf("-- Post-load key integrity verification") < ddl.indexOf("ADD CONSTRAINT [UK_CHILD_CODE]"));
+		assertTrue(ddl.indexOf("CREATE INDEX") < ddl.indexOf("ADD CONSTRAINT [FK_CHILD_PARENT]"));
 		assertFalse(ddl.contains("ADD CONSTRAINT [FK_CHILD_ALT]"));
 		assertFalse(ddl.contains("c.[PARENT_ALT]"));
 		assertTrue(ddl.contains("-- Source foreign keys omitted from the target DDL:\n"
@@ -138,6 +153,12 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- PK \"PK_PARENT\" -> \"PK_PARENT\" (retained)\n"
 				+ "-- PK \"PK_CHILD\" -> \"PK_CHILD\" (retained)"));
 		assertTrue(partial.contains("-- COLUMN \"source.Child.ID\" -> \"TARGET.CHILD_T.CHILD_ID\""));
+	}
+
+	private static int occurrences(final String text, final String value) {
+		int count = 0;
+		for (int offset = 0; (offset = text.indexOf(value, offset)) >= 0; offset += value.length()) { count++; }
+		return count;
 	}
 
 	@Test

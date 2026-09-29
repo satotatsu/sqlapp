@@ -31,6 +31,14 @@ public final class MigrationTargetDdlGenerator {
 			final Function<String, String> quote, final String batchSeparator,
 			final Function<ResolvedMigrationTargetMapping.ColumnMapping, String> identityClause,
 			final Predicate<String> usableSourceName) {
+		return generate(source, mapping, quote, batchSeparator, identityClause, usableSourceName, table -> "");
+	}
+
+	public static String generate(final MigrationAssessmentSource source, final ResolvedMigrationTargetMapping mapping,
+			final Function<String, String> quote, final String batchSeparator,
+			final Function<ResolvedMigrationTargetMapping.ColumnMapping, String> identityClause,
+			final Predicate<String> usableSourceName,
+			final Function<ResolvedMigrationTargetMapping.TableMapping, String> identityLoadGuidance) {
 		final var sourceTables = new HashMap<ObjectId, Table>();
 		for (final var schema : source.schemas()) {
 			for (final var table : schema.getTables()) { sourceTables.put(tableId(table), table); }
@@ -40,6 +48,7 @@ public final class MigrationTargetDdlGenerator {
 		final var names = new NameRegistry(usableSourceName);
 		final var omittedKeysAndIndexes = new java.util.ArrayList<String>();
 		final var omittedForeignKeys = new java.util.ArrayList<String>();
+		final var keySql = new StringBuilder();
 		final var indexSql = new StringBuilder();
 		final var foreignKeySql = new StringBuilder();
 		int emittedPrimaryKeys = 0;
@@ -50,7 +59,7 @@ public final class MigrationTargetDdlGenerator {
 		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
 				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n")
 				.append(mappingSummaryComments(source, mapping, mappedTables))
-				.append("\n-- Phase 1: Create target tables.\n");
+				.append("\n-- sqlapp:phase-1:begin\n-- Phase 1: Create target tables.\n");
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			final Map<String, String> columns = columns(mapped);
@@ -73,23 +82,26 @@ public final class MigrationTargetDdlGenerator {
 				}
 				if (primaryKeyColumns.contains(key(column.sourceColumn().name())) || Boolean.FALSE.equals(column.nullable())) { sql.append(" NOT NULL"); }
 				else if (Boolean.TRUE.equals(column.nullable())) { sql.append(" NULL"); }
-				if (i + 1 < mapped.columns().size() || primaryKey != null || !uniqueKeys.isEmpty() || !checks.isEmpty()) { sql.append(','); }
+				if (i + 1 < mapped.columns().size() || !checks.isEmpty()) { sql.append(','); }
 				sql.append('\n');
 			}
 			final var constraints = new java.util.ArrayList<String>();
 			if (primaryKey != null) {
 				emittedPrimaryKeys++;
 				final String sourceName = sourceTable.getConstraints().getPrimaryKeyConstraint().getName();
-				constraints.add("CONSTRAINT " + quote.apply(names.choose(mapped.targetSchema(), "PK", sourceName,
-						objectIdentity(mapped) + ".primary"))
-						+ " PRIMARY KEY (" + primaryKey + ")");
+				keySql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD CONSTRAINT ")
+						.append(quote.apply(names.choose(mapped.targetSchema(), "PK", sourceName,
+								objectIdentity(mapped) + ".primary")))
+						.append(" PRIMARY KEY (").append(primaryKey).append(");\n").append(batchSeparator);
 			}
 			emittedUniqueConstraints += uniqueKeys.size();
 			emittedChecks += checks.size();
 			for (int i = 0; i < uniqueKeys.size(); i++) {
 				final var unique = uniqueKeys.get(i);
-				constraints.add("CONSTRAINT " + quote.apply(names.choose(mapped.targetSchema(), "UK", unique.sourceName(),
-						objectIdentity(mapped) + ".unique." + i)) + " UNIQUE (" + unique.columns() + ")");
+				keySql.append("ALTER TABLE ").append(name(mapped, quote)).append(" ADD CONSTRAINT ")
+						.append(quote.apply(names.choose(mapped.targetSchema(), "UK", unique.sourceName(),
+								objectIdentity(mapped) + ".unique." + i)))
+						.append(" UNIQUE (").append(unique.columns()).append(");\n").append(batchSeparator);
 			}
 			checks.forEach(expression -> constraints.add("CHECK (" + expression + ")"));
 			for (int i = 0; i < constraints.size(); i++) {
@@ -179,17 +191,24 @@ public final class MigrationTargetDdlGenerator {
 				else { omittedForeignKeys.add(omittedForeignKey(sourceTable, foreignKey, "one or more participating columns are not mapped")); }
 			}
 		}
-		return sql.append(ddlObjectSummaryComments(mapping.tables().size(), emittedPrimaryKeys,
+		return sql.append("-- sqlapp:phase-1:end\n")
+				.append(ddlObjectSummaryComments(mapping.tables().size(), emittedPrimaryKeys,
 				emittedUniqueConstraints, emittedChecks, emittedIndexes, emittedForeignKeys,
 				omittedKeysAndIndexes.size(), omittedForeignKeys.size()))
-				.append("\n-- Phase 2: Load data in the suggested order and run verification queries.\n")
-				.append(loadOrderComments(sourceTables, mapping, mappedTables))
+				.append("\n-- sqlapp:phase-2:begin\n-- Phase 2: Load data in the suggested order and run verification queries.\n")
+				.append(loadOrderComments(sourceTables, mapping, mappedTables, identityLoadGuidance, quote))
 				.append(rowCountBaselineComments(source, mapping, quote))
 				.append(integrityVerificationComments(sourceTables, mapping, mappedTables, quote))
-				.append("\n-- Phase 3: After loading and verifying data, create secondary indexes.\n")
+				.append(phaseTwoCompletionGateComments(mapping))
+				.append("-- sqlapp:phase-2:end\n")
+				.append("\n-- sqlapp:phase-3:begin\n-- Phase 3: After loading and verifying data, create keys and secondary indexes.\n")
+				.append(keySql)
 				.append(indexSql)
-				.append("\n-- Phase 4: After loading and verifying data, apply foreign keys.\n")
+				.append("-- sqlapp:phase-3:end\n")
+				.append("\n-- sqlapp:phase-4:begin\n-- Phase 4: After loading and verifying data, apply foreign keys.\n")
 				.append(foreignKeySql)
+				.append("-- sqlapp:phase-4:end\n")
+				.append("\n-- sqlapp:appendix:begin\n")
 				.append(omittedKeyAndIndexComments(omittedKeysAndIndexes))
 				.append(omittedForeignKeyComments(omittedForeignKeys))
 				.append(omittedSourceObjectComments(source, mappedTables))
@@ -197,7 +216,18 @@ public final class MigrationTargetDdlGenerator {
 				.append(sourceColumnTypeMappingComments(sourceTables, mapping))
 				.append(columnSemanticReviewComments(sourceTables, mapping))
 				.append(names.mappingComments())
-				.append(names.fallbackComments()).toString();
+				.append(names.fallbackComments())
+				.append("-- sqlapp:appendix:end\n").toString();
+	}
+
+	private static String phaseTwoCompletionGateComments(final ResolvedMigrationTargetMapping mapping) {
+		final boolean hasIdentity = mapping.tables().stream().flatMap(table -> table.columns().stream())
+				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
+		return "\n-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):\n"
+				+ "-- - Target row counts and available null-count/value-range baselines match the Access source.\n"
+				+ "-- - Every duplicate query returns no rows and every orphan count is 0.\n"
+				+ (hasIdentity ? "-- - Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready for new inserts.\n" : "")
+				+ "-- Record reviewed exceptions explicitly before continuing.\n";
 	}
 
 	private static String ddlObjectSummaryComments(final int tables, final int primaryKeys,
@@ -543,7 +573,9 @@ public final class MigrationTargetDdlGenerator {
 
 	private static String loadOrderComments(final Map<ObjectId, Table> sourceTables,
 			final ResolvedMigrationTargetMapping mapping,
-			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables) {
+			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables,
+			final Function<ResolvedMigrationTargetMapping.TableMapping, String> identityLoadGuidance,
+			final Function<String, String> quote) {
 		final var dependencies = new java.util.LinkedHashMap<ObjectId, java.util.Set<ObjectId>>();
 		for (final var mapped : mapping.tables()) {
 			final var parents = new java.util.LinkedHashSet<ObjectId>();
@@ -573,13 +605,34 @@ public final class MigrationTargetDdlGenerator {
 		}
 		final var sql = new StringBuilder("\n-- Suggested data load order from emitted foreign keys:\n");
 		for (int i = 0; i < ordered.size(); i++) {
-			sql.append("-- ").append(i + 1).append(". ").append(commentName(mappedTables.get(ordered.get(i)))).append('\n');
+			final var table = mappedTables.get(ordered.get(i));
+			sql.append("-- ").append(i + 1).append(". ").append(commentName(table)).append('\n');
+			appendIdentityLoadGuidance(sql, table, identityLoadGuidance, quote);
 		}
 		if (!dependencies.isEmpty()) {
 			sql.append("-- Cyclic or cycle-dependent tables require staged loading or deferred constraints:\n");
-			dependencies.keySet().forEach(id -> sql.append("-- - ").append(commentName(mappedTables.get(id))).append('\n'));
+			dependencies.keySet().forEach(id -> {
+				final var table = mappedTables.get(id);
+				sql.append("-- - ").append(commentName(table)).append('\n');
+				appendIdentityLoadGuidance(sql, table, identityLoadGuidance, quote);
+			});
 		}
 		return sql.toString();
+	}
+
+	private static void appendIdentityLoadGuidance(final StringBuilder sql,
+			final ResolvedMigrationTargetMapping.TableMapping table,
+			final Function<ResolvedMigrationTargetMapping.TableMapping, String> identityLoadGuidance,
+			final Function<String, String> quote) {
+		if (table.columns().stream().noneMatch(column -> Boolean.TRUE.equals(column.identity()))) { return; }
+		final String guidance = identityLoadGuidance.apply(table);
+		if (guidance != null && !guidance.isBlank()) { sql.append("--    ").append(guidance).append('\n'); }
+		for (final var column : table.columns()) {
+			if (!Boolean.TRUE.equals(column.identity())) { continue; }
+			sql.append("--    Verify loaded Access AutoNumber maximum: SELECT MAX(")
+					.append(quote.apply(column.targetColumn())).append(") FROM ")
+					.append(name(table, quote)).append(";\n");
+		}
 	}
 
 	private static boolean foreignKeyComplete(final com.sqlapp.data.schemas.ForeignKeyConstraint foreignKey,

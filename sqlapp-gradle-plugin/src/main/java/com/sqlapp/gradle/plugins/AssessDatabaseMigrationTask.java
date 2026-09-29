@@ -2,6 +2,7 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
@@ -39,6 +40,9 @@ public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDat
 	@Optional
 	@OutputFile
 	public abstract RegularFileProperty getDdlOutputFile();
+	@Optional
+	@org.gradle.api.tasks.OutputDirectory
+	public abstract DirectoryProperty getDdlPhaseOutputDirectory();
 	@Input
 	public abstract Property<String> getTargetVersion();
 	@Input
@@ -60,6 +64,8 @@ public abstract class AssessDatabaseMigrationTask extends AbstractTask<AssessDat
 		command.setMappingFile(getMappingFile().isPresent() ? getMappingFile().get().getAsFile() : null);
 		command.setMappingTemplateFile(getMappingTemplateFile().isPresent() ? getMappingTemplateFile().get().getAsFile() : null);
 		command.setDdlOutputFile(getDdlOutputFile().isPresent() ? getDdlOutputFile().get().getAsFile() : null);
+		command.setDdlPhaseOutputDirectory(getDdlPhaseOutputDirectory().isPresent()
+				? getDdlPhaseOutputDirectory().get().getAsFile() : null);
 		command.setTargetVersion(getTargetVersion().get());
 		command.setTargetDatabase(getTargetDatabase().get());
 		command.setFailOnBlockers(getFailOnBlockers().get());

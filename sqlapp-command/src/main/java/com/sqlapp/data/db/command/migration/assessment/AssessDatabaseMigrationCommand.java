@@ -30,6 +30,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 	private File mappingFile;
 	private File mappingTemplateFile;
 	private File ddlOutputFile;
+	private File ddlPhaseOutputDirectory;
 	private String targetVersion;
 	private String targetDatabase;
 	private boolean failOnBlockers = true;
@@ -71,6 +72,9 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 			throw new CommandException("outputFile, targetDatabase and targetVersion are required");
 		}
 		if (ddlOutputFile != null && mappingFile == null) { throw new CommandException("ddlOutputFile requires mappingFile"); }
+		if (ddlPhaseOutputDirectory != null && mappingFile == null) {
+			throw new CommandException("ddlPhaseOutputDirectory requires mappingFile");
+		}
 		try {
 			final var input = inputFile.toPath().toRealPath();
 			final var output = outputFile.toPath().toAbsolutePath().normalize();
@@ -78,6 +82,8 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 			final var mappingPath = mappingFile == null ? null : mappingFile.toPath().toAbsolutePath().normalize();
 			final var templatePath = mappingTemplateFile == null ? null : mappingTemplateFile.toPath().toAbsolutePath().normalize();
 			final var ddlPath = ddlOutputFile == null ? null : ddlOutputFile.toPath().toAbsolutePath().normalize();
+			final var phaseDirectory = ddlPhaseOutputDirectory == null ? null
+					: ddlPhaseOutputDirectory.toPath().toAbsolutePath().normalize();
 			if (mappingFile != null && !mappingFile.isFile()) { throw new CommandException("mappingFile must be an existing YAML file"); }
 			if (input.equals(output) || Files.exists(output) && Files.isSameFile(input, output)) {
 				throw new CommandException("outputFile must not overwrite inputFile");
@@ -108,6 +114,17 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 							|| Files.isSameFile(mappingPath, ddlPath)
 							|| templatePath != null && Files.exists(templatePath) && Files.isSameFile(templatePath, ddlPath)))) {
 				throw new CommandException("ddlOutputFile must be distinct from input and other output/configuration files");
+			}
+			if (phaseDirectory != null) {
+				if (Files.exists(phaseDirectory) && !Files.isDirectory(phaseDirectory)) {
+					throw new CommandException("ddlPhaseOutputDirectory must be a directory");
+				}
+				for (final var path : new java.nio.file.Path[] {
+						input, output, htmlOutput, mappingPath, templatePath, ddlPath }) {
+					if (path != null && (phaseDirectory.equals(path) || path.startsWith(phaseDirectory))) {
+						throw new CommandException("ddlPhaseOutputDirectory must be distinct from input and other output/configuration files");
+					}
+				}
 			}
 			final String fingerprint = AssessMigrationCommand.fingerprint(inputFile);
 			final var source = MigrationAssessmentSourceProvider.resolve(input).load(input, scanData);
@@ -143,7 +160,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 					Method.LOGICAL_MIGRATION, source.dataScanned(), source.relationshipsCollected(),
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, source.dataProfile(),
 					mappingFingerprint, targetMapping);
-			final String ddl = ddlOutputFile == null || mappingAssessment.hasBlockers() ? null
+			final String ddl = ddlOutputFile == null && ddlPhaseOutputDirectory == null || mappingAssessment.hasBlockers() ? null
 					: ddlWithProvenance(target.generateTargetDdl(source, targetMapping, version), fingerprint,
 							mappingFingerprint, targetMapping.targetDatabase(), version);
 			writeReport(result, source, target, fingerprint, version, ddl);
@@ -185,9 +202,32 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 		if (ddlOutputFile != null && ddl != null) {
 			AtomicMigrationFile.write(ddlOutputFile.toPath(), temporary -> Files.writeString(temporary, ddl, StandardCharsets.UTF_8));
 		}
+		if (ddlPhaseOutputDirectory != null && ddl != null) { writeDdlPhases(ddl); }
 		info("Database migration assessment: ", report.status());
 		if (failOnBlockers && report.assessment().hasBlockers()) {
 			throw new CommandException("Migration blockers found; review report: " + outputFile);
 		}
+	}
+
+	private void writeDdlPhases(final String ddl) throws IOException {
+		final int firstMarker = ddl.indexOf("-- sqlapp:phase-1:begin");
+		if (firstMarker < 0) { throw new IOException("Generated DDL does not contain phase markers"); }
+		final String provenance = ddl.substring(0, firstMarker);
+		for (int phase = 1; phase <= 4; phase++) {
+			writeDdlSection(ddl, provenance, "phase-" + phase, "phase-" + phase + ".sql");
+		}
+		writeDdlSection(ddl, provenance, "appendix", "appendix.sql");
+	}
+
+	private void writeDdlSection(final String ddl, final String provenance, final String section,
+			final String fileName) throws IOException {
+		final String begin = "-- sqlapp:" + section + ":begin";
+		final String end = "-- sqlapp:" + section + ":end";
+		final int start = ddl.indexOf(begin);
+		final int finish = ddl.indexOf(end, start);
+		if (start < 0 || finish < 0) { throw new IOException("Generated DDL has incomplete " + section + " markers"); }
+		final String content = provenance + ddl.substring(start, finish + end.length()) + "\n";
+		AtomicMigrationFile.write(ddlPhaseOutputDirectory.toPath().resolve(fileName),
+				temporary -> Files.writeString(temporary, content, StandardCharsets.UTF_8));
 	}
 }
