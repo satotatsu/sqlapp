@@ -60,7 +60,7 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(sql.contains("Preserve Access AutoNumber values with explicit inserts"));
 		assertTrue(sql.contains("verify that the Oracle identity generator starts above the loaded maximum"));
 		assertTrue(sql.contains("Verify loaded Access AutoNumber maximum: SELECT MAX(\"ID\") FROM \"Orders\";"));
-		assertTrue(sql.contains("Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready"));
+		assertTrue(sql.contains("Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready"));
 		assertTrue(sql.contains("Source defaults are not copied automatically; only reviewed target defaults from the mapping are emitted"));
 		assertTrue(sql.contains("Nullable unique keys, conversion expressions and cascade rules are not included"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-1.sql")).contains("CREATE TABLE \"Orders\""));

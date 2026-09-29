@@ -239,8 +239,9 @@ public final class MigrationTargetDdlGenerator {
 
 	private static String phaseTwoCompletionGateComments(final Map<ObjectId, Table> sourceTables,
 			final ResolvedMigrationTargetMapping mapping, final boolean hasIntegrityVerification) {
-		final boolean hasIdentity = mapping.tables().stream().flatMap(table -> table.columns().stream())
+		final boolean hasTargetIdentity = mapping.tables().stream().flatMap(table -> table.columns().stream())
 				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
+		boolean hasSourceIdentity = false;
 		boolean hasCalculated = false;
 		boolean hasValidationOrEmptyStringPolicy = false;
 		boolean hasDefaultDifference = false;
@@ -254,6 +255,7 @@ public final class MigrationTargetDdlGenerator {
 				hasConversion |= normalizedExpression(mappedColumn.conversion()) != null;
 				final var sourceColumn = sourceColumn(sourceTable, mappedColumn.sourceColumn().name());
 				if (sourceColumn == null) { continue; }
+				hasSourceIdentity |= sourceColumn.isIdentity();
 				hasCalculated |= normalizedExpression(sourceColumn.getFormula()) != null;
 				hasDefaultDifference |= !java.util.Objects.equals(normalizedExpression(sourceColumn.getDefaultValue()),
 						normalizedExpression(mappedColumn.defaultExpression()));
@@ -262,9 +264,10 @@ public final class MigrationTargetDdlGenerator {
 			}
 		}
 		return "\n-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):\n"
-				+ "-- - Target row counts and available null-count/value-range baselines match the Access source.\n"
+				+ "-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable.\n"
 				+ (hasIntegrityVerification ? "-- - Every generated duplicate query returns no rows and every generated orphan count is 0.\n" : "")
-				+ (hasIdentity ? "-- - Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready for new inserts.\n" : "")
+				+ (hasSourceIdentity ? "-- - Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready for new inserts.\n" : "")
+				+ (hasTargetIdentity && !hasSourceIdentity ? "-- - Every newly introduced target identity generator or seed is ready for new inserts.\n" : "")
 				+ (hasDefaultDifference ? "-- - Every changed or omitted Access default produces the approved value for target-side inserts.\n" : "")
 				+ (hasConversion ? "-- - Every mapped conversion matches approved representative, boundary and NULL source values.\n" : "")
 				+ (hasCalculated ? "-- - Every Access calculated field matches the approved materialization or target recalculation behavior.\n" : "")

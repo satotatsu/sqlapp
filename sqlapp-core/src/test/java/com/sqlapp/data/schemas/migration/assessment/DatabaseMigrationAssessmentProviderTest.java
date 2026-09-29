@@ -125,8 +125,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Phase 1: Create target tables."));
 		assertTrue(ddl.contains("-- Phase 2: Load data in the suggested order and run verification queries."));
 		assertTrue(ddl.contains("-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):"));
-		assertTrue(ddl.contains("-- - Target row counts and available null-count/value-range baselines match the Access source."));
+		assertTrue(ddl.contains("-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable."));
 		assertTrue(ddl.contains("-- - Every generated duplicate query returns no rows and every generated orphan count is 0."));
+		assertTrue(ddl.contains("-- - Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready for new inserts."));
 		assertTrue(ddl.contains("-- - Every changed or omitted Access default produces the approved value for target-side inserts."));
 		assertTrue(ddl.contains("-- - Every mapped conversion matches approved representative, boundary and NULL source values."));
 		assertTrue(ddl.contains("-- - Every Access calculated field matches the approved materialization or target recalculation behavior."));
@@ -329,6 +330,7 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- Verify target: SELECT MIN(\"ORDER_ID\"), MAX(\"ORDER_ID\") FROM \"APP\".\"ORDERS\";"));
 		assertTrue(ddl.contains("-- \"APP.ORDERS\".\"CREATED_AT\": source min=2020-01-02T03:04:05, max=2025-06-07T08:09:10\n"
 				+ "-- Verify target: SELECT MIN(\"CREATED_AT\"), MAX(\"CREATED_AT\") FROM \"APP\".\"ORDERS\";"));
+		assertTrue(ddl.contains("-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable."));
 		assertFalse(ddl.contains("-- Before executing Phase 1, approve every Access table and field omitted"));
 		assertFalse(ddl.contains("-- Before executing Phase 3, approve the replacement or exclusion"));
 		assertFalse(ddl.contains("-- Before executing Phase 4, approve the replacement or exclusion"));
