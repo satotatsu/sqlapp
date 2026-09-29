@@ -73,7 +73,7 @@ accepted by this provider. See [SQL Server diagnostic coverage](access-sqlserver
 | `mappingFile` | `RegularFileProperty` | Optional version 1 target mapping YAML, bound to the source fingerprint and requested target |
 | `mappingTemplateFile` | `RegularFileProperty` | Optional generated YAML skeleton containing every local table/column and target-specific suggested types |
 | `ddlOutputFile` | `RegularFileProperty` | Optional review-only target `CREATE TABLE` SQL; requires `mappingFile` |
-| `ddlPhaseOutputDirectory` | `DirectoryProperty` | Optional atomic per-file output containing `phase-1.sql` through `phase-4.sql` and `appendix.sql`; requires `mappingFile` |
+| `ddlPhaseOutputDirectory` | `DirectoryProperty` | Optional atomic per-file output containing `phase-1.sql` through `phase-4.sql`, `appendix.sql` and `manifest.sha256`; requires `mappingFile` |
 | `failOnBlockers` | `Property<Boolean>` | Defaults to `true`; blockers fail the task after publishing the report |
 | `scanData` | `Property<Boolean>` | Defaults to `false`; opt in to local Access scalar data profiling |
 
@@ -213,8 +213,35 @@ follow phase 4 inside matching `-- sqlapp:appendix:begin` and `:end` markers.
 Set `ddlPhaseOutputDirectory` to have sqlapp perform that extraction. It writes
 `phase-1.sql` through `phase-4.sql` plus `appendix.sql`; every file repeats the
 source fingerprint, mapping fingerprint and normalized target header and is
-replaced atomically. The directory and its fixed output names must not collide
+replaced atomically. A `manifest.sha256` file is replaced last and records the
+SHA-256 of all five files and the assessment JSON that produced them, allowing a runner or reviewer to detect a partial
+update, manual edit or mixture of outputs from different assessment runs before
+executing a phase. The directory and its fixed output names must not collide
 with the input, report, mapping, template or combined DDL paths.
+Before executing the files, verify the complete directory offline:
+
+```groovy
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-target-phases')
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    expectedAssessmentReportFingerprint = 'sha256:...'
+}
+```
+
+The verifier requires exactly the five manifest entries, recalculates every
+SHA-256, validates the matching begin/end marker in each file, and requires an
+identical source fingerprint, mapping fingerprint and target header across the
+set. Optional expected fingerprint and target properties bind verification to
+an approved Access file, mapping and deployment target instead of accepting any
+internally consistent directory. As the simpler default, `assessmentReportFile`
+reads those four expected values from the JSON produced by
+`assessDatabaseMigration` and verifies that JSON against the hash embedded in
+`manifest.sha256`. The individual `expectedSourceFingerprint`,
+`expectedMappingFingerprint`, `expectedTargetDatabase` and
+`expectedTargetVersion` properties remain available when approval values come
+from another system. Set `expectedAssessmentReportFingerprint` when the report
+itself is an approved artifact; the verifier checks its SHA-256 before trusting
+the values inside it. It fails without opening a database connection.
 A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped and its referenced key is

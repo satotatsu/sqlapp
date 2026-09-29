@@ -67,6 +67,12 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(Files.readString(ddlPhases.resolve("phase-3.sql")).contains("sqlapp:phase-3:begin"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-4.sql")).contains("sqlapp:phase-4:begin"));
 		assertTrue(Files.readString(ddlPhases.resolve("appendix.sql")).contains("Source table and column name mapping"));
+		final String phaseManifest = Files.readString(ddlPhases.resolve("manifest.sha256"));
+		assertTrue(phaseManifest.contains("# assessmentReport "
+				+ AssessMigrationCommand.fingerprint(command.getOutputFile())));
+		for (final String name : List.of("phase-1.sql", "phase-2.sql", "phase-3.sql", "phase-4.sql", "appendix.sql")) {
+			assertTrue(phaseManifest.contains(sha256(Files.readString(ddlPhases.resolve(name))) + "  " + name));
+		}
 
 		command.setMappingFile(null);
 		command.setDdlOutputFile(null);
@@ -97,6 +103,11 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(sql.contains("\nGO\n"));
 		command.setDdlOutputFile(template.toFile());
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("ddlOutputFile"));
+	}
+
+	private static String sha256(final String value) throws Exception {
+		return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+				.digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 	}
 
 	@Test

@@ -94,6 +94,7 @@ tables:
 		assertTrue(new File(ddlPhases, 'phase-3.sql').getText('UTF-8').contains('sqlapp:phase-3:begin'))
 		assertTrue(new File(ddlPhases, 'phase-4.sql').getText('UTF-8').contains('sqlapp:phase-4:begin'))
 		assertTrue(new File(ddlPhases, 'appendix.sql').getText('UTF-8').contains('Source table and column name mapping'))
+		assertTrue(new File(ddlPhases, 'manifest.sha256').getText('UTF-8').contains('phase-4.sql'))
 		assertEquals(3, task.internalCommand().report.formatVersion())
 		assertEquals('TARGET_T', task.internalCommand().report.targetMapping().tables().get(0).targetTable())
 		def template = new File(testProjectDir, 'mapping-template.yaml')

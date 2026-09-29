@@ -202,32 +202,54 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 		if (ddlOutputFile != null && ddl != null) {
 			AtomicMigrationFile.write(ddlOutputFile.toPath(), temporary -> Files.writeString(temporary, ddl, StandardCharsets.UTF_8));
 		}
-		if (ddlPhaseOutputDirectory != null && ddl != null) { writeDdlPhases(ddl); }
+		if (ddlPhaseOutputDirectory != null && ddl != null) { writeDdlPhases(ddl, outputFile.toPath()); }
 		info("Database migration assessment: ", report.status());
 		if (failOnBlockers && report.assessment().hasBlockers()) {
 			throw new CommandException("Migration blockers found; review report: " + outputFile);
 		}
 	}
 
-	private void writeDdlPhases(final String ddl) throws IOException {
+	private void writeDdlPhases(final String ddl, final java.nio.file.Path assessmentReport) throws IOException {
 		final int firstMarker = ddl.indexOf("-- sqlapp:phase-1:begin");
 		if (firstMarker < 0) { throw new IOException("Generated DDL does not contain phase markers"); }
 		final String provenance = ddl.substring(0, firstMarker);
+		final var sections = new java.util.LinkedHashMap<String, String>();
 		for (int phase = 1; phase <= 4; phase++) {
-			writeDdlSection(ddl, provenance, "phase-" + phase, "phase-" + phase + ".sql");
+			final String name = "phase-" + phase + ".sql";
+			sections.put(name, ddlSection(ddl, provenance, "phase-" + phase));
 		}
-		writeDdlSection(ddl, provenance, "appendix", "appendix.sql");
+		sections.put("appendix.sql", ddlSection(ddl, provenance, "appendix"));
+		final var manifest = new StringBuilder("# sqlapp DDL phase manifest; verify before executing any phase\n")
+				.append("# assessmentReport sha256:").append(sha256(Files.readAllBytes(assessmentReport))).append('\n');
+		for (final var entry : sections.entrySet()) {
+			AtomicMigrationFile.write(ddlPhaseOutputDirectory.toPath().resolve(entry.getKey()),
+					temporary -> Files.writeString(temporary, entry.getValue(), StandardCharsets.UTF_8));
+			manifest.append(sha256(entry.getValue())).append("  ").append(entry.getKey()).append('\n');
+		}
+		AtomicMigrationFile.write(ddlPhaseOutputDirectory.toPath().resolve("manifest.sha256"),
+				temporary -> Files.writeString(temporary, manifest, StandardCharsets.UTF_8));
 	}
 
-	private void writeDdlSection(final String ddl, final String provenance, final String section,
-			final String fileName) throws IOException {
+	private static String ddlSection(final String ddl, final String provenance, final String section) throws IOException {
 		final String begin = "-- sqlapp:" + section + ":begin";
 		final String end = "-- sqlapp:" + section + ":end";
 		final int start = ddl.indexOf(begin);
 		final int finish = ddl.indexOf(end, start);
 		if (start < 0 || finish < 0) { throw new IOException("Generated DDL has incomplete " + section + " markers"); }
-		final String content = provenance + ddl.substring(start, finish + end.length()) + "\n";
-		AtomicMigrationFile.write(ddlPhaseOutputDirectory.toPath().resolve(fileName),
-				temporary -> Files.writeString(temporary, content, StandardCharsets.UTF_8));
+		return provenance + ddl.substring(start, finish + end.length()) + "\n";
+	}
+
+	private static String sha256(final String content) {
+		return sha256(content.getBytes(StandardCharsets.UTF_8));
+	}
+
+	private static String sha256(final byte[] content) {
+		try {
+			final byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+					.digest(content);
+			return java.util.HexFormat.of().formatHex(digest);
+		} catch (final java.security.NoSuchAlgorithmException e) {
+			throw new IllegalStateException("SHA-256 is unavailable", e);
+		}
 	}
 }
