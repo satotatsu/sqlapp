@@ -57,9 +57,11 @@ public final class MigrationTargetDdlGenerator {
 		int emittedIndexes = 0;
 		int emittedForeignKeys = 0;
 		final var sql = new StringBuilder("-- Review-only DDL. Keys and secondary indexes are emitted only when every participating object is mapped.\n")
-				.append("-- Nullable unique keys, source defaults, conversion expressions and cascade rules are not included.\n")
+				.append("-- Source defaults are not copied automatically; only reviewed target defaults from the mapping are emitted.\n")
+				.append("-- Nullable unique keys, conversion expressions and cascade rules are not included.\n")
 				.append(mappingSummaryComments(source, mapping, mappedTables))
-				.append("\n-- sqlapp:phase-1:begin\n-- Phase 1: Create target tables.\n");
+				.append("\n-- sqlapp:phase-1:begin\n-- Phase 1: Create target tables.\n")
+				.append(phaseOneScopeGuidance(source, mappedTables));
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			final Map<String, String> columns = columns(mapped);
@@ -211,11 +213,12 @@ public final class MigrationTargetDdlGenerator {
 				.append(phaseTwoCompletionGateComments(sourceTables, mapping))
 				.append("-- sqlapp:phase-2:end\n")
 				.append("\n-- sqlapp:phase-3:begin\n-- Phase 3: After loading and verifying data, create keys and secondary indexes.\n")
+				.append(phaseThreeObjectGuidance(omittedKeysAndIndexes))
 				.append(keySql)
 				.append(indexSql)
 				.append("-- sqlapp:phase-3:end\n")
 				.append("\n-- sqlapp:phase-4:begin\n-- Phase 4: After loading and verifying data, apply foreign keys.\n")
-				.append(phaseFourRelationshipGuidance(sourceTables, mapping))
+				.append(phaseFourRelationshipGuidance(sourceTables, mapping, omittedForeignKeys))
 				.append(foreignKeySql)
 				.append("-- sqlapp:phase-4:end\n")
 				.append("\n-- sqlapp:appendix:begin\n")
@@ -239,15 +242,20 @@ public final class MigrationTargetDdlGenerator {
 				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
 		boolean hasCalculated = false;
 		boolean hasValidationOrEmptyStringPolicy = false;
+		boolean hasDefaultDifference = false;
+		boolean hasConversion = false;
 		for (final var mapped : mapping.tables()) {
 			final Table sourceTable = sourceTables.get(mapped.sourceTable());
 			if (sourceTable == null) { continue; }
 			hasValidationOrEmptyStringPolicy |= sourceTable.getConstraints().stream()
 					.anyMatch(constraint -> constraint instanceof com.sqlapp.data.schemas.CheckConstraint);
 			for (final var mappedColumn : mapped.columns()) {
+				hasConversion |= normalizedExpression(mappedColumn.conversion()) != null;
 				final var sourceColumn = sourceColumn(sourceTable, mappedColumn.sourceColumn().name());
 				if (sourceColumn == null) { continue; }
 				hasCalculated |= normalizedExpression(sourceColumn.getFormula()) != null;
+				hasDefaultDifference |= !java.util.Objects.equals(normalizedExpression(sourceColumn.getDefaultValue()),
+						normalizedExpression(mappedColumn.defaultExpression()));
 				hasValidationOrEmptyStringPolicy |= normalizedExpression(sourceColumn.getCheck()) != null
 						|| Boolean.TRUE.equals(sourceColumn.getSpecifics().get("access.allowZeroLength", Boolean.class));
 			}
@@ -256,24 +264,54 @@ public final class MigrationTargetDdlGenerator {
 				+ "-- - Target row counts and available null-count/value-range baselines match the Access source.\n"
 				+ "-- - Every duplicate query returns no rows and every orphan count is 0.\n"
 				+ (hasIdentity ? "-- - Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready for new inserts.\n" : "")
+				+ (hasDefaultDifference ? "-- - Every changed or omitted Access default produces the approved value for target-side inserts.\n" : "")
+				+ (hasConversion ? "-- - Every mapped conversion matches approved representative, boundary and NULL source values.\n" : "")
 				+ (hasCalculated ? "-- - Every Access calculated field matches the approved materialization or target recalculation behavior.\n" : "")
 				+ (hasValidationOrEmptyStringPolicy ? "-- - Translated Access validation and empty-string behavior passes representative insert and update tests.\n" : "")
 				+ "-- Record reviewed exceptions explicitly before continuing.\n";
 	}
 
+	private static String phaseOneScopeGuidance(final MigrationAssessmentSource source,
+			final Map<ObjectId, ResolvedMigrationTargetMapping.TableMapping> mappedTables) {
+		for (final var schema : source.schemas()) {
+			for (final var table : schema.getTables()) {
+				final var mapped = mappedTables.get(tableId(table));
+				if (mapped == null) {
+					return "-- Before executing Phase 1, approve every Access table and field omitted from the migration scope and listed in the appendix.\n";
+				}
+				final var mappedColumns = new java.util.HashSet<String>();
+				mapped.columns().forEach(column -> mappedColumns.add(key(column.sourceColumn().name())));
+				if (table.getColumns().stream().anyMatch(column -> !mappedColumns.contains(key(column.getName())))) {
+					return "-- Before executing Phase 1, approve every Access table and field omitted from the migration scope and listed in the appendix.\n";
+				}
+			}
+		}
+		return "";
+	}
+
+	private static String phaseThreeObjectGuidance(final java.util.List<String> omittedKeysAndIndexes) {
+		return omittedKeysAndIndexes.isEmpty() ? ""
+				: "-- Before executing Phase 3, approve the replacement or exclusion of every Access key and index omitted in the appendix.\n";
+	}
+
 	private static String phaseFourRelationshipGuidance(final Map<ObjectId, Table> sourceTables,
-			final ResolvedMigrationTargetMapping mapping) {
+			final ResolvedMigrationTargetMapping mapping, final java.util.List<String> omittedForeignKeys) {
+		final var guidance = new StringBuilder();
+		if (!omittedForeignKeys.isEmpty()) {
+			guidance.append("-- Before executing Phase 4, approve the replacement or exclusion of every Access relationship omitted in the appendix.\n");
+		}
 		for (final var mapped : mapping.tables()) {
 			final Table table = sourceTables.get(mapped.sourceTable());
 			if (table == null) { continue; }
 			for (final var foreignKey : table.getConstraints().getForeignKeyConstraints()) {
 				if (foreignKey.getUpdateRule() == com.sqlapp.data.schemas.CascadeRule.Cascade
 						|| foreignKey.getDeleteRule() == com.sqlapp.data.schemas.CascadeRule.Cascade) {
-					return "-- Before executing Phase 4, approve the target-specific replacement for every Access cascade action listed in the appendix.\n";
+					guidance.append("-- Before executing Phase 4, approve the target-specific replacement for every Access cascade action listed in the appendix.\n");
+					return guidance.toString();
 				}
 			}
 		}
-		return "";
+		return guidance.toString();
 	}
 
 	private static String ddlObjectSummaryComments(final int tables, final int primaryKeys,

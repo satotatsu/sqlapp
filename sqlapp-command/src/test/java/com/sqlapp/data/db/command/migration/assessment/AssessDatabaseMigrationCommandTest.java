@@ -61,7 +61,8 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(sql.contains("verify that the Oracle identity generator starts above the loaded maximum"));
 		assertTrue(sql.contains("Verify loaded Access AutoNumber maximum: SELECT MAX(\"ID\") FROM \"Orders\";"));
 		assertTrue(sql.contains("Every Access AutoNumber maximum is preserved and the target identity generator or seed is ready"));
-		assertTrue(sql.contains("Nullable unique keys, source defaults, conversion expressions and cascade rules are not included"));
+		assertTrue(sql.contains("Source defaults are not copied automatically; only reviewed target defaults from the mapping are emitted"));
+		assertTrue(sql.contains("Nullable unique keys, conversion expressions and cascade rules are not included"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-1.sql")).contains("CREATE TABLE \"Orders\""));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-2.sql")).contains("Post-load row-count baseline"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-3.sql")).contains("sqlapp:phase-3:begin"));

@@ -319,7 +319,10 @@ unique index produces `migration.mapping.unique-index-design`. Every omitted
 source foreign key is also listed
 with its reason, including an unmapped referenced table, inconsistent or
 unmapped columns, and a referenced key that was not emitted. Access constraint and
-index names are preserved when they are nonblank, unique in the target schema,
+index omissions are repeated as an approval gate before Phase 3, and relationship
+omissions are repeated before Phase 4, so the generated scripts do not hide an
+incomplete target design at execution time. Access constraint and index names
+are preserved when they are nonblank, unique in the target schema,
 within the target identifier limit and contain no control characters. Quoting
 preserves spaces, Unicode and target delimiter characters. An unusable or
 duplicate name falls back to a deterministic ASCII `PK_`, `UK_`, `FK_` or `IX_`
@@ -342,7 +345,9 @@ new load restrictions and dropped or changed generation behavior are visible.
 The JSON and HTML reports expose the same cases as
 `migration.mapping.nullability-change`, `migration.mapping.identity-change` and
 `migration.mapping.default-change` review findings, with a
-`mappingSemanticDifferences` inventory total.
+`mappingSemanticDifferences` inventory total. When a mapped default differs,
+the Phase 2 completion gate requires a target-side insert test of the approved
+behavior.
 Control characters are
 escaped in those comments. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.
@@ -351,7 +356,8 @@ do not share identical NULL uniqueness semantics. Fully mapped non-unique
 secondary indexes are emitted after the tables, preserving column order and
 descending keys. Their target names use a deterministic ASCII hash so they fit
 both Oracle and SQL Server identifier limits without trusting Access names.
-Source defaults, conversion expressions and cascade rules remain excluded, and the
+Source defaults are never copied automatically; only reviewed target defaults
+from the mapping are emitted. Conversion expressions and cascade rules remain excluded, and the
 SQL starts with comments stating that scope. The command
 never executes this SQL. If mapping validation finds an
 invalid target type or another mapping blocker, the JSON/HTML evidence is
@@ -403,12 +409,17 @@ table. Inventory entries `unmappedTables` and
 `unmappedColumnsInMappedTables` provide totals. Columns belonging to an omitted
 table are not repeated as individual findings. These findings do not block an
 intentional partial migration; record the scope decision during review.
+When the generated DDL has any omitted Access table or field, Phase 1 repeats
+this requirement and directs the reviewer to approve the appendix scope before
+creating target tables.
 
 `nullable` is optional. When it is `false`, `scanData=true` turns observed
 source NULLs into blockers; without complete scalar coverage it produces a
 review item rather than asserting there are no NULLs. `conversion` records the
 chosen conversion intent in JSON and HTML. It is descriptive text: this task
-does not execute it or transform values.
+does not execute it or transform values. When at least one conversion is present,
+the Phase 2 completion gate requires representative, boundary and NULL values to
+be checked against the approved conversion result.
 
 `defaultExpression` is an optional, reviewed target SQL expression. Source
 defaults are not copied automatically because Access functions and expression

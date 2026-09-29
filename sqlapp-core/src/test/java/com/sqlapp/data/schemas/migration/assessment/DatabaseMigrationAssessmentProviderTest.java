@@ -127,10 +127,14 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):"));
 		assertTrue(ddl.contains("-- - Target row counts and available null-count/value-range baselines match the Access source."));
 		assertTrue(ddl.contains("-- - Every duplicate query returns no rows and every orphan count is 0."));
+		assertTrue(ddl.contains("-- - Every changed or omitted Access default produces the approved value for target-side inserts."));
+		assertTrue(ddl.contains("-- - Every mapped conversion matches approved representative, boundary and NULL source values."));
 		assertTrue(ddl.contains("-- - Every Access calculated field matches the approved materialization or target recalculation behavior."));
 		assertTrue(ddl.contains("-- - Translated Access validation and empty-string behavior passes representative insert and update tests."));
 		assertTrue(ddl.contains("-- Phase 3: After loading and verifying data, create keys and secondary indexes."));
+		assertTrue(ddl.contains("-- Before executing Phase 3, approve the replacement or exclusion of every Access key and index omitted in the appendix."));
 		assertTrue(ddl.contains("-- Phase 4: After loading and verifying data, apply foreign keys."));
+		assertTrue(ddl.contains("-- Before executing Phase 4, approve the replacement or exclusion of every Access relationship omitted in the appendix."));
 		assertTrue(ddl.contains("-- Before executing Phase 4, approve the target-specific replacement for every Access cascade action listed in the appendix."));
 		for (int phase = 1; phase <= 4; phase++) {
 			final String begin = "-- sqlapp:phase-" + phase + ":begin";
@@ -177,6 +181,8 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- PK \"PK_PARENT\" -> \"PK_PARENT\" (retained)\n"
 				+ "-- PK \"PK_CHILD\" -> \"PK_CHILD\" (retained)"));
 		assertTrue(partial.contains("-- COLUMN \"source.Child.ID\" -> \"TARGET.CHILD_T.CHILD_ID\""));
+		assertTrue(partial.contains("-- Before executing Phase 1, approve every Access table and field omitted from the migration scope and listed in the appendix."));
+		assertFalse(ddl.contains("-- Before executing Phase 1, approve every Access table and field omitted"));
 	}
 
 	private static int occurrences(final String text, final String value) {
@@ -301,6 +307,10 @@ class DatabaseMigrationAssessmentProviderTest {
 				+ "-- Verify target: SELECT MIN(\"ORDER_ID\"), MAX(\"ORDER_ID\") FROM \"APP\".\"ORDERS\";"));
 		assertTrue(ddl.contains("-- \"APP.ORDERS\".\"CREATED_AT\": source min=2020-01-02T03:04:05, max=2025-06-07T08:09:10\n"
 				+ "-- Verify target: SELECT MIN(\"CREATED_AT\"), MAX(\"CREATED_AT\") FROM \"APP\".\"ORDERS\";"));
+		assertFalse(ddl.contains("-- Before executing Phase 1, approve every Access table and field omitted"));
+		assertFalse(ddl.contains("-- Before executing Phase 3, approve the replacement or exclusion"));
+		assertFalse(ddl.contains("-- Before executing Phase 4, approve the replacement or exclusion"));
+		assertFalse(ddl.contains("-- Before executing Phase 4, approve the target-specific replacement"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,
