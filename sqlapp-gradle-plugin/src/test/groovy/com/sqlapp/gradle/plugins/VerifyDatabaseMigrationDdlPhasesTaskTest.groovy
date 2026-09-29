@@ -19,6 +19,8 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		report.text = '{}'
 		task.directory.set(directory)
 		task.assessmentReportFile.set(report)
+		def verificationReport = new File(testProjectDir, 'verification.json')
+		task.verificationReportFile.set(verificationReport)
 		task.expectedAssessmentReportFingerprint.set('sha256:' + '3' * 64)
 		task.expectedSourceFingerprint.set('sha256:' + '1' * 64)
 		task.expectedMappingFingerprint.set('sha256:' + '2' * 64)
@@ -28,6 +30,7 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		task.beforeRun(command)
 		assertEquals(directory, command.directory)
 		assertEquals(report, command.assessmentReportFile)
+		assertEquals(verificationReport, command.verificationReportFile)
 		assertEquals(task.expectedAssessmentReportFingerprint.get(), command.expectedAssessmentReportFingerprint)
 		assertEquals(task.expectedSourceFingerprint.get(), command.expectedSourceFingerprint)
 		assertEquals(task.expectedMappingFingerprint.get(), command.expectedMappingFingerprint)

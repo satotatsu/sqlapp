@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
 
@@ -26,8 +27,13 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 			"phase-1.sql", "phase-2.sql", "phase-3.sql", "phase-4.sql", "appendix.sql");
 	private static final Pattern ENTRY = Pattern.compile("([0-9a-f]{64})  (phase-[1-4]\\.sql|appendix\\.sql)");
 	private static final Pattern FINGERPRINT = Pattern.compile("sha256:[0-9a-f]{64}");
+	private static final Pattern SOURCE_HEADER = Pattern.compile("(?m)^-- sqlapp sourceFingerprint: (\\S+)$");
+	private static final Pattern MAPPING_HEADER = Pattern.compile("(?m)^-- sqlapp mappingFingerprint: (\\S+)$");
+	private static final Pattern TARGET_HEADER = Pattern.compile("(?m)^-- sqlapp target: (\\S+) (\\S+)$");
 	private File directory;
 	private File assessmentReportFile;
+	private File verificationReportFile;
+	private VerificationReport verificationReport;
 	private String expectedAssessmentReportFingerprint;
 	private String expectedSourceFingerprint;
 	private String expectedMappingFingerprint;
@@ -36,11 +42,23 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 
 	@Override
 	protected void doRun() {
+		verificationReport = null;
 		if (directory == null || !directory.isDirectory()) {
 			throw new CommandException("directory must be an existing DDL phase output directory");
 		}
 		if (assessmentReportFile != null && !assessmentReportFile.isFile()) {
 			throw new CommandException("assessmentReportFile must be an existing database migration assessment JSON file");
+		}
+		if (verificationReportFile != null) {
+			final var phaseDirectory = directory.toPath().toAbsolutePath().normalize();
+			final var reportPath = verificationReportFile.toPath().toAbsolutePath().normalize();
+			if (reportPath.startsWith(phaseDirectory)) {
+				throw new CommandException("verificationReportFile must be outside directory");
+			}
+			if (assessmentReportFile != null
+					&& reportPath.equals(assessmentReportFile.toPath().toAbsolutePath().normalize())) {
+				throw new CommandException("verificationReportFile must not overwrite assessmentReportFile");
+			}
 		}
 		if (expectedAssessmentReportFingerprint != null && assessmentReportFile == null) {
 			throw new CommandException("expectedAssessmentReportFingerprint requires assessmentReportFile");
@@ -57,9 +75,10 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		try {
 			final var manifestPath = directory.toPath().resolve("manifest.sha256");
 			if (!Files.isRegularFile(manifestPath)) { throw new CommandException("manifest.sha256 is missing: " + directory); }
+			final byte[] manifestBytes = Files.readAllBytes(manifestPath);
 			final var entries = new LinkedHashMap<String, String>();
 			String manifestReportFingerprint = null;
-			for (final String line : Files.readAllLines(manifestPath, StandardCharsets.UTF_8)) {
+			for (final String line : new String(manifestBytes, StandardCharsets.UTF_8).lines().toList()) {
 				if (line.startsWith("# assessmentReport ")) {
 					if (manifestReportFingerprint != null) { throw new CommandException("Duplicate assessmentReport fingerprint in manifest.sha256"); }
 					manifestReportFingerprint = line.substring("# assessmentReport ".length());
@@ -75,6 +94,22 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 			}
 			if (!entries.keySet().equals(Set.copyOf(FILES))) {
 				throw new CommandException("manifest.sha256 must contain exactly the five generated DDL files");
+			}
+			if (manifestReportFingerprint == null) {
+				throw new CommandException("manifest.sha256 must contain exactly one assessmentReport fingerprint");
+			}
+			try (var paths = Files.list(directory.toPath())) {
+				final var unexpectedSql = paths
+						.filter(Files::isRegularFile)
+						.map(path -> path.getFileName().toString())
+						.filter(name -> name.toLowerCase(java.util.Locale.ROOT).endsWith(".sql"))
+						.filter(name -> !FILES.contains(name))
+						.sorted()
+						.toList();
+				if (!unexpectedSql.isEmpty()) {
+					throw new CommandException("DDL phase directory contains unverified SQL files: "
+							+ String.join(", ", unexpectedSql));
+				}
 			}
 			String provenance = null;
 			for (final String name : FILES) {
@@ -102,20 +137,22 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 					throw new CommandException("DDL phase provenance headers do not match: " + name);
 				}
 			}
-			if (provenance == null || !provenance.contains("-- sqlapp sourceFingerprint: sha256:")
-					|| !provenance.contains("-- sqlapp mappingFingerprint: sha256:")
-					|| !provenance.contains("-- sqlapp target: ")) {
-				throw new CommandException("DDL phase provenance header is incomplete");
-			}
-			verifyExpectedProvenance(provenance);
+			final ProvenanceIdentity identity = parseProvenance(provenance);
+			verifyExpectedProvenance(identity);
 			if (assessmentReportFile != null) {
-				if (manifestReportFingerprint == null) {
-					throw new CommandException("manifest.sha256 does not bind an assessmentReportFile");
-				}
 				if (!manifestReportFingerprint.equals(AssessMigrationCommand.fingerprint(assessmentReportFile))) {
 					throw new CommandException("assessmentReportFile does not match manifest.sha256");
 				}
-				verifyAssessmentReport(provenance);
+				verifyAssessmentReport(identity);
+			}
+			verificationReport = new VerificationReport(1, "VERIFIED", "sha256:" + sha256(manifestBytes), manifestReportFingerprint,
+					identity.sourceFingerprint(), identity.mappingFingerprint(), identity.targetDatabase(),
+					identity.targetVersion(), java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries)));
+			if (verificationReportFile != null) {
+				final var converter = new JsonConverter();
+				converter.setIndentOutput(true);
+				AtomicMigrationFile.write(verificationReportFile.toPath().toAbsolutePath().normalize(),
+						temporary -> converter.writeJsonValue(temporary.toFile(), verificationReport));
 			}
 		} catch (final CommandException e) {
 			throw e;
@@ -126,7 +163,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void verifyAssessmentReport(final String provenance) {
+	private void verifyAssessmentReport(final ProvenanceIdentity identity) {
 		if (expectedAssessmentReportFingerprint != null) {
 			try {
 				if (!expectedAssessmentReportFingerprint.equals(AssessMigrationCommand.fingerprint(assessmentReportFile))) {
@@ -151,10 +188,10 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		final String database = stringValue(targetMapping.get("targetDatabase"), "targetMapping.targetDatabase");
 		validateFingerprint("assessmentReportFile sourceFingerprint", source);
 		validateFingerprint("assessmentReportFile mappingFingerprint", mapping);
-		if (!provenance.contains("-- sqlapp sourceFingerprint: " + source + "\n")
-				|| !provenance.contains("-- sqlapp mappingFingerprint: " + mapping + "\n")
-				|| !Pattern.compile("(?mi)^-- sqlapp target: " + Pattern.quote(database) + " "
-						+ Pattern.quote(version) + "$").matcher(provenance).find()) {
+		if (!identity.sourceFingerprint().equals(source)
+				|| !identity.mappingFingerprint().equals(mapping)
+				|| !identity.targetDatabase().equalsIgnoreCase(database)
+				|| !identity.targetVersion().equalsIgnoreCase(version)) {
 			throw new CommandException("DDL phases do not match assessmentReportFile");
 		}
 	}
@@ -166,23 +203,66 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		return text;
 	}
 
-	private void verifyExpectedProvenance(final String provenance) {
+	private void verifyExpectedProvenance(final ProvenanceIdentity identity) {
 		if (expectedSourceFingerprint != null
-				&& !provenance.contains("-- sqlapp sourceFingerprint: " + expectedSourceFingerprint + "\n")) {
+				&& !identity.sourceFingerprint().equals(expectedSourceFingerprint)) {
 			throw new CommandException("DDL phases do not match expectedSourceFingerprint");
 		}
 		if (expectedMappingFingerprint != null
-				&& !provenance.contains("-- sqlapp mappingFingerprint: " + expectedMappingFingerprint + "\n")) {
+				&& !identity.mappingFingerprint().equals(expectedMappingFingerprint)) {
 			throw new CommandException("DDL phases do not match expectedMappingFingerprint");
 		}
 		if (expectedTargetDatabase != null || expectedTargetVersion != null) {
-			final var matcher = Pattern.compile("(?m)^-- sqlapp target: (\\S+) (\\S+)$").matcher(provenance);
-			if (!matcher.find()
-					|| expectedTargetDatabase != null && !expectedTargetDatabase.equalsIgnoreCase(matcher.group(1))
-					|| expectedTargetVersion != null && !expectedTargetVersion.equalsIgnoreCase(matcher.group(2))) {
+			if (expectedTargetDatabase != null && !expectedTargetDatabase.equalsIgnoreCase(identity.targetDatabase())
+					|| expectedTargetVersion != null && !expectedTargetVersion.equalsIgnoreCase(identity.targetVersion())) {
 				throw new CommandException("DDL phases do not match expected target database and version");
 			}
 		}
+	}
+
+	private static ProvenanceIdentity parseProvenance(final String provenance) {
+		final String source = uniqueHeader(SOURCE_HEADER, provenance, "sourceFingerprint");
+		final String mapping = uniqueHeader(MAPPING_HEADER, provenance, "mappingFingerprint");
+		validateFingerprint("DDL phase sourceFingerprint", source);
+		validateFingerprint("DDL phase mappingFingerprint", mapping);
+		final var target = TARGET_HEADER.matcher(provenance);
+		if (!target.find()) {
+			throw new CommandException("DDL phase provenance header must contain exactly one target");
+		}
+		final String database = target.group(1);
+		final String version = target.group(2);
+		if (target.find()) {
+			throw new CommandException("DDL phase provenance header must contain exactly one target");
+		}
+		final String canonical = "-- sqlapp sourceFingerprint: " + source + "\n"
+				+ "-- sqlapp mappingFingerprint: " + mapping + "\n"
+				+ "-- sqlapp target: " + database + " " + version + "\n";
+		if (!canonical.equals(provenance)) {
+			throw new CommandException("DDL phase provenance header must contain only the three canonical header lines");
+		}
+		return new ProvenanceIdentity(source, mapping, database, version);
+	}
+
+	private static String uniqueHeader(final Pattern pattern, final String provenance, final String property) {
+		final var matcher = pattern.matcher(provenance);
+		if (!matcher.find()) {
+			throw new CommandException("DDL phase provenance header must contain exactly one " + property);
+		}
+		final String value = matcher.group(1);
+		if (matcher.find()) {
+			throw new CommandException("DDL phase provenance header must contain exactly one " + property);
+		}
+		return value;
+	}
+
+	private record ProvenanceIdentity(String sourceFingerprint, String mappingFingerprint,
+			String targetDatabase, String targetVersion) {
+	}
+
+	public record VerificationReport(int formatVersion, String status, String manifestFingerprint,
+			String assessmentReportFingerprint,
+			String sourceFingerprint, String mappingFingerprint, String targetDatabase, String targetVersion,
+			java.util.Map<String, String> ddlFingerprints) {
 	}
 
 	private static void validateFingerprint(final String property, final String fingerprint) {

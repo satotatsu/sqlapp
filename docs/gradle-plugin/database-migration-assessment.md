@@ -225,13 +225,19 @@ tasks.named('verifyDatabaseMigrationDdlPhases') {
     directory = layout.buildDirectory.dir('reports/access-target-phases')
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     expectedAssessmentReportFingerprint = 'sha256:...'
+    verificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
 }
 ```
 
-The verifier requires exactly the five manifest entries, recalculates every
-SHA-256, validates the matching begin/end marker in each file, and requires an
+The verifier requires exactly the five DDL entries and one assessment-report
+fingerprint in the manifest, recalculates every DDL SHA-256, validates the
+matching begin/end marker in each file, rejects any other `.sql` file in the
+phase directory, and requires an
 identical source fingerprint, mapping fingerprint and target header across the
-set. Optional expected fingerprint and target properties bind verification to
+set. Each of those provenance headers must occur exactly once and both
+fingerprints must use the canonical lowercase SHA-256 form. Additional text or
+SQL is rejected before the section's begin marker. Optional expected fingerprint
+and target properties bind verification to
 an approved Access file, mapping and deployment target instead of accepting any
 internally consistent directory. As the simpler default, `assessmentReportFile`
 reads those four expected values from the JSON produced by
@@ -241,7 +247,11 @@ reads those four expected values from the JSON produced by
 `expectedTargetVersion` properties remain available when approval values come
 from another system. Set `expectedAssessmentReportFingerprint` when the report
 itself is an approved artifact; the verifier checks its SHA-256 before trusting
-the values inside it. It fails without opening a database connection.
+the values inside it. Optional `verificationReportFile` is atomically written
+only after successful verification and records the assessment report, source,
+mapping, target, manifest and five DDL fingerprints for CI or deployment
+evidence. It must be outside the phase directory and must not overwrite the
+assessment report. Verification does not open a database connection.
 A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped and its referenced key is
