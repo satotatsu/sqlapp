@@ -128,6 +128,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable."));
 		assertTrue(ddl.contains("-- - Every generated duplicate query returns no rows and every generated orphan count is 0."));
 		assertTrue(ddl.contains("-- - Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready for new inserts."));
+		assertTrue(ddl.contains("--    Verify loaded Access AutoNumber maximum: SELECT MAX([PARENT_ID]) FROM [TARGET].[PARENT_T];"));
 		assertTrue(ddl.contains("-- - Every changed or omitted Access default produces the approved value for target-side inserts."));
 		assertTrue(ddl.contains("-- - Every mapped conversion matches approved representative, boundary and NULL source values."));
 		assertTrue(ddl.contains("-- - Every Access calculated field matches the approved materialization or target recalculation behavior."));
@@ -168,8 +169,12 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CHILD_ID], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CHILD_ID] HAVING COUNT(*) > 1;"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT [CODE], COUNT(*) FROM [TARGET].[CHILD_T] GROUP BY [CODE] HAVING COUNT(*) > 1;"));
 		assertTrue(ddl.contains("-- Verify target orphans: SELECT COUNT(*) FROM [TARGET].[CHILD_T] c LEFT JOIN [TARGET].[PARENT_T] p ON c.[PARENT_ID] = p.[PARENT_ID] WHERE c.[PARENT_ID] IS NOT NULL AND p.[PARENT_ID] IS NULL;"));
-		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:\n"
-				+ "-- 1. \"TARGET.PARENT_T\"\n-- 2. \"TARGET.CHILD_T\""));
+		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:"));
+		final int parentLoadOrder = ddl.indexOf("-- 1. \"TARGET.PARENT_T\"");
+		final int autoNumberMaximum = ddl.indexOf("--    Verify loaded Access AutoNumber maximum:");
+		final int childLoadOrder = ddl.indexOf("-- 2. \"TARGET.CHILD_T\"");
+		assertTrue(parentLoadOrder >= 0 && parentLoadOrder < autoNumberMaximum);
+		assertTrue(autoNumberMaximum < childLoadOrder);
 		assertTrue(ddl.contains("-- Post-load row-count baseline from the Access source:\n"
 				+ "-- \"TARGET.PARENT_T\": not scanned\n"
 				+ "-- Verify target: SELECT COUNT(*) FROM [TARGET].[PARENT_T];\n"
@@ -336,6 +341,26 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertFalse(ddl.contains("-- Before executing Phase 4, approve the replacement or exclusion"));
 		assertFalse(ddl.contains("-- Before executing Phase 4, approve the target-specific replacement"));
 		assertFalse(ddl.contains("Every generated duplicate query"));
+	}
+
+	@Test
+	void targetDdlDoesNotApplyNumericMaximumChecksToAccessGuidAutoNumbers() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("Tokens");
+		final var guid = new Column("ID").setIdentity(true);
+		guid.getSpecifics().put("access.sourceType", "GUID");
+		table.getColumns().add(guid);
+		schema.getTables().add(table);
+		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "Tokens"), "APP", "TOKENS",
+				List.of(column("source", "Tokens", "ID", "TOKEN_ID")));
+		final String ddl = MigrationTargetDdlGenerator.generate(
+				new MigrationAssessmentSource(List.of(schema), EMPTY, false, true),
+				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)),
+				value -> "\"" + value + "\"", "\n", value -> "", name -> true);
+		assertTrue(ddl.contains("--    Access GUID AutoNumber has no meaningful maximum; verify preserved values with row-count and duplicate checks."));
+		assertFalse(ddl.contains("Verify loaded Access AutoNumber maximum"));
+		assertTrue(ddl.contains("Every mapped Access AutoNumber value is preserved"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,

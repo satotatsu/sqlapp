@@ -781,29 +781,40 @@ public final class MigrationTargetDdlGenerator {
 		for (int i = 0; i < ordered.size(); i++) {
 			final var table = mappedTables.get(ordered.get(i));
 			sql.append("-- ").append(i + 1).append(". ").append(commentName(table)).append('\n');
-			appendIdentityLoadGuidance(sql, table, identityLoadGuidance, quote);
+			appendIdentityLoadGuidance(sql, sourceTables.get(table.sourceTable()), table, identityLoadGuidance, quote);
 		}
 		if (!dependencies.isEmpty()) {
 			sql.append("-- Cyclic or cycle-dependent tables require staged loading or deferred constraints:\n");
 			dependencies.keySet().forEach(id -> {
 				final var table = mappedTables.get(id);
 				sql.append("-- - ").append(commentName(table)).append('\n');
-				appendIdentityLoadGuidance(sql, table, identityLoadGuidance, quote);
+				appendIdentityLoadGuidance(sql, sourceTables.get(table.sourceTable()), table, identityLoadGuidance, quote);
 			});
 		}
 		return sql.toString();
 	}
 
-	private static void appendIdentityLoadGuidance(final StringBuilder sql,
+	private static void appendIdentityLoadGuidance(final StringBuilder sql, final Table sourceTable,
 			final ResolvedMigrationTargetMapping.TableMapping table,
 			final Function<ResolvedMigrationTargetMapping.TableMapping, String> identityLoadGuidance,
 			final Function<String, String> quote) {
-		if (table.columns().stream().noneMatch(column -> Boolean.TRUE.equals(column.identity()))) { return; }
-		final String guidance = identityLoadGuidance.apply(table);
-		if (guidance != null && !guidance.isBlank()) { sql.append("--    ").append(guidance).append('\n'); }
+		final boolean hasTargetIdentity = table.columns().stream()
+				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
+		if (hasTargetIdentity) {
+			final String guidance = identityLoadGuidance.apply(table);
+			if (guidance != null && !guidance.isBlank()) { sql.append("--    ").append(guidance).append('\n'); }
+		}
 		for (final var column : table.columns()) {
-			if (!Boolean.TRUE.equals(column.identity())) { continue; }
-			sql.append("--    Verify loaded Access AutoNumber maximum: SELECT MAX(")
+			final var sourceColumn = sourceTable == null ? null
+					: sourceColumn(sourceTable, column.sourceColumn().name());
+			final boolean sourceIdentity = sourceColumn != null && sourceColumn.isIdentity();
+			if (!sourceIdentity && !Boolean.TRUE.equals(column.identity())) { continue; }
+			if (sourceIdentity && "GUID".equalsIgnoreCase(sourceType(sourceColumn))) {
+				sql.append("--    Access GUID AutoNumber has no meaningful maximum; verify preserved values with row-count and duplicate checks.\n");
+				continue;
+			}
+			sql.append(sourceIdentity ? "--    Verify loaded Access AutoNumber maximum: SELECT MAX("
+					: "--    Verify loaded target identity maximum: SELECT MAX(")
 					.append(quote.apply(column.targetColumn())).append(") FROM ")
 					.append(name(table, quote)).append(";\n");
 		}
