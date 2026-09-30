@@ -333,6 +333,11 @@ tasks.named('verifyDatabaseMigrationDdlPhases') {
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     expectedAssessmentReportFingerprint = 'sha256:...'
     expectedManifestFingerprint = 'sha256:...'
+	// Optional deployment gate; requires assessmentReportFile.
+	failOnUnresolvedAutoNumberStrategies = true
+	failOnIncompleteMapping = true
+	failOnMappingSemanticDifferences = true
+	failOnAssessmentBlockers = true
     verificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
 }
 ```
@@ -361,7 +366,31 @@ mapping, target, manifest and five DDL fingerprints for CI or deployment
 evidence. It must be outside the phase directory and must not overwrite the
 assessment report. Pass its `manifestFingerprint` back as
 `expectedManifestFingerprint` during deployment to require the exact approved
-manifest and DDL set. Verification does not open a database connection.
+manifest and DDL set. When the assessment inventory provides it, verification
+report format 2 also records `unresolvedAutoNumberStrategies`; older assessment
+reports without that inventory remain verifiable and omit the value. The same
+report records `unmappedTables` and `unmappedColumnsInMappedTables` when those
+inventory values are available, even when the incomplete-mapping gate is off.
+It also records `mappingSemanticDifferences` and the assessment `status` when
+available.
+Verification does not open a database connection.
+Set `failOnUnresolvedAutoNumberStrategies` to `true` to reject deployment
+verification while the assessment inventory still contains mapped Access
+AutoNumber columns whose target `identity` choice is `null`. Its default is
+`false` for compatibility, and enabling it requires `assessmentReportFile`.
+Set `failOnIncompleteMapping` to `true` to reject verification when
+`unmappedTables` or `unmappedColumnsInMappedTables` is greater than zero. This
+gate also defaults to `false` and requires `assessmentReportFile`, allowing an
+explicitly scoped partial migration when it remains disabled.
+Set `failOnMappingSemanticDifferences` to `true` to require the
+`mappingSemanticDifferences` inventory count to be zero. Leave it disabled when
+reviewed Access-to-target changes such as NULL handling, defaults, validation
+expressions or calculated fields are intentional; their count remains in the
+verification report.
+Set `failOnAssessmentBlockers` to `true` to reject an assessment whose status is
+`BLOCKED`. This covers blockers outside the three focused inventories, including
+data findings such as duplicate keys, orphan rows and observed target-capacity
+violations. The gate defaults to `false` and requires `assessmentReportFile`.
 A source primary key is emitted when all
 of its columns are mapped. A foreign key is emitted after table creation when
 both tables and every participating column are mapped and its referenced key is

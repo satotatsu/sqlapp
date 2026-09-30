@@ -13,6 +13,10 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		def task = project.tasks.named('verifyDatabaseMigrationDdlPhases',
 				VerifyDatabaseMigrationDdlPhasesTask).get()
 		assertFalse(task.directory.isPresent())
+		assertFalse(task.failOnUnresolvedAutoNumberStrategies.get())
+		assertFalse(task.failOnIncompleteMapping.get())
+		assertFalse(task.failOnMappingSemanticDifferences.get())
+		assertFalse(task.failOnAssessmentBlockers.get())
 		def directory = new File(testProjectDir, 'ddl-phases')
 		directory.mkdirs()
 		def report = new File(testProjectDir, 'assessment.json')
@@ -27,6 +31,10 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		task.expectedMappingFingerprint.set('sha256:' + '2' * 64)
 		task.expectedTargetDatabase.set('oracle')
 		task.expectedTargetVersion.set('19c')
+		task.failOnUnresolvedAutoNumberStrategies.set(true)
+		task.failOnIncompleteMapping.set(true)
+		task.failOnMappingSemanticDifferences.set(true)
+		task.failOnAssessmentBlockers.set(true)
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals(directory, command.directory)
@@ -38,5 +46,9 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		assertEquals(task.expectedMappingFingerprint.get(), command.expectedMappingFingerprint)
 		assertEquals('oracle', command.expectedTargetDatabase)
 		assertEquals('19c', command.expectedTargetVersion)
+		assertTrue(command.failOnUnresolvedAutoNumberStrategies)
+		assertTrue(command.failOnIncompleteMapping)
+		assertTrue(command.failOnMappingSemanticDifferences)
+		assertTrue(command.failOnAssessmentBlockers)
 	}
 }

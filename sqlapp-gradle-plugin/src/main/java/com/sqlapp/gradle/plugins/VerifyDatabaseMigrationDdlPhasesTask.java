@@ -16,6 +16,13 @@ import com.sqlapp.data.db.command.migration.assessment.VerifyDatabaseMigrationDd
 /** Verifies phase-separated database migration DDL without opening a database connection. */
 public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		extends AbstractTask<VerifyDatabaseMigrationDdlPhasesCommand> {
+	public VerifyDatabaseMigrationDdlPhasesTask() {
+		getFailOnUnresolvedAutoNumberStrategies().convention(false);
+		getFailOnIncompleteMapping().convention(false);
+		getFailOnMappingSemanticDifferences().convention(false);
+		getFailOnAssessmentBlockers().convention(false);
+	}
+
 	@InputDirectory
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract DirectoryProperty getDirectory();
@@ -36,6 +43,14 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 	public abstract Property<String> getExpectedTargetDatabase();
 	@Input @Optional
 	public abstract Property<String> getExpectedTargetVersion();
+	@Input
+	public abstract Property<Boolean> getFailOnUnresolvedAutoNumberStrategies();
+	@Input
+	public abstract Property<Boolean> getFailOnIncompleteMapping();
+	@Input
+	public abstract Property<Boolean> getFailOnMappingSemanticDifferences();
+	@Input
+	public abstract Property<Boolean> getFailOnAssessmentBlockers();
 
 	@Override
 	protected VerifyDatabaseMigrationDdlPhasesCommand createCommand() {
@@ -57,5 +72,9 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		if (getExpectedMappingFingerprint().isPresent()) { command.setExpectedMappingFingerprint(getExpectedMappingFingerprint().get()); }
 		if (getExpectedTargetDatabase().isPresent()) { command.setExpectedTargetDatabase(getExpectedTargetDatabase().get()); }
 		if (getExpectedTargetVersion().isPresent()) { command.setExpectedTargetVersion(getExpectedTargetVersion().get()); }
+		command.setFailOnUnresolvedAutoNumberStrategies(getFailOnUnresolvedAutoNumberStrategies().get());
+		command.setFailOnIncompleteMapping(getFailOnIncompleteMapping().get());
+		command.setFailOnMappingSemanticDifferences(getFailOnMappingSemanticDifferences().get());
+		command.setFailOnAssessmentBlockers(getFailOnAssessmentBlockers().get());
 	}
 }
