@@ -31,6 +31,11 @@ final class MigrationTargetMappingCoverage {
 			mappingsByTable.put(table.sourceTable(), table);
 			table.columns().forEach(column -> mappedColumns.add(column.sourceColumn()));
 		});
+		final var profiles = new HashMap<ObjectId, com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile>();
+		if (source.dataProfile() != null) {
+			source.dataProfile().tables().forEach(table -> table.columns()
+					.forEach(column -> profiles.put(column.column(), column)));
+		}
 		final var findings = new ArrayList<Finding>();
 		int omittedTables = 0;
 		int omittedColumns = 0;
@@ -119,6 +124,17 @@ final class MigrationTargetMappingCoverage {
 						} else {
 							findings.add(semanticFinding("identity-change", columnId, "identity", "false", targetIdentity));
 						}
+					}
+					final var profile = profiles.get(columnId);
+					if (column.isIdentity() && Boolean.TRUE.equals(columnMapping.identity())
+							&& profile != null && profile.numeric() != null && profile.numeric().minimum() != null
+							&& profile.numeric().minimum().signum() < 0) {
+						semanticDifferences++;
+						findings.add(new Finding("migration.mapping.observed-negative-autonumber", Severity.WARNING,
+								Evidence.DATABASE, columnId,
+								"Negative Access AutoNumber values were observed while target identity generation is enabled.",
+								"Check whether Access New Values uses Random. Preserve existing keys and references, then approve "
+										+ "the intentional change to sequential target generation or define a compatible alternative.", null));
 					}
 					final String sourceDefault = expression(column.getDefaultValue());
 					final String targetDefault = expression(columnMapping.defaultExpression());

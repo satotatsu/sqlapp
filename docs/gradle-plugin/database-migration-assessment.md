@@ -405,6 +405,11 @@ For an AutoNumber whose target identity choice is absent or false, the identity
 finding specifically asks the reviewer to check Access's Increment versus Random
 setting (or GUID generation), document the selected target strategy and test the
 first newly generated row after loading.
+With `scanData=true`, negative values observed in a numeric Access AutoNumber
+mapped to target identity produce
+`migration.mapping.observed-negative-autonumber`. This is database evidence that
+requires checking the Access Random setting and approving any change to sequential
+target generation.
 Control characters are
 escaped in those comments. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.

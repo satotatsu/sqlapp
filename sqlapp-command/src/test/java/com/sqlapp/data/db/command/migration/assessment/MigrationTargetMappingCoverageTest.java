@@ -20,6 +20,39 @@ import com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMappi
 
 class MigrationTargetMappingCoverageTest {
 	@Test
+	void warnsWhenObservedNegativeAutoNumbersAreMappedToSequentialIdentity() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("RandomKeys");
+		final var sourceColumn = new Column("ID").setIdentity(true);
+		sourceColumn.getSpecifics().put("access.sourceType", "LONG");
+		table.getColumns().add(sourceColumn);
+		schema.getTables().add(table);
+		final var tableId = new ObjectId(null, "source", "table", "RandomKeys");
+		final var columnId = new ObjectId(null, "source", "column", "ID", "RandomKeys");
+		final var profile = new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile(List.of(
+				new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.TableProfile(tableId, 2, List.of(
+						new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile(columnId, "LONG",
+								com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.Coverage.SCANNED, 0L, null,
+								new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.NumericStatistics(
+										new java.math.BigDecimal("-2147483648"), new java.math.BigDecimal("17"), 10, 0, 0), null)))));
+		final var mappedColumn = new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int", false,
+				true, null, null);
+		final var mapping = new ResolvedMigrationTargetMapping("fp", "sqlserver", "2022", List.of(
+				new ResolvedMigrationTargetMapping.TableMapping(tableId, "dbo", "RandomKeys", List.of(mappedColumn))));
+		final var assessment = new MigrationTargetMappingCoverage().assess(
+				new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true,
+						profile), mapping);
+		final var finding = assessment.findings().stream()
+				.filter(f -> f.ruleId().equals("migration.mapping.observed-negative-autonumber"))
+				.findFirst().orElseThrow();
+		assertEquals(MigrationAssessment.Severity.WARNING, finding.severity());
+		assertEquals(MigrationAssessment.Evidence.DATABASE, finding.evidence());
+		assertTrue(finding.action().contains("New Values uses Random"));
+		assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
+				.findFirst().orElseThrow().count());
+	}
+
+	@Test
 	void reportsMappedColumnSemanticDifferences() {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var table = new Table("Sample");
