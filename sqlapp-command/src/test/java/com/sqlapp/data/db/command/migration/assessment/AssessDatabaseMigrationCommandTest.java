@@ -85,7 +85,11 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(sql.contains("Every mapped Access AutoNumber NULL count is 0, its value is preserved and the approved target key-generation strategy is ready"));
 		assertTrue(sql.contains("Source defaults are not copied automatically; only reviewed target defaults from the mapping are emitted"));
 		assertTrue(sql.contains("Nullable unique keys, conversion expressions and cascade rules are not included"));
-		assertTrue(Files.readString(ddlPhases.resolve("phase-1.sql")).contains("CREATE TABLE \"Orders\""));
+		final String phaseOne = Files.readString(ddlPhases.resolve("phase-1.sql"));
+		assertTrue(phaseOne.contains("CREATE TABLE \"Orders\""));
+		assertTrue(phaseOne.contains("-- unresolved AutoNumber strategies: 1"));
+		assertTrue(phaseOne.indexOf("-- sqlapp:phase-1:begin")
+				< phaseOne.indexOf("-- unresolved AutoNumber strategies: 1"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-2.sql")).contains("Post-load row-count baseline"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-3.sql")).contains("sqlapp:phase-3:begin"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-4.sql")).contains("sqlapp:phase-4:begin"));
@@ -96,6 +100,10 @@ class AssessDatabaseMigrationCommandTest {
 		for (final String name : List.of("phase-1.sql", "phase-2.sql", "phase-3.sql", "phase-4.sql", "appendix.sql")) {
 			assertTrue(phaseManifest.contains(sha256(Files.readString(ddlPhases.resolve(name))) + "  " + name));
 		}
+		final var verifier = new VerifyDatabaseMigrationDdlPhasesCommand();
+		verifier.setDirectory(ddlPhases.toFile());
+		verifier.setAssessmentReportFile(command.getOutputFile());
+		assertDoesNotThrow(verifier::run);
 
 		command.setMappingFile(null);
 		command.setDdlOutputFile(null);

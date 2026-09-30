@@ -234,7 +234,8 @@ version. Reviewers can compare these values with the JSON report and reject a
 DDL file produced from stale or different inputs. The preview contains mapped tables, columns,
 target types and explicit nullability. Its opening mapping summary reports total,
 mapped and omitted Access tables and columns, plus data-profile and relationship
-collection status. A second summary reports how many target tables, primary keys,
+collection status. It also reports how many mapped Access AutoNumber strategies
+remain unresolved. A second summary reports how many target tables, primary keys,
 unique constraints, checks, indexes and foreign keys were emitted, with counts of
 omitted keys, indexes and foreign keys. Four phase markers separate table creation,
 data loading and verification, secondary-index creation, and final foreign-key
@@ -317,7 +318,9 @@ follow phase 4 inside matching `-- sqlapp:appendix:begin` and `:end` markers.
 Set `ddlPhaseOutputDirectory` to have sqlapp perform that extraction. It writes
 `phase-1.sql` through `phase-4.sql` plus `appendix.sql`; every file repeats the
 source fingerprint, mapping fingerprint and normalized target header and is
-replaced atomically. A `manifest.sha256` file is replaced last and records the
+replaced atomically. The review preamble and mapping summary are retained inside
+the Phase 1 markers; the other files start their section immediately after the
+three-line provenance header. A `manifest.sha256` file is replaced last and records the
 SHA-256 of all five files and the assessment JSON that produced them, allowing a runner or reviewer to detect a partial
 update, manual edit or mixture of outputs from different assessment runs before
 executing a phase. The directory and its fixed output names must not collide

@@ -212,13 +212,22 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 	private void writeDdlPhases(final String ddl, final java.nio.file.Path assessmentReport) throws IOException {
 		final int firstMarker = ddl.indexOf("-- sqlapp:phase-1:begin");
 		if (firstMarker < 0) { throw new IOException("Generated DDL does not contain phase markers"); }
-		final String provenance = ddl.substring(0, firstMarker);
+		int provenanceEnd = 0;
+		for (int line = 0; line < 3; line++) {
+			provenanceEnd = ddl.indexOf('\n', provenanceEnd);
+			if (provenanceEnd < 0 || provenanceEnd >= firstMarker) {
+				throw new IOException("Generated DDL does not contain the canonical provenance header");
+			}
+			provenanceEnd++;
+		}
+		final String provenance = ddl.substring(0, provenanceEnd);
+		final String preamble = ddl.substring(provenanceEnd, firstMarker);
 		final var sections = new java.util.LinkedHashMap<String, String>();
 		for (int phase = 1; phase <= 4; phase++) {
 			final String name = "phase-" + phase + ".sql";
-			sections.put(name, ddlSection(ddl, provenance, "phase-" + phase));
+			sections.put(name, ddlSection(ddl, provenance, "phase-" + phase, phase == 1 ? preamble : ""));
 		}
-		sections.put("appendix.sql", ddlSection(ddl, provenance, "appendix"));
+		sections.put("appendix.sql", ddlSection(ddl, provenance, "appendix", ""));
 		final var manifest = new StringBuilder("# sqlapp DDL phase manifest; verify before executing any phase\n")
 				.append("# assessmentReport sha256:").append(sha256(Files.readAllBytes(assessmentReport))).append('\n');
 		for (final var entry : sections.entrySet()) {
@@ -230,13 +239,16 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 				temporary -> Files.writeString(temporary, manifest, StandardCharsets.UTF_8));
 	}
 
-	private static String ddlSection(final String ddl, final String provenance, final String section) throws IOException {
+	private static String ddlSection(final String ddl, final String provenance, final String section,
+			final String preamble) throws IOException {
 		final String begin = "-- sqlapp:" + section + ":begin";
 		final String end = "-- sqlapp:" + section + ":end";
 		final int start = ddl.indexOf(begin);
 		final int finish = ddl.indexOf(end, start);
 		if (start < 0 || finish < 0) { throw new IOException("Generated DDL has incomplete " + section + " markers"); }
-		return provenance + ddl.substring(start, finish + end.length()) + "\n";
+		final int bodyStart = start + begin.length();
+		return provenance + ddl.substring(start, bodyStart) + "\n" + preamble
+				+ ddl.substring(bodyStart + 1, finish + end.length()) + "\n";
 	}
 
 	private static String sha256(final String content) {

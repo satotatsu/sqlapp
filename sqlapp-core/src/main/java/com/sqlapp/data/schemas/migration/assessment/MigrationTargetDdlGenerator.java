@@ -441,6 +441,7 @@ public final class MigrationTargetDdlGenerator {
 		int sourceColumns = 0;
 		int omittedTables = 0;
 		int omittedColumns = 0;
+		int unresolvedAutoNumberStrategies = 0;
 		for (final var schema : source.schemas()) {
 			for (final var table : schema.getTables()) {
 				sourceTables++;
@@ -450,10 +451,12 @@ public final class MigrationTargetDdlGenerator {
 					omittedTables++;
 					continue;
 				}
-				final var mappedColumns = new java.util.HashSet<String>();
-				mapped.columns().forEach(column -> mappedColumns.add(key(column.sourceColumn().name())));
+				final var mappedColumns = new HashMap<String, ResolvedMigrationTargetMapping.ColumnMapping>();
+				mapped.columns().forEach(column -> mappedColumns.put(key(column.sourceColumn().name()), column));
 				for (final var column : table.getColumns()) {
-					if (!mappedColumns.contains(key(column.getName()))) { omittedColumns++; }
+					final var mappedColumn = mappedColumns.get(key(column.getName()));
+					if (mappedColumn == null) { omittedColumns++; }
+					else if (column.isIdentity() && mappedColumn.identity() == null) { unresolvedAutoNumberStrategies++; }
 				}
 			}
 		}
@@ -463,6 +466,7 @@ public final class MigrationTargetDdlGenerator {
 				+ "; omitted tables: " + omittedTables + "\n"
 				+ "-- source columns: " + sourceColumns + "; mapped columns: " + mappedColumns
 				+ "; omitted columns in mapped tables: " + omittedColumns + "\n"
+				+ "-- unresolved AutoNumber strategies: " + unresolvedAutoNumberStrategies + "\n"
 				+ "-- data profile scanned: " + source.dataScanned()
 				+ "; relationships collected: " + source.relationshipsCollected() + "\n";
 	}

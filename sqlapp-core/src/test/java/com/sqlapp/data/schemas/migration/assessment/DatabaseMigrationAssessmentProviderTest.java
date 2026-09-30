@@ -75,6 +75,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Mapping summary:\n"
 				+ "-- source tables: 2; mapped tables: 2; omitted tables: 0\n"
 				+ "-- source columns: 7; mapped columns: 7; omitted columns in mapped tables: 0\n"
+				+ "-- unresolved AutoNumber strategies: 1\n"
 				+ "-- data profile scanned: false; relationships collected: true"));
 		assertTrue(ddl.contains("-- Target DDL object summary:\n"
 				+ "-- tables: 2; primary keys: 2; unique constraints: 1; checks: 1\n"
