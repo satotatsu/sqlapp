@@ -110,6 +110,8 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- \"source.Parent.ID\" (\"<unknown>\") -> \"TARGET.PARENT_T.PARENT_ID\" (\"int\"); nullability required -> required; identity true -> unspecified; default <none> -> <none>"));
 		assertTrue(ddl.contains("-- Column semantic differences requiring review:"));
 		assertTrue(ddl.contains("-- \"source.Parent.ID\": identity true -> unspecified"));
+		assertTrue(ddl.contains("-- \"source.Parent.ID\": confirm Access AutoNumber Increment, Random or GUID behavior; "
+				+ "document the target generator and test its first new row"));
 		assertTrue(ddl.contains("-- \"source.Parent.Alt\": nullability required -> nullable"));
 		assertTrue(ddl.contains("-- \"source.Child.Code\": default \"7\" -> \"0\""));
 		assertTrue(ddl.contains("-- \"source.Child.Code\": empty-string policy Access AllowZeroLength=true -> target validation unspecified"));
@@ -128,7 +130,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable."));
 		assertTrue(ddl.contains("-- - Every generated duplicate query returns no rows and every generated orphan count is 0."));
 		assertTrue(ddl.contains("-- - Every mapped Access AutoNumber NULL count is 0, its value is preserved and the approved target key-generation strategy is ready for new inserts."));
-		assertTrue(ddl.contains("--    Verify loaded Access AutoNumber maximum: SELECT MAX([PARENT_ID]) FROM [TARGET].[PARENT_T];"));
+		assertTrue(ddl.contains("-- - For every Access AutoNumber without target identity, confirm Increment, Random or GUID behavior, "
+				+ "document its replacement and test the first newly generated row."));
+		assertTrue(ddl.contains("--    Verify loaded Access AutoNumber range: SELECT MIN([PARENT_ID]), MAX([PARENT_ID]) FROM [TARGET].[PARENT_T];"));
 		assertTrue(ddl.contains("-- \"TARGET.PARENT_T\".\"PARENT_ID\": source NULLs not scanned; expected 0 for Access AutoNumber\n"
 				+ "-- Verify target (expected 0): SELECT COUNT(*) FROM [TARGET].[PARENT_T] WHERE [PARENT_ID] IS NULL;"));
 		assertTrue(ddl.contains("-- - Every changed or omitted Access default produces the approved value for target-side inserts."));
@@ -173,10 +177,10 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Verify target orphans: SELECT COUNT(*) FROM [TARGET].[CHILD_T] c LEFT JOIN [TARGET].[PARENT_T] p ON c.[PARENT_ID] = p.[PARENT_ID] WHERE c.[PARENT_ID] IS NOT NULL AND p.[PARENT_ID] IS NULL;"));
 		assertTrue(ddl.contains("-- Suggested data load order from emitted foreign keys:"));
 		final int parentLoadOrder = ddl.indexOf("-- 1. \"TARGET.PARENT_T\"");
-		final int autoNumberMaximum = ddl.indexOf("--    Verify loaded Access AutoNumber maximum:");
+		final int autoNumberRange = ddl.indexOf("--    Verify loaded Access AutoNumber range:");
 		final int childLoadOrder = ddl.indexOf("-- 2. \"TARGET.CHILD_T\"");
-		assertTrue(parentLoadOrder >= 0 && parentLoadOrder < autoNumberMaximum);
-		assertTrue(autoNumberMaximum < childLoadOrder);
+		assertTrue(parentLoadOrder >= 0 && parentLoadOrder < autoNumberRange);
+		assertTrue(autoNumberRange < childLoadOrder);
 		assertTrue(ddl.contains("-- Post-load row-count baseline from the Access source:\n"
 				+ "-- \"TARGET.PARENT_T\": not scanned\n"
 				+ "-- Verify target: SELECT COUNT(*) FROM [TARGET].[PARENT_T];\n"
@@ -363,7 +367,7 @@ class DatabaseMigrationAssessmentProviderTest {
 				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)),
 				value -> "\"" + value + "\"", "\n", value -> "", name -> true);
 		assertTrue(ddl.contains("--    Access GUID AutoNumber has no meaningful maximum; verify preserved values with row-count and duplicate checks."));
-		assertFalse(ddl.contains("Verify loaded Access AutoNumber maximum"));
+		assertFalse(ddl.contains("Verify loaded Access AutoNumber range"));
 		assertTrue(ddl.contains("-- \"APP.TOKENS\".\"TOKEN_ID\": source NULLs not scanned; expected 0 for Access AutoNumber\n"
 				+ "-- Verify target (expected 0): SELECT COUNT(*) FROM \"APP\".\"TOKENS\" WHERE \"TOKEN_ID\" IS NULL;"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT \"TOKEN_ID\", COUNT(*) FROM \"APP\".\"TOKENS\" GROUP BY \"TOKEN_ID\" HAVING COUNT(*) > 1;"));

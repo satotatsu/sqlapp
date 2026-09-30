@@ -343,6 +343,7 @@ public final class MigrationTargetDdlGenerator {
 		final boolean hasTargetIdentity = mapping.tables().stream().flatMap(table -> table.columns().stream())
 				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
 		boolean hasSourceIdentity = false;
+		boolean hasUnresolvedSourceIdentity = false;
 		boolean hasCalculated = false;
 		boolean hasValidationOrEmptyStringPolicy = false;
 		boolean hasDefaultDifference = false;
@@ -357,6 +358,8 @@ public final class MigrationTargetDdlGenerator {
 				final var sourceColumn = sourceColumn(sourceTable, mappedColumn.sourceColumn().name());
 				if (sourceColumn == null) { continue; }
 				hasSourceIdentity |= sourceColumn.isIdentity();
+				hasUnresolvedSourceIdentity |= sourceColumn.isIdentity()
+						&& !Boolean.TRUE.equals(mappedColumn.identity());
 				hasCalculated |= normalizedExpression(sourceColumn.getFormula()) != null;
 				hasDefaultDifference |= !java.util.Objects.equals(normalizedExpression(sourceColumn.getDefaultValue()),
 						normalizedExpression(mappedColumn.defaultExpression()));
@@ -368,6 +371,7 @@ public final class MigrationTargetDdlGenerator {
 				+ "-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable.\n"
 				+ (hasIntegrityVerification ? "-- - Every generated duplicate query returns no rows and every generated orphan count is 0.\n" : "")
 				+ (hasSourceIdentity ? "-- - Every mapped Access AutoNumber NULL count is 0, its value is preserved and the approved target key-generation strategy is ready for new inserts.\n" : "")
+				+ (hasUnresolvedSourceIdentity ? "-- - For every Access AutoNumber without target identity, confirm Increment, Random or GUID behavior, document its replacement and test the first newly generated row.\n" : "")
 				+ (hasTargetIdentity && !hasSourceIdentity ? "-- - Every newly introduced target identity generator or seed is ready for new inserts.\n" : "")
 				+ (hasDefaultDifference ? "-- - Every changed or omitted Access default produces the approved value for target-side inserts.\n" : "")
 				+ (hasConversion ? "-- - Every mapped conversion matches approved representative, boundary and NULL source values.\n" : "")
@@ -570,6 +574,10 @@ public final class MigrationTargetDdlGenerator {
 				if (sourceColumn.isIdentity() != Boolean.TRUE.equals(column.identity())) {
 					reviews.add(semanticReview(sourceName, "identity", Boolean.toString(sourceColumn.isIdentity()),
 							column.identity() == null ? "unspecified" : column.identity().toString()));
+					if (sourceColumn.isIdentity()) {
+						reviews.add("-- " + NameRegistry.commentValue(sourceName)
+								+ ": confirm Access AutoNumber Increment, Random or GUID behavior; document the target generator and test its first new row\n");
+					}
 				}
 				final String sourceDefault = normalizedExpression(sourceColumn.getDefaultValue());
 				final String targetDefault = normalizedExpression(column.defaultExpression());
@@ -932,8 +940,9 @@ public final class MigrationTargetDdlGenerator {
 				sql.append("--    Access GUID AutoNumber has no meaningful maximum; verify preserved values with row-count and duplicate checks.\n");
 				continue;
 			}
-			sql.append(sourceIdentity ? "--    Verify loaded Access AutoNumber maximum: SELECT MAX("
-					: "--    Verify loaded target identity maximum: SELECT MAX(")
+			sql.append(sourceIdentity ? "--    Verify loaded Access AutoNumber range: SELECT MIN("
+					: "--    Verify loaded target identity range: SELECT MIN(")
+					.append(quote.apply(column.targetColumn())).append("), MAX(")
 					.append(quote.apply(column.targetColumn())).append(") FROM ")
 					.append(name(table, quote)).append(";\n");
 		}
