@@ -314,6 +314,11 @@ public final class MigrationTargetDdlGenerator {
 				throw new IllegalArgumentException("Target DDL identity cannot be combined with nullable: true: "
 						+ sourceTableName + "." + resolved.getName());
 			}
+			if (Boolean.TRUE.equals(column.identity()) && resolved.isIdentity()
+					&& "GUID".equalsIgnoreCase(sourceType(resolved))) {
+				throw new IllegalArgumentException("Target DDL Access GUID AutoNumber cannot use target identity: "
+						+ sourceTableName + "." + resolved.getName());
+			}
 			if (column.defaultExpression() != null) {
 				if (Boolean.TRUE.equals(column.identity()) && !column.defaultExpression().isBlank()) {
 					throw new IllegalArgumentException("Target DDL target default expression cannot be combined with identity: "
@@ -524,7 +529,7 @@ public final class MigrationTargetDdlGenerator {
 					sql.append("; conversion ").append(NameRegistry.commentValue(column.conversion()));
 				}
 				sql.append("; nullability ").append(sourceColumn == null ? "<unknown>"
-						: sourceColumn.isNotNull() ? "required" : "nullable")
+						: sourceRequired(sourceColumn) ? "required" : "nullable")
 						.append(" -> ").append(targetNullability(sourceTable, column))
 						.append("; identity ").append(sourceColumn == null ? "<unknown>" : sourceColumn.isIdentity())
 						.append(" -> ").append(column.identity() == null ? "unspecified" : column.identity())
@@ -556,9 +561,10 @@ public final class MigrationTargetDdlGenerator {
 						column.sourceColumn().table() == null ? table.sourceTable().name() : column.sourceColumn().table(),
 						column.sourceColumn().name());
 				final String targetNullability = targetNullability(sourceTable, column);
-				final String sourceNullability = sourceColumn.isNotNull() ? "required" : "nullable";
+				final boolean sourceRequired = sourceRequired(sourceColumn);
+				final String sourceNullability = sourceRequired ? "required" : "nullable";
 				if ((!"unspecified".equals(targetNullability) && !sourceNullability.equals(targetNullability))
-						|| (sourceColumn.isNotNull() && "unspecified".equals(targetNullability))) {
+						|| (sourceRequired && "unspecified".equals(targetNullability))) {
 					reviews.add(semanticReview(sourceName, "nullability", sourceNullability, targetNullability));
 				}
 				if (sourceColumn.isIdentity() != Boolean.TRUE.equals(column.identity())) {
@@ -957,7 +963,7 @@ public final class MigrationTargetDdlGenerator {
 			boolean emitted = true;
 			for (final var column : unique.getColumns()) {
 				final var sourceColumn = parentTable.getColumns().get(column.getName());
-				if (!parentColumns.containsKey(key(column.getName())) || sourceColumn == null || !sourceColumn.isNotNull()
+				if (!parentColumns.containsKey(key(column.getName())) || sourceColumn == null || !sourceRequired(sourceColumn)
 						|| !Boolean.FALSE.equals(nullable.get(key(column.getName())))) { emitted = false; break; }
 			}
 			if (emitted) { return true; }
@@ -1030,7 +1036,7 @@ public final class MigrationTargetDdlGenerator {
 					complete = false;
 					break;
 				}
-				if (!sourceColumn.isNotNull() || !Boolean.FALSE.equals(nullable.get(key(sourceName)))) { required = false; }
+				if (!sourceRequired(sourceColumn) || !Boolean.FALSE.equals(nullable.get(key(sourceName)))) { required = false; }
 				if (i > 0) { value.append(", "); }
 				value.append(quote.apply(targetName));
 			}
@@ -1048,6 +1054,9 @@ public final class MigrationTargetDdlGenerator {
 		final var result = new HashMap<String, String>();
 		table.columns().forEach(column -> result.put(key(column.sourceColumn().name()), column.targetColumn()));
 		return result;
+	}
+	private static boolean sourceRequired(final com.sqlapp.data.schemas.Column column) {
+		return column.isNotNull() || column.isIdentity();
 	}
 	private static String name(final ResolvedMigrationTargetMapping.TableMapping table, final Function<String, String> quote) {
 		return (table.targetSchema() == null || table.targetSchema().isBlank() ? "" : quote.apply(table.targetSchema()) + ".")

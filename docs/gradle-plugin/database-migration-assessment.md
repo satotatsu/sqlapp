@@ -279,6 +279,16 @@ Likewise, `identity: true` cannot be combined with `nullable: true`; choose a
 required target column or a non-identity key-generation design. Generated
 mapping templates set Access AutoNumber columns to `nullable: false` even when
 the Access metadata does not separately expose their required status.
+Numeric AutoNumber columns receive `identity: true`. GUID AutoNumber/Replication
+ID columns remain required but omit `identity`, because Oracle and SQL Server
+numeric identity clauses are not GUID generators; select the target GUID
+generation strategy during mapping review.
+If an edited YAML file or direct API mapping sets `identity: true` for an Access
+GUID AutoNumber, assessment stops before producing DDL and identifies the
+affected table and field.
+Access AutoNumber columns are treated as required source values even when the
+reader does not expose a separate `NOT NULL` flag. This prevents a false
+nullability-change review and keeps unique-key safety checks consistent.
 The end of phase 2 contains a completion gate: reconcile every generated target
 count and range query with its displayed Access baseline, obtain and approve
 baselines marked `not scanned` or `unavailable`, require every generated

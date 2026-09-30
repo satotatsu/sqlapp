@@ -48,6 +48,8 @@ class MigrationTargetMappingCoverageTest {
 
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.identity-change")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")
+				&& f.object().equals(id) && f.reason().contains("from required to nullable")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.default-change")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.allow-zero-length")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.calculated-expression")));
@@ -62,7 +64,7 @@ class MigrationTargetMappingCoverageTest {
 				&& f.reason().contains("Access IgnoreNulls")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.unique-index-design")
 				&& f.reason().contains("Access standalone unique index")));
-		assertEquals(10, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
+		assertEquals(11, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
 				.findFirst().orElseThrow().count());
 	}
 }

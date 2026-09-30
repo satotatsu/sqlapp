@@ -73,6 +73,11 @@ final class MigrationTargetMappingResolver {
 					throw new CommandException("identity cannot be combined with nullable: true: "
 							+ table.getName() + "." + column.getName());
 				}
+				if (Boolean.TRUE.equals(configuredColumn.identity())
+						&& "GUID".equalsIgnoreCase(column.getSpecifics().get("access.sourceType", String.class))) {
+					throw new CommandException("Access GUID AutoNumber cannot use target identity: "
+							+ table.getName() + "." + column.getName());
+				}
 				final String defaultExpression = defaultExpression(configuredColumn.defaultExpression(), table, column,
 						configuredColumn.identity());
 				columns.add(new ResolvedMigrationTargetMapping.ColumnMapping(

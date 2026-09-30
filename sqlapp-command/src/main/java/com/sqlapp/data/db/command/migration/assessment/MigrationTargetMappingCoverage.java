@@ -96,10 +96,11 @@ final class MigrationTargetMappingCoverage {
 					}
 					final var columnMapping = tableMapping.columns().stream()
 							.filter(candidate -> candidate.sourceColumn().equals(columnId)).findFirst().orElseThrow();
-					final String sourceNullability = column.isNotNull() ? "required" : "nullable";
+					final boolean sourceRequired = column.isNotNull() || column.isIdentity();
+					final String sourceNullability = sourceRequired ? "required" : "nullable";
 					final String targetNullability = targetNullability(table, column.getName(), primaryComplete, columnMapping.nullable());
 					if ((!"unspecified".equals(targetNullability) && !sourceNullability.equals(targetNullability))
-							|| (column.isNotNull() && "unspecified".equals(targetNullability))) {
+							|| (sourceRequired && "unspecified".equals(targetNullability))) {
 						semanticDifferences++;
 						findings.add(semanticFinding("nullability-change", columnId, "nullability",
 								sourceNullability, targetNullability));

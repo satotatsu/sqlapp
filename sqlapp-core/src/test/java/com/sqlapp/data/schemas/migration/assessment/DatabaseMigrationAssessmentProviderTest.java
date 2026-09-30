@@ -355,7 +355,9 @@ class DatabaseMigrationAssessmentProviderTest {
 		schema.getTables().add(table);
 		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(
 				new MigrationAssessment.ObjectId(null, "source", "table", "Tokens"), "APP", "TOKENS",
-				List.of(column("source", "Tokens", "ID", "TOKEN_ID")));
+				List.of(new ResolvedMigrationTargetMapping.ColumnMapping(
+						new MigrationAssessment.ObjectId(null, "source", "column", "ID", "Tokens"),
+						"TOKEN_ID", "varchar(36)", false, null)));
 		final String ddl = MigrationTargetDdlGenerator.generate(
 				new MigrationAssessmentSource(List.of(schema), EMPTY, false, true),
 				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)),
@@ -368,6 +370,19 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertEquals(1, occurrences(ddl, "-- Verify target duplicates:"));
 		assertTrue(ddl.contains("Every generated duplicate query returns no rows"));
 		assertTrue(ddl.contains("Every mapped Access AutoNumber NULL count is 0, its value is preserved"));
+		assertTrue(ddl.contains("nullability required -> required; identity true -> unspecified"));
+		assertFalse(ddl.contains("\"source.Tokens.ID\": nullability"));
+
+		final var identityMapped = new ResolvedMigrationTargetMapping.TableMapping(mapped.sourceTable(), "APP", "TOKENS",
+				List.of(new ResolvedMigrationTargetMapping.ColumnMapping(
+						new MigrationAssessment.ObjectId(null, "source", "column", "ID", "Tokens"),
+						"TOKEN_ID", "varchar(36)", false, true, null, null)));
+		final var exception = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(
+						new MigrationAssessmentSource(List.of(schema), EMPTY, false, true),
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(identityMapped)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(exception.getMessage().contains("Access GUID AutoNumber cannot use target identity"));
 	}
 
 	@Test
