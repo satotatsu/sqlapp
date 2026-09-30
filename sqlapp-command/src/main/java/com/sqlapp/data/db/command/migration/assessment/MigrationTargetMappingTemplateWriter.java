@@ -36,6 +36,7 @@ final class MigrationTargetMappingTemplateWriter {
 					columnValue.put("sourceColumn", column.getName());
 					columnValue.put("targetType", provider.suggestTargetType(column, targetVersion));
 					columnValue.put("nullable", column.isIdentity() ? false : !column.isNotNull());
+					if (column.isIdentity()) { columnValue.put("identity", null); }
 					columns.add(columnValue);
 				}
 				tableValue.put("columns", columns);

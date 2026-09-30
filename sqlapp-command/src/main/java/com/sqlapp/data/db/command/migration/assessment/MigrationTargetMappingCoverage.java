@@ -40,6 +40,7 @@ final class MigrationTargetMappingCoverage {
 		int omittedTables = 0;
 		int omittedColumns = 0;
 		int semanticDifferences = 0;
+		int unresolvedAutoNumberStrategies = 0;
 		for (final var schema : source.schemas()) {
 			for (final var table : schema.getTables()) {
 				final var tableId = new ObjectId(schema.getCatalogName(), schema.getName(), "table", table.getName());
@@ -101,6 +102,9 @@ final class MigrationTargetMappingCoverage {
 					}
 					final var columnMapping = tableMapping.columns().stream()
 							.filter(candidate -> candidate.sourceColumn().equals(columnId)).findFirst().orElseThrow();
+					if (column.isIdentity() && columnMapping.identity() == null) {
+						unresolvedAutoNumberStrategies++;
+					}
 					final boolean sourceRequired = column.isNotNull() || column.isIdentity();
 					final String sourceNullability = sourceRequired ? "required" : "nullable";
 					final String targetNullability = targetNullability(table, column.getName(), primaryComplete, columnMapping.nullable());
@@ -168,7 +172,8 @@ final class MigrationTargetMappingCoverage {
 		return new MigrationAssessment(findings, java.util.List.of(
 				new Inventory(null, "", "unmappedTables", omittedTables),
 				new Inventory(null, "", "unmappedColumnsInMappedTables", omittedColumns),
-				new Inventory(null, "", "mappingSemanticDifferences", semanticDifferences)));
+				new Inventory(null, "", "mappingSemanticDifferences", semanticDifferences),
+				new Inventory(null, "", "unresolvedAutoNumberStrategies", unresolvedAutoNumberStrategies)));
 	}
 
 	private static boolean primaryComplete(final Table table,

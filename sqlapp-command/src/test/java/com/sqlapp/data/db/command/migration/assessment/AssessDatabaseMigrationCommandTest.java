@@ -37,7 +37,8 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(yaml.contains("targetType: \"NUMBER(1,0)\""));
 		assertTrue(yaml.contains("targetType: \"VARCHAR2(80 CHAR)\""));
 		assertTrue(yaml.contains("targetType: \"NUMBER(12,2)\""));
-		assertFalse(yaml.contains("identity:"));
+		assertEquals(2, occurrences(yaml, "identity: null"));
+		assertFalse(yaml.contains("identity: true"));
 		command.setMappingTemplateFile(null);
 		command.setMappingFile(template.toFile());
 		command.setMappingTemplateFile(template.toFile());
@@ -52,12 +53,18 @@ class AssessDatabaseMigrationCommandTest {
 				.filter(column -> "Token".equals(column.sourceColumn().name())).findFirst().orElseThrow();
 		assertEquals(false, tokenMapping.nullable());
 		assertNull(tokenMapping.identity());
+		assertEquals(2, command.getReport().assessment().inventory().stream()
+				.filter(item -> "unresolvedAutoNumberStrategies".equals(item.type()))
+				.findFirst().orElseThrow().count());
 		assertFalse(command.getReport().assessment().findings().stream().anyMatch(finding ->
 				"migration.mapping.nullability-change".equals(finding.ruleId())
 						&& "Token".equals(finding.object().name())));
 		yaml = withFirstIdentity(Files.readString(template));
 		Files.writeString(template, yaml);
 		command.run();
+		assertEquals(1, command.getReport().assessment().inventory().stream()
+				.filter(item -> "unresolvedAutoNumberStrategies".equals(item.type()))
+				.findFirst().orElseThrow().count());
 		final Path ddl = directory.resolve("target.sql");
 		final Path ddlPhases = directory.resolve("target-phases");
 		command.setDdlOutputFile(ddl.toFile());
@@ -102,7 +109,8 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(yaml.contains("targetType: \"bit\""));
 		assertTrue(yaml.contains("targetType: \"nvarchar(80)\""));
 		assertTrue(yaml.contains("targetType: \"decimal(12,2)\""));
-		assertFalse(yaml.contains("identity:"));
+		assertEquals(2, occurrences(yaml, "identity: null"));
+		assertFalse(yaml.contains("identity: true"));
 		Files.writeString(template, withFirstIdentity(yaml));
 		command.setMappingTemplateFile(null);
 		command.setMappingFile(template.toFile());
@@ -214,7 +222,7 @@ class AssessDatabaseMigrationCommandTest {
 	}
 
 	private static String withFirstIdentity(final String yaml) {
-		return yaml.replaceFirst("(?m)^([ \\t]*)nullable: false\\r?$", "$0\n$1identity: true");
+		return yaml.replaceFirst("identity: null", "identity: true");
 	}
 
 	@Test

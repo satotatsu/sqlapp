@@ -50,6 +50,8 @@ class MigrationTargetMappingCoverageTest {
 		assertTrue(finding.action().contains("New Values uses Random"));
 		assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
 				.findFirst().orElseThrow().count());
+		assertEquals(0, assessment.inventory().stream().filter(i -> i.type().equals("unresolvedAutoNumberStrategies"))
+				.findFirst().orElseThrow().count());
 	}
 
 	@Test
@@ -101,6 +103,8 @@ class MigrationTargetMappingCoverageTest {
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.unique-index-design")
 				&& f.reason().contains("Access standalone unique index")));
 		assertEquals(11, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
+				.findFirst().orElseThrow().count());
+		assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("unresolvedAutoNumberStrategies"))
 				.findFirst().orElseThrow().count());
 	}
 }
