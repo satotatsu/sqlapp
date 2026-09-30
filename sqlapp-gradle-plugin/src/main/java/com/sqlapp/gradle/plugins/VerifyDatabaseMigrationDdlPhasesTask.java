@@ -21,6 +21,7 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		getFailOnIncompleteMapping().convention(false);
 		getFailOnMappingSemanticDifferences().convention(false);
 		getFailOnAssessmentBlockers().convention(false);
+		getRequireDeploymentReady().convention(false);
 	}
 
 	@InputDirectory
@@ -51,6 +52,8 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 	public abstract Property<Boolean> getFailOnMappingSemanticDifferences();
 	@Input
 	public abstract Property<Boolean> getFailOnAssessmentBlockers();
+	@Input
+	public abstract Property<Boolean> getRequireDeploymentReady();
 
 	@Override
 	protected VerifyDatabaseMigrationDdlPhasesCommand createCommand() {
@@ -76,5 +79,6 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		command.setFailOnIncompleteMapping(getFailOnIncompleteMapping().get());
 		command.setFailOnMappingSemanticDifferences(getFailOnMappingSemanticDifferences().get());
 		command.setFailOnAssessmentBlockers(getFailOnAssessmentBlockers().get());
+		command.setRequireDeploymentReady(getRequireDeploymentReady().get());
 	}
 }

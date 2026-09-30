@@ -333,11 +333,8 @@ tasks.named('verifyDatabaseMigrationDdlPhases') {
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     expectedAssessmentReportFingerprint = 'sha256:...'
     expectedManifestFingerprint = 'sha256:...'
-	// Optional deployment gate; requires assessmentReportFile.
-	failOnUnresolvedAutoNumberStrategies = true
-	failOnIncompleteMapping = true
-	failOnMappingSemanticDifferences = true
-	failOnAssessmentBlockers = true
+	// Simple deployment gate; requires assessmentReportFile.
+	requireDeploymentReady = true
     verificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
 }
 ```
@@ -374,6 +371,10 @@ inventory values are available, even when the incomplete-mapping gate is off.
 It also records `mappingSemanticDifferences` and the assessment `status` when
 available.
 Verification does not open a database connection.
+Set `requireDeploymentReady` to `true` for the common deployment path. It
+combines the blocker, incomplete-mapping, unresolved-AutoNumber and mapping
+semantic-difference gates below. It defaults to `false` for compatibility and
+requires `assessmentReportFile`.
 Set `failOnUnresolvedAutoNumberStrategies` to `true` to reject deployment
 verification while the assessment inventory still contains mapped Access
 AutoNumber columns whose target `identity` choice is `null`. Its default is

@@ -44,6 +44,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 	private boolean failOnIncompleteMapping;
 	private boolean failOnMappingSemanticDifferences;
 	private boolean failOnAssessmentBlockers;
+	private boolean requireDeploymentReady;
 
 	@Override
 	protected void doRun() {
@@ -68,10 +69,10 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		if (expectedAssessmentReportFingerprint != null && assessmentReportFile == null) {
 			throw new CommandException("expectedAssessmentReportFingerprint requires assessmentReportFile");
 		}
-		if ((failOnUnresolvedAutoNumberStrategies || failOnIncompleteMapping || failOnMappingSemanticDifferences
+		if ((requireDeploymentReady || failOnUnresolvedAutoNumberStrategies || failOnIncompleteMapping || failOnMappingSemanticDifferences
 				|| failOnAssessmentBlockers)
 				&& assessmentReportFile == null) {
-			throw new CommandException((failOnUnresolvedAutoNumberStrategies
+			throw new CommandException((requireDeploymentReady ? "requireDeploymentReady" : failOnUnresolvedAutoNumberStrategies
 					? "failOnUnresolvedAutoNumberStrategies" : failOnIncompleteMapping
 							? "failOnIncompleteMapping" : failOnMappingSemanticDifferences
 									? "failOnMappingSemanticDifferences" : "failOnAssessmentBlockers")
@@ -211,7 +212,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		}
 		final String database = stringValue(targetMapping.get("targetDatabase"), "targetMapping.targetDatabase");
 		final String assessmentStatus = report.get("status") instanceof String status && !status.isBlank() ? status : null;
-		if (failOnAssessmentBlockers) {
+		if (requireDeploymentReady || failOnAssessmentBlockers) {
 			if (assessmentStatus == null) {
 				throw new CommandException("assessmentReportFile must contain status for failOnAssessmentBlockers");
 			}
@@ -220,25 +221,27 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 			}
 		}
 		final Integer unresolved = inventoryCount(report, "unresolvedAutoNumberStrategies",
-				failOnUnresolvedAutoNumberStrategies);
-		final Integer unmappedTables = inventoryCount(report, "unmappedTables", failOnIncompleteMapping);
-		final Integer unmappedColumns = inventoryCount(report, "unmappedColumnsInMappedTables", failOnIncompleteMapping);
+				requireDeploymentReady || failOnUnresolvedAutoNumberStrategies);
+		final Integer unmappedTables = inventoryCount(report, "unmappedTables",
+				requireDeploymentReady || failOnIncompleteMapping);
+		final Integer unmappedColumns = inventoryCount(report, "unmappedColumnsInMappedTables",
+				requireDeploymentReady || failOnIncompleteMapping);
 		final Integer semanticDifferences = inventoryCount(report, "mappingSemanticDifferences",
-				failOnMappingSemanticDifferences);
-		if (failOnUnresolvedAutoNumberStrategies) {
+				requireDeploymentReady || failOnMappingSemanticDifferences);
+		if (requireDeploymentReady || failOnUnresolvedAutoNumberStrategies) {
 			if (unresolved > 0) {
 				throw new CommandException("assessmentReportFile contains " + unresolved
 						+ " unresolved Access AutoNumber strategies; set each mapped identity to true or false");
 			}
 		}
-		if (failOnIncompleteMapping) {
+		if (requireDeploymentReady || failOnIncompleteMapping) {
 			if (unmappedTables > 0 || unmappedColumns > 0) {
 				throw new CommandException("assessmentReportFile contains an incomplete target mapping: "
 						+ unmappedTables + " unmapped tables and " + unmappedColumns
 						+ " unmapped columns in mapped tables");
 			}
 		}
-		if (failOnMappingSemanticDifferences && semanticDifferences > 0) {
+		if ((requireDeploymentReady || failOnMappingSemanticDifferences) && semanticDifferences > 0) {
 			throw new CommandException("assessmentReportFile contains " + semanticDifferences
 					+ " target mapping semantic differences requiring explicit review");
 		}

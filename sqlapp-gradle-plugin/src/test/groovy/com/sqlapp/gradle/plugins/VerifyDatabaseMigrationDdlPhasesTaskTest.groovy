@@ -17,6 +17,7 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		assertFalse(task.failOnIncompleteMapping.get())
 		assertFalse(task.failOnMappingSemanticDifferences.get())
 		assertFalse(task.failOnAssessmentBlockers.get())
+		assertFalse(task.requireDeploymentReady.get())
 		def directory = new File(testProjectDir, 'ddl-phases')
 		directory.mkdirs()
 		def report = new File(testProjectDir, 'assessment.json')
@@ -35,6 +36,7 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		task.failOnIncompleteMapping.set(true)
 		task.failOnMappingSemanticDifferences.set(true)
 		task.failOnAssessmentBlockers.set(true)
+		task.requireDeploymentReady.set(true)
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals(directory, command.directory)
@@ -50,5 +52,6 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		assertTrue(command.failOnIncompleteMapping)
 		assertTrue(command.failOnMappingSemanticDifferences)
 		assertTrue(command.failOnAssessmentBlockers)
+		assertTrue(command.requireDeploymentReady)
 	}
 }

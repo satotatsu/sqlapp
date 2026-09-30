@@ -94,6 +94,11 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertEquals(successfulVerification, Files.readString(verificationReport));
 		assertNull(command.getVerificationReport());
 		command.setFailOnAssessmentBlockers(false);
+		command.setRequireDeploymentReady(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("status is BLOCKED"));
+		assertEquals(successfulVerification, Files.readString(verificationReport));
+		assertNull(command.getVerificationReport());
+		command.setRequireDeploymentReady(false);
 		command.setExpectedAssessmentReportFingerprint("sha256:" + "4".repeat(64));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("expectedAssessmentReportFingerprint"));
 		assertEquals(successfulVerification, Files.readString(verificationReport));
@@ -152,6 +157,10 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		command.setFailOnAssessmentBlockers(true);
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
 				.contains("failOnAssessmentBlockers requires assessmentReportFile"));
+		command.setFailOnAssessmentBlockers(false);
+		command.setRequireDeploymentReady(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("requireDeploymentReady requires assessmentReportFile"));
 	}
 
 	@Test
@@ -175,6 +184,34 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertNull(command.getVerificationReport().unmappedColumnsInMappedTables());
 		assertNull(command.getVerificationReport().mappingSemanticDifferences());
 		assertNull(command.getVerificationReport().assessmentStatus());
+	}
+
+	@Test
+	void deploymentReadyGateAcceptsCompleteReviewedAssessment() throws Exception {
+		final String provenance = "-- sqlapp sourceFingerprint: sha256:" + "1".repeat(64) + "\n"
+				+ "-- sqlapp mappingFingerprint: sha256:" + "2".repeat(64) + "\n"
+				+ "-- sqlapp target: sqlserver 2022\n";
+		final Path report = directory.resolveSibling("deployment-ready-assessment.json");
+		Files.writeString(report, """
+				{"sourceFingerprint":"sha256:%s","mappingFingerprint":"sha256:%s","targetVersion":"2022",
+				 "status":"REVIEW_REQUIRED","targetMapping":{"targetDatabase":"sqlserver"},
+				 "assessment":{"inventory":[
+				   {"type":"unresolvedAutoNumberStrategies","count":0},
+				   {"type":"unmappedTables","count":0},
+				   {"type":"unmappedColumnsInMappedTables","count":0},
+				   {"type":"mappingSemanticDifferences","count":0}]}}
+				""".formatted("1".repeat(64), "2".repeat(64)));
+		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
+		final var command = new VerifyDatabaseMigrationDdlPhasesCommand();
+		command.setDirectory(directory.toFile());
+		command.setAssessmentReportFile(report.toFile());
+		command.setRequireDeploymentReady(true);
+		assertDoesNotThrow(command::run);
+		assertEquals("REVIEW_REQUIRED", command.getVerificationReport().assessmentStatus());
+		assertEquals(0, command.getVerificationReport().unresolvedAutoNumberStrategies());
+		assertEquals(0, command.getVerificationReport().unmappedTables());
+		assertEquals(0, command.getVerificationReport().unmappedColumnsInMappedTables());
+		assertEquals(0, command.getVerificationReport().mappingSemanticDifferences());
 	}
 
 	@Test
