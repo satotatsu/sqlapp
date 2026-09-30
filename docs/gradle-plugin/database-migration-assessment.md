@@ -396,6 +396,10 @@ The JSON and HTML reports expose the same cases as
 `mappingSemanticDifferences` inventory total. When a mapped default differs,
 the Phase 2 completion gate requires a target-side insert test of the approved
 behavior.
+For an AutoNumber whose target identity choice is absent or false, the identity
+finding specifically asks the reviewer to check Access's Increment versus Random
+setting (or GUID generation), document the selected target strategy and test the
+first newly generated row after loading.
 Control characters are
 escaped in those comments. A non-primary unique constraint is emitted only when every participating
 column is mapped and required in both the source Schema and target mapping.

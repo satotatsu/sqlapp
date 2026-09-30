@@ -46,7 +46,10 @@ class MigrationTargetMappingCoverageTest {
 				new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), false, true),
 				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)));
 
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.identity-change")));
+		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.identity-change")
+				&& f.reason().contains("Access AutoNumber")
+				&& f.action().contains("Increment or Random")
+				&& f.action().contains("first new row")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")
 				&& f.object().equals(id) && f.reason().contains("from required to nullable")));

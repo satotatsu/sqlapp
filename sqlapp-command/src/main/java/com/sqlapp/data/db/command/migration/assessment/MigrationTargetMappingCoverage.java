@@ -107,9 +107,18 @@ final class MigrationTargetMappingCoverage {
 					}
 					if (column.isIdentity() != Boolean.TRUE.equals(columnMapping.identity())) {
 						semanticDifferences++;
-						findings.add(semanticFinding("identity-change", columnId, "identity",
-								Boolean.toString(column.isIdentity()), columnMapping.identity() == null
-										? "unspecified" : columnMapping.identity().toString()));
+						final String targetIdentity = columnMapping.identity() == null
+								? "unspecified" : columnMapping.identity().toString();
+						if (column.isIdentity()) {
+							findings.add(new Finding("migration.mapping.identity-change", Severity.REVIEW, Evidence.SCHEMA,
+									columnId, "Mapped Access AutoNumber generation changes from true to "
+											+ targetIdentity + ".",
+									"Check the Access New Values setting (Increment or Random; GUID uses a separate generator), "
+											+ "then explicitly select target identity generation or a documented alternative and test the first new row.",
+									null));
+						} else {
+							findings.add(semanticFinding("identity-change", columnId, "identity", "false", targetIdentity));
+						}
 					}
 					final String sourceDefault = expression(column.getDefaultValue());
 					final String targetDefault = expression(columnMapping.defaultExpression());
