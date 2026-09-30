@@ -127,8 +127,10 @@ class DatabaseMigrationAssessmentProviderTest {
 		assertTrue(ddl.contains("-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):"));
 		assertTrue(ddl.contains("-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable."));
 		assertTrue(ddl.contains("-- - Every generated duplicate query returns no rows and every generated orphan count is 0."));
-		assertTrue(ddl.contains("-- - Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready for new inserts."));
+		assertTrue(ddl.contains("-- - Every mapped Access AutoNumber NULL count is 0, its value is preserved and the approved target key-generation strategy is ready for new inserts."));
 		assertTrue(ddl.contains("--    Verify loaded Access AutoNumber maximum: SELECT MAX([PARENT_ID]) FROM [TARGET].[PARENT_T];"));
+		assertTrue(ddl.contains("-- \"TARGET.PARENT_T\".\"PARENT_ID\": source NULLs not scanned; expected 0 for Access AutoNumber\n"
+				+ "-- Verify target (expected 0): SELECT COUNT(*) FROM [TARGET].[PARENT_T] WHERE [PARENT_ID] IS NULL;"));
 		assertTrue(ddl.contains("-- - Every changed or omitted Access default produces the approved value for target-side inserts."));
 		assertTrue(ddl.contains("-- - Every mapped conversion matches approved representative, boundary and NULL source values."));
 		assertTrue(ddl.contains("-- - Every Access calculated field matches the approved materialization or target recalculation behavior."));
@@ -360,10 +362,171 @@ class DatabaseMigrationAssessmentProviderTest {
 				value -> "\"" + value + "\"", "\n", value -> "", name -> true);
 		assertTrue(ddl.contains("--    Access GUID AutoNumber has no meaningful maximum; verify preserved values with row-count and duplicate checks."));
 		assertFalse(ddl.contains("Verify loaded Access AutoNumber maximum"));
+		assertTrue(ddl.contains("-- \"APP.TOKENS\".\"TOKEN_ID\": source NULLs not scanned; expected 0 for Access AutoNumber\n"
+				+ "-- Verify target (expected 0): SELECT COUNT(*) FROM \"APP\".\"TOKENS\" WHERE \"TOKEN_ID\" IS NULL;"));
 		assertTrue(ddl.contains("-- Verify target duplicates: SELECT \"TOKEN_ID\", COUNT(*) FROM \"APP\".\"TOKENS\" GROUP BY \"TOKEN_ID\" HAVING COUNT(*) > 1;"));
 		assertEquals(1, occurrences(ddl, "-- Verify target duplicates:"));
 		assertTrue(ddl.contains("Every generated duplicate query returns no rows"));
-		assertTrue(ddl.contains("Every mapped Access AutoNumber value is preserved"));
+		assertTrue(ddl.contains("Every mapped Access AutoNumber NULL count is 0, its value is preserved"));
+	}
+
+	@Test
+	void targetDdlRejectsTablesWithoutMappedColumns() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		schema.getTables().add(new Table("Empty"));
+		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "Empty");
+		final var mapping = new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(
+				new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "EMPTY_T", List.of())));
+		final var exception = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(new MigrationAssessmentSource(List.of(schema), EMPTY, false, true),
+						mapping, value -> "\"" + value + "\"", "\n"));
+		assertTrue(exception.getMessage().contains("at least one mapped column"));
+		assertTrue(exception.getMessage().contains("source.Empty"));
+	}
+
+	@Test
+	void targetDdlRejectsMissingAndDuplicateSourceTables() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("Present");
+		table.getColumns().add(new Column("ID"));
+		schema.getTables().add(table);
+		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
+		final var missingId = new MigrationAssessment.ObjectId(null, "source", "table", "Missing");
+		final var missing = new ResolvedMigrationTargetMapping.TableMapping(missingId, "APP", "MISSING_T",
+				List.of(column("source", "Missing", "ID", "ID")));
+		final var missingException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(missing)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(missingException.getMessage().contains("source table was not found: source.Missing"));
+
+		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "Present");
+		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "PRESENT_T",
+				List.of(column("source", "Present", "ID", "ID")));
+		final var duplicateException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped, mapped)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(duplicateException.getMessage().contains("duplicate source table mapping: source.Present"));
+	}
+
+	@Test
+	void targetDdlRejectsInvalidResolvedColumnMappings() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("Present");
+		table.getColumns().add(new Column("ID"));
+		table.getColumns().add(new Column("Code"));
+		schema.getTables().add(table);
+		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
+		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "Present");
+		final var missingColumn = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "PRESENT_T",
+				List.of(column("source", "Present", "Missing", "ID")));
+		final var missingException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(missingColumn)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(missingException.getMessage().contains("source column was not found: source.Present.Missing"));
+
+		final var duplicateTarget = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "PRESENT_T",
+				List.of(column("source", "Present", "ID", "VALUE"),
+						column("source", "Present", "Code", "value")));
+		final var duplicateException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(duplicateTarget)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(duplicateException.getMessage().contains("duplicate target column mapping: value"));
+
+		final var blankType = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "PRESENT_T", List.of(
+				new ResolvedMigrationTargetMapping.ColumnMapping(
+						new MigrationAssessment.ObjectId(null, "source", "column", "ID", "Present"),
+						"ID", " ", false, null)));
+		final var typeException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(blankType)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(typeException.getMessage().contains("target type must not be blank: source.Present.ID"));
+	}
+
+	@Test
+	void targetDdlRejectsInvalidAndDuplicateTargetTables() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var first = new Table("First");
+		first.getColumns().add(new Column("ID"));
+		final var second = new Table("Second");
+		second.getColumns().add(new Column("ID"));
+		schema.getTables().add(first);
+		schema.getTables().add(second);
+		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
+		final var firstId = new MigrationAssessment.ObjectId(null, "source", "table", "First");
+		final var blank = new ResolvedMigrationTargetMapping.TableMapping(firstId, "APP", " ",
+				List.of(column("source", "First", "ID", "ID")));
+		final var blankException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(blank)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(blankException.getMessage().contains("target table must not be blank: source.First"));
+
+		final var mappedFirst = new ResolvedMigrationTargetMapping.TableMapping(firstId, "APP", "SHARED",
+				List.of(column("source", "First", "ID", "ID")));
+		final var mappedSecond = new ResolvedMigrationTargetMapping.TableMapping(
+				new MigrationAssessment.ObjectId(null, "source", "table", "Second"), "app", "shared",
+				List.of(column("source", "Second", "ID", "ID")));
+		final var duplicateException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mappedFirst, mappedSecond)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(duplicateException.getMessage().contains("duplicate target table mapping: app.shared"));
+	}
+
+	@Test
+	void targetDdlRejectsUnsafeExecutableSqlFragments() {
+		final var schema = new Schema("source").setProductName("Microsoft Access");
+		final var table = new Table("Sample");
+		table.getColumns().add(new Column("ID"));
+		schema.getTables().add(table);
+		final var source = new MigrationAssessmentSource(List.of(schema), EMPTY, false, true);
+		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "Sample");
+		final var columnId = new MigrationAssessment.ObjectId(null, "source", "column", "ID", "Sample");
+		final var unsafeType = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "SAMPLE_T", List.of(
+				new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int; DROP TABLE APP.X", false, null)));
+		final var typeException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(unsafeType)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(typeException.getMessage().contains("target type must be a comment-free single-line SQL fragment"));
+
+		final var unsafeDefault = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "SAMPLE_T", List.of(
+				new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int", false, null,
+						"0 -- bypass", null)));
+		final var defaultException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(unsafeDefault)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(defaultException.getMessage().contains("target default expression must be a comment-free single-line SQL fragment"));
+
+		final var unsafeCheck = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "SAMPLE_T",
+				List.of("ID > 0\nDROP TABLE APP.X"), List.of(column("source", "Sample", "ID", "ID")));
+		final var checkException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(unsafeCheck)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(checkException.getMessage().contains("target CHECK expression must be a comment-free single-line SQL fragment"));
+
+		final var identityDefault = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "SAMPLE_T", List.of(
+				new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int", false, true, "0", null)));
+		final var identityDefaultException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(identityDefault)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(identityDefaultException.getMessage().contains("target default expression cannot be combined with identity"));
+
+		final var nullableIdentity = new ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "SAMPLE_T", List.of(
+				new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int", true, true, null, null)));
+		final var nullableIdentityException = assertThrows(IllegalArgumentException.class,
+				() -> MigrationTargetDdlGenerator.generate(source,
+						new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(nullableIdentity)),
+						value -> "\"" + value + "\"", "\n"));
+		assertTrue(nullableIdentityException.getMessage().contains("identity cannot be combined with nullable: true"));
 	}
 
 	private static ResolvedMigrationTargetMapping.ColumnMapping column(final String schema, final String table,

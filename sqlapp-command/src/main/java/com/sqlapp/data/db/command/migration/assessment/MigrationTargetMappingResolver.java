@@ -68,11 +68,16 @@ final class MigrationTargetMappingResolver {
 				if (configuredColumn.targetType() == null || configuredColumn.targetType().isBlank()) {
 					throw new CommandException("targetType is required for " + table.getName() + "." + column.getName());
 				}
+				final String targetType = sqlExpression(configuredColumn.targetType(), "targetType", table, column);
+				if (Boolean.TRUE.equals(configuredColumn.identity()) && Boolean.TRUE.equals(configuredColumn.nullable())) {
+					throw new CommandException("identity cannot be combined with nullable: true: "
+							+ table.getName() + "." + column.getName());
+				}
 				final String defaultExpression = defaultExpression(configuredColumn.defaultExpression(), table, column,
 						configuredColumn.identity());
 				columns.add(new ResolvedMigrationTargetMapping.ColumnMapping(
 						new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(), table.getName()),
-						targetColumn, configuredColumn.targetType().trim(), configuredColumn.nullable(),
+						targetColumn, targetType, configuredColumn.nullable(),
 						configuredColumn.identity(), defaultExpression, configuredColumn.conversion()));
 			}
 			if (columns.isEmpty()) { throw new CommandException("Mapping table must contain at least one column: " + table.getName()); }

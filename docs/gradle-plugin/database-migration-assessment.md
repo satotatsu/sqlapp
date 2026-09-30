@@ -253,7 +253,32 @@ same phase. Access GUID AutoNumber columns do not receive a numeric maximum
 query; the DDL states that their preserved values must instead be checked with
 row-count and duplicate verification. Every mapped Access AutoNumber column
 receives a duplicate query even when it is not part of an emitted primary or
-unique key; an equivalent key query is emitted only once.
+unique key; an equivalent key query is emitted only once. Its normal target
+NULL-count query is annotated with an expected result of zero, including when
+no target `NOT NULL` or primary-key constraint is emitted, so the DDL does not
+repeat the same query.
+Target DDL generation rejects a mapped table with no mapped columns instead of
+producing an unusable empty `CREATE TABLE` statement. The normal YAML resolver
+performs the same validation earlier with the source table name in its error.
+Direct DDL API calls also reject source table identities that are absent from
+the supplied Access Schema and duplicate mappings for the same source table;
+both errors identify the affected Access table.
+They likewise reject missing or duplicate source fields, case-insensitive
+duplicate target column names, and blank target column names or data types
+before emitting any DDL.
+Blank or control-character target table identities are also rejected. Mapping
+multiple Access tables to the same case-insensitive target schema and table is
+an error rather than producing duplicate `CREATE TABLE` statements.
+Executable target type, default and CHECK fragments must be nonblank,
+single-line and free of statement separators and SQL comments. This validation
+is applied while resolving YAML and again for direct resolved-mapping API calls
+before any DDL is returned.
+A target default expression cannot be combined with `identity: true`; this is
+enforced both while resolving YAML and by the shared DDL generator.
+Likewise, `identity: true` cannot be combined with `nullable: true`; choose a
+required target column or a non-identity key-generation design. Generated
+mapping templates set Access AutoNumber columns to `nullable: false` even when
+the Access metadata does not separately expose their required status.
 The end of phase 2 contains a completion gate: reconcile every generated target
 count and range query with its displayed Access baseline, obtain and approve
 baselines marked `not scanned` or `unavailable`, require every generated

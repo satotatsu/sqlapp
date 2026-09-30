@@ -45,6 +45,7 @@ class AssessDatabaseMigrationCommandTest {
 		command.run();
 		assertEquals(3, command.getReport().formatVersion());
 		assertEquals(4, command.getReport().targetMapping().tables().getFirst().columns().size());
+		assertEquals(false, command.getReport().targetMapping().tables().getFirst().columns().getFirst().nullable());
 		final Path ddl = directory.resolve("target.sql");
 		final Path ddlPhases = directory.resolve("target-phases");
 		command.setDdlOutputFile(ddl.toFile());
@@ -60,7 +61,7 @@ class AssessDatabaseMigrationCommandTest {
 		assertTrue(sql.contains("Preserve Access AutoNumber values with explicit inserts"));
 		assertTrue(sql.contains("verify that the Oracle identity generator starts above the loaded maximum"));
 		assertTrue(sql.contains("Verify loaded Access AutoNumber maximum: SELECT MAX(\"ID\") FROM \"Orders\";"));
-		assertTrue(sql.contains("Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready"));
+		assertTrue(sql.contains("Every mapped Access AutoNumber NULL count is 0, its value is preserved and the approved target key-generation strategy is ready"));
 		assertTrue(sql.contains("Source defaults are not copied automatically; only reviewed target defaults from the mapping are emitted"));
 		assertTrue(sql.contains("Nullable unique keys, conversion expressions and cascade rules are not included"));
 		assertTrue(Files.readString(ddlPhases.resolve("phase-1.sql")).contains("CREATE TABLE \"Orders\""));
@@ -203,6 +204,16 @@ class AssessDatabaseMigrationCommandTest {
 				.replace("NAME IS NOT NULL; DROP TABLE CUSTOMERS", "NAME IS NOT NULL")
 				.replace("targetTable: CUSTOMERS", "targetTable: \"CUSTOMERS\\nARCHIVE\""));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("targetTable"));
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+		Files.writeString(mapping, Files.readString(mapping)
+				.replace("targetTable: \"CUSTOMERS\\nARCHIVE\"", "targetTable: CUSTOMERS")
+				.replace("targetType: VARCHAR2(2 CHAR)", "targetType: \"VARCHAR2(2); DROP TABLE CUSTOMERS\""));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("targetType"));
+		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
+		Files.writeString(mapping, Files.readString(mapping)
+				.replace("targetType: \"VARCHAR2(2); DROP TABLE CUSTOMERS\"", "targetType: VARCHAR2(2 CHAR)")
+				.replace("nullable: false", "nullable: true\n        identity: true"));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("identity cannot be combined with nullable: true"));
 		assertEquals(json, Files.readString(command.getOutputFile().toPath()));
 	}
 

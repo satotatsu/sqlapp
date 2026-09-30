@@ -35,7 +35,7 @@ final class MigrationTargetMappingTemplateWriter {
 					final Map<String, Object> columnValue = new LinkedHashMap<>();
 					columnValue.put("sourceColumn", column.getName());
 					columnValue.put("targetType", provider.suggestTargetType(column, targetVersion));
-					columnValue.put("nullable", !column.isNotNull());
+					columnValue.put("nullable", column.isIdentity() ? false : !column.isNotNull());
 					if (column.isIdentity()) { columnValue.put("identity", true); }
 					columns.add(columnValue);
 				}

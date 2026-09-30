@@ -44,7 +44,23 @@ public final class MigrationTargetDdlGenerator {
 			for (final var table : schema.getTables()) { sourceTables.put(tableId(table), table); }
 		}
 		final var mappedTables = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
-		mapping.tables().forEach(table -> mappedTables.put(table.sourceTable(), table));
+		final var targetTables = new java.util.HashSet<String>();
+		mapping.tables().forEach(table -> {
+			final String sourceName = qualified(table.sourceTable().catalog(), table.sourceTable().schema(),
+					table.sourceTable().name());
+			if (!sourceTables.containsKey(table.sourceTable())) {
+				throw new IllegalArgumentException("Target DDL source table was not found: " + sourceName);
+			}
+			if (mappedTables.containsKey(table.sourceTable())) {
+				throw new IllegalArgumentException("Target DDL contains a duplicate source table mapping: " + sourceName);
+			}
+			if (table.columns().isEmpty()) {
+				throw new IllegalArgumentException("Target DDL requires at least one mapped column: " + sourceName);
+			}
+			validateTargetTable(table, sourceName, targetTables);
+			validateColumns(sourceTables.get(table.sourceTable()), table, sourceName);
+			mappedTables.put(table.sourceTable(), table);
+		});
 		final var names = new NameRegistry(usableSourceName);
 		final var omittedKeysAndIndexes = new java.util.ArrayList<String>();
 		final var omittedForeignKeys = new java.util.ArrayList<String>();
@@ -211,7 +227,7 @@ public final class MigrationTargetDdlGenerator {
 				omittedKeysAndIndexes.size(), omittedForeignKeys.size()))
 				.append("\n-- sqlapp:phase-2:begin\n-- Phase 2: Load data in the suggested order and run verification queries.\n")
 				.append(loadOrderComments(sourceTables, mapping, mappedTables, identityLoadGuidance, quote))
-				.append(rowCountBaselineComments(source, mapping, quote))
+				.append(rowCountBaselineComments(source, sourceTables, mapping, quote))
 				.append(integrityVerification)
 				.append(phaseTwoCompletionGateComments(sourceTables, mapping, hasIntegrityVerification))
 				.append("-- sqlapp:phase-2:end\n")
@@ -237,6 +253,84 @@ public final class MigrationTargetDdlGenerator {
 				.append(names.mappingComments())
 				.append(names.fallbackComments())
 				.append("-- sqlapp:appendix:end\n").toString();
+	}
+
+	private static void validateTargetTable(final ResolvedMigrationTargetMapping.TableMapping mapped,
+			final String sourceTableName, final java.util.Set<String> targetTables) {
+		if (mapped.targetTable() == null || mapped.targetTable().isBlank()) {
+			throw new IllegalArgumentException("Target DDL target table must not be blank: " + sourceTableName);
+		}
+		if (mapped.targetTable().codePoints().anyMatch(Character::isISOControl)
+				|| mapped.targetSchema() != null
+						&& mapped.targetSchema().codePoints().anyMatch(Character::isISOControl)) {
+			throw new IllegalArgumentException("Target DDL target table identity must not contain control characters: "
+					+ sourceTableName);
+		}
+		final String targetKey = (mapped.targetSchema() == null || mapped.targetSchema().isBlank()
+				? "" : key(mapped.targetSchema().trim())) + "." + key(mapped.targetTable().trim());
+		if (!targetTables.add(targetKey)) {
+			throw new IllegalArgumentException("Target DDL contains a duplicate target table mapping: "
+					+ qualified(mapped.targetSchema(), mapped.targetTable()));
+		}
+		for (final String expression : mapped.checkExpressions()) {
+			validateSqlFragment(expression, "target CHECK expression", sourceTableName);
+		}
+	}
+
+	private static void validateColumns(final Table sourceTable,
+			final ResolvedMigrationTargetMapping.TableMapping mapped, final String sourceTableName) {
+		final var sourceNames = new java.util.HashSet<String>();
+		final var targetNames = new java.util.HashSet<String>();
+		for (final var column : mapped.columns()) {
+			final var resolved = sourceColumn(sourceTable, column.sourceColumn().name());
+			final var expected = resolved == null ? null : new ObjectId(sourceTable.getCatalogName(),
+					sourceTable.getSchemaName(), "column", resolved.getName(), sourceTable.getName());
+			if (expected == null || !expected.equals(column.sourceColumn())) {
+				throw new IllegalArgumentException("Target DDL source column was not found: "
+						+ sourceTableName + "." + column.sourceColumn().name());
+			}
+			if (!sourceNames.add(key(resolved.getName()))) {
+				throw new IllegalArgumentException("Target DDL contains a duplicate source column mapping: "
+						+ sourceTableName + "." + resolved.getName());
+			}
+			if (column.targetColumn() == null || column.targetColumn().isBlank()) {
+				throw new IllegalArgumentException("Target DDL target column must not be blank: "
+						+ sourceTableName + "." + resolved.getName());
+			}
+			if (column.targetColumn().codePoints().anyMatch(Character::isISOControl)) {
+				throw new IllegalArgumentException("Target DDL target column must not contain control characters: "
+						+ sourceTableName + "." + resolved.getName());
+			}
+			if (!targetNames.add(key(column.targetColumn()))) {
+				throw new IllegalArgumentException("Target DDL contains a duplicate target column mapping: "
+						+ column.targetColumn());
+			}
+			if (column.targetType() == null || column.targetType().isBlank()) {
+				throw new IllegalArgumentException("Target DDL target type must not be blank: "
+						+ sourceTableName + "." + resolved.getName());
+			}
+			validateSqlFragment(column.targetType(), "target type", sourceTableName + "." + resolved.getName());
+			if (Boolean.TRUE.equals(column.identity()) && Boolean.TRUE.equals(column.nullable())) {
+				throw new IllegalArgumentException("Target DDL identity cannot be combined with nullable: true: "
+						+ sourceTableName + "." + resolved.getName());
+			}
+			if (column.defaultExpression() != null) {
+				if (Boolean.TRUE.equals(column.identity()) && !column.defaultExpression().isBlank()) {
+					throw new IllegalArgumentException("Target DDL target default expression cannot be combined with identity: "
+							+ sourceTableName + "." + resolved.getName());
+				}
+				validateSqlFragment(column.defaultExpression(), "target default expression",
+						sourceTableName + "." + resolved.getName());
+			}
+		}
+	}
+
+	private static void validateSqlFragment(final String value, final String property, final String sourceObject) {
+		if (value == null || value.isBlank() || value.indexOf(';') >= 0 || value.indexOf('\r') >= 0
+				|| value.indexOf('\n') >= 0 || value.contains("--") || value.contains("/*") || value.contains("*/")) {
+			throw new IllegalArgumentException("Target DDL " + property
+					+ " must be a comment-free single-line SQL fragment: " + sourceObject);
+		}
 	}
 
 	private static String phaseTwoCompletionGateComments(final Map<ObjectId, Table> sourceTables,
@@ -268,7 +362,7 @@ public final class MigrationTargetDdlGenerator {
 		return "\n-- Phase 2 completion gate (do not continue to Phase 3 until every applicable check passes):\n"
 				+ "-- - Every generated target count and range query matches its displayed Access baseline; obtain and approve any baseline marked not scanned or unavailable.\n"
 				+ (hasIntegrityVerification ? "-- - Every generated duplicate query returns no rows and every generated orphan count is 0.\n" : "")
-				+ (hasSourceIdentity ? "-- - Every mapped Access AutoNumber value is preserved and the approved target key-generation strategy is ready for new inserts.\n" : "")
+				+ (hasSourceIdentity ? "-- - Every mapped Access AutoNumber NULL count is 0, its value is preserved and the approved target key-generation strategy is ready for new inserts.\n" : "")
 				+ (hasTargetIdentity && !hasSourceIdentity ? "-- - Every newly introduced target identity generator or seed is ready for new inserts.\n" : "")
 				+ (hasDefaultDifference ? "-- - Every changed or omitted Access default produces the approved value for target-side inserts.\n" : "")
 				+ (hasConversion ? "-- - Every mapped conversion matches approved representative, boundary and NULL source values.\n" : "")
@@ -695,6 +789,7 @@ public final class MigrationTargetDdlGenerator {
 	}
 
 	private static String rowCountBaselineComments(final MigrationAssessmentSource source,
+			final Map<ObjectId, Table> sourceTables,
 			final ResolvedMigrationTargetMapping mapping, final Function<String, String> quote) {
 		final var counts = new HashMap<ObjectId, Long>();
 		if (source.dataProfile() != null) {
@@ -718,12 +813,16 @@ public final class MigrationTargetDdlGenerator {
 		for (final var table : mapping.tables()) {
 			for (final var column : table.columns()) {
 				final var profile = profiles.get(column.sourceColumn());
+				final var sourceColumn = sourceColumn(sourceTables.get(table.sourceTable()), column.sourceColumn().name());
+				final boolean autoNumber = sourceColumn != null && sourceColumn.isIdentity();
 				sql.append("-- ").append(commentName(table)).append('.').append(NameRegistry.commentValue(column.targetColumn()))
 						.append(": source NULLs ");
 				if (profile == null) { sql.append("not scanned"); }
 				else if (profile.nullCount() == null) { sql.append("unavailable"); }
 				else { sql.append(profile.nullCount()); }
-				sql.append('\n').append("-- Verify target: SELECT COUNT(*) FROM ").append(name(table, quote))
+				if (autoNumber) { sql.append("; expected 0 for Access AutoNumber"); }
+				sql.append('\n').append(autoNumber ? "-- Verify target (expected 0): SELECT COUNT(*) FROM "
+						: "-- Verify target: SELECT COUNT(*) FROM ").append(name(table, quote))
 						.append(" WHERE ").append(quote.apply(column.targetColumn())).append(" IS NULL;\n");
 			}
 		}
