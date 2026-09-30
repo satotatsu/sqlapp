@@ -33,12 +33,9 @@ final class MigrationTargetMappingTemplateWriter {
 				final var columns = new ArrayList<Map<String, Object>>();
 				for (final var column : table.getColumns()) {
 					final Map<String, Object> columnValue = new LinkedHashMap<>();
-					final String accessType = column.getSpecifics().get("access.sourceType", String.class);
-					final boolean targetIdentity = column.isIdentity() && !"GUID".equalsIgnoreCase(accessType);
 					columnValue.put("sourceColumn", column.getName());
 					columnValue.put("targetType", provider.suggestTargetType(column, targetVersion));
 					columnValue.put("nullable", column.isIdentity() ? false : !column.isNotNull());
-					if (targetIdentity) { columnValue.put("identity", true); }
 					columns.add(columnValue);
 				}
 				tableValue.put("columns", columns);

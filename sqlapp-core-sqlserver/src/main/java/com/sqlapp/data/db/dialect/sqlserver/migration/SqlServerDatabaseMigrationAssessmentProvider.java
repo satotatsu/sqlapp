@@ -31,15 +31,22 @@ public final class SqlServerDatabaseMigrationAssessmentProvider implements Datab
 		return com.sqlapp.data.schemas.migration.assessment.MigrationTargetDdlGenerator
 				.generate(source, mapping, SqlServerDatabaseMigrationAssessmentProvider::sqlServerName, "GO\n\n",
 						column -> " IDENTITY(1,1)", SqlServerDatabaseMigrationAssessmentProvider::usableObjectName,
-						table -> "Preserve Access AutoNumber values: execute SET IDENTITY_INSERT "
-								+ sqlServerTableName(table)
-								+ " ON before loading this table, OFF immediately afterward, then verify the identity seed.");
+						SqlServerDatabaseMigrationAssessmentProvider::identityLoadGuidance);
 	}
 
 	private static String sqlServerName(final String value) { return "[" + value.replace("]", "]]") + "]"; }
 	private static String sqlServerTableName(final ResolvedMigrationTargetMapping.TableMapping table) {
 		return (table.targetSchema() == null || table.targetSchema().isBlank() ? ""
 				: sqlServerName(table.targetSchema()) + ".") + sqlServerName(table.targetTable());
+	}
+	private static String identityLoadGuidance(final ResolvedMigrationTargetMapping.TableMapping table) {
+		final String name = sqlServerTableName(table);
+		return "Preserve Access AutoNumber values: execute SET IDENTITY_INSERT " + name
+				+ " ON before loading this table and OFF immediately afterward.\n"
+				+ "After comparing the loaded maximum below, inspect generator state: DBCC CHECKIDENT ("
+				+ name + ", NORESEED);\n"
+				+ "If its current identity is lower than the loaded maximum, align it: DBCC CHECKIDENT ("
+				+ name + ", RESEED);";
 	}
 	private static boolean usableObjectName(final String value) {
 		return value.codePointCount(0, value.length()) <= 128

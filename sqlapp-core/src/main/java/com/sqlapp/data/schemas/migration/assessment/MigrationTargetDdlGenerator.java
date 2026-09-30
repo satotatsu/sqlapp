@@ -919,7 +919,9 @@ public final class MigrationTargetDdlGenerator {
 				.anyMatch(column -> Boolean.TRUE.equals(column.identity()));
 		if (hasTargetIdentity) {
 			final String guidance = identityLoadGuidance.apply(table);
-			if (guidance != null && !guidance.isBlank()) { sql.append("--    ").append(guidance).append('\n'); }
+			if (guidance != null && !guidance.isBlank()) {
+				guidance.lines().forEach(line -> sql.append("--    ").append(line).append('\n'));
+			}
 		}
 		for (final var column : table.columns()) {
 			final var sourceColumn = sourceTable == null ? null
