@@ -325,7 +325,35 @@ SHA-256 of all five files and the assessment JSON that produced them, allowing a
 update, manual edit or mixture of outputs from different assessment runs before
 executing a phase. The directory and its fixed output names must not collide
 with the input, report, mapping, template or combined DDL paths.
-Before executing the files, verify the complete directory offline:
+For a quick internal-integrity check, only the generated directory is required:
+
+```groovy
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-target-phases')
+}
+```
+
+This minimum configuration checks the manifest, all five DDL hashes, phase
+markers and common provenance without reading a database. The assessment file,
+expected fingerprints, verification report and readiness gates are optional.
+Without `assessmentReportFile`, the verifier retains the assessment fingerprint
+recorded in the manifest as evidence but does not validate the referenced JSON
+file or apply assessment-based policies.
+Use two verification passes before executing the files. First, verify internal
+integrity and write a candidate evidence report without an approval gate:
+
+```groovy
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-target-phases')
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    verificationReportFile = layout.buildDirectory.file('reports/ddl-verification-candidate.json')
+}
+```
+
+Review that report together with the assessment, mapping and DDL. Its
+`assessmentReportFingerprint` and `manifestFingerprint` are the exact values to
+record in the approval system. After approval, configure a separate deployment
+verification using those recorded values:
 
 ```groovy
 tasks.named('verifyDatabaseMigrationDdlPhases') {
@@ -333,11 +361,16 @@ tasks.named('verifyDatabaseMigrationDdlPhases') {
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     expectedAssessmentReportFingerprint = 'sha256:...'
     expectedManifestFingerprint = 'sha256:...'
-	// Simple deployment gate; requires assessmentReportFile.
-	requireDeploymentReady = true
+    // Simple deployment gate; requires assessmentReportFile and both expected fingerprints.
+    requireDeploymentReady = true
     verificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
 }
 ```
+
+Do not derive the expected values from the files during the deployment run;
+that would confirm only self-consistency, not prior approval. A changed
+assessment, mapping, Access source, manifest or phase file requires a new
+candidate verification and approval.
 
 The verifier requires exactly the five DDL entries and one assessment-report
 fingerprint in the manifest, recalculates every DDL SHA-256, validates the
@@ -369,12 +402,41 @@ reports without that inventory remain verifiable and omit the value. The same
 report records `unmappedTables` and `unmappedColumnsInMappedTables` when those
 inventory values are available, even when the incomplete-mapping gate is off.
 It also records `mappingSemanticDifferences` and the assessment `status` when
-available.
+available. `verificationPolicies` lists the effective blocker, completeness,
+AutoNumber and semantic-difference checks applied to that successful run, so a
+CI result distinguishes integrity-only verification from deployment-readiness
+verification. `status: VERIFIED` means that every check configured for that
+invocation passed. It does not by itself mean that a reviewer approved the
+artifacts. An empty `verificationPolicies` list identifies the directory-only
+integrity check; `APPROVED_FINGERPRINTS` identifies a run that verified both
+supplied approval fingerprints.
 Verification does not open a database connection.
 Set `requireDeploymentReady` to `true` for the common deployment path. It
-combines the blocker, incomplete-mapping, unresolved-AutoNumber and mapping
-semantic-difference gates below. It defaults to `false` for compatibility and
+combines the blocker, incomplete-mapping and unresolved-AutoNumber gates below,
+and requires the assessment to have scanned
+the Access data, retained its aggregate `dataProfile` and collected its
+relationships. The current assessment status must be `REVIEW_REQUIRED`;
+`BLOCKED`, missing and unknown statuses are rejected. The mapped assessment
+must use `formatVersion=3`; the value is copied to `assessmentFormatVersion` in
+the verification evidence. `sourceProduct` must be `access`, and
+`targetProduct` must match the mapped and DDL target; both are retained in the
+verification evidence. It also requires both
+`expectedAssessmentReportFingerprint` and `expectedManifestFingerprint`, so the
+verified files are the artifacts that were approved. It defaults to `false` for compatibility and
 requires `assessmentReportFile`.
+Set `requireDataScan` alone to require `dataScanned=true` without enabling the
+other deployment-readiness gates. Successful verification reports retain the
+`dataScanned` value and include `DATA_SCAN` in `verificationPolicies` when this
+condition was enforced.
+Set `requireRelationshipsCollected` alone to require
+`relationshipsCollected=true` without the other readiness gates. Successful
+verification reports retain this value and record `RELATIONSHIPS_COLLECTED`
+when enforced. This ensures orphan-record checks had the source relationship
+metadata they need.
+Set `requireApprovedFingerprints` alone to require both approved SHA-256 values
+without enabling the data and mapping readiness gates. Successful reports add
+`APPROVED_FINGERPRINTS` to `verificationPolicies` when this condition is
+enforced.
 Set `failOnUnresolvedAutoNumberStrategies` to `true` to reject deployment
 verification while the assessment inventory still contains mapped Access
 AutoNumber columns whose target `identity` choice is `null`. Its default is
@@ -387,7 +449,10 @@ Set `failOnMappingSemanticDifferences` to `true` to require the
 `mappingSemanticDifferences` inventory count to be zero. Leave it disabled when
 reviewed Access-to-target changes such as NULL handling, defaults, validation
 expressions or calculated fields are intentional; their count remains in the
-verification report.
+verification report. `requireDeploymentReady` does not imply this zero-count
+gate because reviewed Access semantics such as cascades or `IgnoreNulls` can
+remain intentionally different; the approved assessment fingerprint binds
+those reviewed findings to the deployment.
 Set `failOnAssessmentBlockers` to `true` to reject an assessment whose status is
 `BLOCKED`. This covers blockers outside the three focused inventories, including
 data findings such as duplicate keys, orphan rows and observed target-capacity

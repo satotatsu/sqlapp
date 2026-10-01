@@ -19,6 +19,31 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 	@TempDir Path directory;
 
 	@Test
+	void verifiesInternalIntegrityWithDirectoryOnly() throws Exception {
+		final String provenance = "-- sqlapp sourceFingerprint: sha256:" + "1".repeat(64) + "\n"
+				+ "-- sqlapp mappingFingerprint: sha256:" + "2".repeat(64) + "\n"
+				+ "-- sqlapp target: sqlserver 2022\n";
+		final var manifest = new StringBuilder("# manifest\n# assessmentReport sha256:")
+				.append("3".repeat(64)).append('\n');
+		for (final String section : List.of("phase-1", "phase-2", "phase-3", "phase-4", "appendix")) {
+			final String name = section + ".sql";
+			final String content = provenance + "-- sqlapp:" + section + ":begin\n-- content\n-- sqlapp:"
+					+ section + ":end\n";
+			Files.writeString(directory.resolve(name), content);
+			manifest.append(sha256(content)).append("  ").append(name).append('\n');
+		}
+		Files.writeString(directory.resolve("manifest.sha256"), manifest);
+
+		final var command = new VerifyDatabaseMigrationDdlPhasesCommand();
+		command.setDirectory(directory.toFile());
+		assertDoesNotThrow(command::run);
+		assertEquals("sqlserver", command.getVerificationReport().targetDatabase());
+		assertEquals("sha256:" + "3".repeat(64), command.getVerificationReport().assessmentReportFingerprint());
+		assertTrue(command.getVerificationReport().verificationPolicies().isEmpty());
+		assertNull(command.getVerificationReport().assessmentStatus());
+	}
+
+	@Test
 	void verifiesCompleteArtifactsAndRejectsChangesAndInvalidManifests() throws Exception {
 		final String provenance = "-- sqlapp sourceFingerprint: sha256:" + "1".repeat(64) + "\n"
 				+ "-- sqlapp mappingFingerprint: sha256:" + "2".repeat(64) + "\n"
@@ -32,7 +57,7 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		}
 		final Path report = directory.resolve("assessment.json");
 		Files.writeString(report, """
-				{"sourceFingerprint":"sha256:%s","mappingFingerprint":"sha256:%s","targetVersion":"19c","status":"BLOCKED",
+				{"sourceFingerprint":"sha256:%s","mappingFingerprint":"sha256:%s","targetVersion":"19c","status":"BLOCKED","dataScanned":false,"relationshipsCollected":false,
 				 "targetMapping":{"targetDatabase":"oracle"},
 				 "assessment":{"inventory":[
 				   {"type":"unresolvedAutoNumberStrategies","count":1},
@@ -63,6 +88,9 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertEquals(3, command.getVerificationReport().unmappedColumnsInMappedTables());
 		assertEquals(4, command.getVerificationReport().mappingSemanticDifferences());
 		assertEquals("BLOCKED", command.getVerificationReport().assessmentStatus());
+		assertEquals(false, command.getVerificationReport().dataScanned());
+		assertEquals(false, command.getVerificationReport().relationshipsCollected());
+		assertTrue(command.getVerificationReport().verificationPolicies().isEmpty());
 		assertEquals(5, command.getVerificationReport().ddlFingerprints().size());
 		assertTrue(Files.readString(verificationReport).contains("\"unresolvedAutoNumberStrategies\" : 1"));
 		assertTrue(Files.readString(verificationReport).contains("\"unmappedTables\" : 2"));
@@ -94,11 +122,30 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertEquals(successfulVerification, Files.readString(verificationReport));
 		assertNull(command.getVerificationReport());
 		command.setFailOnAssessmentBlockers(false);
+		command.setRequireDataScan(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("dataScanned=true"));
+		assertEquals(successfulVerification, Files.readString(verificationReport));
+		assertNull(command.getVerificationReport());
+		command.setRequireDataScan(false);
+		command.setRequireRelationshipsCollected(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("relationshipsCollected=true"));
+		assertEquals(successfulVerification, Files.readString(verificationReport));
+		assertNull(command.getVerificationReport());
+		command.setRequireRelationshipsCollected(false);
+		final String approvedManifestFingerprint = command.getExpectedManifestFingerprint();
+		command.setExpectedManifestFingerprint(null);
 		command.setRequireDeploymentReady(true);
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("status is BLOCKED"));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("requires expectedAssessmentReportFingerprint"));
 		assertEquals(successfulVerification, Files.readString(verificationReport));
 		assertNull(command.getVerificationReport());
 		command.setRequireDeploymentReady(false);
+		command.setExpectedManifestFingerprint(approvedManifestFingerprint);
+		final String approvedAssessmentFingerprint = command.getExpectedAssessmentReportFingerprint();
+		command.setExpectedAssessmentReportFingerprint(null);
+		command.setRequireApprovedFingerprints(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("requires expectedAssessmentReportFingerprint"));
+		command.setRequireApprovedFingerprints(false);
+		command.setExpectedAssessmentReportFingerprint(approvedAssessmentFingerprint);
 		command.setExpectedAssessmentReportFingerprint("sha256:" + "4".repeat(64));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("expectedAssessmentReportFingerprint"));
 		assertEquals(successfulVerification, Files.readString(verificationReport));
@@ -158,9 +205,21 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
 				.contains("failOnAssessmentBlockers requires assessmentReportFile"));
 		command.setFailOnAssessmentBlockers(false);
+		command.setRequireDataScan(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("requireDataScan requires assessmentReportFile"));
+		command.setRequireDataScan(false);
+		command.setRequireRelationshipsCollected(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("requireRelationshipsCollected requires assessmentReportFile"));
+		command.setRequireRelationshipsCollected(false);
 		command.setRequireDeploymentReady(true);
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
 				.contains("requireDeploymentReady requires assessmentReportFile"));
+		command.setRequireDeploymentReady(false);
+		command.setRequireApprovedFingerprints(true);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("requireApprovedFingerprints requires assessmentReportFile"));
 	}
 
 	@Test
@@ -193,25 +252,98 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 				+ "-- sqlapp target: sqlserver 2022\n";
 		final Path report = directory.resolveSibling("deployment-ready-assessment.json");
 		Files.writeString(report, """
-				{"sourceFingerprint":"sha256:%s","mappingFingerprint":"sha256:%s","targetVersion":"2022",
-				 "status":"REVIEW_REQUIRED","targetMapping":{"targetDatabase":"sqlserver"},
+				{"formatVersion":3,"sourceFingerprint":"sha256:%s","mappingFingerprint":"sha256:%s",
+				 "sourceProduct":"access","targetProduct":"sqlserver","targetVersion":"2022",
+				 "status":"REVIEW_REQUIRED","dataScanned":true,"relationshipsCollected":true,"dataProfile":{},
+				 "targetMapping":{"targetDatabase":"sqlserver"},
 				 "assessment":{"inventory":[
 				   {"type":"unresolvedAutoNumberStrategies","count":0},
 				   {"type":"unmappedTables","count":0},
 				   {"type":"unmappedColumnsInMappedTables","count":0},
-				   {"type":"mappingSemanticDifferences","count":0}]}}
+				   {"type":"mappingSemanticDifferences","count":4}]}}
 				""".formatted("1".repeat(64), "2".repeat(64)));
 		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
 		final var command = new VerifyDatabaseMigrationDdlPhasesCommand();
 		command.setDirectory(directory.toFile());
 		command.setAssessmentReportFile(report.toFile());
+		command.setExpectedAssessmentReportFingerprint(AssessMigrationCommand.fingerprint(report.toFile()));
+		command.setExpectedManifestFingerprint("sha256:" + sha256(Files.readString(directory.resolve("manifest.sha256"))));
 		command.setRequireDeploymentReady(true);
 		assertDoesNotThrow(command::run);
 		assertEquals("REVIEW_REQUIRED", command.getVerificationReport().assessmentStatus());
 		assertEquals(0, command.getVerificationReport().unresolvedAutoNumberStrategies());
 		assertEquals(0, command.getVerificationReport().unmappedTables());
 		assertEquals(0, command.getVerificationReport().unmappedColumnsInMappedTables());
-		assertEquals(0, command.getVerificationReport().mappingSemanticDifferences());
+		assertEquals(4, command.getVerificationReport().mappingSemanticDifferences());
+		assertEquals(true, command.getVerificationReport().dataScanned());
+		assertEquals(true, command.getVerificationReport().relationshipsCollected());
+		assertEquals(3, command.getVerificationReport().assessmentFormatVersion());
+		assertEquals("access", command.getVerificationReport().sourceProduct());
+		assertEquals("sqlserver", command.getVerificationReport().targetProduct());
+		assertEquals(List.of("ASSESSMENT_BLOCKERS", "INCOMPLETE_MAPPING", "UNRESOLVED_AUTONUMBER",
+				"DATA_SCAN", "RELATIONSHIPS_COLLECTED", "APPROVED_FINGERPRINTS"),
+				command.getVerificationReport().verificationPolicies());
+	}
+
+	@Test
+	void deploymentReadyGateRejectsMissingProfileAndUnknownStatus() throws Exception {
+		final String provenance = "-- sqlapp sourceFingerprint: sha256:" + "1".repeat(64) + "\n"
+				+ "-- sqlapp mappingFingerprint: sha256:" + "2".repeat(64) + "\n"
+				+ "-- sqlapp target: oracle 19c\n";
+		final Path report = directory.resolveSibling("invalid-readiness-assessment.json");
+		final String template = """
+				{"formatVersion":3,"sourceFingerprint":"sha256:%s","mappingFingerprint":"sha256:%s",
+				 "sourceProduct":"access","targetProduct":"oracle","targetVersion":"19c",
+				 "status":"%s","dataScanned":true,"relationshipsCollected":true,%s
+				 "targetMapping":{"targetDatabase":"oracle"},
+				 "assessment":{"inventory":[
+				   {"type":"unresolvedAutoNumberStrategies","count":0},
+				   {"type":"unmappedTables","count":0},
+				   {"type":"unmappedColumnsInMappedTables","count":0},
+				   {"type":"mappingSemanticDifferences","count":0}]}}
+				""";
+		Files.writeString(report, template.formatted("1".repeat(64), "2".repeat(64), "REVIEW_REQUIRED", ""));
+		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
+		var command = deploymentReadyCommand(report);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("must contain dataProfile"));
+
+		Files.writeString(report, template.formatted("1".repeat(64), "2".repeat(64), "FUTURE_STATUS",
+				"\"dataProfile\":{},"));
+		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
+		command = deploymentReadyCommand(report);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("unsupported status: FUTURE_STATUS"));
+
+		Files.writeString(report, template.formatted("1".repeat(64), "2".repeat(64), "REVIEW_REQUIRED",
+				"\"dataProfile\":{},").replace("\"formatVersion\":3", "\"formatVersion\":2"));
+		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
+		command = deploymentReadyCommand(report);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("formatVersion must be 3"));
+
+		final String validReport = template.formatted("1".repeat(64), "2".repeat(64), "REVIEW_REQUIRED",
+				"\"dataProfile\":{},");
+		Files.writeString(report, validReport.replace("\"sourceProduct\":\"access\"",
+				"\"sourceProduct\":\"postgresql\""));
+		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
+		command = deploymentReadyCommand(report);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("sourceProduct must be access"));
+
+		Files.writeString(report, validReport.replace("\"targetProduct\":\"oracle\"",
+				"\"targetProduct\":\"sqlserver\""));
+		writeArtifact(provenance, AssessMigrationCommand.fingerprint(report.toFile()));
+		command = deploymentReadyCommand(report);
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("targetProduct must match"));
+	}
+
+	private VerifyDatabaseMigrationDdlPhasesCommand deploymentReadyCommand(final Path report) throws Exception {
+		final var command = new VerifyDatabaseMigrationDdlPhasesCommand();
+		command.setDirectory(directory.toFile());
+		command.setAssessmentReportFile(report.toFile());
+		command.setExpectedAssessmentReportFingerprint(AssessMigrationCommand.fingerprint(report.toFile()));
+		command.setExpectedManifestFingerprint("sha256:" + sha256(Files.readString(directory.resolve("manifest.sha256"))));
+		command.setRequireDeploymentReady(true);
+		return command;
 	}
 
 	@Test

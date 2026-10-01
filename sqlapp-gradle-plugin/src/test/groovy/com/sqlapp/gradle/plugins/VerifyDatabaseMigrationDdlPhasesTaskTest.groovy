@@ -7,6 +7,37 @@ import org.junit.jupiter.api.Test
 
 class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 	@Test
+	void mapsDirectoryOnlyWithoutEnablingOptionalPolicies() {
+		def project = createProject(testProjectDir)
+		project.plugins.apply(DbPlugin)
+		def task = project.tasks.named('verifyDatabaseMigrationDdlPhases',
+				VerifyDatabaseMigrationDdlPhasesTask).get()
+		def directory = new File(testProjectDir, 'ddl-phases')
+		directory.mkdirs()
+		task.directory.set(directory)
+
+		def command = task.createCommand()
+		task.beforeRun(command)
+		assertEquals(directory, command.directory)
+		assertNull(command.assessmentReportFile)
+		assertNull(command.verificationReportFile)
+		assertNull(command.expectedManifestFingerprint)
+		assertNull(command.expectedAssessmentReportFingerprint)
+		assertNull(command.expectedSourceFingerprint)
+		assertNull(command.expectedMappingFingerprint)
+		assertNull(command.expectedTargetDatabase)
+		assertNull(command.expectedTargetVersion)
+		assertFalse(command.failOnUnresolvedAutoNumberStrategies)
+		assertFalse(command.failOnIncompleteMapping)
+		assertFalse(command.failOnMappingSemanticDifferences)
+		assertFalse(command.failOnAssessmentBlockers)
+		assertFalse(command.requireDeploymentReady)
+		assertFalse(command.requireDataScan)
+		assertFalse(command.requireRelationshipsCollected)
+		assertFalse(command.requireApprovedFingerprints)
+	}
+
+	@Test
 	void registersAndMapsDirectory() {
 		def project = createProject(testProjectDir)
 		project.plugins.apply(DbPlugin)
@@ -18,6 +49,9 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		assertFalse(task.failOnMappingSemanticDifferences.get())
 		assertFalse(task.failOnAssessmentBlockers.get())
 		assertFalse(task.requireDeploymentReady.get())
+		assertFalse(task.requireDataScan.get())
+		assertFalse(task.requireRelationshipsCollected.get())
+		assertFalse(task.requireApprovedFingerprints.get())
 		def directory = new File(testProjectDir, 'ddl-phases')
 		directory.mkdirs()
 		def report = new File(testProjectDir, 'assessment.json')
@@ -37,6 +71,9 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		task.failOnMappingSemanticDifferences.set(true)
 		task.failOnAssessmentBlockers.set(true)
 		task.requireDeploymentReady.set(true)
+		task.requireDataScan.set(true)
+		task.requireRelationshipsCollected.set(true)
+		task.requireApprovedFingerprints.set(true)
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals(directory, command.directory)
@@ -53,5 +90,8 @@ class VerifyDatabaseMigrationDdlPhasesTaskTest extends AbstractTaskTest {
 		assertTrue(command.failOnMappingSemanticDifferences)
 		assertTrue(command.failOnAssessmentBlockers)
 		assertTrue(command.requireDeploymentReady)
+		assertTrue(command.requireDataScan)
+		assertTrue(command.requireRelationshipsCollected)
+		assertTrue(command.requireApprovedFingerprints)
 	}
 }

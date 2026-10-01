@@ -117,6 +117,49 @@ The earlier `assessAccessOracleMigration` task and
 `AssessAccessOracleMigrationCommand` remain Oracle-preset compatibility aliases
 of the same generic implementation.
 
+## Deployment-ready DDL verification
+
+During mapping work, the generated files can first be checked with only their
+directory:
+
+```groovy
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-oracle-phases')
+}
+```
+
+This checks the phase files and manifest without requiring fingerprints or an
+assessment report. Add the approval settings below only for the deployment
+gate.
+
+For a reviewed Access mapping, enable `scanData`, generate the phase directory,
+and preserve the assessment JSON used to create it:
+
+```groovy
+tasks.named('assessDatabaseMigration') {
+    scanData = true
+    mappingFile = layout.projectDirectory.file('migration/access-oracle.yaml')
+    ddlPhaseOutputDirectory = layout.buildDirectory.dir('reports/access-oracle-phases')
+}
+
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-oracle-phases')
+    assessmentReportFile = layout.buildDirectory.file('reports/access-oracle.json')
+    expectedAssessmentReportFingerprint = 'sha256:<approved-assessment-sha256>'
+    expectedManifestFingerprint = 'sha256:<approved-manifest-sha256>'
+    requireDeploymentReady = true
+    verificationReportFile = layout.buildDirectory.file('reports/access-oracle-ddl-verification.json')
+}
+```
+
+The readiness gate requires a complete mapping, resolved Access AutoNumber
+choices, no blockers, a completed Access data scan, collected relationships
+and both approval fingerprints. Reviewed semantic differences remain visible in
+the evidence and are bound by the approved assessment fingerprint. It
+does not connect to Oracle or execute the generated DDL. Use the
+[generic DDL verification reference](database-migration-assessment.md) for the
+individual gates when an approved exception is needed.
+
 Type references: [Oracle 19c types](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Data-Types.html),
 [Oracle NULL behavior](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Nulls.html),
 [Oracle 23 SQL BOOLEAN](https://docs.oracle.com/en/database/oracle/oracle-database/23/nfcoa/oracle-database-23c-new-features-guide.pdf).

@@ -45,6 +45,9 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 	private boolean failOnMappingSemanticDifferences;
 	private boolean failOnAssessmentBlockers;
 	private boolean requireDeploymentReady;
+	private boolean requireDataScan;
+	private boolean requireRelationshipsCollected;
+	private boolean requireApprovedFingerprints;
 
 	@Override
 	protected void doRun() {
@@ -66,17 +69,18 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 				throw new CommandException("verificationReportFile must not overwrite assessmentReportFile");
 			}
 		}
+		final String assessmentReportPolicy = assessmentReportPolicy();
+		if (assessmentReportPolicy != null && assessmentReportFile == null) {
+			throw new CommandException(assessmentReportPolicy + " requires assessmentReportFile");
+		}
 		if (expectedAssessmentReportFingerprint != null && assessmentReportFile == null) {
 			throw new CommandException("expectedAssessmentReportFingerprint requires assessmentReportFile");
 		}
-		if ((requireDeploymentReady || failOnUnresolvedAutoNumberStrategies || failOnIncompleteMapping || failOnMappingSemanticDifferences
-				|| failOnAssessmentBlockers)
-				&& assessmentReportFile == null) {
-			throw new CommandException((requireDeploymentReady ? "requireDeploymentReady" : failOnUnresolvedAutoNumberStrategies
-					? "failOnUnresolvedAutoNumberStrategies" : failOnIncompleteMapping
-							? "failOnIncompleteMapping" : failOnMappingSemanticDifferences
-									? "failOnMappingSemanticDifferences" : "failOnAssessmentBlockers")
-					+ " requires assessmentReportFile");
+		if (requireDeploymentReady || requireApprovedFingerprints) {
+			if (expectedAssessmentReportFingerprint == null || expectedManifestFingerprint == null) {
+				throw new CommandException((requireDeploymentReady ? "requireDeploymentReady" : "requireApprovedFingerprints")
+						+ " requires expectedAssessmentReportFingerprint and expectedManifestFingerprint");
+			}
 		}
 		validateFingerprint("expectedSourceFingerprint", expectedSourceFingerprint);
 		validateFingerprint("expectedMappingFingerprint", expectedMappingFingerprint);
@@ -172,6 +176,11 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 					assessmentInventory.unmappedTables(), assessmentInventory.unmappedColumnsInMappedTables(),
 					assessmentInventory.mappingSemanticDifferences(),
 					assessmentInventory.assessmentStatus(),
+					assessmentInventory.dataScanned(),
+					assessmentInventory.relationshipsCollected(),
+					assessmentInventory.assessmentFormatVersion(),
+					assessmentInventory.sourceProduct(), assessmentInventory.targetProduct(),
+					verificationPolicies(),
 					java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries)));
 			if (verificationReportFile != null) {
 				final var converter = new JsonConverter();
@@ -185,6 +194,18 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 			throw new CommandException("DDL phase verification failed: " + e.getMessage(), e);
 		}
 		info("Database migration DDL phases verified: ", directory.getAbsolutePath());
+	}
+
+	private String assessmentReportPolicy() {
+		if (requireDeploymentReady) { return "requireDeploymentReady"; }
+		if (requireApprovedFingerprints) { return "requireApprovedFingerprints"; }
+		if (requireDataScan) { return "requireDataScan"; }
+		if (requireRelationshipsCollected) { return "requireRelationshipsCollected"; }
+		if (failOnUnresolvedAutoNumberStrategies) { return "failOnUnresolvedAutoNumberStrategies"; }
+		if (failOnIncompleteMapping) { return "failOnIncompleteMapping"; }
+		if (failOnMappingSemanticDifferences) { return "failOnMappingSemanticDifferences"; }
+		if (failOnAssessmentBlockers) { return "failOnAssessmentBlockers"; }
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -207,17 +228,53 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		final String source = stringValue(report.get("sourceFingerprint"), "sourceFingerprint");
 		final String mapping = stringValue(report.get("mappingFingerprint"), "mappingFingerprint");
 		final String version = stringValue(report.get("targetVersion"), "targetVersion");
+		final String sourceProduct = report.get("sourceProduct") instanceof String product && !product.isBlank()
+				? product : null;
+		final String targetProduct = report.get("targetProduct") instanceof String product && !product.isBlank()
+				? product : null;
 		if (!(report.get("targetMapping") instanceof java.util.Map<?, ?> targetMapping)) {
 			throw new CommandException("assessmentReportFile must contain targetMapping");
 		}
 		final String database = stringValue(targetMapping.get("targetDatabase"), "targetMapping.targetDatabase");
+		if (requireDeploymentReady) {
+			if (!"access".equalsIgnoreCase(sourceProduct)) {
+				throw new CommandException("assessmentReportFile sourceProduct must be access for requireDeploymentReady");
+			}
+			if (targetProduct == null || !targetProduct.equalsIgnoreCase(database)) {
+				throw new CommandException("assessmentReportFile targetProduct must match targetMapping.targetDatabase");
+			}
+		}
 		final String assessmentStatus = report.get("status") instanceof String status && !status.isBlank() ? status : null;
+		final Integer assessmentFormatVersion = integerValue(report.get("formatVersion"));
+		if (requireDeploymentReady && !Integer.valueOf(3).equals(assessmentFormatVersion)) {
+			throw new CommandException("assessmentReportFile formatVersion must be 3 for requireDeploymentReady");
+		}
+		final Boolean dataScanned = report.get("dataScanned") instanceof Boolean scanned ? scanned : null;
+		final Boolean relationshipsCollected = report.get("relationshipsCollected") instanceof Boolean collected
+				? collected : null;
+		if (requireDeploymentReady || requireDataScan) {
+			if (!Boolean.TRUE.equals(dataScanned)) {
+				throw new CommandException("assessmentReportFile must have dataScanned=true; rerun assessment with scanData enabled");
+			}
+			if (!(report.get("dataProfile") instanceof java.util.Map<?, ?>)) {
+				throw new CommandException("assessmentReportFile must contain dataProfile when dataScanned=true");
+			}
+		}
+		if (requireDeploymentReady || requireRelationshipsCollected) {
+			if (!Boolean.TRUE.equals(relationshipsCollected)) {
+				throw new CommandException("assessmentReportFile must have relationshipsCollected=true; "
+						+ "rerun assessment with an Access source that exposes relationships");
+			}
+		}
 		if (requireDeploymentReady || failOnAssessmentBlockers) {
 			if (assessmentStatus == null) {
-				throw new CommandException("assessmentReportFile must contain status for failOnAssessmentBlockers");
+				throw new CommandException("assessmentReportFile must contain status when blocker verification is enabled");
 			}
 			if ("BLOCKED".equalsIgnoreCase(assessmentStatus)) {
 				throw new CommandException("assessmentReportFile status is BLOCKED; resolve its migration blockers before deployment");
+			}
+			if (!"REVIEW_REQUIRED".equalsIgnoreCase(assessmentStatus)) {
+				throw new CommandException("assessmentReportFile contains unsupported status: " + assessmentStatus);
 			}
 		}
 		final Integer unresolved = inventoryCount(report, "unresolvedAutoNumberStrategies",
@@ -227,7 +284,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 		final Integer unmappedColumns = inventoryCount(report, "unmappedColumnsInMappedTables",
 				requireDeploymentReady || failOnIncompleteMapping);
 		final Integer semanticDifferences = inventoryCount(report, "mappingSemanticDifferences",
-				requireDeploymentReady || failOnMappingSemanticDifferences);
+				failOnMappingSemanticDifferences);
 		if (requireDeploymentReady || failOnUnresolvedAutoNumberStrategies) {
 			if (unresolved > 0) {
 				throw new CommandException("assessmentReportFile contains " + unresolved
@@ -241,7 +298,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 						+ " unmapped columns in mapped tables");
 			}
 		}
-		if ((requireDeploymentReady || failOnMappingSemanticDifferences) && semanticDifferences > 0) {
+		if (failOnMappingSemanticDifferences && semanticDifferences > 0) {
 			throw new CommandException("assessmentReportFile contains " + semanticDifferences
 					+ " target mapping semantic differences requiring explicit review");
 		}
@@ -253,7 +310,16 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 				|| !identity.targetVersion().equalsIgnoreCase(version)) {
 			throw new CommandException("DDL phases do not match assessmentReportFile");
 		}
-		return new AssessmentInventory(unresolved, unmappedTables, unmappedColumns, semanticDifferences, assessmentStatus);
+		return new AssessmentInventory(unresolved, unmappedTables, unmappedColumns, semanticDifferences,
+				assessmentStatus, dataScanned, relationshipsCollected, assessmentFormatVersion,
+				sourceProduct, targetProduct);
+	}
+
+	private static Integer integerValue(final Object value) {
+		if (!(value instanceof Number number) || number.intValue() < 0 || number.doubleValue() != number.intValue()) {
+			return null;
+		}
+		return number.intValue();
 	}
 
 	private static Integer inventoryCount(final java.util.Map<?, ?> report, final String type, final boolean required) {
@@ -340,10 +406,30 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 	}
 
 	private record AssessmentInventory(Integer unresolvedAutoNumberStrategies, Integer unmappedTables,
-			Integer unmappedColumnsInMappedTables, Integer mappingSemanticDifferences, String assessmentStatus) {
-		private static final AssessmentInventory EMPTY = new AssessmentInventory(null, null, null, null, null);
+			Integer unmappedColumnsInMappedTables, Integer mappingSemanticDifferences, String assessmentStatus,
+			Boolean dataScanned, Boolean relationshipsCollected, Integer assessmentFormatVersion,
+			String sourceProduct, String targetProduct) {
+		private static final AssessmentInventory EMPTY = new AssessmentInventory(
+				null, null, null, null, null, null, null, null, null, null);
 	}
 
+	private java.util.List<String> verificationPolicies() {
+		final var policies = new java.util.ArrayList<String>();
+		if (requireDeploymentReady || failOnAssessmentBlockers) { policies.add("ASSESSMENT_BLOCKERS"); }
+		if (requireDeploymentReady || failOnIncompleteMapping) { policies.add("INCOMPLETE_MAPPING"); }
+		if (requireDeploymentReady || failOnUnresolvedAutoNumberStrategies) { policies.add("UNRESOLVED_AUTONUMBER"); }
+		if (failOnMappingSemanticDifferences) { policies.add("MAPPING_SEMANTIC_DIFFERENCES"); }
+		if (requireDeploymentReady || requireDataScan) { policies.add("DATA_SCAN"); }
+		if (requireDeploymentReady || requireRelationshipsCollected) { policies.add("RELATIONSHIPS_COLLECTED"); }
+		if (requireDeploymentReady || requireApprovedFingerprints) { policies.add("APPROVED_FINGERPRINTS"); }
+		return java.util.List.copyOf(policies);
+	}
+
+	/**
+	 * Verification evidence. {@code VERIFIED} means that every configured check
+	 * passed; approval is asserted only when {@code APPROVED_FINGERPRINTS} is
+	 * present in {@code verificationPolicies}.
+	 */
 	public record VerificationReport(int formatVersion, String status, String manifestFingerprint,
 			String assessmentReportFingerprint,
 			String sourceFingerprint, String mappingFingerprint, String targetDatabase, String targetVersion,
@@ -357,13 +443,25 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 			Integer mappingSemanticDifferences,
 			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 			String assessmentStatus,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			Boolean dataScanned,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			Boolean relationshipsCollected,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			Integer assessmentFormatVersion,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			String sourceProduct,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+			String targetProduct,
+			java.util.List<String> verificationPolicies,
 			java.util.Map<String, String> ddlFingerprints) {
 		public VerificationReport(final int formatVersion, final String status, final String manifestFingerprint,
 				final String assessmentReportFingerprint, final String sourceFingerprint, final String mappingFingerprint,
 				final String targetDatabase, final String targetVersion, final Integer unresolvedAutoNumberStrategies,
 				final java.util.Map<String, String> ddlFingerprints) {
 			this(formatVersion, status, manifestFingerprint, assessmentReportFingerprint, sourceFingerprint,
-					mappingFingerprint, targetDatabase, targetVersion, unresolvedAutoNumberStrategies, null, null, null, null,
+					mappingFingerprint, targetDatabase, targetVersion, unresolvedAutoNumberStrategies, null, null, null, null, null, null, null, null, null,
+					java.util.List.of(),
 					ddlFingerprints);
 		}
 		public VerificationReport(final int formatVersion, final String status, final String manifestFingerprint,
@@ -371,7 +469,8 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 				final String targetDatabase, final String targetVersion,
 				final java.util.Map<String, String> ddlFingerprints) {
 			this(formatVersion, status, manifestFingerprint, assessmentReportFingerprint, sourceFingerprint,
-					mappingFingerprint, targetDatabase, targetVersion, null, null, null, null, null, ddlFingerprints);
+					mappingFingerprint, targetDatabase, targetVersion, null, null, null, null, null, null, null, null, null, null,
+					java.util.List.of(), ddlFingerprints);
 		}
 	}
 

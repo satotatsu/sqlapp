@@ -99,6 +99,50 @@ support lifecycle or an upgrade recommendation. The existing DialectResolver,
 metadata readers and SQL factories are unchanged. Other versions (including
 2025) and Azure SQL require explicit additional coverage and are rejected.
 
+## Deployment-ready DDL verification
+
+During mapping work, the generated files can first be checked with only their
+directory:
+
+```groovy
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-sqlserver-phases')
+}
+```
+
+This checks the phase files and manifest without requiring fingerprints or an
+assessment report. Add the approval settings below only for the deployment
+gate.
+
+After reviewing the Access-to-SQL Server mapping, generate phase-separated DDL
+from a data-scanned assessment and bind deployment verification to the approved
+artifacts:
+
+```groovy
+tasks.named('assessDatabaseMigration') {
+    scanData = true
+    mappingFile = layout.projectDirectory.file('migration/access-sqlserver.yaml')
+    ddlPhaseOutputDirectory = layout.buildDirectory.dir('reports/access-sqlserver-phases')
+}
+
+tasks.named('verifyDatabaseMigrationDdlPhases') {
+    directory = layout.buildDirectory.dir('reports/access-sqlserver-phases')
+    assessmentReportFile = layout.buildDirectory.file('reports/access-sqlserver.json')
+    expectedAssessmentReportFingerprint = 'sha256:<approved-assessment-sha256>'
+    expectedManifestFingerprint = 'sha256:<approved-manifest-sha256>'
+    requireDeploymentReady = true
+    verificationReportFile = layout.buildDirectory.file('reports/access-sqlserver-ddl-verification.json')
+}
+```
+
+The gate requires a complete mapping, resolved Access AutoNumber choices, no
+blockers, an Access data scan, collected relationships and both approval
+fingerprints. Reviewed semantic differences remain in the evidence and are
+bound by the approved assessment fingerprint. Verification is offline and does
+not execute `IDENTITY_INSERT`, `DBCC CHECKIDENT` or any other SQL Server command.
+See the [generic DDL verification reference](database-migration-assessment.md)
+for the individual exception gates and verification-report fields.
+
 References checked for these rules:
 [Access/SQL Server types](https://support.microsoft.com/en-us/access/comparing-access-and-sql-server-data-types),
 [Access incompatibilities](https://learn.microsoft.com/en-us/sql/ssma/access/incompatible-access-features-accesstosql),

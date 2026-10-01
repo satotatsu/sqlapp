@@ -22,6 +22,9 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		getFailOnMappingSemanticDifferences().convention(false);
 		getFailOnAssessmentBlockers().convention(false);
 		getRequireDeploymentReady().convention(false);
+		getRequireDataScan().convention(false);
+		getRequireRelationshipsCollected().convention(false);
+		getRequireApprovedFingerprints().convention(false);
 	}
 
 	@InputDirectory
@@ -54,6 +57,12 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 	public abstract Property<Boolean> getFailOnAssessmentBlockers();
 	@Input
 	public abstract Property<Boolean> getRequireDeploymentReady();
+	@Input
+	public abstract Property<Boolean> getRequireDataScan();
+	@Input
+	public abstract Property<Boolean> getRequireRelationshipsCollected();
+	@Input
+	public abstract Property<Boolean> getRequireApprovedFingerprints();
 
 	@Override
 	protected VerifyDatabaseMigrationDdlPhasesCommand createCommand() {
@@ -80,5 +89,8 @@ public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		command.setFailOnMappingSemanticDifferences(getFailOnMappingSemanticDifferences().get());
 		command.setFailOnAssessmentBlockers(getFailOnAssessmentBlockers().get());
 		command.setRequireDeploymentReady(getRequireDeploymentReady().get());
+		command.setRequireDataScan(getRequireDataScan().get());
+		command.setRequireRelationshipsCollected(getRequireRelationshipsCollected().get());
+		command.setRequireApprovedFingerprints(getRequireApprovedFingerprints().get());
 	}
 }
