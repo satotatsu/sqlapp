@@ -511,6 +511,28 @@ format 6 expose the same `provenance` object, allowing an audit to connect the
 reviewed inputs, executed plan, progress and verification outcome. Readers
 continue to accept operational report format 2 and verification report format
 5; those older reports have no provenance field.
+
+After the load, `verifyBulkMigrationEvidence` performs the corresponding
+offline audit:
+
+```groovy
+tasks.named('verifyBulkMigrationEvidence') {
+    operationalReportFile = layout.buildDirectory.file('reports/access-load-operations.json')
+    verificationReportFile = layout.buildDirectory.file('reports/access-load-verification.json')
+    configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+}
+```
+
+It requires a completed job, matching migrated data, the same plan fingerprint
+and identical provenance in both reports. Supplied source artifacts are hashed
+again and compared with that provenance. The three source files are optional;
+the two reports are required. Provenance is required by default because it is
+the link to the reviewed inputs. Set `requireProvenance = false` only to inspect
+older or programmatically generated reports; `requireSuccessfulExecution` and
+`requireMatchingData` can likewise be relaxed for failure investigation. The
+task is file-only and never opens a database connection.
 Generation requires a format 3 Access assessment with no blockers, no unmapped
 tables or columns, and no unresolved AutoNumber strategy. The job generator
 also recomputes the supplied Schema XML SHA-256 when the assessment contains a

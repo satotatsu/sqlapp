@@ -251,24 +251,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 
 	private static void validateApprovalArtifact(final File file, final String expectedFingerprint,
 			final String fileProperty, final String provenanceProperty) {
-		if (file == null) {
-			return;
-		}
-		if (expectedFingerprint == null) {
-			throw new CommandException(fileProperty + " requires provenance." + provenanceProperty
-					+ " in configurationFile.");
-		}
-		try {
-			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(file);
-			if (!expectedFingerprint.equals(actual)) {
-				throw new CommandException(fileProperty + " fingerprint does not match provenance."
-						+ provenanceProperty + ".");
-			}
-		} catch (final CommandException e) {
-			throw e;
-		} catch (final Exception e) {
-			throw new CommandException("Could not fingerprint " + fileProperty + ": " + e.getMessage(), e);
-		}
+		BulkMigrationArtifactProvenanceVerifier.verify(file, expectedFingerprint, fileProperty, provenanceProperty);
 	}
 
 	static BulkMigrationJobVerificationResult verifyWithIsolation(final BulkMigrationJobPlan plan,
