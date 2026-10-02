@@ -5,6 +5,7 @@ import org.gradle.api.Action;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
@@ -39,6 +40,20 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getConfigurationFile();
 
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedConfigurationFingerprint();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getAssessmentReportFile();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getDdlVerificationReportFile();
+
 	@Nested
 	public abstract DataSourceExtension getSourceDataSource();
 
@@ -65,6 +80,15 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		if (getConfigurationFile().isPresent()) {
 			command.setConfigurationFile(getConfigurationFile().get().getAsFile());
 			command.setSourceDataSource(getSourceDataSource().createDataSource());
+		}
+		if (getExpectedConfigurationFingerprint().isPresent()) {
+			command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().get());
+		}
+		if (getAssessmentReportFile().isPresent()) {
+			command.setAssessmentReportFile(getAssessmentReportFile().get().getAsFile());
+		}
+		if (getDdlVerificationReportFile().isPresent()) {
+			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
 		}
 		if (getListener().isPresent()) {
 			command.setListener(getListener().get());

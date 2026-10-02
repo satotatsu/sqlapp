@@ -7,8 +7,17 @@ import java.util.Objects;
 
 /** Stable JSON summary of post-migration JDBC verification. */
 public record BulkMigrationVerificationReport(int formatVersion, Instant generatedAt, String planFingerprint,
-		String isolation, boolean match, long expectedRows, long actualRows, long mismatchedTasks, List<Task> tasks) {
-	public static final int CURRENT_FORMAT_VERSION = 5;
+		String isolation, boolean match, long expectedRows, long actualRows, long mismatchedTasks, List<Task> tasks,
+		BulkMigrationArtifactProvenance provenance) {
+	public static final int CURRENT_FORMAT_VERSION = 6;
+	public static final int MIN_SUPPORTED_FORMAT_VERSION = 5;
+
+	public BulkMigrationVerificationReport(final int formatVersion, final Instant generatedAt,
+			final String planFingerprint, final String isolation, final boolean match, final long expectedRows,
+			final long actualRows, final long mismatchedTasks, final List<Task> tasks) {
+		this(formatVersion, generatedAt, planFingerprint, isolation, match, expectedRows, actualRows, mismatchedTasks,
+				tasks, null);
+	}
 
 	public BulkMigrationVerificationReport {
 		tasks = List.copyOf(Objects.requireNonNull(tasks, "tasks"));

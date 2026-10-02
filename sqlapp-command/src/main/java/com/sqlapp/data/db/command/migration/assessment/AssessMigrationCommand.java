@@ -3,10 +3,8 @@ package com.sqlapp.data.db.command.migration.assessment;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
@@ -18,6 +16,7 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentProvider;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.MessageDigests;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -148,14 +147,6 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 	}
 
 	static String fingerprint(final File file) throws Exception {
-		final var digest = MessageDigest.getInstance("SHA-256");
-		try (final var stream = Files.newInputStream(file.toPath())) {
-			final byte[] buffer = new byte[8192];
-			int count;
-			while ((count = stream.read(buffer)) != -1) {
-				digest.update(buffer, 0, count);
-			}
-		}
-		return "sha256:" + HexFormat.of().formatHex(digest.digest());
+		return "sha256:" + MessageDigests.SHA256.checksumAsString(file);
 	}
 }

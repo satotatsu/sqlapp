@@ -45,6 +45,10 @@ for `com.sqlapp.db`. The focused guides are:
   extension.
 - [Normalization and legacy migration](gradle-plugin/normalization-and-legacy-migration.md):
   reviewable normalization and legacy-system extraction/load workflows.
+- [Database migration assessment](gradle-plugin/database-migration-assessment.md):
+  Access source diagnosis, optional data checks, target mapping and DDL
+  verification for [Oracle](gradle-plugin/access-oracle-migration-assessment.md)
+  or [SQL Server](gradle-plugin/access-sqlserver-migration-assessment.md).
 - [Troubleshooting](gradle-plugin/troubleshooting.md): task discovery,
   runtime classpath, dialect selection, DataSource files, paths, and outputs.
 

@@ -5,7 +5,10 @@
 `assessDatabaseMigration` is the common entry point for offline migration
 diagnosis. Specify a source file and an explicit target database and version.
 The source inventory and the target compatibility rules are discovered through
-ServiceLoader from the runtime classpath. No DDL/DML is generated or executed.
+ServiceLoader from the runtime classpath. The minimum configuration writes only
+the assessment report. A reviewed mapping can optionally produce DDL preview
+files, but the task never executes DDL or DML and never connects to the target
+database.
 
 ## Supported targets
 
@@ -409,8 +412,124 @@ verification. `status: VERIFIED` means that every check configured for that
 invocation passed. It does not by itself mean that a reviewer approved the
 artifacts. An empty `verificationPolicies` list identifies the directory-only
 integrity check; `APPROVED_FINGERPRINTS` identifies a run that verified both
-supplied approval fingerprints.
+supplied approval fingerprints. `DEPLOYMENT_READY` identifies the composite
+gate, including its assessment format, Access source and matching target-product
+checks; the component policies are also listed.
 Verification does not open a database connection.
+
+## Generate an initial data-load job
+
+After the mapped assessment is reviewed, generate a YAML configuration for the
+existing `executeBulkMigrationJob` task:
+
+```groovy
+tasks.named('generateAccessBulkMigrationJobConfiguration') {
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    schemaFile = layout.buildDirectory.file('schema/access.xml')
+    outputFile = layout.buildDirectory.file('reports/access-load.yaml')
+}
+```
+
+The generated job enables post-load row-count and ordered chunk-hash
+verification by default, fails the job on a mismatch, and writes
+`<job-name>-verification.json` beside the job YAML. Set
+`verificationReportFile` to store that evidence elsewhere, or set
+`verification = false` only when verification will be performed separately.
+It also writes task and chunk progress, completion and failure details to
+`<job-name>-operations.json`. Set `operationalReportFile` to change that path,
+or set `operationalReport = false` when another operational reporting listener
+is configured.
+
+The generated job uses resumable 10,000-row `INSERT` chunks and preserves
+Access AutoNumber values based on the source Schema XML, including mappings
+that implement future values with a target sequence rather than an identity
+column. `chunkSize`, `resume` and `jobId` are optional.
+Each task carries the assessment source fingerprint and resolved mapping
+fingerprint as its source and target checkpoint identities. A resumed job is
+therefore rejected when its captured Access source or reviewed mapping has
+changed.
+Task IDs use the qualified Access table name, for example
+`access:Sales.Customers`, so operational and verification reports identify the
+original Access object without relying on generated sequence numbers.
+The durable `migrationId` is namespaced as `<jobId>:<qualified Access table>`
+so different explicitly named jobs do not share checkpoint progress in the
+same target checkpoint table. Set a stable, unique `jobId` when a target
+database hosts more than one Access migration.
+The resolved Access primary-key columns are written to each task's
+`keysetColumns` in declared order, making the resume key reviewable without
+adding user configuration.
+The generator also writes the loadable, non-computed Access columns to
+`verificationColumns`. This makes the exact ordered chunk-hash comparison scope
+visible in the YAML; hidden and formula columns are excluded consistently with
+the bulk writer.
+`checkpointMode` defaults to `DATABASE`, which commits each data chunk and its
+checkpoint atomically on the target connection. Set it to `FILE` only when the
+selected target bulk provider cannot participate in that transaction. The
+default file directory is `<job-name>-checkpoints`; `checkpointDirectory` can
+override it. `CUSTOM` is available only through the programmatic bulk API.
+Set `leaseOwnerId` to a stable worker or deployment-runner ID to add a target
+database lease and reject concurrent execution of the same job and plan. The
+lease is optional because an honest owner ID cannot be inferred from the
+offline files. Its default duration is 300 seconds and can be changed with
+`leaseDurationSeconds`; the executor renews it while the job is active.
+For an approval-controlled pipeline, set
+`expectedAssessmentReportFingerprint` to the lowercase `sha256:...` value of
+the approved assessment JSON. The generator then rejects a changed report
+before parsing or producing the job. This gate is optional for the simple
+interactive workflow.
+Set `ddlVerificationReportFile` to the format 2 JSON evidence produced by
+`verifyDatabaseMigrationDdlPhases` when data loading must wait for approved DDL.
+The generator requires `VERIFIED`, the `DEPLOYMENT_READY` policy, and exact
+assessment-report, source, mapping, target-product and target-version
+provenance. The gate is optional for workflows that provision the target by a
+separate controlled process.
+Set `expectedDdlVerificationReportFingerprint` to the approved lowercase
+`sha256:...` value when the verification report itself is an approved artifact.
+The generator checks the complete file before parsing it, so replacing the DDL
+evidence requires a new approval. This option requires
+`ddlVerificationReportFile` and remains optional for the simple workflow.
+The generated YAML records the assessment-report fingerprint and, when the DDL
+gate is used, the DDL-verification-report fingerprint under `provenance`. These
+values make the reviewed inputs traceable without making either approval gate
+mandatory at execution time.
+After reviewing the generated YAML, deployment automation can set
+`executeBulkMigrationJob.expectedConfigurationFingerprint` to its approved
+lowercase `sha256:...` value. The executor verifies the entire configuration
+file before parsing it or opening the source connection. This final gate is
+optional for interactive runs.
+Deployment automation can also set `assessmentReportFile` and
+`ddlVerificationReportFile` on `executeBulkMigrationJob`. When either file is
+present, the executor recomputes its SHA-256 and requires an exact match with
+the corresponding value under the YAML `provenance` object before moving any
+data. Both inputs are optional, independently selectable approval gates; an
+ordinary interactive run still needs only the generated YAML and its Schema
+XML.
+For declarative jobs, the executor carries the configuration fingerprint and
+the optional assessment and DDL-verification fingerprints into both generated
+JSON artifacts. Operational report format 3 and post-load verification report
+format 6 expose the same `provenance` object, allowing an audit to connect the
+reviewed inputs, executed plan, progress and verification outcome. Readers
+continue to accept operational report format 2 and verification report format
+5; those older reports have no provenance field.
+Generation requires a format 3 Access assessment with no blockers, no unmapped
+tables or columns, and no unresolved AutoNumber strategy. The job generator
+also recomputes the supplied Schema XML SHA-256 when the assessment contains a
+source fingerprint and rejects a different source file. The report target
+product and version must match the resolved mapping target, and its migration
+method must remain `LOGICAL_MIGRATION`. The generated YAML retains that value
+as `schemaFingerprint`, so `executeBulkMigrationJob` repeats the check before
+resolving a plan. Existing handwritten bulk YAML remains compatible because
+`schemaFingerprint` is optional. The current bulk
+executor can load this generated configuration only when source and target
+schema, table and column names are unchanged and no mapping conversion is
+configured. Every mapped table and column must match the supplied Schema XML,
+and each table must have a primary key for resumable keyset reads; the
+generator also requires every primary-key column to resolve and be `NOT NULL`,
+and rejects other mappings explicitly. Type conversion
+performed by the target JDBC driver still requires non-production validation.
+Configure the Access source and target data sources separately on
+`executeBulkMigrationJob`, then pass this file as its `configurationFile`.
+
 Set `requireDeploymentReady` to `true` for the common deployment path. It
 combines the blocker, incomplete-mapping and unresolved-AutoNumber gates below,
 and requires the assessment to have scanned

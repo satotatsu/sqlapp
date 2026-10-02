@@ -415,6 +415,7 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 
 	private java.util.List<String> verificationPolicies() {
 		final var policies = new java.util.ArrayList<String>();
+		if (requireDeploymentReady) { policies.add("DEPLOYMENT_READY"); }
 		if (requireDeploymentReady || failOnAssessmentBlockers) { policies.add("ASSESSMENT_BLOCKERS"); }
 		if (requireDeploymentReady || failOnIncompleteMapping) { policies.add("INCOMPLETE_MAPPING"); }
 		if (requireDeploymentReady || failOnUnresolvedAutoNumberStrategies) { policies.add("UNRESOLVED_AUTONUMBER"); }
@@ -428,7 +429,8 @@ public class VerifyDatabaseMigrationDdlPhasesCommand extends AbstractCommand {
 	/**
 	 * Verification evidence. {@code VERIFIED} means that every configured check
 	 * passed; approval is asserted only when {@code APPROVED_FINGERPRINTS} is
-	 * present in {@code verificationPolicies}.
+	 * present in {@code verificationPolicies}, while {@code DEPLOYMENT_READY}
+	 * identifies the composite deployment gate.
 	 */
 	public record VerificationReport(int formatVersion, String status, String manifestFingerprint,
 			String assessmentReportFingerprint,

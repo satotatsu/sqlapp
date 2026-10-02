@@ -34,6 +34,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 	private final BulkMigrationOperationalReportIO reportIO;
 	private final BulkMigrationOperationalReportFailurePolicy failurePolicy;
 	private final Consumer<RuntimeException> failureConsumer;
+	private final BulkMigrationArtifactProvenance provenance;
 	private volatile RuntimeException lastFailure;
 	private volatile BulkMigrationOperationalReport.Execution latestExecution;
 	private volatile String leaseAcquisitionId;
@@ -56,8 +57,17 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer) {
+		this(plan, targetFile, maintenanceSupplier, progressSupplier, failurePolicy, failureConsumer, null);
+	}
+
+	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
+			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
+			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
+			final Consumer<RuntimeException> failureConsumer,
+			final BulkMigrationArtifactProvenance provenance) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier, () -> Map.of(), failurePolicy, failureConsumer,
-				new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO());
+				new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO(), provenance);
 	}
 
 	public BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
@@ -67,7 +77,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier, progressSnapshotsSupplier, failurePolicy,
-				failureConsumer, new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO());
+				failureConsumer, new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO(), null);
 	}
 
 	BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
@@ -77,6 +87,17 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer, final BulkMigrationOperationalReportBuilder builder,
 			final BulkMigrationOperationalReportIO reportIO) {
+		this(plan, targetFile, maintenanceSupplier, progressSupplier, progressSnapshotsSupplier, failurePolicy,
+				failureConsumer, builder, reportIO, null);
+	}
+
+	BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,
+			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
+			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
+			final Supplier<Map<String, BulkMigrationProgressSnapshot>> progressSnapshotsSupplier,
+			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
+			final Consumer<RuntimeException> failureConsumer, final BulkMigrationOperationalReportBuilder builder,
+			final BulkMigrationOperationalReportIO reportIO, final BulkMigrationArtifactProvenance provenance) {
 		this.plan = Objects.requireNonNull(plan, "plan");
 		this.targetFile = Objects.requireNonNull(targetFile, "targetFile");
 		this.maintenanceSupplier = maintenanceSupplier == null ? () -> null : maintenanceSupplier;
@@ -87,6 +108,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		} : failureConsumer;
 		this.builder = Objects.requireNonNull(builder, "builder");
 		this.reportIO = Objects.requireNonNull(reportIO, "reportIO");
+		this.provenance = provenance;
 	}
 
 	@Override
@@ -237,7 +259,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 		try {
 			final var status = BulkMigrationJobStatusInspector.inspect(plan);
 			final var report = builder.build(plan, status, maintenanceSupplier.get(), progressSupplier.get(),
-					progressSnapshotsSupplier.get(), latestExecution);
+					progressSnapshotsSupplier.get(), latestExecution, provenance);
 			reportIO.write(targetFile, report);
 			return report;
 		} catch (SQLException e) {

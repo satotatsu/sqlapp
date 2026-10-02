@@ -15,8 +15,18 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 public record BulkMigrationOperationalReport(int formatVersion, Instant generatedAt, String jobId,
 		String planFingerprint, boolean compatible, long processedRows, long completedTasks, int totalTasks,
 		List<Task> tasks, List<Operation> operations, Maintenance maintenance, Progress progress,
-		List<Progress> progressByMigration, Execution execution) {
-	public static final int CURRENT_FORMAT_VERSION = 2;
+		List<Progress> progressByMigration, Execution execution, BulkMigrationArtifactProvenance provenance) {
+	public static final int CURRENT_FORMAT_VERSION = 3;
+	public static final int MIN_SUPPORTED_FORMAT_VERSION = 2;
+
+	public BulkMigrationOperationalReport(final int formatVersion, final Instant generatedAt, final String jobId,
+			final String planFingerprint, final boolean compatible, final long processedRows,
+			final long completedTasks, final int totalTasks, final List<Task> tasks, final List<Operation> operations,
+			final Maintenance maintenance, final Progress progress, final List<Progress> progressByMigration,
+			final Execution execution) {
+		this(formatVersion, generatedAt, jobId, planFingerprint, compatible, processedRows, completedTasks, totalTasks,
+				tasks, operations, maintenance, progress, progressByMigration, execution, null);
+	}
 
 	public BulkMigrationOperationalReport {
 		tasks = List.copyOf(Objects.requireNonNull(tasks, "tasks"));

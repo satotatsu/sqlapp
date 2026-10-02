@@ -46,11 +46,39 @@ Migration commands use focused subpackages under
 - `migration.environment` for capturing and comparing migration environments;
 - `migration.bulk` for bulk data migration;
 - `migration.snapshot` for Type 2 snapshot execution;
-- `migration.legacy` for legacy hierarchy, mapping, and loader generation; and
+- `migration.legacy` for legacy hierarchy, mapping, and loader generation;
+- `migration.assessment` for offline source assessment, target mapping and DDL
+  artifact verification; and
 - `migration.verification` for data, transformation, and cutover checks.
 
 `migration.internal` contains shared implementation helpers and is not a
 supported application API.
+
+## Verify migration DDL without a database
+
+`VerifyDatabaseMigrationDdlPhasesCommand` needs only the directory generated
+by an assessment command for its simplest integrity check:
+
+```java
+import java.io.File;
+
+import com.sqlapp.data.db.command.migration.assessment.VerifyDatabaseMigrationDdlPhasesCommand;
+
+VerifyDatabaseMigrationDdlPhasesCommand command =
+        new VerifyDatabaseMigrationDdlPhasesCommand();
+command.setDirectory(new File("build/reports/access-target-phases"));
+command.run();
+
+var evidence = command.getVerificationReport();
+```
+
+This verifies the manifest, five DDL checksums, phase markers and common
+provenance. It does not open a database. Assessment reports, expected
+fingerprints and readiness policies are optional setters. For deployment,
+`setRequireDeploymentReady(true)` provides the high-level gate after setting
+the assessment report and two approved fingerprints. See
+[Database migration assessment](gradle-plugin/database-migration-assessment.md)
+for the full two-pass approval flow.
 
 ## Export database metadata to Schema XML
 
@@ -191,6 +219,7 @@ files; that file-loading convenience belongs to the Gradle
 | Convert files | `ConvertDataCommand` | Reads and writes files; may remove originals when configured |
 | Execute SQL files | `SqlExecuteCommand` | Executes SQL and may change database state |
 | Versioned migration | `MigrationCommand` | Executes migration SQL and updates migration history |
+| Verify migration DDL | `VerifyDatabaseMigrationDdlPhasesCommand` | File-only integrity check with optional assessment and approval policies |
 | Normalize Schema XML | normalization command classes | Writes transformed XML, plans, and optional mappings |
 | Bulk migration | bulk/migration command classes | Reads and changes database data and operational state |
 

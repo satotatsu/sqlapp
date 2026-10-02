@@ -57,6 +57,12 @@ public final class BulkMigrationVerificationReportIO {
 
 	public void write(final Path file, final String planFingerprint, final BulkMigrationVerificationIsolation isolation,
 			final int maxReportedMismatches, final BulkMigrationJobVerificationResult result) {
+		write(file, planFingerprint, isolation, maxReportedMismatches, result, null);
+	}
+
+	public void write(final Path file, final String planFingerprint, final BulkMigrationVerificationIsolation isolation,
+			final int maxReportedMismatches, final BulkMigrationJobVerificationResult result,
+			final BulkMigrationArtifactProvenance provenance) {
 		Objects.requireNonNull(isolation, "isolation");
 		Objects.requireNonNull(result, "result");
 		if (result.getPlanFingerprint() != null && !result.getPlanFingerprint().equals(planFingerprint)) {
@@ -82,7 +88,7 @@ public final class BulkMigrationVerificationReportIO {
 		write(file,
 				new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
 						Instant.now(), planFingerprint, isolation.name(), result.isMatch(), result.getExpectedRows(),
-						result.getActualRows(), result.getMismatchedTasks(), tasks));
+						result.getActualRows(), result.getMismatchedTasks(), tasks, provenance));
 	}
 
 	public void write(final Path file, final BulkMigrationVerificationReport report) {
@@ -101,7 +107,8 @@ public final class BulkMigrationVerificationReportIO {
 		if (report == null) {
 			throw new CommandException("Bulk migration verification report must not be null");
 		}
-		if (report.formatVersion() != BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION) {
+		if (report.formatVersion() < BulkMigrationVerificationReport.MIN_SUPPORTED_FORMAT_VERSION
+				|| report.formatVersion() > BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION) {
 			throw new CommandException(
 					"Unsupported bulk migration verification report format: " + report.formatVersion());
 		}

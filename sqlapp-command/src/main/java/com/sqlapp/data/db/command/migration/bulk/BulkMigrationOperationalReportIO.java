@@ -88,7 +88,8 @@ public final class BulkMigrationOperationalReportIO {
 		if (report == null) {
 			throw new CommandException("Bulk migration report must not be null");
 		}
-		if (report.formatVersion() != BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION) {
+		if (report.formatVersion() < BulkMigrationOperationalReport.MIN_SUPPORTED_FORMAT_VERSION
+				|| report.formatVersion() > BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION) {
 			throw new CommandException("Unsupported bulk migration report formatVersion: " + report.formatVersion());
 		}
 		if (report.generatedAt() == null || report.jobId() == null || report.jobId().isBlank()

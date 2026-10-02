@@ -2,7 +2,7 @@
 
 The main Gradle plugin guides use Groovy DSL because the companion example
 project uses `build.gradle`. This page shows the equivalent Kotlin DSL syntax
-for the common Schema XML and HTML workflow.
+for common Schema XML, HTML and Access migration verification workflows.
 
 sqlapp task properties use Gradle's lazy `Property`, `ListProperty`,
 `DirectoryProperty`, and `RegularFileProperty` APIs. In `build.gradle.kts`, set
@@ -110,6 +110,58 @@ Gradle does not infer the task dependency from matching file paths. Keep the
 explicit `dependsOn` when the XML must be refreshed before documentation is
 generated. For reviewed offline XML, omit the dependency and point
 `targetFile` to that saved file.
+
+## Verify Access migration DDL
+
+The minimum Kotlin DSL configuration for generated Access migration phases
+sets only the directory:
+
+```kotlin
+import com.sqlapp.gradle.plugins.VerifyDatabaseMigrationDdlPhasesTask
+
+tasks.named<VerifyDatabaseMigrationDdlPhasesTask>("verifyDatabaseMigrationDdlPhases") {
+    directory.set(layout.buildDirectory.dir("reports/access-target-phases"))
+}
+```
+
+This performs the offline manifest, checksum, marker and provenance checks.
+Assessment and approval settings are optional. After review, enable the
+composite deployment gate and supply the two independently recorded approval
+fingerprints:
+
+```kotlin
+tasks.named<VerifyDatabaseMigrationDdlPhasesTask>("verifyDatabaseMigrationDdlPhases") {
+    directory.set(layout.buildDirectory.dir("reports/access-target-phases"))
+    assessmentReportFile.set(layout.buildDirectory.file("reports/migration.json"))
+    expectedAssessmentReportFingerprint.set("sha256:...")
+    expectedManifestFingerprint.set("sha256:...")
+    requireDeploymentReady.set(true)
+    verificationReportFile.set(layout.buildDirectory.file("reports/ddl-verification.json"))
+}
+```
+
+See [Database migration assessment](database-migration-assessment.md) for
+Access-to-Oracle and Access-to-SQL Server generation, review and approval
+steps.
+
+The initial-load job generator also has a concise Kotlin DSL entry point:
+
+```kotlin
+import com.sqlapp.gradle.plugins.GenerateAccessBulkMigrationJobConfigurationTask
+
+tasks.named<GenerateAccessBulkMigrationJobConfigurationTask>(
+    "generateAccessBulkMigrationJobConfiguration"
+) {
+    assessmentReportFile.set(layout.buildDirectory.file("reports/migration.json"))
+    schemaFile.set(layout.buildDirectory.file("schema/access.xml"))
+    outputFile.set(layout.buildDirectory.file("reports/access-load.yaml"))
+}
+```
+
+Approval-controlled runs can additionally set `ddlVerificationReportFile`,
+`expectedAssessmentReportFingerprint`, and
+`expectedDdlVerificationReportFingerprint`. All three remain optional for the
+simple workflow.
 
 ## Configure list and map properties
 

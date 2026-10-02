@@ -143,6 +143,49 @@ not execute `IDENTITY_INSERT`, `DBCC CHECKIDENT` or any other SQL Server command
 See the [generic DDL verification reference](database-migration-assessment.md)
 for the individual exception gates and verification-report fields.
 
+## Initial Access data load
+
+For a complete mapping that keeps schema, table and column names unchanged and
+uses no conversion expressions, generate an initial-load job for the existing
+bulk migration task:
+
+```groovy
+tasks.named('generateAccessBulkMigrationJobConfiguration') {
+    assessmentReportFile = layout.buildDirectory.file('reports/access-sqlserver.json')
+    schemaFile = layout.buildDirectory.file('schema/access.xml')
+    outputFile = layout.buildDirectory.file('reports/access-sqlserver-load.yaml')
+}
+```
+
+For an approval-controlled deployment, also bind generation to the approved
+assessment and deployment-ready DDL verification evidence:
+
+```groovy
+tasks.named('generateAccessBulkMigrationJobConfiguration') {
+    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    expectedAssessmentReportFingerprint = 'sha256:<approved-assessment-sha256>'
+    expectedDdlVerificationReportFingerprint = 'sha256:<approved-ddl-verification-sha256>'
+}
+```
+
+These fingerprints are optional. Keep the first configuration for the simple
+review workflow; use the additional properties when the files are approved
+artifacts in CI or deployment automation.
+
+Review the YAML, create the SQL Server objects from the approved DDL, then
+supply it to `executeBulkMigrationJob.configurationFile` with separately
+configured Access source and SQL Server target data sources. The generated job
+uses resumable `INSERT` chunks and preserves existing Access AutoNumber values
+from the source Schema XML. Generation never connects to SQL
+Server. Post-load count and ordered chunk-hash verification is enabled by
+default and writes JSON evidence; a separate operational JSON report records
+progress and failures. Resume checkpoints are bound to the captured Access
+source and reviewed mapping fingerprints. Task IDs retain the qualified Access
+table name, while checkpoint IDs also include `jobId`. Identifier renames and conversion expressions are
+rejected until the declarative bulk executor can apply them explicitly. The
+supplied Schema XML is also checked against the assessment source fingerprint
+when present.
+
 References checked for these rules:
 [Access/SQL Server types](https://support.microsoft.com/en-us/access/comparing-access-and-sql-server-data-types),
 [Access incompatibilities](https://learn.microsoft.com/en-us/sql/ssma/access/incompatible-access-features-accesstosql),

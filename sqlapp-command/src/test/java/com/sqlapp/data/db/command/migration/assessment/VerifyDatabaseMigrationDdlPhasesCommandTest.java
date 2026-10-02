@@ -99,6 +99,11 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertTrue(Files.readString(verificationReport).contains("\"assessmentStatus\" : \"BLOCKED\""));
 		assertEquals("sha256:" + sha256(Files.readString(directory.resolve("manifest.sha256"))),
 				command.getVerificationReport().manifestFingerprint());
+		command.setRequireApprovedFingerprints(true);
+		assertDoesNotThrow(command::run);
+		assertEquals(List.of("APPROVED_FINGERPRINTS"), command.getVerificationReport().verificationPolicies());
+		command.setRequireApprovedFingerprints(false);
+		assertDoesNotThrow(command::run);
 		final String successfulVerification = Files.readString(verificationReport);
 		command.setFailOnUnresolvedAutoNumberStrategies(true);
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("unresolved Access AutoNumber"));
@@ -280,7 +285,7 @@ class VerifyDatabaseMigrationDdlPhasesCommandTest {
 		assertEquals(3, command.getVerificationReport().assessmentFormatVersion());
 		assertEquals("access", command.getVerificationReport().sourceProduct());
 		assertEquals("sqlserver", command.getVerificationReport().targetProduct());
-		assertEquals(List.of("ASSESSMENT_BLOCKERS", "INCOMPLETE_MAPPING", "UNRESOLVED_AUTONUMBER",
+		assertEquals(List.of("DEPLOYMENT_READY", "ASSESSMENT_BLOCKERS", "INCOMPLETE_MAPPING", "UNRESOLVED_AUTONUMBER",
 				"DATA_SCAN", "RELATIONSHIPS_COLLECTED", "APPROVED_FINGERPRINTS"),
 				command.getVerificationReport().verificationPolicies());
 	}

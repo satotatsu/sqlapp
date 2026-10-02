@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -35,6 +36,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.util.MessageDigests;
 import com.sqlapp.util.YamlConverter;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -42,6 +44,87 @@ import com.zaxxer.hikari.HikariDataSource;
 class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 	@TempDir
 	Path temporaryDirectory;
+
+	@Test
+	void validatesOptionalSchemaFingerprintBeforePlanResolution() throws Exception {
+		try (var source = dataSource("bulk_schema_fingerprint_source");
+				var target = dataSource("bulk_schema_fingerprint_target")) {
+			final Schema schema = new Schema("PUBLIC");
+			final File schemaFile = temporaryDirectory.resolve("fingerprinted-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setTasks(List.of());
+			final File configurationFile = temporaryDirectory.resolve("fingerprinted-job.yaml").toFile();
+			configuration.setSchemaFingerprint("sha256:" + "0".repeat(64));
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			try (var connection = source.getConnection()) {
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+				configuration.setSchemaFingerprint(null);
+				final var provenance = new BulkMigrationJobConfiguration.Provenance();
+				provenance.setAssessmentReportFingerprint("SHA256:" + "0".repeat(64));
+				configuration.setProvenance(provenance);
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+				provenance.setAssessmentReportFingerprint("sha256:" + "0".repeat(64));
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertNotNull(new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+			}
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setConfigurationFile(configurationFile);
+			command.setExpectedConfigurationFingerprint("sha256:" + "f".repeat(64));
+			assertThrows(CommandException.class, command::run);
+			command.setExpectedConfigurationFingerprint("SHA256:" + "f".repeat(64));
+			assertThrows(CommandException.class, command::run);
+			command.setExpectedConfigurationFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile));
+			assertDoesNotThrow(command::run);
+		}
+	}
+
+	@Test
+	void validatesOptionalApprovalArtifactsAgainstConfigurationProvenance() throws Exception {
+		try (var source = dataSource("bulk_approval_source"); var target = dataSource("bulk_approval_target")) {
+			final File schemaFile = temporaryDirectory.resolve("approval-schema.xml").toFile();
+			new Schema("PUBLIC").writeXml(schemaFile);
+			final File assessmentFile = temporaryDirectory.resolve("assessment.json").toFile();
+			final File ddlVerificationFile = temporaryDirectory.resolve("ddl-verification.json").toFile();
+			Files.writeString(assessmentFile.toPath(), "{\"status\":\"REVIEW_REQUIRED\"}");
+			Files.writeString(ddlVerificationFile.toPath(), "{\"status\":\"VERIFIED\"}");
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setTasks(List.of());
+			final var provenance = new BulkMigrationJobConfiguration.Provenance();
+			provenance.setAssessmentReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(assessmentFile));
+			provenance.setDdlVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(ddlVerificationFile));
+			configuration.setProvenance(provenance);
+			final File configurationFile = temporaryDirectory.resolve("approval-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(configurationFile);
+			command.setAssessmentReportFile(assessmentFile);
+			command.setDdlVerificationReportFile(ddlVerificationFile);
+			assertDoesNotThrow(command::run);
+
+			Files.writeString(assessmentFile.toPath(), "{\"status\":\"CHANGED\"}");
+			assertThrows(CommandException.class, command::run);
+			Files.writeString(assessmentFile.toPath(), "{\"status\":\"REVIEW_REQUIRED\"}");
+			provenance.setDdlVerificationReportFingerprint(null);
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			assertThrows(CommandException.class, command::run);
+		}
+	}
 
 	@Test
 	void executesProgrammaticPlanAgainstConfiguredDataSource() {
@@ -95,6 +178,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final var configuration = new BulkMigrationJobConfiguration();
 			configuration.setJobId("nightly-items");
 			configuration.setSchemaFile("schema.xml");
+			final var provenance = new BulkMigrationJobConfiguration.Provenance();
+			provenance.setAssessmentReportFingerprint("sha256:" + "a".repeat(64));
+			provenance.setDdlVerificationReportFingerprint("sha256:" + "d".repeat(64));
+			configuration.setProvenance(provenance);
 			final var task = new BulkMigrationJobConfiguration.Task();
 			task.setId("items");
 			task.setTable("PUBLIC.ITEMS");
@@ -124,6 +211,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertEquals(BulkMigrationJobLeaseMode.DATABASE, resolution.leaseConfiguration().mode());
 				assertEquals("yaml-worker", resolution.leaseConfiguration().ownerId());
 				assertEquals(90, resolution.leaseConfiguration().duration().toSeconds());
+				assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
+						resolution.provenance().configurationFingerprint());
+				assertEquals("sha256:" + "a".repeat(64),
+						resolution.provenance().assessmentReportFingerprint());
 				final var options = plan.getTasks().get(0).getOptions();
 				assertEquals(250, options.getBulkOption().getBatchSize());
 				assertEquals(true, options.getBulkOption().isKeepNulls());
@@ -213,13 +304,19 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			});
 			assertThrows(RuntimeException.class, mismatchCommand::run);
 			assertEquals(false, mismatchCommand.getVerificationResult().isMatch());
+			final var operationalArtifact = new BulkMigrationOperationalReportIO()
+					.read(temporaryDirectory.resolve("reports/mismatch-status.json"));
 			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
-					new BulkMigrationOperationalReportIO()
-							.read(temporaryDirectory.resolve("reports/mismatch-status.json")).execution().event());
+					operationalArtifact.execution().event());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
+					operationalArtifact.provenance().configurationFingerprint());
+			assertEquals("sha256:" + "a".repeat(64),
+					operationalArtifact.provenance().assessmentReportFingerprint());
 			final var mismatchArtifact = new BulkMigrationVerificationReportIO()
 					.read(temporaryDirectory.resolve("reports/mismatch-verification.json"));
 			assertEquals(false, mismatchArtifact.match());
 			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
+			assertEquals(operationalArtifact.provenance(), mismatchArtifact.provenance());
 			assertNotNull(mismatchArtifact.tasks().get(0).expectedKeysetFingerprint());
 			assertNotNull(mismatchArtifact.tasks().get(0).actualKeysetFingerprint());
 			final var mismatchChunk = mismatchArtifact.tasks().get(0).mismatches().get(0);

@@ -41,6 +41,14 @@ public final class BulkMigrationOperationalReportBuilder {
 			final BulkMigrationMaintenanceState maintenance, final BulkMigrationProgressSnapshot progress,
 			final Map<String, BulkMigrationProgressSnapshot> progressByMigration,
 			final BulkMigrationOperationalReport.Execution execution) {
+		return build(plan, status, maintenance, progress, progressByMigration, execution, null);
+	}
+
+	public BulkMigrationOperationalReport build(final BulkMigrationJobPlan plan, final BulkMigrationJobStatus status,
+			final BulkMigrationMaintenanceState maintenance, final BulkMigrationProgressSnapshot progress,
+			final Map<String, BulkMigrationProgressSnapshot> progressByMigration,
+			final BulkMigrationOperationalReport.Execution execution,
+			final BulkMigrationArtifactProvenance provenance) {
 		Objects.requireNonNull(status, "status").validateAgainst(plan);
 		if (maintenance != null && !plan.getJobId().equals(maintenance.jobId())) {
 			throw new IllegalArgumentException("Maintenance jobId does not match the migration plan");
@@ -83,7 +91,7 @@ public final class BulkMigrationOperationalReportBuilder {
 		final var report = new BulkMigrationOperationalReport(BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION,
 				Instant.now(clock), plan.getJobId(), plan.getFingerprint(), status.isCompatible(),
 				status.getProcessedRows(), status.getCompletedTasks(), tasks.size(), tasks, operations,
-				maintenance(maintenance), progress(progress), effectiveProgress, execution);
+				maintenance(maintenance), progress(progress), effectiveProgress, execution, provenance);
 		status.validateAgainst(plan);
 		return report;
 	}

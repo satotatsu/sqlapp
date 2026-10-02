@@ -30,12 +30,20 @@ import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
+import com.sqlapp.util.MessageDigests;
 import com.sqlapp.util.YamlConverter;
 
 /** Resolves a portable YAML job definition against a captured Schema model. */
 public class BulkMigrationJobConfigurationResolver {
 	public record Resolution(BulkMigrationJobPlan plan, BulkMigrationJobLeaseConfiguration leaseConfiguration,
-			OperationalReportConfiguration reportConfiguration, VerificationConfiguration verificationConfiguration) {
+			OperationalReportConfiguration reportConfiguration, VerificationConfiguration verificationConfiguration,
+			BulkMigrationArtifactProvenance provenance) {
+		public Resolution(final BulkMigrationJobPlan plan,
+				final BulkMigrationJobLeaseConfiguration leaseConfiguration,
+				final OperationalReportConfiguration reportConfiguration,
+				final VerificationConfiguration verificationConfiguration) {
+			this(plan, leaseConfiguration, reportConfiguration, verificationConfiguration, null);
+		}
 		public Resolution {
 			java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
 		}
@@ -87,6 +95,8 @@ public class BulkMigrationJobConfigurationResolver {
 			throw new CommandException("schemaFile is required in bulk migration configuration.");
 		}
 		final File schemaFile = resolve(configurationFile, configuration.getSchemaFile());
+		validateSchemaFingerprint(schemaFile, configuration.getSchemaFingerprint());
+		validateProvenance(configuration.getProvenance());
 		final List<Table> tables = readTables(schemaFile);
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
 		validateTasks(configuration.getTasks());
@@ -136,7 +146,16 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		return new Resolution(plan, lease(configurationFile, configuration.getLease()),
 				report(configurationFile, configuration.getReport()),
-				verification(configurationFile, configuration.getVerification(), configuration.getTasks()));
+				verification(configurationFile, configuration.getVerification(), configuration.getTasks()),
+				provenance(configurationFile, configuration.getProvenance()));
+	}
+
+	private static BulkMigrationArtifactProvenance provenance(final File configurationFile,
+			final BulkMigrationJobConfiguration.Provenance provenance) {
+		return new BulkMigrationArtifactProvenance(
+				"sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
+				provenance == null ? null : provenance.getAssessmentReportFingerprint(),
+				provenance == null ? null : provenance.getDdlVerificationReportFingerprint());
 	}
 
 	private static void validateTasks(final List<BulkMigrationJobConfiguration.Task> tasks) {
@@ -310,6 +329,44 @@ public class BulkMigrationJobConfigurationResolver {
 			return tables(SchemaUtils.readXml(file));
 		} catch (IOException e) {
 			throw new CommandException("Failed to read Schema XML: " + file, e);
+		}
+	}
+
+	private static void validateSchemaFingerprint(final File file, final String expected) {
+		if (expected == null || expected.isBlank()) {
+			return;
+		}
+		if (!expected.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("schemaFingerprint must be a lowercase SHA-256 value");
+		}
+		if (!file.isFile()) {
+			throw new CommandException("Schema XML does not exist: " + file);
+		}
+		try {
+			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(file);
+			if (!expected.equals(actual)) {
+				throw new CommandException("schemaFile fingerprint does not match schemaFingerprint: " + file);
+			}
+		} catch (final CommandException e) {
+			throw e;
+		} catch (final Exception e) {
+			throw new CommandException("Failed to fingerprint Schema XML: " + file, e);
+		}
+	}
+
+	private static void validateProvenance(final BulkMigrationJobConfiguration.Provenance provenance) {
+		if (provenance == null) {
+			return;
+		}
+		validateFingerprint("provenance.assessmentReportFingerprint",
+				provenance.getAssessmentReportFingerprint());
+		validateFingerprint("provenance.ddlVerificationReportFingerprint",
+				provenance.getDdlVerificationReportFingerprint());
+	}
+
+	private static void validateFingerprint(final String property, final String value) {
+		if (value != null && !value.isBlank() && !value.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException(property + " must be a lowercase SHA-256 value");
 		}
 	}
 

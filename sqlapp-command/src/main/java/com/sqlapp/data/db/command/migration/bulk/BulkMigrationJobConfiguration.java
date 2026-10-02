@@ -20,10 +20,21 @@ import lombok.Setter;
 public class BulkMigrationJobConfiguration {
 	private String jobId;
 	private String schemaFile;
+	/** Optional SHA-256 identity of schemaFile, checked before plan resolution. */
+	private String schemaFingerprint;
+	private Provenance provenance;
 	private List<Task> tasks = new ArrayList<>();
 	private Lease lease;
 	private Report report;
 	private Verification verification;
+
+	/** Optional identities of reviewed artifacts used to generate this job. */
+	@Getter
+	@Setter
+	public static class Provenance {
+		private String assessmentReportFingerprint;
+		private String ddlVerificationReportFingerprint;
+	}
 
 	@Getter
 	@Setter

@@ -160,6 +160,49 @@ does not connect to Oracle or execute the generated DDL. Use the
 [generic DDL verification reference](database-migration-assessment.md) for the
 individual gates when an approved exception is needed.
 
+## Initial Access data load
+
+For a complete mapping that keeps schema, table and column names unchanged and
+uses no conversion expressions, generate an initial-load job for the existing
+bulk migration task:
+
+```groovy
+tasks.named('generateAccessBulkMigrationJobConfiguration') {
+    assessmentReportFile = layout.buildDirectory.file('reports/access-oracle.json')
+    schemaFile = layout.buildDirectory.file('schema/access.xml')
+    outputFile = layout.buildDirectory.file('reports/access-oracle-load.yaml')
+}
+```
+
+For an approval-controlled deployment, also bind generation to the approved
+assessment and deployment-ready DDL verification evidence:
+
+```groovy
+tasks.named('generateAccessBulkMigrationJobConfiguration') {
+    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    expectedAssessmentReportFingerprint = 'sha256:<approved-assessment-sha256>'
+    expectedDdlVerificationReportFingerprint = 'sha256:<approved-ddl-verification-sha256>'
+}
+```
+
+These fingerprints are optional. Keep the first configuration for the simple
+review workflow; use the additional properties when the files are approved
+artifacts in CI or deployment automation.
+
+Review the YAML, create the Oracle objects from the approved DDL, then supply
+the YAML to `executeBulkMigrationJob.configurationFile` with separately
+configured Access source and Oracle target data sources. The generated job uses
+resumable `INSERT` chunks, preserves existing Access AutoNumber values even
+when future Oracle values use a sequence, and
+enables operational and fail-on-mismatch post-load verification JSON reports.
+It binds resumable checkpoints to the captured Access source and reviewed
+mapping fingerprints. Qualified Access table names are retained in task IDs,
+and checkpoint IDs are additionally namespaced by `jobId`. Generation does not
+execute the job. The supplied Schema XML is checked against the assessment
+source fingerprint when present. Mappings that rename identifiers or use
+conversion expressions are rejected because the current declarative bulk
+executor cannot apply those transformations safely.
+
 Type references: [Oracle 19c types](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Data-Types.html),
 [Oracle NULL behavior](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Nulls.html),
 [Oracle 23 SQL BOOLEAN](https://docs.oracle.com/en/database/oracle/oracle-database/23/nfcoa/oracle-database-23c-new-features-guide.pdf).

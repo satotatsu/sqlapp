@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -76,7 +77,8 @@ class BulkMigrationOperationalReportTest {
 		new BulkMigrationOperationalReportIO().write(output, report);
 
 		final Map<String, Object> json = new JsonConverter().fromJsonString(output.toFile(), Map.class);
-		assertEquals(2, ((Number) json.get("formatVersion")).intValue());
+		assertEquals(BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION,
+				((Number) json.get("formatVersion")).intValue());
 		assertEquals(plan.getJobId(), json.get("jobId"));
 		assertEquals(plan.getFingerprint(), json.get("planFingerprint"));
 		assertEquals(25, ((Number) json.get("processedRows")).longValue());
@@ -113,9 +115,13 @@ class BulkMigrationOperationalReportTest {
 		final var status = new BulkMigrationJobStatus(plan.getFingerprint(),
 				List.of(new BulkMigrationJobTaskStatus("customers", BulkMigrationJobTaskState.NOT_STARTED, null)));
 		final var report = new BulkMigrationOperationalReportBuilder().build(plan, status, null, null);
-		final var unsupported = copyWith(report, 3, report.totalTasks());
+		final var unsupported = copyWith(report, BulkMigrationOperationalReport.CURRENT_FORMAT_VERSION + 1,
+				report.totalTasks());
 		final Path unsupportedFile = directory.resolve("unsupported.json");
 		assertThrows(com.sqlapp.exceptions.CommandException.class, () -> io.write(unsupportedFile, unsupported));
+		final Path legacyFile = directory.resolve("legacy-v2.json");
+		assertDoesNotThrow(() -> io.write(legacyFile,
+				copyWith(report, BulkMigrationOperationalReport.MIN_SUPPORTED_FORMAT_VERSION, report.totalTasks())));
 
 		final var inconsistent = copyWith(report, report.formatVersion(), 2);
 		final Path inconsistentFile = directory.resolve("inconsistent.json");

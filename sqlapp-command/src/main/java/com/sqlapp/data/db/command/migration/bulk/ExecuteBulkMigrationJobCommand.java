@@ -29,6 +29,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
 import com.sqlapp.jdbc.bulk.CompositeBulkMigrationJobListener;
+import com.sqlapp.util.MessageDigests;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -42,6 +43,9 @@ import lombok.Setter;
 public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private BulkMigrationJobPlan plan;
 	private File configurationFile;
+	private String expectedConfigurationFingerprint;
+	private File assessmentReportFile;
+	private File ddlVerificationReportFile;
 	private DataSource sourceDataSource;
 	private BulkMigrationJobListener listener = BulkMigrationJobListener.NO_OP;
 	private ChunkedBulkMigrationListener chunkListener = ChunkedBulkMigrationListener.NO_OP;
@@ -62,6 +66,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		if (plan == null && configurationFile == null) {
 			throw new CommandException("Bulk migration plan or configurationFile is required.");
 		}
+		validateExpectedConfigurationFingerprint();
+		validateApprovalArtifactInputs();
 		if (configurationFile != null && sourceDataSource == null) {
 			throw new CommandException("Bulk migration source data source is required for configurationFile.");
 		}
@@ -72,12 +78,13 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		execute(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
 					sourceConnection);
+			validateApprovalArtifacts(resolved.provenance());
 			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
 				throw new CommandException(
 						"Specify lease configuration either in the job file " + "or as a command property, not both.");
 			}
 			executePlan(resolved.plan(), resolved.leaseConfiguration(), listener, resolved.reportConfiguration(),
-					resolved.verificationConfiguration(), sourceConnection);
+					resolved.verificationConfiguration(), sourceConnection, resolved.provenance());
 		});
 	}
 
@@ -118,6 +125,16 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration reportConfiguration,
 			final BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationConfiguration,
 			final Connection sourceConnection) {
+		executePlan(executionPlan, executionLeaseConfiguration, configuredListener, reportConfiguration,
+				verificationConfiguration, sourceConnection, null);
+	}
+
+	private void executePlan(final BulkMigrationJobPlan executionPlan,
+			final BulkMigrationJobLeaseConfiguration executionLeaseConfiguration,
+			final BulkMigrationJobListener configuredListener,
+			final BulkMigrationJobConfigurationResolver.OperationalReportConfiguration reportConfiguration,
+			final BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationConfiguration,
+			final Connection sourceConnection, final BulkMigrationArtifactProvenance provenance) {
 		executionPlan.validateUnchanged();
 		execute(getDataSource(), targetConnection -> {
 			// The chunk executor owns commit/rollback boundaries, including durable
@@ -134,7 +151,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				reportListener = new BulkMigrationOperationalReportJobListener(effectivePlan,
 						reportConfiguration.targetFile(), () -> null, () -> null, reportConfiguration.failurePolicy(),
 						failure -> {
-						});
+						}, provenance);
 				executionListener = configuredListener == BulkMigrationJobListener.NO_OP ? reportListener
 						: CompositeBulkMigrationJobListener.of(configuredListener, reportListener);
 			}
@@ -165,7 +182,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					if (verificationConfiguration.targetFile() != null) {
 						new BulkMigrationVerificationReportIO().write(verificationConfiguration.targetFile(),
 								effectivePlan.getFingerprint(), verificationConfiguration.isolation(),
-								verificationConfiguration.maxReportedMismatches(), verificationResult);
+								verificationConfiguration.maxReportedMismatches(), verificationResult, provenance);
 					}
 					if (verificationConfiguration.failOnMismatch() && !verificationResult.isMatch()) {
 						throw new CommandException("Bulk migration verification failed: "
@@ -184,6 +201,74 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 		});
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
+	}
+
+	private void validateExpectedConfigurationFingerprint() {
+		if (expectedConfigurationFingerprint == null || expectedConfigurationFingerprint.isBlank()) {
+			return;
+		}
+		if (configurationFile == null) {
+			throw new CommandException("expectedConfigurationFingerprint requires configurationFile.");
+		}
+		if (!expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
+		}
+		try {
+			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile);
+			if (!expectedConfigurationFingerprint.equals(actual)) {
+				throw new CommandException(
+						"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
+			}
+		} catch (final CommandException e) {
+			throw e;
+		} catch (final Exception e) {
+			throw new CommandException("Could not fingerprint configurationFile: " + e.getMessage(), e);
+		}
+	}
+
+	private void validateApprovalArtifactInputs() {
+		if ((assessmentReportFile != null || ddlVerificationReportFile != null) && configurationFile == null) {
+			throw new CommandException("Approval artifact files require configurationFile.");
+		}
+		validateArtifactFile(assessmentReportFile, "assessmentReportFile");
+		validateArtifactFile(ddlVerificationReportFile, "ddlVerificationReportFile");
+	}
+
+	private static void validateArtifactFile(final File file, final String property) {
+		if (file != null && !file.isFile()) {
+			throw new CommandException(property + " must be an existing file.");
+		}
+	}
+
+	private void validateApprovalArtifacts(final BulkMigrationArtifactProvenance provenance) {
+		validateApprovalArtifact(assessmentReportFile,
+				provenance == null ? null : provenance.assessmentReportFingerprint(), "assessmentReportFile",
+				"assessmentReportFingerprint");
+		validateApprovalArtifact(ddlVerificationReportFile,
+				provenance == null ? null : provenance.ddlVerificationReportFingerprint(), "ddlVerificationReportFile",
+				"ddlVerificationReportFingerprint");
+	}
+
+	private static void validateApprovalArtifact(final File file, final String expectedFingerprint,
+			final String fileProperty, final String provenanceProperty) {
+		if (file == null) {
+			return;
+		}
+		if (expectedFingerprint == null) {
+			throw new CommandException(fileProperty + " requires provenance." + provenanceProperty
+					+ " in configurationFile.");
+		}
+		try {
+			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(file);
+			if (!expectedFingerprint.equals(actual)) {
+				throw new CommandException(fileProperty + " fingerprint does not match provenance."
+						+ provenanceProperty + ".");
+			}
+		} catch (final CommandException e) {
+			throw e;
+		} catch (final Exception e) {
+			throw new CommandException("Could not fingerprint " + fileProperty + ": " + e.getMessage(), e);
+		}
 	}
 
 	static BulkMigrationJobVerificationResult verifyWithIsolation(final BulkMigrationJobPlan plan,

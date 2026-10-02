@@ -24,6 +24,9 @@ use a plugin release that contains the tasks you need.
 | [Schema, SQL and HTML](schema-sql-and-html.md) | XML export, comparison, SQL generation, documentation properties and outputs |
 | [Custom tasks and versioned migrations](custom-tasks-and-migrations.md) | Data export, file conversion, SQL execution, migration extension and task types |
 | [Normalization and legacy migration](normalization-and-legacy-migration.md) | Normalization, PL/I import, extraction contracts and hierarchy loading |
+| [Database migration assessment](database-migration-assessment.md) | Generic Access migration diagnosis, mapping, data checks, DDL preview and verification |
+| [Access to Oracle](access-oracle-migration-assessment.md) | Oracle-specific mapping, review points and deployment-ready DDL verification |
+| [Access to SQL Server](access-sqlserver-migration-assessment.md) | SQL Server-specific mapping, review points and deployment-ready DDL verification |
 | [Oracle migration assessment](oracle-migration-assessment.md) | Offline preflight, object inventory, evidence and manual checks for a 26ai target |
 
 Bulk migration and SCD2 snapshot configuration are covered below.
@@ -55,6 +58,8 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `assessMigration` | Assess a Schema XML snapshot offline and write a migration preflight JSON report |
 | Migration | `assessDatabaseMigration` | [Assess a source file for an explicit target database/version](database-migration-assessment.md); Access to Oracle or SQL Server |
 | Migration | `assessAccessOracleMigration` | Compatibility alias with the Oracle target preset |
+| Migration | `verifyDatabaseMigrationDdlPhases` | Verify generated migration DDL with only its directory; optionally bind an assessment, approved fingerprints and deployment-readiness policies |
+| Migration | `generateAccessBulkMigrationJobConfiguration` | Generate a resumable initial-load YAML for the existing bulk migration task from a compatible reviewed Access assessment |
 | Migration | `migrationValidate` | Read-only validation of recorded up SQL checksums; missing checksums are unverified |
 | Migration | `migrationPlan` | Read-only plan of pending versioned SQL and known blockers |
 | Migration | `migrationInsert` | Insert migration history |

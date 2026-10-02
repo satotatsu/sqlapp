@@ -44,6 +44,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "assessAccessOracleMigration", AssessAccessOracleMigrationTask.class);
 		registerTask(project, "assessDatabaseMigration", AssessDatabaseMigrationTask.class);
 		registerTask(project, "verifyDatabaseMigrationDdlPhases", VerifyDatabaseMigrationDdlPhasesTask.class);
+		registerTask(project, "generateAccessBulkMigrationJobConfiguration",
+				GenerateAccessBulkMigrationJobConfigurationTask.class);
 		registerTask(project, "verifyMigrationExecutionReport", VerifyMigrationExecutionReportTask.class);
 		registerTask(project, "generateBulkMigrationOperationalReport",
 				GenerateBulkMigrationOperationalReportTask.class);

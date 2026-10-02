@@ -18,6 +18,8 @@ through Java APIs, command classes, and the `com.sqlapp.db` Gradle plugin.
 - Generate relational test data with foreign-key dependency handling.
 - Apply versioned SQL migrations.
 - Plan, execute, resume, verify, and audit bulk data migrations.
+- Assess Access MDB/ACCDB migrations to Oracle or SQL Server offline, including
+  optional data checks, target mapping and reviewable DDL verification.
 
 ## Requirements
 
@@ -148,6 +150,7 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 
 - [Documentation index](docs/README.md)
 - [Gradle plugin task guide](docs/gradle-plugin/README.md)
+- [Access database migration assessment](docs/gradle-plugin/database-migration-assessment.md)
 - [Gradle plugin Kotlin DSL](docs/gradle-plugin/kotlin-dsl.md)
 - [Gradle plugin troubleshooting](docs/gradle-plugin/troubleshooting.md)
 - [Java API getting started](docs/java-api-getting-started.md)

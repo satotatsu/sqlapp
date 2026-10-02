@@ -43,6 +43,7 @@ data generation.
 | Export database metadata | `exportSchemaXml` | [Schema model](https://github.com/satotatsu/sqlapp-gradle-example/blob/develop/docs/schema-model.md) |
 | Compare snapshots and create migration SQL | `diffSchemaXml`, `generateDiffSql`, `generateSql` | [Schema diff](https://github.com/satotatsu/sqlapp-gradle-example/blob/develop/docs/schema-diff.md) |
 | Apply versioned SQL | `migration`, custom `migrationDown` | [Migration](https://github.com/satotatsu/sqlapp-gradle-example/blob/develop/docs/migration.md) |
+| Assess an Access migration and verify generated DDL | `assessDatabaseMigration`, `verifyDatabaseMigrationDdlPhases` | [Database migration assessment](database-migration-assessment.md) |
 | Generate database documentation | `generateHtmlDocs`, custom `zipHtml` | [HTML documentation](https://github.com/satotatsu/sqlapp-gradle-example/blob/develop/docs/html-documentation.md) |
 | Maintain display-name dictionaries | custom `updateDictionaries`, `dictionariesToCsv` | [Dictionary](https://github.com/satotatsu/sqlapp-gradle-example/blob/develop/docs/dictionary.md) |
 | Add relationships absent from the database | `foreignKeyDefinitionDirectory` on relevant tasks | [Logical foreign keys](https://github.com/satotatsu/sqlapp-gradle-example/blob/develop/docs/logical-foreign-keys.md) |
