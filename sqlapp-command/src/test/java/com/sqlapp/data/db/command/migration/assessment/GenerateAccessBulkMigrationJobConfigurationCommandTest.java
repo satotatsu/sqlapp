@@ -194,11 +194,19 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 	void rejectsMappingsTheExistingExecutorCannotApply() throws Exception {
 		final Path schema = Files.writeString(directory.resolve("source.xml"), schema(true));
 		final Path report = Files.writeString(directory.resolve("assessment.json"), report(schema, "CUSTOMERS_NEW", "ID", null));
-		final var command = command(schema, report, directory.resolve("job.yaml"));
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("unchanged table"));
+		final Path output = directory.resolve("job.yaml");
+		final var command = command(schema, report, output);
+		command.run();
+		final var generated = new YamlConverter().fromJsonString(output.toFile(),
+				BulkMigrationJobConfiguration.class);
+		assertEquals("access.CUSTOMERS_NEW", generated.getTasks().getFirst().getTargetTable());
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "CUSTOMER_ID", null));
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("unchanged column"));
+		command.run();
+		final var renamedColumn = new YamlConverter().fromJsonString(output.toFile(),
+				BulkMigrationJobConfiguration.class);
+		assertEquals(java.util.Map.of("ID", "CUSTOMER_ID"),
+				renamedColumn.getTasks().getFirst().getColumnMappings());
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "ID", "CAST(ID AS BIGINT)"));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("cannot apply mapping conversion"));

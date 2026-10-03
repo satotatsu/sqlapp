@@ -522,6 +522,10 @@ tasks.named('verifyBulkMigrationEvidence') {
     configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    outputFile = layout.buildDirectory.file('reports/access-load-evidence.json')
 }
 ```
 
@@ -533,6 +537,40 @@ the link to the reviewed inputs. Set `requireProvenance = false` only to inspect
 older or programmatically generated reports; `requireSuccessfulExecution` and
 `requireMatchingData` can likewise be relaxed for failure investigation. The
 task is file-only and never opens a database connection.
+`outputFile` is optional. When present, the task atomically writes a format 1
+JSON audit artifact containing the plan and job IDs, both input-report
+fingerprints, the effective verification policies, the artifacts that were
+checked, the final execution and data-match state, and the common provenance.
+`BulkMigrationEvidenceReportIO.read(evidence, operations, verification)` can
+later revalidate both source-report hashes and their plan, state and provenance
+against the saved audit artifact. Reading also rejects a policy that disagrees
+with the recorded result, unknown policy or artifact names, and missing source
+report entries.
+The same check is exposed as `verifyBulkMigrationEvidenceReport` for deployment
+and archival pipelines:
+
+```groovy
+tasks.named('verifyBulkMigrationEvidenceReport') {
+    evidenceReportFile = layout.buildDirectory.file('reports/access-load-evidence.json')
+    operationalReportFile = layout.buildDirectory.file('reports/access-load-operations.json')
+    verificationReportFile = layout.buildDirectory.file('reports/access-load-verification.json')
+    expectedEvidenceReportFingerprint = providers.environmentVariable('APPROVED_EVIDENCE_SHA256')
+    expectedPlanFingerprint = providers.environmentVariable('APPROVED_PLAN_ID')
+    expectedConfigurationFingerprint = providers.environmentVariable('APPROVED_JOB_SHA256')
+    maxEvidenceAgeSeconds = 86400
+}
+```
+
+`expectedEvidenceReportFingerprint` is optional. When supplied, the task checks
+the exact lowercase `sha256:...` identity of the audit JSON before parsing it.
+`expectedPlanFingerprint` and `expectedConfigurationFingerprint` optionally
+bind the audit to the approved execution plan and generated job YAML.
+`maxEvidenceAgeSeconds` rejects expired evidence and future timestamps; it has
+no default because archival retention requirements vary by deployment.
+The configuration, assessment and DDL-verification files are also optional.
+When supplied, each file must have been recorded in `verifiedArtifacts` during
+the original audit and its current SHA-256 must match the saved provenance.
+The task is file-only and does not need the migration source or target database.
 Generation requires a format 3 Access assessment with no blockers, no unmapped
 tables or columns, and no unresolved AutoNumber strategy. The job generator
 also recomputes the supplied Schema XML SHA-256 when the assessment contains a
@@ -541,10 +579,11 @@ product and version must match the resolved mapping target, and its migration
 method must remain `LOGICAL_MIGRATION`. The generated YAML retains that value
 as `schemaFingerprint`, so `executeBulkMigrationJob` repeats the check before
 resolving a plan. Existing handwritten bulk YAML remains compatible because
-`schemaFingerprint` is optional. The current bulk
-executor can load this generated configuration only when source and target
-schema, table and column names are unchanged and no mapping conversion is
-configured. Every mapped table and column must match the supplied Schema XML,
+`schemaFingerprint` is optional. The bulk executor accepts a different target
+schema or table name through the optional per-task `targetTable` value. Simple
+one-to-one column renames are represented by the optional `columnMappings` map.
+Mapping conversion expressions are not supported by the initial-load executor.
+Every mapped table and column must match the supplied Schema XML,
 and each table must have a primary key for resumable keyset reads; the
 generator also requires every primary-key column to resolve and be `NOT NULL`,
 and rejects other mappings explicitly. Type conversion

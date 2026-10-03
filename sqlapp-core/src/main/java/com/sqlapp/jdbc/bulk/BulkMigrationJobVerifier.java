@@ -37,8 +37,7 @@ public final class BulkMigrationJobVerifier {
 		final List<BulkMigrationJobVerificationTask> ordered = new ArrayList<>(tasks.size());
 		for (final BulkMigrationJobTask planned : plan.getTasks()) {
 			final BulkMigrationJobVerificationTask task = byId.get(planned.getTaskId());
-			final var source = planned.getSourceTable() != null ? planned.getSourceTable()
-					: planned.getKeysetSource().getTable();
+			final var source = planned.getEffectiveSourceTable();
 			if (!SchemaUtils.isSameTable(source, task.getExpected())) {
 				throw new IllegalArgumentException("Verification expected table differs from "
 						+ "migration plan task: " + planned.getTaskId());

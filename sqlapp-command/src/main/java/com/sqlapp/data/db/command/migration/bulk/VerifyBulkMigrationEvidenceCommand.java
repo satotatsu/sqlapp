@@ -2,6 +2,9 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.File;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -19,21 +22,25 @@ public class VerifyBulkMigrationEvidenceCommand extends AbstractCommand {
 	private File configurationFile;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private File outputFile;
 	private boolean requireSuccessfulExecution = true;
 	private boolean requireMatchingData = true;
 	private boolean requireProvenance = true;
 	private BulkMigrationOperationalReport operationalReport;
 	private BulkMigrationVerificationReport verificationReport;
+	private BulkMigrationEvidenceReport evidenceReport;
 
 	@Override
 	protected void doRun() {
 		operationalReport = null;
 		verificationReport = null;
+		evidenceReport = null;
 		requireFile(operationalReportFile, "operationalReportFile");
 		requireFile(verificationReportFile, "verificationReportFile");
 		optionalFile(configurationFile, "configurationFile");
 		optionalFile(assessmentReportFile, "assessmentReportFile");
 		optionalFile(ddlVerificationReportFile, "ddlVerificationReportFile");
+		validateOutputFile();
 		operationalReport = new BulkMigrationOperationalReportIO().read(operationalReportFile.toPath());
 		verificationReport = new BulkMigrationVerificationReportIO().read(verificationReportFile.toPath());
 		if (!operationalReport.planFingerprint().equals(verificationReport.planFingerprint())) {
@@ -62,7 +69,49 @@ public class VerifyBulkMigrationEvidenceCommand extends AbstractCommand {
 		BulkMigrationArtifactProvenanceVerifier.verify(ddlVerificationReportFile,
 				provenance == null ? null : provenance.ddlVerificationReportFingerprint(),
 				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
+		evidenceReport = evidenceReport(provenance);
+		if (outputFile != null) {
+			new BulkMigrationEvidenceReportIO().write(outputFile.toPath(), evidenceReport);
+		}
 		info("Bulk migration evidence verified: ", operationalReportFile.getAbsolutePath());
+	}
+
+	private BulkMigrationEvidenceReport evidenceReport(final BulkMigrationArtifactProvenance provenance) {
+		final List<String> policies = new ArrayList<>();
+		if (requireSuccessfulExecution) { policies.add(BulkMigrationEvidenceReport.POLICY_SUCCESSFUL_EXECUTION); }
+		if (requireMatchingData) { policies.add(BulkMigrationEvidenceReport.POLICY_MATCHING_DATA); }
+		if (requireProvenance) { policies.add(BulkMigrationEvidenceReport.POLICY_PROVENANCE_REQUIRED); }
+		final List<String> artifacts = new ArrayList<>(List.of(
+				BulkMigrationEvidenceReport.ARTIFACT_OPERATIONAL_REPORT,
+				BulkMigrationEvidenceReport.ARTIFACT_VERIFICATION_REPORT));
+		if (configurationFile != null) { artifacts.add(BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION); }
+		if (assessmentReportFile != null) { artifacts.add(BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT); }
+		if (ddlVerificationReportFile != null) {
+			artifacts.add(BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT);
+		}
+		return new BulkMigrationEvidenceReport(BulkMigrationEvidenceReport.CURRENT_FORMAT_VERSION, Instant.now(),
+				operationalReport.jobId(), operationalReport.planFingerprint(), fingerprint(operationalReportFile),
+				fingerprint(verificationReportFile),
+				operationalReport.execution() == null ? null : operationalReport.execution().event(),
+				verificationReport.match(),
+				provenance, policies, artifacts);
+	}
+
+	private static String fingerprint(final File file) {
+		return "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(file);
+	}
+
+	private void validateOutputFile() {
+		if (outputFile == null) { return; }
+		final var output = outputFile.toPath().toAbsolutePath().normalize();
+		for (final File input : List.of(operationalReportFile, verificationReportFile)) {
+			if (output.equals(input.toPath().toAbsolutePath().normalize())) {
+				throw new CommandException("outputFile must not overwrite an input report.");
+			}
+		}
+		if (outputFile.isDirectory()) {
+			throw new CommandException("outputFile must be a JSON file path.");
+		}
 	}
 
 	private static void requireFile(final File file, final String property) {

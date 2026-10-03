@@ -120,14 +120,22 @@ public class BulkMigrationJobPlan {
 
 	private static void task(final MessageDigest digest, final BulkMigrationJobTask task) {
 				final Table table = sourceTable(task);
+				final Table target = task.getEffectiveTargetTable();
 				final ChunkedBulkMigrationOption option = task.getOptions();
 				update(digest, task.getTaskId(), table.getCatalogName(), table.getSchemaName(),
-						table.getName(), task.getKeysetSource() != null,
+						table.getName(), target.getCatalogName(), target.getSchemaName(), target.getName(),
+						task.getKeysetSource() != null,
 						option.getMigrationId(), option.getChunkSize(),
 						option.getMode(), option.getIncrementalStrategy(), option.isResume(), option.getCheckpointMode(),
 						option.getCheckpointTableName(), option.getSourceFingerprint(),
 						option.getTargetFingerprint());
 				table(digest, table);
+				if (task.getTargetTable() != null) {
+					table(digest, target);
+				}
+				update(digest, task.getColumnMappings().size());
+				task.getColumnMappings().entrySet().stream().sorted(Map.Entry.comparingByKey())
+						.forEach(entry -> update(digest, entry.getKey(), entry.getValue()));
 				if (task.getKeysetSource() != null) {
 					final String keysetFingerprint = task.getKeysetSource()
 							.getConfigurationFingerprint();
@@ -160,7 +168,7 @@ public class BulkMigrationJobPlan {
 	}
 
 	private static Table sourceTable(final BulkMigrationJobTask task) {
-		return task.getSourceTable() != null ? task.getSourceTable() : task.getKeysetSource().getTable();
+		return task.getEffectiveSourceTable();
 	}
 
 	private static String defaultJobId(final List<BulkMigrationJobTask> tasks) {

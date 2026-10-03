@@ -145,9 +145,12 @@ for the individual exception gates and verification-report fields.
 
 ## Initial Access data load
 
-For a complete mapping that keeps schema, table and column names unchanged and
-uses no conversion expressions, generate an initial-load job for the existing
+For a complete one-to-one mapping that uses no conversion expressions, generate
+an initial-load job for the existing
 bulk migration task:
+
+Mapped target schema and table names are written to the optional `targetTable`
+property, and renamed columns to `columnMappings`, in the generated YAML.
 
 ```groovy
 tasks.named('generateAccessBulkMigrationJobConfiguration') {

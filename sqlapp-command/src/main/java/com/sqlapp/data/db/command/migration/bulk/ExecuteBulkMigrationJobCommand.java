@@ -282,10 +282,13 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				throw new CommandException(
 						"Declarative verification requires a JDBC keyset source: " + task.getTaskId());
 			}
-			final var target = new JdbcBulkMigrationKeysetSource(targetConnection, source.getTable(),
-					source.getKeyColumnNames());
+			final List<String> targetKeys = source.getKeyColumnNames().stream()
+					.map(task::getTargetColumnName).toList();
+			final var target = new JdbcBulkMigrationKeysetSource(targetConnection, task.getEffectiveTargetTable(),
+					targetKeys);
 			final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(), defaultVerificationColumns(task));
-			final var verification = BulkMigrationVerifier.verify(source, target, columns, chunkSize);
+			final List<String> targetColumns = columns.stream().map(task::getTargetColumnName).toList();
+			final var verification = BulkMigrationVerifier.verify(source, target, columns, targetColumns, chunkSize);
 			results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), verification.getColumns(),
 					verification));
 		}
@@ -294,7 +297,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	}
 
 	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {
-		return BulkMigrationVerificationColumns.resolve(task.getKeysetSource().getTable(), task.getOptions().getMode(),
+		return BulkMigrationVerificationColumns.resolve(task.getEffectiveSourceTable(), task.getOptions().getMode(),
 				task.getOptions().getBulkOption(), task.getOptions().getBulkUpsertOption());
 	}
 
@@ -308,7 +311,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				continue;
 			}
 			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId()).sourceTable(task.getSourceTable())
-					.keysetSource(task.getKeysetSource()).options(task.getOptions())
+					.keysetSource(task.getKeysetSource()).targetTable(task.getTargetTable())
+					.columnMappings(task.getColumnMappings()).options(task.getOptions())
 					.chunkListener(task.getChunkListener())
 					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,
 							task.getOptions().getCheckpointTableName()))

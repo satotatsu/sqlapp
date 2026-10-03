@@ -131,6 +131,15 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			}
 			task.setMigrationId(migrationId);
 			task.setTable(sourceTableName);
+			final String targetTableName = qualified(null, table.targetSchema(), table.targetTable());
+			if (!same(sourceTableName, targetTableName)) {
+				task.setTargetTable(targetTableName);
+			}
+			for (final var column : table.columns()) {
+				if (!same(column.sourceColumn().name(), column.targetColumn())) {
+					task.getColumnMappings().put(column.sourceColumn().name(), column.targetColumn());
+				}
+			}
 			task.setKeysetColumns(sourceTable.getPrimaryKeyConstraint().getColumns().stream()
 					.map(reference -> reference.getColumn() == null ? reference.getName() : reference.getColumn().getName())
 					.toList());
@@ -225,15 +234,7 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 
 	private static void validateDirectLoad(final ResolvedMigrationTargetMapping.TableMapping table) {
 		final var source = table.sourceTable();
-		if (!same(source.name(), table.targetTable()) || !same(source.schema(), table.targetSchema())) {
-			throw new CommandException("Existing bulk migration requires unchanged table and schema names: "
-					+ source.name());
-		}
 		for (final var column : table.columns()) {
-			if (!same(column.sourceColumn().name(), column.targetColumn())) {
-				throw new CommandException("Existing bulk migration requires unchanged column names: "
-						+ source.name() + "." + column.sourceColumn().name());
-			}
 			if (column.conversion() != null && !column.conversion().isBlank()) {
 				throw new CommandException("Existing bulk migration cannot apply mapping conversion: "
 						+ source.name() + "." + column.sourceColumn().name());

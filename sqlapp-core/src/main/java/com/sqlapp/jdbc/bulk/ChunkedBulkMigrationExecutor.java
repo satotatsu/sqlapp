@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.sqlapp.data.schemas.Column;
@@ -68,6 +69,28 @@ public final class ChunkedBulkMigrationExecutor {
 						options.getCheckpointTableName()), listener);
 	}
 
+	public static ChunkedBulkMigrationResult executeWithListener(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final Table targetTable,
+			final ChunkedBulkMigrationOption options,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		Objects.requireNonNull(options, "options");
+		if (options.getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE) {
+			throw new IllegalArgumentException("A checkpoint store is required for checkpointMode="
+					+ options.getCheckpointMode());
+		}
+		return execute(targetConnection, source, targetTable, options,
+				new JdbcBulkMigrationCheckpointStore(targetConnection, options.getCheckpointTableName()), listener);
+	}
+
+	public static ChunkedBulkMigrationResult executeWithListener(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final Table targetTable,
+			final Map<String, String> columnMappings, final ChunkedBulkMigrationOption options,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		Objects.requireNonNull(options, "options");
+		return execute(targetConnection, source, targetTable, columnMappings, options,
+				new JdbcBulkMigrationCheckpointStore(targetConnection, options.getCheckpointTableName()), listener);
+	}
+
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final Table sourceTable, final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore) throws SQLException {
@@ -79,7 +102,7 @@ public final class ChunkedBulkMigrationExecutor {
 			final Table sourceTable, final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore,
 			final ChunkedBulkMigrationListener listener) throws SQLException {
-		return executeInternal(targetConnection, sourceTable, null, options, checkpointStore, listener);
+		return executeInternal(targetConnection, sourceTable, sourceTable, Map.of(), null, options, checkpointStore, listener);
 	}
 
 	/** Executes a source that resumes by its unique ordered key rather than row count. */
@@ -95,16 +118,38 @@ public final class ChunkedBulkMigrationExecutor {
 			final BulkMigrationCheckpointStore checkpointStore,
 			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(source, "source");
-		return executeInternal(targetConnection, source.getTable(), source, options, checkpointStore, listener);
+		return executeInternal(targetConnection, source.getTable(), source.getTable(), Map.of(), source, options, checkpointStore, listener);
+	}
+
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final Table targetTable,
+			final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		Objects.requireNonNull(source, "source");
+		return execute(targetConnection, source, targetTable, Map.of(), options, checkpointStore, listener);
+	}
+
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final BulkMigrationKeysetSource source, final Table targetTable,
+			final Map<String, String> columnMappings, final ChunkedBulkMigrationOption options,
+			final BulkMigrationCheckpointStore checkpointStore,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		Objects.requireNonNull(source, "source");
+		return executeInternal(targetConnection, source.getTable(), targetTable, columnMappings, source, options,
+				checkpointStore, listener);
 	}
 
 	private static ChunkedBulkMigrationResult executeInternal(final Connection targetConnection,
-			final Table sourceTable, final BulkMigrationKeysetSource keysetSource,
+			final Table sourceTable, final Table targetTable, final Map<String, String> columnMappings,
+			final BulkMigrationKeysetSource keysetSource,
 			final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore,
 			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(targetConnection, "targetConnection");
 		Objects.requireNonNull(sourceTable, "sourceTable");
+		Objects.requireNonNull(targetTable, "targetTable");
+		validateCompatibleColumns(sourceTable, targetTable, columnMappings);
 		Objects.requireNonNull(options, "options");
 		Objects.requireNonNull(checkpointStore, "checkpointStore");
 		Objects.requireNonNull(listener, "listener");
@@ -142,7 +187,7 @@ public final class ChunkedBulkMigrationExecutor {
 		final long previouslyProcessed = checkpoint.getProcessedRows();
 		long processed = 0;
 		long chunks = checkpoint.getCompletedChunks();
-		final BulkUpsertDuplicateTracker duplicateTracker = duplicateTracker(sourceTable,
+		final BulkUpsertDuplicateTracker duplicateTracker = duplicateTracker(targetTable,
 				options, keysetSource != null, checkpoint);
 		final Iterator<Row> iterator = keysetSource == null
 				? sourceTable.getRows().iterator()
@@ -160,7 +205,7 @@ public final class ChunkedBulkMigrationExecutor {
 				}
 				final List<Row> writeRows = duplicateTracker == null
 						? rows : duplicateTracker.filter(rows);
-				final Table chunk = chunkTable(sourceTable, writeRows);
+				final Table chunk = chunkTable(targetTable, sourceTable, columnMappings, writeRows);
 				final String nextToken = keysetSource == null ? null
 						: keysetSource.resumeToken(rows.get(rows.size() - 1));
 				if (keysetSource != null && (nextToken == null || nextToken.isBlank())) {
@@ -184,7 +229,7 @@ public final class ChunkedBulkMigrationExecutor {
 						nextCheckpoint.getProcessedRows());
 				listener.onChunkStarted(progress);
 				try {
-					executeChunkWithRetry(targetConnection, chunk, sourceTable, options,
+					executeChunkWithRetry(targetConnection, chunk, targetTable, options,
 							checkpointStore, nextCheckpoint, transactional, listener, progress);
 				} catch (SQLException | RuntimeException e) {
 					try {
@@ -404,19 +449,44 @@ public final class ChunkedBulkMigrationExecutor {
 	}
 
 	static Table chunkTable(final Table source, final List<Row> rows) {
-		final Table chunk = new Table(source.getName()).setCatalogName(source.getCatalogName())
-				.setSchemaName(source.getSchemaName());
-		for (final Column column : source.getColumns()) {
+		return chunkTable(source, source, rows);
+	}
+
+	static Table chunkTable(final Table target, final Table source, final List<Row> rows) {
+		return chunkTable(target, source, Map.of(), rows);
+	}
+
+	static Table chunkTable(final Table target, final Table source,
+			final Map<String, String> columnMappings, final List<Row> rows) {
+		validateCompatibleColumns(source, target, columnMappings);
+		final Table chunk = new Table(target.getName()).setCatalogName(target.getCatalogName())
+				.setSchemaName(target.getSchemaName());
+		for (final Column column : target.getColumns()) {
 			chunk.getColumns().add(column.clone());
 		}
 		for (final Row row : rows) {
 			final Row copy = chunk.newRow();
 			for (final Column sourceColumn : source.getColumns()) {
-				copy.put(chunk.getColumns().get(sourceColumn.getName()), row.get(sourceColumn));
+				copy.put(chunk.getColumns().get(columnMappings.getOrDefault(sourceColumn.getName(), sourceColumn.getName())),
+						row.get(sourceColumn));
 			}
 			chunk.getRows().add(copy);
 		}
 		return chunk;
+	}
+
+	private static void validateCompatibleColumns(final Table source, final Table target,
+			final Map<String, String> columnMappings) {
+		Objects.requireNonNull(columnMappings, "columnMappings");
+		if (source.getColumns().size() != target.getColumns().size()
+				|| source.getColumns().stream().anyMatch(column -> target.getColumns()
+						.get(columnMappings.getOrDefault(column.getName(), column.getName())) == null)
+				|| columnMappings.keySet().stream().anyMatch(name -> source.getColumns().get(name) == null)
+				|| source.getColumns().stream()
+						.map(column -> columnMappings.getOrDefault(column.getName(), column.getName()).toLowerCase(java.util.Locale.ROOT))
+						.collect(java.util.stream.Collectors.toSet()).size() != source.getColumns().size()) {
+			throw new IllegalArgumentException("Source and target tables require a complete one-to-one column mapping");
+		}
 	}
 
 	private static List<Row> nextChunk(final Iterator<Row> iterator, final int size) {

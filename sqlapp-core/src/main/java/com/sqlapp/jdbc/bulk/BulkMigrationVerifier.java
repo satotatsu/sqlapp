@@ -50,6 +50,17 @@ public final class BulkMigrationVerifier {
 			final Iterator<Row> actualRows, final List<String> columnNames,
 			final int chunkSize, final SQLFunction<Row, String> expectedKey,
 			final SQLFunction<Row, String> actualKey) throws SQLException {
+		return verify(expected, expectedRows, actual, actualRows, columnNames, columnNames,
+				chunkSize, expectedKey, actualKey);
+	}
+
+	/** Compares source and target columns whose names differ but positions correspond. */
+	public static BulkMigrationVerificationResult verify(final Table expected,
+			final Iterator<Row> expectedRows, final Table actual,
+			final Iterator<Row> actualRows, final List<String> expectedColumnNames,
+			final List<String> actualColumnNames, final int chunkSize,
+			final SQLFunction<Row, String> expectedKey,
+			final SQLFunction<Row, String> actualKey) throws SQLException {
 		Objects.requireNonNull(expected, "expected");
 		Objects.requireNonNull(actual, "actual");
 		Objects.requireNonNull(expectedRows, "expectedRows");
@@ -57,15 +68,19 @@ public final class BulkMigrationVerifier {
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");
 		}
-		Objects.requireNonNull(columnNames, "columnNames");
+		Objects.requireNonNull(expectedColumnNames, "expectedColumnNames");
+		Objects.requireNonNull(actualColumnNames, "actualColumnNames");
+		if (expectedColumnNames.size() != actualColumnNames.size()) {
+			throw new IllegalArgumentException("Expected and actual verification columns must have equal sizes");
+		}
 		if ((expectedKey == null) != (actualKey == null)) {
 			throw new IllegalArgumentException("Both key encoders must be supplied together");
 		}
-		if (columnNames.isEmpty()) {
+		if (expectedColumnNames.isEmpty()) {
 			throw new IllegalArgumentException("At least one verification column is required");
 		}
 		final java.util.Set<String> unique = new java.util.HashSet<>();
-		final List<Column> expectedColumns = columnNames.stream().map(name -> {
+		final List<Column> expectedColumns = expectedColumnNames.stream().map(name -> {
 			final Column column = expected.getColumns().get(name);
 			if (column == null) {
 				throw new IllegalArgumentException("Expected table is missing verification column: "
@@ -76,10 +91,10 @@ public final class BulkMigrationVerifier {
 			}
 			return column;
 		}).toList();
-		final List<Column> actualColumns = expectedColumns.stream().map(column -> {
-			final Column match = actual.getColumns().get(column.getName());
+		final List<Column> actualColumns = actualColumnNames.stream().map(name -> {
+			final Column match = actual.getColumns().get(name);
 			if (match == null) {
-				throw new IllegalArgumentException("Actual table is missing column: " + column.getName());
+				throw new IllegalArgumentException("Actual table is missing column: " + name);
 			}
 			return match;
 		}).toList();
@@ -152,6 +167,23 @@ public final class BulkMigrationVerifier {
 				BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
 			}
 		}
+	}
+
+	public static BulkMigrationVerificationResult verify(
+			final BulkMigrationKeysetSource expected,
+			final BulkMigrationKeysetSource actual, final List<String> expectedColumnNames,
+			final List<String> actualColumnNames, final int chunkSize) throws SQLException {
+		Objects.requireNonNull(expected, "expected");
+		Objects.requireNonNull(actual, "actual");
+		final String expectedFingerprint = requireFingerprint(expected, "expected");
+		final String actualFingerprint = requireFingerprint(actual, "actual");
+		final Iterator<Row> expectedRows = expected.iterator(null);
+		final Iterator<Row> actualRows = actual.iterator(null);
+		final var result = verify(expected.getTable(), expectedRows, actual.getTable(), actualRows,
+				expectedColumnNames, actualColumnNames, chunkSize, expected::resumeToken, actual::resumeToken);
+		return new BulkMigrationVerificationResult(result.getChunkSize(), result.getExpectedRows(),
+				result.getActualRows(), result.getColumns(), expectedFingerprint, actualFingerprint,
+				result.getChunks());
 	}
 
 	private static String requireFingerprint(final BulkMigrationKeysetSource source,

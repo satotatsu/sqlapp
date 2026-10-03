@@ -439,6 +439,45 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void resolvesAndVerifiesRenamedTargetTable() throws Exception {
+		try (var source = dataSource("bulk_renamed_source"); var target = dataSource("bulk_renamed_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
+			executeSql(target, "CREATE TABLE PUBLIC.CUSTOMERS (CUSTOMER_ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(target, "INSERT INTO PUBLIC.CUSTOMERS VALUES (1, 'one'), (2, 'two')");
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("renamed-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setTargetTable("PUBLIC.CUSTOMERS");
+			task.setColumnMappings(Map.of("ID", "CUSTOMER_ID"));
+			task.setMode(BulkMigrationMode.INSERT);
+			task.setResume(false);
+			task.setKeysetColumns(List.of("ID"));
+			task.setVerificationColumns(List.of("ID", "NAME"));
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("renamed-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
+				final var plan = new BulkMigrationJobConfigurationResolver().resolve(job, sourceConnection);
+				assertEquals("CUSTOMERS", plan.getTasks().getFirst().getEffectiveTargetTable().getName());
+				assertEquals("CUSTOMER_ID", plan.getTasks().getFirst().getEffectiveTargetTable()
+						.getColumns().get(0).getName());
+				assertEquals(true, ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1).isMatch());
+			}
+		}
+	}
+
+	@Test
 	void rejectsAmbiguousUnqualifiedTableName() throws Exception {
 		try (var source = dataSource("bulk_ambiguous")) {
 			final Catalog catalog = new Catalog("CATALOG");

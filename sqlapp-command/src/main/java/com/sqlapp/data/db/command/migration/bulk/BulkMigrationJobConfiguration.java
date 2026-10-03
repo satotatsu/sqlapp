@@ -4,6 +4,8 @@ package com.sqlapp.data.db.command.migration.bulk;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
@@ -41,6 +43,9 @@ public class BulkMigrationJobConfiguration {
 	public static class Task {
 		private String id;
 		private String table;
+		/** Optional qualified write target; columns retain their source names. */
+		private String targetTable;
+		private Map<String, String> columnMappings = new LinkedHashMap<>();
 		private List<String> keysetColumns = new ArrayList<>();
 		private String migrationId;
 		private int chunkSize = 10_000;

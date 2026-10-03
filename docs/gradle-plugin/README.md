@@ -65,6 +65,8 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
+| Migration | `verifyBulkMigrationEvidence` | Verify execution and data reports and optionally write a portable audit JSON |
+| Migration | `verifyBulkMigrationEvidenceReport` | Revalidate a saved bulk migration audit and its exact source artifacts offline |
 | Migration | `executeMigrationSnapshot` | Apply one atomic SCD2 snapshot from YAML |
 | Migration | `generateMigrationSnapshotApprovalReport` | Generate a snapshot approval artifact without database access |
 | Migration | `verifyMigrationSnapshotReport` | Verify a saved snapshot success report against its approval |

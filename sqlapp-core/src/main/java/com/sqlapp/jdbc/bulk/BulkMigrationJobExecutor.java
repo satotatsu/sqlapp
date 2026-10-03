@@ -164,10 +164,15 @@ public final class BulkMigrationJobExecutor {
 				}
 				if (task.getKeysetSource() != null) {
 					result = task.getCheckpointStore() == null
-							? ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,
-									task.getKeysetSource(), task.getOptions(), chunkListener)
+							? task.getTargetTable() == null
+									? ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,
+											task.getKeysetSource(), task.getOptions(), chunkListener)
+									: ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,
+											task.getKeysetSource(), task.getTargetTable(), task.getColumnMappings(),
+											task.getOptions(), chunkListener)
 							: ChunkedBulkMigrationExecutor.execute(targetConnection,
-									task.getKeysetSource(), task.getOptions(), task.getCheckpointStore(),
+									task.getKeysetSource(), task.getEffectiveTargetTable(), task.getColumnMappings(),
+									task.getOptions(), task.getCheckpointStore(),
 									chunkListener);
 				} else {
 					result = task.getCheckpointStore() == null
@@ -291,7 +296,6 @@ public final class BulkMigrationJobExecutor {
 	}
 
 	private static Table sourceTable(final BulkMigrationJobTask task) {
-		return task.getSourceTable() != null ? task.getSourceTable()
-				: task.getKeysetSource().getTable();
+		return task.getEffectiveSourceTable();
 	}
 }

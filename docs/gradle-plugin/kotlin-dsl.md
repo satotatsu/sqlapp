@@ -163,6 +163,32 @@ Approval-controlled runs can additionally set `ddlVerificationReportFile`,
 `expectedDdlVerificationReportFingerprint`. All three remain optional for the
 simple workflow.
 
+The post-load audit and its later offline revalidation are also available from
+typed Kotlin DSL tasks:
+
+```kotlin
+import com.sqlapp.gradle.plugins.VerifyBulkMigrationEvidenceReportTask
+import com.sqlapp.gradle.plugins.VerifyBulkMigrationEvidenceTask
+
+tasks.named<VerifyBulkMigrationEvidenceTask>("verifyBulkMigrationEvidence") {
+    operationalReportFile.set(layout.buildDirectory.file("reports/access-load-operations.json"))
+    verificationReportFile.set(layout.buildDirectory.file("reports/access-load-verification.json"))
+    outputFile.set(layout.buildDirectory.file("reports/access-load-evidence.json"))
+}
+
+tasks.named<VerifyBulkMigrationEvidenceReportTask>("verifyBulkMigrationEvidenceReport") {
+    evidenceReportFile.set(layout.buildDirectory.file("reports/access-load-evidence.json"))
+    operationalReportFile.set(layout.buildDirectory.file("reports/access-load-operations.json"))
+    verificationReportFile.set(layout.buildDirectory.file("reports/access-load-verification.json"))
+    expectedEvidenceReportFingerprint.set(providers.environmentVariable("APPROVED_EVIDENCE_SHA256"))
+}
+```
+
+Add the optional configuration, assessment and DDL-verification files when the
+archival check must cover the complete approval chain. See
+[Database migration assessment](database-migration-assessment.md) for the full
+set of identity and freshness gates.
+
 ## Configure list and map properties
 
 Use Gradle's collection-property methods:

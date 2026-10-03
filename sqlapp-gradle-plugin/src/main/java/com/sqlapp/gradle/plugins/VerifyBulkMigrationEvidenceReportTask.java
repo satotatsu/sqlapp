@@ -7,23 +7,21 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
-import com.sqlapp.data.db.command.migration.bulk.VerifyBulkMigrationEvidenceCommand;
+import com.sqlapp.data.db.command.migration.bulk.VerifyBulkMigrationEvidenceReportCommand;
 
-/** Verifies bulk migration execution and data evidence without database access. */
-public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<VerifyBulkMigrationEvidenceCommand> {
-	public VerifyBulkMigrationEvidenceTask() {
-		getRequireSuccessfulExecution().convention(true);
-		getRequireMatchingData().convention(true);
-		getRequireProvenance().convention(true);
-	}
-
-	public void call(final Action<VerifyBulkMigrationEvidenceTask> action) {
+/** Revalidates a saved bulk migration audit artifact without database access. */
+public abstract class VerifyBulkMigrationEvidenceReportTask
+		extends AbstractTask<VerifyBulkMigrationEvidenceReportCommand> {
+	public void call(final Action<VerifyBulkMigrationEvidenceReportTask> action) {
 		action.execute(this);
 	}
+
+	@InputFile
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getEvidenceReportFile();
 
 	@InputFile
 	@PathSensitive(PathSensitivity.RELATIVE)
@@ -48,21 +46,25 @@ public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<Verif
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getDdlVerificationReportFile();
 
-	@OutputFile
+	@Input
 	@Optional
-	public abstract RegularFileProperty getOutputFile();
+	public abstract Property<String> getExpectedEvidenceReportFingerprint();
 
 	@Input
-	public abstract Property<Boolean> getRequireSuccessfulExecution();
+	@Optional
+	public abstract Property<String> getExpectedPlanFingerprint();
 
 	@Input
-	public abstract Property<Boolean> getRequireMatchingData();
+	@Optional
+	public abstract Property<String> getExpectedConfigurationFingerprint();
 
 	@Input
-	public abstract Property<Boolean> getRequireProvenance();
+	@Optional
+	public abstract Property<Long> getMaxEvidenceAgeSeconds();
 
 	@Override
-	protected void beforeRun(final VerifyBulkMigrationEvidenceCommand command) {
+	protected void beforeRun(final VerifyBulkMigrationEvidenceReportCommand command) {
+		command.setEvidenceReportFile(getEvidenceReportFile().get().getAsFile());
 		command.setOperationalReportFile(getOperationalReportFile().get().getAsFile());
 		command.setVerificationReportFile(getVerificationReportFile().get().getAsFile());
 		if (getConfigurationFile().isPresent()) {
@@ -74,16 +76,22 @@ public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<Verif
 		if (getDdlVerificationReportFile().isPresent()) {
 			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
 		}
-		if (getOutputFile().isPresent()) {
-			command.setOutputFile(getOutputFile().get().getAsFile());
+		if (getExpectedEvidenceReportFingerprint().isPresent()) {
+			command.setExpectedEvidenceReportFingerprint(getExpectedEvidenceReportFingerprint().get());
 		}
-		command.setRequireSuccessfulExecution(getRequireSuccessfulExecution().get());
-		command.setRequireMatchingData(getRequireMatchingData().get());
-		command.setRequireProvenance(getRequireProvenance().get());
+		if (getExpectedPlanFingerprint().isPresent()) {
+			command.setExpectedPlanFingerprint(getExpectedPlanFingerprint().get());
+		}
+		if (getExpectedConfigurationFingerprint().isPresent()) {
+			command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().get());
+		}
+		if (getMaxEvidenceAgeSeconds().isPresent()) {
+			command.setMaxEvidenceAgeSeconds(getMaxEvidenceAgeSeconds().get());
+		}
 	}
 
 	@Override
-	protected VerifyBulkMigrationEvidenceCommand createCommand() {
-		return new VerifyBulkMigrationEvidenceCommand();
+	protected VerifyBulkMigrationEvidenceReportCommand createCommand() {
+		return new VerifyBulkMigrationEvidenceReportCommand();
 	}
 }

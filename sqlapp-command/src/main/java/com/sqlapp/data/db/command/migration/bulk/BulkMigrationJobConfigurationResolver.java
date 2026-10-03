@@ -102,6 +102,7 @@ public class BulkMigrationJobConfigurationResolver {
 		validateTasks(configuration.getTasks());
 		for (final var task : configuration.getTasks()) {
 			final Table table = findTable(tables, task.getTable());
+			final Table targetTable = targetTable(table, task.getTargetTable(), task.getColumnMappings());
 			validateVerificationColumns(configuration.getVerification(), task, table);
 			final BulkOption bulk = bulk(task.getBulk());
 			final BulkMigrationRetryOption retry = retry(task.getRetry());
@@ -121,6 +122,8 @@ public class BulkMigrationJobConfigurationResolver {
 					|| task.getKeysetColumns().isEmpty() ? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
 							: new JdbcBulkMigrationKeysetSource(sourceConnection, table, task.getKeysetColumns());
 			final var builder = BulkMigrationJobTask.builder().taskId(task.getId()).keysetSource(source)
+					.targetTable(targetTable)
+					.columnMappings(task.getColumnMappings())
 					.options(options);
 			if (task.getCheckpointMode() == com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.FILE) {
 				if (task.getCheckpointDirectory() == null || task.getCheckpointDirectory().isBlank()) {
@@ -148,6 +151,55 @@ public class BulkMigrationJobConfigurationResolver {
 				report(configurationFile, configuration.getReport()),
 				verification(configurationFile, configuration.getVerification(), configuration.getTasks()),
 				provenance(configurationFile, configuration.getProvenance()));
+	}
+
+	private static Table targetTable(final Table source, final String qualifiedName,
+			final Map<String, String> columnMappings) {
+		if ((qualifiedName == null || qualifiedName.isBlank())
+				&& (columnMappings == null || columnMappings.isEmpty())) {
+			return null;
+		}
+		final String effectiveName = qualifiedName == null || qualifiedName.isBlank()
+				? source.getName() : qualifiedName;
+		final String[] parts = effectiveName.split("\\.", -1);
+		if (parts.length < 1 || parts.length > 3 || java.util.Arrays.stream(parts).anyMatch(String::isBlank)) {
+			throw new CommandException("targetTable must be table, schema.table, or catalog.schema.table: "
+					+ effectiveName);
+		}
+		final Table target = new Table(source.getName()).setCatalogName(source.getCatalogName())
+				.setSchemaName(source.getSchemaName());
+		source.getColumns().forEach(column -> target.getColumns().add(column.clone()));
+		if (source.getPrimaryKeyConstraint() != null) {
+			final var primaryKeyColumns = source.getPrimaryKeyConstraint().getColumns().stream()
+					.map(reference -> target.getColumns().get(reference.getName())).toArray(com.sqlapp.data.schemas.Column[]::new);
+			target.setPrimaryKey(source.getPrimaryKeyConstraint().getName(), primaryKeyColumns);
+		}
+		target.setName(parts[parts.length - 1]);
+		if (parts.length >= 2) {
+			target.setSchemaName(parts[parts.length - 2]);
+		}
+		if (parts.length == 3) {
+			target.setCatalogName(parts[0]);
+		}
+		if (columnMappings != null) {
+			final var targetNames = new HashSet<String>();
+			for (final var sourceColumn : source.getColumns()) {
+				final String targetName = columnMappings.getOrDefault(sourceColumn.getName(), sourceColumn.getName());
+				if (targetName == null || targetName.isBlank()
+						|| !targetNames.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
+					throw new CommandException("columnMappings must produce unique non-empty target columns: "
+							+ targetName);
+				}
+			}
+			for (final var mapping : columnMappings.entrySet()) {
+				final var column = target.getColumns().get(mapping.getKey());
+				if (column == null || mapping.getValue() == null || mapping.getValue().isBlank()) {
+					throw new CommandException("Invalid columnMappings entry: " + mapping);
+				}
+				column.setName(mapping.getValue());
+			}
+		}
+		return target;
 	}
 
 	private static BulkMigrationArtifactProvenance provenance(final File configurationFile,

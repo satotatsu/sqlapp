@@ -29,19 +29,74 @@ class VerifyBulkMigrationEvidenceCommandTest {
 				fingerprint(ddl));
 		final Path operations = directory.resolve("operations.json");
 		final Path verification = directory.resolve("verification.json");
+		final Path evidence = directory.resolve("evidence.json");
 		writeOperational(operations, "plan-1", provenance);
 		writeVerification(verification, "plan-1", provenance);
 
 		final var command = command(operations, verification, configuration, assessment, ddl);
+		command.setOutputFile(evidence.toFile());
 		assertDoesNotThrow(command::run);
 		assertEquals("plan-1", command.getOperationalReport().planFingerprint());
 		assertEquals(command.getOperationalReport().provenance(), command.getVerificationReport().provenance());
+		final var saved = new BulkMigrationEvidenceReportIO().read(evidence);
+		assertEquals(List.of("SUCCESSFUL_EXECUTION", "MATCHING_DATA", "PROVENANCE_REQUIRED"),
+				saved.verificationPolicies());
+		assertEquals(List.of("OPERATIONAL_REPORT", "VERIFICATION_REPORT", "CONFIGURATION", "ASSESSMENT_REPORT",
+				"DDL_VERIFICATION_REPORT"), saved.verifiedArtifacts());
+		assertEquals(fingerprint(operations), saved.operationalReportFingerprint());
+		assertEquals(provenance, saved.provenance());
+		assertEquals(saved, new BulkMigrationEvidenceReportIO().read(evidence, operations, verification));
+		final var reportCommand = new VerifyBulkMigrationEvidenceReportCommand();
+		reportCommand.setEvidenceReportFile(evidence.toFile());
+		reportCommand.setOperationalReportFile(operations.toFile());
+		reportCommand.setVerificationReportFile(verification.toFile());
+		reportCommand.setConfigurationFile(configuration.toFile());
+		reportCommand.setAssessmentReportFile(assessment.toFile());
+		reportCommand.setDdlVerificationReportFile(ddl.toFile());
+		reportCommand.setExpectedEvidenceReportFingerprint(fingerprint(evidence));
+		reportCommand.setExpectedPlanFingerprint("plan-1");
+		reportCommand.setExpectedConfigurationFingerprint(provenance.configurationFingerprint());
+		assertDoesNotThrow(reportCommand::run);
+		assertEquals(saved, reportCommand.getReport());
+		Files.writeString(ddl, "changed");
+		assertThrows(CommandException.class, reportCommand::run);
+		Files.writeString(ddl, "{\"status\":\"VERIFIED\"}");
+		reportCommand.setExpectedEvidenceReportFingerprint("sha256:" + "f".repeat(64));
+		assertThrows(CommandException.class, reportCommand::run);
+		reportCommand.setExpectedEvidenceReportFingerprint(fingerprint(evidence));
+		reportCommand.setExpectedPlanFingerprint("another-plan");
+		assertThrows(CommandException.class, reportCommand::run);
+		reportCommand.setExpectedPlanFingerprint("plan-1");
+		final var oldEvidence = new BulkMigrationEvidenceReport(saved.formatVersion(),
+				Instant.parse("2026-10-02T00:02:00Z"), saved.jobId(), saved.planFingerprint(),
+				saved.operationalReportFingerprint(), saved.verificationReportFingerprint(), saved.executionEvent(),
+				saved.dataMatch(), saved.provenance(), saved.verificationPolicies(), saved.verifiedArtifacts());
+		new BulkMigrationEvidenceReportIO().write(evidence, oldEvidence);
+		reportCommand.setExpectedEvidenceReportFingerprint(fingerprint(evidence));
+		reportCommand.setMaxEvidenceAgeSeconds(1L);
+		assertThrows(CommandException.class, reportCommand::run);
 
 		Files.writeString(assessment, "changed");
 		assertThrows(CommandException.class, command::run);
 		Files.writeString(assessment, "{\"status\":\"REVIEW_REQUIRED\"}");
 		writeVerification(verification, "another-plan", provenance);
+		assertThrows(CommandException.class,
+				() -> new BulkMigrationEvidenceReportIO().read(evidence, operations, verification));
 		assertThrows(CommandException.class, command::run);
+	}
+
+	@Test
+	void evidenceReportRejectsPoliciesThatDisagreeWithRecordedResults() {
+		final var invalid = new BulkMigrationEvidenceReport(BulkMigrationEvidenceReport.CURRENT_FORMAT_VERSION,
+				Instant.parse("2026-10-02T00:02:00Z"), "access-import", "plan-1", "sha256:" + "1".repeat(64),
+				"sha256:" + "2".repeat(64), BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED, false, null,
+				List.of(BulkMigrationEvidenceReport.POLICY_SUCCESSFUL_EXECUTION,
+						BulkMigrationEvidenceReport.POLICY_MATCHING_DATA,
+						BulkMigrationEvidenceReport.POLICY_PROVENANCE_REQUIRED),
+				List.of(BulkMigrationEvidenceReport.ARTIFACT_OPERATIONAL_REPORT,
+						BulkMigrationEvidenceReport.ARTIFACT_VERIFICATION_REPORT));
+		assertThrows(CommandException.class,
+				() -> new BulkMigrationEvidenceReportIO().write(directory.resolve("invalid.json"), invalid));
 	}
 
 	@Test

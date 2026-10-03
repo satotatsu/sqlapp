@@ -32,6 +32,28 @@ import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
 	@Test
+	void targetIdentityChangesPlanAndChunkWriteIdentity() {
+		final Table source = table("SOURCE").setSchemaName("legacy");
+		final Table target = source.clone().setName("CUSTOMERS").setSchemaName("app");
+		target.getColumns().get(0).setName("CUSTOMER_ID");
+		final var options = options("renamed-target");
+		final var unchanged = BulkMigrationJobTask.builder().taskId("task").sourceTable(source)
+				.options(options).build();
+		final var renamed = BulkMigrationJobTask.builder().taskId("task").sourceTable(source)
+				.targetTable(target).columnMappings(java.util.Map.of("ID", "CUSTOMER_ID"))
+				.options(options).build();
+
+		assertNotEquals(BulkMigrationJobPlanner.plan(List.of(unchanged)).getFingerprint(),
+				BulkMigrationJobPlanner.plan(List.of(renamed)).getFingerprint());
+		final Table chunk = ChunkedBulkMigrationExecutor.chunkTable(target, source,
+				java.util.Map.of("ID", "CUSTOMER_ID"), source.getRows());
+		assertEquals("app", chunk.getSchemaName());
+		assertEquals("CUSTOMERS", chunk.getName());
+		assertEquals(source.getColumns().size(), chunk.getColumns().size());
+		assertEquals("CUSTOMER_ID", chunk.getColumns().get(0).getName());
+	}
+
+	@Test
 	void chunkedExecutionPreservesReadFailureWhenClosingRowsFails() {
 		final RuntimeException readFailure = new RuntimeException("read");
 		final Exception closeFailure = new Exception("close");
