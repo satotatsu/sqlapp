@@ -54,6 +54,21 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void rejectsInvalidProgrammaticColumnMappingsBeforePlanning() {
+		final Table source = table("SOURCE");
+		final Table target = table("TARGET");
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobTask.builder()
+				.taskId("missing-target").sourceTable(source).columnMappings(java.util.Map.of("ID", "TARGET_ID"))
+				.options(options("missing-target")).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobTask.builder()
+				.taskId("unknown-source").sourceTable(source).targetTable(target)
+				.columnMappings(java.util.Map.of("UNKNOWN", "ID")).options(options("unknown-source")).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobTask.builder()
+				.taskId("missing-column").sourceTable(source).targetTable(target)
+				.columnMappings(java.util.Map.of("ID", "TARGET_ID")).options(options("missing-column")).build());
+	}
+
+	@Test
 	void chunkedExecutionPreservesReadFailureWhenClosingRowsFails() {
 		final RuntimeException readFailure = new RuntimeException("read");
 		final Exception closeFailure = new Exception("close");

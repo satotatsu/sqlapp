@@ -177,13 +177,27 @@ public final class BulkMigrationVerifier {
 		Objects.requireNonNull(actual, "actual");
 		final String expectedFingerprint = requireFingerprint(expected, "expected");
 		final String actualFingerprint = requireFingerprint(actual, "actual");
-		final Iterator<Row> expectedRows = expected.iterator(null);
-		final Iterator<Row> actualRows = actual.iterator(null);
-		final var result = verify(expected.getTable(), expectedRows, actual.getTable(), actualRows,
-				expectedColumnNames, actualColumnNames, chunkSize, expected::resumeToken, actual::resumeToken);
-		return new BulkMigrationVerificationResult(result.getChunkSize(), result.getExpectedRows(),
-				result.getActualRows(), result.getColumns(), expectedFingerprint, actualFingerprint,
-				result.getChunks());
+		Iterator<Row> expectedRows = null;
+		Iterator<Row> actualRows = null;
+		boolean delegated = false;
+		Throwable failure = null;
+		try {
+			expectedRows = expected.iterator(null);
+			actualRows = actual.iterator(null);
+			delegated = true;
+			final var result = verify(expected.getTable(), expectedRows, actual.getTable(), actualRows,
+					expectedColumnNames, actualColumnNames, chunkSize, expected::resumeToken, actual::resumeToken);
+			return new BulkMigrationVerificationResult(result.getChunkSize(), result.getExpectedRows(),
+					result.getActualRows(), result.getColumns(), expectedFingerprint, actualFingerprint,
+					result.getChunks());
+		} catch (SQLException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
+			if (!delegated) {
+				BulkMigrationIteratorSupport.close(failure, expectedRows, actualRows);
+			}
+		}
 	}
 
 	private static String requireFingerprint(final BulkMigrationKeysetSource source,

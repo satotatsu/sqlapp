@@ -40,6 +40,27 @@ public class BulkMigrationJobTask {
 		this.keysetSource = keysetSource;
 		this.targetTable = targetTable;
 		this.columnMappings = columnMappings == null ? Map.of() : Map.copyOf(columnMappings);
+		if (!this.columnMappings.isEmpty() && targetTable == null) {
+			throw new IllegalArgumentException("targetTable is required when columnMappings are configured: " + taskId);
+		}
+		if (targetTable != null) {
+			final Table source = sourceTable != null ? sourceTable : keysetSource.getTable();
+			if (source.getColumns().size() != targetTable.getColumns().size()) {
+				throw new IllegalArgumentException("Source and target column counts differ: " + taskId);
+			}
+			final var names = new java.util.HashSet<String>();
+			for (final var sourceColumn : source.getColumns()) {
+				final String targetName = this.columnMappings.getOrDefault(sourceColumn.getName(), sourceColumn.getName());
+				if (targetTable.getColumns().get(targetName) == null
+						|| !names.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
+					throw new IllegalArgumentException("Invalid one-to-one target column mapping: "
+							+ sourceColumn.getName() + " -> " + targetName);
+				}
+			}
+			if (this.columnMappings.keySet().stream().anyMatch(name -> source.getColumns().get(name) == null)) {
+				throw new IllegalArgumentException("columnMappings contains an unknown source column: " + taskId);
+			}
+		}
 		this.options = java.util.Objects.requireNonNull(options, "options");
 		this.checkpointStore = checkpointStore;
 		this.chunkListener = chunkListener;

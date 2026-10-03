@@ -195,7 +195,8 @@ class BulkMigrationJobVerifierTest {
 			}
 		};
 
-		assertThrows(SQLException.class, () -> BulkMigrationVerifier.verify(expected, actual, List.of("ID"), 10));
+		assertThrows(SQLException.class, () -> BulkMigrationVerifier.verify(expected, actual,
+				List.of("ID"), List.of("TARGET_ID"), 10));
 		assertTrue(expectedRows.closed);
 	}
 
