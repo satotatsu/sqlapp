@@ -129,7 +129,7 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 		task.setTargetTable("PUBLIC.CUSTOMERS");
 		task.setColumnMappings(Map.of("ACCESS_ID", "CUSTOMER_ID"));
 		task.setKeysetColumns(List.of("ACCESS_ID"));
-		task.setMode(BulkMigrationMode.INSERT);
+		task.setMode(BulkMigrationMode.UPSERT);
 		task.setResume(false);
 		task.setRequireEmptyTarget(true);
 		configuration.setTasks(List.of(task));
