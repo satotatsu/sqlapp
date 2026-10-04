@@ -710,6 +710,53 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 	}
 
 	@Test
+	void resolvesMappedCompositeUpsertColumnsFromSourceNames() throws Exception {
+		try (var source = dataSource("bulk_mapped_composite")) {
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ACCESS_LINES");
+			table.getColumns().add(new Column("ACCESS_ORDER_ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("ACCESS_LINE_NO").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("DESCRIPTION").setDataType(DataType.VARCHAR));
+			table.setPrimaryKey("PK_ACCESS_LINES", table.getColumns().get("ACCESS_ORDER_ID"),
+					table.getColumns().get("ACCESS_LINE_NO"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("mapped-composite-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("access-lines");
+			task.setTable("PUBLIC.ACCESS_LINES");
+			task.setTargetTable("PUBLIC.ORDER_LINES");
+			task.setResume(false);
+			task.setColumnMappings(Map.of("ACCESS_ORDER_ID", "ORDER_ID", "ACCESS_LINE_NO", "LINE_NO"));
+			task.setKeyColumns(List.of("ACCESS_ORDER_ID", "ACCESS_LINE_NO"));
+			task.setUpdateColumns(List.of("DESCRIPTION"));
+			task.setVerificationColumns(List.of("ACCESS_ORDER_ID", "DESCRIPTION"));
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("mapped-composite-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+
+			try (var connection = source.getConnection()) {
+				final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(job, connection);
+				final var resolvedTask = resolution.plan().getTasks().get(0);
+				assertEquals(List.of("ORDER_ID", "LINE_NO"),
+						resolvedTask.getOptions().getBulkUpsertOption().getKeyColumns());
+				assertEquals(List.of("DESCRIPTION"),
+						resolvedTask.getOptions().getBulkUpsertOption().getUpdateColumns());
+				assertEquals(List.of("ACCESS_ORDER_ID", "DESCRIPTION"),
+						resolution.verificationConfiguration().columnsByTask().get("access-lines"));
+				assertEquals("ACCESS_ORDER_ID", resolvedTask.getSourceColumnName("ORDER_ID"));
+			}
+
+			task.setKeyColumns(List.of("MISSING"));
+			assertInvalidConfiguration(source, job, configuration);
+		}
+	}
+
+	@Test
 	void rejectsInvalidVerificationColumnsBeforeExecution() throws Exception {
 		try (var source = dataSource("bulk_invalid_verification")) {
 			final Schema schema = new Schema("PUBLIC");

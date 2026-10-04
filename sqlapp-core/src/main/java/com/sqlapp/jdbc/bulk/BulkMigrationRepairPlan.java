@@ -114,6 +114,10 @@ public final class BulkMigrationRepairPlan {
 					upsert.getDuplicateRowSelectorFingerprint(), upsert.getStagingTableName());
 			list(digest, upsert.getKeyColumns());
 			list(digest, upsert.getUpdateColumns());
+			update(digest, options.getColumnMappings().size());
+			options.getColumnMappings().entrySet().stream()
+					.sorted(java.util.Map.Entry.comparingByKey())
+					.forEach(entry -> update(digest, entry.getKey(), entry.getValue()));
 			bulk(digest, upsert.getBulkOption());
 			return HexFormat.of().formatHex(digest.digest());
 		} catch (NoSuchAlgorithmException e) {

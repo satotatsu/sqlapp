@@ -187,8 +187,8 @@ public final class ChunkedBulkMigrationExecutor {
 		final long previouslyProcessed = checkpoint.getProcessedRows();
 		long processed = 0;
 		long chunks = checkpoint.getCompletedChunks();
-		final BulkUpsertDuplicateTracker duplicateTracker = duplicateTracker(targetTable,
-				options, keysetSource != null, checkpoint);
+		final BulkUpsertDuplicateTracker duplicateTracker = duplicateTracker(sourceTable,
+				targetTable, columnMappings, options, keysetSource != null, checkpoint);
 		final Iterator<Row> iterator = keysetSource == null
 				? sourceTable.getRows().iterator()
 				: keysetSource.iterator(checkpoint.getResumeToken());
@@ -467,7 +467,7 @@ public final class ChunkedBulkMigrationExecutor {
 		for (final Row row : rows) {
 			final Row copy = chunk.newRow();
 			for (final Column sourceColumn : source.getColumns()) {
-				copy.put(chunk.getColumns().get(columnMappings.getOrDefault(sourceColumn.getName(), sourceColumn.getName())),
+				copy.put(chunk.getColumns().get(mappedColumnName(columnMappings, sourceColumn.getName())),
 						row.get(sourceColumn));
 			}
 			chunk.getRows().add(copy);
@@ -480,13 +480,21 @@ public final class ChunkedBulkMigrationExecutor {
 		Objects.requireNonNull(columnMappings, "columnMappings");
 		if (source.getColumns().size() != target.getColumns().size()
 				|| source.getColumns().stream().anyMatch(column -> target.getColumns()
-						.get(columnMappings.getOrDefault(column.getName(), column.getName())) == null)
+						.get(mappedColumnName(columnMappings, column.getName())) == null)
 				|| columnMappings.keySet().stream().anyMatch(name -> source.getColumns().get(name) == null)
 				|| source.getColumns().stream()
-						.map(column -> columnMappings.getOrDefault(column.getName(), column.getName()).toLowerCase(java.util.Locale.ROOT))
+						.map(column -> mappedColumnName(columnMappings, column.getName())
+								.toLowerCase(java.util.Locale.ROOT))
 						.collect(java.util.stream.Collectors.toSet()).size() != source.getColumns().size()) {
 			throw new IllegalArgumentException("Source and target tables require a complete one-to-one column mapping");
 		}
+	}
+
+	private static String mappedColumnName(final Map<String, String> columnMappings,
+			final String sourceName) {
+		return columnMappings.entrySet().stream()
+				.filter(entry -> entry.getKey().equalsIgnoreCase(sourceName))
+				.map(Map.Entry::getValue).findFirst().orElse(sourceName);
 	}
 
 	private static List<Row> nextChunk(final Iterator<Row> iterator, final int size) {
@@ -557,7 +565,8 @@ public final class ChunkedBulkMigrationExecutor {
 		return (int) size;
 	}
 
-	private static BulkUpsertDuplicateTracker duplicateTracker(final Table source,
+	static BulkUpsertDuplicateTracker duplicateTracker(final Table source, final Table target,
+			final Map<String, String> columnMappings,
 			final ChunkedBulkMigrationOption options, final boolean keyset,
 			final BulkMigrationCheckpoint checkpoint) {
 		if (options.getMode() != BulkMigrationMode.UPSERT) {
@@ -565,8 +574,11 @@ public final class ChunkedBulkMigrationExecutor {
 		}
 		final BulkUpsertOption configured = options.getBulkUpsertOption() == null
 				? BulkUpsertOption.defaults() : options.getBulkUpsertOption();
-		final BulkUpsertOption effective = configured.getKeyColumns().isEmpty()
-				? copyWithKeys(configured, primaryKeyNames(source)) : configured;
+		final BulkUpsertOption targetOption = configured.getKeyColumns().isEmpty()
+				? copyWithKeys(configured, primaryKeyNames(target)) : configured;
+		final List<String> sourceKeys = targetOption.getKeyColumns().stream()
+				.map(name -> sourceColumnName(source, target, columnMappings, name)).toList();
+		final BulkUpsertOption effective = copyWithKeys(targetOption, sourceKeys);
 		final BulkUpsertPlan plan = BulkUpsertPlan.resolve(source, effective);
 		// Sequential upserts already give KEEP_LAST global semantics, including after
 		// resume. Avoid retaining every source key for this common migration mode.
@@ -579,6 +591,21 @@ public final class ChunkedBulkMigrationExecutor {
 					+ "; use KEEP_LAST or restart without a checkpoint");
 		}
 		return new BulkUpsertDuplicateTracker(plan);
+	}
+
+	private static String sourceColumnName(final Table source, final Table target,
+			final Map<String, String> columnMappings, final String targetName) {
+		final Column targetColumn = target.getColumns().get(targetName);
+		if (targetColumn == null) {
+			throw new IllegalArgumentException("Unknown target key column: " + targetName);
+		}
+		for (final Column sourceColumn : source.getColumns()) {
+			final String mapped = mappedColumnName(columnMappings, sourceColumn.getName());
+			if (targetColumn.getName().equalsIgnoreCase(mapped)) {
+				return sourceColumn.getName();
+			}
+		}
+		throw new IllegalArgumentException("Target key column has no source mapping: " + targetName);
 	}
 
 	private static void validateCheckpoint(final BulkMigrationCheckpoint checkpoint,

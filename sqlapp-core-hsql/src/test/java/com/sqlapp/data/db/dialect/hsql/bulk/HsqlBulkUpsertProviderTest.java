@@ -14,6 +14,10 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
 
 class HsqlBulkUpsertProviderTest {
 	@Test
@@ -79,6 +83,50 @@ class HsqlBulkUpsertProviderTest {
 		}
 	}
 
+	@Test
+	void repairsMappedAccessColumnsFromAnApprovedPlan() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_mapped_repair", "SA", "")) {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE TABLE ITEMS (TARGET_ID INT PRIMARY KEY, NAME VARCHAR(30), STATUS VARCHAR(10))");
+				statement.execute("INSERT INTO ITEMS VALUES (1, 'old', 'KEEP')");
+			}
+			final Table expected = new Table("ACCESS_ITEMS");
+			expected.getColumns().add(new Column("ACCESS_ID").setDataType(DataType.INT).setNotNull(true));
+			expected.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			expected.getColumns().add(new Column("STATUS").setDataType(DataType.VARCHAR).setLength(10));
+			expected.setPrimaryKey("PK_ACCESS_ITEMS", expected.getColumns().get("ACCESS_ID"));
+			final var expectedRow = expected.newRow();
+			expectedRow.put("ACCESS_ID", 1);
+			expectedRow.put("NAME", "repaired");
+			expectedRow.put("STATUS", "KEEP");
+			expected.getRows().add(expectedRow);
+
+			final Table target = new Table("ITEMS");
+			target.getColumns().add(new Column("TARGET_ID").setDataType(DataType.INT).setNotNull(true));
+			target.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			target.getColumns().add(new Column("STATUS").setDataType(DataType.VARCHAR).setLength(10));
+			target.setPrimaryKey("PK_ITEMS", target.getColumns().get("TARGET_ID"));
+			final var actualRow = target.newRow();
+			actualRow.put("TARGET_ID", 1);
+			actualRow.put("NAME", "old");
+			actualRow.put("STATUS", "KEEP");
+			target.getRows().add(actualRow);
+			final var verification = BulkMigrationVerifier.verify(expected, expected.getRows().iterator(), target,
+					target.getRows().iterator(), java.util.List.of("ACCESS_ID", "NAME", "STATUS"),
+					java.util.List.of("TARGET_ID", "NAME", "STATUS"), 10, null, null);
+			final var options = BulkMigrationRepairOption.builder()
+					.columnMappings(java.util.Map.of("ACCESS_ID", "TARGET_ID"))
+					.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("TARGET_ID").build()).build();
+			final var plan = BulkMigrationRepairPlanner.plan(connection, expected, target, verification, options);
+
+			assertEquals(java.util.List.of("TARGET_ID"), plan.getKeyColumns());
+			assertEquals(1, plan.getEstimatedReplayRows());
+			final var repaired = BulkMigrationRepairExecutor.execute(connection, plan, plan.getFingerprint());
+			assertEquals(1, repaired.getReplayedRows());
+			assertEquals("repaired|KEEP", valueByTargetId(connection, 1));
+		}
+	}
+
 	private static Table table() {
 		final var table = new Table("ITEMS");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
@@ -98,6 +146,15 @@ class HsqlBulkUpsertProviderTest {
 
 	private static String value(final java.sql.Connection connection, final int id) throws Exception {
 		try (var statement = connection.prepareStatement("SELECT NAME, STATUS FROM ITEMS WHERE ID = ?")) {
+			statement.setInt(1, id);
+			try (var result = statement.executeQuery()) {
+				return result.next() ? result.getString(1) + "|" + result.getString(2) : null;
+			}
+		}
+	}
+
+	private static String valueByTargetId(final java.sql.Connection connection, final int id) throws Exception {
+		try (var statement = connection.prepareStatement("SELECT NAME, STATUS FROM ITEMS WHERE TARGET_ID = ?")) {
 			statement.setInt(1, id);
 			try (var result = statement.executeQuery()) {
 				return result.next() ? result.getString(1) + "|" + result.getString(2) : null;

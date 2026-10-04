@@ -151,7 +151,7 @@ public class BulkMigrationJobPlan {
 				} else {
 					final BulkUpsertOption upsert = option.getBulkUpsertOption() == null
 							? BulkUpsertOption.defaults() : option.getBulkUpsertOption();
-					BulkUpsertPlan.resolve(table, upsert);
+					BulkUpsertPlan.resolve(target, upsert);
 					list(digest, upsert.getKeyColumns());
 					list(digest, upsert.getUpdateColumns());
 					update(digest, upsert.isUpdateWhenMatched(), upsert.isInsertWhenNotMatched(),

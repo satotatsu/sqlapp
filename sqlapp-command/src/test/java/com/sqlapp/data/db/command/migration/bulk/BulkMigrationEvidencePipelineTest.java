@@ -21,6 +21,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkUpsertDuplicateKeyStrategy;
 import com.sqlapp.util.MessageDigests;
 import com.sqlapp.util.YamlConverter;
 import com.zaxxer.hikari.HikariConfig;
@@ -114,6 +115,46 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 		}
 	}
 
+	@Test
+	void appliesDuplicateKeyPolicyToMappedAccessColumns() throws Exception {
+		try (var source = dataSource("bulk_mapped_duplicate_source");
+				var target = dataSource("bulk_mapped_duplicate_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ACCESS_CUSTOMERS "
+					+ "(ACCESS_ID INT NOT NULL, CUSTOMER_NAME VARCHAR(30))");
+			executeSql(source, "INSERT INTO PUBLIC.ACCESS_CUSTOMERS VALUES (1, 'first'), (1, 'duplicate')");
+			executeSql(target, "CREATE TABLE PUBLIC.CUSTOMERS "
+					+ "(CUSTOMER_ID INT NOT NULL PRIMARY KEY, CUSTOMER_NAME VARCHAR(30))");
+			final File schemaFile = directory.resolve("duplicate-access-schema.xml").toFile();
+			accessSchema().writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("access-duplicates");
+			task.setTable("PUBLIC.ACCESS_CUSTOMERS");
+			task.setTargetTable("PUBLIC.CUSTOMERS");
+			task.setColumnMappings(Map.of("ACCESS_ID", "CUSTOMER_ID"));
+			task.setKeyColumns(List.of("ACCESS_ID"));
+			task.setResume(false);
+			task.setRequireEmptyTarget(true);
+			configuration.setTasks(List.of(task));
+			final File job = directory.resolve("duplicate-access-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+
+			final var execute = new ExecuteBulkMigrationJobCommand();
+			execute.setSourceDataSource(source);
+			execute.setDataSource(target);
+			execute.setCloseDataSource(false);
+			execute.setConfigurationFile(job);
+			assertThrows(RuntimeException.class, execute::run);
+			assertEquals(0, countRows(target, "PUBLIC.CUSTOMERS"));
+
+			task.setDuplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST);
+			new YamlConverter().writeJsonValue(job, configuration);
+			assertDoesNotThrow(execute::run);
+			assertEquals(1, countRows(target, "PUBLIC.CUSTOMERS"));
+		}
+	}
+
 	private BulkMigrationJobConfiguration configuration(final File schemaFile, final File assessment,
 			final File ddlVerification) {
 		final var configuration = new BulkMigrationJobConfiguration();
@@ -130,6 +171,8 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 		task.setColumnMappings(Map.of("ACCESS_ID", "CUSTOMER_ID"));
 		task.setKeysetColumns(List.of("ACCESS_ID"));
 		task.setMode(BulkMigrationMode.UPSERT);
+		task.setKeyColumns(List.of("ACCESS_ID"));
+		task.setUpdateColumns(List.of("CUSTOMER_NAME"));
 		task.setResume(false);
 		task.setRequireEmptyTarget(true);
 		configuration.setTasks(List.of(task));
@@ -138,6 +181,7 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 		configuration.setReport(report);
 		final var verification = new BulkMigrationJobConfiguration.Verification();
 		verification.setTargetFile("access-load-verification.json");
+		task.setVerificationColumns(List.of("ACCESS_ID", "CUSTOMER_NAME"));
 		configuration.setVerification(verification);
 		return configuration;
 	}

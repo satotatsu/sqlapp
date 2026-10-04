@@ -178,7 +178,8 @@ public final class BulkMigrationRepairExecutor {
 					validateExpectedChunk(rows, mismatch, mismatch.getIndex(), columns);
 				}
 				validateExpectedBoundaries(expected, rows, mismatch);
-				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(target, rows));
+				replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(target, table,
+						options.getColumnMappings(), rows));
 				replayedRows = addBufferedRows(replayedRows, rows.size(), options);
 				previousIndex = mismatch.getIndex();
 			}
@@ -241,7 +242,8 @@ public final class BulkMigrationRepairExecutor {
 				final BulkMigrationVerificationChunk mismatch = byIndex.remove(chunkIndex);
 				if (mismatch != null) {
 					if (!rows.isEmpty()) {
-						replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(target, rows));
+						replayChunks.add(ChunkedBulkMigrationExecutor.chunkTable(target, expected,
+								options.getColumnMappings(), rows));
 						replayedRows = addBufferedRows(replayedRows, rows.size(), options);
 					}
 				}
@@ -277,18 +279,28 @@ public final class BulkMigrationRepairExecutor {
 		if (options.getMaxBufferedRows() < 0) {
 			throw new IllegalArgumentException("maxBufferedRows must not be negative");
 		}
+		ChunkedBulkMigrationExecutor.chunkTable(target, expected,
+				options.getColumnMappings(), List.of());
 		verificationColumns(expected, verification.getColumns());
 		if (verification.getMismatches().stream()
 				.anyMatch(chunk -> chunk.getExpectedRows() > 0)) {
 			final BulkUpsertPlan plan = BulkUpsertPlan.resolve(target,
 					options.getBulkUpsertOption());
 			for (final Column column : plan.getStagingColumns()) {
-				if (expected.getColumns().get(column.getName()) == null) {
+				if (!hasMappedSourceColumn(expected, options.getColumnMappings(), column.getName())) {
 					throw new IllegalArgumentException("Expected source is missing target UPSERT "
 							+ "column: " + column.getName());
 				}
 			}
 		}
+	}
+
+	private static boolean hasMappedSourceColumn(final Table expected,
+			final Map<String, String> mappings, final String targetName) {
+		return expected.getColumns().stream().anyMatch(column -> mappings.entrySet().stream()
+				.filter(entry -> entry.getKey().equalsIgnoreCase(column.getName()))
+				.map(Map.Entry::getValue).findFirst().orElse(column.getName())
+				.equalsIgnoreCase(targetName));
 	}
 
 	private static long addBufferedRows(final long current, final int added,

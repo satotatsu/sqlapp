@@ -713,9 +713,12 @@ public final class BulkMigration {
 			final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 			for (final Table table : orderedTables()) {
 				final var expected = keysetSource(sourceConnection, table);
-				final var actual = keysetSource(targetConnection, table);
+				final Table targetTable = targetTable(table);
+				final var actual = keysetSource(targetConnection, targetTable,
+						expected.getKeyColumnNames().stream().map(name -> targetColumnName(table, name)).toList());
 				final List<String> columns = verificationColumns(table);
 				final var verification = BulkMigrationVerifier.verify(expected, actual, columns,
+						columns.stream().map(name -> targetColumnName(table, name)).toList(),
 						verificationChunkSize(table));
 				results.add(new BulkMigrationJobTaskVerificationResult(taskId(table), columns, verification));
 			}
@@ -843,7 +846,8 @@ public final class BulkMigration {
 			final BulkMigrationCheckpointStore checkpointStore = checkpointStore(table, targetConnection,
 					checkpointReadOnly);
 			tasks.add(BulkMigrationJobTask.builder().taskId(taskId(table))
-					.keysetSource(keysetSource(sourceConnection, table)).options(options)
+					.keysetSource(keysetSource(sourceConnection, table)).targetTable(configuredTargetTable(table))
+					.columnMappings(tableOption(table).getColumnMappings()).options(options)
 					.checkpointStore(checkpointStore).build());
 		}
 		final BulkMigrationJobLifecycle effective = effectiveLifecycle(maintenanceConnection, maintenanceReadOnly);
@@ -885,9 +889,11 @@ public final class BulkMigration {
 			final Table table = orderedTables().get(i);
 			final var verified = verification.getTasks().get(i);
 			tasks.add(BulkMigrationJobRepairTask.builder().taskId(taskId(table))
-					.expectedKeysetSource(keysetSource(sourceConnection, table)).target(table)
+					.expectedKeysetSource(keysetSource(sourceConnection, table)).target(targetTable(table))
 					.verificationResult(verified.getVerificationResult())
-					.options(BulkMigrationRepairOption.builder().bulkUpsertOption(upsertOption(table)).build())
+					.options(BulkMigrationRepairOption.builder()
+							.columnMappings(tableOption(table).getColumnMappings())
+							.bulkUpsertOption(targetUpsertOption(table)).build())
 					.build());
 		}
 		return BulkMigrationJobRepairPlanner.plan(targetConnection, tasks);
@@ -902,7 +908,7 @@ public final class BulkMigration {
 				.incrementalStrategy(incrementalStrategy).resume(resume).checkpointMode(checkpointMode(table))
 				.checkpointTableName(checkpointTableName).sourceFingerprint(sourceFingerprint)
 				.targetFingerprint(targetFingerprint).bulkOption(bulkOption(table))
-				.bulkUpsertOption(upsertOption(table)).retryOption(retryOption(table)).build();
+				.bulkUpsertOption(targetUpsertOption(table)).retryOption(retryOption(table)).build();
 	}
 
 	private JdbcBulkMigrationKeysetSource keysetSource(final Connection connection, final Table table) {
@@ -911,10 +917,16 @@ public final class BulkMigration {
 				: new JdbcBulkMigrationKeysetSource(connection, table, columns);
 	}
 
+	private static JdbcBulkMigrationKeysetSource keysetSource(final Connection connection,
+			final Table table, final List<String> columns) {
+		return new JdbcBulkMigrationKeysetSource(connection, table, columns);
+	}
+
 	private List<String> verificationColumns(final Table table) {
 		final List<String> columns = tableOption(table).getVerificationColumns();
 		return columns.isEmpty()
-				? BulkMigrationVerificationColumns.resolve(table, mode, bulkOption(table), upsertOption(table))
+				? BulkMigrationVerificationColumns.resolve(targetTable(table), mode, bulkOption(table),
+						targetUpsertOption(table)).stream().map(name -> sourceColumnName(table, name)).toList()
 				: columns;
 	}
 
@@ -932,6 +944,69 @@ public final class BulkMigration {
 	private BulkUpsertOption upsertOption(final Table table) {
 		final BulkUpsertOption value = tableOption(table).getUpsertOption();
 		return value == null ? upsertOption : value;
+	}
+
+	private BulkUpsertOption targetUpsertOption(final Table table) {
+		final BulkUpsertOption value = upsertOption(table);
+		return BulkUpsertOption.builder()
+				.keyColumns(value.getKeyColumns().stream().map(name -> targetColumnName(table, name)).toList())
+				.updateColumns(value.getUpdateColumns().stream().map(name -> targetColumnName(table, name)).toList())
+				.updateWhenMatched(value.isUpdateWhenMatched()).insertWhenNotMatched(value.isInsertWhenNotMatched())
+				.useTransaction(value.isUseTransaction()).duplicateKeyStrategy(value.getDuplicateKeyStrategy())
+				.duplicateRowSelector(value.getDuplicateRowSelector())
+				.duplicateRowSelectorFingerprint(value.getDuplicateRowSelectorFingerprint())
+				.stagingTableName(value.getStagingTableName()).bulkOption(value.getBulkOption()).build();
+	}
+
+	private String targetColumnName(final Table table, final String sourceName) {
+		return tableOption(table).getColumnMappings().entrySet().stream()
+				.filter(entry -> entry.getKey().equalsIgnoreCase(sourceName)).map(Map.Entry::getValue)
+				.findFirst().orElse(sourceName);
+	}
+
+	private String sourceColumnName(final Table table, final String targetName) {
+		return table.getColumns().stream().map(column -> column.getName())
+				.filter(name -> targetColumnName(table, name).equalsIgnoreCase(targetName)).findFirst()
+				.orElse(targetName);
+	}
+
+	private Table targetTable(final Table source) {
+		final BulkMigrationTableOption option = tableOption(source);
+		if (option.getTargetTable() == null && option.getColumnMappings().isEmpty()) {
+			return source;
+		}
+		final Table target = new Table(source.getName()).setCatalogName(source.getCatalogName())
+				.setSchemaName(source.getSchemaName());
+		source.getColumns().forEach(column -> target.getColumns().add(column.clone()));
+		if (source.getPrimaryKeyConstraint() != null) {
+			final var primaryKeyColumns = source.getPrimaryKeyConstraint().getColumns().stream()
+					.map(reference -> target.getColumns().get(reference.getName()))
+					.toArray(com.sqlapp.data.schemas.Column[]::new);
+			target.setPrimaryKey(source.getPrimaryKeyConstraint().getName(), primaryKeyColumns);
+		}
+		if (option.getTargetTable() != null) {
+			final String[] names = option.getTargetTable().split("\\.", -1);
+			if (names.length < 1 || names.length > 3 || java.util.Arrays.stream(names).anyMatch(String::isBlank)) {
+				throw new IllegalArgumentException("targetTable must be table, schema.table, or catalog.schema.table");
+			}
+			target.setName(names[names.length - 1]);
+			if (names.length >= 2) target.setSchemaName(names[names.length - 2]);
+			if (names.length == 3) target.setCatalogName(names[0]);
+		}
+		for (final var mapping : option.getColumnMappings().entrySet()) {
+			final var column = target.getColumns().get(mapping.getKey());
+			if (column == null || mapping.getValue() == null || mapping.getValue().isBlank()) {
+				throw new IllegalArgumentException("Invalid columnMappings entry: " + mapping);
+			}
+			column.setName(mapping.getValue());
+		}
+		return target;
+	}
+
+	private Table configuredTargetTable(final Table source) {
+		final BulkMigrationTableOption option = tableOption(source);
+		return option.getTargetTable() == null && option.getColumnMappings().isEmpty()
+				? null : targetTable(source);
 	}
 
 	private BulkOption bulkOption(final Table table) {
@@ -1057,6 +1132,19 @@ public final class BulkMigration {
 		}
 		validateColumns(table, option.getKeysetColumns(), "keysetColumns");
 		validateColumns(table, option.getVerificationColumns(), "verificationColumns");
+		final var targetNames = new HashSet<String>();
+		for (final var column : table.getColumns()) {
+			final String targetName = option.getColumnMappings().entrySet().stream()
+					.filter(entry -> entry.getKey().equalsIgnoreCase(column.getName()))
+					.map(Map.Entry::getValue).findFirst().orElse(column.getName());
+			if (targetName == null || targetName.isBlank()
+					|| !targetNames.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
+				throw new IllegalArgumentException("Invalid columnMappings target: " + targetName);
+			}
+		}
+		if (option.getColumnMappings().keySet().stream().anyMatch(name -> table.getColumns().get(name) == null)) {
+			throw new IllegalArgumentException("columnMappings contains an unknown source column: " + table.getName());
+		}
 		return option;
 	}
 

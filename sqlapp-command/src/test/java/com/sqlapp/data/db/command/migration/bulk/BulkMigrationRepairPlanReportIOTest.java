@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,6 +29,7 @@ class BulkMigrationRepairPlanReportIOTest {
 		io.write(file, report);
 
 		assertEquals(report, io.read(file));
+		assertEquals(Map.of("ACCESS_ID", "ID"), io.read(file).columnMappings());
 		assertEquals(report, io.read(file, "plan-fingerprint"));
 		assertThrows(CommandException.class, () -> io.read(file, "another-plan"));
 	}
@@ -88,7 +90,8 @@ class BulkMigrationRepairPlanReportIOTest {
 				new BulkMigrationRepairPlanReport.Relation(null, "TARGET_SCHEMA", "TARGET_ROWS"), true,
 				"expected-keyset", "actual-keyset", "SQLite", "3.50", "com.example.SqliteBulkUpsertExecutor", true,
 				false, "repair_stage", 1, estimatedRows, 100, true, List.of("ID", "TXT"), List.of("ID"),
-				List.of("ID", "TXT"), List.of("TXT"), List.of(new BulkMigrationRepairPlanReport.Chunk(0, 1, 1,
+				List.of("ID", "TXT"), List.of("TXT"), Map.of("ACCESS_ID", "ID"),
+				List.of(new BulkMigrationRepairPlanReport.Chunk(0, 1, 1,
 						"expected-hash", "actual-hash", "first", "last", "first", "last")));
 	}
 }

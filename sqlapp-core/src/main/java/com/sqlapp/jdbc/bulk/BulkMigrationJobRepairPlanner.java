@@ -10,7 +10,7 @@ import java.util.Objects;
 
 import com.sqlapp.data.schemas.Table.TableOrder;
 
-/** Builds a fully preflighted repair plan in target dependency order. */
+/** Builds a fully preflighted repair plan in the source Schema dependency order. */
 public final class BulkMigrationJobRepairPlanner {
 	private BulkMigrationJobRepairPlanner() {
 	}
@@ -24,10 +24,10 @@ public final class BulkMigrationJobRepairPlanner {
 			validateTask(task, ids);
 		}
 		BulkMigrationJobExecutor.validateAcyclic(tasks,
-				BulkMigrationJobRepairTask::getTargetTable,
+				BulkMigrationJobRepairTask::getExpectedTable,
 				BulkMigrationJobRepairTask::getTaskId, "Migration repair job");
 		final List<BulkMigrationJobRepairTask> ordered = TableOrder.CREATE.sort(tasks,
-				BulkMigrationJobRepairTask::getTargetTable);
+				BulkMigrationJobRepairTask::getExpectedTable);
 		for (final BulkMigrationJobRepairTask task : ordered) {
 			try {
 				BulkMigrationRepairExecutor.validateConfiguration(task.getExpectedTable(),

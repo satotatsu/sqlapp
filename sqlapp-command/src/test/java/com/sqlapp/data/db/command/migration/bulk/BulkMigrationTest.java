@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -35,6 +36,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceState;
 import com.sqlapp.jdbc.bulk.BulkMigrationMaintenanceStatus;
 import com.sqlapp.jdbc.bulk.InMemoryBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 
 class BulkMigrationTest {
 	@TempDir
@@ -111,6 +113,98 @@ class BulkMigrationTest {
 	}
 
 	@Test
+	void migratesVerifiesAndRepairsMappedAccessColumnsThroughTheFacade() throws Exception {
+		final JDBCDataSource source = dataSource("facade_mapped_source");
+		final JDBCDataSource target = dataSource("facade_mapped_target");
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ACCESS_ITEMS (ACCESS_ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+			statement.execute("INSERT INTO ACCESS_ITEMS VALUES (1, 'source value')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS (ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table table = new Table("ACCESS_ITEMS");
+		table.getColumns().add(new Column("ACCESS_ID").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(20));
+		table.setPrimaryKey("PK_ACCESS_ITEMS", table.getColumns().get("ACCESS_ID"));
+		schema.getTables().add(table);
+		final var option = BulkMigrationTableOption.builder().targetTable("PUBLIC.ITEMS")
+				.columnMappings(Map.of("ACCESS_ID", "ID"))
+				.upsertOption(BulkUpsertOption.builder().keyColumn("ACCESS_ID").build()).build();
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target).schema(schema)
+				.tables("ACCESS_ITEMS").tableOption("ACCESS_ITEMS", option).resume(false).build();
+
+		assertEquals(1, migration.executeAndVerify().migration().getProcessedRows());
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.executeUpdate("UPDATE ITEMS SET TXT='changed' WHERE ID=1");
+		}
+		final var repair = migration.verifyAndPlanRepair();
+		assertTrue(repair.isRequired());
+		final Path repairFile = directory.resolve("mapped-facade-repair.json");
+		final var report = repair.writeJson(repairFile);
+		assertEquals(Map.of("ACCESS_ID", "ID"),
+				report.tasks().get(0).repairPlan().columnMappings());
+		assertEquals(1, repair.executeApproved(repairFile).getReplayedRows());
+		assertTrue(migration.verify().isMatch());
+	}
+
+	@Test
+	void migratesAndRepairsMappedAccessParentChildTablesInDependencyOrder() throws Exception {
+		final JDBCDataSource source = dataSource("facade_mapped_relations_source");
+		final JDBCDataSource target = dataSource("facade_mapped_relations_target");
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ACCESS_PARENTS (ACCESS_ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+			statement.execute("CREATE TABLE ACCESS_CHILDREN (ACCESS_ID INTEGER NOT NULL PRIMARY KEY, "
+					+ "ACCESS_PARENT_ID INTEGER NOT NULL, TXT VARCHAR(20), "
+					+ "FOREIGN KEY (ACCESS_PARENT_ID) REFERENCES ACCESS_PARENTS(ACCESS_ID))");
+			statement.execute("INSERT INTO ACCESS_PARENTS VALUES (1, 'parent source')");
+			statement.execute("INSERT INTO ACCESS_CHILDREN VALUES (10, 1, 'child source')");
+		}
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE PARENTS (ID INTEGER NOT NULL PRIMARY KEY, TXT VARCHAR(20))");
+			statement.execute("CREATE TABLE CHILDREN (ID INTEGER NOT NULL PRIMARY KEY, PARENT_ID INTEGER NOT NULL, "
+					+ "TXT VARCHAR(20), FOREIGN KEY (PARENT_ID) REFERENCES PARENTS(ID))");
+		}
+		final Schema schema = new Schema("PUBLIC");
+		final Table parent = new Table("ACCESS_PARENTS");
+		parent.getColumns().add(new Column("ACCESS_ID").setDataType(DataType.INT).setNotNull(true));
+		parent.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(20));
+		parent.setPrimaryKey("PK_ACCESS_PARENTS", parent.getColumns().get("ACCESS_ID"));
+		final Table child = new Table("ACCESS_CHILDREN");
+		child.getColumns().add(new Column("ACCESS_ID").setDataType(DataType.INT).setNotNull(true));
+		child.getColumns().add(new Column("ACCESS_PARENT_ID").setDataType(DataType.INT).setNotNull(true));
+		child.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR).setLength(20));
+		child.setPrimaryKey("PK_ACCESS_CHILDREN", child.getColumns().get("ACCESS_ID"));
+		child.getConstraints().addForeignKeyConstraint("FK_ACCESS_CHILD_PARENT",
+				child.getColumns().get("ACCESS_PARENT_ID"), parent.getColumns().get("ACCESS_ID"));
+		schema.getTables().add(child);
+		schema.getTables().add(parent);
+		final BulkMigration migration = BulkMigration.builder().source(source).target(target).schema(schema)
+				.tableOption("ACCESS_PARENTS", BulkMigrationTableOption.builder().targetTable("PUBLIC.PARENTS")
+						.columnMappings(Map.of("ACCESS_ID", "ID")).build())
+				.tableOption("ACCESS_CHILDREN", BulkMigrationTableOption.builder().targetTable("PUBLIC.CHILDREN")
+						.columnMappings(Map.of("ACCESS_ID", "ID", "ACCESS_PARENT_ID", "PARENT_ID")).build())
+				.build();
+
+		assertEquals(List.of("PUBLIC.ACCESS_PARENTS", "PUBLIC.ACCESS_CHILDREN"),
+				migration.dryRun().tasks().stream().map(BulkMigrationOperationalReport.Task::taskId).toList());
+		assertEquals(2, migration.executeAndVerify().migration().getProcessedRows());
+		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
+			statement.executeUpdate("UPDATE PARENTS SET TXT='parent changed' WHERE ID=1");
+			statement.executeUpdate("UPDATE CHILDREN SET TXT='child changed' WHERE ID=10");
+		}
+
+		final var repair = migration.verifyAndPlanRepair();
+		final Path repairFile = directory.resolve("mapped-relations-repair.json");
+		final var report = repair.writeJson(repairFile);
+		assertEquals(List.of("PUBLIC.ACCESS_PARENTS", "PUBLIC.ACCESS_CHILDREN"),
+				report.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
+		assertEquals(2, repair.executeApproved(repairFile).getReplayedRows());
+		assertTrue(migration.verify().isMatch());
+	}
+
+	@Test
 	void keepsResumeExplicitBecauseSchemaIsNotADataFingerprint() {
 		final Schema schema = new Schema("PUBLIC");
 		final Table table = new Table("ITEMS");
@@ -177,6 +271,7 @@ class BulkMigrationTest {
 		assertEquals(List.of("ID", "TXT"), option.getVerificationColumns());
 		assertThrows(UnsupportedOperationException.class, () -> option.getKeysetColumns().clear());
 		assertTrue(BulkMigrationTableOption.defaults().getKeysetColumns().isEmpty());
+		assertTrue(BulkMigrationTableOption.defaults().getColumnMappings().isEmpty());
 		assertThrows(IllegalArgumentException.class, () -> BulkMigrationTableOption.builder().migrationId(" ").build());
 		assertThrows(IllegalArgumentException.class, () -> BulkMigrationTableOption.builder().chunkSize(0).build());
 		assertThrows(IllegalArgumentException.class,
@@ -185,6 +280,8 @@ class BulkMigrationTest {
 				() -> BulkMigrationTableOption.builder().keysetColumns(List.of("ID", "ID")).build());
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkMigrationTableOption.builder().verificationColumns(List.of(" ")).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationTableOption.builder().targetTable(" ").build());
 	}
 
 	@Test

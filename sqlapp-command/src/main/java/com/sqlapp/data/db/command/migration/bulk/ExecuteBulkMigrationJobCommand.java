@@ -400,8 +400,9 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	}
 
 	private static List<String> defaultVerificationColumns(final BulkMigrationJobTask task) {
-		return BulkMigrationVerificationColumns.resolve(task.getEffectiveSourceTable(), task.getOptions().getMode(),
-				task.getOptions().getBulkOption(), task.getOptions().getBulkUpsertOption());
+		return BulkMigrationVerificationColumns.resolve(task.getEffectiveTargetTable(), task.getOptions().getMode(),
+				task.getOptions().getBulkOption(), task.getOptions().getBulkUpsertOption()).stream()
+				.map(task::getSourceColumnName).toList();
 	}
 
 	static BulkMigrationJobPlan withExplicitDatabaseCheckpointStores(final BulkMigrationJobPlan plan,

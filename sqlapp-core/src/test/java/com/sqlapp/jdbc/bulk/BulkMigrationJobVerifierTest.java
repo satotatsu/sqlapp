@@ -537,7 +537,7 @@ class BulkMigrationJobVerifierTest {
 	}
 
 	@Test
-	void repairJobRejectsCyclicTargetDependenciesBeforeDatabaseAccess() {
+	void repairJobRejectsCyclicSourceDependenciesBeforeDatabaseAccess() {
 		final Table firstTable = table("FIRST", "first");
 		final Table secondTable = table("SECOND", "second");
 		firstTable.getConstraints().addForeignKeyConstraint("FK_FIRST_SECOND", firstTable.getColumns().get("ID"),
@@ -562,6 +562,27 @@ class BulkMigrationJobVerifierTest {
 		assertEquals("Migration repair job contains cyclic or cycle-dependent tasks: [first, second]",
 				failure.getMessage());
 		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
+	void repairJobRetainsSourceDependencyOrderWhenTargetsAreRenamed() throws Exception {
+		final Table parent = table("ACCESS_PARENT", "parent");
+		final Table child = table("ACCESS_CHILD", "child");
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		final Table targetParent = table("PARENT", "parent");
+		final Table targetChild = table("CHILD", "child");
+		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		final var childTask = BulkMigrationJobRepairTask.builder().taskId("child").expected(child)
+				.target(targetChild).verificationResult(verification).build();
+		final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent").expected(parent)
+				.target(targetParent).verificationResult(verification).build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> null);
+
+		final var plan = BulkMigrationJobRepairPlanner.plan(connection, List.of(childTask, parentTask));
+
+		assertEquals(List.of("parent", "child"), plan.getTaskIds());
 	}
 
 	@Test

@@ -28,7 +28,7 @@ public final class BulkMigrationRepairPlanReportIO {
 				plan.isTransactionBreakingStaging(), plan.getStagingTableName(), plan.getVerification().getChunkSize(),
 				plan.getEstimatedReplayRows(), plan.getOptions().getMaxBufferedRows(),
 				plan.getOptions().isVerifyExpectedHashes(), plan.getVerification().getColumns(), plan.getKeyColumns(),
-				plan.getStagingColumns(), plan.getUpdateColumns(),
+				plan.getStagingColumns(), plan.getUpdateColumns(), plan.getOptions().getColumnMappings(),
 				plan.getMismatchChunks().stream()
 						.map(chunk -> new BulkMigrationRepairPlanReport.Chunk(chunk.getIndex(), chunk.getExpectedRows(),
 								chunk.getActualRows(), chunk.getExpectedHash(), chunk.getActualHash(),
@@ -116,6 +116,7 @@ public final class BulkMigrationRepairPlanReportIO {
 		uniqueNames(report.keyColumns(), "keyColumns", false);
 		uniqueNames(report.stagingColumns(), "stagingColumns", false);
 		uniqueNames(report.updateColumns(), "updateColumns", false);
+		columnMappings(report.columnMappings());
 		Objects.requireNonNull(report.mismatchChunks(), "mismatchChunks");
 		long replayRows = 0;
 		final var indexes = new HashSet<Long>();
@@ -146,6 +147,20 @@ public final class BulkMigrationRepairPlanReportIO {
 			throw new CommandException("Repair plan estimatedReplayRows is inconsistent");
 		}
 		return report;
+	}
+
+	private static void columnMappings(final java.util.Map<String, String> mappings) {
+		if (mappings == null) {
+			throw new CommandException("Repair plan columnMappings must not be null");
+		}
+		final var targets = new HashSet<String>();
+		for (final var entry : mappings.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null
+					|| entry.getValue().isBlank()
+					|| !targets.add(entry.getValue().toLowerCase(java.util.Locale.ROOT))) {
+				throw new CommandException("Repair plan columnMappings is invalid");
+			}
+		}
 	}
 
 	private static boolean validKeyRange(final int rows, final String first, final String last) {

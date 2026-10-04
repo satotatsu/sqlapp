@@ -41,13 +41,23 @@ public class BulkMigrationJobTask {
 		this.sourceTable = sourceTable;
 		this.keysetSource = keysetSource;
 		this.targetTable = targetTable;
-		this.columnMappings = columnMappings == null ? Map.of() : Map.copyOf(columnMappings);
+		final Table source = sourceTable != null ? sourceTable : keysetSource.getTable();
+		final var resolvedMappings = new java.util.LinkedHashMap<String, String>();
+		if (columnMappings != null) {
+			for (final var mapping : columnMappings.entrySet()) {
+				final var sourceColumn = source.getColumns().get(mapping.getKey());
+				if (sourceColumn == null || resolvedMappings.put(sourceColumn.getName(), mapping.getValue()) != null) {
+					throw new IllegalArgumentException("columnMappings contains an unknown or duplicate source column: "
+							+ mapping.getKey());
+				}
+			}
+		}
+		this.columnMappings = Map.copyOf(resolvedMappings);
 		this.requireEmptyTarget = requireEmptyTarget;
 		if (!this.columnMappings.isEmpty() && targetTable == null) {
 			throw new IllegalArgumentException("targetTable is required when columnMappings are configured: " + taskId);
 		}
 		if (targetTable != null) {
-			final Table source = sourceTable != null ? sourceTable : keysetSource.getTable();
 			if (source.getColumns().size() != targetTable.getColumns().size()) {
 				throw new IllegalArgumentException("Source and target column counts differ: " + taskId);
 			}
@@ -60,9 +70,6 @@ public class BulkMigrationJobTask {
 							+ sourceColumn.getName() + " -> " + targetName);
 				}
 			}
-			if (this.columnMappings.keySet().stream().anyMatch(name -> source.getColumns().get(name) == null)) {
-				throw new IllegalArgumentException("columnMappings contains an unknown source column: " + taskId);
-			}
 		}
 		this.options = java.util.Objects.requireNonNull(options, "options");
 		this.checkpointStore = checkpointStore;
@@ -71,6 +78,16 @@ public class BulkMigrationJobTask {
 
 	public String getTargetColumnName(final String sourceColumnName) {
 		return columnMappings.getOrDefault(sourceColumnName, sourceColumnName);
+	}
+
+	/** Returns the source column corresponding to a target column name. */
+	public String getSourceColumnName(final String targetColumnName) {
+		for (final var sourceColumn : getEffectiveSourceTable().getColumns()) {
+			if (getTargetColumnName(sourceColumn.getName()).equalsIgnoreCase(targetColumnName)) {
+				return sourceColumn.getName();
+			}
+		}
+		return targetColumnName;
 	}
 
 	public Table getEffectiveSourceTable() {

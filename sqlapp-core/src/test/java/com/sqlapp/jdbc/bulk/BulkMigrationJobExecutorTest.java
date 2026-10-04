@@ -69,6 +69,52 @@ class BulkMigrationJobExecutorTest {
 	}
 
 	@Test
+	void tracksMappedSourceKeysAcrossChunkBoundaries() {
+		final Table source = table("ACCESS_SOURCE");
+		final Table target = source.clone().setName("TARGET");
+		target.getColumns().get("ID").setName("TARGET_ID");
+		final Row first = source.newRow();
+		first.put("ID", 1);
+		final Row duplicate = source.newRow();
+		duplicate.put("ID", 1);
+		final var option = ChunkedBulkMigrationOption.builder().migrationId("mapped-duplicates")
+				.sourceFingerprint("source").targetFingerprint("target")
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumns(List.of("TARGET_ID"))
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.ERROR).build())
+				.build();
+		final var tracker = ChunkedBulkMigrationExecutor.duplicateTracker(source, target,
+				java.util.Map.of("ID", "TARGET_ID"), option, false,
+				BulkMigrationCheckpoint.builder().migrationId("mapped-duplicates")
+						.sourceFingerprint("source").targetFingerprint("target").chunkSize(10).build());
+
+		assertEquals(List.of(first), tracker.filter(List.of(first)));
+		assertThrows(IllegalArgumentException.class, () -> tracker.filter(List.of(duplicate)));
+	}
+
+	@Test
+	void restoresMappedKeepFirstHistoryWhenResuming() {
+		final Table source = table("ACCESS_SOURCE");
+		final Table target = source.clone().setName("TARGET");
+		target.getColumns().get("ID").setName("TARGET_ID");
+		final Row first = source.newRow();
+		first.put("ID", 1);
+		final Row duplicate = source.newRow();
+		duplicate.put("ID", 1);
+		final var option = ChunkedBulkMigrationOption.builder().migrationId("mapped-keep-first")
+				.sourceFingerprint("source").targetFingerprint("target")
+				.bulkUpsertOption(BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST).build())
+				.build();
+		final var tracker = ChunkedBulkMigrationExecutor.duplicateTracker(source, target,
+				java.util.Map.of("ID", "TARGET_ID"), option, false,
+				BulkMigrationCheckpoint.builder().migrationId("mapped-keep-first")
+						.sourceFingerprint("source").targetFingerprint("target").chunkSize(10).build());
+
+		tracker.skip(first);
+		assertTrue(tracker.filter(List.of(duplicate)).isEmpty());
+	}
+
+	@Test
 	void chunkedExecutionPreservesReadFailureWhenClosingRowsFails() {
 		final RuntimeException readFailure = new RuntimeException("read");
 		final Exception closeFailure = new Exception("close");

@@ -106,8 +106,12 @@ public class BulkMigrationJobConfigurationResolver {
 			validateVerificationColumns(configuration.getVerification(), task, table);
 			final BulkOption bulk = bulk(task.getBulk());
 			final BulkMigrationRetryOption retry = retry(task.getRetry());
-			final var upsert = BulkUpsertOption.builder().keyColumns(task.getKeyColumns())
-					.updateColumns(task.getUpdateColumns()).updateWhenMatched(task.isUpdateWhenMatched())
+			final var upsert = BulkUpsertOption.builder()
+					.keyColumns(targetColumns(table, task.getColumnMappings(), task.getKeyColumns(),
+							"keyColumns", task.getId()))
+					.updateColumns(targetColumns(table, task.getColumnMappings(), task.getUpdateColumns(),
+							"updateColumns", task.getId()))
+					.updateWhenMatched(task.isUpdateWhenMatched())
 					.insertWhenNotMatched(task.isInsertWhenNotMatched()).useTransaction(task.isUseTransaction())
 					.duplicateKeyStrategy(task.getDuplicateKeyStrategy()).stagingTableName(task.getStagingTableName())
 					.bulkOption(bulk).build();
@@ -154,6 +158,38 @@ public class BulkMigrationJobConfigurationResolver {
 				provenance(configurationFile, configuration.getProvenance()));
 	}
 
+	private static List<String> targetColumns(final Table source, final Map<String, String> mappings,
+			final List<String> names, final String property, final String taskId) {
+		if (names == null || names.isEmpty()) {
+			return List.of();
+		}
+		final var resolved = new ArrayList<String>(names.size());
+		final var unique = new HashSet<String>();
+		for (final String name : names) {
+			if (name == null || name.isBlank()) {
+				throw new CommandException(property + " must not contain an empty column name: " + taskId);
+			}
+			final var column = source.getColumns().get(name);
+			if (column == null) {
+				throw new CommandException("Unknown " + property + " column '" + name + "' for task: " + taskId);
+			}
+			final String target = mappedName(mappings, column.getName());
+			if (!unique.add(target.toLowerCase(java.util.Locale.ROOT))) {
+				throw new CommandException("Duplicate " + property + " column '" + name + "' for task: " + taskId);
+			}
+			resolved.add(target);
+		}
+		return List.copyOf(resolved);
+	}
+
+	private static String mappedName(final Map<String, String> mappings, final String sourceName) {
+		if (mappings == null) {
+			return sourceName;
+		}
+		return mappings.entrySet().stream().filter(entry -> entry.getKey().equalsIgnoreCase(sourceName))
+				.map(Map.Entry::getValue).findFirst().orElse(sourceName);
+	}
+
 	private static Table targetTable(final Table source, final String qualifiedName,
 			final Map<String, String> columnMappings) {
 		if ((qualifiedName == null || qualifiedName.isBlank())
@@ -185,7 +221,7 @@ public class BulkMigrationJobConfigurationResolver {
 		if (columnMappings != null) {
 			final var targetNames = new HashSet<String>();
 			for (final var sourceColumn : source.getColumns()) {
-				final String targetName = columnMappings.getOrDefault(sourceColumn.getName(), sourceColumn.getName());
+				final String targetName = mappedName(columnMappings, sourceColumn.getName());
 				if (targetName == null || targetName.isBlank()
 						|| !targetNames.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
 					throw new CommandException("columnMappings must produce unique non-empty target columns: "

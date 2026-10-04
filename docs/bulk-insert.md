@@ -436,6 +436,32 @@ underlying APIs and declarative job configuration.
 | Persist operational or verification evidence | `operationalReport(file)` or `verificationReport(file)` |
 | Limit migration to selected tables | `tables(...)` |
 | Override one table only | `tableOption(table, option)` |
+| Rename a target table or columns | `tableOption(table, BulkMigrationTableOption.builder().targetTable(...).columnMappings(...).build())` |
+
+For an Access model whose names differ from the target, keep source names in
+the Schema and per-table column lists. The facade resolves target names for
+execution, verification, and approved repair:
+
+```java
+BulkMigration migration = BulkMigration.builder()
+        .source(accessDataSource)
+        .target(targetDataSource)
+        .schema(accessSchema)
+        .tableOption("ACCESS_CUSTOMERS", BulkMigrationTableOption.builder()
+                .targetTable("APP.CUSTOMERS")
+                .columnMappings(Map.of("ACCESS_ID", "CUSTOMER_ID"))
+                .upsertOption(BulkUpsertOption.builder()
+                        .keyColumn("ACCESS_ID")
+                        .build())
+                .build())
+        .build();
+```
+
+For multiple mapped tables, keep the Access foreign keys in the source Schema.
+Migration and repair both derive parent-before-child order from that source
+relationship graph, even when every target table and foreign-key column has a
+different name. The lightweight target projection contains the mapped columns
+and primary key needed by DML; it does not clone source relationship objects.
 
 ### Operational and advanced flows
 
@@ -664,6 +690,22 @@ BulkMigrationRepairResult result =
         BulkMigrationRepairExecutor.execute(targetConnection, plan);
 ```
 
+When source and target column names differ, configure the repair with the same
+one-to-one mapping used by migration. Verification columns remain source names;
+UPSERT keys and updates remain target names:
+
+```java
+BulkMigrationRepairOption repairOption = BulkMigrationRepairOption.builder()
+        .columnMappings(Map.of("ACCESS_ID", "CUSTOMER_ID"))
+        .bulkUpsertOption(BulkUpsertOption.builder()
+                .keyColumn("CUSTOMER_ID")
+                .build())
+        .build();
+```
+
+The mapping is validated before target access, included in the plan
+fingerprint, and written into the reviewable repair-plan JSON.
+
 The plan has a SHA-256 configuration fingerprint. Execution rejects the plan
 when its source keyset configuration, source or target Schema model,
 verification result, repair options, database product/version, or selected
@@ -694,9 +736,10 @@ still pass its fingerprint, database identity, expected-hash, and key-boundary
 checks before execution.
 
 Multi-table repair has the same review boundary. `BulkMigrationJobRepairPlanner`
-validates every task before writing, sorts target tables into foreign-key create
-order, and returns a `BulkMigrationJobRepairPlan` with one immutable child plan
-per task. Its fingerprint includes the ordered task IDs and child-plan
+validates every task before writing, sorts tasks into the source Schema's
+foreign-key create order, and returns a `BulkMigrationJobRepairPlan` with one
+immutable child plan per task. This preserves Access dependency order when
+target tables are renamed. Its fingerprint includes the ordered task IDs and child-plan
 fingerprints. An approved fingerprint can therefore authorize exactly one
 reviewed dependency order and set of repairs:
 

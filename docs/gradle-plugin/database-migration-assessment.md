@@ -650,6 +650,17 @@ resolving a plan. Existing handwritten bulk YAML remains compatible because
 `schemaFingerprint` is optional. The bulk executor accepts a different target
 schema or table name through the optional per-task `targetTable` value. Simple
 one-to-one column renames are represented by the optional `columnMappings` map.
+Column lists in the generated or handwritten configuration, including
+`keysetColumns`, `keyColumns`, `updateColumns`, and `verificationColumns`, use
+the source Schema names. The resolver applies `columnMappings` to target-side
+UPSERT and verification operations, so Access names remain usable throughout
+the user-authored configuration. Unknown and duplicate resolved columns are
+rejected before execution.
+Duplicate-key policies are evaluated against the corresponding source values
+before rows are renamed for the target. This applies across chunk boundaries
+and to count-based resume history. A resumed JDBC keyset migration still
+requires `KEEP_LAST`, because rows preceding its resume token are unavailable
+for reconstructing `KEEP_FIRST`, `ERROR`, or custom selection history.
 Mapping conversion expressions are not supported by the initial-load executor.
 Every mapped table and column must match the supplied Schema XML,
 and each table must have a primary key for resumable keyset reads; the

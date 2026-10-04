@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
@@ -20,6 +21,8 @@ public class BulkMigrationTableOption {
 	Integer verificationChunkSize;
 	List<String> keysetColumns;
 	List<String> verificationColumns;
+	String targetTable;
+	Map<String, String> columnMappings;
 	BulkUpsertOption upsertOption;
 	BulkOption bulkOption;
 	BulkMigrationRetryOption retryOption;
@@ -28,7 +31,8 @@ public class BulkMigrationTableOption {
 	@Builder
 	public BulkMigrationTableOption(final String migrationId, final Integer chunkSize,
 			final Integer verificationChunkSize, final List<String> keysetColumns,
-			final List<String> verificationColumns, final BulkUpsertOption upsertOption, final BulkOption bulkOption,
+			final List<String> verificationColumns, final String targetTable,
+			final Map<String, String> columnMappings, final BulkUpsertOption upsertOption, final BulkOption bulkOption,
 			final BulkMigrationRetryOption retryOption, final BulkMigrationCheckpointStore checkpointStore) {
 		if (migrationId != null && migrationId.isBlank()) {
 			throw new IllegalArgumentException("migrationId must not be empty");
@@ -44,6 +48,11 @@ public class BulkMigrationTableOption {
 		this.verificationChunkSize = verificationChunkSize;
 		this.keysetColumns = columns(keysetColumns, "keysetColumns");
 		this.verificationColumns = columns(verificationColumns, "verificationColumns");
+		this.targetTable = targetTable;
+		if (targetTable != null && targetTable.isBlank()) {
+			throw new IllegalArgumentException("targetTable must not be empty");
+		}
+		this.columnMappings = columnMappings == null ? Map.of() : Map.copyOf(columnMappings);
 		this.upsertOption = upsertOption;
 		this.bulkOption = bulkOption;
 		this.retryOption = retryOption;
