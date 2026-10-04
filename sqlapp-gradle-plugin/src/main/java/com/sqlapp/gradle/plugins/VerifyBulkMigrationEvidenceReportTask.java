@@ -46,6 +46,15 @@ public abstract class VerifyBulkMigrationEvidenceReportTask
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getDdlVerificationReportFile();
 
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getTargetValidationReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedTargetEnvironmentId();
+
 	@Input
 	@Optional
 	public abstract Property<String> getExpectedEvidenceReportFingerprint();
@@ -75,6 +84,12 @@ public abstract class VerifyBulkMigrationEvidenceReportTask
 		}
 		if (getDdlVerificationReportFile().isPresent()) {
 			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
+		}
+		if (getTargetValidationReportFile().isPresent()) {
+			command.setTargetValidationReportFile(getTargetValidationReportFile().get().getAsFile());
+		}
+		if (getExpectedTargetEnvironmentId().isPresent()) {
+			command.setExpectedTargetEnvironmentId(getExpectedTargetEnvironmentId().get());
 		}
 		if (getExpectedEvidenceReportFingerprint().isPresent()) {
 			command.setExpectedEvidenceReportFingerprint(getExpectedEvidenceReportFingerprint().get());

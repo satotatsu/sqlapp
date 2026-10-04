@@ -65,6 +65,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `migrationInsert` | Insert migration history |
 | Migration | `migrationRepair` | Repair migration history |
 | Migration | `executeBulkMigrationJob` | Execute a programmatic plan or declarative migration job |
+| Migration | `validateBulkMigrationTarget` | Validate a declarative job against the live target without migrating rows |
 | Migration | `verifyBulkMigrationEvidence` | Verify execution and data reports and optionally write a portable audit JSON |
 | Migration | `verifyBulkMigrationEvidenceReport` | Revalidate a saved bulk migration audit and its exact source artifacts offline |
 | Migration | `executeMigrationSnapshot` | Apply one atomic SCD2 snapshot from YAML |
@@ -251,6 +252,56 @@ executeBulkMigrationJob {
     dataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
 }
 ```
+
+To require the reviewed live-target check during execution, add its evidence
+and an explicit freshness limit:
+
+```groovy
+executeBulkMigrationJob {
+    configurationFile = file('migration/job.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:ucanaccess:///data/source.accdb' }
+    dataSource { jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app' }
+    targetValidationReportFile = layout.buildDirectory.file('reports/target-validation.json')
+    expectedTargetValidationReportFingerprint = providers.gradleProperty('approvedTargetValidationFingerprint')
+    maxTargetValidationAgeSeconds = 3600L
+    targetEnvironmentId = 'production-oracle'
+}
+```
+
+The report must match the resolved configuration fingerprint, plan, job,
+ordered Access task IDs and provenance. Its age limit is mandatory when the
+report gate is enabled; the report fingerprint remains optional. Execution
+also compares the database product, version, catalog, schema and optional
+environment ID, then repeats the live target checks before writing rows.
+
+Run the same plan resolution and target checks before the deployment window:
+
+```groovy
+validateBulkMigrationTarget {
+    configurationFile = file('migration/job.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:ucanaccess:///data/source.accdb' }
+    dataSource {
+        jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app'
+        username = providers.gradleProperty('dbUser')
+        password = providers.gradleProperty('dbPassword')
+    }
+    expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
+    assessmentReportFile = file('migration/assessment.json')
+    ddlVerificationReportFile = file('migration/ddl-verification.json')
+    reportFile = layout.buildDirectory.file('reports/target-validation.json')
+    targetEnvironmentId = 'production-oracle'
+}
+```
+
+This task performs no migration writes. It validates each resolved target table,
+mapped column, non-null primary or unique key, and the optional
+`requireEmptyTarget` initial-load condition. A successful command result retains
+the configuration fingerprint, plan fingerprint and Access-derived task IDs.
+The approval files and JSON report are optional. When supplied, their SHA-256
+values must match the YAML provenance and the report records the validated
+configuration, plan, job and task identities using atomic file replacement.
+`targetEnvironmentId` is optional and distinguishes environments that otherwise
+expose the same database product, catalog and schema.
 
 ```yaml
 jobId: nightly-customer-migration

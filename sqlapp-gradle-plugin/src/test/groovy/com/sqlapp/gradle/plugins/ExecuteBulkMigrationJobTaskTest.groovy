@@ -22,6 +22,10 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		assertFalse(task.expectedConfigurationFingerprint.isPresent())
 		assertFalse(task.assessmentReportFile.isPresent())
 		assertFalse(task.ddlVerificationReportFile.isPresent())
+		assertFalse(task.targetValidationReportFile.isPresent())
+		assertFalse(task.expectedTargetValidationReportFingerprint.isPresent())
+		assertFalse(task.maxTargetValidationAgeSeconds.isPresent())
+		assertFalse(task.targetEnvironmentId.isPresent())
 		assertNotNull(task.sourceDataSource)
 		assertFalse(task.listener.isPresent())
 		assertFalse(task.chunkListener.isPresent())
@@ -30,14 +34,24 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		task.expectedConfigurationFingerprint.set('sha256:' + 'a' * 64)
 		def assessment = new File(testProjectDir, 'assessment.json')
 		def ddlVerification = new File(testProjectDir, 'ddl-verification.json')
+		def targetValidation = new File(testProjectDir, 'target-validation.json')
 		assessment.text = '{}'
 		ddlVerification.text = '{}'
+		targetValidation.text = '{}'
 		task.assessmentReportFile.set(assessment)
 		task.ddlVerificationReportFile.set(ddlVerification)
+		task.targetValidationReportFile.set(targetValidation)
+		task.expectedTargetValidationReportFingerprint.set('sha256:' + 'b' * 64)
+		task.maxTargetValidationAgeSeconds.set(600L)
+		task.targetEnvironmentId.set('production-oracle')
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals('sha256:' + 'a' * 64, command.expectedConfigurationFingerprint)
 		assertEquals(assessment, command.assessmentReportFile)
 		assertEquals(ddlVerification, command.ddlVerificationReportFile)
+		assertEquals(targetValidation, command.targetValidationReportFile)
+		assertEquals('sha256:' + 'b' * 64, command.expectedTargetValidationReportFingerprint)
+		assertEquals(600L, command.maxTargetValidationAgeSeconds)
+		assertEquals('production-oracle', command.targetEnvironmentId)
 	}
 }

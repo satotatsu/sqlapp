@@ -152,6 +152,7 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 						+ sourceTableName);
 			}
 			task.setMode(BulkMigrationMode.INSERT);
+			task.setRequireEmptyTarget(true);
 			task.setChunkSize(chunkSize);
 			task.setResume(resume);
 			task.setCheckpointMode(checkpointMode);

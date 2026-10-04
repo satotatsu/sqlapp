@@ -13,10 +13,12 @@ import java.io.File;
 import java.sql.SQLException;
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -35,6 +37,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.MessageDigests;
 import com.sqlapp.util.YamlConverter;
@@ -122,6 +125,86 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			Files.writeString(assessmentFile.toPath(), "{\"status\":\"REVIEW_REQUIRED\"}");
 			provenance.setDdlVerificationReportFingerprint(null);
 			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			assertThrows(CommandException.class, command::run);
+		}
+	}
+
+	@Test
+	void requiresMatchingFreshTargetValidationEvidenceWhenConfigured() throws Exception {
+		try (var source = dataSource("bulk_target_evidence_source");
+				var target = dataSource("bulk_target_evidence_target")) {
+			final File schemaFile = temporaryDirectory.resolve("target-evidence-schema.xml").toFile();
+			new Schema("PUBLIC").writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setJobId("approved-empty-job");
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setTasks(List.of());
+			final var operationalReport = new BulkMigrationJobConfiguration.Report();
+			operationalReport.setTargetFile("target-evidence-operations.json");
+			configuration.setReport(operationalReport);
+			final File job = temporaryDirectory.resolve("target-evidence-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+
+			final BulkMigrationJobConfigurationResolver.Resolution resolved;
+			try (var sourceConnection = source.getConnection()) {
+				resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
+			}
+			final File evidence = temporaryDirectory.resolve("target-evidence.json").toFile();
+			final var reportIO = new BulkMigrationTargetValidationReportIO();
+			final String productName;
+			final String productVersion;
+			final String catalogName;
+			final String schemaName;
+			try (var targetConnection = target.getConnection()) {
+				productName = targetConnection.getMetaData().getDatabaseProductName();
+				productVersion = targetConnection.getMetaData().getDatabaseProductVersion();
+				catalogName = targetConnection.getCatalog();
+				schemaName = targetConnection.getSchema();
+			}
+			reportIO.write(evidence.toPath(), new BulkMigrationTargetValidationReport(
+					BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
+					resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+					resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+					resolved.provenance(), "production", productName, productVersion, catalogName, schemaName));
+
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(job);
+			command.setTargetValidationReportFile(evidence);
+			command.setMaxTargetValidationAgeSeconds(60L);
+			command.setTargetEnvironmentId("production");
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			assertDoesNotThrow(command::run);
+			final var executedReport = new BulkMigrationOperationalReportIO()
+					.read(temporaryDirectory.resolve("target-evidence-operations.json"));
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(evidence),
+					executedReport.provenance().targetValidationReportFingerprint());
+
+			reportIO.write(evidence.toPath(), new BulkMigrationTargetValidationReport(
+					BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
+					resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+					resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+					resolved.provenance(), "production", "different-product", productVersion, catalogName, schemaName));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			assertThrows(CommandException.class, command::run);
+			final var rejectedReport = new BulkMigrationOperationalReportIO()
+					.read(temporaryDirectory.resolve("target-evidence-operations.json"));
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
+					rejectedReport.execution().event());
+
+			reportIO.write(evidence.toPath(), new BulkMigrationTargetValidationReport(
+					BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now().minusSeconds(120),
+					resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+					resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+					resolved.provenance(), "production", productName, productVersion, catalogName, schemaName));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			assertThrows(CommandException.class, command::run);
+			command.setMaxTargetValidationAgeSeconds(null);
 			assertThrows(CommandException.class, command::run);
 		}
 	}
@@ -443,7 +526,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 		try (var source = dataSource("bulk_renamed_source"); var target = dataSource("bulk_renamed_target")) {
 			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
 			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
-			executeSql(target, "CREATE TABLE PUBLIC.CUSTOMERS (CUSTOMER_ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(target, "CREATE TABLE PUBLIC.CUSTOMERS (CUSTOMER_ID INT NOT NULL, NAME VARCHAR(30))");
 			executeSql(target, "INSERT INTO PUBLIC.CUSTOMERS VALUES (1, 'one'), (2, 'two')");
 			final Schema schema = new Schema("PUBLIC");
 			final Table table = new Table("ITEMS");
@@ -472,7 +555,37 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertEquals("CUSTOMERS", plan.getTasks().getFirst().getEffectiveTargetTable().getName());
 				assertEquals("CUSTOMER_ID", plan.getTasks().getFirst().getEffectiveTargetTable()
 						.getColumns().get(0).getName());
+				final SQLException nonUnique = assertThrows(SQLException.class,
+						() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
+				assertEquals(true, nonUnique.getMessage().contains("unique index"));
+				executeSql(targetConnection,
+						"ALTER TABLE PUBLIC.CUSTOMERS ADD CONSTRAINT UK_CUSTOMERS UNIQUE (CUSTOMER_ID)");
+				assertDoesNotThrow(() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
 				assertEquals(true, ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1).isMatch());
+				task.setRequireEmptyTarget(true);
+				new YamlConverter().writeJsonValue(job, configuration);
+				final var emptyRequiredPlan = new BulkMigrationJobConfigurationResolver().resolve(job, sourceConnection);
+				final SQLException notEmpty = assertThrows(SQLException.class,
+						() -> BulkMigrationTargetValidator.validate(targetConnection, emptyRequiredPlan));
+				assertEquals(true, notEmpty.getMessage().contains("must be empty"));
+				executeSql(targetConnection, "ALTER TABLE PUBLIC.CUSTOMERS DROP COLUMN NAME");
+				final SQLException missing = assertThrows(SQLException.class,
+						() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
+				assertEquals(true, missing.getMessage().contains("items"));
+				assertEquals(true, missing.getMessage().contains("NAME"));
+				final AtomicBoolean rejected = new AtomicBoolean();
+				final var command = new ExecuteBulkMigrationJobCommand();
+				command.setDataSource(target);
+				command.setCloseDataSource(false);
+				command.setPlan(plan);
+				command.setListener(new BulkMigrationJobListener() {
+					@Override
+					public void onJobRejected(final String planFingerprint, final Throwable failure) {
+						rejected.set(true);
+					}
+				});
+				assertThrows(RuntimeException.class, command::run);
+				assertEquals(true, rejected.get());
 			}
 		}
 	}

@@ -17,6 +17,7 @@ public class BulkMigrationJobTask {
 	private final BulkMigrationKeysetSource keysetSource;
 	private final Table targetTable;
 	private final Map<String, String> columnMappings;
+	private final boolean requireEmptyTarget;
 	private final ChunkedBulkMigrationOption options;
 	private final BulkMigrationCheckpointStore checkpointStore;
 	private final ChunkedBulkMigrationListener chunkListener;
@@ -25,6 +26,7 @@ public class BulkMigrationJobTask {
 			final BulkMigrationKeysetSource keysetSource,
 			final Table targetTable,
 			final Map<String, String> columnMappings,
+			final boolean requireEmptyTarget,
 			final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore,
 			final ChunkedBulkMigrationListener chunkListener) {
@@ -40,6 +42,7 @@ public class BulkMigrationJobTask {
 		this.keysetSource = keysetSource;
 		this.targetTable = targetTable;
 		this.columnMappings = columnMappings == null ? Map.of() : Map.copyOf(columnMappings);
+		this.requireEmptyTarget = requireEmptyTarget;
 		if (!this.columnMappings.isEmpty() && targetTable == null) {
 			throw new IllegalArgumentException("targetTable is required when columnMappings are configured: " + taskId);
 		}

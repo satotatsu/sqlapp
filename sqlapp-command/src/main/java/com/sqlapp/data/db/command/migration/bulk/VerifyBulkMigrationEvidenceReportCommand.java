@@ -20,6 +20,8 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 	private File configurationFile;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private File targetValidationReportFile;
+	private String expectedTargetEnvironmentId;
 	private String expectedEvidenceReportFingerprint;
 	private String expectedPlanFingerprint;
 	private String expectedConfigurationFingerprint;
@@ -35,6 +37,8 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 		optionalFile(configurationFile, "configurationFile");
 		optionalFile(assessmentReportFile, "assessmentReportFile");
 		optionalFile(ddlVerificationReportFile, "ddlVerificationReportFile");
+		optionalFile(targetValidationReportFile, "targetValidationReportFile");
+		validateExpectedTargetEnvironment();
 		if (expectedEvidenceReportFingerprint != null) {
 			if (!expectedEvidenceReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
 				throw new CommandException("expectedEvidenceReportFingerprint must be a lowercase SHA-256 value.");
@@ -67,6 +71,11 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 				BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT,
 				report.provenance() == null ? null : report.provenance().ddlVerificationReportFingerprint(),
 				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
+		verifySourceArtifact(targetValidationReportFile,
+				BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT,
+				report.provenance() == null ? null : report.provenance().targetValidationReportFingerprint(),
+				"targetValidationReportFile", "targetValidationReportFingerprint");
+		verifyTargetValidationReport();
 		if (expectedPlanFingerprint != null && !expectedPlanFingerprint.equals(report.planFingerprint())) {
 			throw new CommandException("Evidence report does not match expectedPlanFingerprint.");
 		}
@@ -88,6 +97,45 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 			}
 		}
 		info("Bulk migration evidence report verified: ", evidenceReportFile.getAbsolutePath());
+	}
+
+	private void verifyTargetValidationReport() {
+		if (targetValidationReportFile == null) {
+			return;
+		}
+		final var targetReport = new BulkMigrationTargetValidationReportIO().read(targetValidationReportFile.toPath());
+		final var operational = new BulkMigrationOperationalReportIO().read(operationalReportFile.toPath());
+		final var executedTaskIds = operational.tasks().stream()
+				.map(BulkMigrationOperationalReport.Task::taskId).toList();
+		final var provenance = report.provenance();
+		final var approvalProvenance = provenance == null ? null : new BulkMigrationArtifactProvenance(
+				provenance.configurationFingerprint(), provenance.assessmentReportFingerprint(),
+				provenance.ddlVerificationReportFingerprint());
+		if (!report.jobId().equals(targetReport.jobId())
+				|| !report.planFingerprint().equals(targetReport.planFingerprint())
+				|| !executedTaskIds.equals(targetReport.taskIds())
+				|| targetReport.generatedAt().isAfter(operational.generatedAt())
+				|| provenance == null
+				|| !provenance.configurationFingerprint().equals(targetReport.configurationFingerprint())
+				|| !java.util.Objects.equals(approvalProvenance, targetReport.provenance())
+				|| expectedTargetEnvironmentId != null
+						&& !expectedTargetEnvironmentId.equals(targetReport.targetEnvironmentId())) {
+			throw new CommandException(
+					"Target validation report does not match the saved evidence report or was created after execution.");
+		}
+	}
+
+	private void validateExpectedTargetEnvironment() {
+		if (expectedTargetEnvironmentId == null) {
+			return;
+		}
+		if (expectedTargetEnvironmentId.isBlank()) {
+			throw new CommandException("expectedTargetEnvironmentId must not be blank.");
+		}
+		if (targetValidationReportFile == null) {
+			throw new CommandException(
+					"expectedTargetEnvironmentId requires targetValidationReportFile.");
+		}
 	}
 
 	private static void requireFile(final File file, final String property) {

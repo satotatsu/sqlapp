@@ -22,6 +22,8 @@ public class VerifyBulkMigrationEvidenceCommand extends AbstractCommand {
 	private File configurationFile;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private File targetValidationReportFile;
+	private String expectedTargetEnvironmentId;
 	private File outputFile;
 	private boolean requireSuccessfulExecution = true;
 	private boolean requireMatchingData = true;
@@ -40,6 +42,8 @@ public class VerifyBulkMigrationEvidenceCommand extends AbstractCommand {
 		optionalFile(configurationFile, "configurationFile");
 		optionalFile(assessmentReportFile, "assessmentReportFile");
 		optionalFile(ddlVerificationReportFile, "ddlVerificationReportFile");
+		optionalFile(targetValidationReportFile, "targetValidationReportFile");
+		validateExpectedTargetEnvironment();
 		validateOutputFile();
 		operationalReport = new BulkMigrationOperationalReportIO().read(operationalReportFile.toPath());
 		verificationReport = new BulkMigrationVerificationReportIO().read(verificationReportFile.toPath());
@@ -69,6 +73,10 @@ public class VerifyBulkMigrationEvidenceCommand extends AbstractCommand {
 		BulkMigrationArtifactProvenanceVerifier.verify(ddlVerificationReportFile,
 				provenance == null ? null : provenance.ddlVerificationReportFingerprint(),
 				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
+		BulkMigrationArtifactProvenanceVerifier.verify(targetValidationReportFile,
+				provenance == null ? null : provenance.targetValidationReportFingerprint(),
+				"targetValidationReportFile", "targetValidationReportFingerprint");
+		verifyTargetValidationReport(provenance);
 		evidenceReport = evidenceReport(provenance);
 		if (outputFile != null) {
 			new BulkMigrationEvidenceReportIO().write(outputFile.toPath(), evidenceReport);
@@ -89,12 +97,52 @@ public class VerifyBulkMigrationEvidenceCommand extends AbstractCommand {
 		if (ddlVerificationReportFile != null) {
 			artifacts.add(BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT);
 		}
+		if (targetValidationReportFile != null) {
+			artifacts.add(BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT);
+		}
 		return new BulkMigrationEvidenceReport(BulkMigrationEvidenceReport.CURRENT_FORMAT_VERSION, Instant.now(),
 				operationalReport.jobId(), operationalReport.planFingerprint(), fingerprint(operationalReportFile),
 				fingerprint(verificationReportFile),
 				operationalReport.execution() == null ? null : operationalReport.execution().event(),
 				verificationReport.match(),
 				provenance, policies, artifacts);
+	}
+
+	private void verifyTargetValidationReport(final BulkMigrationArtifactProvenance provenance) {
+		if (targetValidationReportFile == null) {
+			return;
+		}
+		final var report = new BulkMigrationTargetValidationReportIO().read(targetValidationReportFile.toPath());
+		final var approvalProvenance = provenance == null ? null : new BulkMigrationArtifactProvenance(
+				provenance.configurationFingerprint(), provenance.assessmentReportFingerprint(),
+				provenance.ddlVerificationReportFingerprint());
+		final List<String> executedTaskIds = operationalReport.tasks().stream()
+				.map(BulkMigrationOperationalReport.Task::taskId).toList();
+		if (!operationalReport.jobId().equals(report.jobId())
+				|| !operationalReport.planFingerprint().equals(report.planFingerprint())
+				|| !executedTaskIds.equals(report.taskIds())
+				|| report.generatedAt().isAfter(operationalReport.generatedAt())
+				|| provenance == null
+				|| !provenance.configurationFingerprint().equals(report.configurationFingerprint())
+				|| !Objects.equals(approvalProvenance, report.provenance())
+				|| expectedTargetEnvironmentId != null
+						&& !expectedTargetEnvironmentId.equals(report.targetEnvironmentId())) {
+			throw new CommandException(
+					"Target validation report does not match the migration evidence or was created after execution.");
+		}
+	}
+
+	private void validateExpectedTargetEnvironment() {
+		if (expectedTargetEnvironmentId == null) {
+			return;
+		}
+		if (expectedTargetEnvironmentId.isBlank()) {
+			throw new CommandException("expectedTargetEnvironmentId must not be blank.");
+		}
+		if (targetValidationReportFile == null) {
+			throw new CommandException(
+					"expectedTargetEnvironmentId requires targetValidationReportFile.");
+		}
 	}
 
 	private static String fingerprint(final File file) {

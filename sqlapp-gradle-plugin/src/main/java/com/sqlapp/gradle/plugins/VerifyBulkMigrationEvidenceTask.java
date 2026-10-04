@@ -48,6 +48,15 @@ public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<Verif
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getDdlVerificationReportFile();
 
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getTargetValidationReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedTargetEnvironmentId();
+
 	@OutputFile
 	@Optional
 	public abstract RegularFileProperty getOutputFile();
@@ -73,6 +82,12 @@ public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<Verif
 		}
 		if (getDdlVerificationReportFile().isPresent()) {
 			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
+		}
+		if (getTargetValidationReportFile().isPresent()) {
+			command.setTargetValidationReportFile(getTargetValidationReportFile().get().getAsFile());
+		}
+		if (getExpectedTargetEnvironmentId().isPresent()) {
+			command.setExpectedTargetEnvironmentId(getExpectedTargetEnvironmentId().get());
 		}
 		if (getOutputFile().isPresent()) {
 			command.setOutputFile(getOutputFile().get().getAsFile());

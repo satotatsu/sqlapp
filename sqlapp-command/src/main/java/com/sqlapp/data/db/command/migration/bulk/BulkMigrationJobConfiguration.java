@@ -46,6 +46,8 @@ public class BulkMigrationJobConfiguration {
 		/** Optional qualified write target; columns retain their source names. */
 		private String targetTable;
 		private Map<String, String> columnMappings = new LinkedHashMap<>();
+		/** Reject execution when the target already contains rows. */
+		private boolean requireEmptyTarget;
 		private List<String> keysetColumns = new ArrayList<>();
 		private String migrationId;
 		private int chunkSize = 10_000;

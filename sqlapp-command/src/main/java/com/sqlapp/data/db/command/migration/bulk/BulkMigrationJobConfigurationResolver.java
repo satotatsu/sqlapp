@@ -124,6 +124,7 @@ public class BulkMigrationJobConfigurationResolver {
 			final var builder = BulkMigrationJobTask.builder().taskId(task.getId()).keysetSource(source)
 					.targetTable(targetTable)
 					.columnMappings(task.getColumnMappings())
+					.requireEmptyTarget(task.isRequireEmptyTarget())
 					.options(options);
 			if (task.getCheckpointMode() == com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.FILE) {
 				if (task.getCheckpointDirectory() == null || task.getCheckpointDirectory().isBlank()) {

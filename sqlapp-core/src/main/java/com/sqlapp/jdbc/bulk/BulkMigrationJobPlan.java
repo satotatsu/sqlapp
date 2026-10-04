@@ -136,6 +136,7 @@ public class BulkMigrationJobPlan {
 				update(digest, task.getColumnMappings().size());
 				task.getColumnMappings().entrySet().stream().sorted(Map.Entry.comparingByKey())
 						.forEach(entry -> update(digest, entry.getKey(), entry.getValue()));
+				update(digest, task.isRequireEmptyTarget());
 				if (task.getKeysetSource() != null) {
 					final String keysetFingerprint = task.getKeysetSource()
 							.getConfigurationFingerprint();

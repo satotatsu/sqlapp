@@ -33,6 +33,7 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 		assertDoesNotThrow(command::run);
 
 		final var value = new YamlConverter().fromJsonString(output.toFile(), BulkMigrationJobConfiguration.class);
+		assertTrue(value.getTasks().getFirst().isRequireEmptyTarget());
 		assertEquals("access-to-sqlserver", value.getJobId());
 		assertEquals("source.xml", value.getSchemaFile());
 		assertEquals(AssessMigrationCommand.fingerprint(schema.toFile()), value.getSchemaFingerprint());

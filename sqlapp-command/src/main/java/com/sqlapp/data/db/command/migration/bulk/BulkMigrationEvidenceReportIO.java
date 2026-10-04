@@ -20,7 +20,8 @@ public final class BulkMigrationEvidenceReportIO {
 			BulkMigrationEvidenceReport.ARTIFACT_VERIFICATION_REPORT,
 			BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION,
 			BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT,
-			BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT);
+			BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT,
+			BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT);
 
 	public BulkMigrationEvidenceReport read(final Path file) {
 		if (file == null || !java.nio.file.Files.isRegularFile(file)) {
@@ -115,7 +116,10 @@ public final class BulkMigrationEvidenceReportIO {
 				|| report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT)
 						&& (report.provenance() == null || report.provenance().ddlVerificationReportFingerprint() == null)
 				|| report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION)
-						&& report.provenance() == null) {
+						&& report.provenance() == null
+				|| report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT)
+						&& (report.provenance() == null
+								|| report.provenance().targetValidationReportFingerprint() == null)) {
 			throw new CommandException("Verified source artifacts require matching provenance fingerprints.");
 		}
 		return report;

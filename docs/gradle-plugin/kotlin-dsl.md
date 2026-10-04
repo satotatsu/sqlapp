@@ -163,6 +163,57 @@ Approval-controlled runs can additionally set `ddlVerificationReportFile`,
 `expectedDdlVerificationReportFingerprint`. All three remain optional for the
 simple workflow.
 
+Validate the generated job against the live target before executing it:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ValidateBulkMigrationTargetTask
+
+tasks.named<ValidateBulkMigrationTargetTask>("validateBulkMigrationTarget") {
+    configurationFile.set(layout.buildDirectory.file("reports/access-load.yaml"))
+    sourceDataSource {
+        jdbcUrl.set(providers.environmentVariable("ACCESS_JDBC_URL"))
+    }
+    dataSource {
+        jdbcUrl.set(providers.environmentVariable("TARGET_JDBC_URL"))
+        username.set(providers.environmentVariable("TARGET_DB_USER"))
+        password.set(providers.environmentVariable("TARGET_DB_PASSWORD"))
+    }
+    expectedConfigurationFingerprint.set(
+        providers.environmentVariable("APPROVED_JOB_SHA256")
+    )
+    assessmentReportFile.set(layout.buildDirectory.file("reports/migration.json"))
+    ddlVerificationReportFile.set(layout.buildDirectory.file("reports/ddl-verification.json"))
+    reportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    targetEnvironmentId.set("production-oracle")
+}
+```
+
+The task reads live target metadata and the optional empty-target condition,
+but does not migrate rows or create migration state. The approval files and
+atomic JSON report are optional for the simple workflow.
+
+An approval-controlled execution can require that fresh report:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ExecuteBulkMigrationJobTask
+
+tasks.named<ExecuteBulkMigrationJobTask>("executeBulkMigrationJob") {
+    configurationFile.set(layout.buildDirectory.file("reports/access-load.yaml"))
+    sourceDataSource { jdbcUrl.set(providers.environmentVariable("ACCESS_JDBC_URL")) }
+    dataSource { jdbcUrl.set(providers.environmentVariable("TARGET_JDBC_URL")) }
+    targetValidationReportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    expectedTargetValidationReportFingerprint.set(
+        providers.environmentVariable("APPROVED_TARGET_VALIDATION_SHA256")
+    )
+    maxTargetValidationAgeSeconds.set(3600L)
+    targetEnvironmentId.set("production-oracle")
+}
+```
+
+The age is required when the report gate is used. Execution compares every
+recorded job and target database identity and repeats the live validation
+before writing rows.
+
 The post-load audit and its later offline revalidation are also available from
 typed Kotlin DSL tasks:
 
@@ -173,6 +224,8 @@ import com.sqlapp.gradle.plugins.VerifyBulkMigrationEvidenceTask
 tasks.named<VerifyBulkMigrationEvidenceTask>("verifyBulkMigrationEvidence") {
     operationalReportFile.set(layout.buildDirectory.file("reports/access-load-operations.json"))
     verificationReportFile.set(layout.buildDirectory.file("reports/access-load-verification.json"))
+    targetValidationReportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    expectedTargetEnvironmentId.set("production-oracle")
     outputFile.set(layout.buildDirectory.file("reports/access-load-evidence.json"))
 }
 
@@ -180,11 +233,13 @@ tasks.named<VerifyBulkMigrationEvidenceReportTask>("verifyBulkMigrationEvidenceR
     evidenceReportFile.set(layout.buildDirectory.file("reports/access-load-evidence.json"))
     operationalReportFile.set(layout.buildDirectory.file("reports/access-load-operations.json"))
     verificationReportFile.set(layout.buildDirectory.file("reports/access-load-verification.json"))
+    targetValidationReportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    expectedTargetEnvironmentId.set("production-oracle")
     expectedEvidenceReportFingerprint.set(providers.environmentVariable("APPROVED_EVIDENCE_SHA256"))
 }
 ```
 
-Add the optional configuration, assessment and DDL-verification files when the
+Add the optional configuration, assessment, DDL-verification and target-validation files when the
 archival check must cover the complete approval chain. See
 [Database migration assessment](database-migration-assessment.md) for the full
 set of identity and freshness gates.

@@ -5,6 +5,8 @@ package com.sqlapp.data.db.command.migration.bulk;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
@@ -46,6 +49,11 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private String expectedConfigurationFingerprint;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private File targetValidationReportFile;
+	private String expectedTargetValidationReportFingerprint;
+	private Long maxTargetValidationAgeSeconds;
+	private String targetEnvironmentId;
+	private BulkMigrationTargetValidationReport approvedTargetValidationReport;
 	private DataSource sourceDataSource;
 	private BulkMigrationJobListener listener = BulkMigrationJobListener.NO_OP;
 	private ChunkedBulkMigrationListener chunkListener = ChunkedBulkMigrationListener.NO_OP;
@@ -57,6 +65,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	protected void doRun() {
 		result = null;
 		verificationResult = null;
+		approvedTargetValidationReport = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
@@ -68,6 +77,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		}
 		validateExpectedConfigurationFingerprint();
 		validateApprovalArtifactInputs();
+		validateTargetValidationInputs();
 		if (configurationFile != null && sourceDataSource == null) {
 			throw new CommandException("Bulk migration source data source is required for configurationFile.");
 		}
@@ -79,12 +89,14 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
 					sourceConnection);
 			validateApprovalArtifacts(resolved.provenance());
+			validateTargetValidationReport(resolved);
+			final BulkMigrationArtifactProvenance executionProvenance = executionProvenance(resolved.provenance());
 			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
 				throw new CommandException(
 						"Specify lease configuration either in the job file " + "or as a command property, not both.");
 			}
 			executePlan(resolved.plan(), resolved.leaseConfiguration(), listener, resolved.reportConfiguration(),
-					resolved.verificationConfiguration(), sourceConnection, resolved.provenance());
+					resolved.verificationConfiguration(), sourceConnection, executionProvenance);
 		});
 	}
 
@@ -154,6 +166,17 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 						}, provenance);
 				executionListener = configuredListener == BulkMigrationJobListener.NO_OP ? reportListener
 						: CompositeBulkMigrationJobListener.of(configuredListener, reportListener);
+			}
+			try {
+				validateTargetDatabaseIdentity(targetConnection);
+				BulkMigrationTargetValidator.validate(targetConnection, effectivePlan);
+			} catch (SQLException | RuntimeException | Error rejection) {
+				try {
+					executionListener.onJobRejected(effectivePlan.getFingerprint(), rejection);
+				} catch (RuntimeException listenerFailure) {
+					rejection.addSuppressed(listenerFailure);
+				}
+				throw rejection;
 			}
 			if (executionLeaseConfiguration == null) {
 				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
@@ -234,6 +257,86 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		validateArtifactFile(ddlVerificationReportFile, "ddlVerificationReportFile");
 	}
 
+	private void validateTargetValidationInputs() {
+		if (targetValidationReportFile == null) {
+			if (expectedTargetValidationReportFingerprint != null || maxTargetValidationAgeSeconds != null
+					|| targetEnvironmentId != null) {
+				throw new CommandException(
+						"Target validation fingerprint and age require targetValidationReportFile.");
+			}
+			return;
+		}
+		validateArtifactFile(targetValidationReportFile, "targetValidationReportFile");
+		if (plan != null) {
+			throw new CommandException("targetValidationReportFile requires configurationFile.");
+		}
+		if (maxTargetValidationAgeSeconds == null || maxTargetValidationAgeSeconds <= 0) {
+			throw new CommandException(
+					"maxTargetValidationAgeSeconds must be greater than zero when targetValidationReportFile is set.");
+		}
+		if (targetEnvironmentId != null && targetEnvironmentId.isBlank()) {
+			throw new CommandException("targetEnvironmentId must not be blank.");
+		}
+		if (expectedTargetValidationReportFingerprint != null
+				&& !expectedTargetValidationReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedTargetValidationReportFingerprint must be a lowercase SHA-256 value.");
+		}
+		if (expectedTargetValidationReportFingerprint != null) {
+			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(targetValidationReportFile);
+			if (!expectedTargetValidationReportFingerprint.equals(actual)) {
+				throw new CommandException(
+						"targetValidationReportFile fingerprint does not match expectedTargetValidationReportFingerprint.");
+			}
+		}
+	}
+
+	private void validateTargetValidationReport(final BulkMigrationJobConfigurationResolver.Resolution resolved) {
+		if (targetValidationReportFile == null) {
+			return;
+		}
+		final var report = new BulkMigrationTargetValidationReportIO().read(targetValidationReportFile.toPath());
+		final var plan = resolved.plan();
+		if (!plan.getJobId().equals(report.jobId()) || !plan.getFingerprint().equals(report.planFingerprint())
+				|| !plan.getTaskIds().equals(report.taskIds()) || !java.util.Objects.equals(resolved.provenance(), report.provenance())
+				|| resolved.provenance() == null || !resolved.provenance().configurationFingerprint()
+						.equals(report.configurationFingerprint())) {
+			throw new CommandException("Target validation report does not match the resolved migration job.");
+		}
+		if (!java.util.Objects.equals(targetEnvironmentId, report.targetEnvironmentId())) {
+			throw new CommandException("Target validation report does not match targetEnvironmentId.");
+		}
+		final Instant now = Instant.now();
+		if (report.generatedAt().isAfter(now)) {
+			throw new CommandException("Target validation report generatedAt is in the future.");
+		}
+		if (Duration.between(report.generatedAt(), now).compareTo(Duration.ofSeconds(maxTargetValidationAgeSeconds)) > 0) {
+			throw new CommandException("Target validation report is older than maxTargetValidationAgeSeconds.");
+		}
+		approvedTargetValidationReport = report;
+	}
+
+	private void validateTargetDatabaseIdentity(final Connection connection) throws SQLException {
+		if (approvedTargetValidationReport == null) {
+			return;
+		}
+		final var metadata = connection.getMetaData();
+		if (!approvedTargetValidationReport.databaseProductName().equals(metadata.getDatabaseProductName())
+				|| !approvedTargetValidationReport.databaseProductVersion().equals(metadata.getDatabaseProductVersion())
+				|| !java.util.Objects.equals(approvedTargetValidationReport.catalogName(), connection.getCatalog())
+				|| !java.util.Objects.equals(approvedTargetValidationReport.schemaName(), connection.getSchema())) {
+			throw new CommandException("Target validation report does not match the connected target database.");
+		}
+	}
+
+	private BulkMigrationArtifactProvenance executionProvenance(final BulkMigrationArtifactProvenance provenance) {
+		if (targetValidationReportFile == null || provenance == null) {
+			return provenance;
+		}
+		return new BulkMigrationArtifactProvenance(provenance.configurationFingerprint(),
+				provenance.assessmentReportFingerprint(), provenance.ddlVerificationReportFingerprint(),
+				"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidationReportFile));
+	}
+
 	private static void validateArtifactFile(final File file, final String property) {
 		if (file != null && !file.isFile()) {
 			throw new CommandException(property + " must be an existing file.");
@@ -312,7 +415,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId()).sourceTable(task.getSourceTable())
 					.keysetSource(task.getKeysetSource()).targetTable(task.getTargetTable())
-					.columnMappings(task.getColumnMappings()).options(task.getOptions())
+					.columnMappings(task.getColumnMappings()).requireEmptyTarget(task.isRequireEmptyTarget())
+					.options(task.getOptions())
 					.chunkListener(task.getChunkListener())
 					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,
 							task.getOptions().getCheckpointTableName()))

@@ -20,6 +20,8 @@ class VerifyBulkMigrationEvidenceTaskTest extends AbstractTaskTest {
 		assertFalse(task.configurationFile.isPresent())
 		assertFalse(task.assessmentReportFile.isPresent())
 		assertFalse(task.ddlVerificationReportFile.isPresent())
+		assertFalse(task.targetValidationReportFile.isPresent())
+		assertFalse(task.expectedTargetEnvironmentId.isPresent())
 		assertFalse(task.outputFile.isPresent())
 		assertTrue(task.requireSuccessfulExecution.get())
 		assertTrue(task.requireMatchingData.get())

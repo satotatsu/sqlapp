@@ -20,6 +20,7 @@ public record BulkMigrationEvidenceReport(int formatVersion, Instant generatedAt
 	public static final String ARTIFACT_CONFIGURATION = "CONFIGURATION";
 	public static final String ARTIFACT_ASSESSMENT_REPORT = "ASSESSMENT_REPORT";
 	public static final String ARTIFACT_DDL_VERIFICATION_REPORT = "DDL_VERIFICATION_REPORT";
+	public static final String ARTIFACT_TARGET_VALIDATION_REPORT = "TARGET_VALIDATION_REPORT";
 
 	public BulkMigrationEvidenceReport {
 		Objects.requireNonNull(generatedAt, "generatedAt");

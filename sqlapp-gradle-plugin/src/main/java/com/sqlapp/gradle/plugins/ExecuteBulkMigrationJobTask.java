@@ -54,6 +54,23 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getDdlVerificationReportFile();
 
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getTargetValidationReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedTargetValidationReportFingerprint();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxTargetValidationAgeSeconds();
+
+	@Input
+	@Optional
+	public abstract Property<String> getTargetEnvironmentId();
+
 	@Nested
 	public abstract DataSourceExtension getSourceDataSource();
 
@@ -89,6 +106,18 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		}
 		if (getDdlVerificationReportFile().isPresent()) {
 			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
+		}
+		if (getTargetValidationReportFile().isPresent()) {
+			command.setTargetValidationReportFile(getTargetValidationReportFile().get().getAsFile());
+		}
+		if (getExpectedTargetValidationReportFingerprint().isPresent()) {
+			command.setExpectedTargetValidationReportFingerprint(getExpectedTargetValidationReportFingerprint().get());
+		}
+		if (getMaxTargetValidationAgeSeconds().isPresent()) {
+			command.setMaxTargetValidationAgeSeconds(getMaxTargetValidationAgeSeconds().get());
+		}
+		if (getTargetEnvironmentId().isPresent()) {
+			command.setTargetEnvironmentId(getTargetEnvironmentId().get());
 		}
 		if (getListener().isPresent()) {
 			command.setListener(getListener().get());

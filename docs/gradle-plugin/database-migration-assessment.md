@@ -497,6 +497,59 @@ After reviewing the generated YAML, deployment automation can set
 lowercase `sha256:...` value. The executor verifies the entire configuration
 file before parsing it or opening the source connection. This final gate is
 optional for interactive runs.
+
+Before the load window, validate that exact YAML against the live target without
+moving any rows:
+
+```groovy
+tasks.named('validateBulkMigrationTarget') {
+    configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:ucanaccess:///data/source.accdb' }
+    dataSource {
+        jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app'
+        username = providers.gradleProperty('dbUser')
+        password = providers.gradleProperty('dbPassword')
+    }
+    expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    reportFile = layout.buildDirectory.file('reports/target-validation.json')
+    targetEnvironmentId = 'production-oracle'
+}
+```
+
+The task uses the executor's configuration resolver and validates target table
+identity, renamed columns, non-null primary or unique keys, and the generated
+`requireEmptyTarget: true` condition. It reads live target metadata and, for the
+empty-target condition, at most the first ordered target row. It creates no
+checkpoints, leases or migrated rows. The three approval properties and report
+output remain optional. When approval files are supplied, their complete-file
+SHA-256 values must match the YAML provenance. A successful report atomically
+records the configuration, plan, job, task and provenance identities for CI.
+It also records the database product, version, catalog and schema. Set the
+optional `targetEnvironmentId` when separate environments expose the same
+database identity values.
+
+Require that evidence when executing the load:
+
+```groovy
+tasks.named('executeBulkMigrationJob') {
+    configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:ucanaccess:///data/source.accdb' }
+    dataSource { jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app' }
+    targetValidationReportFile = layout.buildDirectory.file('reports/target-validation.json')
+    expectedTargetValidationReportFingerprint = providers.gradleProperty('approvedTargetValidationFingerprint')
+    maxTargetValidationAgeSeconds = 3600L
+    targetEnvironmentId = 'production-oracle'
+}
+```
+
+The age limit has no implicit default because the acceptable interval depends
+on the deployment process. The report fingerprint is optional. Even with this
+gate, execution repeats the live metadata, key and empty-target checks before
+the first lifecycle operation or row write. It also compares the recorded
+database product, version, catalog, schema and optional environment ID with the
+current target connection.
 Deployment automation can also set `assessmentReportFile` and
 `ddlVerificationReportFile` on `executeBulkMigrationJob`. When either file is
 present, the executor recomputes its SHA-256 and requires an exact match with
@@ -505,7 +558,7 @@ data. Both inputs are optional, independently selectable approval gates; an
 ordinary interactive run still needs only the generated YAML and its Schema
 XML.
 For declarative jobs, the executor carries the configuration fingerprint and
-the optional assessment and DDL-verification fingerprints into both generated
+the optional assessment, DDL-verification and target-validation report fingerprints into both generated
 JSON artifacts. Operational report format 3 and post-load verification report
 format 6 expose the same `provenance` object, allowing an audit to connect the
 reviewed inputs, executed plan, progress and verification outcome. Readers
@@ -522,9 +575,8 @@ tasks.named('verifyBulkMigrationEvidence') {
     configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
-    configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
-    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
-    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    targetValidationReportFile = layout.buildDirectory.file('reports/target-validation.json')
+    expectedTargetEnvironmentId = 'production-oracle'
     outputFile = layout.buildDirectory.file('reports/access-load-evidence.json')
 }
 ```
@@ -541,6 +593,20 @@ task is file-only and never opens a database connection.
 JSON audit artifact containing the plan and job IDs, both input-report
 fingerprints, the effective verification policies, the artifacts that were
 checked, the final execution and data-match state, and the common provenance.
+When `targetValidationReportFile` is supplied, the offline audit also verifies
+its exact bytes and confirms that its job, plan, configuration and approval
+provenance match the execution evidence. The recorded validation time must not
+be later than the operational report, and the validated task IDs must exactly
+match the executed task IDs. Set `expectedTargetEnvironmentId` to
+reject otherwise valid evidence created for another deployment environment.
+
+The complete supported workflow is therefore: generate or review the job,
+run `validateBulkMigrationTarget`, execute with the approved target-validation
+fingerprint, run the configured post-load verification, create the audit JSON
+with `verifyBulkMigrationEvidence`, and later revalidate the saved audit with
+`verifyBulkMigrationEvidenceReport`. The integration suite exercises this
+whole chain, including an Access-named source table, a renamed target table and
+column, live data transfer, exact provenance, and tamper rejection.
 `BulkMigrationEvidenceReportIO.read(evidence, operations, verification)` can
 later revalidate both source-report hashes and their plan, state and provenance
 against the saved audit artifact. Reading also rejects a policy that disagrees
@@ -554,6 +620,8 @@ tasks.named('verifyBulkMigrationEvidenceReport') {
     evidenceReportFile = layout.buildDirectory.file('reports/access-load-evidence.json')
     operationalReportFile = layout.buildDirectory.file('reports/access-load-operations.json')
     verificationReportFile = layout.buildDirectory.file('reports/access-load-verification.json')
+    targetValidationReportFile = layout.buildDirectory.file('reports/target-validation.json')
+    expectedTargetEnvironmentId = 'production-oracle'
     expectedEvidenceReportFingerprint = providers.environmentVariable('APPROVED_EVIDENCE_SHA256')
     expectedPlanFingerprint = providers.environmentVariable('APPROVED_PLAN_ID')
     expectedConfigurationFingerprint = providers.environmentVariable('APPROVED_JOB_SHA256')
@@ -590,6 +658,16 @@ and rejects other mappings explicitly. Type conversion
 performed by the target JDBC driver still requires non-production validation.
 Configure the Access source and target data sources separately on
 `executeBulkMigrationJob`, then pass this file as its `configurationFile`.
+Before lifecycle operations or row writes begin, execution checks JDBC metadata
+for every resolved target table and mapped column. A missing or ambiguous table,
+or a missing column, rejects the job. Resumable key columns must also be
+`NOT NULL` and backed by an actual target primary key or unique index. Failures
+include the task ID and are written as rejections to the operational report
+when reporting is configured.
+Generated Access initial-load tasks also set `requireEmptyTarget: true`. The
+preflight opens an ordered target read and rejects a table containing any row.
+Handwritten generic jobs default this option to `false`, preserving append and
+upsert workflows; enable it explicitly for other initial-load jobs.
 
 Set `requireDeploymentReady` to `true` for the common deployment path. It
 combines the blocker, incomplete-mapping and unresolved-AutoNumber gates below,
