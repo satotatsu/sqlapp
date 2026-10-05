@@ -855,16 +855,110 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setMaxTargetValidationAgeSeconds(60L);
 			command.setTargetEnvironmentId("repair-test");
 			final Path postRepairVerification = temporaryDirectory.resolve("post-repair-verification.json");
+			final Path repairExecution = temporaryDirectory.resolve("repair-execution.json");
+			command.setRepairExecutionReportFile(repairExecution.toFile());
 			command.setPostRepairVerificationReportFile(postRepairVerification.toFile());
+
+			command.setExpectedTargetValidationReportFingerprint("sha256:" + "0".repeat(64));
+			final var fingerprintRejection = assertThrows(CommandException.class, command::run);
+			assertEquals(
+					"targetValidationReportFile fingerprint does not match expectedTargetValidationReportFingerprint.",
+					fingerprintRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			command.setTargetEnvironmentId("another-environment");
+			final var environmentRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report does not match targetEnvironmentId.",
+					environmentRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			command.setTargetEnvironmentId("repair-test");
+			final var approvedTarget = new BulkMigrationTargetValidationReportIO().read(targetValidation);
+			new BulkMigrationTargetValidationReportIO().write(targetValidation,
+					withTargetValidationIdentity(approvedTarget, Instant.now().minusSeconds(120),
+							approvedTarget.databaseProductName()));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			final var staleRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report is older than maxTargetValidationAgeSeconds.",
+					staleRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			new BulkMigrationTargetValidationReportIO().write(targetValidation,
+					withTargetValidationIdentity(approvedTarget, Instant.now(), "another-database"));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			final var databaseRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report does not match the connected target database.",
+					databaseRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			new BulkMigrationTargetValidationReportIO().write(targetValidation,
+					withTargetValidationIdentity(approvedTarget, Instant.now(), approvedTarget.databaseProductName()));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
 
 			command.run();
 
 			assertEquals(1, command.getResult().getReplayedRows());
 			assertEquals(true, command.getVerificationResult().isMatch());
+			final var executionArtifact = new BulkMigrationJobRepairExecutionReportIO().read(repairExecution);
+			assertEquals(command.getResult().getPlanFingerprint(), executionArtifact.repairPlanFingerprint());
+			assertEquals(1, executionArtifact.replayedRows());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()),
+					executionArtifact.approvedRepairPlanFileFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()),
+					executionArtifact.provenance().targetValidationReportFingerprint());
 			final var postRepairArtifact = new BulkMigrationVerificationReportIO().read(postRepairVerification);
 			assertEquals(true, postRepairArtifact.match());
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()),
 					postRepairArtifact.provenance().targetValidationReportFingerprint());
+			final var evidence = new VerifyBulkMigrationJobRepairEvidenceCommand();
+			evidence.setRepairExecutionReportFile(repairExecution.toFile());
+			evidence.setApprovedRepairPlanFile(approval.toFile());
+			evidence.setPostRepairVerificationReportFile(postRepairVerification.toFile());
+			evidence.setExpectedRepairExecutionReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()));
+			evidence.setExpectedMigrationPlanFingerprint(postRepairArtifact.planFingerprint());
+			evidence.setExpectedRepairPlanFingerprint(executionArtifact.repairPlanFingerprint());
+			evidence.setExpectedConfigurationFingerprint(executionArtifact.provenance().configurationFingerprint());
+			evidence.setMaxEvidenceAgeSeconds(60L);
+			evidence.run();
+			assertEquals(executionArtifact, evidence.getReport());
+			final Path changedApproval = temporaryDirectory.resolve("changed-approved-repair.json");
+			Files.copy(approval, changedApproval);
+			Files.writeString(changedApproval, System.lineSeparator(), java.nio.file.StandardOpenOption.APPEND);
+			evidence.setApprovedRepairPlanFile(changedApproval.toFile());
+			final var changedApprovalRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals("Repair execution report does not match approvedRepairPlanFile.",
+					changedApprovalRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setApprovedRepairPlanFile(approval.toFile());
+			final Path expiredExecution = temporaryDirectory.resolve("expired-repair-execution.json");
+			new BulkMigrationJobRepairExecutionReportIO().write(expiredExecution,
+					withRepairCompletedAt(executionArtifact, Instant.now().minusSeconds(120)));
+			evidence.setRepairExecutionReportFile(expiredExecution.toFile());
+			evidence.setExpectedRepairExecutionReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(expiredExecution.toFile()));
+			evidence.setMaxEvidenceAgeSeconds(60L);
+			final var expiredRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals("Repair execution evidence has expired.", expiredRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setRepairExecutionReportFile(repairExecution.toFile());
+			evidence.setExpectedRepairExecutionReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()));
+			final Path incompleteVerification = temporaryDirectory.resolve("incomplete-post-repair-verification.json");
+			new BulkMigrationVerificationReportIO().write(incompleteVerification,
+					new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
+							Instant.now(), postRepairArtifact.planFingerprint(), postRepairArtifact.isolation(), true, 0, 0,
+							0, List.of(), postRepairArtifact.provenance()));
+			evidence.setPostRepairVerificationReportFile(incompleteVerification.toFile());
+			final var incompleteRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals("Post-repair verification report does not match successful repair execution.",
+					incompleteRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setPostRepairVerificationReportFile(postRepairVerification.toFile());
+			evidence.setExpectedRepairPlanFingerprint("different-plan");
+			assertThrows(CommandException.class, evidence::run);
+			assertNull(evidence.getReport());
 			try (var connection = target.getConnection();
 					var rows = connection.createStatement().executeQuery("SELECT NAME FROM PUBLIC.ITEMS WHERE ID=1")) {
 				rows.next();
@@ -873,6 +967,32 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertThrows(CommandException.class, command::run);
 			assertNull(command.getResult());
 			assertNull(command.getVerificationResult());
+		}
+	}
+
+	private static BulkMigrationJobRepairExecutionReport withRepairCompletedAt(
+			final BulkMigrationJobRepairExecutionReport report, final Instant completedAt) {
+		return new BulkMigrationJobRepairExecutionReport(report.formatVersion(), completedAt,
+				report.migrationPlanFingerprint(), report.repairPlanFingerprint(),
+				report.approvedRepairPlanFileFingerprint(), report.mismatchChunks(), report.replayedChunks(),
+				report.replayedRows(), report.affectedRows(), report.tasksRequiringManualReconciliation(), report.tasks(),
+				report.provenance());
+	}
+
+	private static BulkMigrationTargetValidationReport withTargetValidationIdentity(
+			final BulkMigrationTargetValidationReport report, final Instant generatedAt,
+			final String databaseProductName) {
+		return new BulkMigrationTargetValidationReport(report.formatVersion(), generatedAt, report.jobId(),
+				report.planFingerprint(), report.configurationFingerprint(), report.taskIds(), report.provenance(),
+				report.targetEnvironmentId(), databaseProductName, report.databaseProductVersion(), report.catalogName(),
+				report.schemaName());
+	}
+
+	private static String itemName(final HikariDataSource dataSource) throws SQLException {
+		try (var connection = dataSource.getConnection();
+				var rows = connection.createStatement().executeQuery("SELECT NAME FROM PUBLIC.ITEMS WHERE ID=1")) {
+			rows.next();
+			return rows.getString(1);
 		}
 	}
 

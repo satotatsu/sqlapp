@@ -23,6 +23,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private File configurationFile;
 	private String expectedConfigurationFingerprint;
 	private File approvedRepairPlanFile;
+	private File repairExecutionReportFile;
 	private File postRepairVerificationReportFile;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
@@ -52,7 +53,8 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		if (approvedRepairPlanFile == null || !approvedRepairPlanFile.isFile()) {
 			throw new CommandException("Approved bulk migration repair plan file is required.");
 		}
-		validateConfigurationFingerprint();
+		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
+				expectedConfigurationFingerprint);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
 				ddlVerificationReportFile);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
@@ -84,14 +86,21 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		final var approved = new BulkMigrationJobRepairPlanReportIO().read(approvedRepairPlanFile.toPath(),
 				plan.getFingerprint());
 		result = BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approved.planFingerprint());
+		final var executionProvenance = BulkMigrationExecutionApprovalValidator.executionProvenance(
+				resolved.provenance(), targetValidationReportFile);
+		if (repairExecutionReportFile != null) {
+			new BulkMigrationJobRepairExecutionReportIO().write(repairExecutionReportFile.toPath(),
+					resolved.plan().getFingerprint(),
+					"sha256:" + MessageDigests.SHA256.checksumAsString(approvedRepairPlanFile), result,
+					executionProvenance);
+		}
 		verificationResult = ExecuteBulkMigrationJobCommand.verifyWithIsolation(resolved.plan(), targetConnection,
 				verification.chunkSize(), verification.columnsByTask(), verification.isolation());
 		if (postRepairVerificationReportFile != null) {
 			new BulkMigrationVerificationReportIO().write(postRepairVerificationReportFile.toPath(),
 					resolved.plan().getFingerprint(), verification.isolation(),
 					verification.maxReportedMismatches(), verificationResult,
-					BulkMigrationExecutionApprovalValidator.executionProvenance(resolved.provenance(),
-							targetValidationReportFile));
+					executionProvenance);
 		}
 		if (!verificationResult.isMatch()) {
 			throw new CommandException("Bulk migration repair verification failed: "
@@ -99,17 +108,4 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		}
 	}
 
-	private void validateConfigurationFingerprint() {
-		if (expectedConfigurationFingerprint == null || expectedConfigurationFingerprint.isBlank()) {
-			return;
-		}
-		if (!expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}")) {
-			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
-		}
-		final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile);
-		if (!expectedConfigurationFingerprint.equals(actual)) {
-			throw new CommandException(
-					"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
-		}
-	}
 }

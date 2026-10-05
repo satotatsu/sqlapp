@@ -16,6 +16,28 @@ final class BulkMigrationExecutionApprovalValidator {
 	private BulkMigrationExecutionApprovalValidator() {
 	}
 
+	static void validateConfigurationFingerprint(final File configurationFile, final String expectedFingerprint) {
+		if (expectedFingerprint == null || expectedFingerprint.isBlank()) {
+			return;
+		}
+		if (configurationFile == null) {
+			throw new CommandException("expectedConfigurationFingerprint requires configurationFile.");
+		}
+		if (!expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
+		}
+		try {
+			if (!expectedFingerprint.equals(fingerprint(configurationFile))) {
+				throw new CommandException(
+						"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
+			}
+		} catch (final CommandException e) {
+			throw e;
+		} catch (final Exception e) {
+			throw new CommandException("Could not fingerprint configurationFile: " + e.getMessage(), e);
+		}
+	}
+
 	static void validateArtifactInputs(final File configurationFile, final File assessmentReportFile,
 			final File ddlVerificationReportFile) {
 		if ((assessmentReportFile != null || ddlVerificationReportFile != null) && configurationFile == null) {

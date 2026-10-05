@@ -1285,6 +1285,9 @@ explicit approval of the generated plan fingerprint.
 The declarative repair command re-runs the same verification both before and
 after repair. Its optional post-repair verification file provides bounded JSON
 evidence that the approved replay actually restored equality.
+An optional repair execution report separately records the approved repair-plan
+file fingerprint, per-task replay counts, affected rows, unresolved extra or
+missing chunks, and the approval provenance used for execution.
 It also accepts the same reviewed assessment, DDL-verification and live-target
 validation gates as declarative migration execution, including target report
 age and environment identity checks.

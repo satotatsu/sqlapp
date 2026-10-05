@@ -24,6 +24,7 @@ class BulkMigrationReportTaskRegistrationTest {
 				project.getTasks().getByName("executeBulkMigrationJobRepair"));
 		assertFalse(execute.getConfigurationFile().isPresent());
 		assertFalse(execute.getApprovedRepairPlanFile().isPresent());
+		assertFalse(execute.getRepairExecutionReportFile().isPresent());
 		assertFalse(execute.getPostRepairVerificationReportFile().isPresent());
 	}
 }
