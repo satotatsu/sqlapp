@@ -125,8 +125,23 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 					executionProvenance);
 		}
 		if (!verificationResult.isMatch()) {
-			throw new CommandException("Bulk migration repair verification failed: "
+			final var failure = new CommandException("Bulk migration repair verification failed: "
 					+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
+			if (repairFailureReportFile != null) {
+				try {
+					final String verificationFingerprint = postRepairVerificationReportFile == null ? null
+							: "sha256:" + MessageDigests.SHA256
+									.checksumAsString(postRepairVerificationReportFile);
+					new BulkMigrationJobRepairFailureReportIO().write(repairFailureReportFile.toPath(),
+							new BulkMigrationJobRepairFailureReportIO().fromVerificationFailure(
+									resolved.plan().getFingerprint(),
+									"sha256:" + MessageDigests.SHA256.checksumAsString(approvedRepairPlanFile),
+									verificationFingerprint, result, verificationResult, executionProvenance));
+				} catch (RuntimeException evidenceFailure) {
+					failure.addSuppressed(evidenceFailure);
+				}
+			}
+			throw failure;
 		}
 	}
 

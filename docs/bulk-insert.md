@@ -1298,10 +1298,17 @@ success, failure, and post-repair verification outputs from an earlier run.
 Those output paths must be distinct from one another and from all approval
 inputs. If failure-evidence writing itself fails, that secondary error is
 attached to the original repair failure instead of replacing it.
+If replay completes but post-repair verification still differs, the failure
+phase is `POST_VERIFICATION`. The evidence records all completed repair tasks,
+the first mismatched task and, when configured, the SHA-256 of the bounded
+post-repair verification report. This is repair-failure report format version 2.
 The file-only repair-failure evidence verifier binds that failure report back
 to the approved plan. It checks that completed tasks are an exact prefix of the
 approved dependency order and that an execution failure identifies the next
 task, in addition to optional artifact fingerprints, provenance, and age.
+For `POST_VERIFICATION`, supplying `postRepairVerificationReportFile` also
+checks its SHA-256, mismatch state, task order, plan fingerprint, provenance,
+and generation time.
 It also accepts the same reviewed assessment, DDL-verification and live-target
 validation gates as declarative migration execution, including target report
 age and environment identity checks.

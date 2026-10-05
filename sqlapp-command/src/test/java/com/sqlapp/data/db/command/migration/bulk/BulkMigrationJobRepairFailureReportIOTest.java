@@ -23,7 +23,7 @@ class BulkMigrationJobRepairFailureReportIOTest {
 				List.of());
 		final var report = new BulkMigrationJobRepairFailureReport(
 				BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration", "repair",
-				"sha256:" + "a".repeat(64), "EXECUTION", "child", "java.sql.SQLException", "write failed",
+				"sha256:" + "a".repeat(64), null, "EXECUTION", "child", "java.sql.SQLException", "write failed",
 				List.of(completed), null);
 		final Path file = temporaryDirectory.resolve("repair-failure.json");
 		final var io = new BulkMigrationJobRepairFailureReportIO();
@@ -37,7 +37,7 @@ class BulkMigrationJobRepairFailureReportIOTest {
 	void rejectsUnknownFailurePhase() {
 		final var report = new BulkMigrationJobRepairFailureReport(
 				BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration", "repair",
-				"sha256:" + "b".repeat(64), "UNKNOWN", "items", "failure", "message", List.of(), null);
+				"sha256:" + "b".repeat(64), null, "UNKNOWN", "items", "failure", "message", List.of(), null);
 
 		assertThrows(CommandException.class,
 				() -> new BulkMigrationJobRepairFailureReportIO().write(temporaryDirectory.resolve("invalid.json"), report));

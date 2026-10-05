@@ -19,6 +19,7 @@ import lombok.Setter;
 public class VerifyBulkMigrationJobRepairFailureEvidenceCommand extends AbstractCommand {
 	private File repairFailureReportFile;
 	private File approvedRepairPlanFile;
+	private File postRepairVerificationReportFile;
 	private String expectedRepairFailureReportFingerprint;
 	private String expectedMigrationPlanFingerprint;
 	private String expectedRepairPlanFingerprint;
@@ -49,14 +50,20 @@ public class VerifyBulkMigrationJobRepairFailureEvidenceCommand extends Abstract
 				.map(BulkMigrationJobRepairPlanReport.Task::taskId).toList();
 		final List<String> completedTaskIds = failure.completedTasks().stream()
 				.map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList();
+		final boolean postVerification = "POST_VERIFICATION".equals(failure.phase());
 		if (!fingerprint(approvedRepairPlanFile).equals(failure.approvedRepairPlanFileFingerprint())
 				|| !approval.planFingerprint().equals(failure.repairPlanFingerprint())
 				|| !isCompletedPrefix(approvedTaskIds, completedTaskIds)
-				|| completedTaskIds.contains(failure.failedTaskId())
-				|| (!"PREFLIGHT".equals(failure.phase())
+				|| (!postVerification && completedTaskIds.contains(failure.failedTaskId()))
+				|| (postVerification && (!completedTaskIds.equals(approvedTaskIds)
+						|| !approvedTaskIds.contains(failure.failedTaskId())))
+				|| (!postVerification && !"PREFLIGHT".equals(failure.phase())
 						&& (completedTaskIds.size() >= approvedTaskIds.size()
 								|| !approvedTaskIds.get(completedTaskIds.size()).equals(failure.failedTaskId())))) {
 			throw new CommandException("Repair failure report does not match approvedRepairPlanFile.");
+		}
+		if (postVerification) {
+			verifyPostRepairVerification(failure, approvedTaskIds);
 		}
 		if (expectedMigrationPlanFingerprint != null
 				&& !expectedMigrationPlanFingerprint.equals(failure.migrationPlanFingerprint())) {
@@ -73,6 +80,32 @@ public class VerifyBulkMigrationJobRepairFailureEvidenceCommand extends Abstract
 		validateAge(failure.failedAt());
 		report = failure;
 		info("Bulk migration job repair failure evidence verified: ", repairFailureReportFile.getAbsolutePath());
+	}
+
+	private void verifyPostRepairVerification(final BulkMigrationJobRepairFailureReport failure,
+			final List<String> approvedTaskIds) {
+		if (failure.postRepairVerificationReportFingerprint() == null) {
+			if (postRepairVerificationReportFile != null) {
+				throw new CommandException("Repair failure evidence does not reference a post-repair verification report.");
+			}
+			return;
+		}
+		requireFile(postRepairVerificationReportFile, "postRepairVerificationReportFile");
+		if (!fingerprint(postRepairVerificationReportFile)
+				.equals(failure.postRepairVerificationReportFingerprint())) {
+			throw new CommandException("Post-repair verification report does not match repair failure evidence.");
+		}
+		final var verification = new BulkMigrationVerificationReportIO()
+				.read(postRepairVerificationReportFile.toPath());
+		if (verification.match() || !failure.migrationPlanFingerprint().equals(verification.planFingerprint())
+				|| !approvedTaskIds.equals(verification.tasks().stream()
+						.map(BulkMigrationVerificationReport.Task::taskId).toList())
+				|| verification.tasks().stream().filter(task -> !task.match())
+						.noneMatch(task -> task.taskId().equals(failure.failedTaskId()))
+				|| !java.util.Objects.equals(failure.provenance(), verification.provenance())
+				|| verification.generatedAt().isAfter(failure.failedAt())) {
+			throw new CommandException("Post-repair verification report does not match repair failure evidence.");
+		}
 	}
 
 	private static boolean isCompletedPrefix(final List<String> approved, final List<String> completed) {

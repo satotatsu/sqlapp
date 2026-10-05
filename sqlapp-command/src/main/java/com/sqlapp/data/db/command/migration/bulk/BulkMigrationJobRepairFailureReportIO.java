@@ -11,6 +11,8 @@ import java.util.Objects;
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.util.JsonConverter;
 
 /** Atomically reads and writes unsuccessful job-repair evidence. */
@@ -31,9 +33,31 @@ public final class BulkMigrationJobRepairFailureReportIO {
 		final String message = String.valueOf(cause.getMessage());
 		return validate(new BulkMigrationJobRepairFailureReport(CURRENT_VERSION, Instant.now(),
 				migrationPlanFingerprint, failure.getCompletedResult().getPlanFingerprint(),
-				approvedRepairPlanFileFingerprint, failure.getPhase().name(), failure.getFailedTaskId(),
+				approvedRepairPlanFileFingerprint, null, failure.getPhase().name(), failure.getFailedTaskId(),
 				cause.getClass().getName(), message.substring(0, Math.min(message.length(), MAX_FAILURE_MESSAGE_LENGTH)),
 				tasks, provenance));
+	}
+
+	public BulkMigrationJobRepairFailureReport fromVerificationFailure(final String migrationPlanFingerprint,
+			final String approvedRepairPlanFileFingerprint, final String verificationReportFingerprint,
+			final BulkMigrationJobRepairResult result, final BulkMigrationJobVerificationResult verification,
+			final BulkMigrationArtifactProvenance provenance) {
+		Objects.requireNonNull(result, "result");
+		Objects.requireNonNull(verification, "verification");
+		final var failedTaskId = verification.getTasks().stream()
+				.filter(task -> !task.getVerificationResult().isMatch()).map(task -> task.getTaskId()).findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Verification result must contain a mismatch"));
+		final var tasks = result.getTasks().stream().map(task -> {
+			final var repair = task.getRepairResult();
+			return new BulkMigrationJobRepairExecutionReport.Task(task.getTaskId(), repair.getMismatchChunks(),
+					repair.getReplayedChunks(), repair.getReplayedRows(), repair.getAffectedRows(),
+					repair.getChunksWithExtraActualRows(), repair.getChunksWithoutExpectedRows());
+		}).toList();
+		final String message = "Post-repair verification mismatched " + verification.getMismatchedTasks() + " task(s)";
+		return validate(new BulkMigrationJobRepairFailureReport(CURRENT_VERSION, Instant.now(),
+				migrationPlanFingerprint, result.getPlanFingerprint(), approvedRepairPlanFileFingerprint,
+				verificationReportFingerprint, "POST_VERIFICATION", failedTaskId, CommandException.class.getName(),
+				message, tasks, provenance));
 	}
 
 	private static final int CURRENT_VERSION = BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION;
@@ -75,10 +99,13 @@ public final class BulkMigrationJobRepairFailureReportIO {
 				|| report.failureMessage().length() > MAX_FAILURE_MESSAGE_LENGTH || report.completedTasks() == null) {
 			throw new CommandException("Bulk migration job repair failure report is invalid");
 		}
-		try {
-			com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException.Phase.valueOf(report.phase());
-		} catch (NullPointerException | IllegalArgumentException e) {
-			throw new CommandException("Bulk migration job repair failure phase is invalid", e);
+		if (!java.util.Set.of("PREFLIGHT", "EXECUTION", "POST_VERIFICATION").contains(report.phase())) {
+			throw new CommandException("Bulk migration job repair failure phase is invalid");
+		}
+		if ((!"POST_VERIFICATION".equals(report.phase()) && report.postRepairVerificationReportFingerprint() != null)
+				|| (report.postRepairVerificationReportFingerprint() != null
+						&& !sha256(report.postRepairVerificationReportFingerprint()))) {
+			throw new CommandException("Bulk migration job repair failure verification fingerprint is invalid");
 		}
 		final var ids = new HashSet<String>();
 		for (final var task : report.completedTasks()) {
@@ -91,5 +118,9 @@ public final class BulkMigrationJobRepairFailureReportIO {
 
 	private static boolean blank(final String value) {
 		return value == null || value.isBlank();
+	}
+
+	private static boolean sha256(final String value) {
+		return value != null && value.matches("sha256:[0-9a-f]{64}");
 	}
 }

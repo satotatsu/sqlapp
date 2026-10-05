@@ -23,6 +23,8 @@ public abstract class VerifyBulkMigrationJobRepairFailureEvidenceTask
 	public abstract RegularFileProperty getRepairFailureReportFile();
 	@InputFile @PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getApprovedRepairPlanFile();
+	@InputFile @Optional @PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getPostRepairVerificationReportFile();
 	@Input @Optional
 	public abstract Property<String> getExpectedRepairFailureReportFingerprint();
 	@Input @Optional
@@ -38,6 +40,9 @@ public abstract class VerifyBulkMigrationJobRepairFailureEvidenceTask
 	protected void beforeRun(final VerifyBulkMigrationJobRepairFailureEvidenceCommand command) {
 		command.setRepairFailureReportFile(getRepairFailureReportFile().get().getAsFile());
 		command.setApprovedRepairPlanFile(getApprovedRepairPlanFile().get().getAsFile());
+		if (getPostRepairVerificationReportFile().isPresent()) {
+			command.setPostRepairVerificationReportFile(getPostRepairVerificationReportFile().get().getAsFile());
+		}
 		if (getExpectedRepairFailureReportFingerprint().isPresent()) {
 			command.setExpectedRepairFailureReportFingerprint(getExpectedRepairFailureReportFingerprint().get());
 		}

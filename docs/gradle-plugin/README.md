@@ -448,13 +448,15 @@ post-repair verification report:
 verifyBulkMigrationJobRepairFailureEvidence {
     repairFailureReportFile = layout.buildDirectory.file('reports/access-load-repair-failure.json')
     approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
+    postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-post-repair.json')
     maxEvidenceAgeSeconds = 86400
 }
 ```
 
 This checks the approved-plan file SHA, repair-plan fingerprint, completed task
-prefix, failed task position, optional expected fingerprints, provenance, and
-evidence age.
+prefix, failed task position, optional expected fingerprints, provenance and
+evidence age. For `POST_VERIFICATION` failures, it also checks the referenced
+mismatch report when that report was configured during repair.
 
 The assessment, DDL and target-validation approval properties have the same
 meaning as on `executeBulkMigrationJob`. When supplied, repair validates their

@@ -18,11 +18,14 @@ class VerifyBulkMigrationJobRepairFailureEvidenceTaskTest extends AbstractTaskTe
 		assertFalse(task.expectedRepairPlanFingerprint.isPresent())
 		assertFalse(task.expectedConfigurationFingerprint.isPresent())
 		assertFalse(task.maxEvidenceAgeSeconds.isPresent())
+		assertFalse(task.postRepairVerificationReportFile.isPresent())
 
 		def failure = new File(testProjectDir, 'failure.json'); failure.text = '{}'
 		def approval = new File(testProjectDir, 'approval.json'); approval.text = '{}'
+		def verification = new File(testProjectDir, 'verification.json'); verification.text = '{}'
 		task.repairFailureReportFile.set(failure)
 		task.approvedRepairPlanFile.set(approval)
+		task.postRepairVerificationReportFile.set(verification)
 		task.expectedRepairFailureReportFingerprint.set('sha256:' + 'a' * 64)
 		task.expectedMigrationPlanFingerprint.set('migration')
 		task.expectedRepairPlanFingerprint.set('repair')
@@ -33,6 +36,7 @@ class VerifyBulkMigrationJobRepairFailureEvidenceTaskTest extends AbstractTaskTe
 		task.beforeRun(command)
 		assertEquals(failure, command.repairFailureReportFile)
 		assertEquals(approval, command.approvedRepairPlanFile)
+		assertEquals(verification, command.postRepairVerificationReportFile)
 		assertEquals('sha256:' + 'a' * 64, command.expectedRepairFailureReportFingerprint)
 		assertEquals('migration', command.expectedMigrationPlanFingerprint)
 		assertEquals('repair', command.expectedRepairPlanFingerprint)

@@ -31,8 +31,8 @@ class VerifyBulkMigrationJobRepairFailureEvidenceCommandTest {
 		final var completed = new BulkMigrationJobRepairExecutionReport.Task("parent", 1, 1, 1, 1,
 				List.of(), List.of());
 		final var provenance = new BulkMigrationArtifactProvenance("sha256:" + "b".repeat(64), null, null);
-		final var failure = new BulkMigrationJobRepairFailureReport(1, Instant.now(), "migration", approval.planFingerprint(),
-				fingerprint(approvalFile), "EXECUTION", "child", "java.sql.SQLException", "write failed",
+		final var failure = new BulkMigrationJobRepairFailureReport(BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration", approval.planFingerprint(),
+				fingerprint(approvalFile), null, "EXECUTION", "child", "java.sql.SQLException", "write failed",
 				List.of(completed), provenance);
 		final Path failureFile = directory.resolve("failure.json");
 		new BulkMigrationJobRepairFailureReportIO().write(failureFile, failure);
@@ -58,8 +58,8 @@ class VerifyBulkMigrationJobRepairFailureEvidenceCommandTest {
 		new BulkMigrationJobRepairPlanReportIO().write(approvalFile, approval);
 		final var completed = new BulkMigrationJobRepairExecutionReport.Task("child", 1, 1, 1, 1,
 				List.of(), List.of());
-		final var failure = new BulkMigrationJobRepairFailureReport(1, Instant.now(), "migration", approval.planFingerprint(),
-				fingerprint(approvalFile), "EXECUTION", "parent", "failure", "message", List.of(completed), null);
+		final var failure = new BulkMigrationJobRepairFailureReport(BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration", approval.planFingerprint(),
+				fingerprint(approvalFile), null, "EXECUTION", "parent", "failure", "message", List.of(completed), null);
 		final Path failureFile = directory.resolve("failure.json");
 		new BulkMigrationJobRepairFailureReportIO().write(failureFile, failure);
 
@@ -67,6 +67,44 @@ class VerifyBulkMigrationJobRepairFailureEvidenceCommandTest {
 				command(approvalFile, failureFile)::run);
 
 		assertEquals("Repair failure report does not match approvedRepairPlanFile.", rejection.getMessage());
+	}
+
+	@Test
+	void verifiesPostRepairMismatchAgainstItsVerificationArtifact() throws Exception {
+		final var approval = approval();
+		final Path approvalFile = directory.resolve("approval.json");
+		new BulkMigrationJobRepairPlanReportIO().write(approvalFile, approval);
+		final var parent = new BulkMigrationVerificationReport.Task("parent", List.of("ID"), null, null,
+				true, 1, 1, 0, List.of());
+		final var mismatch = new BulkMigrationVerificationReport.Chunk(0, 1, 1, "expected", "actual",
+				null, null, null, null);
+		final var child = new BulkMigrationVerificationReport.Task("child", List.of("ID"), null, null,
+				false, 1, 1, 1, List.of(mismatch));
+		final var provenance = new BulkMigrationArtifactProvenance("sha256:" + "c".repeat(64), null, null);
+		final Path verificationFile = directory.resolve("post-verification.json");
+		new BulkMigrationVerificationReportIO().write(verificationFile,
+				new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
+						Instant.now(), "migration", "READ_COMMITTED", false, 2, 2, 1,
+						List.of(parent, child), provenance));
+		final var completed = List.of(
+				new BulkMigrationJobRepairExecutionReport.Task("parent", 1, 1, 1, 1, List.of(), List.of()),
+				new BulkMigrationJobRepairExecutionReport.Task("child", 1, 1, 1, 1, List.of(), List.of()));
+		final var failure = new BulkMigrationJobRepairFailureReport(
+				BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration",
+				approval.planFingerprint(), fingerprint(approvalFile), fingerprint(verificationFile),
+				"POST_VERIFICATION", "child", CommandException.class.getName(), "mismatch", completed, provenance);
+		final Path failureFile = directory.resolve("failure.json");
+		new BulkMigrationJobRepairFailureReportIO().write(failureFile, failure);
+		final var command = command(approvalFile, failureFile);
+		command.setPostRepairVerificationReportFile(verificationFile.toFile());
+
+		command.run();
+
+		assertEquals(failure, command.getReport());
+		java.nio.file.Files.writeString(verificationFile, System.lineSeparator(),
+				java.nio.file.StandardOpenOption.APPEND);
+		assertThrows(CommandException.class, command::run);
+		assertNull(command.getReport());
 	}
 
 	private static VerifyBulkMigrationJobRepairFailureEvidenceCommand command(final Path approval, final Path failure) {
