@@ -76,6 +76,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `generateBulkMigrationJobRepairPlanReport` | Write a review-only repair plan as JSON |
 | Migration | `executeBulkMigrationJobRepair` | Re-verify and execute an approved declarative repair plan |
 | Migration | `verifyBulkMigrationJobRepairEvidence` | Verify repair approval, execution and post-repair evidence without database access |
+| Migration | `verifyBulkMigrationJobRepairFailureEvidence` | Verify approved repair failure evidence without database access |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
 | Normalization | `columnRuleTransform` | Apply YAML-based column type and naming rules |
@@ -398,6 +399,7 @@ tasks.named('executeBulkMigrationJobRepair') {
     configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
     approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
     repairExecutionReportFile = layout.buildDirectory.file('reports/access-load-repair-execution.json')
+    repairFailureReportFile = layout.buildDirectory.file('reports/access-load-repair-failure.json')
     postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-repaired.json')
     expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
@@ -418,6 +420,12 @@ the YAML settings and fails unless source and target match. The optional
 `repairExecutionReportFile` records the approved plan file fingerprint and
 task-level replay counts. `postRepairVerificationReportFile` persists the final
 data-comparison evidence. Both are optional for the simple execution path.
+`repairFailureReportFile` is also optional. When repair preflight or a task
+fails, it records the failure phase and task plus the completed task prefix;
+configured outcome files from an earlier run are cleared immediately before
+replay. Outcome paths must be distinct from each other and from approval input
+files. A failure-report write error is attached to the original repair error.
+it is a distinct format and cannot be mistaken for successful execution.
 The file-only `verifyBulkMigrationJobRepairEvidence` task can later bind the
 approved plan, execution report, and successful post-repair verification into
 one audit check without reconnecting to either database:
@@ -428,9 +436,25 @@ verifyBulkMigrationJobRepairEvidence {
     repairExecutionReportFile = layout.buildDirectory.file('reports/access-load-repair-execution.json')
     postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-repaired.json')
     expectedRepairExecutionReportFingerprint = providers.gradleProperty('approvedRepairExecutionFingerprint')
+    expectedPostRepairVerificationReportFingerprint = providers.gradleProperty('approvedPostRepairVerificationFingerprint')
     maxEvidenceAgeSeconds = 86400L
 }
 ```
+
+Failed runs can be checked independently, without requiring a success or
+post-repair verification report:
+
+```groovy
+verifyBulkMigrationJobRepairFailureEvidence {
+    repairFailureReportFile = layout.buildDirectory.file('reports/access-load-repair-failure.json')
+    approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
+    maxEvidenceAgeSeconds = 86400
+}
+```
+
+This checks the approved-plan file SHA, repair-plan fingerprint, completed task
+prefix, failed task position, optional expected fingerprints, provenance, and
+evidence age.
 
 The assessment, DDL and target-validation approval properties have the same
 meaning as on `executeBulkMigrationJob`. When supplied, repair validates their

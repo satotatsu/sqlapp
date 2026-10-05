@@ -10,25 +10,21 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
-import com.sqlapp.data.db.command.migration.bulk.VerifyBulkMigrationJobRepairEvidenceCommand;
+import com.sqlapp.data.db.command.migration.bulk.VerifyBulkMigrationJobRepairFailureEvidenceCommand;
 
-/** Verifies repair evidence files without database access. */
-public abstract class VerifyBulkMigrationJobRepairEvidenceTask
-		extends AbstractTask<VerifyBulkMigrationJobRepairEvidenceCommand> {
-	public void call(final Action<VerifyBulkMigrationJobRepairEvidenceTask> action) {
+/** Verifies failed repair evidence files without database access. */
+public abstract class VerifyBulkMigrationJobRepairFailureEvidenceTask
+		extends AbstractTask<VerifyBulkMigrationJobRepairFailureEvidenceCommand> {
+	public void call(final Action<VerifyBulkMigrationJobRepairFailureEvidenceTask> action) {
 		action.execute(this);
 	}
 
 	@InputFile @PathSensitive(PathSensitivity.RELATIVE)
-	public abstract RegularFileProperty getRepairExecutionReportFile();
+	public abstract RegularFileProperty getRepairFailureReportFile();
 	@InputFile @PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getApprovedRepairPlanFile();
-	@InputFile @PathSensitive(PathSensitivity.RELATIVE)
-	public abstract RegularFileProperty getPostRepairVerificationReportFile();
 	@Input @Optional
-	public abstract Property<String> getExpectedRepairExecutionReportFingerprint();
-	@Input @Optional
-	public abstract Property<String> getExpectedPostRepairVerificationReportFingerprint();
+	public abstract Property<String> getExpectedRepairFailureReportFingerprint();
 	@Input @Optional
 	public abstract Property<String> getExpectedMigrationPlanFingerprint();
 	@Input @Optional
@@ -39,16 +35,11 @@ public abstract class VerifyBulkMigrationJobRepairEvidenceTask
 	public abstract Property<Long> getMaxEvidenceAgeSeconds();
 
 	@Override
-	protected void beforeRun(final VerifyBulkMigrationJobRepairEvidenceCommand command) {
-		command.setRepairExecutionReportFile(getRepairExecutionReportFile().get().getAsFile());
+	protected void beforeRun(final VerifyBulkMigrationJobRepairFailureEvidenceCommand command) {
+		command.setRepairFailureReportFile(getRepairFailureReportFile().get().getAsFile());
 		command.setApprovedRepairPlanFile(getApprovedRepairPlanFile().get().getAsFile());
-		command.setPostRepairVerificationReportFile(getPostRepairVerificationReportFile().get().getAsFile());
-		if (getExpectedRepairExecutionReportFingerprint().isPresent()) {
-			command.setExpectedRepairExecutionReportFingerprint(getExpectedRepairExecutionReportFingerprint().get());
-		}
-		if (getExpectedPostRepairVerificationReportFingerprint().isPresent()) {
-			command.setExpectedPostRepairVerificationReportFingerprint(
-					getExpectedPostRepairVerificationReportFingerprint().get());
+		if (getExpectedRepairFailureReportFingerprint().isPresent()) {
+			command.setExpectedRepairFailureReportFingerprint(getExpectedRepairFailureReportFingerprint().get());
 		}
 		if (getExpectedMigrationPlanFingerprint().isPresent()) {
 			command.setExpectedMigrationPlanFingerprint(getExpectedMigrationPlanFingerprint().get());
@@ -65,7 +56,7 @@ public abstract class VerifyBulkMigrationJobRepairEvidenceTask
 	}
 
 	@Override
-	protected VerifyBulkMigrationJobRepairEvidenceCommand createCommand() {
-		return new VerifyBulkMigrationJobRepairEvidenceCommand();
+	protected VerifyBulkMigrationJobRepairFailureEvidenceCommand createCommand() {
+		return new VerifyBulkMigrationJobRepairFailureEvidenceCommand();
 	}
 }

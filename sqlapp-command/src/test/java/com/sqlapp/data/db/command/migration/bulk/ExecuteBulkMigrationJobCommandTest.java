@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -856,7 +857,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setTargetEnvironmentId("repair-test");
 			final Path postRepairVerification = temporaryDirectory.resolve("post-repair-verification.json");
 			final Path repairExecution = temporaryDirectory.resolve("repair-execution.json");
+			final Path staleFailure = temporaryDirectory.resolve("stale-repair-failure.json");
+			Files.writeString(staleFailure, "stale");
 			command.setRepairExecutionReportFile(repairExecution.toFile());
+			command.setRepairFailureReportFile(staleFailure.toFile());
 			command.setPostRepairVerificationReportFile(postRepairVerification.toFile());
 
 			command.setExpectedTargetValidationReportFingerprint("sha256:" + "0".repeat(64));
@@ -898,6 +902,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 
 			command.run();
 
+			assertFalse(Files.exists(staleFailure));
 			assertEquals(1, command.getResult().getReplayedRows());
 			assertEquals(true, command.getVerificationResult().isMatch());
 			final var executionArtifact = new BulkMigrationJobRepairExecutionReportIO().read(repairExecution);
@@ -917,12 +922,22 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			evidence.setPostRepairVerificationReportFile(postRepairVerification.toFile());
 			evidence.setExpectedRepairExecutionReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()));
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()));
 			evidence.setExpectedMigrationPlanFingerprint(postRepairArtifact.planFingerprint());
 			evidence.setExpectedRepairPlanFingerprint(executionArtifact.repairPlanFingerprint());
 			evidence.setExpectedConfigurationFingerprint(executionArtifact.provenance().configurationFingerprint());
 			evidence.setMaxEvidenceAgeSeconds(60L);
 			evidence.run();
 			assertEquals(executionArtifact, evidence.getReport());
+			evidence.setExpectedPostRepairVerificationReportFingerprint("sha256:" + "0".repeat(64));
+			final var verificationFingerprintRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals(
+					"postRepairVerificationReportFile fingerprint does not match expectedPostRepairVerificationReportFingerprint.",
+					verificationFingerprintRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()));
 			final Path changedApproval = temporaryDirectory.resolve("changed-approved-repair.json");
 			Files.copy(approval, changedApproval);
 			Files.writeString(changedApproval, System.lineSeparator(), java.nio.file.StandardOpenOption.APPEND);
@@ -951,11 +966,15 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 							Instant.now(), postRepairArtifact.planFingerprint(), postRepairArtifact.isolation(), true, 0, 0,
 							0, List.of(), postRepairArtifact.provenance()));
 			evidence.setPostRepairVerificationReportFile(incompleteVerification.toFile());
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(incompleteVerification.toFile()));
 			final var incompleteRejection = assertThrows(CommandException.class, evidence::run);
 			assertEquals("Post-repair verification report does not match successful repair execution.",
 					incompleteRejection.getMessage());
 			assertNull(evidence.getReport());
 			evidence.setPostRepairVerificationReportFile(postRepairVerification.toFile());
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()));
 			evidence.setExpectedRepairPlanFingerprint("different-plan");
 			assertThrows(CommandException.class, evidence::run);
 			assertNull(evidence.getReport());
@@ -967,6 +986,80 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertThrows(CommandException.class, command::run);
 			assertNull(command.getResult());
 			assertNull(command.getVerificationResult());
+		}
+	}
+
+	@Test
+	void writesFailureEvidenceWhenApprovedRepairExecutionFails() throws Exception {
+		try (var source = dataSource("failed_job_repair_source");
+				var target = dataSource("failed_job_repair_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(100))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'value-too-long-for-target')");
+			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(5))");
+			executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'old')");
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("failed-repair-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setResume(false);
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("failed-repair-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+			final Path approval = temporaryDirectory.resolve("failed-repair-plan.json");
+			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
+				final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
+				final var verified = ExecuteBulkMigrationJobCommand.verify(resolved.plan(), targetConnection,
+						resolved.verificationConfiguration().chunkSize());
+				new BulkMigrationJobRepairPlanReportIO().write(approval,
+						ExecuteBulkMigrationJobCommand.repairPlan(resolved.plan(), targetConnection, verified));
+			}
+			final Path failureFile = temporaryDirectory.resolve("repair-failure.json");
+			final Path staleExecutionFile = temporaryDirectory.resolve("stale-repair-execution.json");
+			final Path staleVerificationFile = temporaryDirectory.resolve("stale-post-repair-verification.json");
+			Files.writeString(staleExecutionFile, "stale");
+			Files.writeString(staleVerificationFile, "stale");
+			final var command = new ExecuteBulkMigrationJobRepairCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(job);
+			command.setApprovedRepairPlanFile(approval.toFile());
+			command.setRepairFailureReportFile(failureFile.toFile());
+			command.setRepairExecutionReportFile(failureFile.toFile());
+			final var collision = assertThrows(CommandException.class, command::run);
+			assertEquals("Bulk migration repair artifact files must use distinct paths.", collision.getMessage());
+			command.setRepairExecutionReportFile(staleExecutionFile.toFile());
+			command.setPostRepairVerificationReportFile(staleVerificationFile.toFile());
+
+			assertThrows(RuntimeException.class, command::run);
+
+			assertFalse(Files.exists(staleExecutionFile));
+			assertFalse(Files.exists(staleVerificationFile));
+			final var failure = new BulkMigrationJobRepairFailureReportIO().read(failureFile);
+			assertEquals("EXECUTION", failure.phase());
+			assertEquals("items", failure.failedTaskId());
+			assertEquals(List.of(), failure.completedTasks());
+			final var evidence = new VerifyBulkMigrationJobRepairFailureEvidenceCommand();
+			evidence.setRepairFailureReportFile(failureFile.toFile());
+			evidence.setApprovedRepairPlanFile(approval.toFile());
+			evidence.setExpectedRepairFailureReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(failureFile.toFile()));
+			evidence.setExpectedMigrationPlanFingerprint(failure.migrationPlanFingerprint());
+			evidence.setExpectedRepairPlanFingerprint(failure.repairPlanFingerprint());
+			evidence.setMaxEvidenceAgeSeconds(60L);
+			evidence.run();
+			assertEquals(failure, evidence.getReport());
+			assertEquals("old", itemName(target));
 		}
 	}
 

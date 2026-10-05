@@ -2,13 +2,18 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
+import java.util.HashSet;
 
 import javax.sql.DataSource;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.util.MessageDigests;
@@ -24,6 +29,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private String expectedConfigurationFingerprint;
 	private File approvedRepairPlanFile;
 	private File repairExecutionReportFile;
+	private File repairFailureReportFile;
 	private File postRepairVerificationReportFile;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
@@ -53,6 +59,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		if (approvedRepairPlanFile == null || !approvedRepairPlanFile.isFile()) {
 			throw new CommandException("Approved bulk migration repair plan file is required.");
 		}
+		validateArtifactPaths();
 		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
 				expectedConfigurationFingerprint);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
@@ -85,9 +92,24 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		final var plan = ExecuteBulkMigrationJobCommand.repairPlan(resolved.plan(), targetConnection, verified);
 		final var approved = new BulkMigrationJobRepairPlanReportIO().read(approvedRepairPlanFile.toPath(),
 				plan.getFingerprint());
-		result = BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approved.planFingerprint());
 		final var executionProvenance = BulkMigrationExecutionApprovalValidator.executionProvenance(
 				resolved.provenance(), targetValidationReportFile);
+		clearPreviousOutcomeArtifacts();
+		try {
+			result = BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approved.planFingerprint());
+		} catch (BulkMigrationJobRepairException failure) {
+			if (repairFailureReportFile != null) {
+				try {
+					new BulkMigrationJobRepairFailureReportIO().write(repairFailureReportFile.toPath(),
+							new BulkMigrationJobRepairFailureReportIO().fromFailure(resolved.plan().getFingerprint(),
+									"sha256:" + MessageDigests.SHA256.checksumAsString(approvedRepairPlanFile), failure,
+									executionProvenance));
+				} catch (RuntimeException evidenceFailure) {
+					failure.addSuppressed(evidenceFailure);
+				}
+			}
+			throw failure;
+		}
 		if (repairExecutionReportFile != null) {
 			new BulkMigrationJobRepairExecutionReportIO().write(repairExecutionReportFile.toPath(),
 					resolved.plan().getFingerprint(),
@@ -105,6 +127,39 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		if (!verificationResult.isMatch()) {
 			throw new CommandException("Bulk migration repair verification failed: "
 					+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
+		}
+	}
+
+	private void validateArtifactPaths() {
+		final var paths = new HashSet<Path>();
+		for (final File input : new File[] { configurationFile, approvedRepairPlanFile }) {
+			paths.add(input.toPath().toAbsolutePath().normalize());
+		}
+		for (final File input : new File[] { assessmentReportFile, ddlVerificationReportFile,
+				targetValidationReportFile }) {
+			if (input != null) {
+				paths.add(input.toPath().toAbsolutePath().normalize());
+			}
+		}
+		for (final File output : new File[] { repairExecutionReportFile, repairFailureReportFile,
+				postRepairVerificationReportFile }) {
+			if (output != null && !paths.add(output.toPath().toAbsolutePath().normalize())) {
+				throw new CommandException("Bulk migration repair artifact files must use distinct paths.");
+			}
+		}
+	}
+
+	private void clearPreviousOutcomeArtifacts() {
+		for (final File file : new File[] { repairExecutionReportFile, repairFailureReportFile,
+				postRepairVerificationReportFile }) {
+			if (file == null) {
+				continue;
+			}
+			try {
+				Files.deleteIfExists(file.toPath().toAbsolutePath().normalize());
+			} catch (IOException e) {
+				throw new CommandException("Failed to clear previous bulk migration repair artifact: " + file, e);
+			}
 		}
 	}
 

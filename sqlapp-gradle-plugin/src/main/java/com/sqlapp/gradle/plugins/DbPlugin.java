@@ -58,6 +58,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "verifyBulkMigrationEvidenceReport", VerifyBulkMigrationEvidenceReportTask.class);
 		registerTask(project, "verifyBulkMigrationJobRepairEvidence",
 				VerifyBulkMigrationJobRepairEvidenceTask.class);
+		registerTask(project, "verifyBulkMigrationJobRepairFailureEvidence",
+				VerifyBulkMigrationJobRepairFailureEvidenceTask.class);
 		registerTask(project, "generateMigrationSnapshotApprovalReport",
 				GenerateMigrationSnapshotApprovalReportTask.class);
 		registerTask(project, "executeMigrationSnapshot", ExecuteMigrationSnapshotTask.class);

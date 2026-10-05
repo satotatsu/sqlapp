@@ -1288,6 +1288,20 @@ evidence that the approved replay actually restored equality.
 An optional repair execution report separately records the approved repair-plan
 file fingerprint, per-task replay counts, affected rows, unresolved extra or
 missing chunks, and the approval provenance used for execution.
+When repair execution fails, an optional repair failure report records the
+failure phase and task, exception type and bounded message, the successfully
+completed task prefix, the approved repair-plan file fingerprint, and the same
+approval provenance. Success and failure use separate files, so an earlier
+successful report cannot be mistaken for the outcome of a later failed run.
+Immediately before an approved replay starts, the command removes configured
+success, failure, and post-repair verification outputs from an earlier run.
+Those output paths must be distinct from one another and from all approval
+inputs. If failure-evidence writing itself fails, that secondary error is
+attached to the original repair failure instead of replacing it.
+The file-only repair-failure evidence verifier binds that failure report back
+to the approved plan. It checks that completed tasks are an exact prefix of the
+approved dependency order and that an execution failure identifies the next
+task, in addition to optional artifact fingerprints, provenance, and age.
 It also accepts the same reviewed assessment, DDL-verification and live-target
 validation gates as declarative migration execution, including target report
 age and environment identity checks.

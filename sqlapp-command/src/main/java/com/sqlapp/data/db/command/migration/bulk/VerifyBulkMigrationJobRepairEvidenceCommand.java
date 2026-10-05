@@ -21,6 +21,7 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 	private File approvedRepairPlanFile;
 	private File postRepairVerificationReportFile;
 	private String expectedRepairExecutionReportFingerprint;
+	private String expectedPostRepairVerificationReportFingerprint;
 	private String expectedMigrationPlanFingerprint;
 	private String expectedRepairPlanFingerprint;
 	private String expectedConfigurationFingerprint;
@@ -34,6 +35,8 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 		requireFile(approvedRepairPlanFile, "approvedRepairPlanFile");
 		requireFile(postRepairVerificationReportFile, "postRepairVerificationReportFile");
 		validateSha256(expectedRepairExecutionReportFingerprint, "expectedRepairExecutionReportFingerprint");
+		validateSha256(expectedPostRepairVerificationReportFingerprint,
+				"expectedPostRepairVerificationReportFingerprint");
 		validateSha256(expectedConfigurationFingerprint, "expectedConfigurationFingerprint");
 		validateOptionalText(expectedMigrationPlanFingerprint, "expectedMigrationPlanFingerprint");
 		validateOptionalText(expectedRepairPlanFingerprint, "expectedRepairPlanFingerprint");
@@ -79,6 +82,11 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 				&& !expectedRepairExecutionReportFingerprint.equals(fingerprint(repairExecutionReportFile))) {
 			throw new CommandException(
 					"repairExecutionReportFile fingerprint does not match expectedRepairExecutionReportFingerprint.");
+		}
+		if (expectedPostRepairVerificationReportFingerprint != null
+				&& !expectedPostRepairVerificationReportFingerprint.equals(fingerprint(postRepairVerificationReportFile))) {
+			throw new CommandException(
+					"postRepairVerificationReportFile fingerprint does not match expectedPostRepairVerificationReportFingerprint.");
 		}
 	}
 

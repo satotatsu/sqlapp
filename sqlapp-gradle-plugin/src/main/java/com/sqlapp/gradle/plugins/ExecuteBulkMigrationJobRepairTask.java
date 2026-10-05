@@ -37,6 +37,8 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	@OutputFile @Optional
 	public abstract RegularFileProperty getRepairExecutionReportFile();
 	@OutputFile @Optional
+	public abstract RegularFileProperty getRepairFailureReportFile();
+	@OutputFile @Optional
 	public abstract RegularFileProperty getPostRepairVerificationReportFile();
 	@InputFile @Optional @PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getAssessmentReportFile();
@@ -63,6 +65,9 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 		command.setApprovedRepairPlanFile(getApprovedRepairPlanFile().get().getAsFile());
 		if (getRepairExecutionReportFile().isPresent()) {
 			command.setRepairExecutionReportFile(getRepairExecutionReportFile().get().getAsFile());
+		}
+		if (getRepairFailureReportFile().isPresent()) {
+			command.setRepairFailureReportFile(getRepairFailureReportFile().get().getAsFile());
 		}
 		if (getPostRepairVerificationReportFile().isPresent()) {
 			command.setPostRepairVerificationReportFile(
