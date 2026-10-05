@@ -10,6 +10,7 @@ import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import com.sqlapp.util.MessageDigests;
 
 import lombok.Getter;
@@ -22,12 +23,23 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private File configurationFile;
 	private String expectedConfigurationFingerprint;
 	private File approvedRepairPlanFile;
+	private File postRepairVerificationReportFile;
+	private File assessmentReportFile;
+	private File ddlVerificationReportFile;
+	private File targetValidationReportFile;
+	private String expectedTargetValidationReportFingerprint;
+	private Long maxTargetValidationAgeSeconds;
+	private String targetEnvironmentId;
 	private DataSource sourceDataSource;
 	private BulkMigrationJobRepairResult result;
+	private BulkMigrationJobVerificationResult verificationResult;
+	private BulkMigrationTargetValidationReport approvedTargetValidationReport;
 
 	@Override
 	protected void doRun() {
 		result = null;
+		verificationResult = null;
+		approvedTargetValidationReport = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
@@ -41,9 +53,18 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 			throw new CommandException("Approved bulk migration repair plan file is required.");
 		}
 		validateConfigurationFingerprint();
+		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
+				ddlVerificationReportFile);
+		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
+				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds, targetEnvironmentId);
 		executeNoTranAndClose(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
 					sourceConnection);
+			BulkMigrationExecutionApprovalValidator.validateArtifacts(resolved.provenance(), assessmentReportFile,
+					ddlVerificationReportFile);
+			approvedTargetValidationReport = BulkMigrationExecutionApprovalValidator.validateTargetReport(
+					targetValidationReportFile, targetEnvironmentId,
+					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds, resolved);
 			if (resolved.verificationConfiguration() == null) {
 				throw new CommandException("Bulk migration verification must be enabled to execute repair.");
 			}
@@ -54,6 +75,8 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 
 	private void executeRepair(final BulkMigrationJobConfigurationResolver.Resolution resolved,
 			final Connection targetConnection) throws Exception {
+		BulkMigrationExecutionApprovalValidator.validateTargetDatabaseIdentity(approvedTargetValidationReport,
+				targetConnection);
 		final var verification = resolved.verificationConfiguration();
 		final var verified = ExecuteBulkMigrationJobCommand.verifyWithIsolation(resolved.plan(), targetConnection,
 				verification.chunkSize(), verification.columnsByTask(), verification.isolation());
@@ -61,6 +84,19 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		final var approved = new BulkMigrationJobRepairPlanReportIO().read(approvedRepairPlanFile.toPath(),
 				plan.getFingerprint());
 		result = BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approved.planFingerprint());
+		verificationResult = ExecuteBulkMigrationJobCommand.verifyWithIsolation(resolved.plan(), targetConnection,
+				verification.chunkSize(), verification.columnsByTask(), verification.isolation());
+		if (postRepairVerificationReportFile != null) {
+			new BulkMigrationVerificationReportIO().write(postRepairVerificationReportFile.toPath(),
+					resolved.plan().getFingerprint(), verification.isolation(),
+					verification.maxReportedMismatches(), verificationResult,
+					BulkMigrationExecutionApprovalValidator.executionProvenance(resolved.provenance(),
+							targetValidationReportFile));
+		}
+		if (!verificationResult.isMatch()) {
+			throw new CommandException("Bulk migration repair verification failed: "
+					+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
+		}
 	}
 
 	private void validateConfigurationFingerprint() {

@@ -396,7 +396,14 @@ plan, and requires the reviewed JSON fingerprint to match before writing:
 tasks.named('executeBulkMigrationJobRepair') {
     configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
     approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
+    postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-repaired.json')
     expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
+    assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
+    ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
+    targetValidationReportFile = layout.buildDirectory.file('reports/target-validation.json')
+    expectedTargetValidationReportFingerprint = providers.gradleProperty('approvedTargetValidationFingerprint')
+    maxTargetValidationAgeSeconds = 3600L
+    targetEnvironmentId = 'production-oracle'
     sourceDataSource { jdbcUrl = 'jdbc:ucanaccess:///data/source.accdb' }
     dataSource { jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app' }
 }
@@ -404,6 +411,14 @@ tasks.named('executeBulkMigrationJobRepair') {
 
 If source data, target data, verification boundaries, mappings, or job options
 changed after review, the regenerated fingerprint differs and repair is rejected.
+After applying the approved chunks, the task always repeats verification with
+the YAML settings and fails unless source and target match. The optional
+`postRepairVerificationReportFile` persists that final evidence.
+The assessment, DDL and target-validation approval properties have the same
+meaning as on `executeBulkMigrationJob`. When supplied, repair validates their
+fingerprints, freshness, environment ID and connected database identity before
+reading or writing repair rows. Their provenance is retained in the final
+verification report.
 Each task entry records the ordered comparison columns as well as its counts
 and mismatched chunk hashes. The report's top-level `isolation` field records
 the selected JDBC consistency level. Mismatch entries also include source and

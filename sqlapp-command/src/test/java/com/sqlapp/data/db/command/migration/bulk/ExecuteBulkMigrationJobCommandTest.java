@@ -827,12 +827,21 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final File job = temporaryDirectory.resolve("approved-repair-job.yaml").toFile();
 			new YamlConverter().writeJsonValue(job, configuration);
 			final Path approval = temporaryDirectory.resolve("approved-repair.json");
+			final Path targetValidation = temporaryDirectory.resolve("approved-repair-target.json");
 			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
 				final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
 				final var verified = ExecuteBulkMigrationJobCommand.verify(resolved.plan(), targetConnection,
 						resolved.verificationConfiguration().chunkSize());
 				final var plan = ExecuteBulkMigrationJobCommand.repairPlan(resolved.plan(), targetConnection, verified);
 				new BulkMigrationJobRepairPlanReportIO().write(approval, plan);
+				final var metadata = targetConnection.getMetaData();
+				new BulkMigrationTargetValidationReportIO().write(targetValidation,
+						new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+								Instant.now(), resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+								resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+								resolved.provenance(), "repair-test", metadata.getDatabaseProductName(),
+								metadata.getDatabaseProductVersion(), targetConnection.getCatalog(),
+								targetConnection.getSchema()));
 			}
 			final var command = new ExecuteBulkMigrationJobRepairCommand();
 			command.setDataSource(target);
@@ -840,10 +849,22 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setCloseDataSource(false);
 			command.setConfigurationFile(job);
 			command.setApprovedRepairPlanFile(approval.toFile());
+			command.setTargetValidationReportFile(targetValidation.toFile());
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			command.setMaxTargetValidationAgeSeconds(60L);
+			command.setTargetEnvironmentId("repair-test");
+			final Path postRepairVerification = temporaryDirectory.resolve("post-repair-verification.json");
+			command.setPostRepairVerificationReportFile(postRepairVerification.toFile());
 
 			command.run();
 
 			assertEquals(1, command.getResult().getReplayedRows());
+			assertEquals(true, command.getVerificationResult().isMatch());
+			final var postRepairArtifact = new BulkMigrationVerificationReportIO().read(postRepairVerification);
+			assertEquals(true, postRepairArtifact.match());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()),
+					postRepairArtifact.provenance().targetValidationReportFingerprint());
 			try (var connection = target.getConnection();
 					var rows = connection.createStatement().executeQuery("SELECT NAME FROM PUBLIC.ITEMS WHERE ID=1")) {
 				rows.next();
@@ -851,6 +872,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			}
 			assertThrows(CommandException.class, command::run);
 			assertNull(command.getResult());
+			assertNull(command.getVerificationResult());
 		}
 	}
 

@@ -1282,6 +1282,12 @@ review-only multi-table repair plan at the same point. It carries target table
 and column mappings while retaining Access/source task names and foreign-key
 order. Generating this file does not apply data changes; repair still requires
 explicit approval of the generated plan fingerprint.
+The declarative repair command re-runs the same verification both before and
+after repair. Its optional post-repair verification file provides bounded JSON
+evidence that the approved replay actually restored equality.
+It also accepts the same reviewed assessment, DDL-verification and live-target
+validation gates as declarative migration execution, including target report
+age and environment identity checks.
 Each task summary also records the ordered column names used to calculate its
 hashes, so the artifact remains meaningful when `verificationColumns` narrows
 the comparison. The top-level `isolation` field records the JDBC consistency
