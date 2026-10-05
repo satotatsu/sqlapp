@@ -363,6 +363,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			configuration.setReport(mismatchReport);
 			final var mismatchVerification = new BulkMigrationJobConfiguration.Verification();
 			mismatchVerification.setTargetFile("reports/mismatch-verification.json");
+			mismatchVerification.setRepairPlanOnMismatchFile("reports/mismatch-repair.json");
 			mismatchVerification.setIsolation(BulkMigrationVerificationIsolation.REPEATABLE_READ);
 			configuration.setVerification(mismatchVerification);
 			configuration.setLease(null);
@@ -407,6 +408,11 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals(null, mismatchChunk.expectedFirstKey());
 			assertNotNull(mismatchChunk.actualFirstKey());
 			assertNotNull(mismatchChunk.actualLastKey());
+			final var repairArtifact = new BulkMigrationJobRepairPlanReportIO()
+					.read(temporaryDirectory.resolve("reports/mismatch-repair.json"));
+			assertEquals(List.of("items"), repairArtifact.tasks().stream()
+					.map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
+			assertEquals(0, repairArtifact.estimatedReplayRows());
 
 			final var twoMismatches = new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 2, 2,
 					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "a", "b"),
@@ -725,7 +731,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 
 			final var configuration = new BulkMigrationJobConfiguration();
 			configuration.setSchemaFile(schemaFile.getName());
-			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var verification = new BulkMigrationJobConfiguration.Verification();
+			verification.setRepairPlanOnMismatchFile("reports/mapped-repair.json");
+			configuration.setVerification(verification);
 			final var task = new BulkMigrationJobConfiguration.Task();
 			task.setId("access-lines");
 			task.setTable("PUBLIC.ACCESS_LINES");
@@ -748,6 +756,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 						resolvedTask.getOptions().getBulkUpsertOption().getUpdateColumns());
 				assertEquals(List.of("ACCESS_ORDER_ID", "DESCRIPTION"),
 						resolution.verificationConfiguration().columnsByTask().get("access-lines"));
+				assertEquals(temporaryDirectory.resolve("reports/mapped-repair.json").toAbsolutePath().normalize(),
+						resolution.verificationConfiguration().repairPlanOnMismatchFile());
 				assertEquals("ACCESS_ORDER_ID", resolvedTask.getSourceColumnName("ORDER_ID"));
 			}
 
@@ -787,6 +797,60 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertThrows(CommandException.class,
 						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
 			}
+		}
+	}
+
+	@Test
+	void executesOnlyAReverifiedApprovedDeclarativeRepairPlan() throws Exception {
+		try (var source = dataSource("approved_job_repair_source");
+				var target = dataSource("approved_job_repair_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'source')");
+			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'changed')");
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("approved-repair-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setResume(false);
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("approved-repair-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+			final Path approval = temporaryDirectory.resolve("approved-repair.json");
+			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
+				final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
+				final var verified = ExecuteBulkMigrationJobCommand.verify(resolved.plan(), targetConnection,
+						resolved.verificationConfiguration().chunkSize());
+				final var plan = ExecuteBulkMigrationJobCommand.repairPlan(resolved.plan(), targetConnection, verified);
+				new BulkMigrationJobRepairPlanReportIO().write(approval, plan);
+			}
+			final var command = new ExecuteBulkMigrationJobRepairCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(job);
+			command.setApprovedRepairPlanFile(approval.toFile());
+
+			command.run();
+
+			assertEquals(1, command.getResult().getReplayedRows());
+			try (var connection = target.getConnection();
+					var rows = connection.createStatement().executeQuery("SELECT NAME FROM PUBLIC.ITEMS WHERE ID=1")) {
+				rows.next();
+				assertEquals("source", rows.getString(1));
+			}
+			assertThrows(CommandException.class, command::run);
+			assertNull(command.getResult());
 		}
 	}
 

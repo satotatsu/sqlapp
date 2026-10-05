@@ -74,6 +74,7 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `verifyMigrationSnapshotFailureReport` | Verify a saved snapshot failure report against its approval |
 | Migration | `generateBulkMigrationOperationalReport` | Write a bulk migration plan/status snapshot as JSON |
 | Migration | `generateBulkMigrationJobRepairPlanReport` | Write a review-only repair plan as JSON |
+| Migration | `executeBulkMigrationJobRepair` | Re-verify and execute an approved declarative repair plan |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
 | Normalization | `columnRuleTransform` | Apply YAML-based column type and naming rules |
@@ -319,6 +320,7 @@ verification:
   chunkSize: 10000
   failOnMismatch: true
   maxReportedMismatches: 1000
+  repairPlanOnMismatchFile: reports/repair-plan.json
   isolation: REPEATABLE_READ
   targetFile: reports/verification.json
 tasks:
@@ -381,6 +383,27 @@ counts and only mismatched chunk hashes is atomically replaced before mismatch
 failure is raised, so CI retains the evidence. The report can be read with
 `BulkMigrationVerificationReportIO.read`; the overload accepting a plan
 fingerprint rejects stale artifacts.
+When `repairPlanOnMismatchFile` is set, a mismatch also writes a review-only
+job repair plan before `failOnMismatch` is evaluated. The plan reuses the live
+verification boundaries, source-name column mappings, UPSERT policy, and
+source Schema dependency order. It never executes repair; an operator must
+review the JSON and use an approved fingerprint through the repair executor.
+The registered `executeBulkMigrationJobRepair` task performs that final step.
+It resolves the original YAML, re-runs verification, rebuilds the live repair
+plan, and requires the reviewed JSON fingerprint to match before writing:
+
+```groovy
+tasks.named('executeBulkMigrationJobRepair') {
+    configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
+    approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
+    expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
+    sourceDataSource { jdbcUrl = 'jdbc:ucanaccess:///data/source.accdb' }
+    dataSource { jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app' }
+}
+```
+
+If source data, target data, verification boundaries, mappings, or job options
+changed after review, the regenerated fingerprint differs and repair is rejected.
 Each task entry records the ordered comparison columns as well as its counts
 and mismatched chunk hashes. The report's top-level `isolation` field records
 the selected JDBC consistency level. Mismatch entries also include source and

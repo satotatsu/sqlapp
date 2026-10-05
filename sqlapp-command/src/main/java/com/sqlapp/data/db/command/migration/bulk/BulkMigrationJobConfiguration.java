@@ -126,6 +126,8 @@ public class BulkMigrationJobConfiguration {
 		private int chunkSize = 10_000;
 		private boolean failOnMismatch = true;
 		private String targetFile;
+		/** Optional review-only repair plan written when verification mismatches. */
+		private String repairPlanOnMismatchFile;
 		private int maxReportedMismatches = 1_000;
 		private BulkMigrationVerificationIsolation isolation = BulkMigrationVerificationIsolation.DEFAULT;
 	}

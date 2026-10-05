@@ -34,6 +34,7 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 	private boolean resume = true;
 	private boolean verification = true;
 	private String verificationReportFile;
+	private String repairPlanOnMismatchFile;
 	private boolean operationalReport = true;
 	private String operationalReportFile;
 	private BulkMigrationCheckpointMode checkpointMode = BulkMigrationCheckpointMode.DATABASE;
@@ -175,6 +176,9 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			verificationConfiguration.setFailOnMismatch(true);
 			verificationConfiguration.setTargetFile(verificationReportFile == null || verificationReportFile.isBlank()
 					? defaultVerificationReportFile(outputFile) : verificationReportFile);
+			verificationConfiguration.setRepairPlanOnMismatchFile(
+					repairPlanOnMismatchFile == null || repairPlanOnMismatchFile.isBlank()
+							? defaultReportFile(outputFile, "-repair-plan.json") : repairPlanOnMismatchFile);
 			configuration.setVerification(verificationConfiguration);
 		}
 		if (operationalReport) {

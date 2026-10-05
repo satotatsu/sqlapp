@@ -20,5 +20,9 @@ class BulkMigrationReportTaskRegistrationTest {
 		assertFalse(task.getPlan().isPresent());
 		assertFalse(task.getTargetFile().isPresent());
 		assertEquals("generateBulkMigrationJobRepairPlanReport", task.getName());
+		final var execute = assertInstanceOf(ExecuteBulkMigrationJobRepairTask.class,
+				project.getTasks().getByName("executeBulkMigrationJobRepair"));
+		assertFalse(execute.getConfigurationFile().isPresent());
+		assertFalse(execute.getApprovedRepairPlanFile().isPresent());
 	}
 }

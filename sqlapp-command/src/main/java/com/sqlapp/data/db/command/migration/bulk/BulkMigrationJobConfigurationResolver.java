@@ -59,13 +59,20 @@ public class BulkMigrationJobConfigurationResolver {
 
 	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch, java.nio.file.Path targetFile,
 			Map<String, List<String>> columnsByTask, BulkMigrationVerificationIsolation isolation,
-			int maxReportedMismatches) {
+			int maxReportedMismatches, java.nio.file.Path repairPlanOnMismatchFile) {
+		public VerificationConfiguration(final int chunkSize, final boolean failOnMismatch,
+				final java.nio.file.Path targetFile, final Map<String, List<String>> columnsByTask,
+				final BulkMigrationVerificationIsolation isolation, final int maxReportedMismatches) {
+			this(chunkSize, failOnMismatch, targetFile, columnsByTask, isolation, maxReportedMismatches, null);
+		}
 		public VerificationConfiguration {
 			if (chunkSize <= 0 || maxReportedMismatches <= 0) {
 				throw new IllegalArgumentException("verification sizes must be greater than zero");
 			}
 			java.util.Objects.requireNonNull(isolation, "isolation");
 			targetFile = targetFile == null ? null : targetFile.toAbsolutePath().normalize();
+			repairPlanOnMismatchFile = repairPlanOnMismatchFile == null ? null
+					: repairPlanOnMismatchFile.toAbsolutePath().normalize();
 			java.util.Objects.requireNonNull(columnsByTask, "columnsByTask");
 			final Map<String, List<String>> copy = new LinkedHashMap<>();
 			columnsByTask.forEach((taskId, columns) -> {
@@ -324,6 +331,10 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		final java.nio.file.Path targetFile = value.getTargetFile() == null || value.getTargetFile().isBlank() ? null
 				: resolve(configurationFile, value.getTargetFile()).toPath().toAbsolutePath().normalize();
+		final java.nio.file.Path repairPlanFile = value.getRepairPlanOnMismatchFile() == null
+				|| value.getRepairPlanOnMismatchFile().isBlank() ? null
+						: resolve(configurationFile, value.getRepairPlanOnMismatchFile()).toPath()
+								.toAbsolutePath().normalize();
 		final Map<String, List<String>> columns = new LinkedHashMap<>();
 		for (final var task : tasks) {
 			if (task.getVerificationColumns() != null && !task.getVerificationColumns().isEmpty()) {
@@ -331,7 +342,7 @@ public class BulkMigrationJobConfigurationResolver {
 			}
 		}
 		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch(), targetFile,
-				Map.copyOf(columns), value.getIsolation(), value.getMaxReportedMismatches());
+				Map.copyOf(columns), value.getIsolation(), value.getMaxReportedMismatches(), repairPlanFile);
 	}
 
 	private static OperationalReportConfiguration report(final File configurationFile,

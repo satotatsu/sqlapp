@@ -59,6 +59,7 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 		assertTrue(value.getVerification().isFailOnMismatch());
 		assertEquals(250, value.getVerification().getChunkSize());
 		assertEquals("access-load-verification.json", value.getVerification().getTargetFile());
+		assertEquals("access-load-repair-plan.json", value.getVerification().getRepairPlanOnMismatchFile());
 		assertNotNull(value.getReport());
 		assertEquals("access-load-operations.json", value.getReport().getTargetFile());
 		assertNotNull(value.getLease());

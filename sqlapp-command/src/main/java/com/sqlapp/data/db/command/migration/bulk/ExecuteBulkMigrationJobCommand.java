@@ -24,6 +24,9 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
@@ -207,6 +210,11 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 								effectivePlan.getFingerprint(), verificationConfiguration.isolation(),
 								verificationConfiguration.maxReportedMismatches(), verificationResult, provenance);
 					}
+					if (!verificationResult.isMatch()
+							&& verificationConfiguration.repairPlanOnMismatchFile() != null) {
+						writeRepairPlan(effectivePlan, targetConnection, verificationResult,
+								verificationConfiguration.repairPlanOnMismatchFile());
+					}
 					if (verificationConfiguration.failOnMismatch() && !verificationResult.isMatch()) {
 						throw new CommandException("Bulk migration verification failed: "
 								+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
@@ -224,6 +232,34 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 		});
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
+	}
+
+	private static void writeRepairPlan(final BulkMigrationJobPlan plan, final Connection targetConnection,
+			final BulkMigrationJobVerificationResult verification, final java.nio.file.Path targetFile)
+			throws SQLException {
+		final var repairPlan = repairPlan(plan, targetConnection, verification);
+		new BulkMigrationJobRepairPlanReportIO().write(targetFile, repairPlan);
+	}
+
+	static com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlan repairPlan(final BulkMigrationJobPlan plan,
+			final Connection targetConnection, final BulkMigrationJobVerificationResult verification)
+			throws SQLException {
+		verification.validateAgainst(plan);
+		final List<BulkMigrationJobRepairTask> tasks = new ArrayList<>(plan.getTasks().size());
+		for (int i = 0; i < plan.getTasks().size(); i++) {
+			final BulkMigrationJobTask task = plan.getTasks().get(i);
+			if (task.getKeysetSource() == null) {
+				throw new CommandException("Declarative repair planning requires a JDBC keyset source: "
+						+ task.getTaskId());
+			}
+			tasks.add(BulkMigrationJobRepairTask.builder().taskId(task.getTaskId())
+					.expectedKeysetSource(task.getKeysetSource()).target(task.getEffectiveTargetTable())
+					.verificationResult(verification.getTasks().get(i).getVerificationResult())
+					.options(BulkMigrationRepairOption.builder().columnMappings(task.getColumnMappings())
+							.bulkUpsertOption(task.getOptions().getBulkUpsertOption()).build())
+					.build());
+		}
+		return BulkMigrationJobRepairPlanner.plan(targetConnection, tasks);
 	}
 
 	private void validateExpectedConfigurationFingerprint() {

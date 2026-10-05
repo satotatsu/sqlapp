@@ -1277,6 +1277,11 @@ external policy handling; already committed chunks are not rolled back.
 The summary includes totals and mismatched chunk hashes rather than every
 matching row or chunk, keeping the artifact bounded. It is written before a
 configured mismatch failure is raised.
+`verification.repairPlanOnMismatchFile` optionally writes the corresponding
+review-only multi-table repair plan at the same point. It carries target table
+and column mappings while retaining Access/source task names and foreign-key
+order. Generating this file does not apply data changes; repair still requires
+explicit approval of the generated plan fingerprint.
 Each task summary also records the ordered column names used to calculate its
 hashes, so the artifact remains meaningful when `verificationColumns` narrows
 the comparison. The top-level `isolation` field records the JDBC consistency

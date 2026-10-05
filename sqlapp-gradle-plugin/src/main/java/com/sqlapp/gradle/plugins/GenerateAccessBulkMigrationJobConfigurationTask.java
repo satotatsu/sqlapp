@@ -40,6 +40,8 @@ public abstract class GenerateAccessBulkMigrationJobConfigurationTask
 	public abstract Property<Boolean> getVerification();
 	@Input @Optional
 	public abstract Property<String> getVerificationReportFile();
+	@Input @Optional
+	public abstract Property<String> getRepairPlanOnMismatchFile();
 	@Input
 	public abstract Property<Boolean> getOperationalReport();
 	@Input @Optional
@@ -71,6 +73,9 @@ public abstract class GenerateAccessBulkMigrationJobConfigurationTask
 		command.setVerification(getVerification().get());
 		if (getVerificationReportFile().isPresent()) {
 			command.setVerificationReportFile(getVerificationReportFile().get());
+		}
+		if (getRepairPlanOnMismatchFile().isPresent()) {
+			command.setRepairPlanOnMismatchFile(getRepairPlanOnMismatchFile().get());
 		}
 		command.setOperationalReport(getOperationalReport().get());
 		if (getOperationalReportFile().isPresent()) {
