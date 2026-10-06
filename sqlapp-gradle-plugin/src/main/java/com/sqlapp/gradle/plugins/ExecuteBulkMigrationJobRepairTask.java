@@ -36,6 +36,8 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	public abstract Property<String> getExpectedConfigurationFingerprint();
 	@Input @Optional
 	public abstract Property<Long> getMaxConfigurationFileSizeBytes();
+	@Input @Optional
+	public abstract Property<Long> getMaxSchemaFileSizeBytes();
 	@InputFile @PathSensitive(PathSensitivity.NONE)
 	public abstract RegularFileProperty getApprovedRepairPlanFile();
 	@Input @Optional
@@ -60,6 +62,8 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	public abstract RegularFileProperty getAssessmentReportFile();
 	@InputFile @Optional @PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getDdlVerificationReportFile();
+	@Input @Optional
+	public abstract Property<Long> getMaxApprovalArtifactFileSizeBytes();
 	@InputFile @Optional @PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getTargetValidationReportFile();
 	@Input @Optional
@@ -116,6 +120,9 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 		if (getDdlVerificationReportFile().isPresent()) {
 			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
 		}
+		if (getMaxApprovalArtifactFileSizeBytes().isPresent()) {
+			command.setMaxApprovalArtifactFileSizeBytes(getMaxApprovalArtifactFileSizeBytes().get());
+		}
 		if (getTargetValidationReportFile().isPresent()) {
 			command.setTargetValidationReportFile(getTargetValidationReportFile().get().getAsFile());
 		}
@@ -138,6 +145,9 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 		}
 		if (getMaxConfigurationFileSizeBytes().isPresent()) {
 			command.setMaxConfigurationFileSizeBytes(getMaxConfigurationFileSizeBytes().get());
+		}
+		if (getMaxSchemaFileSizeBytes().isPresent()) {
+			command.setMaxSchemaFileSizeBytes(getMaxSchemaFileSizeBytes().get());
 		}
 	}
 

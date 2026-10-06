@@ -270,7 +270,9 @@ executeBulkMigrationJob {
     expectedTargetValidationReportFingerprint = providers.gradleProperty('approvedTargetValidationFingerprint')
     maxTargetValidationAgeSeconds = 3600L
     maxConfigurationFileSizeBytes = 1048576L
+    maxSchemaFileSizeBytes = 4194304L
     maxTargetValidationReportFileSizeBytes = 2097152L
+    maxApprovalArtifactFileSizeBytes = 8388608L
     targetEnvironmentId = 'production-oracle'
 }
 ```
@@ -285,10 +287,11 @@ SHA-256 and parsed model are derived from the same byte snapshot. The accepted
 target-report fingerprint is reused in operational and repair provenance, so a
 file replacement between approval and evidence generation cannot authorize
 different content.
-The two byte limits are optional and have no implicit default. When configured,
-they reject oversized YAML or target evidence before parsing, and the bounded
-read also detects a file that grows after its initial size check. Repair
-execution exposes the same properties.
+The three byte limits are optional and have no implicit default. When
+configured, they reject oversized YAML, Schema XML, or target evidence before
+parsing, and the bounded read also detects a file that grows after its initial
+size check. Repair execution exposes the same properties. Schema fingerprint
+verification and XML parsing use the same bounded byte snapshot.
 
 Run the same plan resolution and target checks before the deployment window:
 
@@ -302,8 +305,11 @@ validateBulkMigrationTarget {
         password = providers.gradleProperty('dbPassword')
     }
     expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
+    maxConfigurationFileSizeBytes = 1048576L
+    maxSchemaFileSizeBytes = 4194304L
     assessmentReportFile = file('migration/assessment.json')
     ddlVerificationReportFile = file('migration/ddl-verification.json')
+    maxApprovalArtifactFileSizeBytes = 8388608L
     reportFile = layout.buildDirectory.file('reports/target-validation.json')
     targetEnvironmentId = 'production-oracle'
 }
@@ -318,6 +324,13 @@ values must match the YAML provenance and the report records the validated
 configuration, plan, job and task identities using atomic file replacement.
 `targetEnvironmentId` is optional and distinguishes environments that otherwise
 expose the same database product, catalog and schema.
+Target validation uses the same bounded configuration and Schema snapshots as
+execution. After atomically writing its JSON report, it reads the report back,
+compares it with the generated model, and retains the resulting SHA-256 on the
+command result.
+`maxApprovalArtifactFileSizeBytes` optionally applies one streaming byte limit
+to both the assessment and DDL-verification artifacts. The verifier stops and
+rejects the artifact if it crosses the limit while its SHA-256 is being read.
 
 ```yaml
 jobId: nightly-customer-migration

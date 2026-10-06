@@ -48,8 +48,10 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private File configurationFile;
 	private String expectedConfigurationFingerprint;
 	private Long maxConfigurationFileSizeBytes;
+	private Long maxSchemaFileSizeBytes;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private Long maxApprovalArtifactFileSizeBytes;
 	private File targetValidationReportFile;
 	private String expectedTargetValidationReportFingerprint;
 	private Long maxTargetValidationAgeSeconds;
@@ -84,7 +86,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
 				maxConfigurationFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
-				ddlVerificationReportFile);
+				ddlVerificationReportFile, maxApprovalArtifactFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
 				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds,
 				maxTargetValidationReportFileSizeBytes, targetEnvironmentId);
@@ -97,9 +99,10 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		}
 		execute(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
-					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
+					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes,
+					maxSchemaFileSizeBytes);
 			BulkMigrationExecutionApprovalValidator.validateArtifacts(resolved.provenance(), assessmentReportFile,
-					ddlVerificationReportFile);
+					ddlVerificationReportFile, maxApprovalArtifactFileSizeBytes);
 			final var approvedTarget = BulkMigrationExecutionApprovalValidator.validateTargetReport(
 					targetValidationReportFile, expectedTargetValidationReportFingerprint, targetEnvironmentId,
 					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds,

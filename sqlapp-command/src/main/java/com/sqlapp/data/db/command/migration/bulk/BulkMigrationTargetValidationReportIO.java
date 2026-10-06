@@ -27,7 +27,7 @@ public final class BulkMigrationTargetValidationReportIO {
 			throw new CommandException("Bulk migration target validation report file is required.");
 		}
 		try {
-			final byte[] bytes = BoundedMigrationJsonFile.read(file, maxFileSizeBytes,
+			final byte[] bytes = BoundedMigrationFile.read(file, maxFileSizeBytes,
 					"maxTargetValidationReportFileSizeBytes", "Target validation report file");
 			final var report = validate(new JsonConverter().fromJsonString(
 					new String(bytes, StandardCharsets.UTF_8), BulkMigrationTargetValidationReport.class));
@@ -59,6 +59,15 @@ public final class BulkMigrationTargetValidationReportIO {
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Could not write bulk migration target validation report: " + file, e);
 		}
+	}
+
+	Snapshot writeSnapshot(final Path file, final BulkMigrationTargetValidationReport report) {
+		write(file, report);
+		final var snapshot = readSnapshot(file);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Written bulk migration target validation report does not match its source model.");
+		}
+		return snapshot;
 	}
 
 	private static BulkMigrationTargetValidationReport validate(final BulkMigrationTargetValidationReport report) {

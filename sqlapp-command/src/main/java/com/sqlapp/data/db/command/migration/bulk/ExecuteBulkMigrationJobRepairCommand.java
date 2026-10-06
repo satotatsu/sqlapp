@@ -28,6 +28,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private File repairReportDirectory;
 	private String expectedConfigurationFingerprint;
 	private Long maxConfigurationFileSizeBytes;
+	private Long maxSchemaFileSizeBytes;
 	private File approvedRepairPlanFile;
 	private String expectedApprovedRepairPlanFileFingerprint;
 	private Long maxApprovedRepairPlanAgeSeconds;
@@ -39,6 +40,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private File repairOutcomeReportFile;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private Long maxApprovalArtifactFileSizeBytes;
 	private File targetValidationReportFile;
 	private String expectedTargetValidationReportFingerprint;
 	private Long maxTargetValidationAgeSeconds;
@@ -92,15 +94,16 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
 				maxConfigurationFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
-				ddlVerificationReportFile);
+				ddlVerificationReportFile, maxApprovalArtifactFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
 				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds,
 				maxTargetValidationReportFileSizeBytes, targetEnvironmentId);
 		executeNoTranAndClose(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
-					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
+					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes,
+					maxSchemaFileSizeBytes);
 			BulkMigrationExecutionApprovalValidator.validateArtifacts(resolved.provenance(), assessmentReportFile,
-					ddlVerificationReportFile);
+					ddlVerificationReportFile, maxApprovalArtifactFileSizeBytes);
 			final var approvedTarget = BulkMigrationExecutionApprovalValidator.validateTargetReport(
 					targetValidationReportFile, expectedTargetValidationReportFingerprint, targetEnvironmentId,
 					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds,

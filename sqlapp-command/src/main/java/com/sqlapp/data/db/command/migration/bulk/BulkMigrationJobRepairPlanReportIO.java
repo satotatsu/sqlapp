@@ -61,7 +61,7 @@ public final class BulkMigrationJobRepairPlanReportIO {
 			throw new CommandException("Bulk migration job repair plan report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
 					"maxApprovedRepairPlanFileSizeBytes", "Approved repair plan file");
 			final var report = validate(new JsonConverter().fromJsonString(
 					new String(bytes, StandardCharsets.UTF_8), BulkMigrationJobRepairPlanReport.class));

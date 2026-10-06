@@ -86,6 +86,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final var command = new ExecuteBulkMigrationJobCommand();
 			command.setDataSource(target);
 			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
 			command.setConfigurationFile(configurationFile);
 			command.setExpectedConfigurationFingerprint("sha256:" + "f".repeat(64));
 			assertThrows(CommandException.class, command::run);
@@ -97,6 +98,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final var sizeRejection = assertThrows(CommandException.class, command::run);
 			assertEquals("Configuration file exceeds maxConfigurationFileSizeBytes.", sizeRejection.getMessage());
 			command.setMaxConfigurationFileSizeBytes(Files.size(configurationFile.toPath()));
+			command.setMaxSchemaFileSizeBytes(Files.size(schemaFile.toPath()) - 1);
+			final var schemaSizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Schema XML file exceeds maxSchemaFileSizeBytes.", schemaSizeRejection.getMessage());
+			command.setMaxSchemaFileSizeBytes(Files.size(schemaFile.toPath()));
 			assertDoesNotThrow(command::run);
 		}
 	}
@@ -130,6 +135,11 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setConfigurationFile(configurationFile);
 			command.setAssessmentReportFile(assessmentFile);
 			command.setDdlVerificationReportFile(ddlVerificationFile);
+			command.setMaxApprovalArtifactFileSizeBytes(Files.size(assessmentFile.toPath()) - 1);
+			assertEquals("assessmentReportFile exceeds maxApprovalArtifactFileSizeBytes.",
+					assertThrows(CommandException.class, command::run).getMessage());
+			command.setMaxApprovalArtifactFileSizeBytes(Math.max(Files.size(assessmentFile.toPath()),
+					Files.size(ddlVerificationFile.toPath())));
 			assertDoesNotThrow(command::run);
 
 			Files.writeString(assessmentFile.toPath(), "{\"status\":\"CHANGED\"}");

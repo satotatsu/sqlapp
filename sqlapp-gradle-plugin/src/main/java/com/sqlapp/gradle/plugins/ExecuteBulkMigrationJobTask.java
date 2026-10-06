@@ -48,6 +48,10 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@Optional
 	public abstract Property<Long> getMaxConfigurationFileSizeBytes();
 
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxSchemaFileSizeBytes();
+
 	@InputFile
 	@Optional
 	@PathSensitive(PathSensitivity.RELATIVE)
@@ -57,6 +61,10 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@Optional
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getDdlVerificationReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxApprovalArtifactFileSizeBytes();
 
 	@InputFile
 	@Optional
@@ -112,11 +120,17 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		if (getMaxConfigurationFileSizeBytes().isPresent()) {
 			command.setMaxConfigurationFileSizeBytes(getMaxConfigurationFileSizeBytes().get());
 		}
+		if (getMaxSchemaFileSizeBytes().isPresent()) {
+			command.setMaxSchemaFileSizeBytes(getMaxSchemaFileSizeBytes().get());
+		}
 		if (getAssessmentReportFile().isPresent()) {
 			command.setAssessmentReportFile(getAssessmentReportFile().get().getAsFile());
 		}
 		if (getDdlVerificationReportFile().isPresent()) {
 			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
+		}
+		if (getMaxApprovalArtifactFileSizeBytes().isPresent()) {
+			command.setMaxApprovalArtifactFileSizeBytes(getMaxApprovalArtifactFileSizeBytes().get());
 		}
 		if (getTargetValidationReportFile().isPresent()) {
 			command.setTargetValidationReportFile(getTargetValidationReportFile().get().getAsFile());

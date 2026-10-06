@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.sql.Connection;
@@ -95,16 +96,23 @@ public class BulkMigrationJobConfigurationResolver {
 	}
 
 	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection) {
-		return resolveJob(configurationFile, sourceConnection, null, null);
+		return resolveJob(configurationFile, sourceConnection, null, null, null);
 	}
 
 	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
 			final String expectedConfigurationFingerprint) {
-		return resolveJob(configurationFile, sourceConnection, expectedConfigurationFingerprint, null);
+		return resolveJob(configurationFile, sourceConnection, expectedConfigurationFingerprint, null, null);
 	}
 
 	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
 			final String expectedConfigurationFingerprint, final Long maxConfigurationFileSizeBytes) {
+		return resolveJob(configurationFile, sourceConnection, expectedConfigurationFingerprint,
+				maxConfigurationFileSizeBytes, null);
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
+			final String expectedConfigurationFingerprint, final Long maxConfigurationFileSizeBytes,
+			final Long maxSchemaFileSizeBytes) {
 		if (configurationFile == null || !configurationFile.isFile()) {
 			throw new CommandException("Bulk migration configuration file is required.");
 		}
@@ -114,7 +122,7 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		final byte[] configurationBytes;
 		try {
-			configurationBytes = BoundedMigrationJsonFile.read(configurationFile.toPath(),
+			configurationBytes = BoundedMigrationFile.read(configurationFile.toPath(),
 					maxConfigurationFileSizeBytes, "maxConfigurationFileSizeBytes", "Configuration file");
 		} catch (IOException e) {
 			throw new CommandException("Could not read bulk migration configuration file: " + configurationFile, e);
@@ -132,9 +140,8 @@ public class BulkMigrationJobConfigurationResolver {
 			throw new CommandException("schemaFile is required in bulk migration configuration.");
 		}
 		final File schemaFile = resolve(configurationFile, configuration.getSchemaFile());
-		validateSchemaFingerprint(schemaFile, configuration.getSchemaFingerprint());
 		validateProvenance(configuration.getProvenance());
-		final List<Table> tables = readTables(schemaFile);
+		final List<Table> tables = readTables(schemaFile, configuration.getSchemaFingerprint(), maxSchemaFileSizeBytes);
 		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
 		validateTasks(configuration.getTasks());
 		for (final var task : configuration.getTasks()) {
@@ -451,36 +458,26 @@ public class BulkMigrationJobConfigurationResolver {
 		return file.isAbsolute() ? file : new File(configurationFile.getAbsoluteFile().getParentFile(), path);
 	}
 
-	private static List<Table> readTables(final File file) {
+	private static List<Table> readTables(final File file, final String expectedFingerprint,
+			final Long maxSchemaFileSizeBytes) {
 		if (!file.isFile()) {
 			throw new CommandException("Schema XML does not exist: " + file);
 		}
-		try {
-			return tables(SchemaUtils.readXml(file));
-		} catch (IOException e) {
-			throw new CommandException("Failed to read Schema XML: " + file, e);
-		}
-	}
-
-	private static void validateSchemaFingerprint(final File file, final String expected) {
-		if (expected == null || expected.isBlank()) {
-			return;
-		}
-		if (!expected.matches("sha256:[0-9a-f]{64}")) {
+		if (expectedFingerprint != null && !expectedFingerprint.isBlank()
+				&& !expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("schemaFingerprint must be a lowercase SHA-256 value");
 		}
-		if (!file.isFile()) {
-			throw new CommandException("Schema XML does not exist: " + file);
-		}
 		try {
-			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(file);
-			if (!expected.equals(actual)) {
+			final byte[] bytes = BoundedMigrationFile.read(file.toPath(), maxSchemaFileSizeBytes,
+					"maxSchemaFileSizeBytes", "Schema XML file");
+			final String actualFingerprint = "sha256:" + MessageDigests.SHA256.checksumAsString(bytes);
+			if (expectedFingerprint != null && !expectedFingerprint.isBlank()
+					&& !expectedFingerprint.equals(actualFingerprint)) {
 				throw new CommandException("schemaFile fingerprint does not match schemaFingerprint: " + file);
 			}
-		} catch (final CommandException e) {
-			throw e;
-		} catch (final Exception e) {
-			throw new CommandException("Failed to fingerprint Schema XML: " + file, e);
+			return tables(SchemaUtils.readXml(new ByteArrayInputStream(bytes)));
+		} catch (IOException e) {
+			throw new CommandException("Failed to read Schema XML: " + file, e);
 		}
 	}
 

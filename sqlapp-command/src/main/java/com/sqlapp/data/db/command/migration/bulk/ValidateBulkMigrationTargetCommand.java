@@ -9,7 +9,6 @@ import javax.sql.DataSource;
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
-import com.sqlapp.util.MessageDigests;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -20,16 +19,21 @@ import lombok.Setter;
 public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceCommand {
 	private File configurationFile;
 	private String expectedConfigurationFingerprint;
+	private Long maxConfigurationFileSizeBytes;
+	private Long maxSchemaFileSizeBytes;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
+	private Long maxApprovalArtifactFileSizeBytes;
 	private File reportFile;
 	private String targetEnvironmentId;
 	private DataSource sourceDataSource;
 	private BulkMigrationTargetValidationResult result;
+	private String targetValidationReportFingerprint;
 
 	@Override
 	protected void doRun() {
 		result = null;
+		targetValidationReportFingerprint = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
@@ -44,25 +48,35 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 		}
 		validateArtifactFile(assessmentReportFile, "assessmentReportFile");
 		validateArtifactFile(ddlVerificationReportFile, "ddlVerificationReportFile");
-		final String configurationFingerprint = configurationFingerprint();
+		if (maxApprovalArtifactFileSizeBytes != null && maxApprovalArtifactFileSizeBytes <= 0) {
+			throw new CommandException("maxApprovalArtifactFileSizeBytes must be greater than zero.");
+		}
+		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
+				expectedConfigurationFingerprint);
+		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
+				maxConfigurationFileSizeBytes);
 		executeNoTranAndClose(sourceDataSource, sourceConnection -> {
 			final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
-					sourceConnection);
+					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes,
+					maxSchemaFileSizeBytes);
 			validateApprovalArtifacts(resolution.provenance());
 			final var plan = resolution.plan();
+			final String configurationFingerprint = resolution.provenance().configurationFingerprint();
 			executeNoTranAndClose(getDataSource(), targetConnection -> {
 				BulkMigrationTargetValidator.validate(targetConnection, plan);
 				result = new BulkMigrationTargetValidationResult(plan.getFingerprint(), configurationFingerprint,
 						plan.getTasks().stream().map(task -> task.getTaskId()).toList());
 				if (reportFile != null) {
 					final var metadata = targetConnection.getMetaData();
-					new BulkMigrationTargetValidationReportIO().write(reportFile.toPath(),
+					final var reportIO = new BulkMigrationTargetValidationReportIO();
+					final var snapshot = reportIO.writeSnapshot(reportFile.toPath(),
 							new BulkMigrationTargetValidationReport(
 									BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
 									plan.getJobId(), plan.getFingerprint(), configurationFingerprint, result.taskIds(),
 									resolution.provenance(), targetEnvironmentId, metadata.getDatabaseProductName(),
 									metadata.getDatabaseProductVersion(), targetConnection.getCatalog(),
 									targetConnection.getSchema()));
+					targetValidationReportFingerprint = snapshot.fingerprint();
 				}
 			});
 		});
@@ -78,29 +92,11 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 	private void validateApprovalArtifacts(final BulkMigrationArtifactProvenance provenance) {
 		BulkMigrationArtifactProvenanceVerifier.verify(assessmentReportFile,
 				provenance == null ? null : provenance.assessmentReportFingerprint(), "assessmentReportFile",
-				"assessmentReportFingerprint");
+				"assessmentReportFingerprint", maxApprovalArtifactFileSizeBytes);
 		BulkMigrationArtifactProvenanceVerifier.verify(ddlVerificationReportFile,
 				provenance == null ? null : provenance.ddlVerificationReportFingerprint(),
-				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
+				"ddlVerificationReportFile", "ddlVerificationReportFingerprint",
+				maxApprovalArtifactFileSizeBytes);
 	}
 
-	private String configurationFingerprint() {
-		if (expectedConfigurationFingerprint != null && !expectedConfigurationFingerprint.isBlank()
-				&& !expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}")) {
-			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
-		}
-		try {
-			final String actual = "sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile);
-			if (expectedConfigurationFingerprint != null && !expectedConfigurationFingerprint.isBlank()
-					&& !expectedConfigurationFingerprint.equals(actual)) {
-				throw new CommandException(
-						"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
-			}
-			return actual;
-		} catch (final CommandException e) {
-			throw e;
-		} catch (final Exception e) {
-			throw new CommandException("Could not fingerprint configurationFile: " + e.getMessage(), e);
-		}
-	}
 }

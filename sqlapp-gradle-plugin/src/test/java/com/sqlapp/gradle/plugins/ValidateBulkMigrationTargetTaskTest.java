@@ -21,8 +21,11 @@ class ValidateBulkMigrationTargetTaskTest {
 				project.getTasks().getByName("validateBulkMigrationTarget"));
 		assertFalse(task.getConfigurationFile().isPresent());
 		assertFalse(task.getExpectedConfigurationFingerprint().isPresent());
+		assertFalse(task.getMaxConfigurationFileSizeBytes().isPresent());
+		assertFalse(task.getMaxSchemaFileSizeBytes().isPresent());
 		assertFalse(task.getAssessmentReportFile().isPresent());
 		assertFalse(task.getDdlVerificationReportFile().isPresent());
+		assertFalse(task.getMaxApprovalArtifactFileSizeBytes().isPresent());
 		assertFalse(task.getReportFile().isPresent());
 		assertFalse(task.getTargetEnvironmentId().isPresent());
 
@@ -32,8 +35,11 @@ class ValidateBulkMigrationTargetTaskTest {
 		final var report = project.getLayout().getBuildDirectory().file("migration/target-validation.json").get();
 		task.getConfigurationFile().set(configuration);
 		task.getExpectedConfigurationFingerprint().set("sha256:" + "0".repeat(64));
+		task.getMaxConfigurationFileSizeBytes().set(1_048_576L);
+		task.getMaxSchemaFileSizeBytes().set(4_194_304L);
 		task.getAssessmentReportFile().set(assessment);
 		task.getDdlVerificationReportFile().set(ddlVerification);
+		task.getMaxApprovalArtifactFileSizeBytes().set(8_388_608L);
 		task.getReportFile().set(report);
 		task.getTargetEnvironmentId().set("production-oracle");
 		task.getSourceDataSource().getJdbcUrl().set("jdbc:hsqldb:mem:validate_task_source");
@@ -43,8 +49,11 @@ class ValidateBulkMigrationTargetTaskTest {
 		assertEquals(configuration.getAsFile(), task.internalCommand().getConfigurationFile());
 		assertEquals("sha256:" + "0".repeat(64),
 				task.internalCommand().getExpectedConfigurationFingerprint());
+		assertEquals(1_048_576L, task.internalCommand().getMaxConfigurationFileSizeBytes());
+		assertEquals(4_194_304L, task.internalCommand().getMaxSchemaFileSizeBytes());
 		assertEquals(assessment.getAsFile(), task.internalCommand().getAssessmentReportFile());
 		assertEquals(ddlVerification.getAsFile(), task.internalCommand().getDdlVerificationReportFile());
+		assertEquals(8_388_608L, task.internalCommand().getMaxApprovalArtifactFileSizeBytes());
 		assertEquals(report.getAsFile(), task.internalCommand().getReportFile());
 		assertEquals("production-oracle", task.internalCommand().getTargetEnvironmentId());
 		assertTrue(task.internalCommand().getSourceDataSource() instanceof HikariDataSource);

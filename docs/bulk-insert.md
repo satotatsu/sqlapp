@@ -1344,9 +1344,14 @@ validation report: parsing and SHA-256 calculation use one byte snapshot. The
 accepted target-report SHA is retained for execution and repair provenance
 instead of fingerprinting the path again later.
 Optional `maxConfigurationFileSizeBytes` and
-`maxTargetValidationReportFileSizeBytes` apply bounded reads to these two
-approval inputs. They are unset by default and are shared by declarative
-migration and repair execution.
+`maxSchemaFileSizeBytes` and `maxTargetValidationReportFileSizeBytes` apply
+bounded reads to these approval inputs. They are unset by default and are
+shared by declarative migration and repair execution. Schema XML fingerprint
+verification and model parsing use the same byte snapshot.
+Optional `maxApprovalArtifactFileSizeBytes` bounds SHA-256 reads of the
+assessment and DDL-verification reports without loading either artifact into
+memory. The same setting is available for target validation, migration, and
+repair execution.
 The unified outcome selector and saved-outcome verifier accept the same
 directory property, so later CI stages need only the approved plan plus the
 repair report directory. All three commands share one filename definition.

@@ -42,7 +42,7 @@ public final class BulkMigrationJobRepairOutcomeReportIO {
 			throw new CommandException("Bulk migration job repair outcome report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
 					"maxEvidenceFileSizeBytes", "Bulk migration job repair outcome report");
 			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationJobRepairOutcomeReport.class));

@@ -59,12 +59,15 @@ final class BulkMigrationExecutionApprovalValidator {
 	}
 
 	static void validateArtifactInputs(final File configurationFile, final File assessmentReportFile,
-			final File ddlVerificationReportFile) {
+			final File ddlVerificationReportFile, final Long maxFileSizeBytes) {
 		if ((assessmentReportFile != null || ddlVerificationReportFile != null) && configurationFile == null) {
 			throw new CommandException("Approval artifact files require configurationFile.");
 		}
 		validateArtifactFile(assessmentReportFile, "assessmentReportFile");
 		validateArtifactFile(ddlVerificationReportFile, "ddlVerificationReportFile");
+		if (maxFileSizeBytes != null && maxFileSizeBytes <= 0) {
+			throw new CommandException("maxApprovalArtifactFileSizeBytes must be greater than zero.");
+		}
 	}
 
 	static void validateTargetInputs(final File configurationFile, final File targetValidationReportFile,
@@ -97,13 +100,13 @@ final class BulkMigrationExecutionApprovalValidator {
 	}
 
 	static void validateArtifacts(final BulkMigrationArtifactProvenance provenance, final File assessmentReportFile,
-			final File ddlVerificationReportFile) {
+			final File ddlVerificationReportFile, final Long maxFileSizeBytes) {
 		BulkMigrationArtifactProvenanceVerifier.verify(assessmentReportFile,
 				provenance == null ? null : provenance.assessmentReportFingerprint(), "assessmentReportFile",
-				"assessmentReportFingerprint");
+				"assessmentReportFingerprint", maxFileSizeBytes);
 		BulkMigrationArtifactProvenanceVerifier.verify(ddlVerificationReportFile,
 				provenance == null ? null : provenance.ddlVerificationReportFingerprint(),
-				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
+				"ddlVerificationReportFile", "ddlVerificationReportFingerprint", maxFileSizeBytes);
 	}
 
 	static ValidatedTargetReport validateTargetReport(final File targetValidationReportFile,

@@ -33,7 +33,7 @@ public final class BulkMigrationVerificationReportIO {
 			throw new CommandException("Bulk migration verification report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
 					"maxEvidenceFileSizeBytes", "Bulk migration verification report");
 			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationVerificationReport.class));

@@ -86,6 +86,19 @@ class ValidateBulkMigrationTargetCommandTest extends AbstractDbCommandTest {
 			command.setTargetEnvironmentId("production-oracle");
 			command.setExpectedConfigurationFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(job));
+			command.setMaxApprovalArtifactFileSizeBytes(Files.size(assessment.toPath()) - 1);
+			assertEquals("assessmentReportFile exceeds maxApprovalArtifactFileSizeBytes.",
+					assertThrows(CommandException.class, command::run).getMessage());
+			command.setMaxApprovalArtifactFileSizeBytes(Math.max(Files.size(assessment.toPath()),
+					Files.size(ddlVerification.toPath())));
+			command.setMaxConfigurationFileSizeBytes(Files.size(job.toPath()) - 1);
+			assertEquals("Configuration file exceeds maxConfigurationFileSizeBytes.",
+					assertThrows(CommandException.class, command::run).getMessage());
+			command.setMaxConfigurationFileSizeBytes(Files.size(job.toPath()));
+			command.setMaxSchemaFileSizeBytes(Files.size(schemaFile.toPath()) - 1);
+			assertEquals("Schema XML file exceeds maxSchemaFileSizeBytes.",
+					assertThrows(CommandException.class, command::run).getMessage());
+			command.setMaxSchemaFileSizeBytes(Files.size(schemaFile.toPath()));
 			command.run();
 
 			assertNotNull(command.getResult());
@@ -98,6 +111,8 @@ class ValidateBulkMigrationTargetCommandTest extends AbstractDbCommandTest {
 			assertEquals(List.of("access:PUBLIC.ITEMS"), saved.taskIds());
 			assertEquals("production-oracle", saved.targetEnvironmentId());
 			assertEquals("HSQL Database Engine", saved.databaseProductName());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(report),
+					command.getTargetValidationReportFingerprint());
 
 			Files.writeString(assessment.toPath(), "{\"status\":\"CHANGED\"}");
 			assertThrows(CommandException.class, command::run);
