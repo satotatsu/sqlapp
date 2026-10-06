@@ -71,10 +71,16 @@ class VerifyBulkMigrationEvidenceReportTaskTest extends AbstractTaskTest {
 		task.expectedPlanFingerprint.set('plan-1')
 		task.expectedConfigurationFingerprint.set(provenance.configurationFingerprint())
 		task.maxEvidenceAgeSeconds.set(3600L)
+		task.maxEvidenceFileSizeBytes.set(1048576L)
+		task.maxApprovalArtifactFileSizeBytes.set(524288L)
+		task.maxTargetValidationReportFileSizeBytes.set(262144L)
 
 		task.exec()
 
 		assertEquals(evidence, task.internalCommand().report)
+		assertEquals(1048576L, task.internalCommand().maxEvidenceFileSizeBytes)
+		assertEquals(524288L, task.internalCommand().maxApprovalArtifactFileSizeBytes)
+		assertEquals(262144L, task.internalCommand().maxTargetValidationReportFileSizeBytes)
 	}
 
 	@Test
@@ -96,6 +102,9 @@ class VerifyBulkMigrationEvidenceReportTaskTest extends AbstractTaskTest {
 		assertFalse(task.expectedPlanFingerprint.isPresent())
 		assertFalse(task.expectedConfigurationFingerprint.isPresent())
 		assertFalse(task.maxEvidenceAgeSeconds.isPresent())
+		assertFalse(task.maxEvidenceFileSizeBytes.isPresent())
+		assertFalse(task.maxApprovalArtifactFileSizeBytes.isPresent())
+		assertFalse(task.maxTargetValidationReportFileSizeBytes.isPresent())
 	}
 
 	private static String fingerprint(File file) {

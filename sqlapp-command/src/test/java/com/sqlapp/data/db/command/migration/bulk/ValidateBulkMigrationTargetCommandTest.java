@@ -113,6 +113,13 @@ class ValidateBulkMigrationTargetCommandTest extends AbstractDbCommandTest {
 			assertEquals("HSQL Database Engine", saved.databaseProductName());
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(report),
 					command.getTargetValidationReportFingerprint());
+			command.setMaxTargetValidationReportFileSizeBytes(Files.size(report.toPath()) - 1);
+			assertEquals("Target validation report file exceeds maxTargetValidationReportFileSizeBytes.",
+					assertThrows(CommandException.class, command::run).getMessage());
+			assertNull(command.getResult());
+			command.setMaxTargetValidationReportFileSizeBytes(Files.size(report.toPath()));
+			command.run();
+			assertNotNull(command.getTargetValidationReportFingerprint());
 
 			Files.writeString(assessment.toPath(), "{\"status\":\"CHANGED\"}");
 			assertThrows(CommandException.class, command::run);

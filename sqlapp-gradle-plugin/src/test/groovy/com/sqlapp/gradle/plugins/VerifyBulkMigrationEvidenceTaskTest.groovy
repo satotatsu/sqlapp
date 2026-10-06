@@ -26,5 +26,8 @@ class VerifyBulkMigrationEvidenceTaskTest extends AbstractTaskTest {
 		assertTrue(task.requireSuccessfulExecution.get())
 		assertTrue(task.requireMatchingData.get())
 		assertTrue(task.requireProvenance.get())
+		assertFalse(task.maxEvidenceFileSizeBytes.isPresent())
+		assertFalse(task.maxApprovalArtifactFileSizeBytes.isPresent())
+		assertFalse(task.maxTargetValidationReportFileSizeBytes.isPresent())
 	}
 }

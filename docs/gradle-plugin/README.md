@@ -293,6 +293,14 @@ parsing, and the bounded read also detects a file that grows after its initial
 size check. Repair execution exposes the same properties. Schema fingerprint
 verification and XML parsing use the same bounded byte snapshot.
 
+The offline `verifyBulkMigrationEvidence` and
+`verifyBulkMigrationEvidenceReport` tasks also accept
+`maxEvidenceFileSizeBytes`, `maxApprovalArtifactFileSizeBytes`, and
+`maxTargetValidationReportFileSizeBytes`. Operational, verification, saved
+evidence, and target-validation JSON are each parsed and fingerprinted from one
+bounded byte snapshot. A generated evidence report is atomically written and
+read back before its accepted SHA-256 is exposed by the command.
+
 Run the same plan resolution and target checks before the deployment window:
 
 ```groovy
@@ -311,6 +319,7 @@ validateBulkMigrationTarget {
     ddlVerificationReportFile = file('migration/ddl-verification.json')
     maxApprovalArtifactFileSizeBytes = 8388608L
     reportFile = layout.buildDirectory.file('reports/target-validation.json')
+    maxTargetValidationReportFileSizeBytes = 2097152L
     targetEnvironmentId = 'production-oracle'
 }
 ```
@@ -327,7 +336,8 @@ expose the same database product, catalog and schema.
 Target validation uses the same bounded configuration and Schema snapshots as
 execution. After atomically writing its JSON report, it reads the report back,
 compares it with the generated model, and retains the resulting SHA-256 on the
-command result.
+command result. `maxTargetValidationReportFileSizeBytes` applies to this
+write-back verification as well as later execution-time reads.
 `maxApprovalArtifactFileSizeBytes` optionally applies one streaming byte limit
 to both the assessment and DDL-verification artifacts. The verifier stops and
 rejects the artifact if it crosses the limit while its SHA-256 is being read.

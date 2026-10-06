@@ -62,8 +62,13 @@ public final class BulkMigrationTargetValidationReportIO {
 	}
 
 	Snapshot writeSnapshot(final Path file, final BulkMigrationTargetValidationReport report) {
+		return writeSnapshot(file, report, null);
+	}
+
+	Snapshot writeSnapshot(final Path file, final BulkMigrationTargetValidationReport report,
+			final Long maxFileSizeBytes) {
 		write(file, report);
-		final var snapshot = readSnapshot(file);
+		final var snapshot = readSnapshot(file, maxFileSizeBytes);
 		if (!report.equals(snapshot.report())) {
 			throw new CommandException("Written bulk migration target validation report does not match its source model.");
 		}

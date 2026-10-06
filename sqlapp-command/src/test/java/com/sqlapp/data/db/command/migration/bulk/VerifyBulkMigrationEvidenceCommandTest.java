@@ -48,6 +48,7 @@ class VerifyBulkMigrationEvidenceCommandTest {
 		command.setExpectedTargetEnvironmentId("production-oracle");
 		command.setOutputFile(evidence.toFile());
 		assertDoesNotThrow(command::run);
+		assertEquals(fingerprint(evidence), command.getEvidenceReportFingerprint());
 		assertEquals(plan, command.getOperationalReport().planFingerprint());
 		assertEquals(command.getOperationalReport().provenance(), command.getVerificationReport().provenance());
 		final var saved = new BulkMigrationEvidenceReportIO().read(evidence);
@@ -72,6 +73,7 @@ class VerifyBulkMigrationEvidenceCommandTest {
 		reportCommand.setExpectedConfigurationFingerprint(provenance.configurationFingerprint());
 		assertDoesNotThrow(reportCommand::run);
 		assertEquals(saved, reportCommand.getReport());
+		assertEquals(fingerprint(evidence), reportCommand.getEvidenceReportFingerprint());
 		reportCommand.setExpectedTargetEnvironmentId("staging-oracle");
 		assertThrows(CommandException.class, reportCommand::run);
 		reportCommand.setExpectedTargetEnvironmentId("production-oracle");
@@ -107,6 +109,32 @@ class VerifyBulkMigrationEvidenceCommandTest {
 		assertThrows(CommandException.class,
 				() -> new BulkMigrationEvidenceReportIO().read(evidence, operations, verification));
 		assertThrows(CommandException.class, command::run);
+	}
+
+	@Test
+	void boundsEvidenceAndApprovalArtifacts() throws Exception {
+		final Path operations = directory.resolve("bounded-operations.json");
+		final Path verification = directory.resolve("bounded-verification.json");
+		writeOperational(operations, "plan-1", null);
+		writeVerification(verification, "plan-1", null);
+		final var command = command(operations, verification, null, null, null);
+		command.setRequireProvenance(false);
+		command.setMaxEvidenceFileSizeBytes(1L);
+		assertThrows(CommandException.class, command::run);
+
+		command.setMaxEvidenceFileSizeBytes(1024 * 1024L);
+		command.setMaxApprovalArtifactFileSizeBytes(0L);
+		assertThrows(CommandException.class, command::run);
+		command.setMaxApprovalArtifactFileSizeBytes(null);
+		command.setOutputFile(directory.resolve("bounded-evidence.json").toFile());
+		assertDoesNotThrow(command::run);
+
+		final var reportCommand = new VerifyBulkMigrationEvidenceReportCommand();
+		reportCommand.setEvidenceReportFile(command.getOutputFile());
+		reportCommand.setOperationalReportFile(operations.toFile());
+		reportCommand.setVerificationReportFile(verification.toFile());
+		reportCommand.setMaxEvidenceFileSizeBytes(1L);
+		assertThrows(CommandException.class, reportCommand::run);
 	}
 
 	@Test

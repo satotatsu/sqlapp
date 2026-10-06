@@ -2,6 +2,8 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Objects;
@@ -24,11 +26,25 @@ public final class BulkMigrationEvidenceReportIO {
 			BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT);
 
 	public BulkMigrationEvidenceReport read(final Path file) {
-		if (file == null || !java.nio.file.Files.isRegularFile(file)) {
+		return read(file, null);
+	}
+
+	public BulkMigrationEvidenceReport read(final Path file, final Long maxFileSizeBytes) {
+		return readSnapshot(file, maxFileSizeBytes).report();
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
+		if (file == null || !Files.isRegularFile(file)) {
 			throw new CommandException("Bulk migration evidence report file is required.");
 		}
 		try {
-			return validate(new JsonConverter().fromJsonString(file.toFile(), BulkMigrationEvidenceReport.class));
+			final byte[] bytes = BoundedMigrationFile.read(file, maxFileSizeBytes,
+					"maxEvidenceFileSizeBytes", "Bulk migration evidence report");
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationEvidenceReport.class));
+			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+		} catch (final IOException e) {
+			throw new CommandException("Could not read bulk migration evidence report: " + file, e);
 		} catch (final CommandException e) {
 			throw e;
 		} catch (final RuntimeException e) {
@@ -38,15 +54,21 @@ public final class BulkMigrationEvidenceReportIO {
 
 	public BulkMigrationEvidenceReport read(final Path file, final Path operationalReportFile,
 			final Path verificationReportFile) {
-		final BulkMigrationEvidenceReport report = read(file);
-		final BulkMigrationOperationalReport operational = new BulkMigrationOperationalReportIO()
-				.read(operationalReportFile);
-		final BulkMigrationVerificationReport verification = new BulkMigrationVerificationReportIO()
-				.read(verificationReportFile);
-		if (!report.operationalReportFingerprint().equals(fingerprint(operationalReportFile))) {
+		final var evidence = readSnapshot(file, null);
+		final var operational = new BulkMigrationOperationalReportIO().readSnapshot(operationalReportFile, null);
+		final var verification = new BulkMigrationVerificationReportIO().readSnapshot(verificationReportFile, null);
+		return verifySources(evidence.report(), operational, verification);
+	}
+
+	BulkMigrationEvidenceReport verifySources(final BulkMigrationEvidenceReport report,
+			final BulkMigrationOperationalReportIO.Snapshot operationalSnapshot,
+			final BulkMigrationVerificationReportIO.Snapshot verificationSnapshot) {
+		final var operational = operationalSnapshot.report();
+		final var verification = verificationSnapshot.report();
+		if (!report.operationalReportFingerprint().equals(operationalSnapshot.fingerprint())) {
 			throw new CommandException("Operational report fingerprint does not match the evidence report.");
 		}
-		if (!report.verificationReportFingerprint().equals(fingerprint(verificationReportFile))) {
+		if (!report.verificationReportFingerprint().equals(verificationSnapshot.fingerprint())) {
 			throw new CommandException("Verification report fingerprint does not match the evidence report.");
 		}
 		if (!report.jobId().equals(operational.jobId())
@@ -76,6 +98,18 @@ public final class BulkMigrationEvidenceReportIO {
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Could not write bulk migration evidence report: " + file, e);
 		}
+	}
+
+	Snapshot writeSnapshot(final Path file, final BulkMigrationEvidenceReport report, final Long maxFileSizeBytes) {
+		write(file, report);
+		final var snapshot = readSnapshot(file, maxFileSizeBytes);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Bulk migration evidence report changed after write.");
+		}
+		return snapshot;
+	}
+
+	record Snapshot(BulkMigrationEvidenceReport report, String fingerprint) {
 	}
 
 	private static BulkMigrationEvidenceReport validate(final BulkMigrationEvidenceReport report) {
@@ -128,10 +162,6 @@ public final class BulkMigrationEvidenceReportIO {
 	private static BulkMigrationOperationalReport.ExecutionEvent event(
 			final BulkMigrationOperationalReport report) {
 		return report.execution() == null ? null : report.execution().event();
-	}
-
-	private static String fingerprint(final Path file) {
-		return "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(file.toFile());
 	}
 
 	private static boolean blank(final String value) {

@@ -25,6 +25,7 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 	private File ddlVerificationReportFile;
 	private Long maxApprovalArtifactFileSizeBytes;
 	private File reportFile;
+	private Long maxTargetValidationReportFileSizeBytes;
 	private String targetEnvironmentId;
 	private DataSource sourceDataSource;
 	private BulkMigrationTargetValidationResult result;
@@ -46,6 +47,14 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 		if (targetEnvironmentId != null && targetEnvironmentId.isBlank()) {
 			throw new CommandException("targetEnvironmentId must not be blank.");
 		}
+		if (maxTargetValidationReportFileSizeBytes != null) {
+			if (reportFile == null) {
+				throw new CommandException("maxTargetValidationReportFileSizeBytes requires reportFile.");
+			}
+			if (maxTargetValidationReportFileSizeBytes <= 0) {
+				throw new CommandException("maxTargetValidationReportFileSizeBytes must be greater than zero.");
+			}
+		}
 		validateArtifactFile(assessmentReportFile, "assessmentReportFile");
 		validateArtifactFile(ddlVerificationReportFile, "ddlVerificationReportFile");
 		if (maxApprovalArtifactFileSizeBytes != null && maxApprovalArtifactFileSizeBytes <= 0) {
@@ -64,7 +73,7 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 			final String configurationFingerprint = resolution.provenance().configurationFingerprint();
 			executeNoTranAndClose(getDataSource(), targetConnection -> {
 				BulkMigrationTargetValidator.validate(targetConnection, plan);
-				result = new BulkMigrationTargetValidationResult(plan.getFingerprint(), configurationFingerprint,
+				final var validated = new BulkMigrationTargetValidationResult(plan.getFingerprint(), configurationFingerprint,
 						plan.getTasks().stream().map(task -> task.getTaskId()).toList());
 				if (reportFile != null) {
 					final var metadata = targetConnection.getMetaData();
@@ -72,12 +81,13 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 					final var snapshot = reportIO.writeSnapshot(reportFile.toPath(),
 							new BulkMigrationTargetValidationReport(
 									BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
-									plan.getJobId(), plan.getFingerprint(), configurationFingerprint, result.taskIds(),
+									plan.getJobId(), plan.getFingerprint(), configurationFingerprint, validated.taskIds(),
 									resolution.provenance(), targetEnvironmentId, metadata.getDatabaseProductName(),
 									metadata.getDatabaseProductVersion(), targetConnection.getCatalog(),
-									targetConnection.getSchema()));
+									targetConnection.getSchema()), maxTargetValidationReportFileSizeBytes);
 					targetValidationReportFingerprint = snapshot.fingerprint();
 				}
+				result = validated;
 			});
 		});
 		info("Bulk migration target validation completed: ", result.planFingerprint());

@@ -27,6 +27,7 @@ class ValidateBulkMigrationTargetTaskTest {
 		assertFalse(task.getDdlVerificationReportFile().isPresent());
 		assertFalse(task.getMaxApprovalArtifactFileSizeBytes().isPresent());
 		assertFalse(task.getReportFile().isPresent());
+		assertFalse(task.getMaxTargetValidationReportFileSizeBytes().isPresent());
 		assertFalse(task.getTargetEnvironmentId().isPresent());
 
 		final var configuration = project.getLayout().getBuildDirectory().file("migration/job.yaml").get();
@@ -41,6 +42,7 @@ class ValidateBulkMigrationTargetTaskTest {
 		task.getDdlVerificationReportFile().set(ddlVerification);
 		task.getMaxApprovalArtifactFileSizeBytes().set(8_388_608L);
 		task.getReportFile().set(report);
+		task.getMaxTargetValidationReportFileSizeBytes().set(2_097_152L);
 		task.getTargetEnvironmentId().set("production-oracle");
 		task.getSourceDataSource().getJdbcUrl().set("jdbc:hsqldb:mem:validate_task_source");
 		task.getSourceDataSource().getUsername().set("SA");
@@ -55,6 +57,8 @@ class ValidateBulkMigrationTargetTaskTest {
 		assertEquals(ddlVerification.getAsFile(), task.internalCommand().getDdlVerificationReportFile());
 		assertEquals(8_388_608L, task.internalCommand().getMaxApprovalArtifactFileSizeBytes());
 		assertEquals(report.getAsFile(), task.internalCommand().getReportFile());
+		assertEquals(2_097_152L,
+				task.internalCommand().getMaxTargetValidationReportFileSizeBytes());
 		assertEquals("production-oracle", task.internalCommand().getTargetEnvironmentId());
 		assertTrue(task.internalCommand().getSourceDataSource() instanceof HikariDataSource);
 		((HikariDataSource) task.internalCommand().getSourceDataSource()).close();

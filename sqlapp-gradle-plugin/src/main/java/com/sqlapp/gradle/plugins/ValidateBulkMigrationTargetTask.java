@@ -64,6 +64,10 @@ public abstract class ValidateBulkMigrationTargetTask extends AbstractDbTask<Val
 
 	@Input
 	@Optional
+	public abstract Property<Long> getMaxTargetValidationReportFileSizeBytes();
+
+	@Input
+	@Optional
 	public abstract Property<String> getTargetEnvironmentId();
 
 	@Nested
@@ -99,6 +103,10 @@ public abstract class ValidateBulkMigrationTargetTask extends AbstractDbTask<Val
 		}
 		if (getReportFile().isPresent()) {
 			command.setReportFile(getReportFile().get().getAsFile());
+		}
+		if (getMaxTargetValidationReportFileSizeBytes().isPresent()) {
+			command.setMaxTargetValidationReportFileSizeBytes(
+					getMaxTargetValidationReportFileSizeBytes().get());
 		}
 		if (getTargetEnvironmentId().isPresent()) {
 			command.setTargetEnvironmentId(getTargetEnvironmentId().get());

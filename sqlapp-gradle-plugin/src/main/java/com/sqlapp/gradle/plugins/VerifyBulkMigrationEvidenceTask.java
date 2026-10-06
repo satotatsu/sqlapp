@@ -70,6 +70,18 @@ public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<Verif
 	@Input
 	public abstract Property<Boolean> getRequireProvenance();
 
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxEvidenceFileSizeBytes();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxApprovalArtifactFileSizeBytes();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxTargetValidationReportFileSizeBytes();
+
 	@Override
 	protected void beforeRun(final VerifyBulkMigrationEvidenceCommand command) {
 		command.setOperationalReportFile(getOperationalReportFile().get().getAsFile());
@@ -95,6 +107,15 @@ public abstract class VerifyBulkMigrationEvidenceTask extends AbstractTask<Verif
 		command.setRequireSuccessfulExecution(getRequireSuccessfulExecution().get());
 		command.setRequireMatchingData(getRequireMatchingData().get());
 		command.setRequireProvenance(getRequireProvenance().get());
+		if (getMaxEvidenceFileSizeBytes().isPresent()) {
+			command.setMaxEvidenceFileSizeBytes(getMaxEvidenceFileSizeBytes().get());
+		}
+		if (getMaxApprovalArtifactFileSizeBytes().isPresent()) {
+			command.setMaxApprovalArtifactFileSizeBytes(getMaxApprovalArtifactFileSizeBytes().get());
+		}
+		if (getMaxTargetValidationReportFileSizeBytes().isPresent()) {
+			command.setMaxTargetValidationReportFileSizeBytes(getMaxTargetValidationReportFileSizeBytes().get());
+		}
 	}
 
 	@Override

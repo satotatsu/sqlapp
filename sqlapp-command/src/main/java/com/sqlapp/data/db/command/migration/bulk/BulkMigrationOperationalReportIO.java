@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -34,19 +35,34 @@ public final class BulkMigrationOperationalReportIO {
 	}
 
 	public BulkMigrationOperationalReport read(final Path file) {
+		return read(file, (Long) null);
+	}
+
+	public BulkMigrationOperationalReport read(final Path file, final Long maxFileSizeBytes) {
+		return readSnapshot(file, maxFileSizeBytes).report();
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		Objects.requireNonNull(file, "file");
-		final Path absolute = file.toAbsolutePath();
+		final Path absolute = file.toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration report does not exist: " + absolute);
 		}
 		try {
-			return validate(converter.fromJsonString(absolute.toFile(), BulkMigrationOperationalReport.class));
-		} catch (RuntimeException e) {
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
+					"maxEvidenceFileSizeBytes", "Bulk migration operational report");
+			final var report = validate(converter.fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationOperationalReport.class));
+			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
 			throw new CommandException("Failed to read bulk migration report: " + absolute, e);
 		}
+	}
+
+	record Snapshot(BulkMigrationOperationalReport report, String fingerprint) {
 	}
 
 	public BulkMigrationOperationalReport read(final Path file, final String expectedPlanFingerprint) {

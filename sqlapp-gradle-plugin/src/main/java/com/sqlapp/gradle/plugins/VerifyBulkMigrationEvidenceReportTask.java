@@ -71,6 +71,18 @@ public abstract class VerifyBulkMigrationEvidenceReportTask
 	@Optional
 	public abstract Property<Long> getMaxEvidenceAgeSeconds();
 
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxEvidenceFileSizeBytes();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxApprovalArtifactFileSizeBytes();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxTargetValidationReportFileSizeBytes();
+
 	@Override
 	protected void beforeRun(final VerifyBulkMigrationEvidenceReportCommand command) {
 		command.setEvidenceReportFile(getEvidenceReportFile().get().getAsFile());
@@ -102,6 +114,15 @@ public abstract class VerifyBulkMigrationEvidenceReportTask
 		}
 		if (getMaxEvidenceAgeSeconds().isPresent()) {
 			command.setMaxEvidenceAgeSeconds(getMaxEvidenceAgeSeconds().get());
+		}
+		if (getMaxEvidenceFileSizeBytes().isPresent()) {
+			command.setMaxEvidenceFileSizeBytes(getMaxEvidenceFileSizeBytes().get());
+		}
+		if (getMaxApprovalArtifactFileSizeBytes().isPresent()) {
+			command.setMaxApprovalArtifactFileSizeBytes(getMaxApprovalArtifactFileSizeBytes().get());
+		}
+		if (getMaxTargetValidationReportFileSizeBytes().isPresent()) {
+			command.setMaxTargetValidationReportFileSizeBytes(getMaxTargetValidationReportFileSizeBytes().get());
 		}
 	}
 

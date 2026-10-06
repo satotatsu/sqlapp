@@ -1125,6 +1125,14 @@ progress entry must agree with the same migration entry in
 `progressByMigration`. Pause-event row counts must likewise match the paused
 task's checkpoint. These checks keep monitoring hints from being mistaken for
 durable resume evidence.
+
+Offline evidence generation and revalidation can independently bound migration
+reports, approval artifacts, and target-validation reports with
+`maxEvidenceFileSizeBytes`, `maxApprovalArtifactFileSizeBytes`, and
+`maxTargetValidationReportFileSizeBytes`. These settings are optional. Each
+accepted JSON report is parsed and fingerprinted from the same bytes, and a
+generated evidence report is read back and compared with the requested model
+before its SHA-256 fingerprint is returned.
 Completion and pause events always include their processed-row boundary.
 Paused events must refer to an `IN_PROGRESS` task, while task-scoped failures
 cannot refer to a `COMPLETE` or `INCOMPATIBLE` task. A task-start event also
