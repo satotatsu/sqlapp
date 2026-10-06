@@ -48,19 +48,33 @@ public final class BulkMigrationJobRepairPlanReportIO {
 	}
 
 	public BulkMigrationJobRepairPlanReport read(final Path file) {
+		return readSnapshot(file).report();
+	}
+
+	Snapshot readSnapshot(final Path file) {
+		return readSnapshot(file, null);
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration job repair plan report does not exist: " + absolute);
 		}
 		try {
-			return validate(
-					new JsonConverter().fromJsonString(absolute.toFile(), BulkMigrationJobRepairPlanReport.class));
-		} catch (RuntimeException e) {
+			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+					"maxApprovedRepairPlanFileSizeBytes", "Approved repair plan file");
+			final var report = validate(new JsonConverter().fromJsonString(
+					new String(bytes, StandardCharsets.UTF_8), BulkMigrationJobRepairPlanReport.class));
+			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
 			throw new CommandException("Failed to read bulk migration job repair plan report: " + absolute, e);
 		}
+	}
+
+	record Snapshot(BulkMigrationJobRepairPlanReport report, String fingerprint) {
 	}
 
 	public BulkMigrationJobRepairPlanReport read(final Path file, final String expectedPlanFingerprint) {

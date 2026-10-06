@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -19,19 +20,37 @@ public final class BulkMigrationVerificationReportIO {
 	public static final int DEFAULT_MAX_REPORTED_MISMATCHES = 1_000;
 
 	public BulkMigrationVerificationReport read(final Path file) {
+		return read(file, (Long) null);
+	}
+
+	public BulkMigrationVerificationReport read(final Path file, final Long maxFileSizeBytes) {
+		return readSnapshot(file, maxFileSizeBytes).report();
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration verification report does not exist: " + absolute);
 		}
 		try {
-			return validate(
-					new JsonConverter().fromJsonString(absolute.toFile(), BulkMigrationVerificationReport.class));
-		} catch (RuntimeException e) {
+			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+					"maxEvidenceFileSizeBytes", "Bulk migration verification report");
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationVerificationReport.class));
+			return new Snapshot(report, fingerprint(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
 			throw new CommandException("Failed to read bulk migration verification report: " + absolute, e);
 		}
+	}
+
+	record Snapshot(BulkMigrationVerificationReport report, String fingerprint) {
+	}
+
+	private static String fingerprint(final byte[] bytes) {
+		return "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes);
 	}
 
 	public BulkMigrationVerificationReport read(final Path file, final String expectedPlanFingerprint) {

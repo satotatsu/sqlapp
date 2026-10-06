@@ -850,18 +850,28 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setCloseDataSource(false);
 			command.setConfigurationFile(job);
 			command.setApprovedRepairPlanFile(approval.toFile());
+			command.setExpectedApprovedRepairPlanFileFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()));
+			command.setMaxApprovedRepairPlanAgeSeconds(60L);
 			command.setTargetValidationReportFile(targetValidation.toFile());
 			command.setExpectedTargetValidationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
 			command.setMaxTargetValidationAgeSeconds(60L);
 			command.setTargetEnvironmentId("repair-test");
-			final Path postRepairVerification = temporaryDirectory.resolve("post-repair-verification.json");
-			final Path repairExecution = temporaryDirectory.resolve("repair-execution.json");
-			final Path staleFailure = temporaryDirectory.resolve("stale-repair-failure.json");
+			final Path repairReports = temporaryDirectory.resolve("repair-reports");
+			Files.createDirectories(repairReports);
+			final Path postRepairVerification = repairReports.resolve("post-repair-verification.json");
+			final Path repairExecution = repairReports.resolve("repair-execution.json");
+			final Path staleFailure = repairReports.resolve("repair-failure.json");
 			Files.writeString(staleFailure, "stale");
-			command.setRepairExecutionReportFile(repairExecution.toFile());
-			command.setRepairFailureReportFile(staleFailure.toFile());
-			command.setPostRepairVerificationReportFile(postRepairVerification.toFile());
+			command.setRepairReportDirectory(repairReports.toFile());
+			final Path automaticOutcome = repairReports.resolve("repair-outcome.json");
+			command.setMaxApprovedRepairPlanFileSizeBytes(Files.size(approval) - 1);
+			final var sizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Approved repair plan file exceeds maxApprovedRepairPlanFileSizeBytes.",
+					sizeRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			command.setMaxApprovedRepairPlanFileSizeBytes(Files.size(approval));
 
 			command.setExpectedTargetValidationReportFingerprint("sha256:" + "0".repeat(64));
 			final var fingerprintRejection = assertThrows(CommandException.class, command::run);
@@ -905,6 +915,11 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertFalse(Files.exists(staleFailure));
 			assertEquals(1, command.getResult().getReplayedRows());
 			assertEquals(true, command.getVerificationResult().isMatch());
+			final var automaticOutcomeArtifact = new BulkMigrationJobRepairOutcomeReportIO().read(automaticOutcome);
+			assertEquals("SUCCEEDED", automaticOutcomeArtifact.status());
+			assertEquals(automaticOutcomeArtifact, command.getOutcomeReport());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()),
+					command.getApprovedRepairPlanFileFingerprint());
 			final var executionArtifact = new BulkMigrationJobRepairExecutionReportIO().read(repairExecution);
 			assertEquals(command.getResult().getPlanFingerprint(), executionArtifact.repairPlanFingerprint());
 			assertEquals(1, executionArtifact.replayedRows());
@@ -917,9 +932,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()),
 					postRepairArtifact.provenance().targetValidationReportFingerprint());
 			final var evidence = new VerifyBulkMigrationJobRepairEvidenceCommand();
-			evidence.setRepairExecutionReportFile(repairExecution.toFile());
+			evidence.setRepairReportDirectory(repairReports.toFile());
 			evidence.setApprovedRepairPlanFile(approval.toFile());
-			evidence.setPostRepairVerificationReportFile(postRepairVerification.toFile());
 			evidence.setExpectedRepairExecutionReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()));
 			evidence.setExpectedPostRepairVerificationReportFingerprint(
@@ -930,6 +944,25 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			evidence.setMaxEvidenceAgeSeconds(60L);
 			evidence.run();
 			assertEquals(executionArtifact, evidence.getReport());
+			final var outcome = new VerifyBulkMigrationJobRepairOutcomeCommand();
+			outcome.setApprovedRepairPlanFile(approval.toFile());
+			outcome.setRepairReportDirectory(repairReports.toFile());
+			outcome.run();
+			assertEquals(VerifyBulkMigrationJobRepairOutcomeCommand.Status.SUCCEEDED, outcome.getStatus());
+			assertEquals(executionArtifact, outcome.getExecutionReport());
+			assertNull(outcome.getFailureReport());
+			final var outcomeArtifact = new BulkMigrationJobRepairOutcomeReportIO().read(automaticOutcome);
+			assertEquals("SUCCEEDED", outcomeArtifact.status());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()),
+					outcomeArtifact.repairExecutionReportFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()),
+					outcomeArtifact.postRepairVerificationReportFingerprint());
+			final var savedOutcome = new VerifyBulkMigrationJobRepairOutcomeReportCommand();
+			savedOutcome.setApprovedRepairPlanFile(approval.toFile());
+			savedOutcome.setRepairReportDirectory(repairReports.toFile());
+			savedOutcome.setExpectedStatus("SUCCEEDED");
+			savedOutcome.run();
+			assertEquals(outcomeArtifact, savedOutcome.getReport());
 			evidence.setExpectedPostRepairVerificationReportFingerprint("sha256:" + "0".repeat(64));
 			final var verificationFingerprintRejection = assertThrows(CommandException.class, evidence::run);
 			assertEquals(
@@ -955,7 +988,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					"sha256:" + MessageDigests.SHA256.checksumAsString(expiredExecution.toFile()));
 			evidence.setMaxEvidenceAgeSeconds(60L);
 			final var expiredRejection = assertThrows(CommandException.class, evidence::run);
-			assertEquals("Repair execution evidence has expired.", expiredRejection.getMessage());
+			assertEquals("Post-repair verification report does not match successful repair execution.",
+					expiredRejection.getMessage());
 			assertNull(evidence.getReport());
 			evidence.setRepairExecutionReportFile(repairExecution.toFile());
 			evidence.setExpectedRepairExecutionReportFingerprint(
@@ -1036,16 +1070,29 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setApprovedRepairPlanFile(approval.toFile());
 			command.setRepairFailureReportFile(failureFile.toFile());
 			command.setRepairExecutionReportFile(failureFile.toFile());
+			command.setRepairOutcomeReportFile(temporaryDirectory.resolve("incomplete-outcome.json").toFile());
+			final var incompleteOutcome = assertThrows(CommandException.class, command::run);
+			assertEquals("repairOutcomeReportFile requires repairExecutionReportFile, repairFailureReportFile "
+					+ "and postRepairVerificationReportFile.", incompleteOutcome.getMessage());
+			command.setRepairOutcomeReportFile(null);
 			final var collision = assertThrows(CommandException.class, command::run);
 			assertEquals("Bulk migration repair artifact files must use distinct paths.", collision.getMessage());
 			command.setRepairExecutionReportFile(staleExecutionFile.toFile());
 			command.setPostRepairVerificationReportFile(staleVerificationFile.toFile());
+			final Path outcomeFile = temporaryDirectory.resolve("failed-repair-outcome.json");
+			Files.writeString(outcomeFile, "stale");
+			command.setRepairOutcomeReportFile(outcomeFile.toFile());
 
 			assertThrows(RuntimeException.class, command::run);
 
 			assertFalse(Files.exists(staleExecutionFile));
 			assertFalse(Files.exists(staleVerificationFile));
 			final var failure = new BulkMigrationJobRepairFailureReportIO().read(failureFile);
+			final var outcome = new BulkMigrationJobRepairOutcomeReportIO().read(outcomeFile);
+			assertEquals("EXECUTION_FAILED", outcome.status());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(failureFile.toFile()),
+					outcome.repairFailureReportFingerprint());
+			assertEquals(outcome, command.getOutcomeReport());
 			assertEquals("EXECUTION", failure.phase());
 			assertEquals("items", failure.failedTaskId());
 			assertEquals(List.of(), failure.completedTasks());

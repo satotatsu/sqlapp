@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.util.MessageDigests;
 
 class BulkMigrationJobRepairPlanReportIOTest {
 	@TempDir
@@ -33,6 +35,16 @@ class BulkMigrationJobRepairPlanReportIOTest {
 		io.write(file, report);
 
 		assertEquals(report, io.read(file));
+		final var snapshot = io.readSnapshot(file);
+		assertEquals(report, snapshot.report());
+		assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(file.toFile()), snapshot.fingerprint());
+		assertEquals(report, io.readSnapshot(file, Files.size(file)).report());
+		final var tooLarge = assertThrows(CommandException.class,
+				() -> io.readSnapshot(file, Files.size(file) - 1));
+		assertEquals("Approved repair plan file exceeds maxApprovedRepairPlanFileSizeBytes.",
+				tooLarge.getMessage());
+		final var invalidLimit = assertThrows(CommandException.class, () -> io.readSnapshot(file, 0L));
+		assertEquals("maxApprovedRepairPlanFileSizeBytes must be greater than zero.", invalidLimit.getMessage());
 		assertEquals(report, io.read(file, report.planFingerprint()));
 		assertThrows(CommandException.class, () -> io.read(file, "not-approved"));
 	}

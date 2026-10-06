@@ -1294,14 +1294,59 @@ completed task prefix, the approved repair-plan file fingerprint, and the same
 approval provenance. Success and failure use separate files, so an earlier
 successful report cannot be mistaken for the outcome of a later failed run.
 Immediately before an approved replay starts, the command removes configured
-success, failure, and post-repair verification outputs from an earlier run.
+success, failure, post-repair verification, and unified outcome outputs from an earlier run.
 Those output paths must be distinct from one another and from all approval
 inputs. If failure-evidence writing itself fails, that secondary error is
 attached to the original repair failure instead of replacing it.
+Optional `repairOutcomeReportFile` publishes the same bounded unified outcome
+as the file-only outcome verifier directly from the repair command. It requires
+execution, failure, and post-repair verification report paths so every status
+can reference its exact authoritative SHA-256 evidence. This is the concise
+execution path; the separate verifier remains available for later independent
+audit.
+For the common path, set only `repairReportDirectory`. The command derives
+`repair-execution.json`, `repair-failure.json`,
+`post-repair-verification.json`, and `repair-outcome.json` there. Advanced
+callers may override any individual path while retaining defaults for the
+others.
+Keep the reviewed repair plan outside this mutable report directory. Set
+`expectedApprovedRepairPlanFileFingerprint` to its lowercase `sha256:` value
+when approval is transferred between people or CI stages. Repair execution
+checks it before opening either migration connection, and the file-only repair
+evidence verifiers apply the same gate.
+Optional `maxApprovedRepairPlanAgeSeconds` limits how long that reviewed plan
+may be reused. Future plan timestamps are rejected even when no age limit is
+configured.
+Optional `maxApprovedRepairPlanFileSizeBytes` applies an operator-selected
+byte limit before the approval JSON is parsed. It is unset by default and is
+shared by repair execution and all file-only repair evidence verifiers.
+Optional `maxEvidenceFileSizeBytes` bounds the execution, failure,
+post-repair verification, and unified outcome JSON inputs. Reads stop as soon
+as the configured limit is crossed, including when a file grows after its
+initial size check.
+Repair execution captures the approved-plan SHA before opening the migration
+connections and uses that same value in execution, failure, and outcome
+evidence. The final outcome publication rechecks the file against the captured
+SHA, so a plan replaced while repair is running cannot produce a verified
+outcome.
+The approved file is read once as bytes; its SHA and parsed model therefore
+refer to exactly the same content. That validated model is retained for the
+live repair-plan comparison. Offline verification also rejects execution or
+failure evidence dated before the approved plan.
+Repair execution, failure, post-repair verification, and saved outcome files
+are also fingerprinted and parsed from one byte snapshot during offline
+verification. Outcome publication reuses those accepted fingerprints.
+The unified outcome selector and saved-outcome verifier accept the same
+directory property, so later CI stages need only the approved plan plus the
+repair report directory. All three commands share one filename definition.
 If replay completes but post-repair verification still differs, the failure
 phase is `POST_VERIFICATION`. The evidence records all completed repair tasks,
 the first mismatched task and, when configured, the SHA-256 of the bounded
 post-repair verification report. This is repair-failure report format version 2.
+Readers apply the same per-task count and chunk-list validation used for
+successful execution evidence. They reject negative or contradictory counts,
+duplicate task or chunk identifiers, overlapping extra/missing classifications,
+and preflight failures that claim completed tasks.
 The file-only repair-failure evidence verifier binds that failure report back
 to the approved plan. It checks that completed tasks are an exact prefix of the
 approved dependency order and that an execution failure identifies the next
@@ -1309,6 +1354,37 @@ task, in addition to optional artifact fingerprints, provenance, and age.
 For `POST_VERIFICATION`, supplying `postRepairVerificationReportFile` also
 checks its SHA-256, mismatch state, task order, plan fingerprint, provenance,
 and generation time.
+An optional expected post-repair verification SHA-256 can be supplied by CI or
+an approval system, adding an external pin to the fingerprint already embedded
+in the failure report.
+A single outcome verifier is available for the ordinary audit path. Given the
+approved plan and the conventional success/failure output locations, it chooses
+failure evidence when present and otherwise verifies successful execution plus
+post-repair comparison. The result is `SUCCEEDED`, `EXECUTION_FAILED`, or
+`VERIFICATION_FAILED`; the underlying strict validators retain the same checks.
+An optional outcome file atomically records that result with the migration and
+repair identities, exact SHA-256 fingerprints of the evidence used, the
+optional failure phase and task, and common provenance. It provides a bounded
+CI artifact without copying row or exception details from the authoritative
+execution, failure, and verification reports. It is published only after all
+identity, freshness, provenance, ordering, and conflict checks pass and cannot
+overwrite an input report.
+An existing outcome at that dedicated path is removed before validation, so a
+rejected evidence set cannot be confused with an earlier verified decision.
+For a deployment gate, optional `expectedStatus` can require `SUCCEEDED`.
+Verified failure evidence is still written to the outcome file before the gate
+fails, preserving the actual result for diagnosis. With no expected status,
+all three verified states remain successful audit results.
+A separate saved-outcome verifier supports later audit and independent CI
+stages. It can externally pin the outcome file SHA-256 and expected status,
+re-runs the strict source-evidence verifier, compares every identity, source
+fingerprint, failure reference and provenance field, and checks that the
+outcome timestamp follows its evidence. Optional maximum age rejects stale
+outcomes; future timestamps are always rejected.
+For an execution failure it rejects leftover success artifacts instead of
+silently ignoring them. For a post-verification failure, an available execution
+report is joined by plan and approval fingerprints, complete task results,
+provenance, and timestamps; an externally pinned execution SHA remains enforced.
 It also accepts the same reviewed assessment, DDL-verification and live-target
 validation gates as declarative migration execution, including target report
 age and environment identity checks.

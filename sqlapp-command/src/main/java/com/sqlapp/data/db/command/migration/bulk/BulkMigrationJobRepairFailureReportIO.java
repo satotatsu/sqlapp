@@ -2,10 +2,10 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Objects;
 
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
@@ -75,19 +75,37 @@ public final class BulkMigrationJobRepairFailureReportIO {
 	}
 
 	public BulkMigrationJobRepairFailureReport read(final Path file) {
+		return read(file, null);
+	}
+
+	public BulkMigrationJobRepairFailureReport read(final Path file, final Long maxFileSizeBytes) {
+		return readSnapshot(file, maxFileSizeBytes).report();
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration job repair failure report does not exist: " + absolute);
 		}
 		try {
-			return validate(new JsonConverter().fromJsonString(absolute.toFile(),
+			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+					"maxEvidenceFileSizeBytes", "Bulk migration job repair failure report");
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationJobRepairFailureReport.class));
-		} catch (RuntimeException e) {
+			return new Snapshot(report, fingerprint(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
 			throw new CommandException("Failed to read bulk migration job repair failure report: " + absolute, e);
 		}
+	}
+
+	record Snapshot(BulkMigrationJobRepairFailureReport report, String fingerprint) {
+	}
+
+	private static String fingerprint(final byte[] bytes) {
+		return "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes);
 	}
 
 	static BulkMigrationJobRepairFailureReport validate(final BulkMigrationJobRepairFailureReport report) {
@@ -107,11 +125,10 @@ public final class BulkMigrationJobRepairFailureReportIO {
 						&& !sha256(report.postRepairVerificationReportFingerprint()))) {
 			throw new CommandException("Bulk migration job repair failure verification fingerprint is invalid");
 		}
-		final var ids = new HashSet<String>();
-		for (final var task : report.completedTasks()) {
-			if (task == null || blank(task.taskId()) || !ids.add(task.taskId())) {
-				throw new CommandException("Bulk migration job repair completed task is invalid");
-			}
+		BulkMigrationJobRepairTaskEvidenceValidator.validate(report.completedTasks(),
+				"Bulk migration job repair completed");
+		if ("PREFLIGHT".equals(report.phase()) && !report.completedTasks().isEmpty()) {
+			throw new CommandException("Bulk migration job repair preflight failure must not contain completed tasks");
 		}
 		return report;
 	}

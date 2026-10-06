@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.util.MessageDigests;
 
 class BulkMigrationJobRepairFailureReportIOTest {
 	@TempDir
@@ -31,6 +32,9 @@ class BulkMigrationJobRepairFailureReportIOTest {
 		io.write(file, report);
 
 		assertEquals(report, io.read(file));
+		final var snapshot = io.readSnapshot(file, null);
+		assertEquals(report, snapshot.report());
+		assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(file.toFile()), snapshot.fingerprint());
 	}
 
 	@Test
@@ -41,5 +45,35 @@ class BulkMigrationJobRepairFailureReportIOTest {
 
 		assertThrows(CommandException.class,
 				() -> new BulkMigrationJobRepairFailureReportIO().write(temporaryDirectory.resolve("invalid.json"), report));
+	}
+
+	@Test
+	void rejectsInvalidCompletedTaskMetricsAndPreflightResults() {
+		final var invalidMetrics = new BulkMigrationJobRepairExecutionReport.Task("items", 1, 2, 1, 1,
+				List.of(), List.of());
+		final var execution = report("EXECUTION", List.of(invalidMetrics));
+		final var completedPreflight = report("PREFLIGHT", List.of(
+				new BulkMigrationJobRepairExecutionReport.Task("items", 1, 1, 1, 1, List.of(), List.of())));
+
+		assertThrows(CommandException.class, () -> new BulkMigrationJobRepairFailureReportIO()
+				.write(temporaryDirectory.resolve("invalid-metrics.json"), execution));
+		assertThrows(CommandException.class, () -> new BulkMigrationJobRepairFailureReportIO()
+				.write(temporaryDirectory.resolve("invalid-preflight.json"), completedPreflight));
+	}
+
+	@Test
+	void rejectsAChunkClassifiedAsBothExtraAndMissing() {
+		final var overlap = new BulkMigrationJobRepairExecutionReport.Task("items", 1, 0, 0, 0,
+				List.of(3L), List.of(3L));
+
+		assertThrows(CommandException.class, () -> new BulkMigrationJobRepairFailureReportIO()
+				.write(temporaryDirectory.resolve("overlap.json"), report("EXECUTION", List.of(overlap))));
+	}
+
+	private static BulkMigrationJobRepairFailureReport report(final String phase,
+			final List<BulkMigrationJobRepairExecutionReport.Task> tasks) {
+		return new BulkMigrationJobRepairFailureReport(BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION,
+				Instant.now(), "migration", "repair", "sha256:" + "c".repeat(64), null, phase, "items",
+				"failure", "message", tasks, null);
 	}
 }

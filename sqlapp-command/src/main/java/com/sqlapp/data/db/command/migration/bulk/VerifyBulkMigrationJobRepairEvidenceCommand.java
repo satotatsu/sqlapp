@@ -8,7 +8,6 @@ import java.util.Objects;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.MessageDigests;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -17,8 +16,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand {
+	private File repairReportDirectory;
 	private File repairExecutionReportFile;
 	private File approvedRepairPlanFile;
+	private String expectedApprovedRepairPlanFileFingerprint;
+	private Long maxApprovedRepairPlanAgeSeconds;
+	private Long maxApprovedRepairPlanFileSizeBytes;
 	private File postRepairVerificationReportFile;
 	private String expectedRepairExecutionReportFingerprint;
 	private String expectedPostRepairVerificationReportFingerprint;
@@ -26,13 +29,25 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 	private String expectedRepairPlanFingerprint;
 	private String expectedConfigurationFingerprint;
 	private Long maxEvidenceAgeSeconds;
+	private Long maxEvidenceFileSizeBytes;
 	private BulkMigrationJobRepairExecutionReport report;
+	private BulkMigrationVerificationReport postRepairVerificationReport;
+	private String reportFingerprint;
+	private String postRepairVerificationReportFingerprint;
 
 	@Override
 	protected void doRun() {
 		report = null;
+		reportFingerprint = null;
+		postRepairVerificationReportFingerprint = null;
+		postRepairVerificationReport = null;
+		resolveReportFiles();
 		requireFile(repairExecutionReportFile, "repairExecutionReportFile");
 		requireFile(approvedRepairPlanFile, "approvedRepairPlanFile");
+		final var approved = BulkMigrationJobRepairApprovalValidator.validate(approvedRepairPlanFile,
+				expectedApprovedRepairPlanFileFingerprint, maxApprovedRepairPlanAgeSeconds,
+				maxApprovedRepairPlanFileSizeBytes);
+		final var approval = approved.report();
 		requireFile(postRepairVerificationReportFile, "postRepairVerificationReportFile");
 		validateSha256(expectedRepairExecutionReportFingerprint, "expectedRepairExecutionReportFingerprint");
 		validateSha256(expectedPostRepairVerificationReportFingerprint,
@@ -43,11 +58,14 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 		if (maxEvidenceAgeSeconds != null && maxEvidenceAgeSeconds <= 0) {
 			throw new CommandException("maxEvidenceAgeSeconds must be greater than zero.");
 		}
-		verifyExpectedFileFingerprint();
-		final var execution = new BulkMigrationJobRepairExecutionReportIO().read(repairExecutionReportFile.toPath());
-		final var approval = new BulkMigrationJobRepairPlanReportIO().read(approvedRepairPlanFile.toPath());
-		final var verification = new BulkMigrationVerificationReportIO().read(postRepairVerificationReportFile.toPath());
-		if (!fingerprint(approvedRepairPlanFile).equals(execution.approvedRepairPlanFileFingerprint())
+		final var executionSnapshot = new BulkMigrationJobRepairExecutionReportIO()
+				.readSnapshot(repairExecutionReportFile.toPath(), maxEvidenceFileSizeBytes);
+		final var verificationSnapshot = new BulkMigrationVerificationReportIO()
+				.readSnapshot(postRepairVerificationReportFile.toPath(), maxEvidenceFileSizeBytes);
+		verifyExpectedFileFingerprint(executionSnapshot.fingerprint(), verificationSnapshot.fingerprint());
+		final var execution = executionSnapshot.report();
+		final var verification = verificationSnapshot.report();
+		if (!approved.fingerprint().equals(execution.approvedRepairPlanFileFingerprint())
 				|| !approval.planFingerprint().equals(execution.repairPlanFingerprint())
 				|| !approval.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList()
 						.equals(execution.tasks().stream().map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList())) {
@@ -57,6 +75,7 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 				|| !execution.tasks().stream().map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList()
 						.equals(verification.tasks().stream().map(BulkMigrationVerificationReport.Task::taskId).toList())
 				|| !Objects.equals(execution.provenance(), verification.provenance())
+				|| execution.completedAt().isBefore(approval.generatedAt())
 				|| verification.generatedAt().isBefore(execution.completedAt())) {
 			throw new CommandException("Post-repair verification report does not match successful repair execution.");
 		}
@@ -74,17 +93,37 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 		}
 		validateAge(execution.completedAt());
 		report = execution;
+		postRepairVerificationReport = verification;
+		reportFingerprint = executionSnapshot.fingerprint();
+		postRepairVerificationReportFingerprint = verificationSnapshot.fingerprint();
 		info("Bulk migration job repair evidence verified: ", repairExecutionReportFile.getAbsolutePath());
 	}
 
-	private void verifyExpectedFileFingerprint() {
+	private void resolveReportFiles() {
+		if (repairReportDirectory == null) {
+			return;
+		}
+		if (!repairReportDirectory.isDirectory()) {
+			throw new CommandException("repairReportDirectory must be an existing directory.");
+		}
+		final var resolved = BulkMigrationJobRepairReportFiles.resolve(repairReportDirectory);
+		if (repairExecutionReportFile == null) {
+			repairExecutionReportFile = resolved.execution();
+		}
+		if (postRepairVerificationReportFile == null) {
+			postRepairVerificationReportFile = resolved.verification();
+		}
+	}
+
+	private void verifyExpectedFileFingerprint(final String executionFingerprint,
+			final String verificationFingerprint) {
 		if (expectedRepairExecutionReportFingerprint != null
-				&& !expectedRepairExecutionReportFingerprint.equals(fingerprint(repairExecutionReportFile))) {
+				&& !expectedRepairExecutionReportFingerprint.equals(executionFingerprint)) {
 			throw new CommandException(
 					"repairExecutionReportFile fingerprint does not match expectedRepairExecutionReportFingerprint.");
 		}
 		if (expectedPostRepairVerificationReportFingerprint != null
-				&& !expectedPostRepairVerificationReportFingerprint.equals(fingerprint(postRepairVerificationReportFile))) {
+				&& !expectedPostRepairVerificationReportFingerprint.equals(verificationFingerprint)) {
 			throw new CommandException(
 					"postRepairVerificationReportFile fingerprint does not match expectedPostRepairVerificationReportFingerprint.");
 		}
@@ -125,7 +164,4 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 		}
 	}
 
-	private static String fingerprint(final File file) {
-		return "sha256:" + MessageDigests.SHA256.checksumAsString(file);
-	}
 }

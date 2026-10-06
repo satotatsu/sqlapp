@@ -77,6 +77,8 @@ Use the Gradle Wrapper and Java 21. Run `gradlew tasks` (Windows:
 | Migration | `executeBulkMigrationJobRepair` | Re-verify and execute an approved declarative repair plan |
 | Migration | `verifyBulkMigrationJobRepairEvidence` | Verify repair approval, execution and post-repair evidence without database access |
 | Migration | `verifyBulkMigrationJobRepairFailureEvidence` | Verify approved repair failure evidence without database access |
+| Migration | `verifyBulkMigrationJobRepairOutcome` | Verify whichever success or failure evidence exists for an approved repair |
+| Migration | `verifyBulkMigrationJobRepairOutcomeReport` | Revalidate a saved unified repair outcome against its source evidence |
 | Normalization | `generateNormalizationPlan` | Generate reviewable normalization candidates and a preview schema |
 | Normalization | `firstNormalForm` | Split repeating column groups and optionally replace composite primary keys |
 | Normalization | `columnRuleTransform` | Apply YAML-based column type and naming rules |
@@ -398,9 +400,11 @@ plan, and requires the reviewed JSON fingerprint to match before writing:
 tasks.named('executeBulkMigrationJobRepair') {
     configurationFile = layout.buildDirectory.file('reports/access-load.yaml')
     approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
-    repairExecutionReportFile = layout.buildDirectory.file('reports/access-load-repair-execution.json')
-    repairFailureReportFile = layout.buildDirectory.file('reports/access-load-repair-failure.json')
-    postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-repaired.json')
+    expectedApprovedRepairPlanFileFingerprint = providers.gradleProperty('approvedRepairPlanFileFingerprint')
+    maxApprovedRepairPlanAgeSeconds = 86400L
+    maxApprovedRepairPlanFileSizeBytes = 10 * 1024 * 1024L
+    maxEvidenceFileSizeBytes = 20 * 1024 * 1024L
+    repairReportDirectory = layout.buildDirectory.dir('reports/access-load-repair')
     expectedConfigurationFingerprint = providers.gradleProperty('approvedJobFingerprint')
     assessmentReportFile = layout.buildDirectory.file('reports/migration.json')
     ddlVerificationReportFile = layout.buildDirectory.file('reports/ddl-verification.json')
@@ -426,6 +430,21 @@ configured outcome files from an earlier run are cleared immediately before
 replay. Outcome paths must be distinct from each other and from approval input
 files. A failure-report write error is attached to the original repair error.
 it is a distinct format and cannot be mistaken for successful execution.
+`repairOutcomeReportFile` is the integrated audit option. When set, the
+execution task runs the same strict outcome verifier and atomically publishes
+`SUCCEEDED`, `EXECUTION_FAILED`, or `VERIFICATION_FAILED` before returning.
+It requires all three detailed report paths because their SHA-256 values are
+the authoritative evidence referenced by the bounded outcome. A failure to
+publish failure-state evidence is attached to the original repair exception;
+a success-state publication error fails the task after repaired data and
+detailed evidence have already been written.
+`repairReportDirectory` is the common concise configuration. It supplies
+`repair-execution.json`, `repair-failure.json`,
+`post-repair-verification.json`, and `repair-outcome.json` within that
+directory. Any individually configured report file overrides only its matching
+default, keeping custom CI layouts available without complicating the normal
+case. A path that already exists as a regular file is rejected before database
+access.
 The file-only `verifyBulkMigrationJobRepairEvidence` task can later bind the
 approved plan, execution report, and successful post-repair verification into
 one audit check without reconnecting to either database:
@@ -433,8 +452,9 @@ one audit check without reconnecting to either database:
 ```groovy
 verifyBulkMigrationJobRepairEvidence {
     approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
-    repairExecutionReportFile = layout.buildDirectory.file('reports/access-load-repair-execution.json')
-    postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-repaired.json')
+    expectedApprovedRepairPlanFileFingerprint = providers.gradleProperty('approvedRepairPlanFileFingerprint')
+    maxApprovedRepairPlanAgeSeconds = 86400L
+    repairReportDirectory = layout.buildDirectory.dir('reports/access-load-repair')
     expectedRepairExecutionReportFingerprint = providers.gradleProperty('approvedRepairExecutionFingerprint')
     expectedPostRepairVerificationReportFingerprint = providers.gradleProperty('approvedPostRepairVerificationFingerprint')
     maxEvidenceAgeSeconds = 86400L
@@ -446,9 +466,11 @@ post-repair verification report:
 
 ```groovy
 verifyBulkMigrationJobRepairFailureEvidence {
-    repairFailureReportFile = layout.buildDirectory.file('reports/access-load-repair-failure.json')
     approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
-    postRepairVerificationReportFile = layout.buildDirectory.file('reports/access-load-post-repair.json')
+    expectedApprovedRepairPlanFileFingerprint = providers.gradleProperty('approvedRepairPlanFileFingerprint')
+    maxApprovedRepairPlanAgeSeconds = 86400L
+    repairReportDirectory = layout.buildDirectory.dir('reports/access-load-repair')
+    expectedPostRepairVerificationReportFingerprint = providers.gradleProperty('approvedFailedVerificationFingerprint')
     maxEvidenceAgeSeconds = 86400
 }
 ```
@@ -457,6 +479,97 @@ This checks the approved-plan file SHA, repair-plan fingerprint, completed task
 prefix, failed task position, optional expected fingerprints, provenance and
 evidence age. For `POST_VERIFICATION` failures, it also checks the referenced
 mismatch report when that report was configured during repair.
+The optional expected post-repair verification fingerprint provides a second,
+externally supplied pin in addition to the SHA stored inside failure evidence.
+Both evidence tasks accept the same `repairReportDirectory` used by repair
+execution. Individual report-file properties remain available as overrides.
+
+For the common audit path, `verifyBulkMigrationJobRepairOutcome` selects the
+failure report when it exists; otherwise it verifies the execution and
+post-repair verification reports. It returns `SUCCEEDED`, `EXECUTION_FAILED`,
+or `VERIFICATION_FAILED` while delegating all checks to the strict verifiers:
+
+```groovy
+verifyBulkMigrationJobRepairOutcome {
+    approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
+    expectedApprovedRepairPlanFileFingerprint = providers.gradleProperty('approvedRepairPlanFileFingerprint')
+    maxApprovedRepairPlanAgeSeconds = 86400L
+    repairReportDirectory = layout.buildDirectory.dir('reports/access-load-repair')
+    expectedStatus = 'SUCCEEDED'
+    maxEvidenceAgeSeconds = 86400
+}
+```
+
+All three conventional outcome paths may be configured together. The Gradle
+task treats the alternatives as optional file inputs, so the intentionally
+absent failure file on success, or absent success files on execution failure,
+does not cause Gradle input validation to stop before outcome selection.
+An execution failure rejects any existing success-side artifact as conflicting
+evidence. A verification failure also binds an available execution report to
+the failure and mismatch reports by fingerprints, task results, provenance and
+timestamps. Expected fingerprints are never treated as satisfied when their
+corresponding evidence file is absent.
+When `outcomeReportFile` is set, the task atomically writes one bounded JSON
+summary after successful verification. It records the selected status,
+migration and repair identities, exact evidence SHA-256 fingerprints, optional
+failure phase and task, and shared provenance. This gives CI one stable
+artifact for all three outcomes while the input reports remain authoritative
+for details. The output path must differ from every input report. Omitting the
+property preserves log-only verification.
+When configured, a stale outcome file is removed before validation starts, so
+a failed validation cannot leave a previous decision available to CI.
+`expectedStatus` is optional. Set it to `SUCCEEDED` for a deployment gate; a
+verified execution or post-verification failure then writes the actual outcome
+report and fails the task with both actual and expected statuses. Leave it
+unset when all three verified states are valid audit results. An invalid status
+value is rejected before an existing outcome output is removed.
+
+Use `verifyBulkMigrationJobRepairOutcomeReport` when consuming that saved
+summary later or in a separate CI stage:
+
+```groovy
+verifyBulkMigrationJobRepairOutcomeReport {
+    approvedRepairPlanFile = layout.buildDirectory.file('reports/access-load-repair-plan.json')
+    expectedApprovedRepairPlanFileFingerprint = providers.gradleProperty('approvedRepairPlanFileFingerprint')
+    maxApprovedRepairPlanAgeSeconds = 86400L
+    repairReportDirectory = layout.buildDirectory.dir('reports/access-load-repair')
+    expectedStatus = 'SUCCEEDED'
+    expectedOutcomeReportFingerprint = providers.gradleProperty('approvedRepairOutcomeFingerprint')
+    maxEvidenceAgeSeconds = 86400
+}
+```
+
+The verifier recalculates outcome selection through the strict source-evidence
+verifiers and compares every saved identity, source SHA, failure reference and
+provenance field. It also rejects a future or expired outcome and an outcome
+timestamp preceding any selected source report. Alternative source paths use
+the same optional-file behavior as the generating task.
+Both outcome tasks accept `repairReportDirectory` and use the same four names
+as repair execution. Individual file properties remain available as selective
+overrides.
+All repair execution and evidence-verification tasks also accept
+`expectedApprovedRepairPlanFileFingerprint`. When configured, the lowercase
+`sha256:` value is checked against the exact reviewed plan file before repair
+execution or evidence selection proceeds. Optional
+`maxApprovedRepairPlanAgeSeconds` rejects stale approval plans; a plan dated in
+the future is always rejected. Optional
+`maxApprovedRepairPlanFileSizeBytes` rejects an unexpectedly large approval
+file before JSON parsing. It has no default, so the common configuration stays
+unchanged; set it where an operator or CI policy defines an appropriate bound.
+Optional `maxEvidenceFileSizeBytes` applies the same bounded-read behavior to
+repair execution, failure, post-repair verification, and saved outcome JSON.
+It is also unset by default and is shared by all repair evidence verifiers.
+Repair execution captures the accepted plan SHA once and binds every detailed
+and unified outcome artifact to it. Integrated outcome publication rechecks the
+current plan file against that captured value.
+The approval file is read once as bytes, and both its SHA and parsed model come
+from that snapshot. The model is retained for the live plan comparison.
+Execution, failure, post-repair verification, and saved outcome evidence use
+the same single-snapshot rule, so expected SHA checks and JSON validation
+cannot observe different versions of a replaced file. Saved-outcome ordering
+checks reuse the already accepted verification model instead of reopening it.
+Evidence verification requires execution and failure timestamps to follow the
+approval timestamp.
 
 The assessment, DDL and target-validation approval properties have the same
 meaning as on `executeBulkMigrationJob`. When supplied, repair validates their

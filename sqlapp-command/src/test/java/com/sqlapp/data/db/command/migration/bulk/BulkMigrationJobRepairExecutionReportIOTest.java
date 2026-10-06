@@ -15,6 +15,7 @@ import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTaskRepairResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairResult;
+import com.sqlapp.util.MessageDigests;
 
 class BulkMigrationJobRepairExecutionReportIOTest {
 	@TempDir
@@ -32,6 +33,7 @@ class BulkMigrationJobRepairExecutionReportIOTest {
 
 		io.write(file, "migration-plan", "sha256:" + "c".repeat(64), result, provenance);
 		final var report = io.read(file);
+		final var snapshot = io.readSnapshot(file, null);
 
 		assertEquals("migration-plan", report.migrationPlanFingerprint());
 		assertEquals("repair-plan", report.repairPlanFingerprint());
@@ -40,6 +42,8 @@ class BulkMigrationJobRepairExecutionReportIOTest {
 		assertEquals(3, report.replayedRows());
 		assertEquals(1, report.tasksRequiringManualReconciliation());
 		assertEquals(provenance, report.provenance());
+		assertEquals(report, snapshot.report());
+		assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(file.toFile()), snapshot.fingerprint());
 	}
 
 	@Test

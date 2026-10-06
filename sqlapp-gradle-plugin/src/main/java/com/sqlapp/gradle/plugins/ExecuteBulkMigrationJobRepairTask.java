@@ -3,11 +3,13 @@ package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -34,12 +36,24 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	public abstract Property<String> getExpectedConfigurationFingerprint();
 	@InputFile @PathSensitive(PathSensitivity.NONE)
 	public abstract RegularFileProperty getApprovedRepairPlanFile();
+	@Input @Optional
+	public abstract Property<String> getExpectedApprovedRepairPlanFileFingerprint();
+	@Input @Optional
+	public abstract Property<Long> getMaxApprovedRepairPlanAgeSeconds();
+	@Input @Optional
+	public abstract Property<Long> getMaxApprovedRepairPlanFileSizeBytes();
+	@Input @Optional
+	public abstract Property<Long> getMaxEvidenceFileSizeBytes();
+	@OutputDirectory @Optional
+	public abstract DirectoryProperty getRepairReportDirectory();
 	@OutputFile @Optional
 	public abstract RegularFileProperty getRepairExecutionReportFile();
 	@OutputFile @Optional
 	public abstract RegularFileProperty getRepairFailureReportFile();
 	@OutputFile @Optional
 	public abstract RegularFileProperty getPostRepairVerificationReportFile();
+	@OutputFile @Optional
+	public abstract RegularFileProperty getRepairOutcomeReportFile();
 	@InputFile @Optional @PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getAssessmentReportFile();
 	@InputFile @Optional @PathSensitive(PathSensitivity.RELATIVE)
@@ -63,6 +77,22 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	protected void beforeRun(final ExecuteBulkMigrationJobRepairCommand command) {
 		command.setConfigurationFile(getConfigurationFile().get().getAsFile());
 		command.setApprovedRepairPlanFile(getApprovedRepairPlanFile().get().getAsFile());
+		if (getExpectedApprovedRepairPlanFileFingerprint().isPresent()) {
+			command.setExpectedApprovedRepairPlanFileFingerprint(
+					getExpectedApprovedRepairPlanFileFingerprint().get());
+		}
+		if (getMaxApprovedRepairPlanAgeSeconds().isPresent()) {
+			command.setMaxApprovedRepairPlanAgeSeconds(getMaxApprovedRepairPlanAgeSeconds().get());
+		}
+		if (getMaxApprovedRepairPlanFileSizeBytes().isPresent()) {
+			command.setMaxApprovedRepairPlanFileSizeBytes(getMaxApprovedRepairPlanFileSizeBytes().get());
+		}
+		if (getMaxEvidenceFileSizeBytes().isPresent()) {
+			command.setMaxEvidenceFileSizeBytes(getMaxEvidenceFileSizeBytes().get());
+		}
+		if (getRepairReportDirectory().isPresent()) {
+			command.setRepairReportDirectory(getRepairReportDirectory().get().getAsFile());
+		}
 		if (getRepairExecutionReportFile().isPresent()) {
 			command.setRepairExecutionReportFile(getRepairExecutionReportFile().get().getAsFile());
 		}
@@ -72,6 +102,9 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 		if (getPostRepairVerificationReportFile().isPresent()) {
 			command.setPostRepairVerificationReportFile(
 					getPostRepairVerificationReportFile().get().getAsFile());
+		}
+		if (getRepairOutcomeReportFile().isPresent()) {
+			command.setRepairOutcomeReportFile(getRepairOutcomeReportFile().get().getAsFile());
 		}
 		if (getAssessmentReportFile().isPresent()) {
 			command.setAssessmentReportFile(getAssessmentReportFile().get().getAsFile());

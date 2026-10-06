@@ -2,10 +2,10 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.Objects;
 
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
@@ -51,19 +51,37 @@ public final class BulkMigrationJobRepairExecutionReportIO {
 	}
 
 	public BulkMigrationJobRepairExecutionReport read(final Path file) {
+		return read(file, null);
+	}
+
+	public BulkMigrationJobRepairExecutionReport read(final Path file, final Long maxFileSizeBytes) {
+		return readSnapshot(file, maxFileSizeBytes).report();
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration job repair execution report does not exist: " + absolute);
 		}
 		try {
-			return validate(new JsonConverter().fromJsonString(absolute.toFile(),
+			final byte[] bytes = BoundedMigrationJsonFile.read(absolute, maxFileSizeBytes,
+					"maxEvidenceFileSizeBytes", "Bulk migration job repair execution report");
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationJobRepairExecutionReport.class));
-		} catch (RuntimeException e) {
+			return new Snapshot(report, fingerprint(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
 			throw new CommandException("Failed to read bulk migration job repair execution report: " + absolute, e);
 		}
+	}
+
+	record Snapshot(BulkMigrationJobRepairExecutionReport report, String fingerprint) {
+	}
+
+	private static String fingerprint(final byte[] bytes) {
+		return "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes);
 	}
 
 	static BulkMigrationJobRepairExecutionReport validate(final BulkMigrationJobRepairExecutionReport report) {
@@ -75,43 +93,14 @@ public final class BulkMigrationJobRepairExecutionReportIO {
 				|| report.tasks() == null) {
 			throw new CommandException("Bulk migration job repair execution report header is invalid");
 		}
-		long mismatchChunks = 0;
-		long replayedChunks = 0;
-		long replayedRows = 0;
-		long affectedRows = 0;
-		long manualTasks = 0;
-		final var taskIds = new HashSet<String>();
-		for (final var task : report.tasks()) {
-			if (task == null || blank(task.taskId()) || !taskIds.add(task.taskId()) || task.mismatchChunks() < 0
-					|| task.replayedChunks() < 0 || task.replayedChunks() > task.mismatchChunks()
-					|| task.replayedRows() < 0 || task.affectedRows() < 0
-					|| invalidChunks(task.chunksWithExtraActualRows())
-					|| invalidChunks(task.chunksWithoutExpectedRows())) {
-				throw new CommandException("Bulk migration job repair execution task is invalid");
-			}
-			try {
-				mismatchChunks = Math.addExact(mismatchChunks, task.mismatchChunks());
-				replayedChunks = Math.addExact(replayedChunks, task.replayedChunks());
-				replayedRows = Math.addExact(replayedRows, task.replayedRows());
-				affectedRows = Math.addExact(affectedRows, task.affectedRows());
-			} catch (ArithmeticException e) {
-				throw new CommandException("Bulk migration job repair execution count overflow", e);
-			}
-			if (!task.chunksWithExtraActualRows().isEmpty() || !task.chunksWithoutExpectedRows().isEmpty()) {
-				manualTasks++;
-			}
-		}
-		if (mismatchChunks != report.mismatchChunks() || replayedChunks != report.replayedChunks()
-				|| replayedRows != report.replayedRows() || affectedRows != report.affectedRows()
-				|| manualTasks != report.tasksRequiringManualReconciliation()) {
+		final var totals = BulkMigrationJobRepairTaskEvidenceValidator.validate(report.tasks(),
+				"Bulk migration job repair execution");
+		if (totals.mismatchChunks() != report.mismatchChunks() || totals.replayedChunks() != report.replayedChunks()
+				|| totals.replayedRows() != report.replayedRows() || totals.affectedRows() != report.affectedRows()
+				|| totals.tasksRequiringManualReconciliation() != report.tasksRequiringManualReconciliation()) {
 			throw new CommandException("Bulk migration job repair execution report summary is inconsistent");
 		}
 		return report;
-	}
-
-	private static boolean invalidChunks(final java.util.List<Long> chunks) {
-		return chunks == null || chunks.stream().anyMatch(value -> value == null || value < 0)
-				|| new HashSet<>(chunks).size() != chunks.size();
 	}
 
 	private static boolean blank(final String value) {
