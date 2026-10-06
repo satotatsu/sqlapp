@@ -103,7 +103,9 @@ Java or a Gradle plugin. Set `plan` and its matching read-only
 the migration, modify checkpoints, or recover maintenance. All complex values
 are programmatic properties rather than a second migration-plan file format,
 and the task is deliberately not build-cacheable because their stores can
-change outside Gradle.
+change outside Gradle. Optional `maxOperationalReportFileSizeBytes` bounds the
+generated JSON. The command atomically writes and rereads the report, compares
+the parsed model, and exposes the accepted SHA-256 fingerprint.
 
 ### `generateBulkMigrationJobRepairPlanReport`
 
@@ -117,8 +119,13 @@ preflight and dependency ordering before the task writes the report.
 generateBulkMigrationJobRepairPlanReport {
     plan = assembledRepairPlan
     targetFile = layout.buildDirectory.file('reports/migration/repair-plan.json')
+    maxRepairPlanReportFileSizeBytes = 2 * 1024 * 1024L // optional
 }
 ```
+
+The generated report is atomically written, read back from a bounded byte
+snapshot, and compared with the requested model. The command exposes the
+accepted report and its SHA-256 fingerprint for approval workflows.
 
 ### `executeMigrationSnapshot`
 
@@ -287,6 +294,9 @@ SHA-256 and parsed model are derived from the same byte snapshot. The accepted
 target-report fingerprint is reused in operational and repair provenance, so a
 file replacement between approval and evidence generation cannot authorize
 different content.
+Execution-generated verification and mismatch repair-plan files are also read
+back and model-checked after their atomic write. Their accepted SHA-256 values
+remain available from `ExecuteBulkMigrationJobCommand` for CI handoff.
 The three byte limits are optional and have no implicit default. When
 configured, they reject oversized YAML, Schema XML, or target evidence before
 parsing, and the bounded read also detects a file that grows after its initial

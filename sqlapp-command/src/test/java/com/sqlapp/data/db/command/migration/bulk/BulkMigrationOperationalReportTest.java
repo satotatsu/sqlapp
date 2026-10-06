@@ -28,6 +28,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointStore;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobLifecycle;
@@ -544,6 +545,13 @@ class BulkMigrationOperationalReportTest {
 
 		assertTrue(target.toFile().isFile());
 		assertNotNull(new JsonConverter().fromJsonString(target.toFile(), Map.class).get("generatedAt"));
+		assertEquals(new BulkMigrationOperationalReportIO().read(target), command.getReport());
+		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(target.toFile()),
+				command.getReportFingerprint());
+		command.setMaxOperationalReportFileSizeBytes(1L);
+		assertThrows(CommandException.class, command::run);
+		command.setMaxOperationalReportFileSizeBytes(0L);
+		assertThrows(CommandException.class, command::run);
 		assertThrows(RuntimeException.class, new GenerateBulkMigrationOperationalReportCommand()::run);
 	}
 

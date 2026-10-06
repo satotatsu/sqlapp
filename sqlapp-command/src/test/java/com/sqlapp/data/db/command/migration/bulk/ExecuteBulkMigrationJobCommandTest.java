@@ -427,6 +427,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					operationalArtifact.provenance().assessmentReportFingerprint());
 			final var mismatchArtifact = new BulkMigrationVerificationReportIO()
 					.read(temporaryDirectory.resolve("reports/mismatch-verification.json"));
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(
+					temporaryDirectory.resolve("reports/mismatch-verification.json").toFile()),
+					mismatchCommand.getVerificationReportFingerprint());
 			assertEquals(false, mismatchArtifact.match());
 			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
 			assertEquals(operationalArtifact.provenance(), mismatchArtifact.provenance());
@@ -439,6 +442,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertNotNull(mismatchChunk.actualLastKey());
 			final var repairArtifact = new BulkMigrationJobRepairPlanReportIO()
 					.read(temporaryDirectory.resolve("reports/mismatch-repair.json"));
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(
+					temporaryDirectory.resolve("reports/mismatch-repair.json").toFile()),
+					mismatchCommand.getRepairPlanReportFingerprint());
 			assertEquals(List.of("items"), repairArtifact.tasks().stream()
 					.map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
 			assertEquals(0, repairArtifact.estimatedReplayRows());

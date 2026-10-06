@@ -17,16 +17,28 @@ import lombok.Setter;
 public class GenerateBulkMigrationJobRepairPlanReportCommand extends AbstractCommand {
 	private BulkMigrationJobRepairPlan plan;
 	private File targetFile;
+	private Long maxRepairPlanReportFileSizeBytes;
+	private BulkMigrationJobRepairPlanReport report;
+	private String reportFingerprint;
 
 	@Override
 	protected void doRun() {
+		report = null;
+		reportFingerprint = null;
 		if (plan == null) {
 			throw new CommandException("Bulk migration job repair plan is required.");
 		}
 		if (targetFile == null) {
 			throw new CommandException("Bulk migration job repair plan report target file is required.");
 		}
-		new BulkMigrationJobRepairPlanReportIO().write(targetFile.toPath(), plan);
+		if (maxRepairPlanReportFileSizeBytes != null && maxRepairPlanReportFileSizeBytes <= 0) {
+			throw new CommandException("maxRepairPlanReportFileSizeBytes must be greater than zero.");
+		}
+		final var io = new BulkMigrationJobRepairPlanReportIO();
+		final var snapshot = io.writeSnapshot(targetFile.toPath(), io.fromPlan(plan),
+				maxRepairPlanReportFileSizeBytes);
+		report = snapshot.report();
+		reportFingerprint = snapshot.fingerprint();
 		info("Bulk migration job repair plan report: ", targetFile.getAbsolutePath());
 	}
 }

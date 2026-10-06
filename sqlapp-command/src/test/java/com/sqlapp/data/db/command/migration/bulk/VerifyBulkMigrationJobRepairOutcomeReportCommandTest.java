@@ -43,6 +43,7 @@ class VerifyBulkMigrationJobRepairOutcomeReportCommandTest {
 		generate.setRepairFailureReportFile(failureFile.toFile());
 		generate.setOutcomeReportFile(outcomeFile.toFile());
 		generate.run();
+		assertEquals(fingerprint(outcomeFile), generate.getOutcomeReportFingerprint());
 
 		final var verify = command(outcomeFile, approvalFile, failureFile);
 		verify.setExpectedOutcomeReportFingerprint(fingerprint(outcomeFile));

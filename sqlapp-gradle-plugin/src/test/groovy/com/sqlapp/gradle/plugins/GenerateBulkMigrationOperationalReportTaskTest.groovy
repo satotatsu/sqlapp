@@ -20,5 +20,6 @@ class GenerateBulkMigrationOperationalReportTaskTest extends AbstractTaskTest {
 		assertFalse(task.status.isPresent())
 		assertFalse(task.maintenanceState.isPresent())
 		assertFalse(task.progress.isPresent())
+		assertFalse(task.maxOperationalReportFileSizeBytes.isPresent())
 	}
 }

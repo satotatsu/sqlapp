@@ -65,11 +65,15 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private BulkMigrationJobLeaseConfiguration leaseConfiguration;
 	private BulkMigrationJobResult result;
 	private BulkMigrationJobVerificationResult verificationResult;
+	private String verificationReportFingerprint;
+	private String repairPlanReportFingerprint;
 
 	@Override
 	protected void doRun() {
 		result = null;
 		verificationResult = null;
+		verificationReportFingerprint = null;
+		repairPlanReportFingerprint = null;
 		approvedTargetValidationReport = null;
 		approvedTargetValidationReportFingerprint = null;
 		if (getDataSource() == null) {
@@ -81,10 +85,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		if (plan == null && configurationFile == null) {
 			throw new CommandException("Bulk migration plan or configurationFile is required.");
 		}
-		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
-				expectedConfigurationFingerprint);
-		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
-				maxConfigurationFileSizeBytes);
+		BulkMigrationExecutionApprovalValidator.validateConfigurationInputs(configurationFile,
+				expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
 				ddlVerificationReportFile, maxApprovalArtifactFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
@@ -224,14 +226,17 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					verificationResult = verify(effectivePlan, targetConnection, verificationConfiguration.chunkSize(),
 							verificationConfiguration.columnsByTask());
 					if (verificationConfiguration.targetFile() != null) {
-						new BulkMigrationVerificationReportIO().write(verificationConfiguration.targetFile(),
-								effectivePlan.getFingerprint(), verificationConfiguration.isolation(),
-								verificationConfiguration.maxReportedMismatches(), verificationResult, provenance);
+						final var verificationIO = new BulkMigrationVerificationReportIO();
+						final var verificationReport = verificationIO.fromResult(effectivePlan.getFingerprint(),
+								verificationConfiguration.isolation(), verificationConfiguration.maxReportedMismatches(),
+								verificationResult, provenance);
+						verificationReportFingerprint = verificationIO
+								.writeSnapshot(verificationConfiguration.targetFile(), verificationReport).fingerprint();
 					}
 					if (!verificationResult.isMatch()
 							&& verificationConfiguration.repairPlanOnMismatchFile() != null) {
-						writeRepairPlan(effectivePlan, targetConnection, verificationResult,
-								verificationConfiguration.repairPlanOnMismatchFile());
+						repairPlanReportFingerprint = writeRepairPlan(effectivePlan, targetConnection,
+								verificationResult, verificationConfiguration.repairPlanOnMismatchFile());
 					}
 					if (verificationConfiguration.failOnMismatch() && !verificationResult.isMatch()) {
 						throw new CommandException("Bulk migration verification failed: "
@@ -252,11 +257,12 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
 	}
 
-	private static void writeRepairPlan(final BulkMigrationJobPlan plan, final Connection targetConnection,
+	private static String writeRepairPlan(final BulkMigrationJobPlan plan, final Connection targetConnection,
 			final BulkMigrationJobVerificationResult verification, final java.nio.file.Path targetFile)
 			throws SQLException {
 		final var repairPlan = repairPlan(plan, targetConnection, verification);
-		new BulkMigrationJobRepairPlanReportIO().write(targetFile, repairPlan);
+		final var io = new BulkMigrationJobRepairPlanReportIO();
+		return io.writeSnapshot(targetFile, io.fromPlan(repairPlan), null).fingerprint();
 	}
 
 	static com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlan repairPlan(final BulkMigrationJobPlan plan,

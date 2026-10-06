@@ -32,6 +32,7 @@ class BulkMigrationRepairPlanReportIOTest {
 		assertEquals(Map.of("ACCESS_ID", "ID"), io.read(file).columnMappings());
 		assertEquals(report, io.read(file, "plan-fingerprint"));
 		assertThrows(CommandException.class, () -> io.read(file, "another-plan"));
+		assertThrows(CommandException.class, () -> io.read(file, 1L));
 	}
 
 	@Test

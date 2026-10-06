@@ -23,9 +23,14 @@ public class GenerateBulkMigrationOperationalReportCommand extends AbstractComma
 	private BulkMigrationMaintenanceState maintenanceState;
 	private BulkMigrationProgressSnapshot progress;
 	private File targetFile;
+	private Long maxOperationalReportFileSizeBytes;
+	private BulkMigrationOperationalReport report;
+	private String reportFingerprint;
 
 	@Override
 	protected void doRun() {
+		report = null;
+		reportFingerprint = null;
 		if (plan == null) {
 			throw new CommandException("Bulk migration plan is required.");
 		}
@@ -35,8 +40,14 @@ public class GenerateBulkMigrationOperationalReportCommand extends AbstractComma
 		if (targetFile == null) {
 			throw new CommandException("Bulk migration report target file is required.");
 		}
-		final var report = new BulkMigrationOperationalReportBuilder().build(plan, status, maintenanceState, progress);
-		new BulkMigrationOperationalReportIO().write(targetFile.toPath(), report);
+		if (maxOperationalReportFileSizeBytes != null && maxOperationalReportFileSizeBytes <= 0) {
+			throw new CommandException("maxOperationalReportFileSizeBytes must be greater than zero.");
+		}
+		final var requested = new BulkMigrationOperationalReportBuilder().build(plan, status, maintenanceState, progress);
+		final var snapshot = new BulkMigrationOperationalReportIO().writeSnapshot(targetFile.toPath(), requested,
+				maxOperationalReportFileSizeBytes);
+		report = snapshot.report();
+		reportFingerprint = snapshot.fingerprint();
 		info("Bulk migration operational report: ", targetFile.getAbsolutePath());
 	}
 }

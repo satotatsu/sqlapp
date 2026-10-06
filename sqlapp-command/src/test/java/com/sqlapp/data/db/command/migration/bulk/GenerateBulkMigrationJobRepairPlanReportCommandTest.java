@@ -19,6 +19,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairTask;
 import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
 import com.sqlapp.jdbc.bulk.BulkMigrationVerifier;
+import com.sqlapp.util.MessageDigests;
 
 class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 	@TempDir
@@ -38,6 +39,22 @@ class GenerateBulkMigrationJobRepairPlanReportCommandTest {
 			final var report = new BulkMigrationJobRepairPlanReportIO().read(target);
 			assertEquals(plan.getFingerprint(), report.planFingerprint());
 			assertEquals(List.of(), report.tasks());
+			assertEquals(report, command.getReport());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(target.toFile()),
+					command.getReportFingerprint());
+		}
+	}
+
+	@Test
+	void rejectsAnOversizedGeneratedReportAndInvalidLimit() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:repair_plan_size")) {
+			final var command = new GenerateBulkMigrationJobRepairPlanReportCommand();
+			command.setPlan(BulkMigrationJobRepairPlanner.plan(connection, List.of()));
+			command.setTargetFile(directory.resolve("bounded-plan.json").toFile());
+			command.setMaxRepairPlanReportFileSizeBytes(0L);
+			assertThrows(CommandException.class, command::run);
+			command.setMaxRepairPlanReportFileSizeBytes(1L);
+			assertThrows(CommandException.class, command::run);
 		}
 	}
 

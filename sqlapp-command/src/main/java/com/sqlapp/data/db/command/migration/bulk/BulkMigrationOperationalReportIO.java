@@ -100,6 +100,16 @@ public final class BulkMigrationOperationalReportIO {
 		}
 	}
 
+	Snapshot writeSnapshot(final Path file, final BulkMigrationOperationalReport report,
+			final Long maxFileSizeBytes) {
+		write(file, report);
+		final var snapshot = readSnapshot(file, maxFileSizeBytes);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Bulk migration operational report changed after write.");
+		}
+		return snapshot;
+	}
+
 	private static BulkMigrationOperationalReport validate(final BulkMigrationOperationalReport report) {
 		if (report == null) {
 			throw new CommandException("Bulk migration report must not be null");

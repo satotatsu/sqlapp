@@ -1248,7 +1248,19 @@ and the heartbeat recording that rejection.
 `GenerateBulkMigrationOperationalReportCommand` exposes the same operation to
 command integrations. The Gradle plugin registers
 `generateBulkMigrationOperationalReport` for builds that assemble the plan and
-matching status programmatically.
+matching status programmatically. The generator optionally accepts
+`maxOperationalReportFileSizeBytes`. Its result is atomically written and read
+back from one bounded snapshot before the accepted report and SHA-256
+fingerprint are exposed. Unified repair outcome publication uses the same
+write, reread, model-comparison, and fingerprint sequence under
+`maxEvidenceFileSizeBytes`.
+
+The high-level `BulkMigration` facade uses the same write-and-reread checks for
+explicit dry-run, verification, and repair-plan JSON. After those operations,
+`getOperationalReportFingerprint()`, `getVerificationReportFingerprint()`, and
+`getRepairPlanReportFingerprint()` expose the SHA-256 of the accepted file.
+The `Repair` handle also exposes its generated approval fingerprint through
+`getReportFingerprint()`.
 `ExecuteBulkMigrationJobCommand` is the corresponding mutating command. It
 executes a validated plan against a configured target data source and can
 optionally fence execution with the existing database or file lease
@@ -1289,7 +1301,15 @@ configured mismatch failure is raised.
 review-only multi-table repair plan at the same point. It carries target table
 and column mappings while retaining Access/source task names and foreign-key
 order. Generating this file does not apply data changes; repair still requires
-explicit approval of the generated plan fingerprint.
+explicit approval of the generated plan fingerprint. Both the verification
+report and mismatch repair plan are atomically written, read back, and compared
+with their requested models. `ExecuteBulkMigrationJobCommand` exposes the
+SHA-256 fingerprints of the accepted files.
+Programmatic job-level repair-plan generation can optionally set
+`maxRepairPlanReportFileSizeBytes`. The generated approval JSON is atomically
+written and read back from one bounded snapshot; its parsed model and SHA-256
+therefore refer to exactly the same bytes. Standalone table repair-plan JSON
+also supports bounded snapshot reads through `BulkMigrationRepairPlanReportIO`.
 The declarative repair command re-runs the same verification both before and
 after repair. Its optional post-repair verification file provides bounded JSON
 evidence that the approved replay actually restored equality.

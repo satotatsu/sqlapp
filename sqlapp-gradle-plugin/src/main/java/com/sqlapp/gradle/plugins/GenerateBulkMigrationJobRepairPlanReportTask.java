@@ -5,6 +5,8 @@ import org.gradle.api.Action;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -29,10 +31,17 @@ public abstract class GenerateBulkMigrationJobRepairPlanReportTask
 	@OutputFile
 	public abstract RegularFileProperty getTargetFile();
 
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxRepairPlanReportFileSizeBytes();
+
 	@Override
 	protected void beforeRun(GenerateBulkMigrationJobRepairPlanReportCommand command) {
 		command.setPlan(getPlan().get());
 		command.setTargetFile(getTargetFile().get().getAsFile());
+		if (getMaxRepairPlanReportFileSizeBytes().isPresent()) {
+			command.setMaxRepairPlanReportFileSizeBytes(getMaxRepairPlanReportFileSizeBytes().get());
+		}
 	}
 
 	@Override

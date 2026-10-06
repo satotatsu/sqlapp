@@ -89,10 +89,8 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		approvedRepairPlanReport = approved.report();
 		approvedRepairPlanFileFingerprint = approved.fingerprint();
 		validateArtifactPaths();
-		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
-				expectedConfigurationFingerprint);
-		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
-				maxConfigurationFileSizeBytes);
+		BulkMigrationExecutionApprovalValidator.validateConfigurationInputs(configurationFile,
+				expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
 				ddlVerificationReportFile, maxApprovalArtifactFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,

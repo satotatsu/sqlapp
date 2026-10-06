@@ -60,10 +60,8 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 		if (maxApprovalArtifactFileSizeBytes != null && maxApprovalArtifactFileSizeBytes <= 0) {
 			throw new CommandException("maxApprovalArtifactFileSizeBytes must be greater than zero.");
 		}
-		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
-				expectedConfigurationFingerprint);
-		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
-				maxConfigurationFileSizeBytes);
+		BulkMigrationExecutionApprovalValidator.validateConfigurationInputs(configurationFile,
+				expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
 		executeNoTranAndClose(sourceDataSource, sourceConnection -> {
 			final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
 					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes,

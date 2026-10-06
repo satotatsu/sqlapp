@@ -47,6 +47,16 @@ public final class BulkMigrationJobRepairPlanReportIO {
 		}
 	}
 
+	Snapshot writeSnapshot(final Path file, final BulkMigrationJobRepairPlanReport report,
+			final Long maxFileSizeBytes) {
+		write(file, report);
+		final var snapshot = readSnapshot(file, maxFileSizeBytes);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Bulk migration job repair plan report changed after write.");
+		}
+		return snapshot;
+	}
+
 	public BulkMigrationJobRepairPlanReport read(final Path file) {
 		return readSnapshot(file).report();
 	}

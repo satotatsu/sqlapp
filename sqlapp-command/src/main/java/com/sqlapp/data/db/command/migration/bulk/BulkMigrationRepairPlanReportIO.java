@@ -4,6 +4,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -54,18 +55,43 @@ public final class BulkMigrationRepairPlanReportIO {
 	}
 
 	public BulkMigrationRepairPlanReport read(final Path file) {
+		return read(file, (Long) null);
+	}
+
+	public BulkMigrationRepairPlanReport read(final Path file, final Long maxFileSizeBytes) {
+		return readSnapshot(file, maxFileSizeBytes).report();
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration repair plan report does not exist: " + absolute);
 		}
 		try {
-			return validate(new JsonConverter().fromJsonString(absolute.toFile(), BulkMigrationRepairPlanReport.class));
-		} catch (RuntimeException e) {
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
+					"maxRepairPlanReportFileSizeBytes", "Bulk migration repair plan report");
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationRepairPlanReport.class));
+			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
 			throw new CommandException("Failed to read bulk migration repair plan report: " + absolute, e);
 		}
+	}
+
+	Snapshot writeSnapshot(final Path file, final BulkMigrationRepairPlanReport report,
+			final Long maxFileSizeBytes) {
+		write(file, report);
+		final var snapshot = readSnapshot(file, maxFileSizeBytes);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Bulk migration repair plan report changed after write.");
+		}
+		return snapshot;
+	}
+
+	record Snapshot(BulkMigrationRepairPlanReport report, String fingerprint) {
 	}
 
 	public BulkMigrationRepairPlanReport read(final Path file, final String expectedPlanFingerprint) {

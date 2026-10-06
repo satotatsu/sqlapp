@@ -45,6 +45,7 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 	private String executionReportFingerprint;
 	private String failureReportFingerprint;
 	private String postRepairVerificationReportFingerprint;
+	private String outcomeReportFingerprint;
 
 	@Override
 	protected void doRun() {
@@ -57,6 +58,7 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 		failureReportFingerprint = null;
 		postRepairVerificationReportFingerprint = null;
 		postRepairVerificationReport = null;
+		outcomeReportFingerprint = null;
 		resolveReportFiles();
 		if (approvedRepairPlanFile == null || !approvedRepairPlanFile.isFile()) {
 			throw new CommandException("approvedRepairPlanFile must be an existing file.");
@@ -172,7 +174,8 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 			outcomeReport = BulkMigrationJobRepairOutcomeReportIO.validate(report);
 			if (outcomeReportFile != null) {
 				validateOutputPath();
-				new BulkMigrationJobRepairOutcomeReportIO().write(outcomeReportFile.toPath(), outcomeReport);
+				outcomeReportFingerprint = new BulkMigrationJobRepairOutcomeReportIO()
+						.writeSnapshot(outcomeReportFile.toPath(), outcomeReport, maxEvidenceFileSizeBytes).fingerprint();
 			}
 		} catch (RuntimeException e) {
 			status = null;
@@ -184,6 +187,7 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 			executionReportFingerprint = null;
 			failureReportFingerprint = null;
 			postRepairVerificationReportFingerprint = null;
+			outcomeReportFingerprint = null;
 			throw e;
 		}
 	}

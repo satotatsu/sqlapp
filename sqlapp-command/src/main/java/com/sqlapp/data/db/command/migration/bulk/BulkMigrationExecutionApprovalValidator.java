@@ -7,56 +7,28 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.nio.file.Files;
 
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.MessageDigests;
 
 /** Shared approval validation for declarative migration and repair execution. */
 final class BulkMigrationExecutionApprovalValidator {
 	private BulkMigrationExecutionApprovalValidator() {
 	}
 
-	static void validateConfigurationFingerprint(final File configurationFile, final String expectedFingerprint) {
-		if (expectedFingerprint == null || expectedFingerprint.isBlank()) {
-			return;
+	static void validateConfigurationInputs(final File configurationFile, final String expectedFingerprint,
+			final Long maxFileSizeBytes) {
+		if (configurationFile == null && (expectedFingerprint != null || maxFileSizeBytes != null)) {
+			throw new CommandException(
+					"Configuration approval properties require configurationFile.");
 		}
-		if (configurationFile == null) {
-			throw new CommandException("expectedConfigurationFingerprint requires configurationFile.");
-		}
-		if (!expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
+		if (expectedFingerprint != null && !expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
 		}
-		try {
-			if (!expectedFingerprint.equals(fingerprint(configurationFile))) {
-				throw new CommandException(
-						"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
-			}
-		} catch (final CommandException e) {
-			throw e;
-		} catch (final Exception e) {
-			throw new CommandException("Could not fingerprint configurationFile: " + e.getMessage(), e);
+		if (maxFileSizeBytes != null && maxFileSizeBytes <= 0) {
+			throw new CommandException("maxConfigurationFileSizeBytes must be greater than zero.");
 		}
 	}
 
-	static void validateConfigurationFileSize(final File configurationFile, final Long maxFileSizeBytes) {
-		if (maxFileSizeBytes == null) {
-			return;
-		}
-		if (configurationFile == null) {
-			throw new CommandException("maxConfigurationFileSizeBytes requires configurationFile.");
-		}
-		if (maxFileSizeBytes <= 0) {
-			throw new CommandException("maxConfigurationFileSizeBytes must be greater than zero.");
-		}
-		try {
-			if (Files.size(configurationFile.toPath()) > maxFileSizeBytes) {
-				throw new CommandException("Configuration file exceeds maxConfigurationFileSizeBytes.");
-			}
-		} catch (java.io.IOException e) {
-			throw new CommandException("Could not inspect configurationFile size: " + e.getMessage(), e);
-		}
-	}
 
 	static void validateArtifactInputs(final File configurationFile, final File assessmentReportFile,
 			final File ddlVerificationReportFile, final Long maxFileSizeBytes) {
@@ -176,7 +148,4 @@ final class BulkMigrationExecutionApprovalValidator {
 		}
 	}
 
-	private static String fingerprint(final File file) {
-		return "sha256:" + MessageDigests.SHA256.checksumAsString(file);
-	}
 }
