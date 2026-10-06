@@ -25,6 +25,8 @@ class ExecuteBulkMigrationJobRepairTaskTest extends AbstractTaskTest {
 		assertFalse(task.maxApprovedRepairPlanFileSizeBytes.isPresent())
 		assertFalse(task.maxEvidenceFileSizeBytes.isPresent())
 		assertFalse(task.maxTargetValidationAgeSeconds.isPresent())
+		assertFalse(task.maxConfigurationFileSizeBytes.isPresent())
+		assertFalse(task.maxTargetValidationReportFileSizeBytes.isPresent())
 		assertFalse(task.targetEnvironmentId.isPresent())
 		assertFalse(task.repairOutcomeReportFile.isPresent())
 		assertFalse(task.repairReportDirectory.isPresent())
@@ -42,6 +44,7 @@ class ExecuteBulkMigrationJobRepairTaskTest extends AbstractTaskTest {
 
 		task.configurationFile.set(configuration)
 		task.expectedConfigurationFingerprint.set('sha256:' + 'a' * 64)
+		task.maxConfigurationFileSizeBytes.set(1048576L)
 		task.approvedRepairPlanFile.set(repairPlan)
 		task.expectedApprovedRepairPlanFileFingerprint.set('sha256:' + 'c' * 64)
 		task.maxApprovedRepairPlanAgeSeconds.set(86400L)
@@ -57,6 +60,7 @@ class ExecuteBulkMigrationJobRepairTaskTest extends AbstractTaskTest {
 		task.targetValidationReportFile.set(targetValidation)
 		task.expectedTargetValidationReportFingerprint.set('sha256:' + 'b' * 64)
 		task.maxTargetValidationAgeSeconds.set(600L)
+		task.maxTargetValidationReportFileSizeBytes.set(2097152L)
 		task.targetEnvironmentId.set('production-oracle')
 		task.sourceDataSource.jdbcUrl.set('jdbc:hsqldb:mem:repair-task')
 
@@ -66,6 +70,7 @@ class ExecuteBulkMigrationJobRepairTaskTest extends AbstractTaskTest {
 
 			assertEquals(configuration, command.configurationFile)
 			assertEquals('sha256:' + 'a' * 64, command.expectedConfigurationFingerprint)
+			assertEquals(1048576L, command.maxConfigurationFileSizeBytes)
 			assertEquals(repairPlan, command.approvedRepairPlanFile)
 			assertEquals('sha256:' + 'c' * 64, command.expectedApprovedRepairPlanFileFingerprint)
 			assertEquals(86400L, command.maxApprovedRepairPlanAgeSeconds)
@@ -81,6 +86,7 @@ class ExecuteBulkMigrationJobRepairTaskTest extends AbstractTaskTest {
 			assertEquals(targetValidation, command.targetValidationReportFile)
 			assertEquals('sha256:' + 'b' * 64, command.expectedTargetValidationReportFingerprint)
 			assertEquals(600L, command.maxTargetValidationAgeSeconds)
+			assertEquals(2097152L, command.maxTargetValidationReportFileSizeBytes)
 			assertEquals('production-oracle', command.targetEnvironmentId)
 			assertNotNull(command.sourceDataSource)
 		} finally {

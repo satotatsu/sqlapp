@@ -70,7 +70,7 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 		if (repairFailureReportFile != null && repairFailureReportFile.isFile()) {
 			final var verifier = new VerifyBulkMigrationJobRepairFailureEvidenceCommand();
 			verifier.setApprovedRepairPlanFile(approvedRepairPlanFile);
-			verifier.setExpectedApprovedRepairPlanFileFingerprint(expectedApprovedRepairPlanFileFingerprint);
+			verifier.setExpectedApprovedRepairPlanFileFingerprint(approvedRepairPlanFingerprint);
 			verifier.setMaxApprovedRepairPlanAgeSeconds(maxApprovedRepairPlanAgeSeconds);
 			verifier.setMaxApprovedRepairPlanFileSizeBytes(maxApprovedRepairPlanFileSizeBytes);
 			verifier.setRepairFailureReportFile(repairFailureReportFile);
@@ -101,7 +101,7 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 		}
 		final var verifier = new VerifyBulkMigrationJobRepairEvidenceCommand();
 		verifier.setApprovedRepairPlanFile(approvedRepairPlanFile);
-		verifier.setExpectedApprovedRepairPlanFileFingerprint(expectedApprovedRepairPlanFileFingerprint);
+		verifier.setExpectedApprovedRepairPlanFileFingerprint(approvedRepairPlanFingerprint);
 		verifier.setMaxApprovedRepairPlanAgeSeconds(maxApprovedRepairPlanAgeSeconds);
 		verifier.setMaxApprovedRepairPlanFileSizeBytes(maxApprovedRepairPlanFileSizeBytes);
 		verifier.setRepairExecutionReportFile(repairExecutionReportFile);

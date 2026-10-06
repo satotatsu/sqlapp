@@ -75,6 +75,13 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				provenance.setAssessmentReportFingerprint("sha256:" + "0".repeat(64));
 				new YamlConverter().writeJsonValue(configurationFile, configuration);
 				assertNotNull(new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+				final String configurationFingerprint = "sha256:"
+						+ MessageDigests.SHA256.checksumAsString(configurationFile);
+				assertEquals(configurationFingerprint, new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, connection, configurationFingerprint)
+						.provenance().configurationFingerprint());
+				assertThrows(CommandException.class, () -> new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, connection, "sha256:" + "f".repeat(64)));
 			}
 			final var command = new ExecuteBulkMigrationJobCommand();
 			command.setDataSource(target);
@@ -86,6 +93,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertThrows(CommandException.class, command::run);
 			command.setExpectedConfigurationFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile));
+			command.setMaxConfigurationFileSizeBytes(Files.size(configurationFile.toPath()) - 1);
+			final var sizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Configuration file exceeds maxConfigurationFileSizeBytes.", sizeRejection.getMessage());
+			command.setMaxConfigurationFileSizeBytes(Files.size(configurationFile.toPath()));
 			assertDoesNotThrow(command::run);
 		}
 	}
@@ -178,7 +189,14 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setTargetEnvironmentId("production");
 			command.setExpectedTargetValidationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			command.setMaxTargetValidationReportFileSizeBytes(Files.size(evidence.toPath()) - 1);
+			final var sizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report file exceeds maxTargetValidationReportFileSizeBytes.",
+					sizeRejection.getMessage());
+			command.setMaxTargetValidationReportFileSizeBytes(Files.size(evidence.toPath()));
 			assertDoesNotThrow(command::run);
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(evidence),
+					command.getApprovedTargetValidationReportFingerprint());
 			final var executedReport = new BulkMigrationOperationalReportIO()
 					.read(temporaryDirectory.resolve("target-evidence-operations.json"));
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(evidence),
@@ -920,6 +938,11 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals(automaticOutcomeArtifact, command.getOutcomeReport());
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()),
 					command.getApprovedRepairPlanFileFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()),
+					command.getRepairExecutionReportFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()),
+					command.getPostRepairVerificationReportFingerprint());
+			assertNull(command.getRepairFailureReportFingerprint());
 			final var executionArtifact = new BulkMigrationJobRepairExecutionReportIO().read(repairExecution);
 			assertEquals(command.getResult().getPlanFingerprint(), executionArtifact.repairPlanFingerprint());
 			assertEquals(1, executionArtifact.replayedRows());
@@ -1092,6 +1115,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals("EXECUTION_FAILED", outcome.status());
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(failureFile.toFile()),
 					outcome.repairFailureReportFingerprint());
+			assertEquals(outcome.repairFailureReportFingerprint(), command.getRepairFailureReportFingerprint());
+			assertNull(command.getRepairExecutionReportFingerprint());
+			assertNull(command.getPostRepairVerificationReportFingerprint());
 			assertEquals(outcome, command.getOutcomeReport());
 			assertEquals("EXECUTION", failure.phase());
 			assertEquals("items", failure.failedTaskId());

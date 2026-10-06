@@ -16,7 +16,6 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairExecutor;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobRepairResult;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
-import com.sqlapp.util.MessageDigests;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +27,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private File configurationFile;
 	private File repairReportDirectory;
 	private String expectedConfigurationFingerprint;
+	private Long maxConfigurationFileSizeBytes;
 	private File approvedRepairPlanFile;
 	private String expectedApprovedRepairPlanFileFingerprint;
 	private Long maxApprovedRepairPlanAgeSeconds;
@@ -42,13 +42,18 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 	private File targetValidationReportFile;
 	private String expectedTargetValidationReportFingerprint;
 	private Long maxTargetValidationAgeSeconds;
+	private Long maxTargetValidationReportFileSizeBytes;
 	private String targetEnvironmentId;
 	private DataSource sourceDataSource;
 	private BulkMigrationJobRepairResult result;
 	private BulkMigrationJobVerificationResult verificationResult;
 	private BulkMigrationTargetValidationReport approvedTargetValidationReport;
+	private String approvedTargetValidationReportFingerprint;
 	private BulkMigrationJobRepairOutcomeReport outcomeReport;
 	private String approvedRepairPlanFileFingerprint;
+	private String repairExecutionReportFingerprint;
+	private String repairFailureReportFingerprint;
+	private String postRepairVerificationReportFingerprint;
 	private BulkMigrationJobRepairPlanReport approvedRepairPlanReport;
 
 	@Override
@@ -56,8 +61,12 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		result = null;
 		verificationResult = null;
 		approvedTargetValidationReport = null;
+		approvedTargetValidationReportFingerprint = null;
 		outcomeReport = null;
 		approvedRepairPlanFileFingerprint = null;
+		repairExecutionReportFingerprint = null;
+		repairFailureReportFingerprint = null;
+		postRepairVerificationReportFingerprint = null;
 		approvedRepairPlanReport = null;
 		resolveReportFiles();
 		if (getDataSource() == null) {
@@ -80,18 +89,24 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		validateArtifactPaths();
 		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
 				expectedConfigurationFingerprint);
+		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
+				maxConfigurationFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
 				ddlVerificationReportFile);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
-				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds, targetEnvironmentId);
+				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds,
+				maxTargetValidationReportFileSizeBytes, targetEnvironmentId);
 		executeNoTranAndClose(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
-					sourceConnection);
+					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
 			BulkMigrationExecutionApprovalValidator.validateArtifacts(resolved.provenance(), assessmentReportFile,
 					ddlVerificationReportFile);
-			approvedTargetValidationReport = BulkMigrationExecutionApprovalValidator.validateTargetReport(
-					targetValidationReportFile, targetEnvironmentId,
-					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds, resolved);
+			final var approvedTarget = BulkMigrationExecutionApprovalValidator.validateTargetReport(
+					targetValidationReportFile, expectedTargetValidationReportFingerprint, targetEnvironmentId,
+					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds,
+					maxTargetValidationReportFileSizeBytes, resolved);
+			approvedTargetValidationReport = approvedTarget == null ? null : approvedTarget.report();
+			approvedTargetValidationReportFingerprint = approvedTarget == null ? null : approvedTarget.fingerprint();
 			if (resolved.verificationConfiguration() == null) {
 				throw new CommandException("Bulk migration verification must be enabled to execute repair.");
 			}
@@ -135,7 +150,7 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 			throw new CommandException("Bulk migration job repair plan fingerprint mismatch");
 		}
 		final var executionProvenance = BulkMigrationExecutionApprovalValidator.executionProvenance(
-				resolved.provenance(), targetValidationReportFile);
+				resolved.provenance(), approvedTargetValidationReportFingerprint);
 		clearPreviousOutcomeArtifacts();
 		try {
 			result = BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
@@ -143,10 +158,11 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		} catch (BulkMigrationJobRepairException failure) {
 			if (repairFailureReportFile != null) {
 				try {
-					new BulkMigrationJobRepairFailureReportIO().write(repairFailureReportFile.toPath(),
-							new BulkMigrationJobRepairFailureReportIO().fromFailure(resolved.plan().getFingerprint(),
-									approvedRepairPlanFileFingerprint, failure,
-									executionProvenance));
+					final var failureIO = new BulkMigrationJobRepairFailureReportIO();
+					final var failureSnapshot = failureIO.writeSnapshot(repairFailureReportFile.toPath(),
+							failureIO.fromFailure(resolved.plan().getFingerprint(),
+									approvedRepairPlanFileFingerprint, failure, executionProvenance));
+					repairFailureReportFingerprint = failureSnapshot.fingerprint();
 					publishOutcome();
 				} catch (RuntimeException evidenceFailure) {
 					failure.addSuppressed(evidenceFailure);
@@ -155,32 +171,36 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 			throw failure;
 		}
 		if (repairExecutionReportFile != null) {
-			new BulkMigrationJobRepairExecutionReportIO().write(repairExecutionReportFile.toPath(),
-					resolved.plan().getFingerprint(),
-					approvedRepairPlanFileFingerprint, result,
-					executionProvenance);
+			final var executionIO = new BulkMigrationJobRepairExecutionReportIO();
+			final var executionSnapshot = executionIO.writeSnapshot(repairExecutionReportFile.toPath(),
+					executionIO.fromResult(resolved.plan().getFingerprint(), approvedRepairPlanFileFingerprint,
+						result, executionProvenance));
+			repairExecutionReportFingerprint = executionSnapshot.fingerprint();
 		}
 		verificationResult = ExecuteBulkMigrationJobCommand.verifyWithIsolation(resolved.plan(), targetConnection,
 				verification.chunkSize(), verification.columnsByTask(), verification.isolation());
 		if (postRepairVerificationReportFile != null) {
-			new BulkMigrationVerificationReportIO().write(postRepairVerificationReportFile.toPath(),
-					resolved.plan().getFingerprint(), verification.isolation(),
-					verification.maxReportedMismatches(), verificationResult,
+			final var verificationIO = new BulkMigrationVerificationReportIO();
+			final var verificationReport = verificationIO.fromResult(resolved.plan().getFingerprint(),
+					verification.isolation(), verification.maxReportedMismatches(), verificationResult,
 					executionProvenance);
+			final var verificationSnapshot = verificationIO.writeSnapshot(postRepairVerificationReportFile.toPath(),
+					verificationReport);
+			postRepairVerificationReportFingerprint = verificationSnapshot.fingerprint();
 		}
 		if (!verificationResult.isMatch()) {
 			final var failure = new CommandException("Bulk migration repair verification failed: "
 					+ verificationResult.getMismatchedTasks() + " task(s) mismatched.");
 			if (repairFailureReportFile != null) {
 				try {
-					final String verificationFingerprint = postRepairVerificationReportFile == null ? null
-							: "sha256:" + MessageDigests.SHA256
-									.checksumAsString(postRepairVerificationReportFile);
-					new BulkMigrationJobRepairFailureReportIO().write(repairFailureReportFile.toPath(),
-							new BulkMigrationJobRepairFailureReportIO().fromVerificationFailure(
+					final var failureIO = new BulkMigrationJobRepairFailureReportIO();
+					final var failureSnapshot = failureIO.writeSnapshot(repairFailureReportFile.toPath(),
+							failureIO.fromVerificationFailure(
 									resolved.plan().getFingerprint(),
 									approvedRepairPlanFileFingerprint,
-									verificationFingerprint, result, verificationResult, executionProvenance));
+									postRepairVerificationReportFingerprint, result, verificationResult,
+									executionProvenance));
+					repairFailureReportFingerprint = failureSnapshot.fingerprint();
 					publishOutcome();
 				} catch (RuntimeException evidenceFailure) {
 					failure.addSuppressed(evidenceFailure);
@@ -204,6 +224,9 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		verifier.setRepairExecutionReportFile(repairExecutionReportFile);
 		verifier.setRepairFailureReportFile(repairFailureReportFile);
 		verifier.setPostRepairVerificationReportFile(postRepairVerificationReportFile);
+		verifier.setExpectedRepairExecutionReportFingerprint(repairExecutionReportFingerprint);
+		verifier.setExpectedRepairFailureReportFingerprint(repairFailureReportFingerprint);
+		verifier.setExpectedPostRepairVerificationReportFingerprint(postRepairVerificationReportFingerprint);
 		verifier.setOutcomeReportFile(repairOutcomeReportFile);
 		verifier.run();
 		outcomeReport = verifier.getOutcomeReport();

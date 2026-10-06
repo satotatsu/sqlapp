@@ -44,6 +44,10 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@Optional
 	public abstract Property<String> getExpectedConfigurationFingerprint();
 
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxConfigurationFileSizeBytes();
+
 	@InputFile
 	@Optional
 	@PathSensitive(PathSensitivity.RELATIVE)
@@ -66,6 +70,10 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@Input
 	@Optional
 	public abstract Property<Long> getMaxTargetValidationAgeSeconds();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxTargetValidationReportFileSizeBytes();
 
 	@Input
 	@Optional
@@ -101,6 +109,9 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		if (getExpectedConfigurationFingerprint().isPresent()) {
 			command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().get());
 		}
+		if (getMaxConfigurationFileSizeBytes().isPresent()) {
+			command.setMaxConfigurationFileSizeBytes(getMaxConfigurationFileSizeBytes().get());
+		}
 		if (getAssessmentReportFile().isPresent()) {
 			command.setAssessmentReportFile(getAssessmentReportFile().get().getAsFile());
 		}
@@ -115,6 +126,10 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		}
 		if (getMaxTargetValidationAgeSeconds().isPresent()) {
 			command.setMaxTargetValidationAgeSeconds(getMaxTargetValidationAgeSeconds().get());
+		}
+		if (getMaxTargetValidationReportFileSizeBytes().isPresent()) {
+			command.setMaxTargetValidationReportFileSizeBytes(
+					getMaxTargetValidationReportFileSizeBytes().get());
 		}
 		if (getTargetEnvironmentId().isPresent()) {
 			command.setTargetEnvironmentId(getTargetEnvironmentId().get());

@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.nio.file.Files;
 
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.MessageDigests;
@@ -38,6 +39,25 @@ final class BulkMigrationExecutionApprovalValidator {
 		}
 	}
 
+	static void validateConfigurationFileSize(final File configurationFile, final Long maxFileSizeBytes) {
+		if (maxFileSizeBytes == null) {
+			return;
+		}
+		if (configurationFile == null) {
+			throw new CommandException("maxConfigurationFileSizeBytes requires configurationFile.");
+		}
+		if (maxFileSizeBytes <= 0) {
+			throw new CommandException("maxConfigurationFileSizeBytes must be greater than zero.");
+		}
+		try {
+			if (Files.size(configurationFile.toPath()) > maxFileSizeBytes) {
+				throw new CommandException("Configuration file exceeds maxConfigurationFileSizeBytes.");
+			}
+		} catch (java.io.IOException e) {
+			throw new CommandException("Could not inspect configurationFile size: " + e.getMessage(), e);
+		}
+	}
+
 	static void validateArtifactInputs(final File configurationFile, final File assessmentReportFile,
 			final File ddlVerificationReportFile) {
 		if ((assessmentReportFile != null || ddlVerificationReportFile != null) && configurationFile == null) {
@@ -48,9 +68,11 @@ final class BulkMigrationExecutionApprovalValidator {
 	}
 
 	static void validateTargetInputs(final File configurationFile, final File targetValidationReportFile,
-			final String expectedFingerprint, final Long maxAgeSeconds, final String targetEnvironmentId) {
+			final String expectedFingerprint, final Long maxAgeSeconds, final Long maxFileSizeBytes,
+			final String targetEnvironmentId) {
 		if (targetValidationReportFile == null) {
-			if (expectedFingerprint != null || maxAgeSeconds != null || targetEnvironmentId != null) {
+			if (expectedFingerprint != null || maxAgeSeconds != null || maxFileSizeBytes != null
+					|| targetEnvironmentId != null) {
 				throw new CommandException("Target validation approval properties require targetValidationReportFile.");
 			}
 			return;
@@ -63,18 +85,14 @@ final class BulkMigrationExecutionApprovalValidator {
 			throw new CommandException(
 					"maxTargetValidationAgeSeconds must be greater than zero when targetValidationReportFile is set.");
 		}
+		if (maxFileSizeBytes != null && maxFileSizeBytes <= 0) {
+			throw new CommandException("maxTargetValidationReportFileSizeBytes must be greater than zero.");
+		}
 		if (targetEnvironmentId != null && targetEnvironmentId.isBlank()) {
 			throw new CommandException("targetEnvironmentId must not be blank.");
 		}
 		if (expectedFingerprint != null && !expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("expectedTargetValidationReportFingerprint must be a lowercase SHA-256 value.");
-		}
-		if (expectedFingerprint != null) {
-			final String actual = fingerprint(targetValidationReportFile);
-			if (!expectedFingerprint.equals(actual)) {
-				throw new CommandException(
-						"targetValidationReportFile fingerprint does not match expectedTargetValidationReportFingerprint.");
-			}
 		}
 	}
 
@@ -88,13 +106,20 @@ final class BulkMigrationExecutionApprovalValidator {
 				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
 	}
 
-	static BulkMigrationTargetValidationReport validateTargetReport(final File targetValidationReportFile,
-			final String targetEnvironmentId, final long maxAgeSeconds,
+	static ValidatedTargetReport validateTargetReport(final File targetValidationReportFile,
+			final String expectedFingerprint, final String targetEnvironmentId, final long maxAgeSeconds,
+			final Long maxFileSizeBytes,
 			final BulkMigrationJobConfigurationResolver.Resolution resolved) {
 		if (targetValidationReportFile == null) {
 			return null;
 		}
-		final var report = new BulkMigrationTargetValidationReportIO().read(targetValidationReportFile.toPath());
+		final var snapshot = new BulkMigrationTargetValidationReportIO()
+				.readSnapshot(targetValidationReportFile.toPath(), maxFileSizeBytes);
+		if (expectedFingerprint != null && !expectedFingerprint.equals(snapshot.fingerprint())) {
+			throw new CommandException(
+					"targetValidationReportFile fingerprint does not match expectedTargetValidationReportFingerprint.");
+		}
+		final var report = snapshot.report();
 		final var plan = resolved.plan();
 		if (!plan.getJobId().equals(report.jobId()) || !plan.getFingerprint().equals(report.planFingerprint())
 				|| !plan.getTaskIds().equals(report.taskIds()) || !Objects.equals(resolved.provenance(), report.provenance())
@@ -112,7 +137,10 @@ final class BulkMigrationExecutionApprovalValidator {
 		if (Duration.between(report.generatedAt(), now).compareTo(Duration.ofSeconds(maxAgeSeconds)) > 0) {
 			throw new CommandException("Target validation report is older than maxTargetValidationAgeSeconds.");
 		}
-		return report;
+		return new ValidatedTargetReport(report, snapshot.fingerprint());
+	}
+
+	record ValidatedTargetReport(BulkMigrationTargetValidationReport report, String fingerprint) {
 	}
 
 	static void validateTargetDatabaseIdentity(final BulkMigrationTargetValidationReport report,
@@ -130,13 +158,13 @@ final class BulkMigrationExecutionApprovalValidator {
 	}
 
 	static BulkMigrationArtifactProvenance executionProvenance(final BulkMigrationArtifactProvenance provenance,
-			final File targetValidationReportFile) {
-		if (targetValidationReportFile == null || provenance == null) {
+			final String targetValidationReportFingerprint) {
+		if (targetValidationReportFingerprint == null || provenance == null) {
 			return provenance;
 		}
 		return new BulkMigrationArtifactProvenance(provenance.configurationFingerprint(),
 				provenance.assessmentReportFingerprint(), provenance.ddlVerificationReportFingerprint(),
-				fingerprint(targetValidationReportFile));
+				targetValidationReportFingerprint);
 	}
 
 	private static void validateArtifactFile(final File file, final String property) {

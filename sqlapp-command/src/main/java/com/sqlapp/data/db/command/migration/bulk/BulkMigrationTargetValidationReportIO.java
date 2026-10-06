@@ -2,9 +2,11 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.Objects;
 
 import com.sqlapp.data.db.command.migration.internal.AtomicMigrationFile;
 import com.sqlapp.exceptions.CommandException;
@@ -13,16 +15,34 @@ import com.sqlapp.util.JsonConverter;
 /** Reads and atomically writes live target validation evidence. */
 public final class BulkMigrationTargetValidationReportIO {
 	public BulkMigrationTargetValidationReport read(final Path file) {
+		return readSnapshot(file).report();
+	}
+
+	Snapshot readSnapshot(final Path file) {
+		return readSnapshot(file, null);
+	}
+
+	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		if (file == null || !Files.isRegularFile(file)) {
 			throw new CommandException("Bulk migration target validation report file is required.");
 		}
 		try {
-			return validate(new JsonConverter().fromJsonString(file.toFile(),
-					BulkMigrationTargetValidationReport.class));
+			final byte[] bytes = BoundedMigrationJsonFile.read(file, maxFileSizeBytes,
+					"maxTargetValidationReportFileSizeBytes", "Target validation report file");
+			final var report = validate(new JsonConverter().fromJsonString(
+					new String(bytes, StandardCharsets.UTF_8), BulkMigrationTargetValidationReport.class));
+			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (final CommandException e) {
 			throw e;
-		} catch (final RuntimeException e) {
+		} catch (final IOException | RuntimeException e) {
 			throw new CommandException("Could not read bulk migration target validation report: " + file, e);
+		}
+	}
+
+	record Snapshot(BulkMigrationTargetValidationReport report, String fingerprint) {
+		Snapshot {
+			Objects.requireNonNull(report, "report");
+			Objects.requireNonNull(fingerprint, "fingerprint");
 		}
 	}
 

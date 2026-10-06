@@ -1336,6 +1336,17 @@ failure evidence dated before the approved plan.
 Repair execution, failure, post-repair verification, and saved outcome files
 are also fingerprinted and parsed from one byte snapshot during offline
 verification. Outcome publication reuses those accepted fingerprints.
+Generated repair evidence is atomically written, read back, compared with its
+source model, and fingerprinted before it can be referenced by failure or
+outcome evidence.
+Declarative execution applies the same rule to the job YAML and live-target
+validation report: parsing and SHA-256 calculation use one byte snapshot. The
+accepted target-report SHA is retained for execution and repair provenance
+instead of fingerprinting the path again later.
+Optional `maxConfigurationFileSizeBytes` and
+`maxTargetValidationReportFileSizeBytes` apply bounded reads to these two
+approval inputs. They are unset by default and are shared by declarative
+migration and repair execution.
 The unified outcome selector and saved-outcome verifier accept the same
 directory property, so later CI stages need only the approved plan plus the
 repair report directory. All three commands share one filename definition.

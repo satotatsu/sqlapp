@@ -82,6 +82,12 @@ public final class BulkMigrationVerificationReportIO {
 	public void write(final Path file, final String planFingerprint, final BulkMigrationVerificationIsolation isolation,
 			final int maxReportedMismatches, final BulkMigrationJobVerificationResult result,
 			final BulkMigrationArtifactProvenance provenance) {
+		write(file, fromResult(planFingerprint, isolation, maxReportedMismatches, result, provenance));
+	}
+
+	public BulkMigrationVerificationReport fromResult(final String planFingerprint,
+			final BulkMigrationVerificationIsolation isolation, final int maxReportedMismatches,
+			final BulkMigrationJobVerificationResult result, final BulkMigrationArtifactProvenance provenance) {
 		Objects.requireNonNull(isolation, "isolation");
 		Objects.requireNonNull(result, "result");
 		if (result.getPlanFingerprint() != null && !result.getPlanFingerprint().equals(planFingerprint)) {
@@ -104,8 +110,7 @@ public final class BulkMigrationVerificationReportIO {
 					verification.isMatch(), verification.getExpectedRows(), verification.getActualRows(),
 					allMismatches.size(), mismatches);
 		}).toList();
-		write(file,
-				new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
+		return validate(new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
 						Instant.now(), planFingerprint, isolation.name(), result.isMatch(), result.getExpectedRows(),
 						result.getActualRows(), result.getMismatchedTasks(), tasks, provenance));
 	}
@@ -120,6 +125,15 @@ public final class BulkMigrationVerificationReportIO {
 		} catch (IOException | RuntimeException e) {
 			throw new CommandException("Failed to write bulk migration verification report: " + absolute, e);
 		}
+	}
+
+	Snapshot writeSnapshot(final Path file, final BulkMigrationVerificationReport report) {
+		write(file, report);
+		final var snapshot = readSnapshot(file, null);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Bulk migration verification report changed after write.");
+		}
+		return snapshot;
 	}
 
 	private static BulkMigrationVerificationReport validate(final BulkMigrationVerificationReport report) {

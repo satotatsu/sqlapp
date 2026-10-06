@@ -50,6 +50,15 @@ public final class BulkMigrationJobRepairExecutionReportIO {
 		}
 	}
 
+	Snapshot writeSnapshot(final Path file, final BulkMigrationJobRepairExecutionReport report) {
+		write(file, report);
+		final var snapshot = readSnapshot(file, null);
+		if (!report.equals(snapshot.report())) {
+			throw new CommandException("Bulk migration job repair execution report changed after write.");
+		}
+		return snapshot;
+	}
+
 	public BulkMigrationJobRepairExecutionReport read(final Path file) {
 		return read(file, null);
 	}

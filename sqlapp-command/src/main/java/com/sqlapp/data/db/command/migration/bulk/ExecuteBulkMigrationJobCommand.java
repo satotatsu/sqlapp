@@ -47,13 +47,16 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private BulkMigrationJobPlan plan;
 	private File configurationFile;
 	private String expectedConfigurationFingerprint;
+	private Long maxConfigurationFileSizeBytes;
 	private File assessmentReportFile;
 	private File ddlVerificationReportFile;
 	private File targetValidationReportFile;
 	private String expectedTargetValidationReportFingerprint;
 	private Long maxTargetValidationAgeSeconds;
+	private Long maxTargetValidationReportFileSizeBytes;
 	private String targetEnvironmentId;
 	private BulkMigrationTargetValidationReport approvedTargetValidationReport;
+	private String approvedTargetValidationReportFingerprint;
 	private DataSource sourceDataSource;
 	private BulkMigrationJobListener listener = BulkMigrationJobListener.NO_OP;
 	private ChunkedBulkMigrationListener chunkListener = ChunkedBulkMigrationListener.NO_OP;
@@ -66,6 +69,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		result = null;
 		verificationResult = null;
 		approvedTargetValidationReport = null;
+		approvedTargetValidationReportFingerprint = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
@@ -77,10 +81,13 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		}
 		BulkMigrationExecutionApprovalValidator.validateConfigurationFingerprint(configurationFile,
 				expectedConfigurationFingerprint);
+		BulkMigrationExecutionApprovalValidator.validateConfigurationFileSize(configurationFile,
+				maxConfigurationFileSizeBytes);
 		BulkMigrationExecutionApprovalValidator.validateArtifactInputs(configurationFile, assessmentReportFile,
 				ddlVerificationReportFile);
 		BulkMigrationExecutionApprovalValidator.validateTargetInputs(configurationFile, targetValidationReportFile,
-				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds, targetEnvironmentId);
+				expectedTargetValidationReportFingerprint, maxTargetValidationAgeSeconds,
+				maxTargetValidationReportFileSizeBytes, targetEnvironmentId);
 		if (configurationFile != null && sourceDataSource == null) {
 			throw new CommandException("Bulk migration source data source is required for configurationFile.");
 		}
@@ -90,14 +97,17 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		}
 		execute(sourceDataSource, sourceConnection -> {
 			final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
-					sourceConnection);
+					sourceConnection, expectedConfigurationFingerprint, maxConfigurationFileSizeBytes);
 			BulkMigrationExecutionApprovalValidator.validateArtifacts(resolved.provenance(), assessmentReportFile,
 					ddlVerificationReportFile);
-			approvedTargetValidationReport = BulkMigrationExecutionApprovalValidator.validateTargetReport(
-					targetValidationReportFile, targetEnvironmentId,
-					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds, resolved);
+			final var approvedTarget = BulkMigrationExecutionApprovalValidator.validateTargetReport(
+					targetValidationReportFile, expectedTargetValidationReportFingerprint, targetEnvironmentId,
+					maxTargetValidationAgeSeconds == null ? 0 : maxTargetValidationAgeSeconds,
+					maxTargetValidationReportFileSizeBytes, resolved);
+			approvedTargetValidationReport = approvedTarget == null ? null : approvedTarget.report();
+			approvedTargetValidationReportFingerprint = approvedTarget == null ? null : approvedTarget.fingerprint();
 			final BulkMigrationArtifactProvenance executionProvenance = BulkMigrationExecutionApprovalValidator
-					.executionProvenance(resolved.provenance(), targetValidationReportFile);
+					.executionProvenance(resolved.provenance(), approvedTargetValidationReportFingerprint);
 			if (leaseConfiguration != null && resolved.leaseConfiguration() != null) {
 				throw new CommandException(
 						"Specify lease configuration either in the job file " + "or as a command property, not both.");

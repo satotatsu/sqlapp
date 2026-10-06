@@ -34,6 +34,8 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	public abstract RegularFileProperty getConfigurationFile();
 	@Input @Optional
 	public abstract Property<String> getExpectedConfigurationFingerprint();
+	@Input @Optional
+	public abstract Property<Long> getMaxConfigurationFileSizeBytes();
 	@InputFile @PathSensitive(PathSensitivity.NONE)
 	public abstract RegularFileProperty getApprovedRepairPlanFile();
 	@Input @Optional
@@ -64,6 +66,8 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 	public abstract Property<String> getExpectedTargetValidationReportFingerprint();
 	@Input @Optional
 	public abstract Property<Long> getMaxTargetValidationAgeSeconds();
+	@Input @Optional
+	public abstract Property<Long> getMaxTargetValidationReportFileSizeBytes();
 	@Input @Optional
 	public abstract Property<String> getTargetEnvironmentId();
 	@Nested
@@ -121,12 +125,19 @@ public abstract class ExecuteBulkMigrationJobRepairTask
 		if (getMaxTargetValidationAgeSeconds().isPresent()) {
 			command.setMaxTargetValidationAgeSeconds(getMaxTargetValidationAgeSeconds().get());
 		}
+		if (getMaxTargetValidationReportFileSizeBytes().isPresent()) {
+			command.setMaxTargetValidationReportFileSizeBytes(
+					getMaxTargetValidationReportFileSizeBytes().get());
+		}
 		if (getTargetEnvironmentId().isPresent()) {
 			command.setTargetEnvironmentId(getTargetEnvironmentId().get());
 		}
 		command.setSourceDataSource(getSourceDataSource().createDataSource());
 		if (getExpectedConfigurationFingerprint().isPresent()) {
 			command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().get());
+		}
+		if (getMaxConfigurationFileSizeBytes().isPresent()) {
+			command.setMaxConfigurationFileSizeBytes(getMaxConfigurationFileSizeBytes().get());
 		}
 	}
 

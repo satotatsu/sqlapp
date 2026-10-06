@@ -4,6 +4,8 @@ package com.sqlapp.data.db.command.migration.bulk;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -93,11 +95,39 @@ public class BulkMigrationJobConfigurationResolver {
 	}
 
 	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection) {
+		return resolveJob(configurationFile, sourceConnection, null, null);
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
+			final String expectedConfigurationFingerprint) {
+		return resolveJob(configurationFile, sourceConnection, expectedConfigurationFingerprint, null);
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
+			final String expectedConfigurationFingerprint, final Long maxConfigurationFileSizeBytes) {
 		if (configurationFile == null || !configurationFile.isFile()) {
 			throw new CommandException("Bulk migration configuration file is required.");
 		}
-		final BulkMigrationJobConfiguration configuration = new YamlConverter().fromJsonString(configurationFile,
-				BulkMigrationJobConfiguration.class);
+		if (expectedConfigurationFingerprint != null
+				&& !expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
+		}
+		final byte[] configurationBytes;
+		try {
+			configurationBytes = BoundedMigrationJsonFile.read(configurationFile.toPath(),
+					maxConfigurationFileSizeBytes, "maxConfigurationFileSizeBytes", "Configuration file");
+		} catch (IOException e) {
+			throw new CommandException("Could not read bulk migration configuration file: " + configurationFile, e);
+		}
+		final String configurationFingerprint = "sha256:"
+				+ MessageDigests.SHA256.checksumAsString(configurationBytes);
+		if (expectedConfigurationFingerprint != null
+				&& !expectedConfigurationFingerprint.equals(configurationFingerprint)) {
+			throw new CommandException(
+					"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
+		}
+		final BulkMigrationJobConfiguration configuration = new YamlConverter().fromJsonString(
+				new String(configurationBytes, StandardCharsets.UTF_8), BulkMigrationJobConfiguration.class);
 		if (configuration == null || configuration.getSchemaFile() == null || configuration.getSchemaFile().isBlank()) {
 			throw new CommandException("schemaFile is required in bulk migration configuration.");
 		}
@@ -162,7 +192,7 @@ public class BulkMigrationJobConfigurationResolver {
 		return new Resolution(plan, lease(configurationFile, configuration.getLease()),
 				report(configurationFile, configuration.getReport()),
 				verification(configurationFile, configuration.getVerification(), configuration.getTasks()),
-				provenance(configurationFile, configuration.getProvenance()));
+				provenance(configurationFingerprint, configuration.getProvenance()));
 	}
 
 	private static List<String> targetColumns(final Table source, final Map<String, String> mappings,
@@ -246,10 +276,10 @@ public class BulkMigrationJobConfigurationResolver {
 		return target;
 	}
 
-	private static BulkMigrationArtifactProvenance provenance(final File configurationFile,
+	private static BulkMigrationArtifactProvenance provenance(final String configurationFingerprint,
 			final BulkMigrationJobConfiguration.Provenance provenance) {
 		return new BulkMigrationArtifactProvenance(
-				"sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
+				configurationFingerprint,
 				provenance == null ? null : provenance.getAssessmentReportFingerprint(),
 				provenance == null ? null : provenance.getDdlVerificationReportFingerprint());
 	}

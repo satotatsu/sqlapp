@@ -269,6 +269,8 @@ executeBulkMigrationJob {
     targetValidationReportFile = layout.buildDirectory.file('reports/target-validation.json')
     expectedTargetValidationReportFingerprint = providers.gradleProperty('approvedTargetValidationFingerprint')
     maxTargetValidationAgeSeconds = 3600L
+    maxConfigurationFileSizeBytes = 1048576L
+    maxTargetValidationReportFileSizeBytes = 2097152L
     targetEnvironmentId = 'production-oracle'
 }
 ```
@@ -278,6 +280,15 @@ ordered Access task IDs and provenance. Its age limit is mandatory when the
 report gate is enabled; the report fingerprint remains optional. Execution
 also compares the database product, version, catalog, schema and optional
 environment ID, then repeats the live target checks before writing rows.
+When an expected configuration or target-report fingerprint is supplied, the
+SHA-256 and parsed model are derived from the same byte snapshot. The accepted
+target-report fingerprint is reused in operational and repair provenance, so a
+file replacement between approval and evidence generation cannot authorize
+different content.
+The two byte limits are optional and have no implicit default. When configured,
+they reject oversized YAML or target evidence before parsing, and the bounded
+read also detects a file that grows after its initial size check. Repair
+execution exposes the same properties.
 
 Run the same plan resolution and target checks before the deployment window:
 
@@ -568,6 +579,9 @@ Execution, failure, post-repair verification, and saved outcome evidence use
 the same single-snapshot rule, so expected SHA checks and JSON validation
 cannot observe different versions of a replaced file. Saved-outcome ordering
 checks reuse the already accepted verification model instead of reopening it.
+Repair execution also rereads each generated evidence file immediately after
+its atomic write, requires the model to equal the generated model, and pins the
+accepted SHA into integrated outcome verification.
 Evidence verification requires execution and failure timestamps to follow the
 approval timestamp.
 
