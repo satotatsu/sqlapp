@@ -214,10 +214,16 @@ class BulkMigrationTest {
 		final var option = BulkMigrationTableOption.builder().targetTable("PUBLIC.ITEMS")
 				.columnMappings(Map.of("ACCESS_ID", "ID"))
 				.upsertOption(BulkUpsertOption.builder().keyColumn("ACCESS_ID").build()).build();
+		final Path executionReportFile = directory.resolve("mapped-execution.json");
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target).schema(schema)
-				.tables("ACCESS_ITEMS").tableOption("ACCESS_ITEMS", option).resume(false).build();
+				.tables("ACCESS_ITEMS").tableOption("ACCESS_ITEMS", option).resume(false)
+				.executionReport(executionReportFile, 1_000_000L).build();
 
 		assertEquals(1, migration.executeAndVerify().migration().getProcessedRows());
+		assertEquals(1, migration.getExecutionReport().processedRows());
+		assertEquals("PUBLIC.ACCESS_ITEMS", migration.getExecutionReport().tasks().get(0).taskId());
+		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256
+				.checksumAsString(executionReportFile.toFile()), migration.getExecutionReportFingerprint());
 		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
 			statement.executeUpdate("UPDATE ITEMS SET TXT='changed' WHERE ID=1");
 		}

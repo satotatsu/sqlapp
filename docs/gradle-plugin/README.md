@@ -262,8 +262,19 @@ executeBulkMigrationJob {
     configurationFile = file('migration/job.yaml')
     sourceDataSource { jdbcUrl = 'jdbc:postgresql://source/app' }
     dataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
+    executionReportFile = layout.buildDirectory.file('reports/migration-execution.json')
 }
 ```
+
+`executionReportFile` is the concise committed-work result: it records the job
+and plan fingerprints, total processed rows, already-complete task count, and
+per-table previous/current row and chunk counts in dependency order. The file
+is removed before a new attempt, then written atomically immediately after the
+migration executor returns and before optional verification starts. Set
+`maxExecutionReportFileSizeBytes` when the generated file must have an explicit
+bound. A report-publication failure raises
+`BulkMigrationExecutionReportException`, whose migration result makes clear
+that the database work already completed.
 
 To require the reviewed live-target check during execution, add its evidence
 and an explicit freshness limit:

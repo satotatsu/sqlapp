@@ -114,12 +114,16 @@ public final class BulkMigration {
 	private final Path maintenanceDirectory;
 	private final String maintenanceTableName;
 	private final Path operationalReportFile;
+	private final Path executionReportFile;
+	private final Long maxExecutionReportFileSizeBytes;
 	private final Path verificationReportFile;
 	private final Path repairPlanOnMismatchFile;
 	private final int maxReportedMismatches;
 	private final BulkMigrationVerificationIsolation verificationIsolation;
 	private final Integer verificationChunkSize;
 	private String operationalReportFingerprint;
+	private String executionReportFingerprint;
+	private BulkMigrationJobExecutionReport executionReport;
 	private String verificationReportFingerprint;
 	private String repairPlanReportFingerprint;
 	private String approvedOperationalReportFingerprint;
@@ -134,6 +138,14 @@ public final class BulkMigration {
 
 	public String getOperationalReportFingerprint() {
 		return operationalReportFingerprint;
+	}
+
+	public String getExecutionReportFingerprint() {
+		return executionReportFingerprint;
+	}
+
+	public BulkMigrationJobExecutionReport getExecutionReport() {
+		return executionReport;
 	}
 
 	public String getVerificationReportFingerprint() {
@@ -199,6 +211,7 @@ public final class BulkMigration {
 			final BulkMigrationCheckpointStore checkpointStore,
 			final BulkMigrationJobLeaseConfiguration leaseConfiguration, final BulkMigrationJobLifecycle lifecycle,
 			final Path maintenanceDirectory, final String maintenanceTableName, final Path operationalReportFile,
+			final Path executionReportFile, final Long maxExecutionReportFileSizeBytes,
 			final Path verificationReportFile, final Path repairPlanOnMismatchFile, final Integer maxReportedMismatches,
 			final BulkMigrationVerificationIsolation verificationIsolation, final Integer verificationChunkSize) {
 		this.source = Objects.requireNonNull(source, "source");
@@ -237,6 +250,12 @@ public final class BulkMigration {
 		this.maintenanceTableName = maintenanceTableName;
 		this.operationalReportFile = operationalReportFile == null ? null
 				: operationalReportFile.toAbsolutePath().normalize();
+		this.executionReportFile = executionReportFile == null ? null
+				: executionReportFile.toAbsolutePath().normalize();
+		if (maxExecutionReportFileSizeBytes != null && maxExecutionReportFileSizeBytes <= 0) {
+			throw new IllegalArgumentException("maxExecutionReportFileSizeBytes must be greater than zero");
+		}
+		this.maxExecutionReportFileSizeBytes = maxExecutionReportFileSizeBytes;
 		this.verificationReportFile = verificationReportFile == null ? null
 				: verificationReportFile.toAbsolutePath().normalize();
 		this.repairPlanOnMismatchFile = repairPlanOnMismatchFile == null ? null
@@ -305,6 +324,19 @@ public final class BulkMigration {
 			return this;
 		}
 
+		/** Writes the committed migration result immediately after execution. */
+		public BulkMigrationBuilder executionReport(final Path file) {
+			this.executionReportFile = Objects.requireNonNull(file, "file");
+			return this;
+		}
+
+		/** Writes the committed result with an explicit output-size bound. */
+		public BulkMigrationBuilder executionReport(final Path file, final long maxFileSizeBytes) {
+			this.executionReportFile = Objects.requireNonNull(file, "file");
+			this.maxExecutionReportFileSizeBytes = maxFileSizeBytes;
+			return this;
+		}
+
 		/** Writes the result of each explicit verification as bounded JSON. */
 		public BulkMigrationBuilder verificationReport(final Path file) {
 			this.verificationReportFile = Objects.requireNonNull(file, "file");
@@ -347,6 +379,7 @@ public final class BulkMigration {
 	}
 
 	public BulkMigrationJobResult execute() throws SQLException {
+		clearPreviousExecutionReport();
 		try (Connection sourceConnection = source.getConnection();
 				Connection targetConnection = target.getConnection()) {
 			if (maintenanceTableName == null) {
@@ -362,7 +395,38 @@ public final class BulkMigration {
 	private BulkMigrationJobResult execute(final Connection sourceConnection, final Connection targetConnection,
 			final Connection maintenanceConnection) throws SQLException {
 		final BulkMigrationJobPlan plan = plan(sourceConnection, targetConnection, false, false, maintenanceConnection);
-		return executePlan(targetConnection, plan);
+		final BulkMigrationJobResult result = executePlan(targetConnection, plan);
+		writeExecutionReport(plan, result);
+		return result;
+	}
+
+	private void clearPreviousExecutionReport() {
+		executionReport = null;
+		executionReportFingerprint = null;
+		if (executionReportFile == null) {
+			return;
+		}
+		try {
+			Files.deleteIfExists(executionReportFile);
+		} catch (IOException e) {
+			throw new com.sqlapp.exceptions.CommandException(
+					"Failed to clear previous bulk migration execution report: " + executionReportFile, e);
+		}
+	}
+
+	private void writeExecutionReport(final BulkMigrationJobPlan plan, final BulkMigrationJobResult result) {
+		if (executionReportFile == null) {
+			return;
+		}
+		try {
+			final var io = new BulkMigrationJobExecutionReportIO();
+			final var snapshot = io.writeSnapshot(executionReportFile, io.fromResult(plan, result, null),
+					maxExecutionReportFileSizeBytes);
+			executionReport = snapshot.report();
+			executionReportFingerprint = snapshot.fingerprint();
+		} catch (RuntimeException failure) {
+			throw new BulkMigrationExecutionReportException(result, failure);
+		}
 	}
 
 	private BulkMigrationJobResult executePlan(final Connection targetConnection, final BulkMigrationJobPlan plan)

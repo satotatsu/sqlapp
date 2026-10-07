@@ -9,6 +9,7 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
@@ -87,6 +88,14 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@Optional
 	public abstract Property<String> getTargetEnvironmentId();
 
+	@OutputFile
+	@Optional
+	public abstract RegularFileProperty getExecutionReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxExecutionReportFileSizeBytes();
+
 	@Nested
 	public abstract DataSourceExtension getSourceDataSource();
 
@@ -147,6 +156,12 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		}
 		if (getTargetEnvironmentId().isPresent()) {
 			command.setTargetEnvironmentId(getTargetEnvironmentId().get());
+		}
+		if (getExecutionReportFile().isPresent()) {
+			command.setExecutionReportFile(getExecutionReportFile().get().getAsFile());
+		}
+		if (getMaxExecutionReportFileSizeBytes().isPresent()) {
+			command.setMaxExecutionReportFileSizeBytes(getMaxExecutionReportFileSizeBytes().get());
 		}
 		if (getListener().isPresent()) {
 			command.setListener(getListener().get());

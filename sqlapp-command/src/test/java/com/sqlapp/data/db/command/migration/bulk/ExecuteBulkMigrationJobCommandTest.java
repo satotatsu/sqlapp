@@ -245,12 +245,24 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setDataSource(dataSource);
 			command.setCloseDataSource(false);
 			command.setPlan(BulkMigrationJobPlanner.plan(List.of()));
+			final Path executionReport = temporaryDirectory.resolve("programmatic-execution.json");
+			command.setExecutionReportFile(executionReport.toFile());
+			command.setMaxExecutionReportFileSizeBytes(1_000_000L);
 
 			command.run();
 
 			assertNotNull(command.getResult());
 			assertEquals(command.getPlan().getFingerprint(), command.getResult().getPlanFingerprint());
 			assertEquals(List.of(), command.getResult().getTasks());
+			assertEquals(0, command.getExecutionReport().processedRows());
+			assertEquals(command.getPlan().getFingerprint(), command.getExecutionReport().planFingerprint());
+			assertEquals(command.getExecutionReport(), new BulkMigrationJobExecutionReportIO().read(executionReport));
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(executionReport.toFile()),
+					command.getExecutionReportFingerprint());
+
+			command.setMaxExecutionReportFileSizeBytes(1L);
+			final var reportFailure = assertThrows(BulkMigrationExecutionReportException.class, command::run);
+			assertNotNull(reportFailure.getMigrationResult());
 		}
 	}
 

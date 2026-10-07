@@ -30,6 +30,8 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		assertFalse(task.maxTargetValidationAgeSeconds.isPresent())
 		assertFalse(task.maxTargetValidationReportFileSizeBytes.isPresent())
 		assertFalse(task.targetEnvironmentId.isPresent())
+		assertFalse(task.executionReportFile.isPresent())
+		assertFalse(task.maxExecutionReportFileSizeBytes.isPresent())
 		assertNotNull(task.sourceDataSource)
 		assertFalse(task.listener.isPresent())
 		assertFalse(task.chunkListener.isPresent())
@@ -41,6 +43,7 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		def assessment = new File(testProjectDir, 'assessment.json')
 		def ddlVerification = new File(testProjectDir, 'ddl-verification.json')
 		def targetValidation = new File(testProjectDir, 'target-validation.json')
+		def executionReport = new File(testProjectDir, 'execution.json')
 		assessment.text = '{}'
 		ddlVerification.text = '{}'
 		targetValidation.text = '{}'
@@ -52,6 +55,8 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		task.maxTargetValidationAgeSeconds.set(600L)
 		task.maxTargetValidationReportFileSizeBytes.set(2097152L)
 		task.targetEnvironmentId.set('production-oracle')
+		task.executionReportFile.set(executionReport)
+		task.maxExecutionReportFileSizeBytes.set(1048576L)
 		def command = task.createCommand()
 		task.beforeRun(command)
 		assertEquals('sha256:' + 'a' * 64, command.expectedConfigurationFingerprint)
@@ -65,5 +70,7 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		assertEquals(600L, command.maxTargetValidationAgeSeconds)
 		assertEquals(2097152L, command.maxTargetValidationReportFileSizeBytes)
 		assertEquals('production-oracle', command.targetEnvironmentId)
+		assertEquals(executionReport, command.executionReportFile)
+		assertEquals(1048576L, command.maxExecutionReportFileSizeBytes)
 	}
 }

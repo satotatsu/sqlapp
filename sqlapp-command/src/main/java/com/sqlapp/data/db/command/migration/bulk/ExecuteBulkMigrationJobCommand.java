@@ -3,6 +3,7 @@ package com.sqlapp.data.db.command.migration.bulk;
 
 
 import java.io.File;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -67,6 +68,10 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private BulkMigrationJobVerificationResult verificationResult;
 	private String verificationReportFingerprint;
 	private String repairPlanReportFingerprint;
+	private File executionReportFile;
+	private Long maxExecutionReportFileSizeBytes;
+	private BulkMigrationJobExecutionReport executionReport;
+	private String executionReportFingerprint;
 
 	@Override
 	protected void doRun() {
@@ -74,8 +79,13 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		verificationResult = null;
 		verificationReportFingerprint = null;
 		repairPlanReportFingerprint = null;
+		executionReport = null;
+		executionReportFingerprint = null;
 		approvedTargetValidationReport = null;
 		approvedTargetValidationReportFingerprint = null;
+		if (maxExecutionReportFileSizeBytes != null && maxExecutionReportFileSizeBytes <= 0) {
+			throw new CommandException("maxExecutionReportFileSizeBytes must be greater than zero.");
+		}
 		if (getDataSource() == null) {
 			throw new CommandException("Bulk migration target data source is required.");
 		}
@@ -95,6 +105,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		if (configurationFile != null && sourceDataSource == null) {
 			throw new CommandException("Bulk migration source data source is required for configurationFile.");
 		}
+		clearPreviousExecutionReport();
 		if (plan != null) {
 			executePlan(plan);
 			return;
@@ -218,6 +229,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 							chunkListener, manager);
 				}
 			}
+			writeExecutionReport(effectivePlan, provenance);
 			if (verificationConfiguration != null) {
 				try (var ignored = BulkMigrationVerificationScope.open(verificationConfiguration.isolation(),
 						java.util.Objects.requireNonNull(sourceConnection,
@@ -255,6 +267,34 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			}
 		});
 		info("Bulk migration job completed: ", executionPlan.getFingerprint());
+	}
+
+	private void clearPreviousExecutionReport() {
+		if (executionReportFile == null) {
+			return;
+		}
+		try {
+			Files.deleteIfExists(executionReportFile.toPath().toAbsolutePath().normalize());
+		} catch (java.io.IOException e) {
+			throw new CommandException("Failed to clear previous bulk migration execution report: "
+					+ executionReportFile.getAbsolutePath(), e);
+		}
+	}
+
+	private void writeExecutionReport(final BulkMigrationJobPlan executionPlan,
+			final BulkMigrationArtifactProvenance provenance) {
+		if (executionReportFile == null) {
+			return;
+		}
+		try {
+			final var io = new BulkMigrationJobExecutionReportIO();
+			final var snapshot = io.writeSnapshot(executionReportFile.toPath(),
+					io.fromResult(executionPlan, result, provenance), maxExecutionReportFileSizeBytes);
+			executionReport = snapshot.report();
+			executionReportFingerprint = snapshot.fingerprint();
+		} catch (RuntimeException failure) {
+			throw new BulkMigrationExecutionReportException(result, failure);
+		}
 	}
 
 	private static String writeRepairPlan(final BulkMigrationJobPlan plan, final Connection targetConnection,

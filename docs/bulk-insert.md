@@ -434,6 +434,7 @@ underlying APIs and declarative job configuration.
 | Prevent concurrent workers | `databaseLease(owner)` or `fileLease(owner, directory)` |
 | Recover vendor preparation after a crash | `databaseMaintenance()` or `fileMaintenance(directory)` |
 | Persist operational or verification evidence | `operationalReport(file)` or `verificationReport(file)` |
+| Persist committed row/chunk results | `executionReport(file)` |
 | Limit migration to selected tables | `tables(...)` |
 | Override one table only | `tableOption(table, option)` |
 | Rename a target table or columns | `tableOption(table, BulkMigrationTableOption.builder().targetTable(...).columnMappings(...).build())` |
@@ -576,6 +577,16 @@ Call `migration.dryRun(reportFile)` to write and return the same operational
 format before execution. Like `dryRun()`, this is read-only: it does not create
 or upgrade a database checkpoint table, create a file-checkpoint directory, or
 invoke the migration lifecycle.
+
+Add `.executionReport(reportFile)` to publish a concise result after the
+migration executor commits. Its overload accepts a maximum byte size. The
+report retains Access/source task IDs while recording per-table previous and
+current processed rows, completed chunks, already-complete state, and the
+resolved plan fingerprint. `getExecutionReport()` and
+`getExecutionReportFingerprint()` return the accepted model and SHA-256. A
+publication failure throws `BulkMigrationExecutionReportException` with the
+committed migration result, and a new attempt removes an older result file
+before database execution begins.
 
 Add `.verificationReport(reportFile)` to save every explicit `verify()` result
 as the existing bounded JSON verification artifact. It also applies to the
@@ -1371,6 +1382,15 @@ and bounded chunk retry rules are represented by nested `bulk` and `retry`
 blocks and participate in the plan fingerprint. `CUSTOM` duplicate selectors
 stay programmatic because they contain executable code. Execution remains
 separate from the read-only report task.
+Set the command or Gradle task's `executionReportFile` to persist the committed
+result immediately after migration and before optional verification. The JSON
+contains total and per-table processed rows, previous checkpoint rows,
+completed chunks, already-complete flags, dependency order, plan identity, and
+artifact provenance. `maxExecutionReportFileSizeBytes` adds an explicit output
+bound. A previous file is removed before each attempt, preventing an earlier
+success from surviving a failed rerun. If the database work completes but this
+file cannot be published, `BulkMigrationExecutionReportException` retains the
+committed `BulkMigrationJobResult`.
 An optional top-level `lease` block selects `DATABASE` or `FILE` fencing. Its
 owner, duration, and database table or file directory are resolved before the
 target migration begins; relative file directories use the job-file directory
