@@ -487,6 +487,11 @@ changes. It never deletes target rows. In INSERT mode those rows must be
 cleared or reconciled separately before rerunning, otherwise duplicates or
 constraint failures are possible. `resetCheckpointsWithFingerprint(value)`
 accepts an explicitly approved fingerprint when no report file is used.
+For an externally stored approval, use
+`resetCheckpoints(reportFile, expectedReportFingerprint, maxEvidenceFileSizeBytes)`.
+It reads one bounded byte snapshot, verifies its SHA-256 fingerprint before
+opening database connections, and exposes the accepted value through
+`getApprovedOperationalReportFingerprint()`.
 
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp
@@ -544,6 +549,9 @@ After reviewing the plan, call
 interrupted lifecycle, or `recoverMaintenance(approvedDryRunReport)` to use the
 fingerprint from a saved report. Recovery rejects a changed plan and is
 idempotent once the durable state is `RESTORED` or `COMPLETE`.
+`recoverMaintenance(reportFile, expectedReportFingerprint,
+maxEvidenceFileSizeBytes)` adds the same bounded-file and expected-SHA gate used
+by checkpoint reset.
 Execution performs the same durable-state preflight after acquiring any job
 lease and refuses to overwrite
 `PREPARING`, `PREPARED`, `POST_PROCESSING`, `RESTORING`, or `RESTORE_FAILED`.
@@ -616,6 +624,93 @@ separately, or `executeAndVerify()` when an interactive caller wants to handle a
 mismatch without an exception. `executeApproved(Path)` rereads the
 reviewed JSON, checks it against a freshly resolved live plan, and then executes
 the repair, so callers do not need to copy fingerprints manually.
+Use `executeApproved(path, expectedReportFingerprint, maxReportAgeSeconds,
+maxReportFileSizeBytes)` when approval storage also supplies an expected
+SHA-256 value, retention window, or file-size limit. Validation completes before
+database connections are opened. The accepted SHA-256 value is available from
+`getApprovedRepairPlanReportFingerprint()` on the migration and
+`getReportFingerprint()` on the repair handle.
+
+State-aware reruns follow the same artifact pattern. `writeNodeManifest(path)`
+writes the current per-table state atomically and exposes its SHA-256 value via
+`getNodeManifestFingerprint()`. The simple `executeModified(path)` entry point
+remains available. For a manifest kept in external approval storage, use
+`executeModified(path, expectedManifestFingerprint,
+maxNodeManifestFileSizeBytes)` to verify one bounded byte snapshot before
+opening database connections. The accepted value is available through
+`getApprovedNodeManifestFingerprint()`.
+For the ordinary recurring workflow,
+`executeModifiedAndWriteManifest(previousPath, currentPath)` executes the
+dependency-closed changed set and atomically writes the state used by the next
+run. Its overload accepts the expected previous-manifest SHA-256 value and an
+input size limit. After success, `getApprovedNodeManifestFingerprint()` is the
+input SHA and `getNodeManifestFingerprint()` is the newly written output SHA.
+
+Before cutover, `assessCutover(checks, lastVerifiedAt,
+maximumVerificationAge)` compares source and target watermarks and rejects stale
+verification. Pass a report path to persist the same decision and measurements
+as atomic JSON; the overload also accepts `maxCutoverReportFileSizeBytes`.
+`getCutoverReportFingerprint()` returns the SHA-256 value of the bytes that were
+written, so deployment approval can bind to the exact cutover evidence.
+At the deployment boundary, call `approveCutover(reportFile,
+expectedReportFingerprint, maximumReportAge, maxCutoverReportFileSizeBytes)`.
+It accepts only an exact, recent `READY` report, rejects future timestamps and
+expired decisions, and exposes the accepted SHA-256 value through
+`getApprovedCutoverReportFingerprint()`. This validation is file-only and does
+not open source or target database connections.
+
+To avoid supplying verification time manually, use
+`assessCutover(checks, verificationReport, maximumVerificationAge,
+cutoverReport)`. It requires a successful verification report whose plan
+fingerprint still matches the live migration plan, then uses that report's
+`generatedAt` as verification time. The advanced overload accepts the expected
+verification-report SHA-256 value and independent input/output size limits.
+`getApprovedVerificationReportFingerprint()` identifies the exact verification
+evidence used by the assessment without changing the existing cutover-report
+format.
+
+For a portable deployment gate, call
+`assessCutoverAndWriteEvidence(checks, verificationReport,
+maximumVerificationAge, cutoverReport, evidenceFile)`. The additional evidence
+file links the successful verification report, its plan fingerprint, and the
+cutover decision by SHA-256 without embedding machine-specific file paths. The
+advanced overload adds an expected verification SHA-256 value and independent
+size limits for all three files. Use `getCutoverEvidenceFingerprint()` as the
+value handed to the deployment stage. That stage calls
+`approveCutoverEvidence(evidenceFile, expectedEvidenceFingerprint,
+verificationReport, cutoverReport, maximumReportAge, ...)`; approval succeeds
+only when the evidence file is exact, both referenced files still have the
+recorded bytes and metadata, verification succeeded, and the cutover decision
+is recent and `READY`. The accepted SHA values are exposed through
+`getApprovedCutoverEvidenceFingerprint()`,
+`getApprovedVerificationReportFingerprint()`, and
+`getApprovedCutoverReportFingerprint()`. Approval is file-only and does not
+open database connections. The simpler cutover APIs remain suitable when an
+external system already stores the relationship between the two reports.
+
+For CI/CD systems that transfer directories as artifacts,
+`assessCutoverPackage(checks, verificationReport, maximumVerificationAge,
+packageDirectory)` publishes a new directory containing `verification.json`,
+`cutover.json`, and `evidence.json`. Files are prepared in a sibling staging
+directory and the completed directory is moved into place; an existing output
+directory is rejected instead of being overwritten. The returned
+`CutoverPackage.evidenceFingerprint()` is the value to carry in the deployment
+approval. A reviewer can call `inspectCutoverPackage(packageDirectory)` to
+cross-check and read the evidence, verification summary, cutover measurements,
+and package SHA-256 value without approving anything or opening database
+connections. `approveCutoverPackage(packageDirectory,
+expectedEvidenceFingerprint, maximumReportAge)` verifies the complete package
+without database access. It requires exactly the three documented regular
+files and rejects missing entries, extra entries, and symbolic-link
+substitution before reading report content. Advanced overloads provide the expected input
+verification SHA-256 value and independent size limits. This package API is
+optional; the individual-report APIs remain available for artifact stores that
+manage files separately.
+All file-only inspection and approval behavior is implemented by
+`MigrationCutoverArtifactService`; applications that do not use the facade can
+call that service directly and retain the same package inventory, fingerprint,
+timestamp, successful-verification, and `READY` checks.
+
 When only one table needs advanced behavior, keep the common builder unchanged
 and add a `BulkMigrationTableOption` for that table:
 

@@ -7,7 +7,9 @@ package com.sqlapp.data.db.command.migration.verification;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.nio.file.Path;
 import java.sql.DriverManager;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -16,10 +18,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.migration.MigrationFreshnessCheck;
+import com.sqlapp.exceptions.CommandException;
 
 class MigrationCutoverAssessorTest {
+	@TempDir
+	Path directory;
 
 	@Test
 	void evaluatesLagAndVerificationAge() throws Exception {
@@ -39,6 +45,15 @@ class MigrationCutoverAssessorTest {
 			assertEquals(MigrationCutoverReport.Status.READY, ready.status());
 			assertEquals(Duration.ofMinutes(2), ready.freshness().getFirst().lag());
 			assertEquals(MigrationCutoverReport.Status.NOT_READY_VERIFICATION_STALE, stale.status());
+
+			final Path reportFile = directory.resolve("cutover/ready.json");
+			final var io = new MigrationCutoverReportIO();
+			final var snapshot = io.writeSnapshot(reportFile, ready, 1_000_000L);
+			assertEquals(ready, snapshot.report());
+			assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(reportFile.toFile()),
+					snapshot.fingerprint());
+			assertEquals(snapshot, io.readSnapshot(reportFile, 1_000_000L));
+			assertThrows(CommandException.class, () -> io.read(reportFile, 1L));
 		}
 	}
 

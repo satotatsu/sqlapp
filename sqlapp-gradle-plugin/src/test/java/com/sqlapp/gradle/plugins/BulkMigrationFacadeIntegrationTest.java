@@ -213,7 +213,12 @@ class BulkMigrationFacadeIntegrationTest {
 				() -> changedPlan.resetCheckpoints(dryRunReport));
 		assertEquals(BulkMigrationJobTaskState.COMPLETE,
 				migration.status().getTasks().get(0).getState());
-		final var reset = migration.resetCheckpoints(dryRunReport);
+		final String reportFingerprint = "sha256:"
+				+ com.sqlapp.util.MessageDigests.SHA256.checksumAsString(dryRunReport.toFile());
+		assertThrows(IllegalArgumentException.class,
+				() -> migration.resetCheckpoints(dryRunReport, "sha256:" + "0".repeat(64), 1_000_000L));
+		final var reset = migration.resetCheckpoints(dryRunReport, reportFingerprint, 1_000_000L);
+		assertEquals(reportFingerprint, migration.getApprovedOperationalReportFingerprint());
 		assertEquals(List.of("ITEMS"), reset.getResetTaskIds());
 		assertEquals(BulkMigrationJobTaskState.NOT_STARTED,
 				migration.status().getTasks().get(0).getState());
@@ -368,6 +373,10 @@ class BulkMigrationFacadeIntegrationTest {
 		assertEquals(BulkMigrationVerificationMismatchException.class.getName(),
 				operationalReport.execution().failureType());
 		assertFalse(new BulkMigrationVerificationReportIO().read(verification).match());
+		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(verification.toFile()),
+				migration.getVerificationReportFingerprint());
+		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(repairPlan.toFile()),
+				migration.getRepairPlanReportFingerprint());
 
 		final Path invalidRepairTarget = directory.resolve("mismatch/repair-directory");
 		Files.createDirectories(invalidRepairTarget);

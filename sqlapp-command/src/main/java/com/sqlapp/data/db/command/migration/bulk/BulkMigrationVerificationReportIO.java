@@ -27,7 +27,7 @@ public final class BulkMigrationVerificationReportIO {
 		return readSnapshot(file, maxFileSizeBytes).report();
 	}
 
-	Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
+	public Snapshot readSnapshot(final Path file, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		if (!Files.isRegularFile(absolute)) {
 			throw new CommandException("Bulk migration verification report does not exist: " + absolute);
@@ -46,7 +46,7 @@ public final class BulkMigrationVerificationReportIO {
 		}
 	}
 
-	record Snapshot(BulkMigrationVerificationReport report, String fingerprint) {
+	public record Snapshot(BulkMigrationVerificationReport report, String fingerprint) {
 	}
 
 	private static String fingerprint(final byte[] bytes) {
@@ -127,7 +127,7 @@ public final class BulkMigrationVerificationReportIO {
 		}
 	}
 
-	Snapshot writeSnapshot(final Path file, final BulkMigrationVerificationReport report) {
+	public Snapshot writeSnapshot(final Path file, final BulkMigrationVerificationReport report) {
 		write(file, report);
 		final var snapshot = readSnapshot(file, null);
 		if (!report.equals(snapshot.report())) {
