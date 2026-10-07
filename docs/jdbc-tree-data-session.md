@@ -4,6 +4,138 @@
 the Schema foreign keys and dialect SQL factories; no database schema changes
 are required.
 
+Its central benefit is automatic optimization of database execution while keeping
+business code simple: access the tree one record at a time, and the session groups
+multiple records for execution using the batching and set-based strategies
+supported by the database. Application code expresses what to process; the session
+handles how those operations are grouped and executed efficiently.
+
+## Intended uses and benefits
+
+The API is designed for business processing where a parent record and its child
+records form a natural unit: orders and order lines, invoices and details,
+customers and their related records, or hierarchical staging data. It is also
+useful when porting procedural COBOL or PL/1 programs to Java: the application can
+keep familiar record-by-record control flow, validation, calculations and branching
+while delegating multi-row execution and relationship handling to the session.
+
+Application code accesses the tree directly with `next(table)` and `getRow(table)`
+loops, creates records with `newRow(table)`, and marks changes with `row.update()`,
+`row.insert()` or `row.delete()`. A child cursor exposes the children of the current
+parent. The application does not need to construct a separate batch, manage
+`PreparedStatement.addBatch()`, or issue a child query inside every parent loop.
+The initial root SQL remains available for business-specific filtering.
+
+The main benefits are:
+
+- **Straightforward business logic.** Nested loops follow the data hierarchy, so
+  business rules remain visible without being expressed as execution callbacks
+  or JDBC plumbing.
+- **Automatic optimization through multi-row execution.** Marked row operations
+  are buffered and grouped by table and operation. The session uses JDBC batches
+  or supported multi-row SQL internally, so ordinary record-by-record business
+  code benefits from grouped execution without hand-written batching logic.
+- **Grouped child reads.** Selected descendants are loaded for a batch of root
+  rows and associated with their parents in memory. Traversing those children
+  does not require a separate SELECT for each parent.
+- **Schema-based relationship handling.** Foreign keys define the tree, generated
+  parent keys propagate to children, inserts run parent first, and explicitly
+  marked deletes run child first.
+- **Explicit execution and observable results.** `execute` supplies the success
+  and failure boundary, and its result distinguishes executed work from confirmed
+  commits, including partial progress after a failure.
+
+For example, the order-processing sample below expresses selection, nested
+iteration, calculations and cancellation using ordinary control flow. The same
+code benefits from batching without introducing a second implementation of its
+business rules.
+
+## Automatic optimization through multi-row execution
+
+The session separates the application's record-at-a-time view from database
+execution. Root records are buffered in batches (`rootBatchSize` defaults to 500).
+Selected child data is loaded for those roots, and pending writes are executed
+as the batch is processed. The final buffered batch is processed when `execute`
+completes successfully.
+
+The optimization is in grouping database work and selecting an appropriate
+supported execution strategy. The business code benefits whether that strategy
+uses `executeBatch()` or a SQL statement that processes multiple rows at once.
+
+Ordinary INSERT, UPDATE and DELETE paths use JDBC `addBatch()` / `executeBatch()`.
+Compatible prepared statements are reused. Depending on the dialect and generated
+key requirements, INSERT may instead use a multi-row INSERT, INSERT RETURNING,
+sequence preallocation, or smaller supported batches. Root-scoped replacement
+deletes use a set-based DELETE. SELECTs use queries with fetch-size hints rather
+than JDBC update batches. These execution choices are handled inside the session;
+the business loop does not need to change for each strategy.
+
+Grouping writes and child reads can reduce database round trips compared with
+issuing a SQL statement for each individual record. Reusing prepared statements
+also reduces repeated statement creation. This makes the API suitable for large
+hierarchical batch jobs while keeping their application code simple. Actual
+throughput depends on the JDBC driver, dialect, indexes, query plans, network,
+record sizes and number of descendants; the API does not promise a fixed speedup.
+
+Batch size and commit interval have different purposes. `setRootBatchSize` tunes
+how many roots are processed together; `setFetchSize` supplies fetch-size hints
+for other statement paths. `setCommitEveryRootBatches` controls transaction
+boundaries and the amount of work that remains reversible. Increasing batch size
+also increases the child data held in memory: a root with many descendants can
+still require substantial memory. Dialect parameter and generated-key limits may
+split a write into smaller groups.
+
+The model represents one selected rooted tree, with one selected parent
+relationship per child table. It is most useful when the business logic needs
+to inspect or transform individual records. Arbitrary relationship graphs or
+processing that can be expressed entirely as a single database-side operation
+may call for a different execution model. SQL issued directly by application
+callbacks is outside the session's automatic batching and result aggregation.
+
+## Executable order-processing example
+
+See [JdbcTreeDataSessionOrderExampleTest](../sqlapp-core-h2/src/test/java/com/sqlapp/data/db/dialect/h2/examples/JdbcTreeDataSessionOrderExampleTest.java)
+for a complete, runnable example. The `processOrders` method contains the business
+logic; database creation, input data, result printing and assertions are kept in
+separate methods. No additional dependencies or external database are needed.
+
+Run from the repository root with Java 21 and the Gradle Wrapper:
+
+```powershell
+.\gradlew.bat :sqlapp-core-h2:test --tests '*JdbcTreeDataSessionOrderExampleTest' --console=plain
+```
+
+The fixture has an order header and its lines, with an ordinary non-CASCADE
+foreign key. A parameterized root SQL query selects only READY and CANCELLED
+orders and a minimum order ID. Child rows are selected through the Schema
+relationship. The application uses `next` / `getRow` loops, validates quantities,
+computes decimal line amounts and header totals, and explicitly marks updates
+or deletions. No additional callbacks are required.
+
+| Order | Initial status | Successful processing |
+| --- | --- | --- |
+| 1 | READY | DONE; two lines total 250.00 |
+| 2 | CANCELLED | Explicitly marked lines and header are deleted child first |
+| 3 | READY | DONE; one line totals 30.00 |
+| 4 | HOLD | Excluded by SQL; header and line remain unchanged |
+
+The success test verifies three completed root batches, one final commit, two
+header updates, three line updates, one header deletion and one line deletion.
+All affected counts are committed. It checks the final database state as well
+as the returned execution report.
+
+The failure test changes order 3's quantity to zero before processing. Its
+validation error occurs after the updates for order 1 and deletions for order 2
+have already executed. The exception retains a report showing two completed
+batches and zero commits. The test verifies that rollback restores order 2 and
+its line and undoes order 1's updates. Order 4 is unchanged in both cases.
+
+The example sets root batch size to one to expose these boundaries, and retains
+the default commit interval so the entire execution commits only on success.
+For larger jobs, changing the batch size changes SQL batching; explicitly enabling
+periodic commits also changes what can be rolled back. The example has no automatic
+restart: the initial SQL defines the work to process.
+
 ## Safe execution
 
 Run row processing inside `execute`:
