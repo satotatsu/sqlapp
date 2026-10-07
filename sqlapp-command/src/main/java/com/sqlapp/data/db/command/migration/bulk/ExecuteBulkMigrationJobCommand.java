@@ -72,6 +72,9 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	private Long maxExecutionReportFileSizeBytes;
 	private BulkMigrationJobExecutionReport executionReport;
 	private String executionReportFingerprint;
+	private File executionFailureReportFile;
+	private BulkMigrationJobFailureReport executionFailureReport;
+	private String executionFailureReportFingerprint;
 
 	@Override
 	protected void doRun() {
@@ -81,6 +84,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		repairPlanReportFingerprint = null;
 		executionReport = null;
 		executionReportFingerprint = null;
+		executionFailureReport = null;
+		executionFailureReportFingerprint = null;
 		approvedTargetValidationReport = null;
 		approvedTargetValidationReportFingerprint = null;
 		if (maxExecutionReportFileSizeBytes != null && maxExecutionReportFileSizeBytes <= 0) {
@@ -212,22 +217,27 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				}
 				throw rejection;
 			}
-			if (executionLeaseConfiguration == null) {
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
-						chunkListener);
-			} else if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
-				final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory.create(null,
-						executionLeaseConfiguration);
-				result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
-						chunkListener, manager);
-			} else {
-				try (Connection leaseConnection = getDataSource().getConnection()) {
-					leaseConnection.setAutoCommit(true);
-					final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory
-							.create(leaseConnection, executionLeaseConfiguration);
+			try {
+				if (executionLeaseConfiguration == null) {
+					result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
+							chunkListener);
+				} else if (executionLeaseConfiguration.mode() == BulkMigrationJobLeaseMode.FILE) {
+					final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory.create(null,
+							executionLeaseConfiguration);
 					result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
 							chunkListener, manager);
+				} else {
+					try (Connection leaseConnection = getDataSource().getConnection()) {
+						leaseConnection.setAutoCommit(true);
+						final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory
+								.create(leaseConnection, executionLeaseConfiguration);
+						result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
+								chunkListener, manager);
+					}
 				}
+			} catch (SQLException | RuntimeException | Error failure) {
+				writeExecutionFailureReport(effectivePlan, provenance, failure);
+				throw failure;
 			}
 			writeExecutionReport(effectivePlan, provenance);
 			if (verificationConfiguration != null) {
@@ -270,14 +280,31 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 	}
 
 	private void clearPreviousExecutionReport() {
-		if (executionReportFile == null) {
+		try {
+			if (executionReportFile != null) {
+				Files.deleteIfExists(executionReportFile.toPath().toAbsolutePath().normalize());
+			}
+			if (executionFailureReportFile != null) {
+				Files.deleteIfExists(executionFailureReportFile.toPath().toAbsolutePath().normalize());
+			}
+		} catch (java.io.IOException e) {
+			throw new CommandException("Failed to clear previous bulk migration execution reports", e);
+		}
+	}
+
+	private void writeExecutionFailureReport(final BulkMigrationJobPlan plan,
+			final BulkMigrationArtifactProvenance provenance, final Throwable failure) {
+		if (executionFailureReportFile == null) {
 			return;
 		}
 		try {
-			Files.deleteIfExists(executionReportFile.toPath().toAbsolutePath().normalize());
-		} catch (java.io.IOException e) {
-			throw new CommandException("Failed to clear previous bulk migration execution report: "
-					+ executionReportFile.getAbsolutePath(), e);
+			final var io = new BulkMigrationJobFailureReportIO();
+			final var snapshot = io.writeSnapshot(executionFailureReportFile.toPath(),
+					io.fromFailure(plan, failure, provenance), maxExecutionReportFileSizeBytes);
+			executionFailureReport = snapshot.report();
+			executionFailureReportFingerprint = snapshot.fingerprint();
+		} catch (RuntimeException reportFailure) {
+			failure.addSuppressed(reportFailure);
 		}
 	}
 

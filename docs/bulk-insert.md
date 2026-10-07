@@ -1391,6 +1391,12 @@ bound. A previous file is removed before each attempt, preventing an earlier
 success from surviving a failed rerun. If the database work completes but this
 file cannot be published, `BulkMigrationExecutionReportException` retains the
 committed `BulkMigrationJobResult`.
+The command and Gradle task also accept `executionFailureReportFile`. A failed
+or paused multi-table run records the stopped Access task ID, bounded exception
+type/message, and the completed parent-before-child task prefix. Failure-report
+write errors are suppressed onto the original execution failure. Success and
+failure outputs are separate and stale copies are cleared only after command
+configuration has passed validation and a new execution attempt is ready.
 An optional top-level `lease` block selects `DATABASE` or `FILE` fencing. Its
 owner, duration, and database table or file directory are resolved before the
 target migration begins; relative file directories use the job-file directory

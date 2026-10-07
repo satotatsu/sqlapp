@@ -92,6 +92,10 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 	@Optional
 	public abstract RegularFileProperty getExecutionReportFile();
 
+	@OutputFile
+	@Optional
+	public abstract RegularFileProperty getExecutionFailureReportFile();
+
 	@Input
 	@Optional
 	public abstract Property<Long> getMaxExecutionReportFileSizeBytes();
@@ -159,6 +163,9 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		}
 		if (getExecutionReportFile().isPresent()) {
 			command.setExecutionReportFile(getExecutionReportFile().get().getAsFile());
+		}
+		if (getExecutionFailureReportFile().isPresent()) {
+			command.setExecutionFailureReportFile(getExecutionFailureReportFile().get().getAsFile());
 		}
 		if (getMaxExecutionReportFileSizeBytes().isPresent()) {
 			command.setMaxExecutionReportFileSizeBytes(getMaxExecutionReportFileSizeBytes().get());

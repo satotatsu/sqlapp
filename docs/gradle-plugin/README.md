@@ -263,6 +263,7 @@ executeBulkMigrationJob {
     sourceDataSource { jdbcUrl = 'jdbc:postgresql://source/app' }
     dataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
     executionReportFile = layout.buildDirectory.file('reports/migration-execution.json')
+    executionFailureReportFile = layout.buildDirectory.file('reports/migration-failure.json')
 }
 ```
 
@@ -275,6 +276,12 @@ migration executor returns and before optional verification starts. Set
 bound. A report-publication failure raises
 `BulkMigrationExecutionReportException`, whose migration result makes clear
 that the database work already completed.
+`executionFailureReportFile` records `FAILED` or `PAUSED`, the stopped Access
+task ID when available, bounded exception details, and the successfully
+completed dependency-order prefix. Success and failure use separate files;
+both previous outputs are removed when a valid new execution attempt begins.
+Failure-report publication errors are attached as suppressed exceptions so the
+original database or pause failure remains primary.
 
 To require the reviewed live-target check during execution, add its evidence
 and an explicit freshness limit:

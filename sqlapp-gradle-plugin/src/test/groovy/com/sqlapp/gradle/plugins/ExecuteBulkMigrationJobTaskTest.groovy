@@ -31,6 +31,7 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		assertFalse(task.maxTargetValidationReportFileSizeBytes.isPresent())
 		assertFalse(task.targetEnvironmentId.isPresent())
 		assertFalse(task.executionReportFile.isPresent())
+		assertFalse(task.executionFailureReportFile.isPresent())
 		assertFalse(task.maxExecutionReportFileSizeBytes.isPresent())
 		assertNotNull(task.sourceDataSource)
 		assertFalse(task.listener.isPresent())
@@ -44,6 +45,7 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		def ddlVerification = new File(testProjectDir, 'ddl-verification.json')
 		def targetValidation = new File(testProjectDir, 'target-validation.json')
 		def executionReport = new File(testProjectDir, 'execution.json')
+		def executionFailureReport = new File(testProjectDir, 'execution-failure.json')
 		assessment.text = '{}'
 		ddlVerification.text = '{}'
 		targetValidation.text = '{}'
@@ -56,6 +58,7 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		task.maxTargetValidationReportFileSizeBytes.set(2097152L)
 		task.targetEnvironmentId.set('production-oracle')
 		task.executionReportFile.set(executionReport)
+		task.executionFailureReportFile.set(executionFailureReport)
 		task.maxExecutionReportFileSizeBytes.set(1048576L)
 		def command = task.createCommand()
 		task.beforeRun(command)
@@ -71,6 +74,7 @@ class ExecuteBulkMigrationJobTaskTest extends AbstractTaskTest {
 		assertEquals(2097152L, command.maxTargetValidationReportFileSizeBytes)
 		assertEquals('production-oracle', command.targetEnvironmentId)
 		assertEquals(executionReport, command.executionReportFile)
+		assertEquals(executionFailureReport, command.executionFailureReportFile)
 		assertEquals(1048576L, command.maxExecutionReportFileSizeBytes)
 	}
 }

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 
 class BulkMigrationJobExecutionReportIOTest {
 	@TempDir
@@ -33,5 +34,18 @@ class BulkMigrationJobExecutionReportIOTest {
 		assertThrows(CommandException.class, () -> io.writeSnapshot(file,
 				new BulkMigrationJobExecutionReport(1, Instant.now(), "access-job", "plan", 14, 0,
 						List.of(task), null), null));
+	}
+
+	@Test
+	void writesASeparateFailureResultWithoutPretendingExecutionCompleted() {
+		final var plan = BulkMigrationJobPlanner.plan("access-job", List.of());
+		final var io = new BulkMigrationJobFailureReportIO();
+		final var report = io.fromFailure(plan, new IllegalStateException("source read failed"), null);
+		final Path file = directory.resolve("reports/execution-failure.json");
+		final var snapshot = io.writeSnapshot(file, report, 10_000L);
+
+		assertEquals("FAILED", snapshot.report().status());
+		assertEquals(List.of(), snapshot.report().completedTasks());
+		assertEquals(report, io.read(file, 10_000L));
 	}
 }
