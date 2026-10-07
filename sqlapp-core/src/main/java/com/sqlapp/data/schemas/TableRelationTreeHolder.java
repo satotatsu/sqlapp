@@ -354,14 +354,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 			@Override
 			public boolean next() throws SQLException {
-				if (currentIndex < subList.size()) {
-					return true;
+				if (loadSubList()) {
+					currentIndex = 0;
 				}
-				if (!loadSubList()) {
-					return false;
-				}
-				currentIndex = 0;
-				return !subList.isEmpty();
+				return currentIndex < subList.size();
 			}
 
 			@Override
@@ -391,7 +387,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			private boolean resultSetNext = true;
 			private final List<Row> loadedList = CommonUtils.list();
 			private final List<Column> resultSetColumns = CommonUtils.list();
-			private long readResulSetCount = 0;
 
 			@Override
 			public boolean next() throws SQLException {
@@ -403,16 +398,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				}
 				readFromResultSet();
 				currentIndex = 0;
-				if (!getRows().isEmpty() || !loadedList.isEmpty()) {
-					if (readResulSetCount > 1) {
-						if (this.resultSetNext) {
-							return true;
-						}
-					} else {
-						return true;
-					}
-				}
-				return false;
+				// Reaching EOF does not discard the final, partially filled batch.
+				return !loadedList.isEmpty();
 			}
 
 			@Override
@@ -479,7 +466,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 						break;
 					}
 				}
-				readResulSetCount++;
 				this.resultSetNext = hasNext;
 				if (!hasNext) {
 					close();

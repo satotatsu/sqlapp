@@ -26,6 +26,19 @@ parent. The application does not need to construct a separate batch, manage
 `PreparedStatement.addBatch()`, or issue a child query inside every parent loop.
 The initial root SQL remains available for business-specific filtering.
 
+When a business rule stops a child loop early, advancing to the next parent
+discards that cursor's unread children. Its next iteration starts with children
+of the new current parent, including when that parent has no children.
+
+Custom child queries can be registered independently with
+`select(childTable, sql, context)`. The supplied context is used for parameter
+evaluation on each root batch, including when a prepared statement is reused.
+The two-argument child overload retains the root-row list as its implicit context.
+Return the relationship columns needed to associate results with their parents.
+Rows unrelated to the current batch's loaded parents are excluded from processing.
+Use `select(childTable)` for automatic queries restricted to the current root
+batch; a custom query must express its own SQL restrictions.
+
 The main benefits are:
 
 - **Straightforward business logic.** Nested loops follow the data hierarchy, so
@@ -77,6 +90,16 @@ hierarchical batch jobs while keeping their application code simple. Actual
 throughput depends on the JDBC driver, dialect, indexes, query plans, network,
 record sizes and number of descendants; the API does not promise a fixed speedup.
 
+For INSERTs with a sequence-backed column, dialects supporting sequence
+preallocation (including HSQLDB 2.x) fetch the required sequence values together
+for each table in the root batch. Associate the column with its `Sequence` in
+the Schema model using `setSequenceName`. With five roots and `rootBatchSize = 3`,
+the root sequence is queried for three values, then two; each child sequence is
+queried for the actual number of child rows in that batch. Parent values propagate
+to child foreign keys before insertion. The final batch does not reserve unused
+values. Sequence allocation itself is subject to the database's transaction
+semantics, so a rollback may still leave gaps.
+
 Batch size and commit interval have different purposes. `setRootBatchSize` tunes
 how many roots are processed together; `setFetchSize` supplies fetch-size hints
 for other statement paths. `setCommitEveryRootBatches` controls transaction
@@ -93,6 +116,11 @@ may call for a different execution model. SQL issued directly by application
 callbacks is outside the session's automatic batching and result aggregation.
 
 ## Executable order-processing example
+
+For a three-level procedural migration example (order, line, shipment allocation),
+see the [COBOL migration walkthrough](jdbc-tree-data-cobol-migration-example.md).
+It includes fictional COBOL-style pseudocode, a Java mapping, and executable
+success and rollback tests.
 
 See [JdbcTreeDataSessionOrderExampleTest](../sqlapp-core-h2/src/test/java/com/sqlapp/data/db/dialect/h2/examples/JdbcTreeDataSessionOrderExampleTest.java)
 for a complete, runnable example. The `processOrders` method contains the business

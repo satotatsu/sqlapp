@@ -84,6 +84,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	private final TableRelationTreeHolder tableRelationTreeHolder;
 	private final CommitCountHolder commitCountHandler = new CommitCountHolder(Long.MAX_VALUE, this.commitHandler);
 	private final Map<Column, SequenceGenerator> identitySequenceGenerators = new IdentityHashMap<>();
+	private final Map<TableRelation, Object> childSelectContexts = new IdentityHashMap<>();
 
 	private long batchUpdateCounter = 0;
 
@@ -223,6 +224,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT_BY_ROOT_ROWS, sql);
 			tableRelation.setSelectRegistered(true);
 			tableRelation.setSelectSqlNode(sqlNode);
+			childSelectContexts.put(tableRelation, context);
 		}
 	}
 
@@ -262,6 +264,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 				final List<Row> rows = loadRowDataByRoot(tabRelation);
 				final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
 				setParentRow(tabRelation, rows, rowNums, parentTableRelation.getRows());
+				// A custom query may also return rows belonging to other root batches.
+				rows.removeIf(row -> row.getParentRow() == null);
 				tabRelation.setLoadedRows(rows);
 			}
 		}, () -> {
@@ -273,6 +277,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	public void select(Table table, String sql) {
 		select(table, sql, CommonUtils.map());
+		// Preserve the implicit root-row context of child SELECTs without an explicit context.
+		childSelectContexts.remove(tableRelationTreeHolder.getTableRelation(table));
 	}
 
 	public void select(Table table) {
@@ -560,6 +566,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 		identitySequenceGenerators.values().forEach(SequenceGenerator::close);
 		identitySequenceGenerators.clear();
+		childSelectContexts.clear();
 		commitCountHandler.reset();
 		lastRow = null;
 		batchUpdateCounter = 0;
@@ -1173,21 +1180,21 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 					if (holder == null) {
 						if (tableRelation.getSelectSqlNode() != null) {
-							holder = registerStatementHolder(rootTableRelation, tableRelation.getSelectSqlNode());
+							holder = registerStatementHolder(tableRelation, tableRelation.getSelectSqlNode());
 						} else {
 							initialize(tableRelation, sqlType);
 							holder = tableRelation.getStatementHolder(sqlType);
 						}
 					}
-					PreparedStatement statement = null;
-					if (holder.getStatement(sqlSignature, rootRows) == null) {
-						statement = holder.createStatement(connection, sqlSignature, rootRows.size(), rootRows, false,
+					final Object context = childSelectContexts.containsKey(tableRelation)
+							? childSelectContexts.get(tableRelation) : rootRows;
+					PreparedStatement statement = holder.getStatement(sqlSignature, rootRows.size(), context);
+					if (statement == null) {
+						statement = holder.createStatement(connection, sqlSignature, rootRows.size(), context, false,
 								params -> {
 									params.setTableRelation(tableRelation);
 								});
 						statement.setFetchSize(fetchSize);
-					} else {
-						statement = holder.getStatement(sqlSignature, rootRows);
 					}
 					List<Row> resultSetRows = CommonUtils.list(rootRows.size());
 					preparedStatementBeforeExecuteHandler.accept(statement);
