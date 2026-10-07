@@ -239,7 +239,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 	}
 
 	@Test
-	void executesProgrammaticPlanAgainstConfiguredDataSource() {
+	void executesProgrammaticPlanAgainstConfiguredDataSource() throws Exception {
 		try (var dataSource = newDataSource()) {
 			final var command = new ExecuteBulkMigrationJobCommand();
 			command.setDataSource(dataSource);
@@ -263,6 +263,30 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setMaxExecutionReportFileSizeBytes(1L);
 			final var reportFailure = assertThrows(BulkMigrationExecutionReportException.class, command::run);
 			assertNotNull(reportFailure.getMigrationResult());
+
+			final Path failedOutput = temporaryDirectory.resolve("programmatic-failure.json");
+			final Path staleSuccess = temporaryDirectory.resolve("stale-success.json");
+			Files.writeString(staleSuccess, "stale");
+			final var failed = new ExecuteBulkMigrationJobCommand();
+			failed.setDataSource(dataSource);
+			failed.setCloseDataSource(false);
+			failed.setPlan(BulkMigrationJobPlanner.plan("failed-access-job", List.of()));
+			failed.setExecutionReportFile(staleSuccess.toFile());
+			failed.setExecutionFailureReportFile(failedOutput.toFile());
+			failed.setListener(new BulkMigrationJobListener() {
+				@Override
+				public void onJobStarted(final String planFingerprint, final int taskCount) {
+					throw new IllegalStateException("listener stopped execution");
+				}
+			});
+			assertThrows(IllegalStateException.class, failed::run);
+			assertFalse(Files.exists(staleSuccess));
+			final var failedReport = new BulkMigrationJobFailureReportIO().read(failedOutput, 1_000_000L);
+			assertEquals("FAILED", failedReport.status());
+			assertEquals("failed-access-job", failedReport.jobId());
+			assertEquals(IllegalStateException.class.getName(), failedReport.failureType());
+			assertEquals(List.of(), failedReport.completedTasks());
+			assertNotNull(failed.getExecutionFailureReportFingerprint());
 		}
 	}
 
