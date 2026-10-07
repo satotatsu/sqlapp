@@ -47,8 +47,20 @@ class SqlServerJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = SQL_SERVER.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = SchemaUtils.getSchema(connection, "dbo").orElseThrow();
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("PARENT_TABLE"), schema.getTables().get("CHILD_TABLE"));
+		}
+	}
+
+	@Test
 	void testSelectCursorRemainsUsableDuringHierarchicalInsert() throws SQLException {
 		try (Connection connection = SQL_SERVER.createConnection("")) {
+			connection.setAutoCommit(false);
 			createTables(connection);
 			Schema schema = SchemaUtils.getSchema(connection, "dbo")
 					.orElseThrow(() -> new AssertionError("SQL Server dbo schema was not loaded."));

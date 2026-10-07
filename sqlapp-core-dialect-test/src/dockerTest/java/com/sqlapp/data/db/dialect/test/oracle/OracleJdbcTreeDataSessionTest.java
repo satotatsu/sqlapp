@@ -49,6 +49,16 @@ class OracleJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("PARENT_TABLE"), schema.getTables().get("CHILD_TABLE"));
+		}
+	}
+	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
 		try (Connection writer = ORACLE.createConnection(""); Connection observer = ORACLE.createConnection("")) {
 			writer.setAutoCommit(false);

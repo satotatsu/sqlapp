@@ -46,6 +46,16 @@ class PostgresJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadPublicSchema(connection);
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
+		}
+	}
+	@Test
 	void testAlwaysIdentityRejectsExplicitValues() throws SQLException {
 		try (Connection connection = POSTGRES.createConnection("")) {
 			connection.setAutoCommit(false);

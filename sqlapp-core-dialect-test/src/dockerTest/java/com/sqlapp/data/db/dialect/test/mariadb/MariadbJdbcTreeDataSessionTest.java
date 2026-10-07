@@ -50,6 +50,16 @@ class MariadbJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadSchema(connection);
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
+		}
+	}
+	@Test
 	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
 		try (Connection connection = MARIADB.createConnection("")) {
 			connection.setAutoCommit(false);

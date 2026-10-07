@@ -50,6 +50,16 @@ class MySqlJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadSchema(connection);
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
+		}
+	}
+	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
 		try (Connection writer = MYSQL.createConnection(""); Connection observer = MYSQL.createConnection("")) {
 			writer.setAutoCommit(false);
