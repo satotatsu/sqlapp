@@ -390,25 +390,28 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		if (tableRelation.getRows().size() == 0) {
 			return;
 		}
-		handleAsBatch(tableRelation, true);
+		handleAsBatch(tableRelation, true, new IdentityHashMap<>());
 	}
 
 	private boolean rootFinish = true;
 
-	private void handleAsBatch(final TableRelation tableRelation, boolean root) throws SQLException {
+	private void handleAsBatch(final TableRelation tableRelation, boolean root,
+			Map<TableRelation, TableOperationMode> modes) throws SQLException {
 		Table table = tableRelation.getTable();
 		if (root) {
 			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, tableRelation.getRows());
 			rootFinish = false;
+			prepareRowOperations(tableRelation, modes);
+			deleteMarkedRows(tableRelation, modes);
 		}
-		boolean updated = handleStatementHolder(this, tableRelation, tableRelation.getRows());
+		boolean updated = handleStatementHolder(tableRelation, tableRelation.getRows(), modes.get(tableRelation));
 		if (root) {
 			this.batchUpdateCounter++;
 			afterRootBatchHandler.accept(this.batchUpdateCounter, table, tableRelation.getRows());
 		}
 		setRowValueToChildren(tableRelation);
 		for (TableRelation childTableRelation : tableRelation.getChildren()) {
-			handleAsBatch(childTableRelation, false);// 再帰的に子供をBATCH UPDATE
+			handleAsBatch(childTableRelation, false, modes);// 再帰的に子供をBATCH UPDATE
 		}
 		if (root) {
 			Row row = CommonUtils.last(tableRelation.getRows());
@@ -427,6 +430,31 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	private Row lastRow = null;
+
+	private void prepareRowOperations(TableRelation relation, Map<TableRelation, TableOperationMode> modes) {
+		final TableOperationMode mode = tableOperationMode.apply(relation.getTable());
+		modes.put(relation, mode);
+		for (Row row : relation.getRows()) {
+			if (row.isDefault()) {
+				relation.setRowOperation(row, mode.getRowOperation());
+			}
+		}
+		for (TableRelation child : relation.getChildren()) {
+			prepareRowOperations(child, modes);
+		}
+	}
+
+	private void deleteMarkedRows(TableRelation relation, Map<TableRelation, TableOperationMode> modes)
+			throws SQLException {
+		// Existing parent keys must be available before child DELETE parameters are bound.
+		setRowValueToChildren(relation);
+		for (TableRelation child : relation.getChildren()) {
+			deleteMarkedRows(child, modes);
+		}
+		if (modes.get(relation) != TableOperationMode.REPLACE) {
+			deleteByRows(relation, relation.getRows().stream().filter(Row::isDelete).toList());
+		}
+	}
 
 	private void clearRows(final TableRelation tableRelation) {
 		tableRelation.getRows().clear();
@@ -494,28 +522,60 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	@Override
 	public void close() throws SQLException {
-		if (rootFinish) {
-			boolean executeUpdate = false;
-			TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableRelation();
-			if (rootTableRelation.getRows().size() > 0) {
-				executeUpdate(rootTableRelation);
-				executeUpdate = true;
+		try {
+			if (rootFinish) {
+				TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableRelation();
+				if (!rootTableRelation.getRows().isEmpty()) {
+					executeUpdate(rootTableRelation);
+				}
+				if (commitCountHandler.isFinalCommit()) {
+					beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
+				}
+				if (commitCountHandler.finalCommit(connection)) {
+					afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
+				}
 			}
-			if (executeUpdate && commitCountHandler.isFinalCommit()) {
-				beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
+		} finally {
+			for (TableRelation tableRelation : tableRelationTreeHolder) {
+				tableRelation.close();
 			}
-			if (executeUpdate && commitCountHandler.finalCommit(connection)) {
-				afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
-			}
+			identitySequenceGenerators.values().forEach(SequenceGenerator::close);
+			identitySequenceGenerators.clear();
+			commitCountHandler.reset();
+			lastRow = null;
+			batchUpdateCounter = 0;
 		}
-		for (TableRelation tableRelation : tableRelationTreeHolder) {
-			tableRelation.close();
+	}
+
+	/**
+	 * Runs work and closes this session, rolling back uncommitted work on failure.
+	 * The connection must have auto-commit disabled and its transaction is owned by
+	 * this operation. Earlier periodic commits cannot be rolled back. The connection
+	 * itself remains open. Prefer this method to try-with-resources when business
+	 * logic can fail: {@link #close()} alone cannot detect an exception in its caller.
+	 *
+	 * @param work session configuration and row processing
+	 * @throws SQLException if execution, commit or rollback fails
+	 */
+	public void execute(SQLConsumer<JdbcTreeDataSession> work) throws SQLException {
+		if (connection.getAutoCommit()) {
+			throw new IllegalStateException("JdbcTreeDataSession.execute requires autoCommit=false.");
 		}
-		identitySequenceGenerators.values().forEach(SequenceGenerator::close);
-		identitySequenceGenerators.clear();
-		commitCountHandler.reset();
-		lastRow = null;
-		batchUpdateCounter = 0;
+		try (this) {
+			try {
+				work.accept(this);
+			} catch (SQLException | RuntimeException | Error failure) {
+				rootFinish = false;
+				throw failure;
+			}
+		} catch (SQLException | RuntimeException | Error failure) {
+			try {
+				connection.rollback();
+			} catch (SQLException | RuntimeException rollbackFailure) {
+				failure.addSuppressed(rollbackFailure);
+			}
+			throw failure;
+		}
 	}
 
 	public static enum TableOperationMode {
@@ -837,8 +897,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return result;
 	}
 
-	private boolean handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-			List<Row> rows) throws SQLException {
+	private boolean handleStatementHolder(final TableRelation tableRelation,
+			List<Row> rows, TableOperationMode mode) throws SQLException {
 		final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 		List<Row> filteredRows = rows.stream()
 				.filter(row -> row.getParentRow() == null || !row.getParentRow().isDelete()).toList();// 親が削除された行は除外
@@ -848,20 +908,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		if (filteredRows.isEmpty()) {
 			return false;
 		}
-		final TableOperationMode mode = tableOperationMode.apply(tableRelation.getTable());
-		final List<Row> deleteRows = CommonUtils.list();
 		final List<Row> insertRows = CommonUtils.list();
 		final List<Row> insertIgnoreRows = CommonUtils.list();
 		final List<Row> updateRows = CommonUtils.list();
 		final List<Row> mergeRows = CommonUtils.list();
 		final List<Row> unchangedOrDefault = CommonUtils.list();
 		filteredRows.forEach(row -> {
-			if (row.isDefault()) {
-				tableRelation.setRowOperation(row, mode.getRowOperation());
-			}
-			if (row.isDelete()) {
-				deleteRows.add(row);
-			} else if (row.isInsert()) {
+			if (row.isInsert()) {
 				insertRows.add(row);
 			} else if (row.isInsertIgnore()) {
 				insertIgnoreRows.add(row);
@@ -876,7 +929,6 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		});
 		if (mode == TableOperationMode.REPLACE) {
 			long ret = deleteByRootRows(tableRelation, rows);
-			deleteRows.clear();
 			insertRows.addAll(insertIgnoreRows);
 			insertIgnoreRows.clear();
 			handleStatement(tableRelation, insertRows, SqlType.INSERT);
@@ -884,7 +936,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			handleMerge(tableRelation, mergeRows);
 			return true;
 		} else {
-			deleteByRows(tableRelation, deleteRows);
+			// Explicit deletes have already run in child-first order.
 			handleStatement(tableRelation, insertRows, SqlType.INSERT);
 			handleInsertIgnore(tableRelation, insertIgnoreRows);
 			handleStatement(tableRelation, updateRows, SqlType.UPDATE);
