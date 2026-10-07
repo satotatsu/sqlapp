@@ -242,11 +242,11 @@ class SybaseJdbcTreeDataSessionTest {
 			table.getColumns().add(new Column("id").setDataType(DataType.INT).setIdentity(true));
 			table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(30));
 			SQLException exception = assertThrows(SQLException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, table)) {
+				new JdbcTreeDataSession(connection, table).execute(session -> {
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					Row row = session.newRow(table);
 					row.put("txt", "row-1");
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("provide explicit key values"), exception::getMessage);
 		}

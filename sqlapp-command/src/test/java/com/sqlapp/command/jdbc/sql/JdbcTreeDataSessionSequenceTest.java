@@ -142,7 +142,7 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
 			int loop = 10;
-			try (session) {
+			session.execute(activeSession -> {
 				for (int i = 0; i < loop; i++) {
 					Row row = session.newRow(tab);
 					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
@@ -159,7 +159,7 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -215,6 +215,7 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
+			conn.setAutoCommit(false);
 			cons.accept(conn);
 			finCons.accept(conn);
 		}

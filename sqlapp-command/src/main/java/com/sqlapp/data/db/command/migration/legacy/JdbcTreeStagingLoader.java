@@ -105,16 +105,16 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private long loadRoot(LoadDataSetWrapper root) throws SQLException {
-		long loaded = 0;
+		long[] loaded = { 0 };
 		JdbcTreeDataSession reader = createReader(root);
 		JdbcTreeDataSession writer = createWriter(root);
-		try (JdbcTreeDataCopySession copySession = createCopySession(root, reader, writer)) {
+		createCopySession(root, reader, writer).execute(copySession -> {
 			while (copySession.next(stagingTables.get(root.getId()))) {
 				copyHierarchy(copySession, root);
-				loaded++;
+				loaded[0]++;
 			}
-		}
-		return loaded;
+		});
+		return loaded[0];
 	}
 
 	private JdbcTreeDataCopySession createCopySession(LoadDataSetWrapper root, JdbcTreeDataSession reader,

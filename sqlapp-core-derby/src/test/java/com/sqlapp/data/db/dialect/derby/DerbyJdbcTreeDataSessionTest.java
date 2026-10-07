@@ -52,7 +52,7 @@ class DerbyJdbcTreeDataSessionTest {
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -65,7 +65,7 @@ class DerbyJdbcTreeDataSessionTest {
 					Row childRow = session.newRow(child);
 					childRow.put("TXT", "child-" + i);
 				}
-			}
+			});
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());
@@ -95,10 +95,10 @@ class DerbyJdbcTreeDataSessionTest {
 			createTables(connection);
 			Table parent = loadSchema(connection).getTables().get("PARENT_TABLE");
 			SQLException exception = assertThrows(SQLException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent)) {
+				new JdbcTreeDataSession(connection, parent).execute(session -> {
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					session.newRow(parent).put("TXT", "unsupported-identity");
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("associate an explicit sequence"), exception.getMessage());
 			connection.rollback();

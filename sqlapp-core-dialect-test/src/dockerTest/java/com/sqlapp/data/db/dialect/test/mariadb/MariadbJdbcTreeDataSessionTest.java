@@ -57,14 +57,14 @@ class MariadbJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
 				addChild(session, child, "child-3");
 				addParent(session, parent, "parent-4");
 				addChild(session, child, "child-4");
-			}
+			});
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.txt, c.txt FROM parent_table p
 					JOIN child_table c ON c.parent_id = p.id
@@ -85,7 +85,7 @@ class MariadbJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
@@ -94,7 +94,7 @@ class MariadbJdbcTreeDataSessionTest {
 				addParent(session, parent, "parent-4");
 				addParent(session, parent, "parent-5");
 				addChild(session, child, "child-5");
-			}
+			});
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.txt, c.txt FROM parent_table p
 					LEFT JOIN child_table c ON c.parent_id = p.id
@@ -118,7 +118,7 @@ class MariadbJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(writer);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
+			new JdbcTreeDataSession(writer, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setCommitEveryRootBatches(1);
 				session.setTableOperationMode(TableOperationMode.INSERT);
@@ -130,7 +130,7 @@ class MariadbJdbcTreeDataSessionTest {
 				assertEquals(4, count(observer, "parent_table"));
 				assertEquals(2, count(observer, "child_table"));
 				addChild(session, child, "child-5");
-			}
+			});
 			assertEquals(5, count(observer, "parent_table"));
 			assertEquals(3, count(observer, "child_table"));
 		}
@@ -144,12 +144,12 @@ class MariadbJdbcTreeDataSessionTest {
 			Schema schema = loadSchema(connection);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(10);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
 				addChild(session, child, "child-3");
-			}
+			});
 			assertEquals(3, count(connection, "parent_table"));
 			assertEquals(1, count(connection, "child_table"));
 			connection.rollback();
@@ -170,12 +170,12 @@ class MariadbJdbcTreeDataSessionTest {
 					ResultSet.CONCUR_READ_ONLY);
 					ResultSet resultSet = statement.executeQuery("SELECT id, txt FROM parent_table ORDER BY id")) {
 				assertTrue(resultSet.next());
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setRootBatchSize(1);
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					addParent(session, parent, "parent-3");
 					addChild(session, child, "child-3");
-				}
+				});
 				assertTrue(resultSet.next());
 			}
 		}
@@ -192,7 +192,7 @@ class MariadbJdbcTreeDataSessionTest {
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -203,7 +203,7 @@ class MariadbJdbcTreeDataSessionTest {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
-			}
+			});
 			assertEquals(2, statements.size());
 			assertEquals(6, executions.get());
 
@@ -230,7 +230,7 @@ class MariadbJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				Row first = addParent(session, parent, "parent-100");
@@ -239,7 +239,7 @@ class MariadbJdbcTreeDataSessionTest {
 				Row second = addParent(session, parent, "parent-200");
 				second.put("id", 200L);
 				addChild(session, child, "child-200");
-			}
+			});
 
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.id, c.parent_id
@@ -265,13 +265,13 @@ class MariadbJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("child_table");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setRootBatchSize(2);
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					addParent(session, parent, "generated-parent");
 					Row explicit = addParent(session, parent, "explicit-parent");
 					explicit.put("id", 100L);
-				}
+				});
 			});
 
 			assertTrue(exception.getMessage().contains("cannot mix"));

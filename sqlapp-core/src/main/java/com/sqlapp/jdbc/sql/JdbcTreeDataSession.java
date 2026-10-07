@@ -303,6 +303,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	protected boolean next(final TableRelation tableRelation) throws SQLException {
+		requireExecuting();
 		if (!tableRelation.isSelectRegistered()) {
 			throw new IllegalStateException("Table[name=" + tableRelation.getTable().getName()
 					+ "] has not been selected. Call select(table) before next().");
@@ -311,6 +312,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	public Row getRow(Table table) throws SQLException {
+		requireExecuting();
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		return tableRelation.get();
 	}
@@ -331,6 +333,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	public Row newRow(Table table) throws SQLException {
+		requireExecuting();
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		if (tableRelation.isRoot()) {
 			int tableRowSize = tableRelation.getRows().size();
@@ -394,13 +397,20 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	private boolean rootFinish = true;
+	private boolean executing;
+
+	private void requireExecuting() {
+		if (!executing) {
+			throw new IllegalStateException("Process rows inside JdbcTreeDataSession.execute(work).");
+		}
+	}
 
 	private void handleAsBatch(final TableRelation tableRelation, boolean root,
 			Map<TableRelation, TableOperationMode> modes) throws SQLException {
 		Table table = tableRelation.getTable();
 		if (root) {
-			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, tableRelation.getRows());
 			rootFinish = false;
+			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, tableRelation.getRows());
 			prepareRowOperations(tableRelation, modes);
 			deleteMarkedRows(tableRelation, modes);
 		}
@@ -476,12 +486,14 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	public void readAll() throws SQLException {
+		requireExecuting();
 		TableRelation rootTableRelation = this.getRootTableRelation();
 		readResursive(rootTableRelation, (table, rowNo, row) -> {
 		});
 	}
 
 	public void readAll(TableRowConsumer consumer) throws SQLException {
+		requireExecuting();
 		TableRelation rootTableRelation = this.getRootTableRelation();
 		readResursive(rootTableRelation, consumer);
 	}
@@ -502,6 +514,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	public void readAll(SQLBiConsumer<Table, Row> consumer) throws SQLException {
+		requireExecuting();
 		TableRelation rootTableRelation = this.getRootTableRelation();
 		readResursive(rootTableRelation, consumer);
 	}
@@ -520,53 +533,65 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 	}
 
+	/** Releases resources and discards buffered rows without executing SQL or committing. */
 	@Override
 	public void close() throws SQLException {
-		try {
-			if (rootFinish) {
-				TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableRelation();
-				if (!rootTableRelation.getRows().isEmpty()) {
-					executeUpdate(rootTableRelation);
-				}
-				if (commitCountHandler.isFinalCommit()) {
-					beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
-				}
-				if (commitCountHandler.finalCommit(connection)) {
-					afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
-				}
-			}
-		} finally {
-			for (TableRelation tableRelation : tableRelationTreeHolder) {
-				tableRelation.close();
-			}
-			identitySequenceGenerators.values().forEach(SequenceGenerator::close);
-			identitySequenceGenerators.clear();
-			commitCountHandler.reset();
-			lastRow = null;
-			batchUpdateCounter = 0;
+		if (executing) {
+			throw new IllegalStateException("Do not close a session inside execute(work).");
+		}
+		for (TableRelation tableRelation : tableRelationTreeHolder) {
+			tableRelation.close();
+		}
+		identitySequenceGenerators.values().forEach(SequenceGenerator::close);
+		identitySequenceGenerators.clear();
+		commitCountHandler.reset();
+		lastRow = null;
+		batchUpdateCounter = 0;
+		rootFinish = true;
+	}
+
+	void finishExecution() throws SQLException {
+		requireExecuting();
+		if (!rootFinish) {
+			throw new IllegalStateException("A root batch failed; this execution cannot be committed.");
+		}
+		TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableRelation();
+		if (!rootTableRelation.getRows().isEmpty()) {
+			executeUpdate(rootTableRelation);
+		}
+		if (commitCountHandler.isFinalCommit()) {
+			beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
+		}
+		if (commitCountHandler.finalCommit(connection)) {
+			afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);
 		}
 	}
 
 	/**
-	 * Runs work and closes this session, rolling back uncommitted work on failure.
-	 * The connection must have auto-commit disabled and its transaction is owned by
-	 * this operation. Earlier periodic commits cannot be rolled back. The connection
-	 * itself remains open. Prefer this method to try-with-resources when business
-	 * logic can fail: {@link #close()} alone cannot detect an exception in its caller.
+	 * Runs row processing, flushes and commits on success, and releases resources.
+	 * On failure, buffered rows are discarded and uncommitted work is rolled back.
+	 * Auto-commit must be disabled. This operation owns the connection transaction;
+	 * earlier periodic commits cannot be rolled back. The connection remains open.
+	 * Configuration and SELECT registration may be performed before execution.
+	 * A session may be configured and executed again after execution completes.
 	 *
 	 * @param work session configuration and row processing
 	 * @throws SQLException if execution, commit or rollback fails
 	 */
 	public void execute(SQLConsumer<JdbcTreeDataSession> work) throws SQLException {
+		if (executing) {
+			throw new IllegalStateException("JdbcTreeDataSession.execute is already running.");
+		}
 		if (connection.getAutoCommit()) {
 			throw new IllegalStateException("JdbcTreeDataSession.execute requires autoCommit=false.");
 		}
+		executing = true;
 		try (this) {
 			try {
 				work.accept(this);
-			} catch (SQLException | RuntimeException | Error failure) {
-				rootFinish = false;
-				throw failure;
+				finishExecution();
+			} finally {
+				executing = false;
 			}
 		} catch (SQLException | RuntimeException | Error failure) {
 			try {
@@ -947,6 +972,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	public List<Row> handleDeleteStatementHolder(final TableRelation tableRelation, List<Row> rows)
 			throws SQLException {
+		requireExecuting();
 		if (tableRelation.isRoot()) {
 			handleStatement(tableRelation, rows, SqlType.DELETE);
 			return rows;

@@ -220,6 +220,24 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Copies rows within the source and target execution boundaries. On success,
+	 * the final source batch is processed before the target batch is committed.
+	 * On failure both sessions discard buffered rows and roll back uncommitted work.
+	 * Separate connections do not provide an atomic distributed transaction.
+	 *
+	 * @param work copy configuration and row processing
+	 * @throws SQLException if copying or transaction completion fails
+	 */
+	public void execute(SQLConsumer<JdbcTreeDataCopySession> work) throws SQLException {
+		try (this) {
+			source.execute(reader -> target.execute(writer -> {
+				work.accept(this);
+				source.finishExecution();
+			}));
+		}
+	}
+
 	public static enum HoldCursorStrategy {
 		HOLD {
 			@Override

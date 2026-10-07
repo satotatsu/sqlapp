@@ -42,7 +42,7 @@ class HsqlJdbcTreeDataSessionTest {
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -55,7 +55,7 @@ class HsqlJdbcTreeDataSessionTest {
 					Row childRow = session.newRow(child);
 					childRow.put("TXT", "child-" + i);
 				}
-			}
+			});
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());

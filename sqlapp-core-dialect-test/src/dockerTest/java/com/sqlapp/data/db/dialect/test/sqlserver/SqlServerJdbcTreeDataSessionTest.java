@@ -61,14 +61,14 @@ class SqlServerJdbcTreeDataSessionTest {
 				try (ResultSet cursor = statement.executeQuery("SELECT ID, TXT FROM PARENT_TABLE ORDER BY ID")) {
 					assertTrue(cursor.next());
 
-					try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+					new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 						session.setRootBatchSize(1);
 						session.setTableOperationMode(TableOperationMode.INSERT);
 						Row parentRow = session.newRow(parent);
 						parentRow.put("TXT", "parent-3");
 						Row childRow = session.newRow(child);
 						childRow.put("TXT", "child-3");
-					}
+					});
 
 					assertTrue(cursor.next(), "The open SELECT cursor must remain usable after INSERT.");
 				}

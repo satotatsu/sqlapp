@@ -163,7 +163,7 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 			System.out.println("---------------------------COPY------------------------------------");
 			JdbcTreeDataCopySession copySession = new JdbcTreeDataCopySession(source, session);
 			initializer.accept(copySession);
-			try (copySession) {
+			copySession.execute(activeSession -> {
 				while (copySession.next(tab)) {
 					Row sourceRow = copySession.getRow(tab);
 					Row row = copySession.newCopy(sourceRow, tabTo);
@@ -186,7 +186,7 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			tab.read(connection);
 			tab1.read(connection);
 			tab1_1.read(connection);
@@ -258,7 +258,7 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 		});
 		System.out.println("---------------------------INSERT------------------------------------");
 		session.setTableOperationMode(TableOperationMode.INSERT);
-		try (session) {
+		session.execute(activeSession -> {
 			for (int i = 0; i < rowSize1; i++) {
 				Row row = session.newRow(tab);
 				row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
@@ -277,8 +277,7 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 					}
 				}
 			}
-		}
-		session.close();
+		});
 		session.setTableOperationMode(TableOperationMode.NONE);
 		session.select(tab);
 		session.select(tab1);
@@ -289,6 +288,7 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
+			conn.setAutoCommit(false);
 			cons.accept(conn);
 			finCons.accept(conn);
 		}

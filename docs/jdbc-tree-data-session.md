@@ -6,7 +6,7 @@ are required.
 
 ## Safe execution
 
-Use `execute` when row processing includes business logic that can throw:
+Run row processing inside `execute`:
 
 ```java
 connection.setAutoCommit(false);
@@ -37,10 +37,22 @@ Periodic commits configured with `setCommitEveryRootBatches` remain durable if a
 later batch fails; rollback cannot undo them. A failure in an after-commit callback
 also cannot undo the commit that already succeeded.
 
-Existing constructors and try-with-resources usage remain supported. `close()`
-still flushes pending rows and commits on normal session state; it cannot detect
-an exception thrown in the surrounding business code. Use `execute` for that
-failure boundary. Cleanup also runs when flushing or committing fails.
+`execute` is the only row-processing entry point. Reading the next row, getting
+the current row, or creating a row outside its callback fails with an actionable
+error. Configuration and SELECT registration may be performed before execution.
+The session releases resources after each execution and can be configured and
+executed again. Reentrant execution and closing inside the callback are rejected.
+
+`close()` only releases resources and discards buffered rows; it never flushes,
+commits, or rolls back. Existing code that depended on try-with-resources to
+complete writes must move row processing into `execute`. Cleanup also runs when
+flushing or committing fails. A caught batch failure cannot be committed by
+returning normally from the callback.
+
+`JdbcTreeDataCopySession.execute(copy -> { ... })` uses the same execution
+boundaries for its source and target, processing the final source batch before
+completing the target. Both connections must have auto-commit disabled. Separate
+source and target connections do not provide an atomic distributed transaction.
 
 ## Explicit deletion order
 

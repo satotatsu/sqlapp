@@ -107,6 +107,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithGeneratedKey() throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection connection = ds.getConnection();) {
+			connection.setAutoCommit(false);
 			this.dropTables(connection, "TAB_2_1");
 			this.dropTables(connection, "TAB_2");
 			this.dropTables(connection, "TAB_1_1");
@@ -168,7 +169,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			final Table tab2_1 = schema.getTables().get("TAB_2_1");
 			System.out.println("---------------------------INSERT------------------------------------");
 			int loop = 3;
-			try (session) {
+			session.execute(activeSession -> {
 				for (int i = 0; i < loop; i++) {
 					Row row = session.newRow(tab);
 					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
@@ -199,7 +200,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -285,15 +286,15 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			session.setTableOperationMode(TableOperationMode.UPDATE);
 			// handler.getTableOptions().setUpdateKeyColumnsMatchingStrategy((t) ->
 			// ColumnSelectionStrategy.UNIQUE_KEY);
-			try (session) {
-				for (i = 0; i < (loop + 1); i++) {
+			session.execute(activeSession -> {
+				for (int batchIndex = 0; batchIndex < (loop + 1); batchIndex++) {
 					Row row = session.newRow(tab);
-					row.put("TXT", tab.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
+					row.put("TXT", tab.getName() + "_TXT_" + batchIndex + "_UPDATED");// If the number of calls to this
 																				// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.
-					row.put("UK", "UK" + i);
+					row.put("UK", "UK" + batchIndex);
 					for (int j = 0; j < 3; j++) {
 						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", tab1.getName() + "_TXT_" + j + "_UPDATED");
@@ -317,7 +318,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -403,16 +404,16 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			session.setTableOperationMode(TableOperationMode.INSERT_IGNORE);
 			// handler.getTableOptions().setUpdateKeyColumnsMatchingStrategy((t) ->
 			// ColumnSelectionStrategy.UNIQUE_KEY);
-			try (session) {
-				for (i = 0; i < (loop + 1); i++) {
+			session.execute(activeSession -> {
+				for (int batchIndex = 0; batchIndex < (loop + 1); batchIndex++) {
 					Row row = session.newRow(tab);
-					row.put("TXT", tab.getName() + "_TXT_" + i + "_INSERT_IGNORE");// If the number of calls to
+					row.put("TXT", tab.getName() + "_TXT_" + batchIndex + "_INSERT_IGNORE");// If the number of calls to
 																					// this
 					// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.
-					row.put("UK", "UK" + i);
+					row.put("UK", "UK" + batchIndex);
 					for (int j = 0; j < 3; j++) {
 						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", tab1.getName() + "_TXT_" + j + "_INSERT_IGNORE");
@@ -436,7 +437,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -537,6 +538,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
+			conn.setAutoCommit(false);
 			cons.accept(conn);
 			finCons.accept(conn);
 		}

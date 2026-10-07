@@ -54,8 +54,8 @@ class MdbJdbcTreeDataSessionTest {
 			final Set<PreparedStatement> statements = Collections
 					.newSetFromMap(new IdentityHashMap<>());
 			final AtomicInteger executions = new AtomicInteger();
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
-					parent, child)) {
+			new JdbcTreeDataSession(connection,
+					parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -70,7 +70,7 @@ class MdbJdbcTreeDataSessionTest {
 					childRow.put("ID", i * 10);
 					childRow.put("TXT", "child-" + i);
 				}
-			}
+			});
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());
@@ -104,16 +104,16 @@ class MdbJdbcTreeDataSessionTest {
 		try (Connection connection = open(database)) {
 			connection.setAutoCommit(false);
 			create(connection, dialect, parent, child);
-			final Row parentRow;
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
-					parent, child)) {
+			final Row[] parentRow = new Row[1];
+			new JdbcTreeDataSession(connection,
+					parent, child).execute(session -> {
 				session.setTableOperationMode(TableOperationMode.INSERT);
-				parentRow = session.newRow(parent);
-				parentRow.put("TXT", "parent");
+				parentRow[0] = session.newRow(parent);
+				parentRow[0].put("TXT", "parent");
 				final Row childRow = session.newRow(child);
 				childRow.put("TXT", "child");
-			}
-			assertNotNull(parentRow.get("ID"));
+			});
+			assertNotNull(parentRow[0].get("ID"));
 			try (Statement statement = connection.createStatement();
 					ResultSet row = statement.executeQuery("""
 							SELECT p.ID, c.PARENT_ID
@@ -140,8 +140,8 @@ class MdbJdbcTreeDataSessionTest {
 					.newSetFromMap(new IdentityHashMap<>());
 			final AtomicInteger executions = new AtomicInteger();
 			final Row[] inserted = new Row[2];
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection,
-					parent)) {
+			new JdbcTreeDataSession(connection,
+					parent).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -152,7 +152,7 @@ class MdbJdbcTreeDataSessionTest {
 					inserted[i] = session.newRow(parent);
 					inserted[i].put("TXT", "parent-" + (i + 1));
 				}
-			}
+			});
 			assertEquals(1, statements.size());
 			assertEquals(2, executions.get());
 			assertNotNull(inserted[0].get("ID"));

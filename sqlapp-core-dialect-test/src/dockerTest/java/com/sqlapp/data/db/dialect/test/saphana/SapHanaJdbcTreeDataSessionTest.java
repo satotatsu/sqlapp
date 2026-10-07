@@ -98,14 +98,14 @@ class SapHanaJdbcTreeDataSessionTest {
 			schema.getSequences().add(new Sequence("CHILD_SEQ"));
 			child.getColumns().get("ID").setSequenceName("CHILD_SEQ");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				for (int i = 1; i <= 5; i++) {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
-			}
+			});
 
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.id, p.txt, c.parent_id, c.txt
@@ -135,10 +135,10 @@ class SapHanaJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 
 			SQLException exception = assertThrows(SQLException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					addParent(session, parent, "unsupported-identity");
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("associate an explicit sequence"));
 			connection.rollback();

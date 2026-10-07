@@ -94,7 +94,7 @@ class Db2JdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
@@ -105,7 +105,7 @@ class Db2JdbcTreeDataSessionTest {
 				addChild(session, child, "child-5");
 				addParent(session, parent, "parent-6");
 				addChild(session, child, "child-6");
-			}
+			});
 
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.txt, c.txt FROM parent_table p
@@ -131,7 +131,7 @@ class Db2JdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				Row first = addParent(session, parent, "parent-100");
@@ -140,7 +140,7 @@ class Db2JdbcTreeDataSessionTest {
 				Row second = addParent(session, parent, "parent-200");
 				second.put("ID", 200L);
 				addChild(session, child, "child-200");
-			}
+			});
 
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.id, c.parent_id FROM parent_table p
@@ -165,13 +165,13 @@ class Db2JdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setRootBatchSize(2);
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					addParent(session, parent, "generated-parent");
 					Row explicit = addParent(session, parent, "explicit-parent");
 					explicit.put("ID", 100L);
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("cannot mix"));
 			connection.rollback();
@@ -188,11 +188,11 @@ class Db2JdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					Row row = addParent(session, parent, "parent-100");
 					row.put("ID", 100L);
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("GENERATED ALWAYS"));
 			connection.rollback();

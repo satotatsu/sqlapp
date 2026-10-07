@@ -143,7 +143,7 @@ class FirebirdJdbcTreeDataSessionTest {
 			assertNotNull(packageBody);
 			assertTrue(packageBody.getStatement().toString().toUpperCase().contains("RETURN P_VALUE + 1"));
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setAfterRootBatchHandler(
@@ -152,7 +152,7 @@ class FirebirdJdbcTreeDataSessionTest {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
-			}
+			});
 
 			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
 					SELECT p.txt, c.txt

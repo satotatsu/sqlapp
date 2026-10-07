@@ -61,11 +61,12 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 	void testDeleteChildren() throws SQLException {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
+			connection.setAutoCommit(false);
 			Schema schema = createSchema(connection);
 			Table parentTable = schema.getTables().get("PARENT_TABLE");
 			Table childTable = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables())) {
+			new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
 				session.setTableOperationMode(
 						table -> table == childTable ? TableOperationMode.DELETE : TableOperationMode.NONE);
 
@@ -74,7 +75,7 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 
 				Row child = session.newRow(childTable);
 				child.put("ID", 11);
-			}
+			});
 
 			parentTable.read(connection);
 			childTable.read(connection);
@@ -92,11 +93,12 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 	void testReplaceChildrenByRootRows() throws SQLException {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
+			connection.setAutoCommit(false);
 			Schema schema = createSchema(connection);
 			Table parentTable = schema.getTables().get("PARENT_TABLE");
 			Table childTable = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables())) {
+			new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
 				session.setTableOperationMode(
 						table -> table == childTable ? TableOperationMode.REPLACE : TableOperationMode.UPDATE);
 
@@ -110,7 +112,7 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 				child = session.newRow(childTable);
 				child.put("ID", 14);
 				child.put("TXT", "child-14");
-			}
+			});
 
 			parentTable.read(connection);
 			childTable.read(connection);

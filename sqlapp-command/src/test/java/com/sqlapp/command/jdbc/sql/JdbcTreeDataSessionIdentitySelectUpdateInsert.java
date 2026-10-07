@@ -163,7 +163,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 			System.out.println("---------------------------INSERT------------------------------------");
 			session.setTableOperationMode(TableOperationMode.INSERT);
 			int loop = 3;
-			try (session) {
+			session.execute(activeSession -> {
 				for (int i = 0; i < loop; i++) {
 					Row row = session.newRow(tab);
 					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
@@ -189,7 +189,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -274,13 +274,13 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 			commitCounterHolder[0] = 0;
 			Set<Integer> tabPks = CommonUtils.set();
 			session.setTableOperationMode(TableOperationMode.NONE);
-			try (session) {
+			session.execute(activeSession -> {
 				session.select(tab);
 				session.select(tab1);
 				session.select(tab1_1);
 				session.select(tab2);
 				session.select(tab2_1);
-				i = 0;
+				int selectedRowCount = 0;
 				while (session.next(tab)) {
 					Row row = session.getRow(tab);
 					// On the first call to next(tab):
@@ -311,7 +311,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -330,7 +330,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
 			session.setTableOperationMode(TableOperationMode.NONE);
-			try (session) {
+			session.execute(activeSession -> {
 				String sql = """
 						SELECT *
 						FROM tab
@@ -343,7 +343,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 				session.select(tab1_1);
 				session.select(tab2);
 				session.select(tab2_1);
-				i = 0;
+				int selectedRowCount = 0;
 				while (session.next(tab)) {
 					Row row = session.getRow(tab);
 					println(row);
@@ -363,10 +363,10 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 							println(row2_1);
 						}
 					}
-					i++;
+					selectedRowCount++;
 				}
-			}
-			assertEquals(2, i);
+				assertEquals(2, selectedRowCount);
+			});
 //			assertEquals(2, batchCounterHolder[0]);
 			assertEquals(0, commitCounterHolder[0]);
 			assertTrue(hasRootBatchSizeRows[0]);
@@ -381,13 +381,13 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
 			session.setTableOperationMode(TableOperationMode.NONE);
-			try (session) {
+			session.execute(activeSession -> {
 				session.select(tab);
 				session.select(tab1);
 				session.select(tab1_1);
 				session.select(tab2);
 				session.select(tab2_1);
-				i = 0;
+				int selectedRowCount = 0;
 				while (session.next(tab)) {
 					Row row = session.getRow(tab);
 					println(row);
@@ -416,9 +416,9 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 							println(row2_1);
 						}
 					}
-					i++;
+					selectedRowCount++;
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -513,6 +513,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
+			conn.setAutoCommit(false);
 			cons.accept(conn);
 			finCons.accept(conn);
 		}

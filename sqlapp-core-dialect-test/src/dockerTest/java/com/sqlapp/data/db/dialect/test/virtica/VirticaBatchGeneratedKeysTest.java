@@ -293,7 +293,7 @@ class VirticaBatchGeneratedKeysTest {
 			Table child = tables[1];
 			Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(prepared -> {
@@ -307,7 +307,7 @@ class VirticaBatchGeneratedKeysTest {
 					childRow.put("id", (long) i);
 					childRow.put("txt", "child-" + i);
 				}
-			}
+			});
 
 			assertEquals(2, statements.size());
 			assertEquals(6, executions.get());

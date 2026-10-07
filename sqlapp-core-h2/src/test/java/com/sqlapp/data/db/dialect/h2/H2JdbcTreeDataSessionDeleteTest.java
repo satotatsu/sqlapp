@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 class H2JdbcTreeDataSessionDeleteTest {
@@ -187,6 +188,82 @@ class H2JdbcTreeDataSessionDeleteTest {
 						throw new RuntimeException("business failure");
 					}));
 			assertEquals(2, count(connection, "P"));
+		}
+	}
+
+	@Test
+	void rowProcessingRequiresExecuteAndCloseDoesNotCommit() throws Exception {
+		try (Connection connection = database()) {
+			Schema schema = schema(connection);
+			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
+			assertThrows(IllegalStateException.class, () -> session.newRow(schema.getTables().get("P")));
+			try (Statement statement = connection.createStatement()) {
+				statement.execute("INSERT INTO P VALUES(2)");
+			}
+			session.close();
+			connection.rollback();
+			assertEquals(1, count(connection, "P"));
+		}
+	}
+
+	@Test
+	void rejectsNestedExecutionAndClosingInsideCallback() throws Exception {
+		try (Connection connection = database()) {
+			Schema schema = schema(connection);
+			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
+			assertThrows(IllegalStateException.class, () -> session.execute(active -> {
+				row(active, schema.getTables().get("P"), 2);
+				active.execute(nested -> { });
+			}));
+			assertEquals(1, count(connection, "P"));
+			assertThrows(IllegalStateException.class, () -> session.execute(active -> active.close()));
+			session.execute(active -> row(active, schema.getTables().get("P"), 3));
+			connection.rollback();
+			assertEquals(2, count(connection, "P"));
+		}
+	}
+
+	@Test
+	void swallowedBatchFailureStillRollsBackExecution() throws Exception {
+		try (Connection connection = database()) {
+			Schema schema = schema(connection);
+			assertThrows(IllegalStateException.class, () -> new JdbcTreeDataSession(connection, schema.getTables())
+					.execute(session -> {
+						session.setRootBatchSize(1);
+						row(session, schema.getTables().get("P"), 1).delete();
+						assertThrows(SQLException.class, () -> row(session, schema.getTables().get("P"), 2));
+					}));
+			assertEquals(1, count(connection, "P"));
+		}
+	}
+
+	@Test
+	void copyBusinessFailureRollsBackSourceDeletionAndTargetInsertion() throws Exception {
+		try (Connection connection = database()) {
+			try (Statement statement = connection.createStatement()) {
+				statement.execute("DELETE FROM G");
+				statement.execute("DELETE FROM C");
+				statement.execute("INSERT INTO P VALUES(2)");
+				statement.execute("CREATE TABLE T (ID INT PRIMARY KEY)");
+			}
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC", "P", "T").orElseThrow();
+			Table sourceTable = schema.getTables().get("P");
+			Table targetTable = schema.getTables().get("T");
+			JdbcTreeDataSession source = new JdbcTreeDataSession(connection, sourceTable);
+			source.setTableOperationMode(TableOperationMode.NONE);
+			source.select(sourceTable, "SELECT * FROM P ORDER BY ID");
+			JdbcTreeDataSession target = new JdbcTreeDataSession(connection, targetTable);
+			JdbcTreeDataCopySession copy = new JdbcTreeDataCopySession(source, target);
+			copy.setRootBatchSize(1);
+			assertThrows(SQLException.class, () -> copy.execute(active -> {
+				while (active.next(sourceTable)) {
+					active.newCopy(active.getRow(sourceTable), targetTable);
+				}
+				throw new SQLException("business failure");
+			}));
+			assertEquals(2, count(connection, "P"));
+			assertEquals(0, count(connection, "T"));
 		}
 	}
 
