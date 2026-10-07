@@ -148,29 +148,12 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
-- [Gradle plugin task guide](docs/gradle-plugin/README.md)
-- [Access database migration assessment](docs/gradle-plugin/database-migration-assessment.md)
-- [Gradle plugin Kotlin DSL](docs/gradle-plugin/kotlin-dsl.md)
-- [Gradle plugin troubleshooting](docs/gradle-plugin/troubleshooting.md)
-- [Java API getting started](docs/java-api-getting-started.md)
-- [Command API getting started](docs/command-api-getting-started.md)
-- [Logging and diagnostics](docs/logging-and-diagnostics.md)
-- [Upgrading sqlapp](docs/upgrading.md)
-- [Schema model](docs/schema-model.md)
-- [Maven getting started](docs/maven-getting-started.md)
-- [Published artifacts and dependency selection](docs/artifacts.md)
-- [Compatibility and database verification matrix](docs/compatibility.md)
-- [Architecture](docs/architecture.md)
-- [Building and testing](docs/build-and-test.md)
-- [Runnable Gradle example map](docs/gradle-plugin/example-project.md)
-- [Schema XML, SQL, and HTML workflows](docs/gradle-plugin/schema-sql-and-html.md)
-- [Custom tasks and versioned migrations](docs/gradle-plugin/custom-tasks-and-migrations.md)
-- [Normalization and legacy-migration tasks](docs/gradle-plugin/normalization-and-legacy-migration.md)
-- [Schema viewpoints](docs/schema-viewpoints.md)
-- [Bulk insert and bulk migration](docs/bulk-insert.md)
-- [Data converters](docs/converters.md)
-- [Roadmap](docs/roadmap.md)
+- [Documentation index](docs/README.md): choose a guide by goal.
+- [Gradle plugin](docs/gradle-plugin/README.md): setup, tasks, and workflows.
+- [Java API getting started](docs/java-api-getting-started.md): Schema model and SQL APIs.
+- [Data movement and migration](docs/migration/README.md): assessment, loading, verification, and recovery.
+- [Compatibility](docs/compatibility.md): version boundaries and verification evidence.
+- [Building and testing](docs/build-and-test.md): contributor setup and validation.
 
 The companion
 [`sqlapp-gradle-example`](https://github.com/satotatsu/sqlapp-gradle-example)
