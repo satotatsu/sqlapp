@@ -26,6 +26,9 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataExecutionFailure;
+import com.sqlapp.jdbc.sql.JdbcTreeDataExecutionResult.Phase;
+import com.sqlapp.jdbc.sql.JdbcTreeDataExecutionResult.TransactionOutcome;
 import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
@@ -153,6 +156,12 @@ class H2JdbcTreeDataSessionDeleteTest {
 					})));
 			assertEquals(1, count(connection, "P"));
 			assertFalse(statements.isEmpty());
+			var result = JdbcTreeDataExecutionFailure.result(failure).orElseThrow();
+			assertEquals(Phase.COMMIT, result.failure().phase());
+			assertEquals(TransactionOutcome.UNKNOWN, result.remainingTransaction());
+			assertEquals(0, result.commits());
+			assertEquals(1, result.operations().getFirst().executed().knownAffectedRows());
+			assertEquals(0, result.operations().getFirst().committed().knownAffectedRows());
 			for (PreparedStatement statement : statements) {
 				assertTrue(statement.isClosed());
 			}
@@ -170,8 +179,10 @@ class H2JdbcTreeDataSessionDeleteTest {
 					() -> new JdbcTreeDataSession(failing, schema.getTables()).execute(session -> {
 						throw failure;
 					})));
-			assertEquals(1, failure.getSuppressed().length);
+			assertEquals(2, failure.getSuppressed().length);
 			assertSame(rollbackFailure, failure.getSuppressed()[0]);
+			assertEquals(TransactionOutcome.UNKNOWN,
+					JdbcTreeDataExecutionFailure.result(failure).orElseThrow().remainingTransaction());
 		}
 	}
 

@@ -116,6 +116,8 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		this.target.setAfterCommitEveryRootBatchesHandler((i, row) -> {
 			if (!source.isSameConnection(target)) {
 				source.commitForce();
+			} else {
+				source.recordSharedCommit();
 			}
 			rootCursorCommitted = true;
 		});
@@ -229,12 +231,20 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 	 * @param work copy configuration and row processing
 	 * @throws SQLException if copying or transaction completion fails
 	 */
-	public void execute(SQLConsumer<JdbcTreeDataCopySession> work) throws SQLException {
+	public JdbcTreeDataCopyExecutionResult execute(SQLConsumer<JdbcTreeDataCopySession> work) throws SQLException {
+		JdbcTreeDataExecutionResult[] targetResult = new JdbcTreeDataExecutionResult[1];
+		boolean previousCommitManagement = source.externallyManagedCommits;
+		source.externallyManagedCommits = true;
 		try (this) {
-			source.execute(reader -> target.execute(writer -> {
-				work.accept(this);
-				source.finishExecution();
-			}));
+			JdbcTreeDataExecutionResult sourceResult = source.execute(reader -> {
+				targetResult[0] = target.execute(writer -> {
+					work.accept(this);
+					source.finishExecution();
+				});
+			});
+			return new JdbcTreeDataCopyExecutionResult(sourceResult, targetResult[0]);
+		} finally {
+			source.externallyManagedCommits = previousCommitManagement;
 		}
 	}
 

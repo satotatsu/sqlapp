@@ -425,7 +425,7 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 			assertEquals(0, tab2.getRows().size());
 			assertEquals(0, tab2_1.getRows().size());
 //			assertEquals(2, batchCounterHolder[0]);
-			assertEquals(0, commitCounterHolder[0]);
+			assertEquals(2, commitCounterHolder[0]); // Child writes commit even when the root is NONE.
 			assertTrue(hasRootBatchSizeRows[0]);
 			table = tab;
 			table.read(connection);
