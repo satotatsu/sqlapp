@@ -49,6 +49,8 @@ for `com.sqlapp.db`. The focused guides are:
   Access source diagnosis, optional data checks, target mapping and DDL
   verification for [Oracle](gradle-plugin/access-oracle-migration-assessment.md)
   or [SQL Server](gradle-plugin/access-sqlserver-migration-assessment.md).
+- [Oracle migration assessment](gradle-plugin/oracle-migration-assessment.md):
+  offline preflight, source validation, and target review.
 - [Troubleshooting](gradle-plugin/troubleshooting.md): task discovery,
   runtime classpath, dialect selection, DataSource files, paths, and outputs.
 
@@ -65,6 +67,9 @@ the relevant guides.
 - [Java API getting started](java-api-getting-started.md) shows Schema model
   construction, XML round trips, JDBC dialect resolution, SQL generation, and
   resource ownership.
+- [JDBC tree data sessions](jdbc-tree-data-session.md) covers hierarchical data
+  processing; see the [COBOL example](jdbc-tree-data-cobol-migration-example.md)
+  and [real-database verification](jdbc-tree-data-real-db-verification.md).
 - [Schema model](schema-model.md) covers ownership, tables, columns,
   constraints, indexes, relationships, lookup, XML, and mutation rules.
 - [Command API getting started](command-api-getting-started.md) covers direct
@@ -102,15 +107,17 @@ a dialect with a specific server version in production.
 
 ## Data movement and migration
 
-- [Bulk insert and bulk migration](bulk-insert.md) is the detailed reference
-  for insert/upsert behavior, chunking, checkpoints, leases, verification,
-  maintenance, recovery, repair, and snapshot execution. It is an advanced
-  operational document; start with the Gradle task reference when selecting a
-  task.
-- [Custom tasks and versioned migrations](gradle-plugin/custom-tasks-and-migrations.md)
-  covers the conventional versioned-SQL migration extension and tasks.
-- [Normalization and legacy migration](gradle-plugin/normalization-and-legacy-migration.md)
-  covers schema normalization and generated legacy load artifacts.
+Start with the [migration workflow index](migration/README.md) to choose between
+bulk insert/upsert, resumable migration, multi-table jobs, verification and
+recovery, snapshots, assessment, and legacy loading.
+
+- [Bulk insert and upsert](bulk-insert.md): Java API and vendor providers.
+- [Verification and recovery](migration/verification-and-recovery.md): Java
+  quick start, verification, repair, and advanced operations.
+- [Gradle migration tasks](gradle-plugin/bulk-migration.md): job configuration,
+  approval gates, leases, execution evidence, and repair.
+- [Versioned SQL migrations](gradle-plugin/custom-tasks-and-migrations.md#versioned-migrations).
+- [Normalization and legacy migration](gradle-plugin/normalization-and-legacy-migration.md).
 
 Database-changing examples must be tried against a disposable or explicitly
 authorized database first. Review generated SQL, task database effects,
@@ -140,3 +147,16 @@ sqlapp is licensed under the
   secret provider. Do not commit them with example configuration.
 - Statements about real database support are limited to the evidence recorded
   in the compatibility matrix.
+
+## Maintaining documentation
+
+- Keep the root README focused on the product and primary entry points.
+- Use this index for the full documentation map and workflow indexes for each topic.
+- Keep shared migration semantics and Java APIs under `migration/`; keep Gradle
+  task configuration under `gradle-plugin/`.
+- Keep task names, types, inputs, outputs, and database effects in the Gradle
+  task reference, and link to it from workflow guides.
+- Split guides at workflow boundaries when details obscure the common path.
+  Preserve examples, safety requirements, and failure behavior.
+- When moving sections, check relative links and retain old heading anchors
+  with links to the new location for existing bookmarks.

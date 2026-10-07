@@ -191,7 +191,7 @@ commits. Database state may change after planning. Java callers use
 `MigrationPlanCommand.getPlan()`; a null result means planning did not complete.
 
 Versioned SQL migration is separate from the YAML-driven bulk migration and
-SCD2 snapshot tasks. See the [task guide](README.md#executebulkmigrationjob)
+SCD2 snapshot tasks. See the [bulk migration task guide](bulk-migration.md#executebulkmigrationjob)
 for source/target connections, checkpoints, leases and verification.
 
 ### Concurrent migration execution

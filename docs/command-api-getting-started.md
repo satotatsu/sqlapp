@@ -227,7 +227,7 @@ Review required properties, transaction boundaries, restart behavior, and
 destructive options before calling a database-changing command. The
 [Gradle task reference](gradle-plugin/task-reference.md) provides a compact map
 from task names to command classes and database effects. Detailed bulk behavior
-is documented in [Bulk insert and bulk migration](bulk-insert.md).
+is documented in [Data movement and migration](migration/README.md).
 
 ## Test command integrations
 

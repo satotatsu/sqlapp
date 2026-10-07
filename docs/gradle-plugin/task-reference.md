@@ -326,5 +326,7 @@ credentials, inspect SQL semantics, or simulate database changes.
 - [Schema XML, SQL, and HTML](schema-sql-and-html.md)
 - [Custom tasks and versioned migrations](custom-tasks-and-migrations.md)
 - [Normalization and legacy migration](normalization-and-legacy-migration.md)
-- [Bulk migration and type-2 snapshots](README.md#executebulkmigrationjob)
+- [Bulk migration](bulk-migration.md)
+- [Type-2 snapshots](snapshot.md)
+- [Migration reports](migration-reports.md)
 - [Runnable example project](example-project.md)
