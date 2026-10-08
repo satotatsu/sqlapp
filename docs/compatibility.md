@@ -99,9 +99,9 @@ scope guidance.
 The database matrix does not mean that every sqlapp feature has the same
 coverage. Consult these focused references before using advanced operations:
 
-- [Bulk insert and migration provider matrix](bulk-insert.md)
-- [Dialect enhancement verification and limitations](dialect-enhancement-continuation.md)
-- [Schema viewpoints](schema-viewpoints.md)
+- [Bulk insert and migration provider matrix](data/bulk-insert.md)
+- [Dialect enhancement verification and limitations](development/dialect-enhancement-continuation.md)
+- [Schema viewpoints](schema/viewpoints.md)
 - [Gradle plugin task guide](gradle-plugin/README.md)
 
 Generated-key handling, set-based migration, metadata catalogs, temporary

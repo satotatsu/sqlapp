@@ -150,10 +150,10 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 
 - [Documentation index](docs/README.md): choose a guide by goal.
 - [Gradle plugin](docs/gradle-plugin/README.md): setup, tasks, and workflows.
-- [Java API getting started](docs/java-api-getting-started.md): Schema model and SQL APIs.
+- [Java API getting started](docs/getting-started/java-api.md): Schema model and SQL APIs.
 - [Data movement and migration](docs/migration/README.md): assessment, loading, verification, and recovery.
 - [Compatibility](docs/compatibility.md): version boundaries and verification evidence.
-- [Building and testing](docs/build-and-test.md): contributor setup and validation.
+- [Building and testing](docs/development/build-and-test.md): contributor setup and validation.
 
 The companion
 [`sqlapp-gradle-example`](https://github.com/satotatsu/sqlapp-gradle-example)

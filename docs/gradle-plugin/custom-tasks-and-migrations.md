@@ -34,7 +34,7 @@ tasks.register('exportCustomerData', ExportDataTask) {
 Run `./gradlew exportCustomerData`. This task reads table data from the
 configured database. It also exposes `excludeSchemas`, `excludeTables`,
 `fetchSize`, `sheetName`, `useSchemaNameDirectory` and `converters` for more
-specialized export needs. See [Converters](../converters.md) for conversion
+specialized export needs. See [Converters](../data/converters.md) for conversion
 behavior. Exported rows are distinct from the metadata-only workflow in the
 [schema guide](schema-sql-and-html.md).
 

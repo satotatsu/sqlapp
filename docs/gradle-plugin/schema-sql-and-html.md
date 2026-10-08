@@ -179,7 +179,7 @@ tasks.named('generateHtmlDocs') {
 
 Run `./gradlew generateHtmlDocs`, then inspect the HTML output directory.
 This task consumes saved metadata and can run independently of the database.
-See [HTML database documentation](../html-documentation.md) for the generated
+See [HTML database documentation](../schema/html-documentation.md) for the generated
 site's pages, table details, ER navigation and output layout.
 
 | Property | Type | Purpose |
@@ -200,7 +200,7 @@ viewpointsFile = layout.projectDirectory.file('viewpoints.yaml')
 viewpointId = 'sales'
 ```
 
-See [Schema viewpoints](../schema-viewpoints.md) for the YAML format, table
+See [Schema viewpoints](../schema/viewpoints.md) for the YAML format, table
 resolution rules, and reuse with Loader generation. A viewpoint can include
 tables from the shared Schema model without changing the underlying XML.
 

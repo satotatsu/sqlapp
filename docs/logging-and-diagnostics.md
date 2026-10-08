@@ -150,4 +150,4 @@ record. Verify the output appropriate to the operation:
 For Gradle-specific diagnosis, continue with
 [Gradle plugin troubleshooting](gradle-plugin/troubleshooting.md). For direct
 command behavior and exception handling, see
-[Command API getting started](command-api-getting-started.md).
+[Command API getting started](getting-started/command-api.md).

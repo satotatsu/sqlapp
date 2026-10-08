@@ -192,4 +192,4 @@ information to include in a bug report.
 
 These examples are configuration recipes checked against the repository's
 implementation and tests, not a claim of execution against your database.
-See [Build and test](../build-and-test.md) for testing sqlapp itself.
+See [Build and test](../development/build-and-test.md) for testing sqlapp itself.

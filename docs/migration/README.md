@@ -7,7 +7,7 @@ entry points use the shared migration validation and execution components.
 
 | Goal | Reference | Gradle configuration or related guide |
 |---|---|---|
-| Insert or upsert table rows | [Bulk insert and upsert](../bulk-insert.md) | Vendor providers and batch behavior |
+| Insert or upsert table rows | [Bulk insert and upsert](../data/bulk-insert.md) | Vendor providers and batch behavior |
 | Resume a single-table transfer | [Chunk migration](chunk-migration.md) | Checkpoints, leases, and transactions |
 | Verify or repair transferred data | [Verification and recovery](verification-and-recovery.md) | Java quick start and advanced operations |
 | Coordinate multiple tables | [Migration jobs](jobs.md) | [Gradle tasks](../gradle-plugin/bulk-migration.md) |

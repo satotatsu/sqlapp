@@ -74,9 +74,9 @@ See [Bulk migration Gradle tasks](bulk-migration.md#executebulkmigrationjob).
 - Normalization and legacy migration:
   [Normalization and legacy-migration tasks](normalization-and-legacy-migration.md)
 - Schema viewpoints:
-  [Schema viewpoints](../schema-viewpoints.md)
+  [Schema viewpoints](../schema/viewpoints.md)
 - Building and testing sqlapp itself:
-  [Build and test](../build-and-test.md)
+  [Build and test](../development/build-and-test.md)
 
 ## Configuration conventions
 
