@@ -19,6 +19,8 @@ class PostgresTriggerQueryVersionTest {
 		String modern = query("triggers90.sql");
 		assertTrue(modern.contains("AND NOT t.tgisinternal"));
 		assertTrue(modern.contains("pg_get_triggerdef(t.oid) AS definition"));
+		assertTrue(modern.contains("WHEN t.tgtype & 64 = 64 THEN 'INSTEAD OF'"));
+		assertFalse(query("triggers.sql").contains("INSTEAD OF"));
 	}
 
 	private String query(String name) throws Exception {

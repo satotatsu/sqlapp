@@ -10,7 +10,8 @@ SELECT
  AS action_statement
 , CASE WHEN t.tgtype & 1 = 1 THEN 'ROW' ELSE 'STATEMENT' END
  AS action_orientation
-, CASE WHEN t.tgtype & 2 = 2 THEN 'BEFORE' ELSE 'AFTER' END
+, CASE WHEN t.tgtype & 2 = 2 THEN 'BEFORE'
+       WHEN t.tgtype & 64 = 64 THEN 'INSTEAD OF' ELSE 'AFTER' END
  AS condition_timing
 , CASE WHEN t.tgtype & 4 = 4 THEN 'INSERT' ELSE '' END
  AS is_insert

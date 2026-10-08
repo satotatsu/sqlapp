@@ -876,4 +876,46 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+	@Test
+	void readsAndRecreatesInsteadOfViewTriggerForInsertUpdateAndDelete() throws Exception {
+		String schemaName = "ysql_view_trigger_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, label text)");
+				statement.execute("CREATE VIEW " + schemaName + ".editable AS SELECT id,label FROM " + schemaName
+						+ ".items UNION ALL SELECT -1,'sentinel'::text");
+				statement.execute("CREATE FUNCTION " + schemaName + ".edit_item() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN "
+						+ "IF TG_OP = 'DELETE' THEN DELETE FROM " + schemaName + ".items WHERE id=OLD.id; RETURN OLD; "
+						+ "ELSIF TG_OP = 'UPDATE' THEN UPDATE " + schemaName + ".items SET label=upper(NEW.label) WHERE id=OLD.id; RETURN NEW; "
+						+ "ELSE INSERT INTO " + schemaName + ".items VALUES (NEW.id,upper(NEW.label)); RETURN NEW; END IF; END $$");
+				statement.execute("CREATE TRIGGER edit_item INSTEAD OF INSERT OR UPDATE OR DELETE ON " + schemaName
+						+ ".editable FOR EACH ROW EXECUTE PROCEDURE " + schemaName + ".edit_item()");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader();
+				reader.setSchemaName(schemaName);
+				var schema = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+				var trigger = schema.getTriggers().get("edit_item");
+				assertNotNull(trigger);
+				assertEquals("INSTEAD OF", trigger.getActionTiming());
+				assertEquals("ROW", trigger.getActionOrientation());
+				assertEquals("editable", trigger.getTableName());
+				assertTrue(trigger.getEventManipulation().containsAll(List.of("INSERT", "UPDATE", "DELETE")));
+				assertTrue(String.join("\n", trigger.getDefinition()).contains("INSTEAD OF"));
+				statement.execute("DROP TRIGGER edit_item ON " + schemaName + ".editable");
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var op : registry.createSql(trigger, SqlType.CREATE)) statement.execute(op.getSqlText());
+				assertEquals(2, statement.executeUpdate("INSERT INTO " + schemaName + ".editable VALUES (1,'first'),(2,'second')"));
+				assertEquals(2, scalar(connection, "SELECT count(*) FROM " + schemaName + ".items WHERE label IN ('FIRST','SECOND')"));
+				assertEquals(1, statement.executeUpdate("UPDATE " + schemaName + ".editable SET label='changed' WHERE id=1"));
+				assertEquals(1, scalar(connection, "SELECT count(*) FROM " + schemaName + ".items WHERE id=1 AND label='CHANGED'"));
+				assertEquals(1, statement.executeUpdate("DELETE FROM " + schemaName + ".editable WHERE id=2"));
+				assertEquals(1, scalar(connection, "SELECT count(*) FROM " + schemaName + ".items"));
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
 }

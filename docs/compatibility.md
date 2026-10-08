@@ -277,3 +277,19 @@ repeat NULL. YSQL 11 ignores the option and permits repeated NULL keys. Both
 engines reject repeated non-NULL keys inside the predicate.
 
 Clause order: [PostgreSQL 15 CREATE INDEX](https://www.postgresql.org/docs/15/sql-createindex.html).
+
+## PostgreSQL/YSQL INSTEAD OF trigger metadata
+
+The PostgreSQL 9.0+ trigger query now distinguishes the INSTEAD timing bit from
+AFTER. This corrects metadata for view triggers on PostgreSQL 9.1+ and YSQL
+11/15, where INSTEAD OF is supported. The existing column and bit operations
+remain valid on 9.0, which has no such triggers; its BEFORE/AFTER behavior and
+the pre-9.0 query remain unchanged.
+
+Complete executable trigger definitions remain authoritative for recreation.
+The corrected `actionTiming` also makes the Schema metadata agree with that DDL.
+No public API, configuration or XML-format changes are required. Verification
+uses a UNION ALL view that cannot be automatically updated, recreates its
+INSTEAD OF trigger, and checks INSERT, UPDATE and DELETE through the view.
+
+Version boundary: [PostgreSQL 9.1 CREATE TRIGGER](https://www.postgresql.org/docs/9.1/sql-createtrigger.html).
