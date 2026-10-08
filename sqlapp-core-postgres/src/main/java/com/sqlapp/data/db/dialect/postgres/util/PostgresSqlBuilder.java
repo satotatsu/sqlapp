@@ -56,6 +56,11 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	 */
 	@Override
 	protected PostgresSqlBuilder typeDefinition(Column column) {
+		if (column.getArrayDimension() > 0) {
+			typeDefinition(column.clone().setArrayDimension(0));
+			_add("[]".repeat(column.getArrayDimension()));
+			return this;
+		}
 		if ((column.getDataType() == DataType.RANGE || column.getDataType() == DataType.MULTIRANGE)
 				&& !CommonUtils.isEmpty(column.getDataTypeName())) {
 			_add(column.getDataTypeName());

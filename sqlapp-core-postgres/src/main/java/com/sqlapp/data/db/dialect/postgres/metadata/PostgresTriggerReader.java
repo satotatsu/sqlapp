@@ -71,6 +71,7 @@ public class PostgresTriggerReader extends TriggerReader {
 		obj.setActionOrientation(getString(rs, "action_orientation"));
 		obj.setActionTiming(getString(rs, "condition_timing"));
 		obj.setStatement(getString(rs, "action_statement"));
+		obj.setDefinition(getString(rs, "definition"));
 		obj.addEventManipulation(getString(rs, "is_insert"));
 		obj.addEventManipulation(getString(rs, "is_update"));
 		obj.addEventManipulation(getString(rs, "is_delete"));

@@ -27,6 +27,7 @@ INNER JOIN pg_catalog.pg_class c
 INNER JOIN pg_catalog.pg_trigger t
  on (c.oid = t.tgrelid) 
 WHERE 1=1
+  AND NOT t.tgisinternal
   /*if isNotEmpty(schemaName) */
   AND n.nspname IN /*schemaName*/('%')
   /*end*/

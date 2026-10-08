@@ -225,4 +225,34 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 				closeable.close();
 		}
 	}
+	@Test
+	void retriesDeadlockOnlyAfterRollingBackOwnedTransaction() throws Exception {
+		final var dataSource = createDataSource();
+		try (var delegate = dataSource.getConnection()) {
+			var inject = new java.util.concurrent.atomic.AtomicBoolean();
+			var rollbacks = new java.util.concurrent.atomic.AtomicInteger();
+			var connection = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
+					getClass().getClassLoader(), new Class<?>[] {java.sql.Connection.class}, (proxy, method, args) -> {
+						if (method.getName().equals("prepareStatement") && inject.compareAndSet(true, false)) {
+							throw new SQLException("injected deadlock", "40P01");
+						}
+						if (method.getName().equals("rollback")) rollbacks.incrementAndGet();
+						try {
+							return method.invoke(delegate, args);
+						} catch (java.lang.reflect.InvocationTargetException e) {
+							throw e.getCause();
+						}
+					});
+			var store = new JdbcBulkMigrationJobLeaseStore(connection, "SQLAPP_BML_DEADLOCK");
+			Instant now = Instant.parse("2026-10-08T00:00:00Z");
+			inject.set(true);
+			assertTrue(store.tryAcquire(new BulkMigrationJobLease("job", "plan", "owner", now.plusSeconds(30)), now));
+			assertEquals(1, rollbacks.get());
+			assertTrue(delegate.getAutoCommit());
+			assertEquals("owner", store.load("job").orElseThrow().ownerId());
+		} finally {
+			if (dataSource instanceof AutoCloseable closeable) closeable.close();
+		}
+	}
+
 }

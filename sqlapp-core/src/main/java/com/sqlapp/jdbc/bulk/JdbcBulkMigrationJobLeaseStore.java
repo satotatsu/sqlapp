@@ -223,6 +223,7 @@ public final class JdbcBulkMigrationJobLeaseStore
 				current = current.getNextException()) {
 			if (current instanceof SQLTransactionRollbackException
 					|| "40001".equals(current.getSQLState())
+					|| "40P01".equals(current.getSQLState())
 					|| current.getErrorCode() == 8177
 					|| isSqliteBusy(current)
 					|| isInformixLockConflict(current)

@@ -172,3 +172,16 @@ stays unqualified. This affects dialects using the shared foreign-key factory.
 PostgreSQL SQL factories (including YSQL inheritance) now render `CascadeRule.None`
 as `NO ACTION` for both delete and update, instead of invalid `NONE` syntax.
 Public APIs and Schema XML formats are unchanged.
+
+## PostgreSQL internal triggers
+
+PostgreSQL 9.0+ metadata readers (also used by the YSQL 11/15 baselines) now
+exclude `pg_trigger.tgisinternal` implementation triggers. Foreign keys remain
+in the Schema constraint model; their internal triggers must not be emitted as
+additional user-authored CREATE TRIGGER statements during schema recreation.
+User-defined triggers remain available. The pre-9.0 query is unchanged because
+those catalogs do not expose this flag. Public APIs and Schema XML formats are
+unchanged; exported trigger collections may contain fewer implementation objects.
+
+Catalog boundaries: [PostgreSQL 9.0](https://www.postgresql.org/docs/9.0/catalog-pg-trigger.html)
+and [PostgreSQL 8.4](https://www.postgresql.org/docs/8.4/catalog-pg-trigger.html).

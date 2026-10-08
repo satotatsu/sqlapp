@@ -41,6 +41,8 @@ public class Postgres83SqlFactoryRegistry extends Postgres82SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				PostgresCreateDomainFactory.class);
 	}
 
 }

@@ -63,7 +63,7 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 				String schema_name = getString(rs, "constraint_schema");
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				String expression = getString(rs, "consrc");
+				String expression = getString(rs, "check_expression");
 				CheckConstraint c = map.get(schema_name, table_name, constraint_name);
 				List<Column> columnList = colMap.get(schema_name, table_name, constraint_name);
 				if (c == null) {
@@ -73,7 +73,7 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 					c.setTableName(table_name);
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
-					PostgresTemporalConstraintMetadata.apply(c, expression);
+					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					colMap.put(schema_name, table_name, constraint_name, columnList);
 					map.put(schema_name, table_name, constraint_name, c);
 				}

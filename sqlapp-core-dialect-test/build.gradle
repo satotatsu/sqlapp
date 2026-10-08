@@ -156,3 +156,35 @@ dependencies {
 javadoc {
 	include '**/command/*'
 }
+
+// Fixed, disposable compatibility matrix; never part of the default unit test task.
+['11': 'yugabytedb/yugabyte:2024.2.11.0-b36',
+ '15': 'yugabytedb/yugabyte:2026.1.2.0-b137'].each { engine, image ->
+	tasks.register("yugabyte${engine}CompatibilityTest", Test) {
+		description = "Verifies YSQL compatibility on the PostgreSQL ${engine} engine baseline."
+		group = 'verification'
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.yugabyte.YugabyteMetadataReaderTest'
+		systemProperty 'sqlapp.test.yugabyte.image', image
+		systemProperty 'sqlapp.test.yugabyte.expectedEngineMajor', engine
+		systemProperty 'sqlapp.testcontainers.reuse', false
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging {
+			events 'passed', 'skipped', 'failed'
+			exceptionFormat = 'full'
+		}
+	}
+}
+tasks.named('yugabyte15CompatibilityTest') {
+	mustRunAfter tasks.named('yugabyte11CompatibilityTest')
+}
+tasks.register('yugabyteCompatibilityTest') {
+	description = 'Runs the fixed PostgreSQL 11 and 15 YSQL compatibility matrix in disposable containers.'
+	group = 'verification'
+	dependsOn tasks.named('yugabyte11CompatibilityTest'), tasks.named('yugabyte15CompatibilityTest')
+}

@@ -23,6 +23,8 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.jdbc.ExResultSet;
 
 /**
@@ -35,6 +37,11 @@ public class Postgres90TriggerReader extends PostgresTriggerReader {
 
 	protected Postgres90TriggerReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("triggers90.sql");
 	}
 
 	@Override
