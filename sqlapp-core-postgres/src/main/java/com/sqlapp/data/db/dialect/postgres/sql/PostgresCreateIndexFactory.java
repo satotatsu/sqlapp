@@ -25,6 +25,7 @@ import com.sqlapp.data.db.dialect.postgres.util.PostgresIndexOptions;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
@@ -127,8 +128,13 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 
 	@Override
 	protected void addColumn(final ReferenceColumn col, final PostgresSqlBuilder builder) {
-		builder.name(col);
-		if (col.getOrder() != null && col.getOrder() != Order.Asc) {
+		Index index = col.getParent() == null ? null : col.getParent().getIndex();
+		if (index != null && index.getIndexType() == IndexType.Function && col.getColumn() == null) {
+			builder.brackets(() -> builder._add(col.getName()));
+		} else {
+			builder.name(col);
+		}
+		if (col.getOrder() != null && (col.getOrder() != Order.Asc || col.getNullsOrder() != null)) {
 			builder.space()._add(col.getOrder());
 		}
 		if (col.getNullsOrder() != null) {

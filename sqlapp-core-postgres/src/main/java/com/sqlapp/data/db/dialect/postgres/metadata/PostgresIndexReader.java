@@ -40,6 +40,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.NullsOrder;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -138,6 +139,11 @@ public class PostgresIndexReader extends IndexReader {
 				}
 				if (catalogDetails) {
 					index.getColumns().add(columnName, rs.getBoolean("is_desc") ? Order.Desc : Order.Asc);
+					boolean nullsFirst = rs.getBoolean("nulls_first");
+					if (!rs.wasNull()) {
+						index.getColumns().get(index.getColumns().size() - 1)
+								.setNullsOrder(nullsFirst ? NullsOrder.NullsFirst : NullsOrder.NullsLast);
+					}
 					return;
 				}
 				String columns = columnsMap.get(index.getName());

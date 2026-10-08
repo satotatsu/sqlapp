@@ -148,14 +148,16 @@ and bytea array COPY/upsert cases are verified by JDBC readback. Trigger tests
 verify disabled/ALWAYS/REPLICA state recreation, WHEN conditions, statement
 triggers and TRUNCATE events in an ordinary session. Covering partial unique
 indexes retain descending keys, their catalog definitions and conditional
-duplicate rejection after recreation. See the
+duplicate rejection after recreation. Explicit NULLS FIRST/LAST and
+function-expression indexes are recreated with matching catalog definitions
+and verified expression uniqueness. See the
 [full support scope and limits](../sqlapp-core-yugabyte/README.md).
 
-The 2026-10-08 run passed all 20 cases on each baseline (40 total). The related
-PostgreSQL/YSQL/command regression passed 746 unit tests, with one external
-YSQL test skipped; the unchanged Gradle-plugin result (81 passing tests) was
-reused as up-to-date. Reproduce the regression plus the matrix with:
+The 2026-10-08 run passed all 21 cases on each baseline (42 total). The wider
+core/retained-dialect/command/Gradle-plugin regression passed 2,664 unit tests,
+with one external YSQL test skipped. Reproduce the directly affected regression
+and the matrix with:
 
 ```shell
-./gradlew :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest
+./gradlew :sqlapp-core:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-db2:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest
 ```

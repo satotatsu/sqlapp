@@ -784,4 +784,47 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+	@Test
+	void recreatesExplicitNullOrderingAndExpressionIndexes() throws Exception {
+		String schemaName = "ysql_nulls_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, code integer, label text)");
+				statement.execute("CREATE INDEX null_orders ON " + schemaName + ".items (code ASC NULLS FIRST, label DESC NULLS LAST)");
+				statement.execute("CREATE UNIQUE INDEX expression_order ON " + schemaName + ".items ((lower(label)) DESC NULLS LAST)");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName);
+				var table = reader.getAllFull(connection).stream().filter(v -> "items".equals(v.getName())).findFirst().orElseThrow();
+				var ordered = table.getIndexes().get("null_orders");
+				assertEquals(com.sqlapp.data.schemas.NullsOrder.NullsFirst, ordered.getColumns().get(0).getNullsOrder());
+				assertEquals(com.sqlapp.data.schemas.NullsOrder.NullsLast, ordered.getColumns().get(1).getNullsOrder());
+				var expression = table.getIndexes().get("expression_order");
+				assertEquals(com.sqlapp.data.schemas.IndexType.Function, expression.getIndexType());
+				assertEquals(com.sqlapp.data.schemas.Order.Desc, expression.getColumns().get(0).getOrder());
+				assertEquals(com.sqlapp.data.schemas.NullsOrder.NullsLast, expression.getColumns().get(0).getNullsOrder());
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var index : List.of(ordered, expression)) {
+					String original;
+					try (var rows = statement.executeQuery("SELECT pg_get_indexdef('" + schemaName + "." + index.getName() + "'::regclass)")) {
+						assertTrue(rows.next()); original = rows.getString(1);
+					}
+					statement.execute("DROP INDEX " + schemaName + "." + index.getName());
+					for (var op : registry.createSql(index, SqlType.CREATE)) statement.execute(op.getSqlText());
+					try (var rows = statement.executeQuery("SELECT pg_get_indexdef('" + schemaName + "." + index.getName() + "'::regclass)")) {
+						assertTrue(rows.next()); assertEquals(original, rows.getString(1));
+					}
+				}
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (1,NULL,'Alpha'),(2,1,NULL),(3,2,NULL)");
+				SQLException duplicate = assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + schemaName + ".items VALUES (4,3,'ALPHA')"));
+				assertEquals("23505", duplicate.getSQLState());
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
 }

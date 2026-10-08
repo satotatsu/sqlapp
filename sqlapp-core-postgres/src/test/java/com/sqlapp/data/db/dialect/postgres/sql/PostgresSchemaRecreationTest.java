@@ -83,4 +83,22 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		}
 	}
 
+	@Test
+	void preservesExplicitNullOrderingAndRendersExpressionKeysAsSql() {
+		Table table = new Table("items");
+		table.getColumns().add("label", c -> c.setDataType(DataType.VARCHAR));
+		var index = new com.sqlapp.data.schemas.Index("expression_index");
+		index.setIndexType(com.sqlapp.data.schemas.IndexType.Function);
+		table.getIndexes().add(index);
+		index.getColumns().add("lower(label)", com.sqlapp.data.schemas.Order.Asc);
+		index.getColumns().get(0).setNullsOrder(com.sqlapp.data.schemas.NullsOrder.NullsFirst);
+		String sql = sqlFactoryRegistry.createSql(index, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("lower(label)"), sql);
+		assertFalse(sql.contains("\"lower(label)\""), sql);
+		assertTrue(sql.contains("ASC NULLS FIRST"), sql);
+		index.getColumns().get(0).setOrder(com.sqlapp.data.schemas.Order.Desc)
+				.setNullsOrder(com.sqlapp.data.schemas.NullsOrder.NullsLast);
+		assertTrue(sqlFactoryRegistry.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("DESC NULLS LAST"));
+	}
+
 }

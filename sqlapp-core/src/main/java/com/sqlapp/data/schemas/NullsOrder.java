@@ -39,7 +39,7 @@ public enum NullsOrder implements EnumProperties {
 	/**
 	 * NULLを最後
 	 */
-	,NullsLast("NULLS FIRST", "(nulls)[\\s]*last");
+	,NullsLast("NULLS LAST", "(nulls)[\\s]*last");
 
 	NullsOrder(String text, String patternText) {
 		this.text = text;

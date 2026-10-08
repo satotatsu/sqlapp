@@ -15,6 +15,7 @@ class PostgresIndexQueryVersionTest {
 			String sql = reader.getSqlSqlNode(new ProductVersionInfo().setMajorVersion(major)).toString();
 			assertEquals(major >= 11, sql.contains("pg_get_expr(i.indpred,i.indrelid) AS predicate"));
 			assertEquals(major >= 11, sql.contains("AS is_desc"));
+			assertEquals(major >= 11, sql.contains("AS nulls_first"));
 			assertEquals(major >= 15, sql.contains("i.indnullsnotdistinct,"));
 		}
 	}

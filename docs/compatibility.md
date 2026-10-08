@@ -234,3 +234,25 @@ path are unchanged. No public API, configuration or Schema XML format changes
 are required. Physical YugabyteDB index layout remains outside the support scope.
 
 Clause order: [PostgreSQL 11 CREATE INDEX](https://www.postgresql.org/docs/11/sql-createindex.html).
+
+## NULL ordering and PostgreSQL/YSQL expression index keys
+
+The shared `NullsOrder.NullsLast` enum now renders `NULLS LAST` instead of the
+incorrect `NULLS FIRST`. Enum names, public APIs and the Schema XML structure
+are unchanged. Existing FIRST/LAST XML round trips are covered by core tests.
+SQL generated for a modeled LAST order intentionally changes to the correct value.
+
+PostgreSQL 11+ B-tree/LSM index readers, also used by YSQL 11/15, retain the
+catalog NULL-order flags. Other access methods and pre-11 readers retain their
+existing behavior. The PostgreSQL index factory emits ASC explicitly when a
+NULL order is modeled, so YSQL cannot reinterpret an omitted first-key order
+as HASH. YugabyteDB physical hash/range placement is still outside the
+compatibility scope; generated indexes express the modeled logical sort order.
+
+Unresolved keys in an `IndexType.Function` index are generated as parenthesized
+SQL expressions rather than quoted identifier names. Resolved table columns
+retain normal identifier quoting. Tests recreate `lower(label)` indexes and
+verify their UNIQUE behavior; custom collations and operator classes are not
+covered by this verification.
+
+YSQL defaults: [CREATE INDEX](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_index/).
