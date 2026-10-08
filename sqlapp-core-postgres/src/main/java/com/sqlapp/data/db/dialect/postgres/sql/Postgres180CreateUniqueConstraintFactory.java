@@ -1,5 +1,10 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
+import java.util.List;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+
+
 import com.sqlapp.data.db.sql.AbstractCreateUniqueConstraintFactory;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ReferenceColumn;
@@ -55,5 +60,22 @@ public class Postgres180CreateUniqueConstraintFactory
 	@Override
 	protected void addOption(UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
 		PostgresConstraintOptions.appendNullsNotDistinct(constraint, builder);
+	}
+
+	@Override
+	public List<SqlOperation> createSql(UniqueConstraint constraint) {
+		List<SqlOperation> result = super.createSql(constraint);
+		if (!result.isEmpty() && constraint.getRemarks() != null) {
+			var builder = createSqlBuilder();
+			PostgresConstraintOptions.constraintComment(constraint, constraint.getTable(), builder,
+					getOptions().isDecorateSchemaName());
+			addSql(result, builder, SqlType.SET_COMMENT, constraint);
+		}
+		if (!result.isEmpty() && PostgresConstraintOptions.backingIndexRemarks(constraint) != null) {
+			var builder = createSqlBuilder();
+			PostgresConstraintOptions.backingIndexComment(constraint, builder, getOptions().isDecorateSchemaName());
+			addSql(result, builder, SqlType.SET_COMMENT, constraint.getIndex());
+		}
+		return result;
 	}
 }

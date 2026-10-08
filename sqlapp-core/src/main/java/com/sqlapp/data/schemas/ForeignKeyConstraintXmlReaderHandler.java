@@ -53,10 +53,25 @@ class ForeignKeyConstraintXmlReaderHandler extends AbstractNamedObjectXmlReaderH
 							String name, DummyTable setValue)
 							throws XMLStreamException {
 						ForeignKeyConstraint target=(ForeignKeyConstraint)constraint;
-						target.setRelatedTableSchemaName(setValue.getSchemaName());
-						target.setRelatedTableName(setValue.getName());
-						target.setRelatedColumns(setValue.getColumns()
-								.toArray());
+						Table relatedTable = setValue.toTable();
+						if (relatedTable.getSchemaName() == null && target.getTable() != null) {
+							relatedTable.setSchemaName(target.getTable().getSchemaName());
+						}
+						target.setRelatedTableSchemaName(relatedTable.getSchemaName());
+						target.setRelatedTableName(relatedTable.getName());
+						Column[] relatedColumns = relatedTable.getColumns().toArray();
+						Table localTable = target.getTable();
+						if (localTable != null && java.util.Objects.equals(localTable.getName(), relatedTable.getName())
+								&& java.util.Objects.equals(localTable.getSchemaName(), relatedTable.getSchemaName())) {
+							for (int i = 0; i < relatedColumns.length; i++) {
+								Column localColumn = localTable.getColumns().get(relatedColumns[i].getName());
+								if (localColumn != null) relatedColumns[i] = localColumn;
+							}
+						}
+						// Keep columns owned by the referenced table. Adding detached
+						// columns individually can resolve same-named local columns.
+						target.getRelatedColumns().clear();
+						target.getRelatedColumns().addAll(relatedColumns);
 					}
 				});
 		registerChild(elementHandler.getLocalName(), elementHandler);

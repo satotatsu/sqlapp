@@ -10,12 +10,12 @@ SELECT
 	, seq.seqstart AS identity_start, seq.seqincrement AS identity_increment
 	, seq.seqmax AS identity_maximum, seq.seqmin AS identity_minimum
 	, seq.seqcycle AS identity_cycle, a.attidentity, a.attgenerated
-	, CASE WHEN a.atttypid IN (1042,1043) THEN a.atttypmod-4 WHEN a.atttypid IN (1560,1562) THEN a.atttypmod END AS max_length
-	, CASE WHEN a.atttypid=1700 AND a.atttypmod<>-1 THEN (a.atttypmod>>16)&65535 END AS numeric_precision
-	, CASE WHEN a.atttypid=1700 AND a.atttypmod<>-1 THEN (a.atttypmod-4)&65535 END AS numeric_scale
-	, CASE WHEN a.atttypid=1082 THEN 0 WHEN a.atttypid IN (1083,1114,1184,1266) THEN CASE WHEN a.atttypmod<0 THEN 6 ELSE a.atttypmod END END AS datetime_scale
-	, CASE WHEN a.atttypid=1186 THEN CASE WHEN (a.atttypmod&65535)=65535 THEN null ELSE a.atttypmod&65535 END END AS interval_scale
-	, CASE WHEN a.atttypid=1186 THEN 'interval' END AS interval_type_name
+	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042,1043) THEN a.atttypmod-4 WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1560,1562) THEN a.atttypmod END AS max_length
+	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1700 AND a.atttypmod<>-1 THEN (a.atttypmod>>16)&65535 END AS numeric_precision
+	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1700 AND a.atttypmod<>-1 THEN (a.atttypmod-4)&65535 END AS numeric_scale
+	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1082 THEN 0 WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1083,1114,1184,1266) THEN CASE WHEN a.atttypmod<0 THEN 6 ELSE a.atttypmod END END AS datetime_scale
+	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1186 THEN CASE WHEN (a.atttypmod&65535)=65535 THEN null ELSE a.atttypmod&65535 END END AS interval_scale
+	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1186 THEN 'interval' END AS interval_type_name
 FROM pg_catalog.pg_class c
 JOIN pg_catalog.pg_namespace n ON c.relnamespace=n.oid
 JOIN pg_catalog.pg_attribute a ON c.oid=a.attrelid

@@ -24,38 +24,38 @@ SELECT
 	,seq.seqcycle AS identity_cycle
 	,a.attidentity
 	,'' AS attgenerated
-	,CASE WHEN a.atttypid IN (1042, 1043) /*CHAR,VARCHAR*/
+	,CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042, 1043) /*CHAR,VARCHAR*/
 	 THEN a.atttypmod -4
-	 WHEN a.atttypid IN (1560, 1562) /*BIT,VARBIT*/
+	 WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1560, 1562) /*BIT,VARBIT*/
 	 THEN a.atttypmod
 	 else null
 	END AS max_length
-	,CASE a.atttypid
+	,CASE (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	 WHEN 1700 then
 	     case WHEN a.atttypmod = -1 THEN null
 	     else (a.atttypmod>>16) &65535
 	     end
 	 else null
 	END AS numeric_precision
-	,CASE a.atttypid
+	,CASE (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	 WHEN 1700 then
 	     case WHEN a.atttypmod = -1 THEN null
 	     else (a.atttypmod-4) &65535
 	     end
 	 else null
 	END AS numeric_scale
-	,CASE WHEN a.atttypid IN (1082) /*date*/
+	,CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1082) /*date*/
 	 THEN 0
-	 WHEN a.atttypid IN (1083, 1114, 1184, 1266) /*time, timestamp, timetz, timestamptz*/
+	 WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1083, 1114, 1184, 1266) /*time, timestamp, timetz, timestamptz*/
 	 THEN case WHEN a.atttypmod < 0 THEN 6 else a.atttypmod end
 	 else null
 	END AS datetime_scale
-	,CASE WHEN a.atttypid IN (1186) /*interval*/
+	,CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1186) /*interval*/
 	 THEN case WHEN ((a.atttypmod)&65535)=65535 THEN null else (a.atttypmod)&65535 end
 	 else null
 	END AS interval_scale
 	,CASE
-	 WHEN a.atttypid IN (1186) THEN /*interval*/
+	 WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1186) THEN /*interval*/
 		 CASE ((a.atttypmod)>>16)
 			  WHEN 32767 THEN 'interval'
 			  WHEN 4 THEN 'interval year'

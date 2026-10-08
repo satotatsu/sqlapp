@@ -34,6 +34,9 @@ final class PostgresTemporalConstraintMetadata {
 	}
 
 	static void apply(CheckConstraint constraint, String definition) {
+		if (matches(definition, "\\sNO INHERIT(?:\\s+(?:NOT VALID|NOT ENFORCED))*\\s*$")) {
+			constraint.getSpecifics().put(PostgresConstraintOptions.NO_INHERIT, "true");
+		}
 		applyEnforcement(constraint, definition);
 	}
 

@@ -87,8 +87,12 @@ public class PostgresUtils extends ReaderUtils {
 		}
 		column.setNullable(nullable);
 		column.setIdentity(autoIncrement);
-		dialect.setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision),
-				CommonUtils.notZero(numericScale, datetimeScale, intervalScale), column);
+		// The shared model stores fractional datetime/interval precision in length,
+		// while scale is reserved for numeric types. Keep explicit precision zero.
+		Long precision = maxLength != null ? maxLength : numericPrecision;
+		if (precision == null && datetimeScale != null) precision = datetimeScale.longValue();
+		if (precision == null && intervalScale != null) precision = intervalScale.longValue();
+		dialect.setDbType(productDataType, precision, numericScale, column);
 		if (!isEmpty(sequenceName)) {
 			String[] names = sequenceName.split("[.]");
 			Sequence sequence = new Sequence(names[names.length - 1]);

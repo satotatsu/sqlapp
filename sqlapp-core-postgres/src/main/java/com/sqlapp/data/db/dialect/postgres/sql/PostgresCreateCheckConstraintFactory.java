@@ -19,6 +19,11 @@
 
 package com.sqlapp.data.db.dialect.postgres.sql;
 
+import java.util.List;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+
+
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
@@ -35,7 +40,20 @@ public class PostgresCreateCheckConstraintFactory extends AbstractCreateCheckCon
 
 	@Override
 	protected void addCheckConstraintAfter(CheckConstraint constraint, PostgresSqlBuilder builder) {
+		PostgresConstraintOptions.appendNoInherit(constraint, builder, supportsNotValid());
 		PostgresConstraintOptions.appendNotValid(constraint, builder, supportsNotValid());
 	}
 
+
+	@Override
+	public List<SqlOperation> createSql(CheckConstraint constraint) {
+		List<SqlOperation> result = super.createSql(constraint);
+		if (!result.isEmpty() && constraint.getRemarks() != null) {
+			var builder = createSqlBuilder();
+			PostgresConstraintOptions.constraintComment(constraint, constraint.getTable(), builder,
+					getOptions().isDecorateSchemaName());
+			addSql(result, builder, SqlType.SET_COMMENT, constraint);
+		}
+		return result;
+	}
 }

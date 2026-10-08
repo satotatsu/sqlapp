@@ -21,37 +21,37 @@ SELECT
 	      then pg_get_serial_sequence(concat('"', c.relname, '"'), a.attname)
 	      else null
 	 end  AS sequence_name
-	,case when a.atttypid IN (1042, 1043) /*CHAR,VARCHAR*/
+	,case when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042, 1043) /*CHAR,VARCHAR*/
 	      then a.atttypmod -4
-	      when a.atttypid IN (1560, 1562) /*BIT,VARBIT*/
+	      when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1560, 1562) /*BIT,VARBIT*/
 	      then a.atttypmod
 	      else null
 	 end AS max_length
-	,case a.atttypid
+	,case (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	      when 1700 then
 	           case when a.atttypmod = -1 then null
 	                else (a.atttypmod>>16) &65535
 	           end
 	      else null
 	 end AS numeric_precision
-	,case a.atttypid
+	,case (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	      when 1700 then
 	           case when a.atttypmod = -1 then null
 	                else (a.atttypmod-4) &65535
 	           end
 	      else null
 	 end AS numeric_scale
-	,case when a.atttypid IN (1082) /*date*/
+	,case when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1082) /*date*/
 	      then 0
-	      when a.atttypid IN (1083, 1114, 1184, 1266) /*time, timestamp, timetz, timestamptz*/
+	      when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1083, 1114, 1184, 1266) /*time, timestamp, timetz, timestamptz*/
 	      then case when a.atttypmod < 0 then 6 else a.atttypmod end
 	      else null
 	 end AS datetime_scale
-	,case when a.atttypid IN (1186) /*interval*/
+	,case when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1186) /*interval*/
 	      then case when ((a.atttypmod)&65535)=65535 then null else (a.atttypmod)&65535 end
 	      else null
 	 end AS interval_scale
-	,case when a.atttypid IN (1186) then /*interval*/
+	,case when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1186) then /*interval*/
 	      case ((a.atttypmod)>>16)
 		      when 32767 then 'interval'
 		      when 4 then 'interval year'

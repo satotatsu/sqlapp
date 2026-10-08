@@ -169,23 +169,22 @@ view-column comments, same-named FKs on different tables, composite key order,
 constant CHECKs and constraint comments. YSQL 11 does not support ALTER TYPE
 DROP ATTRIBUTE; real dropped-attribute recreation is outside this matrix.
 
-The 2026-10-08 full run after the constraint recreation and keyword-recognition changes passed
-all 41 cases on each baseline (82 total). The CHECK/FK case covers existing violations,
-standalone regeneration, new-write enforcement (23514/23503), VALIDATE failure
-before repair and success afterward, and unvalidated table recreation with
-comments. View options, permissions and standalone cross-schema FKs remain
-covered by the complete matrix. All five referential actions and forced legacy
-constraint queries also pass on both baselines. New composite MATCH FULL/SIMPLE
-cases check partial-NULL behavior and keyword-like names/literals, and deferred
-PRIMARY KEY/UNIQUE cases assert the unsupported-feature SQLSTATE 0A000.
-Covering PRIMARY KEY/UNIQUE cases also round-trip key/payload columns through
-Schema XML and verify duplicate-key behavior, including NULLS NOT DISTINCT on
-YSQL 15. Historical PostgreSQL servers remain unverified. PostgreSQL/YSQL/command tests executed and
-passed 769 cases, with one optional external YSQL test skipped. Gradle reused
-the unchanged plugin result (81 passing cases); Yugabyte assemble was up to
-date. The preceding broader core/all-retained-dialect/command/plugin run passed
-2,677 tests before the view, NOT VALID and FK action changes. No external or production
-database was accessed.
+The 2026-10-09 full run after the array element modifier and fractional datetime
+precision fixes passed all 44 cases on each baseline (88 total). The added case
+round-trips two-dimensional UUID/numeric/boolean/date/timestamp/bytea/varchar
+columns through Schema XML and DDL recreation, then exercises COPY and staging
+upsert while exchanging SQL NULL, empty arrays and matrices with NULL elements.
+Numeric precision/scale, varchar length and timestamp precision are asserted.
+The matrix retains constraint/comment, covering-index, view, MATCH, referential
+action, transaction, COPY/upsert and migration coverage. Deferred PRIMARY
+KEY/UNIQUE tests explicitly assert unsupported SQLSTATE 0A000. Historical
+PostgreSQL servers and PostgreSQL 18 remain unverified on real engines;
+child-table inheritance remains outside the YSQL compatibility scope.
+The latest directly affected PostgreSQL/Yugabyte/command regression passed
+777 cases, with one optional external YSQL test skipped; Yugabyte assemble was
+up to date. The earlier core/all-retained-dialect/command/plugin regression
+passed 2,697 cases before this batch. No external or production database was
+accessed.
 Reproduce the directly affected regression and the matrix with:
 
 ```shell

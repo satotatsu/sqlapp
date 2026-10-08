@@ -1,5 +1,10 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
+import java.util.List;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+
+
 import com.sqlapp.data.db.sql.AbstractCreateForeignKeyConstraintFactory;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
@@ -86,4 +91,16 @@ public class Postgres180CreateForeignKeyConstraintFactory
 		PostgresConstraintOptions.appendCascadeRules(obj, builder);
 	}
 
+
+	@Override
+	public List<SqlOperation> createSql(ForeignKeyConstraint constraint) {
+		List<SqlOperation> result = super.createSql(constraint);
+		if (!result.isEmpty() && constraint.getRemarks() != null) {
+			var builder = createSqlBuilder();
+			PostgresConstraintOptions.constraintComment(constraint, constraint.getTable(), builder,
+					getOptions().isDecorateSchemaName());
+			addSql(result, builder, SqlType.SET_COMMENT, constraint);
+		}
+		return result;
+	}
 }

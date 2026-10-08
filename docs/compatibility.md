@@ -777,3 +777,121 @@ object loading. Previously it consumed the underlying Reader directly, so
 the subsequent load could see end-of-input. Focused tests cover automatic
 Table/Catalog detection with Unicode and normal Schema equality. The XML format
 and caller ownership behavior of this reader API are unchanged.
+
+
+Validation on 2026-10-09: the focused common-model/Reader tests and PostgreSQL
+query/generator tests passed after fixing the new test setup's API types. The
+initial real-engine tests exposed both the automatic Reader consumption bug
+and missing constraint includes serialization; both are now fixed and the
+focused cases pass on both YSQL baselines. The full core/all-retained-dialect/
+command/plugin regression then executed 2,692 passing cases, with one optional
+external YSQL case skipped. The plugin's 81 cases were executed, and Yugabyte
+assemble was up to date. Both full local compatibility tasks passed 42 cases
+each (84 real-engine cases). No generated files were manually modified and no
+external/production database was accessed.
+
+Executed repository Gradle Wrapper tasks: :sqlapp-core:test and every included
+:sqlapp-core-{db}:test, :sqlapp-core-test:test (no sources), :sqlapp-command:test,
+:sqlapp-gradle-plugin:test, :sqlapp-core-yugabyte:assemble,
+:sqlapp-core-dialect-test:yugabyte11CompatibilityTest and
+:sqlapp-core-dialect-test:yugabyte15CompatibilityTest. Scope selection used the
+retained module list in settings.gradle and excluded generic external-database
+integration tasks.
+
+
+## CHECK inheritance, standalone constraint comments and FK XML identity
+
+PostgreSQL CHECK metadata now preserves a terminal NO INHERIT option in
+Specifics.noInherit, without matching that text in quoted identifiers/literals.
+PostgreSQL 9.2+ ordinary and PostgreSQL 18 factories retain it before enforcement
+and validation options. Earlier factories omit the unavailable syntax, while
+malformed boolean values fail clearly. No new catalog column dependency is
+introduced in older readers. The local YSQL case verifies connoinherit and
+convalidated after recreation and checks that invalid new rows still fail.
+It does not establish child-table inheritance support in YSQL or test that
+behavior on a real PostgreSQL server. Reference:
+[PostgreSQL inheritance](https://www.postgresql.org/docs/11/ddl-inherit.html).
+
+Standalone CHECK, FK and PRIMARY KEY/UNIQUE generation now returns CREATE
+followed by SET_COMMENT operations when remarks are present. UNIQUE/PRIMARY
+KEY generation also restores the backing-index comment, resolving remarks
+from the table's canonical index when needed after XML loading. The new index
+created by an ADD CONSTRAINT column list uses the constraint name; a different
+source index name is not used as a nonexistent destination comment target.
+Schema-qualified names and Unicode/apostrophes are escaped by the SQL builder.
+Callers must execute all returned operations to retain comments. Inline table
+creation keeps its existing comment phase, filtering standalone comment
+operations for separately added NOT VALID constraints to avoid duplicates.
+
+The integration test also exposed an independent shared XML bug: detached FK
+reference columns could be resolved to identically named local columns when
+reading a standalone Table, causing generated SQL to reference the child
+itself and allow an otherwise invalid foreign-key value. The XML reader now
+keeps referenced columns owned by a referenced Table and adds them together,
+retaining schema identity and column order. Self-references reuse canonical
+local columns. Focused tests cover same-named columns, reversed composite
+positions, quoted cross-schema names, standalone self-references and canonical
+Schema parent/self relationships. Public APIs and XML formats are unchanged;
+this changes the incorrectly restored reference ownership for existing XML.
+The local YSQL case round-trips the Table through XML, recreates constraints
+and then the table, verifies constraint/index comments, and checks CHECK/FK/
+UNIQUE violations through SQLSTATE 23514/23503/23505.
+
+Validation on 2026-10-09: focused PostgreSQL constraint/metadata tests and shared
+FK XML tests passed. The focused disposable YSQL 11/15 tests passed after fixing
+the XML ownership defect exposed by the FK violation assertion. The full Gradle
+core/all-retained-dialect/command/plugin test run, Yugabyte assemble, and
+`yugabyte11CompatibilityTest` / `yugabyte15CompatibilityTest` completed with
+BUILD SUCCESSFUL: 2,697 ordinary cases passed and one optional external YSQL
+case was skipped; both real-engine matrices passed 43 cases each (86 total).
+The plugin's 81 cases executed; assemble was up to date. No external or production
+database was accessed and no generated files were edited manually. PostgreSQL
+historical/18 behavior is covered by unit tests, not real-engine verification;
+child-table inheritance remains outside the YSQL compatibility scope.
+
+
+## Array element type modifiers and fractional datetime precision
+
+PostgreSQL column metadata queries now decode length, numeric precision/scale,
+and datetime/interval precision using the array element OID when `attndims > 0`.
+Scalar columns continue to use their original type OID. The existing base,
+10/11, 12-17 and 18 query variants retain their version-specific catalog fields;
+no new catalog columns, module dependencies, resolver branches or public APIs
+were introduced. The base query is also used for composite-type attributes.
+This fixes invalid regeneration such as `numeric(0,0)[][]` for a source
+`numeric(12,3)[][]`, and lost `varchar(n)` array element lengths.
+
+The shared PostgreSQL column mapper now stores fractional datetime and interval
+precision in the Schema model's `length`, where the type generators expect it;
+`scale` retains numeric scale. Explicit datetime precision zero is preserved.
+This affects ordinary and array columns. XML remains in the existing format,
+although newly read metadata now includes the corrected length/precision.
+
+A disposable YSQL 11/15 case reads a table, round-trips Schema XML, regenerates
+the table and checks array dimensions, numeric precision/scale, varchar length
+and timestamp precision. COPY and staging upsert then move two-dimensional UUID,
+numeric, boolean, date, timestamp, bytea and varchar values, SQL NULL, empty
+arrays and NULL elements. The second phase swaps NULL/empty/nonempty values
+between existing rows, checking updates as well as inserts. Binary elements
+include zero, 0xff, quotes, backslashes and empty bytea; strings include Unicode,
+apostrophes, quotes and backslashes. Unit tests cover scalar/array datetime
+precision 0/3/6, numeric zero/nonzero scale, character lengths and interval
+precision. Domain metadata and interval field qualifiers are separate paths and
+are not expanded by this change; other element types, arbitrary dimensions and
+non-default array lower bounds remain outside the verified scope.
+
+Catalog references: [pg_type element OIDs](https://www.postgresql.org/docs/11/catalog-pg-type.html)
+and [pg_attribute type modifiers/dimensions](https://www.postgresql.org/docs/11/catalog-pg-attribute.html).
+
+Validation on 2026-10-09: the added case first exposed invalid numeric array DDL
+and missing datetime precision; both defects were fixed before the successful
+focused tests. The final Gradle run executed `:sqlapp-core-postgres:test`,
+`:sqlapp-core-yugabyte:test`, `:sqlapp-command:test`,
+`:sqlapp-core-yugabyte:assemble`, and both full YSQL compatibility tasks.
+BUILD SUCCESSFUL: PostgreSQL 230, Yugabyte 4 and command 543 cases passed (777),
+with one optional external YSQL case skipped. Both disposable real-engine
+matrices passed 44 cases each (88 total); assemble was up to date. Unchanged
+core/other-dialect/plugin suites were not rerun in this batch. No external or
+production database was accessed and no generated files were edited manually.
+The base/18 column-query variants and interval precision were not verified on
+historical/18 real engines; their compatibility limits remain as stated above.

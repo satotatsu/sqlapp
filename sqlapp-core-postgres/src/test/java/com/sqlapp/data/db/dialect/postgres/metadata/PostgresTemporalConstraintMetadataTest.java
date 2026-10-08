@@ -13,6 +13,17 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 class PostgresTemporalConstraintMetadataTest {
 	@Test
+	void recognizesNoInheritWithoutMatchingQuotedSyntax() {
+		for (String suffix : new String[] {"NO INHERIT", "NO INHERIT NOT VALID", "NO INHERIT NOT ENFORCED NOT VALID"}) {
+			var check = new CheckConstraint("ck", "id > 0");
+			PostgresTemporalConstraintMetadata.apply(check, "CHECK (id > 0) " + suffix);
+			assertEquals("true", check.getSpecifics().get("noInherit"));
+		}
+		var check = new CheckConstraint("ck", "label <> 'NO INHERIT'");
+		PostgresTemporalConstraintMetadata.apply(check, "CHECK (label <> 'NO INHERIT')");
+		assertNull(check.getSpecifics().get("noInherit"));
+	}
+	@Test
 	void ignoresSyntaxWordsInsideIdentifiersAndCheckLiterals() {
 		var fk = new ForeignKeyConstraint("fk");
 		PostgresTemporalConstraintMetadata.apply(fk,

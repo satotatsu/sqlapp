@@ -7,8 +7,40 @@ import com.sqlapp.util.AbstractSqlBuilder;
 /** PostgreSQL CHECK and foreign-key generation options stored in Schema Specifics. */
 public final class PostgresConstraintOptions {
 	public static final String NOT_VALID = "notValid";
+	public static final String NO_INHERIT = "noInherit";
 	private PostgresConstraintOptions() { }
 	interface NotValidFactory { }
+
+	static void appendNoInherit(com.sqlapp.data.schemas.CheckConstraint constraint, AbstractSqlBuilder<?> builder, boolean supported) {
+		String value = constraint.getSpecifics().get(NO_INHERIT);
+		if (value != null && !"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value)) {
+			throw new IllegalArgumentException("Constraint noInherit must be true or false.");
+		}
+		if (supported && Boolean.parseBoolean(value)) builder.space()._add("NO INHERIT");
+	}
+
+	static void constraintComment(Constraint constraint, com.sqlapp.data.schemas.Table table,
+			AbstractSqlBuilder<?> builder, boolean decorateSchemaName) {
+		builder.comment().on().constraint().space().name(constraint, false).on()
+				.name(table, decorateSchemaName).is().space().sqlChar(constraint.getRemarks());
+	}
+
+	static void backingIndexComment(com.sqlapp.data.schemas.UniqueConstraint constraint,
+			AbstractSqlBuilder<?> builder, boolean decorateSchemaName) {
+		// ADD CONSTRAINT with a column list creates its index under the constraint name.
+		var index = new com.sqlapp.data.schemas.Index(constraint.getName());
+		index.setSchemaName(constraint.getTable().getSchemaName());
+		builder.comment().on().index().space().name((com.sqlapp.data.schemas.AbstractSchemaObject<?>) index, decorateSchemaName).is().space()
+				.sqlChar(backingIndexRemarks(constraint));
+	}
+
+	static String backingIndexRemarks(com.sqlapp.data.schemas.UniqueConstraint constraint) {
+		if (constraint.getIndex().getRemarks() != null) return constraint.getIndex().getRemarks();
+		var table = constraint.getTable();
+		if (table == null) return null;
+		var index = table.getIndexes().get(constraint.getIndexName() == null ? constraint.getName() : constraint.getIndexName());
+		return index == null ? null : index.getRemarks();
+	}
 
 	static void appendIncludes(com.sqlapp.data.schemas.UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
 		if (!constraint.getIndex().getIncludes().isEmpty()) {

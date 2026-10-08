@@ -48,7 +48,10 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 	@Override
 	protected void addOtherDefinitions(Table table, List<SqlOperation> result) {
 		for (var constraint : table.getConstraints()) {
-			if (separateNotValid(constraint)) result.addAll(getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE));
+			if (separateNotValid(constraint)) {
+				getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE).stream()
+						.filter(operation -> operation.getSqlType() != SqlType.SET_COMMENT).forEach(result::add);
+			}
 		}
 		if (table.getRemarks() != null) {
 			PostgresSqlBuilder builder = this.createSqlBuilder();

@@ -478,6 +478,79 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void recreatesAndBulkLoadsMultidimensionalTypedArrays() throws Exception {
+		String schemaName = "ysql_nested_types_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, ids uuid[][], "
+						+ "amounts numeric(12,3)[][], flags boolean[][], dates date[][], moments timestamp(3)[][], payloads bytea[][], labels varchar(7)[][])");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("items");
+				Table original = reader.getAllFull(connection).get(0);
+				Table table = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+				String[] columns = { "ids", "amounts", "flags", "dates", "moments", "payloads", "labels" };
+				for (String column : columns) assertEquals(2, table.getColumns().get(column).getArrayDimension(), column);
+				assertEquals(12L, table.getColumns().get("amounts").getLength());
+				assertEquals(3, table.getColumns().get("amounts").getScale());
+				assertEquals(3L, table.getColumns().get("moments").getLength());
+				assertEquals(7L, table.getColumns().get("labels").getLength());
+				statement.execute("DROP TABLE " + schemaName + ".items");
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(table, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				Table recreated = reader.getAllFull(connection).get(0);
+				for (String column : columns) {
+					assertEquals(2, recreated.getColumns().get(column).getArrayDimension(), column);
+					assertEquals(table.getColumns().get(column).getDataType(), recreated.getColumns().get(column).getDataType(), column);
+				}
+				for (String column : List.of("amounts", "moments", "labels")) {
+					assertEquals(table.getColumns().get(column).getLength(), recreated.getColumns().get(column).getLength(), column);
+					assertEquals(table.getColumns().get(column).getScale(), recreated.getColumns().get(column).getScale(), column);
+				}
+				Object[][][] matrices = {
+					{ { UUID.fromString("12345678-1234-5678-9abc-123456789abc"), null }, { null, UUID.fromString("00000000-0000-0000-0000-000000000000") } },
+					{ { new BigDecimal("-123456.789"), null }, { new BigDecimal("0.001"), new BigDecimal("999999999.999") } },
+					{ { true, null }, { false, true } },
+					{ { java.sql.Date.valueOf("2024-02-29"), null }, { java.sql.Date.valueOf("1970-01-01"), java.sql.Date.valueOf("2000-01-01") } },
+					{ { java.sql.Timestamp.valueOf("2024-02-29 12:34:56.123"), null }, { java.sql.Timestamp.valueOf("1970-01-01 00:00:00.001"), java.sql.Timestamp.valueOf("2000-01-01 23:59:59.999") } },
+					{ { new byte[] {0, (byte)255, 34, 92}, null }, { new byte[0], new byte[] {1, 2} } },
+					{ { "O'Brien", null }, { "雪☃", "a\\b\"c" } }
+				};
+				for (int phase = 0; phase < 2; phase++) {
+					table.getRows().clear();
+					int nullId = phase == 0 ? 1 : 2;
+					int emptyId = phase == 0 ? 2 : 3;
+					int matrixId = phase == 0 ? 3 : 1;
+					table.getRows().add(r -> { r.put("id", nullId); for (String column : columns) r.put(column, null); });
+					table.getRows().add(r -> { r.put("id", emptyId); for (String column : columns) r.put(column, new Object[0]); });
+					table.getRows().add(r -> { r.put("id", matrixId); for (int i = 0; i < columns.length; i++) r.put(columns[i], matrices[i]); });
+					assertEquals(3, phase == 0
+							? BulkInsertResolver.execute(connection, table, BulkOption.defaults())
+							: BulkUpsertResolver.execute(connection, table, BulkUpsertOption.defaults()));
+					try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".items ORDER BY id")) {
+						for (int id = 1; id <= 3; id++) {
+							assertTrue(rows.next()); assertEquals(id, rows.getInt("id"));
+							for (int i = 0; i < columns.length; i++) {
+								var array = rows.getArray(columns[i]);
+								if (id == nullId) { assertNull(array, columns[i]); continue; }
+								assertNotNull(array, columns[i]);
+								try {
+									Object[] actual = (Object[]) array.getArray();
+									if (id == emptyId) assertEquals(0, actual.length, columns[i]);
+									else assertArrayEquals(matrices[i], actual, columns[i]);
+								} finally { array.free(); }
+							}
+						}
+						assertFalse(rows.next());
+					}
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void recreatesCompositeTypeDefinitionAttributesCollationAndComments() throws Exception {
 		String schemaName = "ysql_composite_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {
@@ -622,6 +695,55 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+
+	@Test
+	void recreatesNoInheritChecksAndStandaloneConstraintComments() throws Exception {
+		String schemaName = "ysql_constraint_notes_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".parent(id integer PRIMARY KEY)");
+				statement.execute("INSERT INTO " + schemaName + ".parent VALUES (1)");
+				String child = schemaName + ".child";
+				statement.execute("CREATE TABLE " + child + " (id integer, amount integer, CONSTRAINT \"Unique Key\" UNIQUE(id),"
+						+ "CONSTRAINT \"Parent FK\" FOREIGN KEY(id) REFERENCES " + schemaName + ".parent(id))");
+				statement.execute("ALTER TABLE " + child + " ADD CONSTRAINT \"Positive Check\" CHECK(amount >= 0) NO INHERIT NOT VALID");
+				for (String name : List.of("Unique Key","Parent FK","Positive Check")) {
+					statement.execute("COMMENT ON CONSTRAINT \"" + name + "\" ON " + child + " IS '日本語 O''Brien'");
+				}
+				statement.execute("COMMENT ON INDEX " + schemaName + ".\"Unique Key\" IS 'index O''Brien'");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("child");
+				var model = reader.getAllFull(connection).stream().filter(t -> "child".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals("true", model.getConstraints().get("Positive Check").getSpecifics().get("noInherit"));
+				Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(model.asXml()));
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var constraint : restored.getConstraints()) {
+					statement.execute("ALTER TABLE " + child + " DROP CONSTRAINT \"" + constraint.getName() + "\"");
+					for (var operation : registry.createSql(constraint, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				var reread = reader.getAllFull(connection).stream().filter(t -> "child".equals(t.getName())).findFirst().orElseThrow();
+				for (var constraint : reread.getConstraints()) assertEquals("日本語 O'Brien", constraint.getRemarks());
+				assertEquals("index O'Brien", reread.getIndexes().get("Unique Key").getRemarks());
+				assertEquals("true", reread.getConstraints().get("Positive Check").getSpecifics().get("noInherit"));
+				assertEquals("true", reread.getConstraints().get("Positive Check").getSpecifics().get("notValid"));
+				try (var rows = statement.executeQuery("SELECT connoinherit,convalidated FROM pg_catalog.pg_constraint c "
+						+ "JOIN pg_catalog.pg_namespace n ON n.oid=c.connamespace WHERE n.nspname='" + schemaName + "' AND c.conname='Positive Check'")) {
+					assertTrue(rows.next()); assertTrue(rows.getBoolean(1)); assertFalse(rows.getBoolean(2));
+				}
+				statement.execute("INSERT INTO " + child + " VALUES (1,1)");
+				assertEquals("23514", assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + child + " VALUES (NULL,-1)")).getSQLState());
+				assertEquals("23503", assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + child + " VALUES (2,1)")).getSQLState());
+				assertEquals("23505", assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + child + " VALUES (1,2)")).getSQLState());
+				statement.execute("DROP TABLE " + child);
+				for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				var tableReread = reader.getAllFull(connection).stream().filter(t -> "child".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals("true", tableReread.getConstraints().get("Positive Check").getSpecifics().get("noInherit"));
+				for (var constraint : tableReread.getConstraints()) assertEquals("日本語 O'Brien", constraint.getRemarks());
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
 
 	@Test
 	void recreatesCoveringConstraintsThroughXmlWithoutChangingUniqueness() throws Exception {

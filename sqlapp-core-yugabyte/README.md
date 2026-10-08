@@ -79,13 +79,12 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, after the constraint recreation and keyword-recognition changes, the full matrix
-passed all 41 tests on each image (82 real-engine tests). PostgreSQL/YSQL/command tests
-executed and passed 769 cases, with one optional external YSQL case skipped.
-Gradle reused the unchanged plugin result (81 passing cases); Yugabyte assemble
-was up to date. The preceding broader core/all-retained-dialect/command/plugin
-run passed 2,677 tests before the view, NOT VALID and FK action batches. No external or
-production database was accessed.
+On 2026-10-09, after the array element modifier and datetime precision fixes,
+the full matrix passed all 44 tests on each image (88 real-engine tests).
+The directly affected PostgreSQL/Yugabyte/command regression passed 777 cases,
+with one optional external YSQL case skipped; Yugabyte assemble was up to date.
+The earlier core/all-retained-dialect/command/plugin run passed 2,697 cases before
+this batch. No external or production database was accessed.
 
 The matrix asserts the actual JDBC engine major and tests both engines for:
 
@@ -99,6 +98,9 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
   these constraints are not part of the supported YSQL deferral scope.
 - Legacy and modern constraint-query execution with reversed composite key positions
   on both current baselines; historical PostgreSQL servers themselves are unverified.
+- NO INHERIT CHECK state with NOT VALID, standalone constraint/backing-index comments,
+  and XML FK reference identity verified through actual constraint violations.
+  Child-table inheritance itself is not part of the YSQL compatibility scope.
 - NOT VALID CHECK/FK state, post-CREATE constraint addition, comments, legacy violations,
   new-write enforcement and VALIDATE before/after repair (23514/23503).
 - Standalone TableReader recreation with quoted cross-schema composite FK references.
@@ -139,6 +141,10 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 - Key-only generated upsert and bulk upsert, including duplicate no-op behavior.
 - Nested integer/text COPY and upsert, primitive-byte numeric arrays and bytea arrays.
 - UUID/numeric/boolean/date/timestamp arrays with SQL NULL, empty arrays and NULL elements.
+- Two-dimensional UUID/numeric/boolean/date/timestamp/bytea/varchar arrays through
+  XML and table recreation, COPY and upsert; element numeric precision/scale,
+  varchar length and timestamp precision are retained. NULL, empty and nonempty
+  values are exchanged between existing rows; binary/string escaping is checked.
 - Staging upsert, duplicate policies, insert/update-only actions, caller rollback
   and temporary-table cleanup.
 - Chunked checkpoint atomicity, pause/resume, sustained loads, keyset verification
@@ -149,9 +155,11 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 The verified builds are compatibility baselines, not a claim that every
 PostgreSQL statement works on every YugabyteDB release. Sharding/colocation,
 hash/range physical index layout, placement/tablespaces, extensions, multi-node
-failover and performance tuning are not covered. COPY tests cover nested integer/text arrays, primitive-byte smallint arrays and
-one-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays; other array
-element types and nested variants of these added types remain unverified.
+failover and performance tuning are not covered. COPY tests cover nested integer/text arrays, primitive-byte smallint arrays,
+and one- and two-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays,
+plus two-dimensional varchar arrays. Other element types, arbitrary dimensions
+and non-default lower bounds remain unverified. Array modifier fixes apply to
+column/composite-attribute readers; domain metadata is a separate path.
 Multiple domain CHECKs are combined into one expression; their individual
 constraint names are not retained. Composite ALTER, extension-specific attribute types and arbitrary composite-type
 dependency graphs remain unverified. YSQL 11 rejects ALTER TYPE DROP ATTRIBUTE;
