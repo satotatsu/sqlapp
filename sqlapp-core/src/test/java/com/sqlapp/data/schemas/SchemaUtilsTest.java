@@ -38,6 +38,19 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
 public class SchemaUtilsTest {
+	@Test
+	public void readsXmlFromReaderWithoutConsumingTheUnderlyingInput() throws Exception {
+		Table table = new Table("日本語 table");
+		table.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		Table restored = SchemaUtils.readXml(new StringReader(table.asXml()));
+		assertEquals(table, restored);
+		Catalog catalog = new Catalog("catalog");
+		Schema schema = new Schema("public");
+		catalog.getSchemas().add(schema);
+		schema.getTables().add(table);
+		Catalog restoredCatalog = SchemaUtils.readXml(new StringReader(catalog.asXml()));
+		assertEquals(catalog, restoredCatalog);
+	}
 
 	@Test
 	public void testIsSameTable() {

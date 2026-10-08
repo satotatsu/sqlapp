@@ -289,7 +289,7 @@ public class SchemaUtils {
 			br = new BufferedReader(reader, readlimit);
 			br.mark(readlimit);
 			@SuppressWarnings("resource")
-			final StaxReader staxReader = new StaxReader(reader);
+			final StaxReader staxReader = new StaxReader(br);
 			staxReader.nextFristStartElement();
 			if (!staxReader.isStartElement()) {
 				return null;

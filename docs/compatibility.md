@@ -740,3 +740,40 @@ constraint checks. Commands: :sqlapp-core-postgres:test, :sqlapp-core-yugabyte:t
 :sqlapp-core-dialect-test:yugabyte15CompatibilityTest through the repository
 Gradle wrapper. No external/production database was accessed and no generated
 files were manually changed.
+
+
+## Covering constraints, NULL uniqueness and Schema XML
+
+PostgreSQL 11+ constraint metadata now distinguishes key positions from
+INCLUDE payload positions using pg_index.indnkeyatts. PostgreSQL 15+ reads
+indnullsnotdistinct for UNIQUE NULLS NOT DISTINCT. Dedicated 11 and 15 queries
+keep these catalog fields out of earlier branches. The same version boundaries
+apply to standalone and inline constraint generation, with INCLUDE preceding
+DEFERRABLE and NULLS NOT DISTINCT restricted to UNIQUE rather than PRIMARY KEY.
+PostgreSQL 18's temporal factory composes the same options. Earlier branches
+retain their previous omission of options they cannot express, consistently
+with existing index generation. See [PostgreSQL 15 CREATE TABLE](https://www.postgresql.org/docs/15/sql-createtable.html).
+
+The canonical Schema model stores payload columns in the backing Index.
+UniqueConstraint now exposes the existing IncludeColumnsProperty/getIncludes
+view of that collection and persists the existing optional includes element
+in standalone constraint XML and table PRIMARY KEY XML. Payload columns take
+part in equality, clone and difference processing while remaining separate
+from key columns. Existing XML without includes is unchanged and accepted;
+older binaries are not guaranteed to retain the newly persisted constraint
+payload metadata. No dependency changes or vendor-specific fields were added
+to core.
+
+The local YSQL test reads reversed composite keys with quoted payload names,
+round-trips through Schema XML, recreates PRIMARY KEY/UNIQUE tables and
+standalone UNIQUE constraints, and verifies that different payloads cannot
+bypass key uniqueness. It checks ordinary NULL-distinct behavior on YSQL 11
+and NULLS NOT DISTINCT behavior on YSQL 15. Historical PostgreSQL engines and
+PostgreSQL 18 temporal combinations remain outside this real-engine matrix.
+
+A separate shared fix addresses SchemaUtils.readXml(Reader): the initial root
+probe now reads through the same BufferedReader that is marked and reset for
+object loading. Previously it consumed the underlying Reader directly, so
+the subsequent load could see end-of-input. Focused tests cover automatic
+Table/Catalog detection with Unicode and normal Schema equality. The XML format
+and caller ownership behavior of this reader API are unchanged.

@@ -90,6 +90,8 @@ production database was accessed.
 The matrix asserts the actual JDBC engine major and tests both engines for:
 
 - Schema-based table, PK/FK/unique/check constraint, index, view and sequence recreation.
+- Covering PRIMARY KEY/UNIQUE key/payload separation through Schema XML and regeneration;
+  quoted INCLUDE columns and NULLS NOT DISTINCT on the PostgreSQL 15 baseline.
 - All five FK ON UPDATE/DELETE actions, deferred NO ACTION versus immediate RESTRICT.
 - Composite MATCH FULL/SIMPLE recreation and partial-NULL behavior; CHECK literals and
   period_id identifiers do not acquire PostgreSQL 18-only metadata flags.

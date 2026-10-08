@@ -19,3 +19,7 @@
 /.tmp-fk-owner-focused.log
 /.tmp-fk-owner-regression.log
 /.tmp-fk-owner-unit.log
+/.tmp-covering-core.log
+/.tmp-covering-engines.log
+/.tmp-covering-regression.log
+/.tmp-covering-unit.log

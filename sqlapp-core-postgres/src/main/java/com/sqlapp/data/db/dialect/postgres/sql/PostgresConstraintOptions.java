@@ -10,6 +10,18 @@ public final class PostgresConstraintOptions {
 	private PostgresConstraintOptions() { }
 	interface NotValidFactory { }
 
+	static void appendIncludes(com.sqlapp.data.schemas.UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
+		if (!constraint.getIndex().getIncludes().isEmpty()) {
+			builder.space()._add("INCLUDE").space().brackets(() -> builder.names(constraint.getIndex().getIncludes()));
+		}
+	}
+
+	static void appendNullsNotDistinct(com.sqlapp.data.schemas.UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
+		String value = constraint.getSpecifics().get(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT);
+		if (value == null) value = constraint.getIndex().getSpecifics().get(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT);
+		if (!constraint.isPrimaryKey() && Boolean.parseBoolean(value)) builder.space()._add("NULLS NOT DISTINCT");
+	}
+
 	static void appendDeferrability(Constraint constraint, AbstractSqlBuilder<?> builder) {
 		var mode = constraint.getDeferrability();
 		if (mode != null && mode != com.sqlapp.data.schemas.Deferrability.NotDeferrable) {

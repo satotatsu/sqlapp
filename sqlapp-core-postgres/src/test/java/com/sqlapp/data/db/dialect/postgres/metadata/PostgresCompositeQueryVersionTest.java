@@ -8,6 +8,17 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 
 class PostgresCompositeQueryVersionTest {
 	@Test
+	void uniqueCoveringAndNullOptionsRespectCatalogBoundaries() {
+		var reader = new PostgresUniqueConstraintReader(DialectHolder.postgreSQL150);
+		for (int major : new int[] {8, 9, 10, 11, 14, 15, 18}) {
+			String sql = reader.getSqlSqlNode(new ProductVersionInfo().setMajorVersion(major).setMinorVersion(4)).toString();
+			assertEquals(major >= 11, sql.contains("backing.indnkeyatts"), sql);
+			assertEquals(major >= 15, sql.contains("backing.indnullsnotdistinct"), sql);
+			assertTrue(sql.contains("AS is_included"), sql);
+			assertTrue(sql.contains("AS nulls_not_distinct"), sql);
+		}
+	}
+	@Test
 	void collationsAreReadOnlyFrom91() {
 		var reader = new PostgresTypeReader(DialectHolder.postgreSQL150);
 		for (int[] version : new int[][] {{8, 3}, {9, 0}, {9, 1}, {11, 0}, {15, 0}}) {

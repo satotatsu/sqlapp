@@ -69,11 +69,19 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					c.setRemarks(getString(rs, "remarks"));
+					c.setIndexName(getString(rs, "index_name"));
+					if (rs.getBoolean("nulls_not_distinct")) {
+						c.getSpecifics().put(com.sqlapp.data.db.dialect.postgres.sql.PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
+					}
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
 					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					result.add(c);
 					map.put(schema_name, table_name, constraint_name, c);
+				}
+				if (rs.getBoolean("is_included")) {
+					c.getIndex().getIncludes().add(getString(rs, COLUMN_NAME));
+					return;
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(table_name);
@@ -84,6 +92,10 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
+			if (productVersionInfo.getMajorVersion() >= 15) return getSqlNodeCache().getString("uniqueConstraints150.sql");
+			if (productVersionInfo.getMajorVersion() >= 11) return getSqlNodeCache().getString("uniqueConstraints110.sql");
+		}
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& (productVersionInfo.getMajorVersion() > 8
 						|| productVersionInfo.getMajorVersion() == 8 && productVersionInfo.getMinorVersion() != null

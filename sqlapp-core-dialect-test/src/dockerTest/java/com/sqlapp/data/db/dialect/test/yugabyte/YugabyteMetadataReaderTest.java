@@ -624,6 +624,50 @@ class YugabyteMetadataReaderTest {
 
 
 	@Test
+	void recreatesCoveringConstraintsThroughXmlWithoutChangingUniqueness() throws Exception {
+		String schemaName = "ysql_covering_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				boolean nullsNotDistinct = connection.getMetaData().getDatabaseMajorVersion() >= 15;
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader(); reader.setSchemaName(schemaName);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (boolean primary : new boolean[] {true,false}) {
+					String name = primary ? "primary_case" : "unique_case";
+					String qualified = schemaName + "." + name;
+					statement.execute("CREATE TABLE " + qualified + " (a integer,b integer,\"Payload Value\" text, CONSTRAINT covering_key "
+							+ (primary ? "PRIMARY KEY" : "UNIQUE" + (nullsNotDistinct ? " NULLS NOT DISTINCT" : ""))
+							+ " (b,a) INCLUDE (\"Payload Value\"))");
+					reader.setObjectName(name);
+					var model = reader.getAllFull(connection).stream().filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+					var key = (com.sqlapp.data.schemas.UniqueConstraint) model.getConstraints().get("covering_key");
+					assertEquals(List.of("b","a"), key.getColumns().stream().map(c -> c.getName()).toList());
+					assertEquals(List.of("Payload Value"), key.getIndex().getIncludes().stream().map(c -> c.getName()).toList());
+					assertEquals(!primary && nullsNotDistinct ? "true" : null, key.getSpecifics().get("nullsNotDistinct"));
+					Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(model.asXml()));
+					var restoredKey = (com.sqlapp.data.schemas.UniqueConstraint) restored.getConstraints().get("covering_key");
+					assertEquals(List.of("Payload Value"), restoredKey.getIndex().getIncludes().stream().map(c -> c.getName()).toList());
+					statement.execute("DROP TABLE " + qualified);
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("INSERT INTO " + qualified + " VALUES (1,2,'first')");
+					assertEquals("23505", assertThrows(SQLException.class,
+							() -> statement.execute("INSERT INTO " + qualified + " VALUES (1,2,'different payload')")).getSQLState());
+					if (!primary) {
+						statement.execute("INSERT INTO " + qualified + " VALUES (NULL,3,'null first')");
+						if (nullsNotDistinct) assertEquals("23505", assertThrows(SQLException.class,
+								() -> statement.execute("INSERT INTO " + qualified + " VALUES (NULL,3,'null second')")).getSQLState());
+						else statement.execute("INSERT INTO " + qualified + " VALUES (NULL,3,'null second')");
+						statement.execute("ALTER TABLE " + qualified + " DROP CONSTRAINT covering_key");
+						for (var operation : registry.createSql(restoredKey, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					}
+					statement.execute("DROP TABLE " + qualified);
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void preservesCompositeMatchAndAvoidsKeywordFalsePositives() throws Exception {
 		String schemaName = "ysql_match_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {
@@ -765,7 +809,8 @@ class YugabyteMetadataReaderTest {
 				statement.execute("CREATE TABLE " + schemaName + ".parent (a integer,b integer,label text,PRIMARY KEY (b,a),UNIQUE (label,a))");
 				statement.execute("CREATE TABLE " + schemaName + ".child (local_a integer,local_b integer,FOREIGN KEY (local_b,local_a) REFERENCES " + schemaName + ".parent(b,a))");
 				var dialect = DialectResolver.getInstance().getDialect(connection);
-				for (int[] version : new int[][] {{8,3},{8,4},{9,2},{15,0}}) {
+				for (int[] version : new int[][] {{8,3},{8,4},{9,2},{11,0},{15,0}}) {
+					if (version[0] > connection.getMetaData().getDatabaseMajorVersion()) continue;
 					var forced = new com.sqlapp.data.schemas.ProductVersionInfo().setMajorVersion(version[0]).setMinorVersion(version[1]);
 					var foreignKeys = new com.sqlapp.data.db.dialect.postgres.metadata.PostgresForeignKeyConstraintReader(dialect) {
 						@Override

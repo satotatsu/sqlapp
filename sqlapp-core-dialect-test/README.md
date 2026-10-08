@@ -178,8 +178,9 @@ covered by the complete matrix. All five referential actions and forced legacy
 constraint queries also pass on both baselines. New composite MATCH FULL/SIMPLE
 cases check partial-NULL behavior and keyword-like names/literals, and deferred
 PRIMARY KEY/UNIQUE cases assert the unsupported-feature SQLSTATE 0A000.
-Historical PostgreSQL servers
-remain unverified. PostgreSQL/YSQL/command tests executed and
+Covering PRIMARY KEY/UNIQUE cases also round-trip key/payload columns through
+Schema XML and verify duplicate-key behavior, including NULLS NOT DISTINCT on
+YSQL 15. Historical PostgreSQL servers remain unverified. PostgreSQL/YSQL/command tests executed and
 passed 769 cases, with one optional external YSQL test skipped. Gradle reused
 the unchanged plugin result (81 passing cases); Yugabyte assemble was up to
 date. The preceding broader core/all-retained-dialect/command/plugin run passed

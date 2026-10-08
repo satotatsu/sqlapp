@@ -19,6 +19,9 @@ SELECT DISTINCT
   , pg_get_constraintdef(c.constraint_oid) as consrc --制約式
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
+  , false AS is_included
+  , false AS nulls_not_distinct
+  , c.conname AS index_name
   , c.key_position
 FROM (
   SELECT source.*, source.oid AS constraint_oid, generate_subscripts(source.conkey, 1) AS key_position

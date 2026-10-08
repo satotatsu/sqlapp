@@ -48,6 +48,12 @@ public class Postgres180CreateUniqueConstraintFactory
 
 	@Override
 	protected void addDeferrability(UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
+		PostgresConstraintOptions.appendIncludes(constraint, builder);
 		PostgresConstraintOptions.appendDeferrability(constraint, builder);
+	}
+
+	@Override
+	protected void addOption(UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
+		PostgresConstraintOptions.appendNullsNotDistinct(constraint, builder);
 	}
 }

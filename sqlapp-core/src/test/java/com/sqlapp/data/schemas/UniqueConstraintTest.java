@@ -20,6 +20,28 @@
 package com.sqlapp.data.schemas;
 
 public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint> {
+	@org.junit.jupiter.api.Test
+	public void preservesIncludesThroughXmlCloneAndDifference() throws Exception {
+		for (boolean primary : new boolean[] {true, false}) {
+			UniqueConstraint key = new UniqueConstraint("covering_key", primary);
+			key.addColumn("id");
+			key.getIncludes().add("Payload Value");
+			UniqueConstraint restored = new UniqueConstraint();
+			restored.loadXml(new java.io.StringReader(key.asXml()));
+			org.junit.jupiter.api.Assertions.assertEquals(key, restored);
+			org.junit.jupiter.api.Assertions.assertEquals("Payload Value", restored.getIncludes().get(0).getName());
+			UniqueConstraint cloned = (UniqueConstraint) key.clone();
+			org.junit.jupiter.api.Assertions.assertEquals(key, cloned);
+			cloned.getIncludes().add("other");
+			org.junit.jupiter.api.Assertions.assertNotEquals(key, cloned);
+			org.junit.jupiter.api.Assertions.assertEquals(1, key.getIncludes().size());
+			Table table = new Table("items");
+			table.getConstraints().add(key);
+			Table restoredTable = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			UniqueConstraint restoredKey = (UniqueConstraint) restoredTable.getConstraints().get("covering_key");
+			org.junit.jupiter.api.Assertions.assertEquals("Payload Value", restoredKey.getIncludes().get(0).getName());
+		}
+	}
 
 	@Override
 	protected UniqueConstraint getObject() {
