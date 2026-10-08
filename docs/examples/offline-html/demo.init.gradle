@@ -11,6 +11,7 @@ gradle.projectsEvaluated {
     def compileDemo = root.tasks.register('compileDocumentationDemo', JavaCompile) {
         dependsOn(command.tasks.named('classes'), dialect.tasks.named('classes'))
         source(root.file('docs/examples/offline-html/GenerateDemo.java'))
+        source(root.file('docs/examples/offline-html/GenerateSchemaChangeDemo.java'))
         classpath = demoClasspath
         destinationDirectory = root.layout.buildDirectory.dir('classes/offline-demo')
         options.encoding = 'UTF-8'
@@ -24,5 +25,15 @@ gradle.projectsEvaluated {
         mainClass = 'GenerateDemo'
         args(root.file('docs/examples/offline-html/catalog.xml').absolutePath,
                 root.layout.buildDirectory.dir('docs/offline-demo').get().asFile.absolutePath)
+    }
+    root.tasks.register('demoSchemaChangeReview', JavaExec) {
+        group = 'documentation'
+        description = 'Generate before/after HTML and change SQL without executing SQL.'
+        dependsOn(compileDemo)
+        classpath = demoClasspath + root.files(compileDemo.flatMap { it.destinationDirectory })
+        mainClass = 'GenerateSchemaChangeDemo'
+        args(root.file('docs/examples/offline-html/catalog.xml').absolutePath,
+                root.file('docs/examples/offline-html/catalog-after.xml').absolutePath,
+                root.layout.buildDirectory.dir('docs/offline-change').get().asFile.absolutePath)
     }
 }

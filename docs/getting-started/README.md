@@ -11,6 +11,7 @@ change review, verified data migration, and hierarchical business processing.
 | Goal | Guide |
 |---|---|
 | See HTML, ER diagrams, and table DDL without a database | [Offline customer/order demo](offline-demo.md) |
+| Inspect a schema change without applying SQL | [Offline change-review demo](offline-demo.md#review-a-schema-change) |
 | Add tasks to a Gradle build | [Gradle plugin getting started](../gradle-plugin/getting-started.md) |
 | Build Schema models and generate SQL in Java | [Java API](java-api.md) |
 | Declare dependencies in Maven | [Maven setup](maven.md) |

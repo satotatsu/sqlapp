@@ -140,17 +140,20 @@ command.setMultiThread(true);
 command.run();
 ```
 
-The command can also consume an in-memory `Catalog`:
+For a model built in Java, save it as XML and use the same public file entry point:
 
 ```java
-command.setCatalog(catalog);
+File snapshot = new File("build/schema/Catalog.xml");
+java.nio.file.Files.createDirectories(snapshot.toPath().getParent());
+catalog.writeXml(snapshot);
+command.setTargetFile(snapshot);
 command.setOutputDirectory(new File("build/docs/database"));
+command.setMultiThread(false);
 command.run();
 ```
 
-When a catalog is supplied, it takes precedence over loading `targetFile`.
-Use a saved XML input when documentation must be generated from a reviewed,
-reproducible snapshot rather than current database state.
+`setCatalog` is protected and is not a direct public command entry point.
+The saved XML also provides a reproducible input for review and regeneration.
 
 Dictionary files, logical relationships, viewpoints, data-file directories,
 and rendering options are optional. Their Gradle property names map closely to

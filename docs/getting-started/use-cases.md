@@ -94,6 +94,9 @@ Before XML + after XML -> comparison -> generated SQL -> review
 Reviewed versioned SQL -> migration plan -> execution and history
 ```
 
+Try the [offline schema-change demo](offline-demo.md#review-a-schema-change)
+to inspect actual before/after HTML and generated HSQL change SQL without a database.
+
 For example, when the desired model adds `CUSTOMER.EMAIL`, compare snapshots
 with `diffSchemaXml`, then generate the corresponding change SQL with
 `generateDiffSql`. Review the generated SQL for the chosen database dialect

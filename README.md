@@ -31,6 +31,8 @@ See the [compatibility evidence](docs/compatibility.md) and
 
 Try the [customer/order demo without a database](docs/getting-started/offline-demo.md)
 to see the generated HTML, DDL, and clickable ER diagram from a fictional model.
+Then try the [schema-change review demo](docs/getting-started/offline-demo.md#review-a-schema-change)
+to compare before/after documentation and inspect generated change SQL.
 
 For your own database, follow the quick start below: export metadata, generate the
 HTML site, and open its `index.html`. For an existing Schema XML file, the

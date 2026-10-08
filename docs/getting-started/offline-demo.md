@@ -56,6 +56,53 @@ To explore the model, change a column name or length in the sample XML and run
 the task again. The table page and its DDL are derived from the same input.
 Keep edits to the sample internally consistent, including any key references.
 
+## Review a schema change
+
+The second demo uses the same customer/order model and adds one nullable
+`EMAIL VARCHAR(254)` column to `CUSTOMER`. Both snapshots are fictional and
+contain no rows.
+
+From the repository root:
+
+```shell
+./gradlew --init-script docs/examples/offline-html/demo.init.gradle demoSchemaChangeReview
+```
+
+Windows PowerShell:
+
+```powershell
+.\gradlew.bat --init-script docs/examples/offline-html/demo.init.gradle demoSchemaChangeReview
+```
+
+As with the first demo, use `--offline` when dependencies are cached. The demo
+writes these review artifacts:
+
+| Artifact | What to inspect |
+|---|---|
+| `build/docs/offline-change/before/index.html` | The original customer/order model |
+| `build/docs/offline-change/after/index.html` | The same model with `CUSTOMER.EMAIL` added |
+| `build/docs/offline-change/change.sql` | HSQL dialect change SQL for that addition |
+
+Open the `CUSTOMER` detail page in both sites and compare the column list and
+DDL. Then inspect `change.sql`: it should add the nullable email column without
+dropping the customer or order tables. Existing primary keys and the
+customer/order foreign key remain in both models.
+
+The [before snapshot](../examples/offline-html/catalog.xml) and
+[after snapshot](../examples/offline-html/catalog-after.xml) are the inputs.
+[GenerateSchemaChangeDemo.java](../examples/offline-html/GenerateSchemaChangeDemo.java)
+reads them with `SchemaUtils`, asks `GenerateDiffSqlCommand` for SQL operations,
+and generates both HTML sites with the same documentation API as the first demo.
+No database connection is created and the SQL is never applied.
+
+The SQL targets the HSQL dialect named by the snapshots. It is not a portable
+migration script for other products. Generation also does not add a versioned
+migration, execute an upgrade, prove that existing data satisfies a new
+constraint, or establish rollback guarantees. Continue with the
+[SQL generation guide](../gradle-plugin/schema-sql-and-html.md#generate-change-sql)
+and [versioned migration guide](../gradle-plugin/versioned-migrations.md) when
+adapting the workflow to a real deployment.
+
 ## Continue with your own database
 
 Replace the fictional snapshot with metadata exported from your database using
