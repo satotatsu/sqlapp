@@ -827,4 +827,53 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+	@Test
+	void recreatesVersionedNullDistinctnessAndIgnoresUnsupportedOption() throws Exception {
+		String schemaName = "ysql_distinct_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			boolean supportsNotDistinct = connection.getMetaData().getDatabaseMajorVersion() >= 15;
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, code integer, label text, active boolean)");
+				statement.execute("CREATE UNIQUE INDEX null_code ON " + schemaName + ".items (code ASC) INCLUDE (label) "
+						+ (supportsNotDistinct ? "NULLS NOT DISTINCT " : "") + "WHERE active");
+				String original;
+				try (var rows = statement.executeQuery("SELECT pg_get_indexdef('" + schemaName + ".null_code'::regclass)")) {
+					assertTrue(rows.next()); original = rows.getString(1);
+				}
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName);
+				var table = reader.getAllFull(connection).stream().filter(v -> "items".equals(v.getName())).findFirst().orElseThrow();
+				var index = table.getIndexes().get("null_code");
+				assertNotNull(index);
+				assertEquals(supportsNotDistinct ? "true" : null, index.getSpecifics().get("nullsNotDistinct"));
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				if (!supportsNotDistinct) {
+					index.getSpecifics().put("nullsNotDistinct", "true");
+					assertFalse(registry.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
+					index.getSpecifics().remove("nullsNotDistinct");
+				}
+				statement.execute("DROP INDEX " + schemaName + ".null_code");
+				for (var op : registry.createSql(index, SqlType.CREATE)) statement.execute(op.getSqlText());
+				try (var rows = statement.executeQuery("SELECT pg_get_indexdef('" + schemaName + ".null_code'::regclass)")) {
+					assertTrue(rows.next()); assertEquals(original, rows.getString(1));
+				}
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (1,NULL,'first',true),(2,NULL,'excluded',false),(3,NULL,'excluded again',false)");
+				String nullDuplicate = "INSERT INTO " + schemaName + ".items VALUES (4,NULL,'second',true)";
+				if (supportsNotDistinct) {
+					assertEquals("23505", assertThrows(SQLException.class, () -> statement.execute(nullDuplicate)).getSQLState());
+				} else {
+					statement.execute(nullDuplicate);
+				}
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (5,7,'key',true)");
+				assertEquals("23505", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + schemaName + ".items VALUES (6,7,'duplicate key',true)")).getSQLState());
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
 }

@@ -42,7 +42,8 @@ class PostgresModernSchemaSqlTest extends AbstractPostgresSqlFactoryTest {
 		SqlFactory<Index> indexFactory = sqlFactoryRegistry.getSqlFactory(index, SqlType.CREATE);
 		String indexSql = indexFactory.createSql(index).get(0).getSqlText().replace("\"", "").replaceAll("\\s+", " ")
 				.replace(" )", ")");
-		assertTrue(indexSql.contains("UNIQUE NULLS NOT DISTINCT INDEX"), indexSql);
+		assertTrue(indexSql.contains("CREATE UNIQUE INDEX"), indexSql);
+		assertTrue(indexSql.indexOf("NULLS NOT DISTINCT") > indexSql.indexOf("INCLUDE"), indexSql);
 		assertTrue(indexSql.contains("INCLUDE"), indexSql);
 	}
 

@@ -256,3 +256,24 @@ verify their UNIQUE behavior; custom collations and operator classes are not
 covered by this verification.
 
 YSQL defaults: [CREATE INDEX](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_index/).
+
+## PostgreSQL 15+/YSQL 15 NULLS NOT DISTINCT indexes
+
+The PostgreSQL 15+ CREATE INDEX factory now emits `NULLS NOT DISTINCT` after
+the key/INCLUDE clauses and before storage options and WHERE. Previously it
+appeared between UNIQUE and INDEX, producing invalid syntax. YSQL 15 inherits
+the corrected factory and its reader retains `indnullsnotdistinct` in the
+existing `nullsNotDistinct` vendor attribute.
+
+Per the requested compatibility policy, pre-15 dialects ignore this attribute
+and keep ordinary UNIQUE semantics (multiple NULL values are allowed).
+Non-unique indexes and values other than case-insensitive `true` also retain
+the existing ignore behavior. No new configuration errors or public API/XML
+format changes are introduced by this fix.
+
+Verification covers a covering partial UNIQUE index: YSQL 15 rejects duplicate
+NULL keys inside the predicate after recreation, while excluded rows may still
+repeat NULL. YSQL 11 ignores the option and permits repeated NULL keys. Both
+engines reject repeated non-NULL keys inside the predicate.
+
+Clause order: [PostgreSQL 15 CREATE INDEX](https://www.postgresql.org/docs/15/sql-createindex.html).

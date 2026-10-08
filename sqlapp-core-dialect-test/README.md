@@ -150,13 +150,15 @@ triggers and TRUNCATE events in an ordinary session. Covering partial unique
 indexes retain descending keys, their catalog definitions and conditional
 duplicate rejection after recreation. Explicit NULLS FIRST/LAST and
 function-expression indexes are recreated with matching catalog definitions
-and verified expression uniqueness. See the
+and verified expression uniqueness. PG15 NULLS NOT DISTINCT indexes retain
+NULL duplicate rejection; PG11 ignores the option and allows repeated NULL keys. See the
 [full support scope and limits](../sqlapp-core-yugabyte/README.md).
 
-The 2026-10-08 run passed all 21 cases on each baseline (42 total). The wider
-core/retained-dialect/command/Gradle-plugin regression passed 2,664 unit tests,
-with one external YSQL test skipped. Reproduce the directly affected regression
-and the matrix with:
+The 2026-10-08 run passed all 22 cases on each baseline (44 total). The latest
+PostgreSQL/YSQL/command regression passed 748 unit tests, with one external YSQL
+test skipped; Gradle reused the unchanged plugin result (81 passing tests).
+The earlier wider core/retained-dialect/command/plugin run passed 2,664 tests.
+Reproduce the directly affected regression and the matrix with:
 
 ```shell
 ./gradlew :sqlapp-core:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-db2:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest

@@ -101,4 +101,37 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(sqlFactoryRegistry.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("DESC NULLS LAST"));
 	}
 
+	@Test
+	void nullsNotDistinctHasCorrectClauseOrderAndIgnoresInapplicableConfiguration() {
+		Table table = new Table("items");
+		table.getColumns().add("code", c -> c.setDataType(DataType.INT));
+		table.getColumns().add("label", c -> c.setDataType(DataType.VARCHAR));
+		var index = table.getIndexes().add("unique_code");
+		index.setUnique(true);
+		index.getColumns().add("code");
+		index.getIncludes().add("label");
+		index.setWhere("length(label) > 0");
+		index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
+		for (int major : new int[] {11, 14, 15, 18}) {
+			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
+					.getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
+			if (major < 15) {
+				assertFalse(registry.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
+			} else {
+				String sql = registry.createSql(index, SqlType.CREATE).get(0).getSqlText();
+				assertTrue(sql.contains("CREATE UNIQUE INDEX"), sql);
+				assertTrue(sql.indexOf("NULLS NOT DISTINCT") > sql.indexOf("INCLUDE"), sql);
+				assertTrue(sql.indexOf("NULLS NOT DISTINCT") < sql.indexOf("WHERE"), sql);
+			}
+		}
+		var modern = com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL150.createSqlFactoryRegistry();
+		index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "invalid");
+		assertFalse(modern.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
+		index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
+		index.setUnique(false);
+		assertFalse(modern.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
+		index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "false");
+		assertFalse(modern.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
+	}
+
 }
