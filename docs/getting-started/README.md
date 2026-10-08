@@ -10,6 +10,7 @@ change review, verified data migration, and hierarchical business processing.
 
 | Goal | Guide |
 |---|---|
+| Try documentation, change review, and migration together | [Guided demo tour](demo-tour.md) |
 | See HTML, ER diagrams, and table DDL without a database | [Offline customer/order demo](offline-demo.md) |
 | Inspect a schema change without applying SQL | [Offline change-review demo](offline-demo.md#review-a-schema-change) |
 | See transfer and mismatch detection without a DB server | [In-memory migration demo](offline-migration.md) |

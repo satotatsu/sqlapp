@@ -12,6 +12,7 @@ gradle.projectsEvaluated {
         dependsOn(command.tasks.named('classes'), dialect.tasks.named('classes'))
         source(root.file('docs/examples/offline-html/GenerateDemo.java'))
         source(root.file('docs/examples/offline-html/GenerateSchemaChangeDemo.java'))
+        source(root.file('docs/examples/offline-html/DemoOverview.java'))
         source(root.file('docs/examples/offline-migration/MigrateDemo.java'))
         classpath = demoClasspath
         destinationDirectory = root.layout.buildDirectory.dir('classes/offline-demo')
@@ -45,5 +46,13 @@ gradle.projectsEvaluated {
         mainClass = 'MigrateDemo'
         args(root.file('docs/examples/offline-html/catalog.xml').absolutePath,
                 root.layout.buildDirectory.dir('docs/offline-migration').get().asFile.absolutePath)
+    }
+    root.tasks.register('demoSqlapp', JavaExec) {
+        group = 'documentation'
+        description = 'Run all three demos and generate one page linking their actual outputs.'
+        dependsOn('demoDatabaseDocumentation', 'demoSchemaChangeReview', 'demoVerifiedDataMigration')
+        classpath = demoClasspath + root.files(compileDemo.flatMap { it.destinationDirectory })
+        mainClass = 'DemoOverview'
+        args(root.layout.buildDirectory.dir('docs').get().asFile.absolutePath)
     }
 }

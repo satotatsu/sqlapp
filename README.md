@@ -29,12 +29,21 @@ Database support and transaction guarantees depend on the dialect and workflow.
 See the [compatibility evidence](docs/compatibility.md) and
 [use-case guide](docs/getting-started/use-cases.md) for boundaries and examples.
 
-Try the [customer/order demo without a database](docs/getting-started/offline-demo.md)
-to see the generated HTML, DDL, and clickable ER diagram from a fictional model.
-Then try the [schema-change review demo](docs/getting-started/offline-demo.md#review-a-schema-change)
-to compare before/after documentation and inspect generated change SQL.
-Finally, run the [verified migration demo](docs/getting-started/offline-migration.md)
-to transfer five fictional rows in memory and detect a changed target value.
+## Try sqlapp
+
+Run all three customer/order demos from this repository with Java 21:
+
+```shell
+./gradlew --init-script docs/examples/offline-html/demo.init.gradle demoSqlapp
+```
+
+Open `build/docs/demo/index.html` to browse the generated HTML and ER diagram,
+compare a schema change with its SQL, and inspect a real migration verification
+and deliberately detected mismatch. No external database is required.
+
+On Windows, use `.\gradlew.bat` in place of `./gradlew`. See the
+[guided demo tour](docs/getting-started/demo-tour.md) for dependencies, individual
+demos, and how to read the results.
 
 For your own database, follow the quick start below: export metadata, generate the
 HTML site, and open its `index.html`. For an existing Schema XML file, the

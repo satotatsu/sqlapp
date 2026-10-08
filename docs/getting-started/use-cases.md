@@ -6,6 +6,9 @@ Start with the outcome you need. The examples below show representative inputs
 and outputs; they are illustrations, not evidence of a run against your database.
 The linked guides contain configuration, required dependencies, and limitations.
 
+For a hands-on introduction, the [guided demo tour](demo-tour.md) runs the
+first three workflows and links their actual artifacts from one page.
+
 ## On this page
 
 - [Understand and share a database](#understand-and-share-a-database)
