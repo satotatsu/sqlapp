@@ -1,25 +1,43 @@
 # sqlapp
 
-sqlapp is a Java 21 database engineering toolkit. It provides a shared schema
-model, database metadata readers, database-specific SQL generation, HTML
-documentation with ER diagrams, data import/export, test-data generation, and
-versioned or bulk database migration. The same capabilities are available
-through Java APIs, command classes, and the `com.sqlapp.db` Gradle plugin.
+sqlapp helps Java teams understand a database, review schema changes, and move
+related data with verification. It connects these workflows through one shared
+Schema model, with Java APIs and the `com.sqlapp.db` Gradle plugin.
 
 ## What you can do
 
-- Export database metadata to sqlapp Schema XML.
-- Compare schema snapshots and generate database-specific DDL.
-- Generate browsable HTML database documentation and ER diagrams.
-- Maintain logical names, descriptions, and virtual foreign keys outside the
-  physical database.
-- Import, export, and convert tabular data in formats such as CSV, TSV, Excel,
-  YAML, JSON, and TOML.
-- Generate relational test data with foreign-key dependency handling.
-- Apply versioned SQL migrations.
-- Plan, execute, resume, verify, and audit bulk data migrations.
-- Assess Access MDB/ACCDB migrations to Oracle or SQL Server offline, including
-  optional data checks, target mapping and reviewable DDL verification.
+| Your goal | What you get | Start here |
+|---|---|---|
+| Understand and share an existing database | A saved Schema XML snapshot, browsable HTML, clickable ER diagrams, and table DDL | [Generate database documentation](docs/getting-started/use-cases.md#understand-and-share-a-database) |
+| Review and manage schema changes | Snapshot comparisons, database-specific change SQL, and versioned SQL migration tasks | [Review a schema change](docs/getting-started/use-cases.md#review-and-manage-schema-changes) |
+| Move related data and check the result | Dependency-ordered migration, optional resume, row/hash verification, and reviewable repair plans | [Move and verify data](docs/getting-started/use-cases.md#move-related-data-and-verify-it) |
+
+## Why use sqlapp
+
+- **Reuse the same database representation.** Metadata readers, SQL generation,
+  documentation, and migration consume the shared Schema model. Capture a
+  snapshot once and use it to generate documentation and SQL without reconnecting
+  to the source database.
+- **Make database work repeatable.** Use Gradle tasks in a build or embed Java
+  APIs in your own tool. Keep Schema XML, generated SQL, and configured reports
+  as reviewable artifacts alongside the workflow that produced them.
+- **Keep migration outcomes visible.** Detailed plans, checkpoints, verification
+  results, and optional execution reports expose what completed and what needs
+  attention. Resume and approved repair are available when explicitly configured.
+
+Database support and transaction guarantees depend on the dialect and workflow.
+See the [compatibility evidence](docs/compatibility.md) and
+[use-case guide](docs/getting-started/use-cases.md) for boundaries and examples.
+
+For a first result, follow the quick start below: export metadata, generate the
+HTML site, and open its `index.html`. For an existing Schema XML file, the
+[HTML-only workflow](docs/gradle-plugin/getting-started.md#3-generate-html-from-the-xml)
+needs no database connection.
+
+Other capabilities include data-file import/export and conversion, relational
+test-data generation, logical names and virtual foreign keys, and Access
+migration assessment for Oracle or SQL Server. Explore them through the
+[documentation index](docs/README.md) after choosing your main workflow.
 
 ## Requirements
 
@@ -38,7 +56,8 @@ database driver.
 
 ## Gradle plugin quick start
 
-The following Groovy DSL example exports PostgreSQL metadata to Schema XML.
+The following Groovy DSL example exports PostgreSQL metadata and generates
+a browsable database reference. It exports structure only (`dumpRows = false`).
 Replace the JDBC driver version and connection values for your environment.
 
 ```groovy
@@ -68,18 +87,28 @@ tasks.named('exportSchemaXml') {
     outputDirectory = layout.buildDirectory.dir('schema')
     outputFileName = 'Catalog.xml'
 }
+
+tasks.named('generateHtmlDocs') {
+    dependsOn(tasks.named('exportSchemaXml'))
+    targetFile = layout.buildDirectory.file('schema/Catalog.xml')
+    outputDirectory = layout.buildDirectory.dir('docs/database')
+}
 ```
 
 Run it with the project wrapper:
 
 ```shell
-./gradlew exportSchemaXml
+./gradlew generateHtmlDocs
 ```
 
-On Windows PowerShell, use `.\gradlew.bat exportSchemaXml`. The example writes
-`build/schema/Catalog.xml`. Credentials should come from environment variables,
-a local untracked properties file, or another secret provider; do not commit
-them to the build script.
+On Windows PowerShell, use `.\gradlew.bat generateHtmlDocs`.
+Open `build/docs/database/index.html` to browse tables and their DDL, then use
+`relationships.html` for clickable ER diagrams. The metadata snapshot is saved
+as `build/schema/Catalog.xml`; keep it to regenerate the site without another
+export. Diagram contents depend on the relationships captured in the model.
+
+Credentials should come from environment variables, a local untracked properties
+file, or another secret provider; do not commit them to the build script.
 
 Continue with the [Gradle plugin getting-started guide](docs/gradle-plugin/getting-started.md)
 to generate HTML documentation and SQL from the saved XML. A complete runnable
@@ -148,6 +177,7 @@ Gradle baselines, dialect version boundaries, and real-engine test evidence.
 
 ## Documentation
 
+- [Use cases and example outputs](docs/getting-started/use-cases.md): see what each workflow produces.
 - [Documentation index](docs/README.md): choose a guide by goal.
 - [Gradle plugin](docs/gradle-plugin/README.md): setup, tasks, and workflows.
 - [Java API getting started](docs/getting-started/java-api.md): Schema model and SQL APIs.

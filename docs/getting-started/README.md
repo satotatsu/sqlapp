@@ -4,6 +4,10 @@
 
 Choose an entry point for the way you use sqlapp.
 
+If you are still choosing a use case, start with
+[workflows and example outputs](use-cases.md): database documentation, schema
+change review, or verified data migration.
+
 | Goal | Guide |
 |---|---|
 | Add tasks to a Gradle build | [Gradle plugin getting started](../gradle-plugin/getting-started.md) |
