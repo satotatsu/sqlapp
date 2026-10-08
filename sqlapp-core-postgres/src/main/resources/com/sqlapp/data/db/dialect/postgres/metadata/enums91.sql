@@ -16,4 +16,4 @@ WHERE 1=1
   /*if isNotEmpty(domainName)*/
   AND t.typname IN /*domainName*/('%')
   /*end*/
-ORDER BY n.nspname, t.typname, e.oid
+ORDER BY n.nspname, t.typname, e.enumsortorder

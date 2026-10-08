@@ -355,3 +355,43 @@ cycling wraps to the opposite bound and continues; non-cycling reports
 SQLSTATE 2200H. These are single-session checks using CACHE 100. They do not
 assert consecutive values across connections or nodes. No production-code,
 public API or Schema XML changes were needed for this coverage.
+
+## PostgreSQL/YSQL schema fidelity batch
+
+The shared PostgreSQL readers now preserve the following metadata for YSQL
+11/15 and ordinary PostgreSQL:
+
+- Enum labels use `pg_enum.enumsortorder` on PostgreSQL 9.1+, including values
+  inserted with ALTER TYPE BEFORE/AFTER. PostgreSQL 8.3–9.0 uses OID order and
+  never references the newer column. The enum reader also retains type comments.
+- Domains with multiple CHECK constraints produce one Domain object. Each
+  expression is parenthesized and combined with AND, retaining acceptance and
+  rejection behavior in the existing single `check` property. Separate domain
+  constraint names are not retained by this representation.
+- Domain/type comments use the `pg_type` catalog; index comments use `pg_class`
+  in all three index-query generations. The correction does not require a
+  newer catalog column.
+
+CREATE DOMAIN/TYPE for modeled domains and enums now appends COMMENT ON when
+remarks are present. Standalone CREATE INDEX also appends its comment; table
+recreation continues using its existing index-comment path. Comments are
+quoted through the dialect builder. Objects without comments retain the
+previous operation count. Existing APIs and Schema XML formats are unchanged;
+commented objects can now return an additional SET_COMMENT operation.
+
+Real YSQL 11/15 tests cover non-alphabetical enum order after BEFORE/AFTER,
+Unicode/apostrophe labels and comments, multiple domain checks with OR inside
+one check, numeric precision/scale, defaults and NOT NULL. They execute the
+recreated objects and check SQLSTATE 23514/23502/23505 for rejected domain
+values, nulls and duplicate index keys. Standalone and table-based index
+recreation both preserve comments and uniqueness. Composite-type recreation
+is not validated by these tests.
+
+The COPY/upsert matrix additionally covers one-dimensional UUID, numeric,
+boolean, date and timestamp arrays, distinguishing SQL NULL, empty arrays and
+NULL elements. Numeric scale, leap-day dates and timestamp microseconds are
+checked after COPY and an actual upsert update. Other array element types and
+multidimensional variants of these added types remain unverified.
+
+Catalog references: [PostgreSQL 9.1 pg_enum](https://www.postgresql.org/docs/9.1/catalog-pg-enum.html),
+[PostgreSQL object-description functions](https://www.postgresql.org/docs/15/functions-info.html#FUNCTIONS-INFO-COMMENT-TABLE).

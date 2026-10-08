@@ -70,6 +70,7 @@ public class PostgresEnumReader extends DomainReader {
 				if (obj == null) {
 					obj = new Domain(typname);
 					obj.setSchemaName(schemaname);
+					obj.setRemarks(getString(rs, "remarks"));
 					obj.setDataTypeName(typname);
 					obj.setDataType(DataType.ENUM);
 					result.add(obj);
@@ -81,6 +82,12 @@ public class PostgresEnumReader extends DomainReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 9
+						|| (productVersionInfo.getMajorVersion() == 9 && productVersionInfo.getMinorVersion() != null
+								&& productVersionInfo.getMinorVersion() >= 1))) {
+			return getSqlNodeCache().getString("enums91.sql");
+		}
 		return getSqlNodeCache().getString("enums.sql");
 	}
 

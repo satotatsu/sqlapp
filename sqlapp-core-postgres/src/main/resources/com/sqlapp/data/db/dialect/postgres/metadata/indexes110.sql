@@ -6,7 +6,7 @@ SELECT current_database() AS catalog_name,n.nspname AS schema_name,
  CASE WHEN am.amname IN ('btree','lsm') THEN (i.indoption[a.attnum-1] & 1)=1 ELSE false END AS is_desc,
  CASE WHEN am.amname IN ('btree','lsm') THEN (i.indoption[a.attnum-1] & 2)=2 ELSE NULL END AS nulls_first,
  am.amname AS index_type,a.attnum AS num,pg_get_indexdef(ci.oid) AS definition,
- obj_description(i.indexrelid,current_database()) AS remarks
+ obj_description(i.indexrelid,'pg_class') AS remarks
 FROM pg_catalog.pg_index i
 JOIN pg_catalog.pg_class ci ON i.indexrelid=ci.oid
 JOIN pg_catalog.pg_class ti ON i.indrelid=ti.oid

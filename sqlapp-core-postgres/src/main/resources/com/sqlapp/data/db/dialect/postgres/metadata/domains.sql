@@ -10,7 +10,7 @@ SELECT
 	, t.typnotnull
 	, t.typndims
 	, t.typdefault
-	, obj_description(t.oid, current_database()) AS remarks
+	, obj_description(t.oid, 'pg_type') AS remarks
 	,CASE
 	 WHEN t.typbasetype IN (1042, 1043) /*CHAR,VARCHAR*/
 	 THEN
@@ -89,4 +89,4 @@ WHERE 1=1
   /*if isNotEmpty(domainName)*/
   AND t.typname IN /*domainName*/('%')
   /*end*/
-ORDER BY n.nspname, t.typname
+ORDER BY n.nspname, t.typname, con.conname

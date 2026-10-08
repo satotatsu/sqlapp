@@ -153,4 +153,34 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertFalse(registry.createSql(alias, SqlType.CREATE).get(0).getSqlText().contains(" AS "));
 	}
 
+	@Test
+	void emitsEscapedDomainEnumAndStandaloneIndexComments() {
+		var registry = sqlFactoryRegistry;
+		registry.getOptions().setDecorateSchemaName(true);
+		for (DataType type : java.util.List.of(DataType.INT, DataType.ENUM)) {
+			var domain = new com.sqlapp.data.schemas.Domain("Commented type").setSchemaName("Tenant");
+			domain.setDataType(type).setRemarks("日本語 'note'");
+			if (type == DataType.ENUM) domain.getValues().add("value");
+			var operations = registry.createSql(domain, SqlType.CREATE);
+			assertEquals(2, operations.size());
+			String comment = operations.get(1).getSqlText();
+			assertTrue(comment.contains("COMMENT ON " + (type == DataType.ENUM ? "TYPE" : "DOMAIN")), comment);
+			assertTrue(comment.contains("\"Tenant\".\"Commented type\""), comment);
+			assertTrue(comment.contains("'日本語 ''note'''"), comment);
+		}
+		Table table = new Table("items").setSchemaName("Tenant");
+		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		var index = table.getIndexes().add("Commented index");
+		index.getColumns().add("id");
+		index.setRemarks("日本語 'index'");
+		var operations = registry.createSql(index, SqlType.CREATE);
+		assertEquals(2, operations.size());
+		String comment = operations.get(1).getSqlText();
+		assertTrue(comment.contains("COMMENT ON INDEX"), comment);
+		assertTrue(comment.contains("\"Tenant\".\"Commented index\""), comment);
+		assertTrue(comment.contains("'日本語 ''index'''"), comment);
+		index.setRemarks(null);
+		assertEquals(1, registry.createSql(index, SqlType.CREATE).size());
+	}
+
 }

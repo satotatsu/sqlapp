@@ -3,7 +3,11 @@ package com.sqlapp.data.db.dialect.postgres.sql;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.util.List;
+
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateDomainFactory;
 import com.sqlapp.data.schemas.Domain;
@@ -35,4 +39,13 @@ public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<Pos
 			if (!isEmpty(obj.getCheck())) builder.space()._add("CHECK (")._add(obj.getCheck())._add(")");
 		}
 	}
+	@Override
+	protected void addOptions(final Domain obj, List<SqlOperation> sqlList) {
+		if (obj.getRemarks() == null) return;
+		PostgresSqlBuilder builder = createSqlBuilder();
+		builder.comment().on().space()._add(obj.getDataType() == DataType.ENUM ? "TYPE" : "DOMAIN");
+		builder.space().name(obj, getOptions().isDecorateSchemaName()).is().sqlChar(obj.getRemarks());
+		addSql(sqlList, builder, SqlType.SET_COMMENT, obj);
+	}
+
 }

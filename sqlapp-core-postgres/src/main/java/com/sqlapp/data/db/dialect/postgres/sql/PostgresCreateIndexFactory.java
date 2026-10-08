@@ -20,6 +20,10 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import java.util.Map;
+import java.util.List;
+
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 
 import com.sqlapp.data.db.dialect.postgres.util.PostgresIndexOptions;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
@@ -140,6 +144,18 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 		if (col.getNullsOrder() != null) {
 			builder.space()._add(col.getNullsOrder());
 		}
+	}
+
+	@Override
+	public List<SqlOperation> createSql(final Index obj) {
+		List<SqlOperation> result = super.createSql(obj);
+		if (!result.isEmpty() && obj.getRemarks() != null) {
+			PostgresSqlBuilder builder = createSqlBuilder();
+			builder.comment().on().index().space().name(obj, getOptions().isDecorateSchemaName())
+					.is().sqlChar(obj.getRemarks());
+			addSql(result, builder, SqlType.SET_COMMENT, obj);
+		}
+		return result;
 	}
 
 }

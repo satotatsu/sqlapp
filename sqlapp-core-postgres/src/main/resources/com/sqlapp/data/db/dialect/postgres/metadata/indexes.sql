@@ -15,7 +15,7 @@ SELECT
 , am.amname AS index_type
 , a.attnum AS num
 , pg_get_indexdef(ci.oid) AS definition
-, obj_description(i.indexrelid, current_database())
+, obj_description(i.indexrelid, 'pg_class')
   AS remarks
 FROM pg_catalog.pg_index i
 INNER JOIN pg_catalog.pg_class ci

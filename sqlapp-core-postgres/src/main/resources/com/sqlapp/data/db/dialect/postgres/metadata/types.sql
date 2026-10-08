@@ -5,7 +5,7 @@ SELECT
 , CAST(t.oid AS int4) AS oid
 , pg_get_ruledef(t.oid) AS definition
 , t.typdefault
-, obj_description(t.oid, current_database()) as remarks
+, obj_description(t.oid, 'pg_type') as remarks
 FROM pg_catalog.pg_type t
 INNER JOIN pg_catalog.pg_namespace n
   ON (t.typnamespace = n.oid)

@@ -79,8 +79,8 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, all 25 tests passed on each image (50 real-engine tests).
-The preceding PostgreSQL/YSQL/command regression passed 750 unit tests and skipped the
+On 2026-10-08, all 29 tests passed on each image (58 real-engine tests).
+The PostgreSQL/YSQL/command regression passed 753 unit tests and skipped the
 optional YSQL external-database test. Gradle reused the unchanged plugin
 result (81 previously passing tests). The earlier wider core/retained-dialect/
 command/plugin run passed 2,664 tests. Packaging and SPI descriptors were also
@@ -104,6 +104,9 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 - Composite JDBC keyset resume after a persisted cursor.
 - Quoted identifiers, identity, numeric, boolean, date/time, UUID, JSONB, bytea and text-array columns.
 - Enum/domain, function and trigger metadata and executable recreation.
+- Enum label order after ALTER TYPE BEFORE/AFTER, Unicode/apostrophe labels and comments.
+- Multiple domain CHECK expressions, numeric precision/scale, defaults, NOT NULL and comments.
+- Standalone and table-based index comments with preserved uniqueness.
 - INSTEAD OF trigger timing and INSERT/UPDATE/DELETE through a recreated
   trigger on a view that cannot be automatically updated.
 - Disabled/ALWAYS/REPLICA trigger-state recreation, WHEN conditions, statement
@@ -113,6 +116,7 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
   Unicode, null/empty strings, decimals, binary, arrays and explicit identities.
 - Key-only generated upsert and bulk upsert, including duplicate no-op behavior.
 - Nested integer/text COPY and upsert, primitive-byte numeric arrays and bytea arrays.
+- UUID/numeric/boolean/date/timestamp arrays with SQL NULL, empty arrays and NULL elements.
 - Staging upsert, duplicate policies, insert/update-only actions, caller rollback
   and temporary-table cleanup.
 - Chunked checkpoint atomicity, pause/resume, sustained loads, keyset verification
@@ -124,7 +128,10 @@ The verified builds are compatibility baselines, not a claim that every
 PostgreSQL statement works on every YugabyteDB release. Sharding/colocation,
 hash/range physical index layout, placement/tablespaces, extensions, multi-node
 failover and performance tuning are not covered. COPY tests cover nested integer/text arrays, primitive-byte smallint arrays and
-one-dimensional bytea arrays; other array element types remain unverified.
+one-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays; other array
+element types and nested variants of these added types remain unverified.
+Multiple domain CHECKs are combined into one expression; their individual
+constraint names are not retained. Composite-type recreation remains unverified.
 Sequence metadata covers configuration, not live-position migration or ownership.
 
 DDL transaction guarantees and isolation behavior depend on YSQL version and

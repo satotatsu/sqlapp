@@ -26,6 +26,8 @@ import static com.sqlapp.util.CommonUtils.notEmpty;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.DomainReader;
@@ -55,11 +57,18 @@ public class PostgresDomainReader extends DomainReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Domain> result = list();
+		final Map<String, Domain> byId = new LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Domain obj = createDomain(rs);
-				result.add(obj);
+				Domain existing = byId.putIfAbsent(obj.getId(), obj);
+				if (existing == null) {
+					result.add(obj);
+				} else if (!CommonUtils.isEmpty(obj.getCheck())) {
+					existing.setCheck(CommonUtils.isEmpty(existing.getCheck()) ? obj.getCheck()
+							: "(" + existing.getCheck() + ") AND (" + obj.getCheck() + ")");
+				}
 			}
 		});
 		return result;
