@@ -128,6 +128,8 @@ recovery, snapshots, assessment, and legacy loading.
 - [Bulk insert and upsert](data/bulk-insert.md): Java API and vendor providers.
 - [Verification and recovery](migration/verification-and-recovery.md): Java
   quick start, verification, repair, and advanced operations.
+- [Repair planning](migration/repair.md) and [cutover approval](migration/cutover.md):
+  detailed review, evidence, and execution boundaries.
 - [Gradle migration tasks](gradle-plugin/bulk-migration.md): job configuration,
   approval gates, leases, execution evidence, and repair.
 - [Versioned SQL migrations](gradle-plugin/custom-tasks-and-migrations.md#versioned-migrations).

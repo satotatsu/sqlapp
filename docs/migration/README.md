@@ -16,6 +16,11 @@ entry points use the shared migration validation and execution components.
 | Assess an Oracle migration | [Oracle assessment](../gradle-plugin/oracle-migration-assessment.md) | Offline preflight and source validation |
 | Apply versioned SQL migrations | [Versioned migrations](../gradle-plugin/custom-tasks-and-migrations.md#versioned-migrations) | Gradle migration extension |
 | Normalize or load legacy data | [Legacy migration](../gradle-plugin/normalization-and-legacy-migration.md) | Extraction contracts and hierarchy loading |
+| Track progress, retry, pause, or cancel | [Job progress and control](job-progress.md) | Shared listener APIs |
+| Prevent concurrent job execution | [Leases and fencing](job-leases.md) | Stable identity and lease validation |
+| Build or inspect job evidence | [Job reports](job-reports.md) | Read-only reports and live updates |
+| Review and approve data repair | [Repair planning](repair.md) | Approval artifacts and transaction limits |
+| Assess and approve cutover | [Cutover](cutover.md) | Verification evidence and portable packages |
 | Generate operational reports | [Report tasks](../gradle-plugin/migration-reports.md) | Operational and repair-plan reports |
 
 Review generated SQL, database effects, transaction boundaries, and restart

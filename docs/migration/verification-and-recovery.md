@@ -124,6 +124,8 @@ and primary key needed by DML; it does not clone source relationship objects.
 
 ### Operational and advanced flows
 
+### Dry runs and reviewed restart
+
 Call `dryRun()` before execution when an approval screen needs a detached
 snapshot of the resolved task order, lifecycle operations, core options,
 current status, and reproducibility fingerprint. It validates the same job used
@@ -152,6 +154,8 @@ It reads one bounded byte snapshot, verifies its SHA-256 fingerprint before
 opening database connections, and exposes the accepted value through
 `getApprovedOperationalReportFingerprint()`.
 
+### Checkpoint stores
+
 Database checkpoints are the default. A durable file store is one additional
 builder call and is useful when the target database must not contain sqlapp
 control tables:
@@ -174,6 +178,8 @@ custom store's `load` implementation must be read-only because `status()` and
 `dryRun()` call it. File inspection likewise reads an existing checkpoint without
 creating its directory or a target-database table.
 
+### Concurrent execution protection
+
 Concurrent execution protection is also opt-in. Use
 `.fileLease(workerId, leaseDirectory)` when the workers share a filesystem, or
 `.databaseLease(workerId)` when they share only the target database. The
@@ -184,6 +190,8 @@ separate target connection so lease renewal is independent of chunk
 transactions. `status()` remains a read-only checkpoint snapshot; operational
 resume assessment, including live/expired lease state, remains available from
 the detailed operational-report API.
+
+### Maintenance and interrupted-job recovery
 
 Vendor-specific preparation and restoration can be added with
 `.lifecycle(existingLifecycle)`. The facade includes that lifecycle in the
@@ -220,6 +228,8 @@ low-level job executor is used directly. A rejected preflight publishes
 `JOB_REJECTED` without publishing `JOB_STARTED` or invoking restoration, so an
 operational report distinguishes a safe refusal from a failure after execution
 began.
+
+### Execution and verification reports
 
 Add `.operationalReport(reportFile)` to atomically refresh the existing JSON
 operational report at each job and table boundary. Report output is disabled by
@@ -300,6 +310,8 @@ database connections are opened. The accepted SHA-256 value is available from
 `getApprovedRepairPlanReportFingerprint()` on the migration and
 `getReportFingerprint()` on the repair handle.
 
+### State-aware reruns
+
 State-aware reruns follow the same artifact pattern. `writeNodeManifest(path)`
 writes the current per-table state atomically and exposes its SHA-256 value via
 `getNodeManifestFingerprint()`. The simple `executeModified(path)` entry point
@@ -315,70 +327,11 @@ run. Its overload accepts the expected previous-manifest SHA-256 value and an
 input size limit. After success, `getApprovedNodeManifestFingerprint()` is the
 input SHA and `getNodeManifestFingerprint()` is the newly written output SHA.
 
-Before cutover, `assessCutover(checks, lastVerifiedAt,
-maximumVerificationAge)` compares source and target watermarks and rejects stale
-verification. Pass a report path to persist the same decision and measurements
-as atomic JSON; the overload also accepts `maxCutoverReportFileSizeBytes`.
-`getCutoverReportFingerprint()` returns the SHA-256 value of the bytes that were
-written, so deployment approval can bind to the exact cutover evidence.
-At the deployment boundary, call `approveCutover(reportFile,
-expectedReportFingerprint, maximumReportAge, maxCutoverReportFileSizeBytes)`.
-It accepts only an exact, recent `READY` report, rejects future timestamps and
-expired decisions, and exposes the accepted SHA-256 value through
-`getApprovedCutoverReportFingerprint()`. This validation is file-only and does
-not open source or target database connections.
+## Cutover assessment and approval
 
-To avoid supplying verification time manually, use
-`assessCutover(checks, verificationReport, maximumVerificationAge,
-cutoverReport)`. It requires a successful verification report whose plan
-fingerprint still matches the live migration plan, then uses that report's
-`generatedAt` as verification time. The advanced overload accepts the expected
-verification-report SHA-256 value and independent input/output size limits.
-`getApprovedVerificationReportFingerprint()` identifies the exact verification
-evidence used by the assessment without changing the existing cutover-report
-format.
+See [Migration cutover assessment and approval](cutover.md).
 
-For a portable deployment gate, call
-`assessCutoverAndWriteEvidence(checks, verificationReport,
-maximumVerificationAge, cutoverReport, evidenceFile)`. The additional evidence
-file links the successful verification report, its plan fingerprint, and the
-cutover decision by SHA-256 without embedding machine-specific file paths. The
-advanced overload adds an expected verification SHA-256 value and independent
-size limits for all three files. Use `getCutoverEvidenceFingerprint()` as the
-value handed to the deployment stage. That stage calls
-`approveCutoverEvidence(evidenceFile, expectedEvidenceFingerprint,
-verificationReport, cutoverReport, maximumReportAge, ...)`; approval succeeds
-only when the evidence file is exact, both referenced files still have the
-recorded bytes and metadata, verification succeeded, and the cutover decision
-is recent and `READY`. The accepted SHA values are exposed through
-`getApprovedCutoverEvidenceFingerprint()`,
-`getApprovedVerificationReportFingerprint()`, and
-`getApprovedCutoverReportFingerprint()`. Approval is file-only and does not
-open database connections. The simpler cutover APIs remain suitable when an
-external system already stores the relationship between the two reports.
-
-For CI/CD systems that transfer directories as artifacts,
-`assessCutoverPackage(checks, verificationReport, maximumVerificationAge,
-packageDirectory)` publishes a new directory containing `verification.json`,
-`cutover.json`, and `evidence.json`. Files are prepared in a sibling staging
-directory and the completed directory is moved into place; an existing output
-directory is rejected instead of being overwritten. The returned
-`CutoverPackage.evidenceFingerprint()` is the value to carry in the deployment
-approval. A reviewer can call `inspectCutoverPackage(packageDirectory)` to
-cross-check and read the evidence, verification summary, cutover measurements,
-and package SHA-256 value without approving anything or opening database
-connections. `approveCutoverPackage(packageDirectory,
-expectedEvidenceFingerprint, maximumReportAge)` verifies the complete package
-without database access. It requires exactly the three documented regular
-files and rejects missing entries, extra entries, and symbolic-link
-substitution before reading report content. Advanced overloads provide the expected input
-verification SHA-256 value and independent size limits. This package API is
-optional; the individual-report APIs remain available for artifact stores that
-manage files separately.
-All file-only inspection and approval behavior is implemented by
-`MigrationCutoverArtifactService`; applications that do not use the facade can
-call that service directly and retain the same package inventory, fingerprint,
-timestamp, successful-verification, and `READY` checks.
+### Per-table overrides
 
 When only one table needs advanced behavior, keep the common builder unchanged
 and add a `BulkMigrationTableOption` for that table:
@@ -423,135 +376,6 @@ use `MIGRATION_ID` as its sole primary-key column. Ambiguous same-name metadata,
 an obsolete table, and inconsistent persisted progress are reported as errors
 instead of being changed or treated as an absent checkpoint during inspection.
 
-```java
-var verification = BulkMigrationVerifier.verify(expected, actual, 10_000);
-var repair = BulkMigrationRepairExecutor.execute(targetConnection, expected,
-		verification, BulkMigrationRepairOption.defaults());
-var after = BulkMigrationVerifier.verify(expected, rereadTarget, 10_000);
-```
+## Repair planning and execution
 
-For JDBC streaming sources, pass the same `BulkMigrationKeysetSource` to the
-keyset-source overload of `execute`. Repair rejects results without a retained
-source fingerprint and rejects sources whose key order, token codec, or fetch
-configuration fingerprint differs from verification. For each mismatched
-chunk, it opens the source strictly after the preceding chunk's expected last
-key instead of scanning from the beginning. The reread row count, hash, first
-key, and last key must still match the verification artifact before UPSERT.
-Adjacent mismatched chunks share one open stream; a matched gap causes repair
-to reopen directly after that gap's last expected key.
-The iterator is opened only after the fingerprint checks pass and is closed
-before target writes begin.
-
-For an operational dry run, create a `BulkMigrationRepairPlan` first:
-
-```java
-BulkMigrationRepairPlan plan = BulkMigrationRepairPlanner.plan(
-        targetConnection, expectedSource, targetTable, verification, repairOption);
-
-// Review mismatchChunks, estimatedReplayRows, key/staging/update columns,
-// atomic, transactionBreakingStaging, stagingTableName and database identity.
-BulkMigrationRepairResult result =
-        BulkMigrationRepairExecutor.execute(targetConnection, plan);
-```
-
-When source and target column names differ, configure the repair with the same
-one-to-one mapping used by migration. Verification columns remain source names;
-UPSERT keys and updates remain target names:
-
-```java
-BulkMigrationRepairOption repairOption = BulkMigrationRepairOption.builder()
-        .columnMappings(Map.of("ACCESS_ID", "CUSTOMER_ID"))
-        .bulkUpsertOption(BulkUpsertOption.builder()
-                .keyColumn("CUSTOMER_ID")
-                .build())
-        .build();
-```
-
-The mapping is validated before target access, included in the plan
-fingerprint, and written into the reviewable repair-plan JSON.
-
-The plan has a SHA-256 configuration fingerprint. Execution rejects the plan
-when its source keyset configuration, source or target Schema model,
-verification result, repair options, database product/version, or selected
-UPSERT provider no longer matches. Expected row hashes and key boundaries are
-then checked while preparing the replay, before target writes begin. SQL text
-is deliberately not stored in the core plan because staging DDL and MERGE SQL
-are generated by the selected dialect provider at execution time; the plan
-instead exposes the resolved key, staging, and update columns and configured
-staging-table name needed for review.
-
-`sqlapp-command` can persist that review snapshot atomically as UTF-8 JSON:
-
-```java
-BulkMigrationRepairPlanReportIO reportIO =
-        new BulkMigrationRepairPlanReportIO();
-reportIO.write(reportFile, plan);
-
-BulkMigrationRepairPlanReport approved =
-        reportIO.read(reportFile, plan.getFingerprint());
-BulkMigrationRepairResult result = BulkMigrationRepairExecutor.execute(
-        targetConnection, plan, approved.planFingerprint());
-```
-
-The JSON is an approval and audit artifact, not a serialized executable plan:
-it contains no credentials, connections, row data, or Java callbacks. The live
-source and target are resolved again by the caller, and the current plan must
-still pass its fingerprint, database identity, expected-hash, and key-boundary
-checks before execution.
-
-Multi-table repair has the same review boundary. `BulkMigrationJobRepairPlanner`
-validates every task before writing, sorts tasks into the source Schema's
-foreign-key create order, and returns a `BulkMigrationJobRepairPlan` with one
-immutable child plan per task. This preserves Access dependency order when
-target tables are renamed. Its fingerprint includes the ordered task IDs and child-plan
-fingerprints. An approved fingerprint can therefore authorize exactly one
-reviewed dependency order and set of repairs:
-
-```java
-BulkMigrationJobRepairPlan jobPlan = BulkMigrationJobRepairPlanner.plan(
-        targetConnection, repairTasks);
-new BulkMigrationJobRepairPlanReportIO().write(reportFile, jobPlan);
-
-BulkMigrationJobRepairPlanReport approved =
-        new BulkMigrationJobRepairPlanReportIO().read(
-                reportFile, jobPlan.getFingerprint());
-BulkMigrationJobRepairResult result = BulkMigrationJobRepairExecutor.execute(
-        targetConnection, jobPlan, approved.planFingerprint());
-```
-
-Job execution revalidates all child plans and target database/provider
-identities before the first task writes. The job JSON additionally validates
-unique task IDs, task order, aggregate mismatch and replay counts, atomicity,
-and the aggregate fingerprint. A no-replay task does not require provider
-resolution, which keeps an otherwise empty repair plan usable for reporting.
-
-The explicit-target repair path is covered against PostgreSQL 18, SQL Server
-2022, MySQL 8.4, MariaDB 11.8, Firebird 5, Oracle 23ai/26ai, DB2 12.1.5,
-Informix 14.10, Vertica 25.1, Sybase ASE 16, and SAP HANA Express 2.0,
-including JDBC keyset verification, boundary-only rereading, vendor bulk
-UPSERT, and post-repair verification. Oracle, Vertica, Sybase, and SAP HANA
-tests explicitly opt into non-atomic repair because their staging DDL breaks
-the surrounding transaction.
-
-The repair chunk size is taken from the verification result. By
-default, each replay asks the selected UPSERT provider to use a transaction.
-Repair validates and buffers every selected expected chunk before the first
-target write. Set `BulkMigrationRepairOption.maxBufferedRows` to a positive
-limit to fail safely before writing instead of allowing an unexpectedly large
-mismatch set to consume unbounded heap; zero retains the unlimited default.
-The executor validates each selected expected hash before writing it and stops
-if the source changed after verification. When verification used an explicit
-column subset, repair recomputes this guard hash from that same ordered subset;
-changes in unverified columns do not create a false source-change failure.
-Already repaired chunks may remain
-committed if a later chunk fails; callers that require a wider transaction may
-provide a non-auto-commit connection, subject to the selected provider's
-transaction capabilities.
-
-Repair never deletes target rows. A chunk with more actual than expected rows,
-or one with no corresponding expected rows, is reported by
-`requiresManualReconciliation()`. Positional chunk hashing can also cause one
-missing or extra row to shift later chunk boundaries. Always reread and verify
-the target after repair; use key-aware reconciliation before deleting any
-remaining target-only rows.
-
+See [Migration repair planning and execution](repair.md).
