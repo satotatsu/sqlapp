@@ -1,0 +1,383 @@
+# Versioned SQL migrations
+
+[Task guide](README.md) · [Task reference](task-reference.md) · [Custom tasks](custom-tasks-and-migrations.md)
+
+## Versioned migrations
+
+`migration` is both a registered task name and the name of a project extension.
+Configure the extension explicitly to distinguish it from a task configuration:
+
+```groovy
+import com.sqlapp.gradle.plugins.extension.MigrationExtension
+
+extensions.configure(MigrationExtension) {
+    sqlDirectory = layout.projectDirectory.dir('migration/up')
+    encoding = 'UTF-8'
+    dataSource {
+        jdbcUrl = providers.environmentVariable('SQLAPP_JDBC_URL')
+        username = providers.environmentVariable('SQLAPP_DB_USER')
+        password = providers.environmentVariable('SQLAPP_DB_PASSWORD')
+    }
+}
+```
+
+Place reviewed SQL files in `migration/up`, using numeric change prefixes,
+for example `0000000010_create_customer.sql` and
+`0000000020_add_customer_status.sql`. `./gradlew migration` applies versioned
+changes using the configured database and migration history.
+
+| Extension property | Type | Purpose |
+|---|---|---|
+| `sqlDirectory` | `DirectoryProperty` | Up migration SQL directory |
+| `downSqlDirectory` | `DirectoryProperty` | Optional down migration SQL directory |
+| `setupSqlDirectory` | `DirectoryProperty` | Optional SQL before version-up processing |
+| `finalizeSqlDirectory` | `DirectoryProperty` | Optional SQL after version-up processing |
+| `lastChangeNumber` | `Property<String>` | Optional upper change number, converted to `Long` |
+| `showVersionOnly` | `Property<Boolean>` | Request version display instead of normal migration processing |
+| `checksumValidation` | `Property<Boolean>` | Default `false`; record up SQL checksums and validate completed migrations before execution |
+| `rejectOutOfOrder` | `Property<Boolean>` | Default `false`; reject pending versions lower than the latest completed version |
+| `rejectNonTransactional` | `Property<Boolean>` | Default `false`; reject selected migrations that bypass transactions |
+| `requireDownMigration` | `Property<Boolean>` | Default `false`; require rollback SQL for every selected migration |
+| `repeatableMigrations` | `Property<Boolean>` | Default `false`; enable `R__name.sql` files that rerun after their content checksum changes |
+| `expectedPlanFile` | `RegularFileProperty` | Optional reviewed plan JSON that must match execution |
+| `expectedPlanMaxAgeSeconds` | `Property<Long>` | Optional maximum age of the reviewed plan; no limit by default |
+| `expectedPlanFingerprint` | `Property<String>` | Optional approved `sha256:...` value that the plan artifact must match |
+| `lockTimeoutSeconds` | `Property<Integer>` | Optional JDBC timeout while acquiring the migration-history lock |
+| `executionReportFile` | `RegularFileProperty` | Optional atomic JSON audit report for migration execution |
+| `preMigrationSchemaFile` | `RegularFileProperty` | Optional expected live Schema XML checked before migration SQL runs |
+| `withSeriesNumber` | `Property<Boolean>` | Optional series-number behavior |
+| `changeTable` | Nested configuration | Migration history table settings |
+| `dataSource` | Nested configuration | Target database connection |
+
+Only configure optional directories that exist and are part of your workflow.
+The rollback directory is named `downSqlDirectory`, not `sqlDownDirectory`.
+The migration extension's `lastChangeNumber` is a string; the SQL generation
+tasks' similarly named property has different typing and numbering semantics.
+
+Set `rejectOutOfOrder = true` when version numbers must increase monotonically.
+This catches a newly added migration such as version 20 when version 30 is
+already completed, before setup or version SQL runs. The default remains
+permissive for compatibility with existing sqlapp projects. `migrationPlan`
+always reports late versions; they become blockers when `rejectOutOfOrder` is
+enabled.
+
+Set `rejectNonTransactional = true` when every selected migration must run in a
+transaction. A file selected by the existing no-transaction filename filter is
+then rejected before setup SQL runs. The default remains `false` because some
+database DDL cannot run transactionally. `migrationPlan` marks such entries as
+blockers when this policy is enabled.
+
+Set `requireDownMigration = true` when every selected up migration must have a
+rollback path. A matching file in `downSqlDirectory` or an embedded `//@UNDO`
+section satisfies the policy. Missing rollback SQL is rejected before setup SQL
+runs. `migrationPlan` exposes `rollbackAvailable` per pending version.
+
+Set `repeatableMigrations = true` to enable repeatable SQL in the regular
+`sqlDirectory`. Name files `R__description.sql`. Pending repeatables run in
+filename order after pending versioned migrations and before finalize SQL.
+Their SHA-256 history is appended to `<change-table>_repeatable`; unchanged
+files are skipped and previous executions remain available for audit. A
+repeatable script must be safe to execute again, for example by using
+`CREATE OR REPLACE` or an idempotent data refresh.
+
+`migrationInsert` and `migrationRepair` are registered separately for history
+operations. They are not substitutes for applying reviewed schema changes.
+Rollback task classes require explicit registration:
+
+```groovy
+import com.sqlapp.gradle.plugins.MigrationDownTask
+
+tasks.register('rollbackMigration', MigrationDownTask)
+```
+
+That task uses the same `migration` extension, but clears `lastChangeToApply`
+before execution: do not use the extension's `lastChangeNumber` to bound this
+rollback task. Configure and review the down SQL before executing it;
+generated reverse DDL does not establish that deleted business data can be
+recovered.
+
+Run `./gradlew migrationPlan` to inspect the next invocation without modifying
+the database. It works when the history table does not exist and does not create
+or upgrade it, execute setup/version/finalize SQL, acquire migration locks, or
+write checksums. The returned `MigrationPlan` contains the current and target
+versions, setup/finalize statement counts, ordered pending files, statement
+counts, transaction classification, whether new checksums would be recorded,
+failed/in-progress history entries, and validation state for previously recorded
+checksums. `lastChangeNumber`, encoding, recursion, history-table names and the
+non-transaction file filter use the same configuration as `migration`.
+
+`hasBlockers()` reports known failed/in-progress history and checksum mismatches,
+but the plan is observational: it does not reserve the versions, prove SQL will
+succeed, expand and expose final SQL text, or predict database-specific implicit
+commits. Database state may change after planning. Java callers use
+`MigrationPlanCommand.getPlan()`; a null result means planning did not complete.
+
+Versioned SQL migration is separate from the YAML-driven bulk migration and
+SCD2 snapshot tasks. See the [bulk migration task guide](bulk-migration.md#executebulkmigrationjob)
+for source/target connections, checkpoints, leases and verification.
+
+### Concurrent migration execution
+
+For each selected version, migration acquires the dialect's history-table lock
+before rechecking whether that version exists. The lookup preserves the
+connection's transaction isolation. If another invocation has changed the
+history so that the selected version can no longer be started, the command fails
+with `DbConcurrencyException` instead of returning as if it completed. Stop
+competing invocations, inspect the current history, and rerun from the resulting
+state. Earlier versions committed by this invocation remain applied.
+
+This uses the existing per-version locks and commit boundaries; it does not add
+configuration or history columns. It is not a command-wide distributed lock:
+setup/finalize SQL, history-table creation/upgrades, and DDL that implicitly
+commits are not protected for the full invocation. Non-transactional SQL runs on
+a separate connection, while the history connection's lock follows the database's
+transaction semantics. Serialize deployments externally when command-wide
+exclusion is required. Lock support and wait behavior remain dialect/driver
+dependent; these checks do not introduce a lease, automatic retry, or timeout.
+
+### Failure diagnosis and recovery
+
+Migration execution failures automatically log a `MigrationExecutionFailure`
+summary and recovery guidance; no additional configuration is required. Java
+callers can inspect `command.getExecutionFailure()` after catching the original
+exception. The result is reset for each invocation and includes:
+
+- Execution phase: setup, precheck, migration SQL, history completion, version
+  commit, finalize, or final commit.
+- Version and source file for versioned SQL, or source directory without a
+  version for setup/finalize SQL.
+- The one-based most recently attempted statement index (zero before any
+  attempt), number of statements that returned normally in this phase/version,
+  and whether the separate non-transactional connection was used.
+- Versions whose commit calls returned normally earlier in this invocation.
+  A failing commit's version is excluded because its outcome may be uncertain.
+- SQLState/vendor error code when available, and the outcome of rollback and
+  history recovery calls (`NOT_ATTEMPTED`, `RETURNED`, or `FAILED`).
+
+The result is an in-memory/log diagnostic, not a durable restart checkpoint.
+It covers failures within change execution; initial connection, file discovery,
+validation and history preparation failures can occur before this result exists.
+SQL text and parameter values are not included in the diagnostic record.
+
+Statement completion does not prove that data was committed, and a returned
+rollback does not prove that DDL or non-transactional effects were undone.
+Inspect the real schema/data and history before deciding how to recover. A
+connection error during commit can leave the commit outcome unknown.
+
+Both checked SQL exceptions and runtime exceptions enter failure handling.
+Rollback or history recovery failures are attached as suppressed exceptions to
+the original cause. History recovery is not attempted after rollback fails.
+When SQL was attempted during an up migration, failure handling preserves an
+`Errored` entry if possible, including when rollback removed the initial
+`Started` entry. An already completed entry is not overwritten. Down failures
+retain previously applied history. No new history columns are required.
+
+`migrationRepair` removes a failed history entry; it does not undo SQL or restore
+data. Resolve partial database changes first, inspect the failed history, then
+use repair and rerun only when the SQL is appropriate for the resulting state.
+Even a failed transaction that rolled back successfully can retain an error
+marker requiring this explicit history repair.
+
+### Optional checksum validation
+
+The default migration workflow does not record or validate checksums and needs
+no additional configuration. For projects that want immutable applied SQL:
+
+```groovy
+extensions.configure(MigrationExtension) {
+    checksumValidation = true
+}
+```
+
+The next `./gradlew migration` adds a nullable `checksum` column to the configured
+history table if necessary. It validates completed entries that already have a
+checksum before running setup, versioned, or finalize SQL, and records checksums
+for newly executed up migrations. Existing entries are never backfilled from
+today's SQL: they remain `UNVERIFIED` and do not block migration. History-only
+`migrationInsert` also leaves checksums null because it does not execute SQL.
+Disabling the option later preserves existing checksums; subsequent migrations
+run without automatic validation or new checksum recording.
+
+Run `./gradlew migrationValidate` whenever an explicit check is useful, including
+CI. This command validates recorded checksums even when `checksumValidation` is
+false. It requires an existing `sqlDirectory`, reads completed history entries,
+and does not create/upgrade the history table, run SQL scripts or hooks, or
+rewrite checksums. A database without a history table has no entries to validate.
+Validation checks all completed entries, independent of `lastChangeNumber` and
+`showVersionOnly`.
+
+| Result | Meaning |
+|---|---|
+| `VERIFIED` | Current up SQL source matches the recorded checksum |
+| `UNVERIFIED` | No historical checksum is available; this is not a failure or proof of a match |
+| `MISSING` | A checksummed migration no longer has a matching up SQL file |
+| `CHANGED` | Current source does not match its recorded checksum |
+
+`MISSING` and `CHANGED` fail the command. Restore the applied source or investigate
+the discrepancy; neither validation nor repair silently accepts a new checksum.
+This check does not verify database structure or diagnose incomplete migrations.
+
+Checksums use SHA-256 over the up file text decoded with `encoding`, read with the
+same line-ending normalization as SQL parsing, and encoded as UTF-8 for hashing.
+Comments, whitespace and inline `-- //@UNDO` content are included. File names,
+separate down files, setup/finalize files and expanded placeholder values are not
+included. The checksum uses the source snapshot parsed for execution.
+
+Java callers use `MigrationCommand.setChecksumValidation(true)` for the opt-in
+workflow or `MigrationValidateCommand` for the read-only check. After validation,
+`getValidationResult().entries()` provides version, state, expected checksum and
+actual checksum, including when a mismatch causes the command to throw. A null
+result means validation did not run; an empty result means there were no completed
+entries to check. No core Schema XML format changes are required.
+
+### Check the live schema before migration
+
+Set `preMigrationSchemaFile` when a migration assumes a specific starting
+schema and should stop if the database has drifted from it:
+
+```groovy
+extensions.configure(MigrationExtension) {
+    preMigrationSchemaFile = layout.projectDirectory.file('schema/before-migration.xml')
+}
+```
+
+The file describes the expected schema immediately before the pending SQL is
+applied. It is not the desired schema after migration. The check is disabled by
+default. When enabled, `migration` reads the listed tables through the shared
+Schema model before creating or updating migration history and before setup SQL.
+A breaking difference stops execution; compatible or conditional differences
+remain available in `MigrationCommand.getSchemaDriftReport()`.
+
+`migrationPlan` runs the same metadata comparison without changing the database.
+Its `schemaDrift` report contributes to `hasBlockers()`, so the plan can be used
+as a deployment gate. The comparison is table-oriented and limited to objects
+represented by the existing schema compatibility analyzer. Tables omitted from
+the expected file are outside this check.
+
+The plan can also be retained as versioned JSON for CI review:
+
+```groovy
+tasks.named('migrationPlan') {
+    outputFile = layout.buildDirectory.file('reports/migration-plan.json')
+    dryRunOutputFile = layout.buildDirectory.file('reports/migration-plan.sql')
+    failOnBlockers = true
+}
+```
+
+The format-version 8 artifact contains pending files, source SHA-256 values and statement counts,
+transaction mode, history and checksum issues, and the optional schema-drift
+report. It also records out-of-order versions and whether the configured policy
+rejects them. The file is replaced atomically. Omitting `outputFile` keeps the
+console-only behavior. `failOnBlockers` defaults to `false`. When enabled, the
+task writes the artifact first and then fails if the plan contains a history
+issue, checksum failure, breaking schema drift, or rejected out-of-order
+migration. Rejected non-transactional entries and missing required down SQL are
+also blockers. The report
+remains available for diagnosis.
+
+Set `migrationPlan.dryRunOutputFile` to write the selected setup, versioned and
+finalize statements in execution order as UTF-8 SQL. The file is an atomic,
+review-only artifact and `migrationPlan` never executes it.
+
+The artifact also contains `planFingerprint`, a SHA-256 over the portable plan
+content. Absolute source paths are excluded. Reading an accidentally edited or
+partially replaced artifact fails before it can be used as `expectedPlanFile`.
+It also stores the database product and a SHA-256 of the JDBC URL, catalog and
+schema. The raw connection URL and credentials are not written. This binds an
+approved plan to the database location where it was created.
+
+To bind execution to a reviewed plan, point `expectedPlanFile` at the JSON
+created by `migrationPlan`. Before setup SQL runs, `migration` compares the
+current version, target, setup/finalize statement counts, pending order, source
+SHA-256, transaction mode, rollback availability and database identity. A changed SQL file or
+database state stops execution. The database-history comparison is repeated
+after acquiring the migration lock, closing the race between the initial plan
+check and setup SQL. Artifacts containing blockers are rejected.
+Set `expectedPlanMaxAgeSeconds` when deployment policy requires a recently
+generated and reviewed plan. It is optional; omitting it preserves the casual
+plan-and-apply workflow. Existing format-version 7 plans remain readable when
+no maximum age is configured; generate a version 8 plan before enabling the
+age check.
+For CI approval workflows, copy the artifact's `planFingerprint` into
+`expectedPlanFingerprint`. Execution then rejects even a structurally valid
+replacement plan unless it has the exact reviewed fingerprint.
+Set `lockTimeoutSeconds` in CI when a competing migration should fail within a
+bounded time. It is passed to JDBC only for migration-lock statements; omitting
+it retains the driver's existing wait behavior.
+Set `executionReportFile` to retain the selected and committed versions,
+timestamps, database identity, reviewed-plan fingerprint and structured failure
+details. A failed migration still attempts to write the report without masking
+the original migration exception if report writing also fails. The report has
+its own SHA-256 fingerprint and is rejected when any recorded execution detail
+is edited afterward.
+
+Verify the report later without database access:
+
+```groovy
+tasks.named('verifyMigrationExecutionReport') {
+    reportFile = layout.buildDirectory.file('reports/migration-execution.json')
+    expectedReportFingerprint = providers.environmentVariable('APPROVED_MIGRATION_REPORT_SHA256')
+    expectedPlanFingerprint = providers.environmentVariable('APPROVED_MIGRATION_PLAN_SHA256')
+    expectedDatabaseConnectionFingerprint = providers.environmentVariable('EXPECTED_DATABASE_SHA256')
+    maxReportAgeSeconds = 3600
+    requireSuccessful = true
+    requireAllSelectedCommitted = true
+}
+```
+
+`expectedReportFingerprint` is optional. Supplying it binds verification to the
+exact fingerprint retained by the external CI or audit system.
+`expectedPlanFingerprint` verifies that the executed plan is the plan approved
+earlier. `expectedDatabaseConnectionFingerprint` verifies the sanitized
+connection identity recorded in the report, allowing CI to reject a report
+from a different target database. Both are optional lowercase `sha256:` values.
+`maxReportAgeSeconds` optionally rejects an otherwise valid report after its
+recorded completion time becomes too old, preventing reuse of a stale result.
+When enabled, it also rejects future completion times; synchronize the clocks
+of the execution and verification hosts. Omit it to disable freshness checks.
+`requireAllSelectedCommitted` additionally rejects `showVersionOnly` reports
+and partial executions where the committed sequence differs from the selected
+sequence. Execution reports use format version 3, record whether SQL execution
+was requested separately from command success, and retain selected and
+committed repeatable migration names.
+
+## Compare migration state across environments
+
+Capture each environment through the shared `migration` configuration. The
+capture task reads versioned history and the latest checksum for every
+repeatable migration. It does not run SQL files or change history tables.
+
+```groovy
+tasks.named('migrationEnvironmentSnapshot') {
+    environmentId = 'staging'
+    outputFile = layout.buildDirectory.file('migration-state/staging.json')
+}
+```
+
+Run the capture against each target database, retain the generated files as CI
+artifacts, then compare them without database access:
+
+```groovy
+tasks.named('compareMigrationEnvironments') {
+    snapshotFiles.from(
+        layout.projectDirectory.file('approved/production.json'),
+        layout.buildDirectory.file('migration-state/staging.json')
+    )
+    baselineEnvironmentId = 'production'
+    outputFile = layout.buildDirectory.file('reports/migration-environments.json')
+    failOnDifferences = true
+}
+```
+
+Each snapshot has a SHA-256 fingerprint over its environment ID, capture time,
+sanitized database identity, versioned history and repeatable history. Editing
+the JSON invalidates it. Comparison reports missing, extra or changed migration
+entries and database product/version differences. The database connection
+fingerprint remains in the snapshot for audit but is not compared, so separate
+environments with equivalent migration state can match.
+
+
+## Implementation and test references
+
+- [MigrationExtension](../../sqlapp-gradle-plugin/src/main/java/com/sqlapp/gradle/plugins/extension/MigrationExtension.java)
+- [MigrationTaskTest](../../sqlapp-gradle-plugin/src/test/groovy/com/sqlapp/gradle/plugins/MigrationTaskTest.groovy)

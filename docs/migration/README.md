@@ -13,8 +13,8 @@ entry points use the shared migration validation and execution components.
 | Coordinate multiple tables | [Migration jobs](jobs.md) | [Gradle tasks](../gradle-plugin/bulk-migration.md) |
 | Apply an SCD2 snapshot | [Snapshot execution](snapshot.md) | [Gradle task](../gradle-plugin/snapshot.md) |
 | Assess an Access migration | [Assessment](../gradle-plugin/database-migration-assessment.md) | [Mapping](assessment-mapping.md) and [initial load](access-initial-load.md) |
-| Assess an Oracle migration | [Oracle assessment](../gradle-plugin/oracle-migration-assessment.md) | Offline preflight and source validation |
-| Apply versioned SQL migrations | [Versioned migrations](../gradle-plugin/custom-tasks-and-migrations.md#versioned-migrations) | Gradle migration extension |
+| Assess an Oracle migration | [Oracle assessment](../gradle-plugin/oracle-migration-assessment.md) | [Data Pump and character sets](oracle-data-pump-assessment.md), [source validation](../development/oracle-assessment-verification.md) |
+| Apply versioned SQL migrations | [Versioned migrations](../gradle-plugin/versioned-migrations.md#versioned-migrations) | Gradle migration extension |
 | Normalize or load legacy data | [Legacy migration](../gradle-plugin/normalization-and-legacy-migration.md) | Extraction contracts and hierarchy loading |
 | Track progress, retry, pause, or cancel | [Job progress and control](job-progress.md) | Shared listener APIs |
 | Prevent concurrent job execution | [Leases and fencing](job-leases.md) | Stable identity and lease validation |

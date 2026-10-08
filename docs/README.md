@@ -54,9 +54,10 @@ for `com.sqlapp.db`. The focused guides are:
 - [HTML database documentation](schema/html-documentation.md): generated pages,
   table DDL, clickable ER diagrams, Mermaid downloads, viewpoints, and output
   layout.
-- [Custom tasks and versioned migrations](gradle-plugin/custom-tasks-and-migrations.md):
-  registering task types that have no fixed task name, plus the migration
-  extension.
+- [Custom tasks](gradle-plugin/custom-tasks-and-migrations.md): data export,
+  file conversion, SQL execution, and task registration.
+- [Versioned SQL migrations](gradle-plugin/versioned-migrations.md): migration
+  extension, planning, checksums, recovery, and environment comparison.
 - [Normalization and legacy migration](gradle-plugin/normalization-and-legacy-migration.md):
   reviewable normalization and legacy-system extraction/load workflows.
 - [Database migration assessment](gradle-plugin/database-migration-assessment.md):
@@ -132,7 +133,7 @@ recovery, snapshots, assessment, and legacy loading.
   detailed review, evidence, and execution boundaries.
 - [Gradle migration tasks](gradle-plugin/bulk-migration.md): job configuration,
   approval gates, leases, execution evidence, and repair.
-- [Versioned SQL migrations](gradle-plugin/custom-tasks-and-migrations.md#versioned-migrations).
+- [Versioned SQL migrations](gradle-plugin/versioned-migrations.md#versioned-migrations).
 - [Normalization and legacy migration](gradle-plugin/normalization-and-legacy-migration.md).
 
 Database-changing examples must be tried against a disposable or explicitly

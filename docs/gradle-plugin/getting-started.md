@@ -129,7 +129,7 @@ task dependency. Configure `dependsOn` when a task must generate an input.
 
 `dataSource { ... }` configures a task's Hikari data source. Versioned migration
 tasks instead share the `migration` extension described in the
-[migration guide](custom-tasks-and-migrations.md#versioned-migrations).
+[migration guide](versioned-migrations.md#versioned-migrations).
 
 | Property | Type | Meaning |
 |---|---|---|
