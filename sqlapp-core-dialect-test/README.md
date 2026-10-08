@@ -169,15 +169,18 @@ view-column comments, same-named FKs on different tables, composite key order,
 constant CHECKs and constraint comments. YSQL 11 does not support ALTER TYPE
 DROP ATTRIBUTE; real dropped-attribute recreation is outside this matrix.
 
-The 2026-10-08 full run after the FK action and historical-query changes passed
-all 39 cases on each baseline (78 total). The CHECK/FK case covers existing violations,
+The 2026-10-08 full run after the constraint recreation and keyword-recognition changes passed
+all 41 cases on each baseline (82 total). The CHECK/FK case covers existing violations,
 standalone regeneration, new-write enforcement (23514/23503), VALIDATE failure
 before repair and success afterward, and unvalidated table recreation with
 comments. View options, permissions and standalone cross-schema FKs remain
 covered by the complete matrix. All five referential actions and forced legacy
-constraint queries also pass on both baselines; historical PostgreSQL servers
+constraint queries also pass on both baselines. New composite MATCH FULL/SIMPLE
+cases check partial-NULL behavior and keyword-like names/literals, and deferred
+PRIMARY KEY/UNIQUE cases assert the unsupported-feature SQLSTATE 0A000.
+Historical PostgreSQL servers
 remain unverified. PostgreSQL/YSQL/command tests executed and
-passed 766 cases, with one optional external YSQL test skipped. Gradle reused
+passed 769 cases, with one optional external YSQL test skipped. Gradle reused
 the unchanged plugin result (81 passing cases); Yugabyte assemble was up to
 date. The preceding broader core/all-retained-dialect/command/plugin run passed
 2,677 tests before the view, NOT VALID and FK action changes. No external or production

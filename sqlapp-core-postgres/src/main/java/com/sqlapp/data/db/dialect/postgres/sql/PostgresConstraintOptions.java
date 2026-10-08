@@ -10,6 +10,13 @@ public final class PostgresConstraintOptions {
 	private PostgresConstraintOptions() { }
 	interface NotValidFactory { }
 
+	static void appendDeferrability(Constraint constraint, AbstractSqlBuilder<?> builder) {
+		var mode = constraint.getDeferrability();
+		if (mode != null && mode != com.sqlapp.data.schemas.Deferrability.NotDeferrable) {
+			builder.space()._add("DEFERRABLE").space()._add(mode.getSqlValue());
+		}
+	}
+
 	static boolean isNotValid(Constraint constraint) {
 		String value = constraint.getSpecifics().get(NOT_VALID);
 		if (value == null) return false;

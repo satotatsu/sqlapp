@@ -12,6 +12,22 @@ import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
 class PostgresTemporalConstraintMetadataTest {
+	@Test
+	void ignoresSyntaxWordsInsideIdentifiersAndCheckLiterals() {
+		var fk = new ForeignKeyConstraint("fk");
+		PostgresTemporalConstraintMetadata.apply(fk,
+				"FOREIGN KEY (period_id, \"PERIOD value\") REFERENCES \"PERIOD\" (id, other)");
+		assertNull(fk.getSpecifics().get("period"));
+		var unique = new UniqueConstraint("uk", false);
+		PostgresTemporalConstraintMetadata.apply(unique, "UNIQUE (\"WITHOUT OVERLAPS\")");
+		assertNull(unique.getSpecifics().get("withoutOverlaps"));
+		var check = new CheckConstraint("ck", "label <> 'NOT ENFORCED'");
+		PostgresTemporalConstraintMetadata.apply(check, "CHECK (label <> 'NOT ENFORCED')");
+		assertNull(check.getSpecifics().get("notEnforced"));
+		PostgresTemporalConstraintMetadata.apply(fk,
+				"FOREIGN KEY (id, PERIOD \"Valid Range\") REFERENCES parent(id, PERIOD \"Valid Range\")");
+		assertEquals("true", fk.getSpecifics().get("period"));
+	}
 
 	@Test
 	void testRestoreWithoutOverlaps() {

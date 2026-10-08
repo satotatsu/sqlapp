@@ -624,6 +624,69 @@ class YugabyteMetadataReaderTest {
 
 
 	@Test
+	void preservesCompositeMatchAndAvoidsKeywordFalsePositives() throws Exception {
+		String schemaName = "ysql_match_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".parent (a integer,b integer,PRIMARY KEY (a,b))");
+				statement.execute("INSERT INTO " + schemaName + ".parent VALUES (1,2)");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (String mode : List.of("FULL", "SIMPLE")) {
+					String name = "child_" + mode.toLowerCase(java.util.Locale.ROOT);
+					String child = schemaName + "." + name;
+					statement.execute("CREATE TABLE " + child + " (period_id integer, b integer, label text, "
+							+ "CONSTRAINT parent_fk FOREIGN KEY(period_id,b) REFERENCES " + schemaName + ".parent(a,b) MATCH " + mode
+							+ ",CONSTRAINT message_check CHECK (label <> 'NOT ENFORCED'))");
+					reader.setObjectName(name);
+					var model = reader.getAllFull(connection).stream().filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+					var fk = (ForeignKeyConstraint) model.getConstraints().get("parent_fk");
+					assertEquals(mode, fk.getMatchOption().getSqlValue());
+					assertNull(fk.getSpecifics().get("period"));
+					assertNull(model.getConstraints().get("message_check").getSpecifics().get("notEnforced"));
+					statement.execute("DROP TABLE " + child);
+					for (var operation : registry.createSql(model, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					// Exercise the standalone path as well as inline table generation.
+					statement.execute("ALTER TABLE " + child + " DROP CONSTRAINT parent_fk");
+					for (var operation : registry.createSql(fk, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("INSERT INTO " + child + " VALUES (1,2,'ok'),(NULL,NULL,'ok')");
+					if (mode.equals("FULL")) assertEquals("23503", assertThrows(SQLException.class,
+							() -> statement.execute("INSERT INTO " + child + " VALUES (1,NULL,'ok')")).getSQLState());
+					else statement.execute("INSERT INTO " + child + " VALUES (1,NULL,'ok')");
+					assertEquals("23514", assertThrows(SQLException.class,
+							() -> statement.execute("INSERT INTO " + child + " VALUES (1,2,'NOT ENFORCED')")).getSQLState());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void documentsUnsupportedDeferredPrimaryAndUniqueConstraints() throws Exception {
+		String schemaName = "ysql_deferred_unique_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				var registry = DialectResolver.getInstance().getDialect(connection).createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (boolean primary : new boolean[] {true,false}) {
+					Table table = new Table(primary ? "primary_case" : "unique_case").setSchemaName(schemaName);
+					table.getColumns().add("id", c -> c.setDataType(DataType.INT));
+					var key = new com.sqlapp.data.schemas.UniqueConstraint("deferred_key", primary);
+					key.getColumns().add(table.getColumns().get("id"));
+					key.setDeferrability(com.sqlapp.data.schemas.Deferrability.InitiallyDeferred);
+					table.getConstraints().add(key);
+					String sql = registry.createSql(table, SqlType.CREATE).get(0).getSqlText();
+					assertTrue(sql.contains("DEFERRABLE INITIALLY DEFERRED"), sql);
+					assertEquals("0A000", assertThrows(SQLException.class, () -> statement.execute(sql)).getSQLState());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void preservesEveryForeignKeyReferentialAction() throws Exception {
 		String schemaName = "ysql_actions_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

@@ -45,4 +45,9 @@ public class Postgres180CreateUniqueConstraintFactory
 	private boolean isTemporal(UniqueConstraint obj) {
 		return Boolean.parseBoolean(obj.getSpecifics().get(WITHOUT_OVERLAPS));
 	}
+
+	@Override
+	protected void addDeferrability(UniqueConstraint constraint, AbstractSqlBuilder<?> builder) {
+		PostgresConstraintOptions.appendDeferrability(constraint, builder);
+	}
 }

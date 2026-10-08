@@ -79,9 +79,9 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, after the FK action and historical-query changes, the full matrix
-passed all 39 tests on each image (78 real-engine tests). PostgreSQL/YSQL/command tests
-executed and passed 766 cases, with one optional external YSQL case skipped.
+On 2026-10-08, after the constraint recreation and keyword-recognition changes, the full matrix
+passed all 41 tests on each image (82 real-engine tests). PostgreSQL/YSQL/command tests
+executed and passed 769 cases, with one optional external YSQL case skipped.
 Gradle reused the unchanged plugin result (81 passing cases); Yugabyte assemble
 was up to date. The preceding broader core/all-retained-dialect/command/plugin
 run passed 2,677 tests before the view, NOT VALID and FK action batches. No external or
@@ -91,6 +91,10 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 
 - Schema-based table, PK/FK/unique/check constraint, index, view and sequence recreation.
 - All five FK ON UPDATE/DELETE actions, deferred NO ACTION versus immediate RESTRICT.
+- Composite MATCH FULL/SIMPLE recreation and partial-NULL behavior; CHECK literals and
+  period_id identifiers do not acquire PostgreSQL 18-only metadata flags.
+- Explicit 0A000 rejection of deferred PRIMARY KEY/UNIQUE constraints on both baselines;
+  these constraints are not part of the supported YSQL deferral scope.
 - Legacy and modern constraint-query execution with reversed composite key positions
   on both current baselines; historical PostgreSQL servers themselves are unverified.
 - NOT VALID CHECK/FK state, post-CREATE constraint addition, comments, legacy violations,

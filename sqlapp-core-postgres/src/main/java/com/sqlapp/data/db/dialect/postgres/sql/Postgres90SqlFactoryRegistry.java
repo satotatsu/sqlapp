@@ -47,6 +47,8 @@ public class Postgres90SqlFactoryRegistry extends PostgresSqlFactoryRegistry {
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, com.sqlapp.data.db.sql.SqlType.CREATE,
 				PostgresCreateDomainFactory.class);
 		registerSqlFactory(ExcludeConstraint.class, SqlType.CREATE, Postgres90CreateExcludeConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				Postgres90CreateUniqueConstraintFactory.class);
 		// Trigger
 		registerSqlFactory(Trigger.class, SqlType.CREATE, Postgres90CreateTriggerFactory.class);
 	}

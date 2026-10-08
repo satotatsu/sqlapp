@@ -696,3 +696,47 @@ PostgreSQL 220, Yugabyte four (one optional external test skipped), and command
 543 cases passed; the unchanged plugin result (81 cases) was reused. No real
 database test was rerun for this PostgreSQL 18-only generation change, and
 PostgreSQL 18 server execution remains unverified in this batch.
+
+
+## Constraint recreation and keyword recognition
+
+PostgreSQL PRIMARY KEY and UNIQUE SQL factories now retain DEFERRABLE and
+INITIALLY IMMEDIATE/DEFERRED from the Schema model in both standalone ALTER
+TABLE and inline CREATE TABLE generation. A PostgreSQL 9.0 factory isolates
+this syntax from the older 8.x branch, whose generation remains unchanged;
+the PostgreSQL 18 temporal factory also preserves the setting. FK and unique
+constraints share the same deferrability renderer. No existing public API,
+XML format or dependency changes are required; the 9.0 factory is additive.
+Version reference: [PostgreSQL 9.0 CREATE TABLE](https://www.postgresql.org/docs/9.0/sql-createtable.html).
+
+YSQL still supports deferred foreign keys rather than deferred PRIMARY KEY or
+UNIQUE constraints. Generated SQL preserves the request instead of silently
+changing its timing. The local YSQL matrix explicitly checks the database's
+0A000 rejection for the latter constraints, rather than claiming their support.
+See [YSQL CREATE TABLE](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_table/).
+
+Metadata recognition now masks quoted identifiers and string literals before
+looking for PERIOD, WITHOUT OVERLAPS and terminal NOT ENFORCED syntax. Names
+such as period_id and CHECK expressions containing 'NOT ENFORCED' no longer
+acquire PostgreSQL 18-only flags. Actual temporal syntax, including quoted
+period column names, retains unit coverage. On local YSQL 11/15 the new
+composite-FK case reads and recreates MATCH FULL and MATCH SIMPLE through
+both table and standalone paths, checks partial-NULL rejection/acceptance,
+and verifies that a CHECK literal is still enforced without a spurious flag.
+PostgreSQL 18 temporal execution and historical PostgreSQL servers remain
+outside this real-engine matrix. MATCH semantics reference:
+[PostgreSQL 18 CREATE TABLE](https://www.postgresql.org/docs/18/sql-createtable.html).
+
+
+Validation on 2026-10-08: 11 focused unit cases and two new real-engine cases
+on each YSQL baseline passed. The subsequent complete regression passed
+PostgreSQL 222, Yugabyte four and command 543 cases (769 executed passes),
+with one optional external YSQL test skipped. The plugin's 81 passing cases
+and Yugabyte assemble were up to date. Both full local compatibility tasks
+passed 41 cases each (82 real-engine cases), including the explicit unsupported
+constraint checks. Commands: :sqlapp-core-postgres:test, :sqlapp-core-yugabyte:test,
+:sqlapp-command:test, :sqlapp-gradle-plugin:test, :sqlapp-core-yugabyte:assemble,
+:sqlapp-core-dialect-test:yugabyte11CompatibilityTest and
+:sqlapp-core-dialect-test:yugabyte15CompatibilityTest through the repository
+Gradle wrapper. No external/production database was accessed and no generated
+files were manually changed.
