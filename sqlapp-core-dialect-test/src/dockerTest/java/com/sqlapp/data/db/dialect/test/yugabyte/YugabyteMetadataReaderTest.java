@@ -195,6 +195,124 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void recreatesTypedAscendingAndDescendingSequences() throws Exception {
+		String schemaName = "sqlapp_ysql_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
+			reader.setSchemaName(schemaName);
+			var registry = dialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				var types = List.of(DataType.SMALLINT, DataType.INT, DataType.BIGINT);
+				var names = List.of("smallint", "integer", "bigint");
+				for (int index = 0; index < types.size(); index++) {
+					for (int direction : new int[] { 1, -1 }) {
+						String name = "typed_" + index + (direction > 0 ? "_asc" : "_desc");
+						statement.execute("CREATE SEQUENCE " + schemaName + "." + name + " AS " + names.get(index)
+								+ " START WITH " + direction * 10 + " INCREMENT BY " + direction * 3
+								+ " MINVALUE " + (direction > 0 ? 10 : -1000)
+								+ " MAXVALUE " + (direction > 0 ? 1000 : -10) + " CACHE 100");
+						reader.setObjectName(name);
+						Sequence sequence = reader.getAllFull(connection).stream()
+								.filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+						assertEquals(types.get(index), sequence.getDataType());
+						assertEquals(direction * 10, sequence.getStartValue().intValueExact());
+						assertEquals(direction * 3, sequence.getIncrementBy().intValueExact());
+						assertEquals(direction > 0 ? 10 : -1000, sequence.getMinValue().intValueExact());
+						assertEquals(direction > 0 ? 1000 : -10, sequence.getMaxValue().intValueExact());
+						statement.execute("DROP SEQUENCE " + schemaName + "." + name);
+						SqlFactory<Sequence> factory = registry.getSqlFactory(sequence, SqlType.CREATE);
+						for (var operation : factory.createSql(sequence)) statement.execute(operation.getSqlText());
+						Sequence recreated = reader.getAllFull(connection).stream()
+								.filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+						assertEquals(sequence.getDataType(), recreated.getDataType());
+						assertEquals(sequence.getMinValue(), recreated.getMinValue());
+						assertEquals(sequence.getMaxValue(), recreated.getMaxValue());
+						assertEquals(sequence.getCacheSize(), recreated.getCacheSize());
+						try (var rows = statement.executeQuery("SELECT nextval('" + schemaName + "." + name
+								+ "'), nextval('" + schemaName + "." + name + "')")) {
+							assertTrue(rows.next());
+							assertEquals(direction * 10, rows.getLong(1));
+							assertEquals(direction * 13, rows.getLong(2));
+						}
+					}
+				}
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
+	@Test
+	void recreatesSequenceTypeBoundsAndCycleBehavior() throws Exception {
+		String schemaName = "sqlapp_ysql_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
+			reader.setSchemaName(schemaName);
+			var registry = dialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				var types = List.of("smallint", "integer", "bigint");
+				long[] minima = { Short.MIN_VALUE, Integer.MIN_VALUE, Long.MIN_VALUE };
+				long[] maxima = { Short.MAX_VALUE, Integer.MAX_VALUE, Long.MAX_VALUE };
+				for (int index = 0; index < types.size(); index++) {
+					for (int direction : new int[] { 1, -1 }) {
+						for (boolean cycle : new boolean[] { false, true }) {
+							String name = "boundary_" + index + (direction > 0 ? "_asc" : "_desc")
+									+ (cycle ? "_cycle" : "_stop");
+							long start = direction > 0 ? maxima[index] : minima[index];
+							long wrapped = direction > 0 ? minima[index] : maxima[index];
+							statement.execute("CREATE SEQUENCE " + schemaName + "." + name + " AS " + types.get(index)
+									+ " START WITH " + start + " INCREMENT BY " + direction + " MINVALUE " + minima[index]
+									+ " MAXVALUE " + maxima[index] + " CACHE 100" + (cycle ? " CYCLE" : " NO CYCLE"));
+							reader.setObjectName(name);
+							Sequence sequence = reader.getAllFull(connection).stream()
+									.filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+							assertEquals(minima[index], sequence.getMinValue().longValueExact());
+							assertEquals(maxima[index], sequence.getMaxValue().longValueExact());
+							assertEquals(start, sequence.getStartValue().longValueExact());
+							assertEquals(cycle, sequence.isCycle());
+							statement.execute("DROP SEQUENCE " + schemaName + "." + name);
+							SqlFactory<Sequence> factory = registry.getSqlFactory(sequence, SqlType.CREATE);
+							for (var operation : factory.createSql(sequence)) statement.execute(operation.getSqlText());
+							Sequence recreated = reader.getAllFull(connection).stream()
+									.filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+							assertEquals(sequence.getDataType(), recreated.getDataType());
+							assertEquals(sequence.getMinValue(), recreated.getMinValue());
+							assertEquals(sequence.getMaxValue(), recreated.getMaxValue());
+							assertEquals(cycle, recreated.isCycle());
+							String next = "SELECT nextval('" + schemaName + "." + name + "')";
+							try (var rows = statement.executeQuery(next)) {
+								assertTrue(rows.next());
+								assertEquals(start, rows.getLong(1));
+							}
+							if (cycle) {
+								try (var rows = statement.executeQuery(next)) {
+									assertTrue(rows.next());
+									assertEquals(wrapped, rows.getLong(1));
+								}
+								try (var rows = statement.executeQuery(next)) {
+									assertTrue(rows.next());
+									assertEquals(wrapped + direction, rows.getLong(1));
+								}
+							} else {
+								SQLException error = assertThrows(SQLException.class, () -> statement.executeQuery(next));
+								assertEquals("2200H", error.getSQLState());
+							}
+						}
+					}
+				}
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
+	@Test
 	void migratesWithAtomicDatabaseCheckpointsAndResume() throws Exception {
 		try (var connection = connect(); var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE public.ysql_atomic (code varchar(20) PRIMARY KEY, label text)");

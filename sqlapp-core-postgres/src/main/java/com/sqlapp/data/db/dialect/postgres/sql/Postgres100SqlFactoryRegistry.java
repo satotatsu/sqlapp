@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Sequence;
 
 public class Postgres100SqlFactoryRegistry extends Postgres96SqlFactoryRegistry {
 
@@ -47,5 +49,6 @@ public class Postgres100SqlFactoryRegistry extends Postgres96SqlFactoryRegistry 
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Sequence.class, SqlType.CREATE, Postgres100CreateSequenceFactory.class);
 	}
 }

@@ -328,3 +328,30 @@ The real-engine round trip checks Japanese/apostrophe comments, start and
 increment values, and the resulting nextval values. Live sequence position and
 ownership remain outside the supported recreation scope. Ordinary PostgreSQL
 sequence readers are unchanged.
+
+## Typed YSQL sequences
+
+The YSQL 11/15 reader preserves the `smallint`, `integer` or `bigint` sequence
+type from `pg_sequence.seqtypid` in the existing Schema model. The PostgreSQL
+10+ CREATE SEQUENCE factory emits `AS` for these types, including type-name
+aliases resolved by the dialect. Earlier PostgreSQL versions and unsupported
+types retain the previous behavior of omitting the type clause. Unspecified
+types also retain their existing default behavior.
+
+The additive `Postgres100CreateSequenceFactory` is registered from PostgreSQL
+10 onward; existing public signatures and Schema XML formats are unchanged.
+Ordinary PostgreSQL metadata readers are unchanged. The local YSQL matrix
+checks all three types with ascending and descending increments, bounds, cache
+configuration and nextval results after recreation. Live position and ownership
+remain outside this support scope.
+
+## YSQL sequence bounds and cycling
+
+The local YSQL 11/15 integration matrix additionally recreates all three
+sequence types using their full signed integer bounds, in both directions,
+with and without CYCLE. It verifies exact metadata values through 64-bit
+bounds, preservation of the cycle flag, and nextval behavior at the boundary:
+cycling wraps to the opposite bound and continues; non-cycling reports
+SQLSTATE 2200H. These are single-session checks using CACHE 100. They do not
+assert consecutive values across connections or nodes. No production-code,
+public API or Schema XML changes were needed for this coverage.

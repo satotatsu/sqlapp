@@ -134,4 +134,23 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertFalse(modern.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
 	}
 
+	@Test
+	void emitsTypedSequencesOnlyFromPostgres10() {
+		for (int major : new int[] {9, 10, 11, 15}) {
+			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
+					.getDialect("postgres", major, major == 9 ? 6 : 0, null).createSqlFactoryRegistry();
+			for (var type : java.util.List.of(DataType.SMALLINT, DataType.INT, DataType.BIGINT)) {
+				var sequence = new com.sqlapp.data.schemas.Sequence("typed_seq").setDataType(type);
+				String sql = registry.createSql(sequence, SqlType.CREATE).get(0).getSqlText();
+				assertEquals(major >= 10, sql.contains(" AS "), sql);
+				if (major >= 10) assertTrue(sql.contains("AS " + type.name()), sql);
+			}
+		}
+		var registry = com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL150.createSqlFactoryRegistry();
+		var alias = new com.sqlapp.data.schemas.Sequence("alias_seq").setDataTypeName("int4");
+		assertTrue(registry.createSql(alias, SqlType.CREATE).get(0).getSqlText().contains("AS INT"));
+		alias.setDataType(DataType.DECIMAL);
+		assertFalse(registry.createSql(alias, SqlType.CREATE).get(0).getSqlText().contains(" AS "));
+	}
+
 }
