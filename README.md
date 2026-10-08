@@ -33,6 +33,8 @@ Try the [customer/order demo without a database](docs/getting-started/offline-de
 to see the generated HTML, DDL, and clickable ER diagram from a fictional model.
 Then try the [schema-change review demo](docs/getting-started/offline-demo.md#review-a-schema-change)
 to compare before/after documentation and inspect generated change SQL.
+Finally, run the [verified migration demo](docs/getting-started/offline-migration.md)
+to transfer five fictional rows in memory and detect a changed target value.
 
 For your own database, follow the quick start below: export metadata, generate the
 HTML site, and open its `index.html`. For an existing Schema XML file, the

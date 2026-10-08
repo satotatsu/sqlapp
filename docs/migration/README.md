@@ -2,6 +2,9 @@
 
 [Documentation index](../README.md)
 
+For a first hands-on result, try the [in-memory migration demo](../getting-started/offline-migration.md):
+five fictional rows, a successful transfer, and a deliberately detected mismatch.
+
 Choose a workflow first, then consult its operational reference. Java and Gradle
 entry points use the shared migration validation and execution components.
 

@@ -12,6 +12,7 @@ gradle.projectsEvaluated {
         dependsOn(command.tasks.named('classes'), dialect.tasks.named('classes'))
         source(root.file('docs/examples/offline-html/GenerateDemo.java'))
         source(root.file('docs/examples/offline-html/GenerateSchemaChangeDemo.java'))
+        source(root.file('docs/examples/offline-migration/MigrateDemo.java'))
         classpath = demoClasspath
         destinationDirectory = root.layout.buildDirectory.dir('classes/offline-demo')
         options.encoding = 'UTF-8'
@@ -35,5 +36,14 @@ gradle.projectsEvaluated {
         args(root.file('docs/examples/offline-html/catalog.xml').absolutePath,
                 root.file('docs/examples/offline-html/catalog-after.xml').absolutePath,
                 root.layout.buildDirectory.dir('docs/offline-change').get().asFile.absolutePath)
+    }
+    root.tasks.register('demoVerifiedDataMigration', JavaExec) {
+        group = 'documentation'
+        description = 'Migrate and verify fictional rows in two private in-memory databases.'
+        dependsOn(compileDemo)
+        classpath = demoClasspath + root.files(compileDemo.flatMap { it.destinationDirectory })
+        mainClass = 'MigrateDemo'
+        args(root.file('docs/examples/offline-html/catalog.xml').absolutePath,
+                root.layout.buildDirectory.dir('docs/offline-migration').get().asFile.absolutePath)
     }
 }

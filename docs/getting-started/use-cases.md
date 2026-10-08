@@ -135,6 +135,10 @@ tables and relationships, plus any required mappings and fingerprints.
 **Output:** detailed migration and verification results; optional persisted
 plans, checkpoints, execution reports, and repair approval artifacts.
 
+Run the [in-memory migration demo](offline-migration.md) to see a successful
+transfer and a mismatch that row counts alone would miss. It uses private
+embedded databases and writes real execution and verification reports.
+
 The common Java entry point performs UPSERT followed by verification:
 
 ```java

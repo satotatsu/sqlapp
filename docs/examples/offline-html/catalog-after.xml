@@ -25,7 +25,7 @@
             <primaryKeyConstraint name="PK_CUSTOMER_ORDER">
               <columns><column name="ORDER_ID"/></columns>
             </primaryKeyConstraint>
-            <foreignKeyConstraint name="FK_ORDER_CUSTOMER" deferrability="NotDeferrable" updateRule="None" deleteRule="None">
+            <foreignKeyConstraint name="FK_ORDER_CUSTOMER" deferrability="NotDeferrable" updateRule="Restrict" deleteRule="Restrict">
               <columns><column name="CUSTOMER_ID"/></columns>
               <relatedTable name="CUSTOMER">
                 <columns><column name="CUSTOMER_ID"/></columns>
