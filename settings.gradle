@@ -36,6 +36,7 @@ include(
 , 'sqlapp-core-mariadb'
 , 'sqlapp-core-oracle'
 , 'sqlapp-core-postgres'
+, 'sqlapp-core-yugabyte'
 , 'sqlapp-core-saphana'
 , 'sqlapp-core-spanner'
 , 'sqlapp-core-sqlite'

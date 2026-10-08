@@ -47,6 +47,9 @@ tasks.register('dockerTest', Test) {
 	def oracleExpectedDialect = providers.gradleProperty('oracleExpectedDialect').orElse('23ai')
 	systemProperty 'sqlapp.test.oracle.image', oracleTestImage.get()
 	systemProperty 'sqlapp.test.oracle.expectedDialect', oracleExpectedDialect.get()
+	def yugabyteTestImage = providers.gradleProperty('yugabyteTestImage')
+		.orElse('yugabytedb/yugabyte:2026.1.2.0-b137')
+	systemProperty 'sqlapp.test.yugabyte.image', yugabyteTestImage.get()
 	if (testcontainersReuse.get()) {
 		environment 'TESTCONTAINERS_REUSE_ENABLE', 'true'
 	}
@@ -98,6 +101,7 @@ dependencies {
 	implementation project(':sqlapp-core-mysql')
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
+	implementation project(':sqlapp-core-yugabyte')
 	implementation project(':sqlapp-core-saphana')
 	implementation project(':sqlapp-core-spanner')
 	implementation project(':sqlapp-core-sqlite')

@@ -53,6 +53,7 @@ release checklist must record which integration suites were actually run.
 | MySQL | `sqlapp-core-mysql` | 5.6.4, 5.6.5, 5.7, 8.0, 8.0.1, 8.4, 9.0 | MySQL 5.7, 8.0, and 8.4 test images | MySQL 9.0 is resolver/module coverage without a current listed container run. |
 | Oracle Database | `sqlapp-core-oracle` | 10g, 11g, 11g R2, 12c, 18c, 19c, 21c, 23ai, 26ai | Oracle Database Free 23ai image; optional pinned 26ai image | Oracle 26ai reports product version `23.26.x`; older branches are not all container-tested. Dialect support does not imply that the current test JDBC driver is certified for every server version; verify the exact driver/JDK/database combination for legacy sources. |
 | Apache Phoenix | `sqlapp-core-phoenix` | Generic resolver plus a 5.3.1 feature boundary | Module SQL, resolver, and sequence-block tests | Phoenix 5.3.1 multi-row UPSERT still requires verification against a real cluster. |
+| YugabyteDB YSQL | `sqlapp-core-yugabyte` | PostgreSQL engine 11 and 15 baselines | Module tests and local containers 2024.2.11.0-b36 / 2026.1.2.0-b137 | Supported relational compatibility scope: schema recreation, COPY/upsert, checkpoint/resume and conflict handling verified on both baselines. Physical/distributed extensions and multi-node failover excluded; see [scope and limits](../sqlapp-core-yugabyte/README.md). |
 | PostgreSQL | `sqlapp-core-postgres` | Explicit branches from 8.2 through 18 | PostgreSQL 14 and 18.4 test images | Historical branches are preserved, but current containers do not rerun every major release. |
 | SAP HANA | `sqlapp-core-saphana` | Platform and HANA Cloud split | SAP HANA Express 2.0 (`2.00.088`) image | HANA Cloud vector-index and fuzzy-search catalog behavior requires a HANA Cloud tenant. |
 | Google Cloud Spanner | `sqlapp-core-spanner` | Generic Cloud Spanner resolver | Cloud Spanner emulator | Search/vector index, locality/storage, and some service-only metadata require a real service environment. |
@@ -149,3 +150,25 @@ if the removed dialects are required.
 The general resolver fallback for unknown products is unchanged. Receiving a
 generic dialect does not establish support for a removed database. Do not use
 that fallback to generate or execute database-specific migration SQL.
+
+## Index schema qualification
+
+When `decorateSchemaName` is enabled, generated CREATE INDEX statements now
+qualify the target table even when the index and table have the same schema.
+Previously that path ignored the option and depended on the session search path.
+Disabling the option retains unqualified names for same-schema objects. Public
+APIs and Schema XML formats are unchanged.
+
+The PostgreSQL 10–12 table metadata query no longer references PostgreSQL-13-only
+insert-triggered autovacuum settings. PostgreSQL 13+ retains these fields in its
+separate version-specific query. Schema XML and SQL-generation APIs are unchanged.
+
+## Foreign-key SQL generation
+
+With `decorateSchemaName` enabled, foreign-key references now qualify a table
+in the same schema, matching table/index name decoration and avoiding reliance
+on the session search path. With the option disabled, the same-schema reference
+stays unqualified. This affects dialects using the shared foreign-key factory.
+PostgreSQL SQL factories (including YSQL inheritance) now render `CascadeRule.None`
+as `NO ACTION` for both delete and update, instead of invalid `NONE` syntax.
+Public APIs and Schema XML formats are unchanged.

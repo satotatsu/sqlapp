@@ -84,7 +84,7 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 			if (obj.getSchemaName()!=null&&table.getSchemaName()!=null&&!CommonUtils.eq(obj.getSchemaName(), table.getSchemaName())){
 				builder.name(table, true);
 			} else{
-				builder.name(table, false);
+				builder.name(table, this.getOptions().isDecorateSchemaName());
 			}
 		}
 		builder.space()._add("(");

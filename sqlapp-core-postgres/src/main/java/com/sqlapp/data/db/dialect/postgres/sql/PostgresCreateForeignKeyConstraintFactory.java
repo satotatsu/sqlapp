@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.postgres.sql;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateForeignKeyConstraintFactory;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CascadeRule;
 
 /**
  * Foreign Key Constraint生成クラス
@@ -38,4 +39,16 @@ public class PostgresCreateForeignKeyConstraintFactory
 			builder.matchOption(obj);
 		}
 	}
+	@Override
+	protected void addCascadeRule(ForeignKeyConstraint obj, PostgresSqlBuilder builder) {
+		if (obj.getDeleteRule() != null) {
+			builder.space().on().space().delete().space()
+					._add(obj.getDeleteRule() == CascadeRule.None ? "NO ACTION" : obj.getDeleteRule().getSqlValue());
+		}
+		if (obj.getUpdateRule() != null) {
+			builder.space().on().space().update().space()
+					._add(obj.getUpdateRule() == CascadeRule.None ? "NO ACTION" : obj.getUpdateRule().getSqlValue());
+		}
+	}
+
 }

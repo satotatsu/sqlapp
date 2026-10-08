@@ -193,6 +193,7 @@ recommended.
 | MySQL | `sqlapp-core-mysql` | MySQL Connector/J |
 | Oracle Database | `sqlapp-core-oracle` | None |
 | Apache Phoenix | `sqlapp-core-phoenix` | None |
+| YugabyteDB YSQL | `sqlapp-core-yugabyte` | Reuses `sqlapp-core-postgres`; no additional driver |
 | PostgreSQL | `sqlapp-core-postgres` | PostgreSQL JDBC driver |
 | SAP HANA | `sqlapp-core-saphana` | None |
 | Google Cloud Spanner | `sqlapp-core-spanner` | None |

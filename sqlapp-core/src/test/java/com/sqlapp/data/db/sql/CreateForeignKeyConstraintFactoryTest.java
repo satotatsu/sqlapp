@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.List;
 
@@ -78,6 +80,18 @@ public class CreateForeignKeyConstraintFactoryTest extends AbstractStandardFacto
 		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		return table;
+	}
+
+	@Test
+	void decoratesReferenceInSameSchemaWhenRequested() {
+		Table parent = createTable().setSchemaName("schemaA");
+		Table child = createTable1().setSchemaName("schemaA");
+		ForeignKeyConstraint fk = child.getConstraints().addForeignKeyConstraint("FK1",
+				child.getColumns().get("colA"), parent.getColumns().get("colA"));
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		assertTrue(operationfactory.createSql(fk).get(0).getSqlText().split("REFERENCES")[1].contains("schemaA"));
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(false);
+		assertFalse(operationfactory.createSql(fk).get(0).getSqlText().split("REFERENCES")[1].contains("schemaA"));
 	}
 
 }

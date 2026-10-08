@@ -248,7 +248,7 @@ note explicitly states otherwise.
 The repository currently contains dialect modules for DB2, Firebird,
 H2, HSQLDB, Informix, Access/MDB, MariaDB, MySQL, Oracle, Phoenix,
 PostgreSQL, SAP HANA, Cloud Spanner, SQLite, SQL Server, Sybase ASE,
-and Vertica. Module presence does not by itself guarantee every feature on
+Vertica, and YugabyteDB YSQL. Module presence does not by itself guarantee every feature on
 every server version; check the relevant dialect documentation and release
 notes before production use.
 

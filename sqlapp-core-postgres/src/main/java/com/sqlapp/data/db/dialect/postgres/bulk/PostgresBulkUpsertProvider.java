@@ -10,7 +10,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 public class PostgresBulkUpsertProvider implements BulkUpsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect instanceof Postgres95;
+		return dialect instanceof Postgres95 && "PostgreSQL".equalsIgnoreCase(dialect.getProductName());
 	}
 
 	@Override

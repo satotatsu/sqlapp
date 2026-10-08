@@ -67,9 +67,7 @@ SELECT
   ELSE false
   END AS autovacuum_enabled
   , coalesce(av.autovacuum_vacuum_threshold, avs.autovacuum_vacuum_threshold) as autovacuum_vacuum_threshold
-  , coalesce(av.autovacuum_vacuum_insert_threshold, avs.autovacuum_vacuum_insert_threshold) as autovacuum_vacuum_insert_threshold
   , coalesce(av.autovacuum_vacuum_scale_factor, avs.autovacuum_vacuum_scale_factor) as autovacuum_vacuum_scale_factor
-  , coalesce(av.autovacuum_vacuum_insert_scale_factor, avs.autovacuum_vacuum_insert_scale_factor) as autovacuum_vacuum_insert_scale_factor
   , coalesce(av.autovacuum_vacuum_cost_delay, avs.autovacuum_vacuum_cost_delay) as autovacuum_vacuum_cost_delay
   , coalesce(av.autovacuum_vacuum_cost_limit, avs.autovacuum_vacuum_cost_limit) as autovacuum_vacuum_cost_limit
   , coalesce(av.autovacuum_freeze_min_age, avs.autovacuum_freeze_min_age) as autovacuum_freeze_min_age

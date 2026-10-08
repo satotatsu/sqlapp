@@ -115,3 +115,30 @@ boundaries as the MySQL coverage.
 SQL Server uses the image documented by Testcontainers:
 `mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is
 accepted explicitly in the test code.
+
+## YugabyteDB YSQL compatibility
+
+Run the fixed PostgreSQL 11/15 YSQL compatibility matrix:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:yugabyteCompatibilityTest
+```
+
+`yugabyte11CompatibilityTest` uses `yugabytedb/yugabyte:2024.2.11.0-b36`;
+`yugabyte15CompatibilityTest` uses `yugabytedb/yugabyte:2026.1.2.0-b137`.
+Both assert the actual JDBC engine major. These opt-in verification tasks are
+separate from default unit tests and use fresh containers with reuse disabled.
+They create test tables and checkpoint/lease tables in the owned container,
+drop their random schemas and stop the container after the suite. No external
+JDBC environment variables or host data volumes are used.
+
+To investigate another explicitly chosen image:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*YugabyteMetadataReaderTest' -PyugabyteTestImage=yugabytedb/yugabyte:2024.2.11.0-b36
+```
+
+The suite verifies schema metadata and executable recreation, COPY/upsert,
+large-batch rollback, identity/type handling, checkpoint/resume, verification
+and repair, lease contention, savepoints and write conflicts. See the
+[full support scope and limits](../sqlapp-core-yugabyte/README.md).

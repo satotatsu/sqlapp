@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import com.sqlapp.data.db.dialect.resolver.DefaultDialectResolver;
 
 import java.io.IOException;
 
@@ -28,6 +30,11 @@ import javax.xml.stream.XMLStreamException;
 import org.junit.jupiter.api.Test;
 
 public class DialectResolverTest {
+
+	@Test
+	public void metadataIdentificationIsOptionalForExistingResolvers() {
+		assertNull(new DefaultDialectResolver().resolveDatabaseMetaData(null));
+	}
 
 	@Test
 	public void testCompareTo() throws XMLStreamException, IOException {

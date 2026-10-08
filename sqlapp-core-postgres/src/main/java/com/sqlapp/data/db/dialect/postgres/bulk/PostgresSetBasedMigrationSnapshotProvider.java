@@ -10,7 +10,7 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 public class PostgresSetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect instanceof Postgres;
+		return dialect instanceof Postgres && "PostgreSQL".equalsIgnoreCase(dialect.getProductName());
 	}
 
 	@Override

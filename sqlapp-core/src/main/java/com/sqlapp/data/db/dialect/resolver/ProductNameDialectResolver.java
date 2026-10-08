@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.dialect.resolver;
 
+import java.sql.DatabaseMetaData;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,6 +51,18 @@ public abstract class ProductNameDialectResolver extends AbstractDialectResolver
 
 	private String getRegexName(String name) {
 		return name.replaceAll("\\s*", ".*") + ".*";
+	}
+
+	/**
+	 * Optional metadata-based identification for products sharing a JDBC name.
+	 * Return null to keep ordinary product-name/version resolution. Implementations
+	 * must not mutate the connection or suppress identification failures.
+	 * Results are connection-specific and are not cached by JDBC product name.
+	 * @param metadata JDBC database metadata
+	 * @return identified dialect, or null when this resolver does not recognize it
+	 */
+	public Dialect resolveDatabaseMetaData(DatabaseMetaData metadata) {
+		return null;
 	}
 
 	public ProductNameDialectResolver[] getRelatedProducts() {
