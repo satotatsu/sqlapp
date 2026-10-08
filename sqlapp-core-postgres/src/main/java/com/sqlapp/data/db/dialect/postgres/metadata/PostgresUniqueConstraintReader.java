@@ -68,6 +68,7 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
+					c.setRemarks(getString(rs, "remarks"));
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
 					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
@@ -83,6 +84,12 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 8
+						|| productVersionInfo.getMajorVersion() == 8 && productVersionInfo.getMinorVersion() != null
+								&& productVersionInfo.getMinorVersion() >= 4)) {
+			return getSqlNodeCache().getString("uniqueConstraints84.sql");
+		}
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}
 

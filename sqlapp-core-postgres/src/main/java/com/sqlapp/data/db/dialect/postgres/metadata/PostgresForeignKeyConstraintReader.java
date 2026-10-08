@@ -25,6 +25,8 @@ import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.IdentityHashMap;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnPair;
@@ -58,11 +60,10 @@ public class PostgresForeignKeyConstraintReader extends ForeignKeyConstraintRead
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
 		final TripleKeyMap<String, String, String, ForeignKeyConstraint> tCMap = tripleKeyMap();
-		final TripleKeyMap<String, String, String, FlexList<ColumnPair>> tColMap = tripleKeyMap();
+		final Map<ForeignKeyConstraint, FlexList<ColumnPair>> columnsByConstraint = new IdentityHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String pk_table_catalog = null;
 				String pk_table_schema = getString(rs, "constraint_schema");
 				String pk_table_name = getString(rs, TABLE_NAME);
 				String pk_columnName = getString(rs, COLUMN_NAME);
@@ -70,12 +71,13 @@ public class PostgresForeignKeyConstraintReader extends ForeignKeyConstraintRead
 				String fk_table_name = getString(rs, "referential_table_name");
 				String fk_columnName = getString(rs, "referential_column_name");
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(pk_table_schema, pk_table_name, fk_name);
+				FlexList<ColumnPair> colList = columnsByConstraint.get(c);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setSchemaName(pk_table_schema);
 					c.setTableName(pk_table_name);
+					c.setRemarks(getString(rs, "remarks"));
 					c.setUpdateRule(CascadeRule.parse(getString(rs, "update_rule")));
 					c.setDeleteRule(CascadeRule.parse(getString(rs, "delete_rule")));
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
@@ -83,8 +85,8 @@ public class PostgresForeignKeyConstraintReader extends ForeignKeyConstraintRead
 					c.setMatchOption(getString(rs, "match_option"));
 					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					colList = new FlexList<ColumnPair>();
-					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
-					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
+					tCMap.put(pk_table_schema, pk_table_name, fk_name, c);
+					columnsByConstraint.put(c, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();
@@ -95,7 +97,12 @@ public class PostgresForeignKeyConstraintReader extends ForeignKeyConstraintRead
 				colList.add(cPair);
 			}
 		});
-		setForeignKeyConstraintColumns(tColMap, list);
+		for (ForeignKeyConstraint constraint : list) {
+			TripleKeyMap<String, String, String, FlexList<ColumnPair>> isolatedColumns = tripleKeyMap();
+			isolatedColumns.put(constraint.getCatalogName(), constraint.getSchemaName(), constraint.getName(),
+					columnsByConstraint.get(constraint));
+			setForeignKeyConstraintColumns(isolatedColumns, List.of(constraint));
+		}
 		return list;
 	}
 

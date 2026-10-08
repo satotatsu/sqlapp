@@ -385,7 +385,7 @@ one check, numeric precision/scale, defaults and NOT NULL. They execute the
 recreated objects and check SQLSTATE 23514/23502/23505 for rejected domain
 values, nulls and duplicate index keys. Standalone and table-based index
 recreation both preserve comments and uniqueness. Composite-type recreation
-is not validated by these tests.
+is covered by the separate batch below.
 
 The COPY/upsert matrix additionally covers one-dimensional UUID, numeric,
 boolean, date and timestamp arrays, distinguishing SQL NULL, empty arrays and
@@ -395,3 +395,49 @@ multidimensional variants of these added types remain unverified.
 
 Catalog references: [PostgreSQL 9.1 pg_enum](https://www.postgresql.org/docs/9.1/catalog-pg-enum.html),
 [PostgreSQL object-description functions](https://www.postgresql.org/docs/15/functions-info.html#FUNCTIONS-INFO-COMMENT-TABLE).
+
+## Composite types, views and table constraints
+
+PostgreSQL composite-type metadata now stores a complete executable CREATE TYPE
+in `definition`, replacing the incorrect use of pg_get_ruledef with a type OID.
+Attribute order, typmods, array dimensions and schema-qualified user-defined type references are
+read from pg_attribute/pg_type. Dropped attributes are excluded by the query.
+PostgreSQL 9.1+ uses a separate query to preserve attribute collations; older
+versions never reference attcollation or pg_collation. Supplemental modeled
+columns retain attribute comments. The definition is authoritative for CREATE;
+modeled attributes are not mandatory duplicates of its contents.
+
+The additive PostgresCreateTypeFactory is registered through the normal SQL
+factory registry. It uses `definition` when available and can also generate a
+simple composite type from modeled columns. Type and attribute comments are
+emitted separately. View recreation likewise preserves column comments in
+addition to the existing view comment. View comments are joined using both
+object OID and the pg_class catalog identity.
+
+Table constraint metadata and recreation now preserve CHECK, PK/UNIQUE and FK
+comments. COMMENT ON CONSTRAINT leaves the constraint name unqualified and
+qualifies its owning table. Constant CHECK expressions without column references
+are retained. Foreign keys are grouped by schema, owning table and constraint
+name so equal names on different tables do not merge. FK key positions are
+preserved. PostgreSQL 8.4+ PK/UNIQUE metadata follows conkey positions rather
+than physical column order; pre-8.4 keeps its prior query without introducing
+generate_subscripts.
+
+The YSQL 11/15 matrix recreates a quoted composite type containing numeric
+precision/scale, two-dimensional text arrays, enum/domain references and enum arrays, with an
+explicit C collation and Unicode/apostrophe comments on the type and attribute.
+It changes search_path between reading and recreation and evaluates composite
+values afterward, compares the complete recreated definition and checks array
+dimensions on the re-read model. Separate cases verify quoted view/column comments and view
+results, and recreate two parent/child pairs with equal FK names, reversed key
+positions, constant checks and constraint comments. Rejected inserts assert
+SQLSTATE 23503, 23514 and 23505.
+
+YSQL 11 rejected ALTER TYPE DROP ATTRIBUTE during test preparation with an
+unsupported-feature error. That operation and real dropped-attribute metadata
+are outside this verified scope; the query exclusion is covered by unit checks.
+Composite ALTER, extension-specific attribute types and cross-object dependency
+planning for arbitrary composite-type graphs remain unverified. Existing APIs,
+XML formats and dependencies are unchanged. Objects with comments may yield
+additional SET_COMMENT operations. The changed checkConstraints.sql resource
+was converted from its legacy CP932 text encoding to UTF-8.

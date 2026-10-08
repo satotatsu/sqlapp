@@ -19,16 +19,13 @@ SELECT DISTINCT
   , pg_get_constraintdef(c.oid) as consrc --制約式
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
-  , d.refobjsubid
+  , key_position.position
 FROM pg_catalog.pg_constraint c
 INNER JOIN pg_catalog.pg_class r
   ON (c.conrelid = r.oid)
-INNER JOIN pg_catalog.pg_depend d
-  ON (c.oid = d.objid
-  AND r.oid = d.refobjid)
+INNER JOIN generate_subscripts(c.conkey, 1) key_position(position) ON (TRUE)
 INNER JOIN pg_catalog.pg_attribute a
-  ON (r.oid = a.attrelid
-  AND d.refobjsubid = a.attnum )
+  ON (r.oid = a.attrelid AND a.attnum = c.conkey[key_position.position])
 INNER JOIN pg_catalog.pg_namespace nc
   ON (c.connamespace = nc.oid)
 INNER JOIN pg_catalog.pg_namespace nr
@@ -47,4 +44,4 @@ WHERE 1=1
   /*if isNotEmpty(constraintName)*/
   AND c.conname IN /*constraintName*/('%')
   /*end*/
-ORDER BY nr.nspname, r.relname, c.contype, c.conname, d.refobjsubid
+ORDER BY nr.nspname, r.relname, c.contype, c.conname, key_position.position

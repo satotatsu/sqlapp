@@ -23,6 +23,7 @@ INNER JOIN pg_catalog.pg_namespace n
   ON (c.relnamespace = n.oid)
 LEFT OUTER JOIN pg_catalog.pg_description d 
   ON (c.oid = d.objoid
+  AND d.classoid = 'pg_catalog.pg_class'::regclass
   AND d.objsubid = 0) 
 WHERE c.relkind ='v'
   /*if isNotEmpty(schemaName)*/

@@ -43,6 +43,12 @@ public class PostgresCreateViewFactory extends AbstractCreateViewFactory<Postgre
 					.sqlChar(table.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
+		table.getColumns().stream().filter(c -> c.getRemarks() != null).forEach(column -> {
+			PostgresSqlBuilder builder = createSqlBuilder();
+			builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName())
+					._add(".").name(column).is().sqlChar(column.getRemarks());
+			addSql(result, builder, SqlType.SET_COMMENT, column);
+		});
 	}
 
 }

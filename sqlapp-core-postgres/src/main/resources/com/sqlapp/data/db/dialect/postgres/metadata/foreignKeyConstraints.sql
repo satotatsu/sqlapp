@@ -2,11 +2,12 @@ SELECT DISTINCT
   current_database() AS constraint_catalog
   , nc.nspname AS constraint_schema
   , c.conname AS constraint_name
+  , obj_description(c.oid, 'pg_constraint') AS remarks
   , current_database() AS table_catalog
   , pr.nspname AS table_schema
   , p.relname AS table_name
   , pc.attname AS column_name
-  , pc.attnum AS column_index
+  , key_position.position AS column_index
   , rr.nspname AS referential_table_schema
   , r.relname AS referential_table_name
   , rc.attname AS referential_column_name
@@ -73,4 +74,4 @@ WHERE 1=1
   /*if isNotEmpty(constraintName)*/
   AND c.conname IN /*constraintName*/('%')
   /*end*/
-ORDER BY pr.nspname, p.relname, c.conname, pc.attnum
+ORDER BY pr.nspname, p.relname, c.conname, column_index

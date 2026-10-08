@@ -32,6 +32,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Type;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.data.schemas.View;
 
@@ -67,6 +68,8 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, PostgresTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, PostgresAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, PostgresLockTableFactory.class);
+		// Composite type
+		registerSqlFactory(Type.class, SqlType.CREATE, PostgresCreateTypeFactory.class);
 		// View
 		registerSqlFactory(View.class, SqlType.CREATE, PostgresCreateViewFactory.class);
 		// Index

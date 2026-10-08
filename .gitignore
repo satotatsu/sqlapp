@@ -10,3 +10,9 @@
 /.tmp-ysql-triggerstate-final.log
 /.tmp-ysql-triggerstate-regression.log
 /.tmp-ysql-triggerstate-unit.log
+/.tmp-ysql-composite-dimensions.log
+/.tmp-ysql-composite-final.log
+/.tmp-ysql-composite-real.log
+/.tmp-ysql-composite-regression.log
+/.tmp-ysql-composite-type.log
+/.tmp-ysql-composite-unit.log

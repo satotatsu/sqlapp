@@ -69,6 +69,12 @@ public class PostgresTypeReader extends TypeReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 9
+						|| productVersionInfo.getMajorVersion() == 9 && productVersionInfo.getMinorVersion() != null
+								&& productVersionInfo.getMinorVersion() >= 1)) {
+			return getSqlNodeCache().getString("types91.sql");
+		}
 		return getSqlNodeCache().getString("types.sql");
 	}
 

@@ -79,12 +79,17 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, all 29 tests passed on each image (58 real-engine tests).
-The PostgreSQL/YSQL/command regression passed 753 unit tests and skipped the
+On 2026-10-08, the full matrix passed all 32 tests on each image (64 real-engine tests).
+The PostgreSQL/YSQL/command regression passed 757 unit tests and skipped the
 optional YSQL external-database test. Gradle reused the unchanged plugin
 result (81 previously passing tests). The earlier wider core/retained-dialect/
 command/plugin run passed 2,664 tests. Packaging and SPI descriptors were also
 verified. No external or production database was accessed.
+
+After the final composite array-dimension correction, all 32 YSQL 11 cases,
+the YSQL 15 composite-type case, and 214 PostgreSQL/YSQL unit tests passed again
+(with the optional external test skipped). The other YSQL 15 cases were last
+run in the preceding full matrix. Packaging also passed after the correction.
 
 The matrix asserts the actual JDBC engine major and tests both engines for:
 
@@ -104,6 +109,11 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 - Composite JDBC keyset resume after a persisted cursor.
 - Quoted identifiers, identity, numeric, boolean, date/time, UUID, JSONB, bytea and text-array columns.
 - Enum/domain, function and trigger metadata and executable recreation.
+- Composite CREATE TYPE definitions, quoted attributes, collation, custom type/array
+  references and type/attribute comments, including a changed search_path.
+- Quoted view/column comments and recreated view query results.
+- Same-named FKs on different tables, composite key order, constant CHECKs and
+  table-constraint comments, with FK/check/unique rejection after recreation.
 - Enum label order after ALTER TYPE BEFORE/AFTER, Unicode/apostrophe labels and comments.
 - Multiple domain CHECK expressions, numeric precision/scale, defaults, NOT NULL and comments.
 - Standalone and table-based index comments with preserved uniqueness.
@@ -131,7 +141,9 @@ failover and performance tuning are not covered. COPY tests cover nested integer
 one-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays; other array
 element types and nested variants of these added types remain unverified.
 Multiple domain CHECKs are combined into one expression; their individual
-constraint names are not retained. Composite-type recreation remains unverified.
+constraint names are not retained. Composite ALTER, extension-specific attribute types and arbitrary composite-type
+dependency graphs remain unverified. YSQL 11 rejects ALTER TYPE DROP ATTRIBUTE;
+real dropped-attribute recreation is not covered.
 Sequence metadata covers configuration, not live-position migration or ownership.
 
 DDL transaction guarantees and isolation behavior depend on YSQL version and

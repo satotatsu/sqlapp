@@ -2,6 +2,7 @@ SELECT DISTINCT
   current_database() AS constraint_catalog
   , nc.nspname AS constraint_schema
   , c.conname AS constraint_name
+  , obj_description(c.oid, 'pg_constraint') AS remarks
   , current_database() AS table_catalog
   , nr.nspname AS table_schema
   , r.relname AS table_name
@@ -13,19 +14,15 @@ SELECT DISTINCT
     WHEN 'u' THEN 'UNIQUE' 
     END AS constraint_type
   , pg_get_expr(c.conbin, c.conrelid) AS check_expression
-  , pg_get_constraintdef(c.oid) as consrc --êßñÒéÆ
+  , pg_get_constraintdef(c.oid) as consrc --Âà∂Á¥ÑÂºè
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
-  , d.refobjsubid
+  , a.attnum
 FROM pg_catalog.pg_constraint c
 INNER JOIN pg_catalog.pg_class r
   ON (c.conrelid = r.oid)
-INNER JOIN pg_catalog.pg_depend d
-  ON (c.oid = d.objid
-  AND r.oid = d.refobjid)
-INNER JOIN pg_catalog.pg_attribute a
-  ON (r.oid = a.attrelid
-  AND d.refobjsubid = a.attnum )
+LEFT JOIN pg_catalog.pg_attribute a
+  ON (r.oid = a.attrelid AND a.attnum = ANY(c.conkey))
 INNER JOIN pg_catalog.pg_namespace nc
   ON (c.connamespace = nc.oid)
 INNER JOIN pg_catalog.pg_namespace nr
@@ -35,7 +32,7 @@ WHERE 1=1
   AND r.relkind IN ('r','p') 
   AND c.contype = 'c'
   AND (NOT pg_is_other_temp_schema(nr.oid)) 
-  AND NOT attisdropped
+  AND (a.attnum IS NULL OR NOT a.attisdropped)
   /*if isNotEmpty(schemaName)*/
   AND nr.nspname IN /*schemaName*/('%')
   /*end*/
@@ -45,4 +42,4 @@ WHERE 1=1
   /*if isNotEmpty(constraintName)*/
   AND c.conname IN /*constraintName*/('%')
   /*end*/
-ORDER BY nr.nspname, r.relname, c.conname, d.refobjsubid
+ORDER BY nr.nspname, r.relname, c.conname, a.attnum

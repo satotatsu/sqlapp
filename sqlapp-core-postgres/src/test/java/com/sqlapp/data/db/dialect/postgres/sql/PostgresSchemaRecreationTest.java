@@ -183,4 +183,41 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertEquals(1, registry.createSql(index, SqlType.CREATE).size());
 	}
 
+	@Test
+	void createsCompositeTypeFromColumnsOrCompleteDefinition() {
+		var type = new com.sqlapp.data.schemas.Type("Line item").setSchemaName("Tenant");
+		type.getColumns().add("Description", c -> c.setDataType(DataType.VARCHAR).setLength(20));
+		type.getColumns().add("tags", c -> c.setDataType(DataType.INT).setArrayDimension(2));
+		type.setRemarks("型 'comment'");
+		type.getColumns().get("Description").setRemarks("属性 'comment'");
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		var operations = sqlFactoryRegistry.createSql(type, SqlType.CREATE);
+		assertEquals(3, operations.size());
+		String create = operations.get(0).getSqlText();
+		assertTrue(create.contains("CREATE TYPE \"Tenant\".\"Line item\" AS"), create);
+		assertTrue(create.contains("VARCHAR(20)"), create);
+		assertTrue(create.contains("INT[][]"), create);
+		assertTrue(operations.get(2).getSqlText().contains("COMMENT ON COLUMN \"Tenant\".\"Line item\".\"Description\""));
+		type.setDefinition("CREATE TYPE authoritative_type AS (label text COLLATE \"C\")");
+		assertEquals(String.join("\n", type.getDefinition()), sqlFactoryRegistry.createSql(type, SqlType.CREATE).get(0).getSqlText());
+	}
+
+	@Test
+	void commentsViewColumnsAndLeavesConstraintNamesUnqualified() {
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		var view = new com.sqlapp.data.schemas.View("Item view").setSchemaName("Tenant");
+		view.setStatement("SELECT 1 AS id");
+		view.getColumns().add("id", c -> c.setDataType(DataType.INT).setRemarks("列 'comment'"));
+		var operations = sqlFactoryRegistry.createSql(view, SqlType.CREATE);
+		assertEquals(2, operations.size());
+		assertTrue(operations.get(1).getSqlText().contains("COMMENT ON COLUMN \"Tenant\".\"Item view\".id"));
+		Table table = new Table("items").setSchemaName("Tenant");
+		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		var check = new CheckConstraint("Positive id", "id > 0");
+		check.setSchemaName("Tenant"); check.setRemarks("制約 'comment'"); table.getConstraints().add(check);
+		String comment = sqlFactoryRegistry.createSql(table, SqlType.CREATE).stream()
+				.map(op -> op.getSqlText()).filter(sql -> sql.startsWith("COMMENT ON CONSTRAINT")).findFirst().orElseThrow();
+		assertTrue(comment.contains("CONSTRAINT \"Positive id\" ON \"Tenant\".items"), comment);
+	}
+
 }

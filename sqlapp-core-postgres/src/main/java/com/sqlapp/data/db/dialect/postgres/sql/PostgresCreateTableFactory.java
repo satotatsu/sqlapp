@@ -64,7 +64,7 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 		});
 		table.getConstraints().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
 			PostgresSqlBuilder builder = this.createSqlBuilder();
-			builder.comment().on().constraint().space().name(c, this.getOptions().isDecorateSchemaName()).on()
+			builder.comment().on().constraint().space().name(c, false).on()
 					.name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});

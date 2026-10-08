@@ -71,15 +71,19 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 					columnList = list();
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
+					c.setRemarks(getString(rs, "remarks"));
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
 					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					colMap.put(schema_name, table_name, constraint_name, columnList);
 					map.put(schema_name, table_name, constraint_name, c);
 				}
-				Column column = new Column(getString(rs, COLUMN_NAME));
-				column.setTableName(table_name);
-				columnList.add(column);
+				String columnName = getString(rs, COLUMN_NAME);
+				if (columnName != null) {
+					Column column = new Column(columnName);
+					column.setTableName(table_name);
+					columnList.add(column);
+				}
 			}
 		});
 		for (CheckConstraint c : map.toList()) {

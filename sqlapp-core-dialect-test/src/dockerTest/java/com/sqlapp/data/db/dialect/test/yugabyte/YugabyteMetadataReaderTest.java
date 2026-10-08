@@ -478,6 +478,151 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void recreatesCompositeTypeDefinitionAttributesCollationAndComments() throws Exception {
+		String schemaName = "ysql_composite_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TYPE " + schemaName + ".status AS ENUM ('new', 'done')");
+				statement.execute("CREATE DOMAIN " + schemaName + ".positive AS numeric(12,2) CHECK (VALUE > 0)");
+				statement.execute("CREATE TYPE " + schemaName + ".\"Order item\" AS (\"Item name\" text COLLATE \"C\", "
+						+ "amount numeric(12,2), tags text[][], status " + schemaName + ".status, states "
+						+ schemaName + ".status[], valid " + schemaName + ".positive)");
+				statement.execute("COMMENT ON TYPE " + schemaName + ".\"Order item\" IS '複合型 ''comment'''");
+				statement.execute("COMMENT ON COLUMN " + schemaName + ".\"Order item\".\"Item name\" IS '属性 ''comment'''");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTypeReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("Order item");
+				statement.execute("SET search_path TO " + schemaName + ", pg_catalog");
+				var type = reader.getAllFull(connection).stream().filter(t -> "Order item".equals(t.getName())).findFirst().orElseThrow();
+				statement.execute("RESET search_path");
+				assertEquals("複合型 'comment'", type.getRemarks());
+				assertEquals(6, type.getColumns().size());
+				assertEquals(2, type.getColumns().get("tags").getArrayDimension());
+				assertEquals(1, type.getColumns().get("states").getArrayDimension());
+				assertEquals("属性 'comment'", type.getColumns().get("Item name").getRemarks());
+				String definition = String.join("\n", type.getDefinition());
+				assertTrue(definition.contains("CREATE TYPE"), definition);
+				assertTrue(definition.contains("COLLATE"), definition);
+				assertTrue(definition.contains(schemaName + ".status"), definition);
+				statement.execute("DROP TYPE " + schemaName + ".\"Order item\"");
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(type, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				var recreated = reader.getAllFull(connection).stream().filter(t -> "Order item".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals(type.getRemarks(), recreated.getRemarks());
+				assertEquals(6, recreated.getColumns().size());
+				assertEquals(type.getColumns().get("tags").getArrayDimension(), recreated.getColumns().get("tags").getArrayDimension());
+				assertEquals(type.getColumns().get("states").getArrayDimension(), recreated.getColumns().get("states").getArrayDimension());
+				assertEquals(definition, String.join("\n", recreated.getDefinition()));
+				assertEquals(type.getColumns().get("Item name").getRemarks(), recreated.getColumns().get("Item name").getRemarks());
+				String value = "ROW('日本語',12.34,ARRAY[['tag',NULL]]::text[],'new'::" + schemaName
+						+ ".status,ARRAY['done']::" + schemaName + ".status[],5.67::" + schemaName + ".positive)::"
+						+ schemaName + ".\"Order item\"";
+				try (var rows = statement.executeQuery("SELECT (value).\"Item name\", (value).amount, (value).status::text, "
+						+ "(value).states[1]::text, (value).valid FROM (SELECT " + value + " AS value) data")) {
+					assertTrue(rows.next()); assertEquals("日本語", rows.getString(1));
+					assertEquals(new BigDecimal("12.34"), rows.getBigDecimal(2));
+					assertEquals("new", rows.getString(3)); assertEquals("done", rows.getString(4));
+					assertEquals(new BigDecimal("5.67"), rows.getBigDecimal(5));
+				}
+			} finally {
+				statement.execute("RESET search_path");
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
+	@Test
+	void recreatesViewAndColumnCommentsWithQuotedNames() throws Exception {
+		String schemaName = "ysql_view_comments_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer, label text)");
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (7, '日本語')");
+				statement.execute("CREATE VIEW " + schemaName + ".\"Item view\" AS SELECT id AS \"Row id\", label AS \"Display name\" FROM " + schemaName + ".items");
+				statement.execute("COMMENT ON VIEW " + schemaName + ".\"Item view\" IS 'ビュー ''comment'''");
+				statement.execute("COMMENT ON COLUMN " + schemaName + ".\"Item view\".\"Display name\" IS '表示列 ''comment'''");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getViewReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("Item view");
+				var view = reader.getAllFull(connection).stream().filter(t -> "Item view".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals("ビュー 'comment'", view.getRemarks());
+				assertEquals("表示列 'comment'", view.getColumns().get("Display name").getRemarks());
+				statement.execute("DROP VIEW " + schemaName + ".\"Item view\"");
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(view, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				var recreated = reader.getAllFull(connection).stream().filter(t -> "Item view".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals(view.getRemarks(), recreated.getRemarks());
+				assertEquals(view.getColumns().get("Display name").getRemarks(), recreated.getColumns().get("Display name").getRemarks());
+				try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".\"Item view\"")) {
+					assertTrue(rows.next()); assertEquals(7, rows.getInt(1)); assertEquals("日本語", rows.getString(2));
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void separatesSameNamedForeignKeysAndPreservesConstraintOrderAndComments() throws Exception {
+		String schemaName = "ysql_constraints_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				for (int i = 1; i <= 2; i++) {
+					statement.execute("CREATE TABLE " + schemaName + ".parent" + i + " (a integer, b integer, PRIMARY KEY (b,a))");
+					statement.execute("INSERT INTO " + schemaName + ".parent" + i + " VALUES (" + i + ", " + (i * 10) + ")");
+					statement.execute("CREATE TABLE " + schemaName + ".child" + i + " (id integer PRIMARY KEY, parent_a integer, parent_b integer, "
+							+ "label text, CONSTRAINT \"Parent link\" FOREIGN KEY (parent_b,parent_a) REFERENCES " + schemaName + ".parent" + i
+							+ "(b,a), CONSTRAINT \"Positive id\" CHECK (id > 0), CONSTRAINT \"Always ok\" CHECK (true), "
+							+ "CONSTRAINT label_unique_" + i + " UNIQUE (label,parent_b))");
+					for (String name : List.of("Parent link", "Positive id", "Always ok", "label_unique_" + i)) {
+						statement.execute("COMMENT ON CONSTRAINT \"" + name + "\" ON " + schemaName + ".child" + i + " IS '制約 ''comment'''");
+					}
+				}
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader(); reader.setSchemaName(schemaName);
+				var schema = reader.getAllFull(connection).stream().filter(t -> schemaName.equals(t.getName())).findFirst().orElseThrow();
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (int i = 1; i <= 2; i++) {
+					var parent = schema.getTables().get("parent" + i);
+					assertEquals(List.of("b", "a"), parent.getConstraints().getPrimaryKeyConstraint().getColumns().stream().map(c -> c.getName()).toList());
+					var child = schema.getTables().get("child" + i);
+					var fk = (ForeignKeyConstraint) child.getConstraints().get("Parent link");
+					assertNotNull(fk);
+					assertEquals(List.of("parent_b", "parent_a"), fk.getColumns().stream().map(c -> c.getName()).toList());
+					assertEquals("parent" + i, fk.getRelatedColumns().get(0).getTableName());
+					for (String name : List.of("Parent link", "Positive id", "Always ok", "label_unique_" + i)) {
+						assertNotNull(child.getConstraints().get(name));
+						assertEquals("制約 'comment'", child.getConstraints().get(name).getRemarks());
+					}
+					assertEquals(List.of("label", "parent_b"), ((com.sqlapp.data.schemas.UniqueConstraint) child.getConstraints()
+							.get("label_unique_" + i)).getColumns().stream().map(c -> c.getName()).toList());
+					statement.execute("DROP TABLE " + schemaName + ".child" + i);
+					statement.execute("DROP TABLE " + schemaName + ".parent" + i);
+					for (var operation : registry.createSql(parent, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("INSERT INTO " + schemaName + ".parent" + i + " VALUES (" + i + "," + i * 10 + ")");
+					for (var operation : registry.createSql(child, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("INSERT INTO " + schemaName + ".child" + i + " VALUES (1," + i + "," + i * 10 + ",'valid')");
+					final int childIndex = i;
+					SQLException invalid = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName
+							+ ".child" + childIndex + " VALUES (2,999,999,'orphan')"));
+					assertEquals("23503", invalid.getSQLState());
+					SQLException badCheck = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName
+							+ ".child" + childIndex + " VALUES (-1,NULL,NULL,'bad')"));
+					assertEquals("23514", badCheck.getSQLState());
+					SQLException duplicate = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName
+							+ ".child" + childIndex + " VALUES (3," + childIndex + "," + childIndex * 10 + ",'valid')"));
+					assertEquals("23505", duplicate.getSQLState());
+				}
+				var recreated = reader.getAllFull(connection).stream().filter(t -> schemaName.equals(t.getName())).findFirst().orElseThrow();
+				for (int i = 1; i <= 2; i++) for (String name : List.of("Parent link", "Positive id", "Always ok", "label_unique_" + i)) {
+					assertEquals("制約 'comment'", recreated.getTables().get("child" + i).getConstraints().get(name).getRemarks());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void migratesWithAtomicDatabaseCheckpointsAndResume() throws Exception {
 		try (var connection = connect(); var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE public.ysql_atomic (code varchar(20) PRIMARY KEY, label text)");

@@ -10,12 +10,16 @@ SELECT
            THEN quote_ident(en.nspname) || '.' || quote_ident(et.typname) || repeat('[]', GREATEST(a.attndims, 1))
            WHEN tn.nspname = 'pg_catalog' THEN pg_catalog.format_type(a.atttypid, a.atttypmod) ||
              CASE WHEN a.attndims > 1 THEN repeat('[]', a.attndims - 1) ELSE '' END
-           ELSE quote_ident(tn.nspname) || '.' || quote_ident(at.typname) END
+           ELSE quote_ident(tn.nspname) || '.' || quote_ident(at.typname) END ||
+      CASE WHEN a.attcollation <> 0 THEN ' COLLATE ' || quote_ident(cn.nspname) || '.' || quote_ident(coll.collname)
+           ELSE '' END
     FROM pg_catalog.pg_attribute a
     INNER JOIN pg_catalog.pg_type at ON (at.oid = a.atttypid)
     INNER JOIN pg_catalog.pg_namespace tn ON (tn.oid = at.typnamespace)
     LEFT JOIN pg_catalog.pg_type et ON (et.oid = at.typelem)
     LEFT JOIN pg_catalog.pg_namespace en ON (en.oid = et.typnamespace)
+    LEFT JOIN pg_catalog.pg_collation coll ON (coll.oid = a.attcollation)
+    LEFT JOIN pg_catalog.pg_namespace cn ON (cn.oid = coll.collnamespace)
     WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
     ORDER BY a.attnum
   ), ', ') || ')' AS definition
