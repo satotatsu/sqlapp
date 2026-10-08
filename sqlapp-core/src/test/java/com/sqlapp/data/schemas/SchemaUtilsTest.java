@@ -198,4 +198,14 @@ public class SchemaUtilsTest {
 		assertEquals("DECIMAL(2,1)", SchemaUtils.normalizeDataType("Decimal   ( 2, 1  )  "));
 		assertEquals("CHAR", SchemaUtils.normalizeDataType("\"CHAR\""));
 	}
+
+	@Test
+	public void preservesQuotedQualifiedTypeNamesAndLiteralContents() {
+		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"", "public.\"Mixed Case\"[]",
+				"\"Space  Schema\".\"Type  Name\"[][]", "\"O'Brien\".\"Type.Name\"" }) {
+			assertEquals(name, SchemaUtils.normalizeDataType("  " + name + "  "));
+		}
+		assertEquals("ENUM('a.b','\"quoted\"')", SchemaUtils.normalizeDataType("enum('a.b','\"quoted\"')"));
+		assertEquals("DECIMAL(12,3)", SchemaUtils.normalizeDataType("decimal ( 12, 3 )"));
+	}
 }

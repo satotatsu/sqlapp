@@ -79,12 +79,14 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-09, after the array element modifier and datetime precision fixes,
-the full matrix passed all 44 tests on each image (88 real-engine tests).
-The directly affected PostgreSQL/Yugabyte/command regression passed 777 cases,
-with one optional external YSQL case skipped; Yugabyte assemble was up to date.
-The earlier core/all-retained-dialect/command/plugin run passed 2,697 cases before
-this batch. No external or production database was accessed.
+On 2026-10-09, after the domain array/precision, qualified base type and shared
+quoted-type-name fixes, the full matrix passed all 46 tests on each image
+(92 real-engine tests). The core/all-retained-dialect/command/plugin regression
+passed 2,703 cases across the initial run and final rerun, with one optional
+external YSQL case skipped. Core and plugin results were reused as UP-TO-DATE
+in the final run; PostgreSQL/Yugabyte/command and both full engine matrices
+executed again after the final catalog SQL change. Yugabyte assemble was up to
+date. No external or production database was accessed.
 
 The matrix asserts the actual JDBC engine major and tests both engines for:
 
@@ -130,6 +132,12 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
   table-constraint comments, with FK/check/unique rejection after recreation.
 - Enum label order after ALTER TYPE BEFORE/AFTER, Unicode/apostrophe labels and comments.
 - Multiple domain CHECK expressions, numeric precision/scale, defaults, NOT NULL and comments.
+- Array domains over numeric(12,3), varchar(7) and timestamp(3), plus scalar
+  timestamp(0), through XML and domain recreation; defaults, comments, NULL
+  elements, rounding and actual NOT NULL/CHECK rejection are verified.
+- Scalar/array domains over a quoted enum type in a quoted schema: read with
+  the schema on search_path and recreated after removing it; qualified base
+  names, defaults, cardinality checks and invalid enum rejection are verified.
 - Standalone and table-based index comments with preserved uniqueness.
 - INSTEAD OF trigger timing and INSERT/UPDATE/DELETE through a recreated
   trigger on a view that cannot be automatically updated.
@@ -158,8 +166,9 @@ hash/range physical index layout, placement/tablespaces, extensions, multi-node
 failover and performance tuning are not covered. COPY tests cover nested integer/text arrays, primitive-byte smallint arrays,
 and one- and two-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays,
 plus two-dimensional varchar arrays. Other element types, arbitrary dimensions
-and non-default lower bounds remain unverified. Array modifier fixes apply to
-column/composite-attribute readers; domain metadata is a separate path.
+and non-default lower bounds remain unverified. Domain array metadata is covered
+for the builtin and enum cases listed above; arbitrary domain/type dependency
+graphs, domain collation and interval field qualifiers remain unverified.
 Multiple domain CHECKs are combined into one expression; their individual
 constraint names are not retained. Composite ALTER, extension-specific attribute types and arbitrary composite-type
 dependency graphs remain unverified. YSQL 11 rejects ALTER TYPE DROP ATTRIBUTE;

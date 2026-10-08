@@ -169,22 +169,23 @@ view-column comments, same-named FKs on different tables, composite key order,
 constant CHECKs and constraint comments. YSQL 11 does not support ALTER TYPE
 DROP ATTRIBUTE; real dropped-attribute recreation is outside this matrix.
 
-The 2026-10-09 full run after the array element modifier and fractional datetime
-precision fixes passed all 44 cases on each baseline (88 total). The added case
-round-trips two-dimensional UUID/numeric/boolean/date/timestamp/bytea/varchar
-columns through Schema XML and DDL recreation, then exercises COPY and staging
-upsert while exchanging SQL NULL, empty arrays and matrices with NULL elements.
-Numeric precision/scale, varchar length and timestamp precision are asserted.
-The matrix retains constraint/comment, covering-index, view, MATCH, referential
-action, transaction, COPY/upsert and migration coverage. Deferred PRIMARY
-KEY/UNIQUE tests explicitly assert unsupported SQLSTATE 0A000. Historical
-PostgreSQL servers and PostgreSQL 18 remain unverified on real engines;
-child-table inheritance remains outside the YSQL compatibility scope.
-The latest directly affected PostgreSQL/Yugabyte/command regression passed
-777 cases, with one optional external YSQL test skipped; Yugabyte assemble was
-up to date. The earlier core/all-retained-dialect/command/plugin regression
-passed 2,697 cases before this batch. No external or production database was
-accessed.
+The 2026-10-09 final full run after the domain array/precision, qualified base
+type and shared quoted-type-name fixes passed all 46 cases on each baseline
+(92 total). New cases recreate array/scalar domains through XML with numeric,
+varchar and timestamp modifiers, defaults, NOT NULL, CHECK and comments, and
+assert real constraint failures and rounding. Quoted enum base types are read
+with their schema on search_path and recreated after that schema is removed.
+Existing multidimensional COPY/upsert, constraint/comment, index, view,
+referential-action and migration coverage remains included. Deferred PRIMARY
+KEY/UNIQUE tests assert unsupported SQLSTATE 0A000. Historical PostgreSQL servers
+and PostgreSQL 18 remain unverified on real engines; child-table inheritance
+remains outside the YSQL compatibility scope.
+The core/all-retained-dialect/command/plugin regression passed 2,703 cases
+across the initial run and final rerun, with one optional external YSQL test
+skipped. The final run reused unchanged core/plugin results as UP-TO-DATE and
+executed PostgreSQL/Yugabyte/command tests and both full engine matrices again
+after the final catalog SQL change. Yugabyte assemble was up to date. No
+external or production database was accessed.
 Reproduce the directly affected regression and the matrix with:
 
 ```shell

@@ -89,9 +89,7 @@ public class PostgresUtils extends ReaderUtils {
 		column.setIdentity(autoIncrement);
 		// The shared model stores fractional datetime/interval precision in length,
 		// while scale is reserved for numeric types. Keep explicit precision zero.
-		Long precision = maxLength != null ? maxLength : numericPrecision;
-		if (precision == null && datetimeScale != null) precision = datetimeScale.longValue();
-		if (precision == null && intervalScale != null) precision = intervalScale.longValue();
+		Long precision = typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale);
 		dialect.setDbType(productDataType, precision, numericScale, column);
 		if (!isEmpty(sequenceName)) {
 			String[] names = sequenceName.split("[.]");
@@ -105,6 +103,13 @@ public class PostgresUtils extends ReaderUtils {
 		String expression = rs.getString("adsrc");
 		setGeneratedExpression(column, expression, generatedType);
 		column.setRemarks(rs.getString("remarks"));
+	}
+
+	static Long typePrecision(Long maxLength, Long numericPrecision, Integer datetimePrecision, Integer intervalPrecision) {
+		if (maxLength != null) return maxLength;
+		if (numericPrecision != null) return numericPrecision;
+		if (datetimePrecision != null) return datetimePrecision.longValue();
+		return intervalPrecision == null ? null : intervalPrecision.longValue();
 	}
 
 	static void setGeneratedExpression(AbstractColumn<?> column, String expression, String generatedType) {

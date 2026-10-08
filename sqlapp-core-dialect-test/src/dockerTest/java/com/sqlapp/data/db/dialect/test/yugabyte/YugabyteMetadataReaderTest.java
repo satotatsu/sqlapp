@@ -390,6 +390,125 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void recreatesArrayDomainsWithPrecisionDefaultsAndConstraints() throws Exception {
+		String schemaName = "ysql_array_domains_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE DOMAIN " + schemaName + ".\"Amount Grid\" AS numeric(12,3)[][] "
+						+ "DEFAULT '{{1.234,NULL},{2.345,3.456}}'::numeric[] NOT NULL "
+						+ "CHECK (array_length(VALUE,1)=2 AND VALUE[1][1]>=0)");
+				statement.execute("CREATE DOMAIN " + schemaName + ".\"Label Grid\" AS varchar(7)[][]");
+				statement.execute("CREATE DOMAIN " + schemaName + ".\"Moment Grid\" AS timestamp(3)[][]");
+				statement.execute("CREATE DOMAIN " + schemaName + ".\"Whole Moment\" AS timestamp(0)");
+				for (String name : List.of("Amount Grid", "Label Grid", "Moment Grid", "Whole Moment")) {
+					statement.execute("COMMENT ON DOMAIN " + schemaName + ".\"" + name + "\" IS '配列 O''Brien'");
+				}
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getDomainReader();
+				reader.setSchemaName(schemaName);
+				var domains = reader.getAllFull(connection);
+				assertEquals(4, domains.size());
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var domain : domains) {
+					com.sqlapp.data.schemas.Domain restored = com.sqlapp.data.schemas.SchemaUtils.readXml(
+							new java.io.StringReader(domain.asXml()));
+					assertEquals("配列 O'Brien", restored.getRemarks());
+					assertEquals(domain.getName().equals("Whole Moment") ? 0 : 2, restored.getArrayDimension());
+					switch (domain.getName()) {
+						case "Amount Grid" -> {
+							assertEquals(12L, restored.getLength()); assertEquals(3, restored.getScale());
+							assertTrue(restored.isNotNull()); assertNotNull(restored.getDefaultValue());
+							assertNotNull(restored.getCheck());
+						}
+						case "Label Grid" -> assertEquals(7L, restored.getLength());
+						case "Moment Grid" -> assertEquals(3L, restored.getLength());
+						case "Whole Moment" -> assertEquals(0L, restored.getLength());
+						default -> fail(domain.getName());
+					}
+					statement.execute("DROP DOMAIN " + schemaName + ".\"" + domain.getName() + "\"");
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				var recreated = reader.getAllFull(connection);
+				for (var domain : domains) {
+					var actual = recreated.stream().filter(d -> d.getName().equals(domain.getName())).findFirst().orElseThrow();
+					assertEquals(domain.getDataType(), actual.getDataType(), domain.getName());
+					assertEquals(domain.getArrayDimension(), actual.getArrayDimension(), domain.getName());
+					assertEquals(domain.getLength(), actual.getLength(), domain.getName());
+					assertEquals(domain.getScale(), actual.getScale(), domain.getName());
+					assertEquals(domain.getRemarks(), actual.getRemarks(), domain.getName());
+				}
+				statement.execute("CREATE TABLE " + schemaName + ".items (amounts " + schemaName + ".\"Amount Grid\", "
+						+ "labels " + schemaName + ".\"Label Grid\", moments " + schemaName + ".\"Moment Grid\", "
+						+ "whole " + schemaName + ".\"Whole Moment\")");
+				statement.execute("INSERT INTO " + schemaName + ".items(labels,moments,whole) VALUES "
+						+ "(ARRAY[['O''Brien',NULL],['雪','quote\"']], "
+						+ "ARRAY[['2024-02-29 12:34:56.123456'::timestamp,NULL],['2000-01-01'::timestamp,'1970-01-01'::timestamp]], "
+						+ "'2024-02-29 12:34:56.123456')");
+				try (var rows = statement.executeQuery("SELECT amounts[1][1],amounts[1][2],labels[1][1], "
+						+ "moments[1][1],whole FROM " + schemaName + ".items")) {
+					assertTrue(rows.next()); assertEquals(new BigDecimal("1.234"), rows.getBigDecimal(1));
+					assertNull(rows.getBigDecimal(2)); assertEquals("O'Brien", rows.getString(3));
+					assertEquals(java.sql.Timestamp.valueOf("2024-02-29 12:34:56.123"), rows.getTimestamp(4));
+					assertEquals(java.sql.Timestamp.valueOf("2024-02-29 12:34:56"), rows.getTimestamp(5));
+				}
+				for (String invalid : List.of("NULL", "ARRAY[[-1,2],[3,4]]", "ARRAY[[1,2]]")) {
+					SQLException error = assertThrows(SQLException.class,
+							() -> statement.execute("INSERT INTO " + schemaName + ".items(amounts) VALUES (" + invalid + ")"));
+					assertEquals(invalid.equals("NULL") ? "23502" : "23514", error.getSQLState());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void recreatesDomainsOverQuotedUserDefinedTypesOutsideSearchPath() throws Exception {
+		String schemaName = "Ysql Custom " + UUID.randomUUID().toString().replace("-", "");
+		String schemaSql = "\"" + schemaName + "\"";
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaSql);
+			try {
+				String typeName = schemaSql + ".\"State.Type\"";
+				statement.execute("CREATE TYPE " + typeName + " AS ENUM ('ready','O''Brien')");
+				statement.execute("CREATE DOMAIN " + schemaSql + ".\"State List\" AS " + typeName
+						+ "[] DEFAULT ARRAY['ready','O''Brien']::" + typeName + "[] CHECK (cardinality(VALUE)<=2)");
+				statement.execute("CREATE DOMAIN " + schemaSql + ".\"Single State\" AS " + typeName + " DEFAULT 'ready'");
+				statement.execute("SET search_path TO " + schemaSql + ",pg_catalog,public");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getDomainReader();
+				reader.setSchemaName(schemaName);
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				var domains = reader.getAllFull(connection).stream().filter(d -> d.getDataType() != DataType.ENUM).toList();
+				assertEquals(2, domains.size());
+				statement.execute("SET search_path TO pg_catalog,public");
+				for (var domain : domains) {
+					com.sqlapp.data.schemas.Domain restored = com.sqlapp.data.schemas.SchemaUtils.readXml(
+							new java.io.StringReader(domain.asXml()));
+					assertEquals(typeName, restored.getDataTypeName());
+					assertEquals(domain.getName().equals("State List") ? 1 : 0, restored.getArrayDimension());
+					statement.execute("DROP DOMAIN " + schemaSql + ".\"" + domain.getName() + "\"");
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				statement.execute("CREATE TABLE " + schemaSql + ".items (states " + schemaSql
+						+ ".\"State List\", state " + schemaSql + ".\"Single State\")");
+				statement.execute("INSERT INTO " + schemaSql + ".items DEFAULT VALUES");
+				try (var rows = statement.executeQuery("SELECT states[1]::text,states[2]::text,state::text FROM " + schemaSql + ".items")) {
+					assertTrue(rows.next()); assertEquals("ready", rows.getString(1));
+					assertEquals("O'Brien", rows.getString(2)); assertEquals("ready", rows.getString(3));
+				}
+				SQLException check = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO "
+						+ schemaSql + ".items(states) VALUES (ARRAY['ready','ready','ready']::" + typeName + "[])"));
+				assertEquals("23514", check.getSQLState());
+				SQLException invalid = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO "
+						+ schemaSql + ".items(state) VALUES ('invalid')"));
+				assertEquals("22P02", invalid.getSQLState());
+			} finally { statement.execute("DROP SCHEMA " + schemaSql + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void recreatesIndexCommentsThroughStandaloneAndTableFactories() throws Exception {
 		String schemaName = "ysql_index_comment_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

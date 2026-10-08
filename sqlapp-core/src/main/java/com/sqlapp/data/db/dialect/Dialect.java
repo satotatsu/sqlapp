@@ -338,7 +338,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	private String normalize(String dataTypeName) {
 		String text = trim(dataTypeName);
-		text = CommonUtils.unwrap(dataTypeName, '"');
+		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)) return text;
+		text = CommonUtils.unwrap(text, '"');
 		return text.replaceAll("\s+", " ");
 	}
 

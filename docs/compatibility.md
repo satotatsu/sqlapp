@@ -895,3 +895,63 @@ core/other-dialect/plugin suites were not rerun in this batch. No external or
 production database was accessed and no generated files were edited manually.
 The base/18 column-query variants and interval precision were not verified on
 historical/18 real engines; their compatibility limits remain as stated above.
+
+
+## Array domains, fractional precision and quoted base types
+
+PostgreSQL domain metadata now resolves the base array's element OID for its
+numeric precision/scale, character length and datetime/interval precision.
+Builtin element names come from `format_type`; user-defined names are always
+schema-qualified with catalog identifier quoting, independently of search_path.
+Array suffixes live only in the Domain's array dimension. Scalar domains continue
+to use their original base type. The column and domain readers share a local
+precision selector that retains zero fractional precision in model `length`;
+numeric `scale` remains separate. Existing catalog/version boundaries and
+dialect resolution are unchanged.
+
+The PostgreSQL domain factory preserves qualified, quoted OTHER base type names
+rather than passing them through the builtin type formatter. The domain reader
+also retains the actual user-defined base type instead of `USER-DEFINED`.
+This applies to scalar and array domains whose base type remains available
+when the domain is recreated. Dependency ordering for arbitrary domain/type
+graphs is not added.
+
+Focused coverage includes XML round trips and recreated numeric(12,3)[][],
+varchar(7)[][], timestamp(3)[][] and timestamp(0) domains; defaults, CHECK,
+NOT NULL, comments, NULL elements, timestamp rounding and actual 23502/23514
+rejections are checked. Another case recreates scalar/array domains over an
+enum in a quoted schema, read while that schema is on search_path and recreated
+after removing it, with a dot in the quoted type name,
+apostrophes in labels, defaults, cardinality checks and invalid-enum SQLSTATE
+22P02. Unit SQL generation covers the existing PostgreSQL 8.3/11/15/18 registry
+boundaries and exactly one array suffix per modeled dimension.
+
+These tests exposed a separate common issue: type-name normalization stripped
+outer quotes from qualified names and changed quoted identifier contents.
+`SchemaUtils.normalizeDataType` and Dialect type matching now preserve quoted
+qualified names, including escaped quotes and repeated spaces. Existing builtin
+normalization, including quoted CHAR and enum literals, remains covered.
+The additive `SchemaUtils.isQuotedQualifiedTypeName(String)` utility shares the
+quote-aware detection between both paths. Existing signatures, XML format,
+configuration and module dependencies are unchanged. This shared correction
+also applies to Column type setters; it is not a PostgreSQL-only conditional.
+Single unqualified quoted type names retain the previous normalization behavior.
+
+References: [domain catalog representation](https://www.postgresql.org/docs/11/catalog-pg-type.html)
+and [CREATE DOMAIN](https://www.postgresql.org/docs/11/sql-createdomain.html).
+
+Validation on 2026-10-09: focused common SchemaUtils/Dialect, PostgreSQL domain
+SQL/column precision, and both disposable YSQL domain tests passed. The expanded
+search_path assertion exposed unqualified base type metadata; always-qualified
+catalog names fixed it and both focused engine runs then passed. The final
+Gradle invocation selected core/all-retained-dialect `test` tasks, command and
+plugin tests, Yugabyte assemble, and both full YSQL compatibility tasks:
+BUILD SUCCESSFUL. Across this batch's initial run and final rerun, 2,703 ordinary
+cases passed and one optional external YSQL case was skipped. The final run
+reused unchanged core/plugin results as UP-TO-DATE; PostgreSQL/Yugabyte/command
+and both engine matrices executed again after the final catalog SQL change.
+Both matrices passed 46 cases each (92 real-engine cases); assemble was up to
+date. No external or production database was accessed and no generated files
+were edited manually. Historical PostgreSQL and PostgreSQL 18 real engines,
+arbitrary domain dependency graphs, interval field qualifiers and single
+unqualified quoted type-name normalization remain outside this verified scope.

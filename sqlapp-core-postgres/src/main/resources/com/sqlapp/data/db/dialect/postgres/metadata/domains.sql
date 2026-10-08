@@ -3,16 +3,14 @@ SELECT
 	, n.nspname AS domain_schema
 	, t.typname AS domain_name
 	, t.oid
-	, CASE WHEN t.typelem <> 0 AND t.typlen = -1 THEN 'ARRAY'
-	       WHEN nb.nspname = 'pg_catalog' THEN format_type(t.typbasetype, null)
-	       ELSE 'USER-DEFINED' END
-	 AS typname
+	, CASE WHEN nb.nspname = 'pg_catalog' THEN format_type(et.oid, null)
+	       ELSE quote_ident(nb.nspname) || '.' || quote_ident(et.typname) END AS typname
 	, t.typnotnull
 	, t.typndims
 	, t.typdefault
 	, obj_description(t.oid, 'pg_type') AS remarks
 	,CASE
-	 WHEN t.typbasetype IN (1042, 1043) /*CHAR,VARCHAR*/
+	 WHEN et.oid IN (1042, 1043) /*CHAR,VARCHAR*/
 	 THEN
 	   CASE t.typtypmod
 	   WHEN -1
@@ -20,35 +18,35 @@ SELECT
 	   ELSE
 	     t.typtypmod -4
 	   END
-	 WHEN t.typbasetype IN (1560, 1562) /*BIT,VARBIT*/
+	 WHEN et.oid IN (1560, 1562) /*BIT,VARBIT*/
 	 THEN t.typtypmod
 	 ELSE null
 	 end AS max_length
-	,CASE t.typbasetype
+	,CASE et.oid
 	      WHEN 1700 THEN
 	           CASE WHEN t.typtypmod = -1 THEN null
 	                ELSE (t.typtypmod>>16) &65535
 	           END
 	      ELSE null
 	 end AS numeric_precision
-	,CASE t.typbasetype
+	,CASE et.oid
 	      WHEN 1700 THEN
 	           CASE WHEN t.typtypmod = -1 THEN null
 	                ELSE (t.typtypmod-4) &65535
 	           END
 	      ELSE null
 	 end AS numeric_scale
-	,CASE WHEN t.typbasetype IN (1082) /*date*/
+	,CASE WHEN et.oid IN (1082) /*date*/
 	      THEN 0
-	      WHEN t.typbasetype IN (1083, 1114, 1184, 1266) /*time, timestamp, timetz, timestamptz*/
+	      WHEN et.oid IN (1083, 1114, 1184, 1266) /*time, timestamp, timetz, timestamptz*/
 	      THEN CASE WHEN t.typtypmod < 0 THEN 6 ELSE t.typtypmod END
 	      ELSE null
 	 end AS datetime_scale
-	,CASE WHEN t.typbasetype IN (1186) /*interval*/
+	,CASE WHEN et.oid IN (1186) /*interval*/
 	      then CASE WHEN ((t.typtypmod)&65535)=65535 THEN null ELSE (t.typtypmod)&65535 end
 	      ELSE null
 	 end AS interval_scale
-	,CASE WHEN t.typbasetype IN (1186) THEN /*interval*/
+	,CASE WHEN et.oid IN (1186) THEN /*interval*/
 	      CASE ((t.typtypmod)>>16)
 		      WHEN 32767 THEN 'interval'
 		      WHEN 4 THEN 'interval year'
@@ -77,8 +75,10 @@ INNER JOIN pg_catalog.pg_namespace n
  ON (t.typnamespace = n.oid)
 INNER JOIN pg_catalog.pg_type bt
  ON (t.typbasetype = bt.oid)
+INNER JOIN pg_catalog.pg_type et
+ ON (et.oid = CASE WHEN t.typndims > 0 THEN bt.typelem ELSE bt.oid END)
 INNER JOIN pg_catalog.pg_namespace nb
- ON (bt.typnamespace = nb.oid)
+ ON (et.typnamespace = nb.oid)
 LEFT OUTER JOIN pg_catalog.pg_constraint con
  ON (n.oid = con.connamespace AND t.oid = con.contypid)
 WHERE 1=1

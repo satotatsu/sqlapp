@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.ltrim;
 import static com.sqlapp.util.CommonUtils.notEmpty;
 
 import java.sql.Connection;
@@ -82,9 +81,6 @@ public class PostgresDomainReader extends DomainReader {
 		String productDataType = getString(rs, "typname");
 		int arrayDimension = rs.getInt("typndims");
 		String intervalTypeName = getString(rs, "interval_type_name");
-		if (arrayDimension > 0) {
-			productDataType = ltrim(productDataType, '_');
-		}
 		productDataType = notEmpty(intervalTypeName, productDataType);
 		Long maxLength = getLong(rs, "max_length");
 		Long numericPrecision = getLong(rs, "numeric_precision");
@@ -93,8 +89,8 @@ public class PostgresDomainReader extends DomainReader {
 		Integer intervalScale = getInt(rs, "interval_scale");
 		Domain obj = new Domain(getString(rs, "domain_name"));
 		obj.setNullable(!rs.getBoolean("typnotnull"));
-		getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision),
-				CommonUtils.notZero(numericScale, datetimeScale, intervalScale), obj);
+		getDialect().setDbType(productDataType,
+				PostgresUtils.typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale), numericScale, obj);
 		obj.setId(getString(rs, "oid"));
 		// obj.setCatalogName(getString(rs, "domain_catalog"));
 		obj.setSchemaName(getString(rs, "domain_schema"));

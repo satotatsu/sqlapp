@@ -1263,6 +1263,9 @@ public class SchemaUtils {
 	 * @return 正規化した後の値
 	 */
 	public static String normalizeDataType(String value) {
+		if (isQuotedQualifiedTypeName(value)) {
+			return trim(value);
+		}
 		value = trim(value).replaceAll("\s+", " ");
 		final StringBuilder builder = new StringBuilder(value.length());
 		char c;
@@ -1318,6 +1321,29 @@ public class SchemaUtils {
 			}
 		}
 		return builder.toString();
+	}
+
+	/** Returns whether a type name contains quoted identifiers and an unquoted qualification dot. */
+	public static boolean isQuotedQualifiedTypeName(String value) {
+		if (value == null) return false;
+		boolean identifier = false;
+		boolean literal = false;
+		boolean quoted = false;
+		boolean qualified = false;
+		for (int i = 0; i < value.length(); i++) {
+			char current = value.charAt(i);
+			if (current == '\'' && !identifier) {
+				if (literal && i + 1 < value.length() && value.charAt(i + 1) == '\'') { i++; continue; }
+				literal = !literal;
+			} else if (current == '"' && !literal) {
+				if (identifier && i + 1 < value.length() && value.charAt(i + 1) == '"') { i++; continue; }
+				identifier = !identifier;
+				quoted = true;
+			} else if (current == '.' && !identifier && !literal) {
+				qualified = true;
+			}
+		}
+		return quoted && qualified;
 	}
 
 	/**

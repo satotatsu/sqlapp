@@ -32,7 +32,12 @@ public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<Pos
 			}
 			builder._add(")");
 		} else {
-			builder.typeDefinition(obj.getDataType(), obj.getDataTypeName(), obj.getLength(), obj.getScale());
+			if (obj.getDataType() == DataType.OTHER && !isEmpty(obj.getDataTypeName())) {
+				// Catalog format_type preserves qualified, quoted user-defined type names.
+				builder._add(obj.getDataTypeName());
+			} else {
+				builder.typeDefinition(obj.getDataType(), obj.getDataTypeName(), obj.getLength(), obj.getScale());
+			}
 			if (obj.getArrayDimension() > 0) builder._add("[]".repeat(obj.getArrayDimension()));
 			if (!isEmpty(obj.getDefaultValue())) builder.space()._add("DEFAULT ")._add(obj.getDefaultValue());
 			if (obj.isNotNull()) builder.space()._add("NOT NULL");
