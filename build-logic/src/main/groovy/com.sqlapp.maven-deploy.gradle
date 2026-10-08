@@ -11,8 +11,13 @@ plugins {
 
 publishing {
 	publications {
-		mavenJava(MavenPublication) {
-			from components.java
+		// Gradle plugins use the pluginMaven publication created by java-gradle-plugin.
+		if (!pluginManager.hasPlugin('java-gradle-plugin')) {
+			mavenJava(MavenPublication) {
+				from components.java
+			}
+		}
+		withType(MavenPublication).configureEach {
 			pom {
 				name = project.name
 				url = project.url
@@ -45,6 +50,6 @@ publishing {
 
 signing {
 	required = true
-	sign publishing.publications.mavenJava
+	sign publishing.publications
 }
 

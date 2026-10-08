@@ -1,0 +1,109 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.sqlapp",
+    "module": "sqlapp-core-symfoware",
+    "version": "0.80.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "sqlapp-core-symfoware-0.80.0.jar",
+          "url": "sqlapp-core-symfoware-0.80.0.jar",
+          "size": 12572,
+          "sha512": "9b8e8a7f46fee34883986536bbf188d8bc50843d1ab26de12a8d67904cf60d3d01be80d4ef4905dae7b7b8f1bb87ef38daa2ed80711973986297911c995570c7",
+          "sha256": "e6d2f1ad84c130847881cf0e7ac5515f517a5a045889607d37663d52cbed5913",
+          "sha1": "ddf3a1d328e93b3901e3ad555baeb4c901b3898a",
+          "md5": "664491419217c39a9de9838d607d6e45"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "com.sqlapp",
+          "module": "sqlapp-core",
+          "version": {
+            "requires": "0.80.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "sqlapp-core-symfoware-0.80.0.jar",
+          "url": "sqlapp-core-symfoware-0.80.0.jar",
+          "size": 12572,
+          "sha512": "9b8e8a7f46fee34883986536bbf188d8bc50843d1ab26de12a8d67904cf60d3d01be80d4ef4905dae7b7b8f1bb87ef38daa2ed80711973986297911c995570c7",
+          "sha256": "e6d2f1ad84c130847881cf0e7ac5515f517a5a045889607d37663d52cbed5913",
+          "sha1": "ddf3a1d328e93b3901e3ad555baeb4c901b3898a",
+          "md5": "664491419217c39a9de9838d607d6e45"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "sqlapp-core-symfoware-0.80.0-javadoc.jar",
+          "url": "sqlapp-core-symfoware-0.80.0-javadoc.jar",
+          "size": 92419,
+          "sha512": "86e819b70dacf5cbc30457da1c89096d6b0cd5a4ff87dfad90c75886dfbef2d2e1a7d913424af05faa88e0278ff1ca902503dd0e778bb2d080a9af09761ffa89",
+          "sha256": "008084040bc0d3a38e0e4535e970bfc05bdca1b9c0f125c72286a206758eee99",
+          "sha1": "188320afda08804d6944effc142918a00c153905",
+          "md5": "5d90ac58c6dc18310c60382c70f63f2c"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "sqlapp-core-symfoware-0.80.0-sources.jar",
+          "url": "sqlapp-core-symfoware-0.80.0-sources.jar",
+          "size": 9936,
+          "sha512": "320b3688fb5799c88f3e75e4400f0533186dcd1a7cd1e27b37223df31307bc68eecd943eb52ad2f7b511b55e2c2b85a0d70dd32f1dd2da07b1143f9c17fd1897",
+          "sha256": "58425e8543cf1a1cad57f09f2b2253f6e909a31e9c9db1d46ad398b2ba834a73",
+          "sha1": "40b3896a0f4f0856c84d9e46def7522acb5dbb95",
+          "md5": "40393e0387204aed54c26764e2a14fbe"
+        }
+      ]
+    }
+  ]
+}

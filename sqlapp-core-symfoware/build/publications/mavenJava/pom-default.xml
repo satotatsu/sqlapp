@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <!-- This module was also published with a richer model, Gradle metadata,  -->
+  <!-- which should be used instead. Do not delete the following line which  -->
+  <!-- is to indicate to Gradle or any Gradle module metadata file consumer  -->
+  <!-- that they should prefer consuming it instead. -->
+  <!-- do_not_remove: published-with-gradle-metadata -->
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.sqlapp</groupId>
+  <artifactId>sqlapp-core-symfoware</artifactId>
+  <version>0.80.0</version>
+  <name>sqlapp-core-symfoware</name>
+  <description>sqlapp core Symfoware dialect.</description>
+  <url>https://github.com/satotatsu/sqlapp</url>
+  <inceptionYear>2007-2026</inceptionYear>
+  <licenses>
+    <license>
+      <name>The GNU Lesser General Public License, version 3.0 (LGPL-3.0)</name>
+      <url>https://opensource.org/licenses/LGPL-3.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>satot</id>
+      <name>Tatsuo Satoh</name>
+      <email>multisqllib@gmail.com</email>
+      <url></url>
+    </developer>
+  </developers>
+  <scm>
+    <connection>https://github.com/satotatsu/sqlapp.git</connection>
+    <developerConnection>https://github.com/satotatsu/sqlapp.git</developerConnection>
+    <url>https://github.com/satotatsu/sqlapp</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>com.sqlapp</groupId>
+      <artifactId>sqlapp-core</artifactId>
+      <version>0.80.0</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>

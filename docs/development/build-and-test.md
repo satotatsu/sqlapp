@@ -49,6 +49,22 @@ committed.
 
 Start with the smallest test scope that proves the change.
 
+For publication changes, generate POMs locally and check their Central metadata
+and plugin marker dependency without uploading or requiring signing credentials:
+
+```shell
+./gradlew :sqlapp-gradle-plugin:generatePomFileForPluginMavenPublication :sqlapp-gradle-plugin:generatePomFileForSqlappPluginPluginMarkerMavenPublication :sqlapp-core:generatePomFileForMavenJavaPublication
+python -m unittest discover -s docs/development -p test_publication_poms.py
+./gradlew :sqlapp-gradle-plugin:publishAllPublicationsToNmcpRepository --dry-run
+```
+
+The plugin must publish only `pluginMaven` and `sqlappPluginPluginMarkerMaven`,
+with signing tasks for both. Libraries retain `mavenJava`. The shared convention
+applies Central POM metadata and signing to every publication. Apply
+`java-gradle-plugin` before `com.sqlapp.maven-deploy` so the convention selects
+the plugin publication instead of creating a duplicate library publication.
+The Python checks read generated files, so always regenerate POMs first.
+
 Run one test class:
 
 ```shell

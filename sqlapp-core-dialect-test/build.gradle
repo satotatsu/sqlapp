@@ -89,10 +89,8 @@ dependencies {
 	implementation project(':sqlapp-command')
 	implementation project(':sqlapp-core-test')
 	implementation project(':sqlapp-core-db2')
-	implementation project(':sqlapp-core-derby')
 	implementation project(':sqlapp-core-firebird')
 	implementation project(':sqlapp-core-h2')
-	implementation project(':sqlapp-core-hirdb')
 	implementation project(':sqlapp-core-hsql')
 	implementation project(':sqlapp-core-informix')
 	implementation project(':sqlapp-core-mariadb')
@@ -105,11 +103,8 @@ dependencies {
 	implementation project(':sqlapp-core-sqlite')
 	implementation project(':sqlapp-core-sqlserver')
 	implementation project(':sqlapp-core-sybase')
-	implementation project(':sqlapp-core-symfoware')
 	implementation project(':sqlapp-core-virtica')
 	implementation fileTree(dir: 'lib', include: '*.jar')
-	//derby
-	testImplementation('org.apache.derby:derby:10.17.1.0')
 	//hsql
 	testImplementation('org.hsqldb:hsqldb:2.7.4')
 	//firebird

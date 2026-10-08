@@ -184,10 +184,8 @@ recommended.
 | Database family | Artifact | Current bundled JDBC implementation dependency |
 |---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | None |
-| Apache Derby | `sqlapp-core-derby` | None |
 | Firebird | `sqlapp-core-firebird` | Jaybird |
 | H2 | `sqlapp-core-h2` | None |
-| HiRDB | `sqlapp-core-hirdb` | None |
 | HSQLDB | `sqlapp-core-hsql` | HSQLDB JDBC driver |
 | Informix | `sqlapp-core-informix` | None |
 | Microsoft Access / MDB | `sqlapp-core-mdb` | UCanAccess |
@@ -201,7 +199,7 @@ recommended.
 | SQLite | `sqlapp-core-sqlite` | Xerial SQLite JDBC |
 | Microsoft SQL Server | `sqlapp-core-sqlserver` | Microsoft JDBC driver; currently a preview driver coordinate |
 | Sybase ASE | `sqlapp-core-sybase` | None |
-| Symfoware | `sqlapp-core-symfoware` | None |
+| Symfoware Server (Postgres) | `sqlapp-core-postgres` | PostgreSQL JDBC identification; vendor behavior unverified |
 | Vertica | `sqlapp-core-virtica` | Vertica JDBC driver |
 
 The Vertica artifact ID is currently spelled `sqlapp-core-virtica`; use that

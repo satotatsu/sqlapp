@@ -1,6 +1,7 @@
 plugins {
-	id ('com.sqlapp.maven-deploy')
+	// Apply first so the publishing convention uses pluginMaven instead of mavenJava.
 	id 'java-gradle-plugin'
+	id ('com.sqlapp.maven-deploy')
 	id ("com.gradle.plugin-publish") version "2.1.1"
 }
 
@@ -79,7 +80,7 @@ gradlePlugin {
 			id = 'com.sqlapp.db'
 			implementationClass = "com.sqlapp.gradle.plugins.DbPlugin"
 			displayName = "Sqlapp Gradle Plugin"
-			description = "${description}"
+			description = project.description
 			tags.set(['DB', 'ER diagram', 'schema', 'migration', 'diff', 'Test data generation'])
 		}
 	}

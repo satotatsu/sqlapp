@@ -245,9 +245,9 @@ note explicitly states otherwise.
 | `sqlapp-graphviz` | Legacy Graphviz-based ER diagram rendering |
 | `sqlapp-core-test` | Shared test support; not required at application runtime |
 
-The repository currently contains dialect modules for DB2, Derby, Firebird,
-H2, HiRDB, HSQLDB, Informix, Access/MDB, MariaDB, MySQL, Oracle, Phoenix,
-PostgreSQL, SAP HANA, Cloud Spanner, SQLite, SQL Server, Sybase ASE, Symfoware,
+The repository currently contains dialect modules for DB2, Firebird,
+H2, HSQLDB, Informix, Access/MDB, MariaDB, MySQL, Oracle, Phoenix,
+PostgreSQL, SAP HANA, Cloud Spanner, SQLite, SQL Server, Sybase ASE,
 and Vertica. Module presence does not by itself guarantee every feature on
 every server version; check the relevant dialect documentation and release
 notes before production use.

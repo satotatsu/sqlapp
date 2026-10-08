@@ -44,10 +44,8 @@ release checklist must record which integration suites were actually run.
 | Database family | Artifact | Version-aware implementation in source | Current real-engine evidence | Current confidence boundary |
 |---|---|---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | 9.5, 9.7, 9.8, 10.1, 10.5, 11.1, 11.5, 12.1.0, 12.1.2, 12.1.5 | Db2 Community 11.5.8.0 and 12.1.5.0 test images | Older resolver branches are retained but are not all represented by current container runs. |
-| Apache Derby | `sqlapp-core-derby` | Generic Derby resolver | Module tests with Derby 10.17.1.0 dependency | No current container matrix or published minimum server version. |
 | Firebird | `sqlapp-core-firebird` | 2.0, 2.5, 3.0, 5.0 | Firebird 3.0 and 5.0 test images | Firebird 2.x compatibility is code-level/module coverage in the current suite. |
 | H2 | `sqlapp-core-h2` | Pre-2.x and 2.x split | Module-level H2 tests | The 1.x reader is preserved; current real-engine version evidence is not recorded here. |
-| HiRDB | `sqlapp-core-hirdb` | Generic HiRDB resolver | Environment-dependent | Requires a licensed target environment and driver for release verification. |
 | HSQLDB | `sqlapp-core-hsql` | 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.3.4, 2.4.0 | Module/in-process tests; JDBC dependency 2.7.4 | Version branches older than the current driver remain compatibility code. |
 | Informix | `sqlapp-core-informix` | Generic Informix resolver | Informix Developer Database 14.10.FC9W1DE image | Older server-version boundaries are not expressed as separate dialect classes. |
 | Microsoft Access / MDB | `sqlapp-core-mdb` | Generic Access/MDB resolver through UCanAccess | Access 2010 database creation and metadata tests are documented | Japanese index collation in the supplied sample is read-only with the current Jackcess path. |
@@ -61,7 +59,6 @@ release checklist must record which integration suites were actually run.
 | SQLite | `sqlapp-core-sqlite` | Generic SQLite resolver | File/in-process tests with Xerial SQLite JDBC | No server version applies; behavior also depends on the bundled/native SQLite version in the selected driver. |
 | Microsoft SQL Server | `sqlapp-core-sqlserver` | 2000, 2005, 2008/R2, 2012, 2014, 2016/SP1, 2017, 2019, 2022 | SQL Server 2017, 2019, 2022, and 2025 test images | SQL Server 2025 currently resolves through the latest compatible implemented dialect unless a newer boundary is added. |
 | Sybase ASE | `sqlapp-core-sybase` | Generic Sybase resolver | SAP ASE 16 image | Generated-key propagation for IDENTITY is intentionally rejected on the tested jTDS batch path. |
-| Symfoware | `sqlapp-core-symfoware` | Generic Symfoware resolver | Environment-dependent | Requires a licensed target environment and driver for release verification. |
 | Vertica | `sqlapp-core-virtica` | 7.2, 8.0, 9.0, 11.1.1, 12.0.4 | Vertica CE 25.1.0-0 image | Modern servers use the latest compatible dialect; projection, segmentation, KSAFE, flex-table, and external-table work remains deferred. |
 
 The artifact name `sqlapp-core-virtica` retains its historical spelling.
@@ -73,7 +70,6 @@ are not a declaration that applications must use exactly these versions.
 
 | Database | JDBC dependency used by current build/test configuration |
 |---|---|
-| Derby | `org.apache.derby:derby:10.17.1.0` |
 | Firebird | Jaybird `6.0.5` in dialect integration tests; dialect artifact currently uses `5.0.6.java11` |
 | HSQLDB | `org.hsqldb:hsqldb:2.7.4` |
 | Informix | `com.ibm.informix:jdbc:15.0.1.2` |
@@ -123,3 +119,33 @@ For each published release:
 Production users should validate metadata export and generated DDL against a
 non-production instance matching the exact server and JDBC driver versions
 used in production.
+
+## Symfoware transition
+
+The legacy `sqlapp-core-symfoware` artifact and public Java packages have been
+removed. Native-interface databases are no longer supported. This is a breaking
+change for consumers of the old artifact or classes.
+
+Symfoware Server (Postgres) uses `sqlapp-core-postgres` through a compatible JDBC
+connection reporting `PostgreSQL` and the actual PostgreSQL engine major/minor
+version in `DatabaseMetaData`. It reuses PostgreSQL resolution, metadata readers
+and SQL factories. Do not substitute the Symfoware product release (V12.x, etc.)
+for the PostgreSQL engine version. Bare `Symfoware` is not a PostgreSQL alias,
+because it cannot safely distinguish Native and Postgres interfaces.
+
+Vendor driver identification, extensions, permissions, schema recreatability and
+migration operations remain unverified against Symfoware. No real Symfoware
+server was used for this transition. Verify the target server/driver combination
+before use; PostgreSQL unit tests do not establish vendor compatibility.
+
+## Removed Derby and HiRDB dialects
+
+`sqlapp-core-derby` and `sqlapp-core-hirdb`, including their public Java packages,
+are no longer built or published. This is a breaking change for applications
+using those artifacts or classes. Derby and HiRDB are no longer supported
+sources or targets, including migration sources. Use an earlier sqlapp release
+if the removed dialects are required.
+
+The general resolver fallback for unknown products is unchanged. Receiving a
+generic dialect does not establish support for a removed database. Do not use
+that fallback to generate or execute database-specific migration SQL.

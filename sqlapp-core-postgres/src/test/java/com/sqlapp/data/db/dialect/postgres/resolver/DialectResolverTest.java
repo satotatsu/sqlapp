@@ -22,6 +22,8 @@ package com.sqlapp.data.db.dialect.postgres.resolver;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ServiceLoader;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +67,17 @@ public class DialectResolverTest {
 		dialect = DialectResolver.getInstance().getDialect("Postgres", 18, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Postgres180);
+	}
+
+	@Test
+	public void testPostgresCompatibleEngineIdentity() {
+		// Symfoware (Postgres) must report the PostgreSQL engine identity/version.
+		for (int major = 12; major <= 18; major++) {
+			assertEquals(PostgresDialectResolver.getInstance().getDialect(major, 1, null).getClass(),
+					DialectResolver.getInstance().getDialect("PostgreSQL", major, 1, null).getClass());
+		}
+		assertNull(PostgresDialectResolver.getInstance().getDialect("Symfoware", 12, 0, null));
+		assertNull(PostgresDialectResolver.getInstance().getDialect("Symfoware Server (Native)", 12, 0, null));
 	}
 
 	@Test

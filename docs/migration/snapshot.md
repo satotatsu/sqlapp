@@ -135,16 +135,13 @@ join a caller-owned transaction.
 Set-based providers are available for H2, HSQLDB, PostgreSQL, DB2, MySQL and
 MariaDB, SQLite, SQL Server, SAP HANA, Oracle 18c and later, Vertica, SAP ASE,
 and Informix. The Oracle provider uses a private temporary table, so older
-Oracle versions use the streaming fallback. Firebird, Derby, Cloud Spanner,
-Phoenix, HiRDB, Symfoware, and Access intentionally use the fallback:
+Oracle versions use the streaming fallback. Firebird, Cloud Spanner,
+Phoenix and Access intentionally use the fallback:
 
 - Firebird global temporary table definitions are persistent catalog objects,
   not safely generated per execution.
-- Derby cannot derive a declared global temporary table with `AS SELECT` or
-  `LIKE`, and declared temporary tables support only a restricted type set.
 - Cloud Spanner and Phoenix do not provide the connection-local temporary-table
   semantics required by the shared executor.
-- HiRDB and Symfoware are outside this enhancement scope.
 - Access/UCanAccess does not offer a suitable native set-based temporary-table
   path; its portable JDBC fallback remains the supported route.
 

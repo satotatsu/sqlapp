@@ -3,10 +3,8 @@ gradlew :sqlapp-core-test:publish -x test
 gradlew :sqlapp-command:publish -x test
 gradlew :sqlapp-gradle-plugin:publish -x test
 gradlew :sqlapp-core-db2:publish -x test
-gradlew :sqlapp-core-derby:publish -x test
 gradlew :sqlapp-core-firebird:publish -x test
 gradlew :sqlapp-core-h2:publish -x test
-gradlew :sqlapp-core-hirdb:publish -x test
 gradlew :sqlapp-core-hsql:publish -x test
 gradlew :sqlapp-core-informix:publish -x test
 gradlew :sqlapp-core-mdb:publish -x test
@@ -19,7 +17,6 @@ gradlew :sqlapp-core-spanner:publish -x test
 gradlew :sqlapp-core-sqlite:publish -x test
 gradlew :sqlapp-core-sqlserver:publish -x test
 gradlew :sqlapp-core-sybase:publish -x test
-gradlew :sqlapp-core-symfoware:publish -x test
 gradlew :sqlapp-core-virtica:publish -x test
 gradlew :sqlapp-core-phoenix:publish -x test
 gradlew :sqlapp-graphviz:publish -x test
