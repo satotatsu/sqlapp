@@ -419,9 +419,9 @@ comments. COMMENT ON CONSTRAINT leaves the constraint name unqualified and
 qualifies its owning table. Constant CHECK expressions without column references
 are retained. Foreign keys are grouped by schema, owning table and constraint
 name so equal names on different tables do not merge. FK key positions are
-preserved. PostgreSQL 8.4+ PK/UNIQUE metadata follows conkey positions rather
-than physical column order; pre-8.4 keeps its prior query without introducing
-generate_subscripts.
+preserved. PK/UNIQUE metadata follows conkey positions rather than physical
+column order. PostgreSQL 8.4+ uses generate_subscripts; older branches now use
+the generate_series fallback described below.
 
 The YSQL 11/15 matrix recreates a quoted composite type containing numeric
 precision/scale, two-dimensional text arrays, enum/domain references and enum arrays, with an
@@ -455,8 +455,8 @@ module dependencies are unchanged.
 
 This change concerns foreign keys. YugabyteDB does not support deferrable
 primary-key or UNIQUE constraints; no support for those is implied. View
-security/check options and NOT VALID constraint preservation remain separate
-follow-up work.
+security/check options are covered below; NOT VALID constraint preservation
+is covered below.
 
 The integration case reads a full Schema containing the referenced parent,
 recreates both initial modes, and checks child-before-parent insertion,
@@ -520,3 +520,179 @@ unit test first needed API/type corrections to compile, then reproduced the
 ownership failure before the implementation fix; all final checks passed.
 No external or production database was accessed, and no generated output
 was intentionally edited.
+
+
+## View check and security options
+
+PostgreSQL view metadata now retains security_barrier, check_option and
+security_invoker from pg_class.reloptions in the existing Schema Specifics map.
+Views read from the database need no additional configuration to preserve
+these settings when regenerated. PostgreSQL 9.2+ reads reloptions; the older
+query keeps a typed NULL placeholder without referencing that catalog column.
+Version-specific factories enable security_barrier from 9.2, check_option
+from 9.4 and security_invoker from 15. Yugabyte YSQL 11/15 inherits the matching
+PostgreSQL factory, with no vendor checks in shared code.
+
+The ordinary statement-only CREATE VIEW path is unchanged when no supported
+options are specified. Advanced callers can use the additive constants
+PostgresCreateViewFactory.SECURITY_BARRIER, CHECK_OPTION and SECURITY_INVOKER
+as Specifics keys. Boolean values accept true/false, ignoring case and outer
+whitespace; check_option accepts local/cascaded. Invalid values and a known
+option configured for an unsupported target version throw an actionable
+IllegalArgumentException. Security semantics are not silently discarded.
+Complete definition DDL remains authoritative; separately modeled options are
+not appended to it. Public XML formats and dependencies are unchanged.
+
+The local YSQL matrix reads, drops and recreates nested updatable views with
+security_barrier=true and both CHECK OPTION modes, compares re-read options,
+and verifies rejected writes with SQLSTATE 44000. A separate case creates a
+NOLOGIN test role and verifies the recreated security_invoker view on YSQL 15
+rejects access without base-table privileges (42501), then permits it after a
+SELECT grant. YSQL 11 retains ordinary owner-based access. Roles and schemas
+are unique disposable test fixtures and are removed afterward. These cases
+do not migrate roles or GRANTs, or establish RLS-policy and non-leakproof
+predicate evaluation guarantees. NOT VALID constraint preservation is covered
+below. See the [PostgreSQL CREATE VIEW reference](https://www.postgresql.org/docs/15/sql-createview.html)
+for the options and permission semantics.
+
+Validation on 2026-10-08: focused view/query unit tests passed 5/5 and both
+new integration cases passed on each YSQL engine. The complete run of
+:sqlapp-core-postgres:test, :sqlapp-core-yugabyte:test, :sqlapp-command:test and
+:sqlapp-gradle-plugin:test passed 842 tests and skipped one optional external
+YSQL test. Both yugabyte11CompatibilityTest and yugabyte15CompatibilityTest
+passed all 36 cases (72 total); :sqlapp-core-yugabyte:assemble passed.
+The initial unit run had one test assertion comparing the definition list
+rather than its generated SQL text; that assertion was corrected and the
+final suite passed. No external or production database was accessed and no
+generated output was intentionally edited.
+
+
+## NOT VALID CHECK and foreign-key constraints
+
+The existing metadata readers now retain a terminal NOT VALID clause from
+pg_get_constraintdef in Constraint Specifics, using the additive public key
+PostgresConstraintOptions.NOT_VALID ("notValid"). A CHECK expression containing
+the text 'NOT VALID' is not treated as an unvalidated constraint. No new catalog
+columns are required. Read models preserve this state automatically.
+
+PostgreSQL 9.1+ foreign-key and 9.2+ CHECK factories support the flag; the
+PostgreSQL 18 factory variants retain their existing enforcement behavior.
+For advanced authored models, true requests NOT VALID and false retains the
+ordinary default. Invalid boolean values and unsupported target versions fail
+clearly instead of silently changing validation semantics. Existing APIs and
+XML formats remain compatible; constants and version-specific factories are
+additive and no dependencies changed.
+
+NOT VALID is an ALTER TABLE ADD CONSTRAINT option. CREATE TABLE generation
+therefore omits marked CHECK/FK constraints from its inline list, then composes
+the registered constraint factories to emit separate ALTER TABLE operations.
+Constraint comments follow those operations. The Schema model is not mutated,
+and ordinary constraints keep their previous generation path. The operation
+list for a table with unvalidated constraints is intentionally longer.
+
+Local YSQL 11/15 verification starts with a row violating both constraints,
+reads the state through standalone TableReader, drops and regenerates both
+constraints without scanning away the old violation, and confirms new invalid
+writes still fail with 23514/23503. VALIDATE CONSTRAINT fails on the old row,
+then succeeds after that row is repaired; re-reading no longer marks the
+constraints NOT VALID. Recreating the empty table from the original model
+preserves unvalidated state and Unicode/apostrophe constraint comments, while
+still rejecting new violations. NOT VALID does not permit loading invalid
+rows into a newly constrained table; migration of legacy violating data needs
+a separate data/constraint execution plan. No automatic validation, constraint
+disabling or data repair is performed by SQL generation.
+
+Domain and partition-specific validation rules, concurrent validation locking,
+and PostgreSQL 18 combined NOT ENFORCED/NOT VALID execution are not verified
+on real engines by this batch. The PostgreSQL 18 factories have unit coverage;
+the real-engine scope is the two YSQL baselines. See the
+[PostgreSQL ALTER TABLE reference](https://www.postgresql.org/docs/18/sql-altertable.html)
+for validation semantics, and the [9.2 release notes](https://www.postgresql.org/docs/9.2/release-9-2.html)
+for the CHECK support boundary.
+
+Validation on 2026-10-08: focused NOT VALID and constraint-metadata unit tests
+passed 7/7, and the focused integration case passed on each local YSQL engine.
+The final Gradle run executed :sqlapp-core-postgres:test,
+:sqlapp-core-yugabyte:test and :sqlapp-command:test: 764 passed, one optional
+external YSQL test skipped. :sqlapp-gradle-plugin:test reused its 81 passing
+results. Both yugabyte11CompatibilityTest and yugabyte15CompatibilityTest
+passed all 37 cases (74 total); :sqlapp-core-yugabyte:assemble was up to date.
+The first integration-test insertion script failed before creating the test,
+so its first invocation found no matching test; the insertion was corrected
+and the focused and final runs passed. No external/production database was
+accessed and no generated output was intentionally edited.
+
+
+## Foreign-key actions and historical constraint queries
+
+PostgreSQL 18 used a separate FK factory that emitted the Schema enum None as
+NONE in ON DELETE/ON UPDATE clauses. The ordinary PostgreSQL factory already
+translated that enum to NO ACTION. Both factories now compose the same
+PostgreSQL-local action renderer, preserving CASCADE, RESTRICT, SET NULL and
+SET DEFAULT and emitting valid NO ACTION. No public API, XML format or module
+dependency changes. The catalog-query spelling RISTRICT is also corrected to
+RESTRICT; the existing permissive enum parser already recognized the former
+r-prefixed spelling, so that typo alone did not lose the modeled action.
+
+The FK query unconditionally used generate_subscripts (introduced in 8.4),
+and both FK and 8.4+ unique-key queries referenced preceding FROM items from
+a table function, which requires 9.3's implicit LATERAL behavior. Both queries
+now expand conkey in a derived SELECT list instead. Version 8.4+ uses
+generate_subscripts; older branches use generate_series with array_lower and
+array_upper. Both preserve conkey order, and FK columns are paired with the
+same position in confkey. The old PK/UNIQUE pg_depend ordering is removed in
+favor of ordinal key order even before 8.4. The derived query explicitly
+projects source.oid AS constraint_oid, because OID is a system column before
+PostgreSQL 12 and is absent from SELECT *. Namespace OIDs keep their normal
+catalog references. No version-specific column or LATERAL dependency is added
+to older branches.
+
+Unit tests cover historical query selection from the resolver's 8.x default
+through current branches, including the 8.4 function boundary, and all five
+referential actions through PostgreSQL 18. Local YSQL 11/15 cases recreate and
+exercise every ON UPDATE/ON DELETE action, including NULL/default target values
+and 23503 rejection. Parent deletion with RESTRICT rejects immediately even
+when the FK is declared deferred; NO ACTION allows deleting the parent before
+the child within one transaction and committing after both deletions.
+
+A separate local case forces 8.3, 8.4, 9.2 and 15 query selection against each
+current YSQL catalog and verifies reversed composite PK, UNIQUE and FK column
+order. This establishes query execution and key-pairing semantics on those two
+engines, not real execution against historical PostgreSQL servers; legacy
+server compatibility still needs its own engine matrix. PostgreSQL 18 action
+rendering has unit coverage in this batch, not new PostgreSQL 18 real-engine
+verification. Primary version references: [PostgreSQL 8.4 release notes](https://www.postgresql.org/docs/9.2/release-8-4.html)
+and [PostgreSQL 9.3 release notes](https://www.postgresql.org/docs/9.3/release-9-3.html).
+
+
+Validation on 2026-10-08: the full PostgreSQL/YSQL/command regression executed
+and passed 766 cases, with one optional external YSQL test skipped. Gradle
+reused the plugin result (81 passing cases); Yugabyte assemble was up to date.
+Both local compatibility tasks passed all 39 cases each (78 real-engine cases).
+Initial focused failures exposed the missing pre-12 system OID projection, an
+incorrect namespace alias introduced during the rewrite, and missing options
+in the direct-reader test setup; all were corrected before the successful
+focused and complete runs. No external or production database was accessed,
+and no generated files were manually changed.
+
+
+## PostgreSQL 18 foreign-key MATCH generation
+
+The PostgreSQL 18-specific foreign-key factory now preserves the Schema model's
+MATCH option, as the older PostgreSQL factories already do. Previously its
+abstract base hook emitted no MATCH clause, silently changing MATCH FULL to
+the database default. Standalone ALTER TABLE and inline CREATE TABLE paths
+are covered across PostgreSQL 8, 11, 15 and 18, including an unset option.
+The change is confined to PostgreSQL 18 SQL generation; metadata readers,
+public APIs, XML and dependencies are unchanged. MATCH PARTIAL is retained
+as requested by the model, consistently with older factories; SQL rendering
+coverage does not establish database support for that option.
+
+
+Validation on 2026-10-08: the focused foreign-key factory class passed all four
+cases after correcting an ambiguous null setter call in the new test. The full
+PostgreSQL, Yugabyte, command and plugin regression completed successfully:
+PostgreSQL 220, Yugabyte four (one optional external test skipped), and command
+543 cases passed; the unchanged plugin result (81 cases) was reused. No real
+database test was rerun for this PostgreSQL 18-only generation change, and
+PostgreSQL 18 server execution remains unverified in this batch.

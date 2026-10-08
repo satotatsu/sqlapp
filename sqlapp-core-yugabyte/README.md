@@ -79,17 +79,25 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, after the standalone FK-owner correction, the full matrix
-passed all 34 tests on each image (68 real-engine tests). The core, all retained
-dialects, command and plugin regression passed 2,677 unit tests and skipped
-one optional YSQL external-database test. Every included test task executed;
-the Yugabyte assemble task was up to date. No external or production database
-was accessed.
+On 2026-10-08, after the FK action and historical-query changes, the full matrix
+passed all 39 tests on each image (78 real-engine tests). PostgreSQL/YSQL/command tests
+executed and passed 766 cases, with one optional external YSQL case skipped.
+Gradle reused the unchanged plugin result (81 passing cases); Yugabyte assemble
+was up to date. The preceding broader core/all-retained-dialect/command/plugin
+run passed 2,677 tests before the view, NOT VALID and FK action batches. No external or
+production database was accessed.
 
 The matrix asserts the actual JDBC engine major and tests both engines for:
 
 - Schema-based table, PK/FK/unique/check constraint, index, view and sequence recreation.
+- All five FK ON UPDATE/DELETE actions, deferred NO ACTION versus immediate RESTRICT.
+- Legacy and modern constraint-query execution with reversed composite key positions
+  on both current baselines; historical PostgreSQL servers themselves are unverified.
+- NOT VALID CHECK/FK state, post-CREATE constraint addition, comments, legacy violations,
+  new-write enforcement and VALIDATE before/after repair (23514/23503).
 - Standalone TableReader recreation with quoted cross-schema composite FK references.
+- View LOCAL/CASCADED CHECK OPTION and security_barrier preservation, write rejection (44000).
+- YSQL 15 security_invoker base-table permission checking (42501) and YSQL 11 owner access.
 - Deferrable FKs in both initial modes, standalone ADD CONSTRAINT, child-before-parent
   insertion and SET CONSTRAINTS checking with SQLSTATE 23503.
 - Sequence comments with Unicode/apostrophes, configuration and nextval checks.
@@ -145,8 +153,10 @@ real dropped-attribute recreation is not covered.
 Sequence metadata covers configuration, not live-position migration or ownership.
 FK recreation also covers standalone TableReader reads with quoted, cross-schema
 composite references. Referenced columns retain their parent-table owner even
-when the complete parent table is not loaded. View security/check options and NOT VALID constraint
-preservation remain unimplemented.
+when the complete parent table is not loaded. View security/check options are covered as listed above. Role/GRANT migration,
+RLS policies and predicate-leakproofness guarantees are not covered. NOT VALID
+CHECK/FK state is preserved; domain/partition-specific validation and migration
+of legacy violating rows into a newly constrained target are outside this scope.
 
 DDL transaction guarantees and isolation behavior depend on YSQL version and
 server flags. DDL recreation tests execute outside caller transactions; they do

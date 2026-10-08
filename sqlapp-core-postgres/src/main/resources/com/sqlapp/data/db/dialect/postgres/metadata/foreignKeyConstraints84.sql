@@ -42,7 +42,7 @@ SELECT DISTINCT
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
 FROM (
-  SELECT source.*, source.oid AS constraint_oid, generate_series(array_lower(source.conkey, 1), array_upper(source.conkey, 1)) AS key_position
+  SELECT source.*, source.oid AS constraint_oid, generate_subscripts(source.conkey, 1) AS key_position
   FROM pg_catalog.pg_constraint source
 ) c
 INNER JOIN pg_catalog.pg_class p

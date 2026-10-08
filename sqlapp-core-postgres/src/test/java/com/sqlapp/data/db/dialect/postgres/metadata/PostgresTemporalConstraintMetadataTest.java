@@ -52,4 +52,19 @@ class PostgresTemporalConstraintMetadataTest {
 		assertEquals("true", foreignKey.getSpecifics()
 				.get(com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateCheckConstraintFactory.NOT_ENFORCED));
 	}
+	@Test
+	void readsTerminalNotValidWithoutMatchingCheckLiterals() {
+		for (String definition : new String[] {"CHECK (id > 0) NOT VALID", "CHECK (id > 0) NOT ENFORCED NOT VALID", "CHECK (id > 0) NOT VALID NOT ENFORCED"}) {
+			var check = new CheckConstraint("positive","id > 0");
+			PostgresTemporalConstraintMetadata.apply(check,definition);
+			assertEquals("true",check.getSpecifics().get("notValid"));
+		}
+		var check = new CheckConstraint("message","label <> 'NOT VALID'");
+		PostgresTemporalConstraintMetadata.apply(check,"CHECK (label <> 'NOT VALID')");
+		assertNull(check.getSpecifics().get("notValid"));
+		var fk = new ForeignKeyConstraint("fk");
+		PostgresTemporalConstraintMetadata.apply(fk,"FOREIGN KEY (id) REFERENCES parent(id) NOT VALID");
+		assertEquals("true",fk.getSpecifics().get("notValid"));
+	}
+
 }

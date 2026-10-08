@@ -17,7 +17,7 @@ SELECT
         ELSE null 
       END AS varchar
     ) AS definition
-  , NULL::text[] AS view_options
+  , c.reloptions AS view_options
   , d.description AS remarks
 FROM pg_catalog.pg_class c 
 INNER JOIN pg_catalog.pg_namespace n

@@ -107,6 +107,12 @@ public class PostgresForeignKeyConstraintReader extends ForeignKeyConstraintRead
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 8
+						|| productVersionInfo.getMajorVersion() == 8 && productVersionInfo.getMinorVersion() != null
+								&& productVersionInfo.getMinorVersion() >= 4)) {
+			return getSqlNodeCache().getString("foreignKeyConstraints84.sql");
+		}
 		return getSqlNodeCache().getString("foreignKeyConstraints.sql");
 	}
 }

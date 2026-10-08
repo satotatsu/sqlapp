@@ -21,6 +21,9 @@ package com.sqlapp.data.db.dialect.postgres.sql;
 
 import java.util.List;
 
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.Constraint;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -44,6 +47,9 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 
 	@Override
 	protected void addOtherDefinitions(Table table, List<SqlOperation> result) {
+		for (var constraint : table.getConstraints()) {
+			if (separateNotValid(constraint)) result.addAll(getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE));
+		}
 		if (table.getRemarks() != null) {
 			PostgresSqlBuilder builder = this.createSqlBuilder();
 			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().space()
@@ -68,6 +74,21 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 					.name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
+	}
+
+	private boolean separateNotValid(Constraint constraint) {
+		if (!(constraint instanceof CheckConstraint)
+				&& !(constraint instanceof ForeignKeyConstraint)) return false;
+		if (!PostgresConstraintOptions.isNotValid(constraint)) return false;
+		if (!(getSqlFactoryRegistry().getSqlFactory(constraint, SqlType.CREATE) instanceof PostgresConstraintOptions.NotValidFactory)) {
+			throw new IllegalArgumentException("NOT VALID is unsupported for this constraint on the target PostgreSQL version.");
+		}
+		return true;
+	}
+
+	@Override
+	protected void addConstraintDefinition(Constraint constraint, PostgresSqlBuilder builder) {
+		if (!separateNotValid(constraint)) super.addConstraintDefinition(constraint, builder);
 	}
 
 }

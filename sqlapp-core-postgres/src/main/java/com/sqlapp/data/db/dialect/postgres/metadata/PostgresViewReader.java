@@ -64,10 +64,29 @@ public class PostgresViewReader extends ViewReader {
 		table.setSchemaName(getString(rs, SCHEMA_NAME));
 		table.setRemarks(comments);
 		table.setStatement(getString(rs, "definition"));
+		var array = rs.getArray("view_options");
+		if (array != null) {
+			try {
+				for (Object option : (Object[]) array.getArray()) {
+					String text = String.valueOf(option);
+					int equals = text.indexOf('=');
+					if (equals > 0) {
+						String name = text.substring(0, equals);
+						if (List.of("security_barrier", "check_option", "security_invoker").contains(name)) {
+							table.getSpecifics().put(name, text.substring(equals + 1));
+						}
+					}
+				}
+			} finally { array.free(); }
+		}
 		return table;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo.getMajorVersion() > 9
+				|| productVersionInfo.getMajorVersion() == 9 && productVersionInfo.getMinorVersion() >= 2) {
+			return getSqlNodeCache().getString("views92.sql");
+		}
 		return getSqlNodeCache().getString("views.sql");
 	}
 

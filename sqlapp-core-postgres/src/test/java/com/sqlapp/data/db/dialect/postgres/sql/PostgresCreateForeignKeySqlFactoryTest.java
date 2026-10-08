@@ -12,6 +12,30 @@ import com.sqlapp.data.schemas.Table;
 
 class PostgresCreateForeignKeySqlFactoryTest extends AbstractPostgresSqlFactoryTest {
 	@Test
+	void preservesMatchOptionsForStandaloneAndInlineForeignKeys() {
+		for (int major : new int[] {8, 11, 15, 18}) {
+			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
+					.getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
+			Table parent = new Table("parent");
+			parent.getColumns().add("id", c -> c.setDataType(DataType.INT));
+			Table child = new Table("child");
+			child.getColumns().add("id", c -> c.setDataType(DataType.INT));
+			var fk = child.getConstraints().addForeignKeyConstraint("fk",
+					child.getColumns().get("id"), parent.getColumns().get("id"));
+			for (var mode : ForeignKeyConstraint.MatchOption.values()) {
+				fk.setMatchOption(mode);
+				for (String sql : java.util.List.of(
+						registry.createSql(fk, SqlType.CREATE).get(0).getSqlText(),
+						registry.createSql(child, SqlType.CREATE).get(0).getSqlText())) {
+					assertTrue(sql.contains("MATCH " + mode.getSqlValue()), sql);
+				}
+			}
+			fk.setMatchOption((ForeignKeyConstraint.MatchOption) null);
+			assertFalse(registry.createSql(fk, SqlType.CREATE).get(0).getSqlText().contains("MATCH "));
+		}
+	}
+
+	@Test
 	void emitsNoActionAndPreservesOtherCascadeRules() {
 		Table parent = new Table("parent");
 		parent.getColumns().add("id", c -> c.setDataType(DataType.INT));
@@ -50,6 +74,27 @@ class PostgresCreateForeignKeySqlFactoryTest extends AbstractPostgresSqlFactoryT
 					} else {
 						assertTrue(sql.contains("DEFERRABLE " + mode.getSqlValue()), sql);
 					}
+				}
+			}
+		}
+	}
+
+	@Test
+	void rendersEveryReferentialActionIncludingPostgres18NoAction() {
+		for (int major : new int[] {8,11,15,18}) {
+			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
+					.getDialect("postgres",major,0,null).createSqlFactoryRegistry();
+			Table parent = new Table("parent"); parent.getColumns().add("id",c -> c.setDataType(DataType.INT));
+			Table child = new Table("child"); child.getColumns().add("id",c -> c.setDataType(DataType.INT));
+			var fk = child.getConstraints().addForeignKeyConstraint("fk",child.getColumns().get("id"),parent.getColumns().get("id"));
+			for (CascadeRule rule : CascadeRule.values()) {
+				fk.setDeleteRule(rule).setUpdateRule(rule);
+				String action = rule == CascadeRule.None ? "NO ACTION" : rule.getSqlValue();
+				for (String sql : java.util.List.of(registry.createSql(fk,SqlType.CREATE).get(0).getSqlText(),
+						registry.createSql(child,SqlType.CREATE).get(0).getSqlText())) {
+					assertTrue(sql.contains("ON DELETE " + action),sql);
+					assertTrue(sql.contains("ON UPDATE " + action),sql);
+					assertFalse(sql.contains("ON DELETE NONE"),sql);
 				}
 			}
 		}

@@ -8,7 +8,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * PostgreSQL 18 CHECK constraint enforcement state.
  */
 public class Postgres180CreateCheckConstraintFactory
-		extends AbstractCreateCheckConstraintFactory<AbstractSqlBuilder<?>> {
+		extends AbstractCreateCheckConstraintFactory<AbstractSqlBuilder<?>> implements PostgresConstraintOptions.NotValidFactory {
 	public static final String NOT_ENFORCED = "notEnforced";
 
 	@Override
@@ -16,5 +16,6 @@ public class Postgres180CreateCheckConstraintFactory
 		if (Boolean.parseBoolean(constraint.getSpecifics().get(NOT_ENFORCED))) {
 			builder.space()._add("NOT ENFORCED");
 		}
+		PostgresConstraintOptions.appendNotValid(constraint, builder, true);
 	}
 }

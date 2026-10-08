@@ -2,7 +2,7 @@ SELECT DISTINCT
   current_database() AS constraint_catalog
   , nc.nspname AS constraint_schema
   , c.conname AS constraint_name
-  , obj_description(c.oid, 'pg_constraint') AS remarks
+  , obj_description(c.constraint_oid, 'pg_constraint') AS remarks
   , current_database() AS table_catalog
   , nr.nspname AS table_schema
   , r.relname AS table_name
@@ -16,16 +16,18 @@ SELECT DISTINCT
     WHEN 'u' THEN 'UNIQUE'
     WHEN 'x' THEN 'EXCLUDE'
     END AS constraint_type
-  , pg_get_constraintdef(c.oid) as consrc --制約式
+  , pg_get_constraintdef(c.constraint_oid) as consrc --制約式
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
-  , key_position.position
-FROM pg_catalog.pg_constraint c
+  , c.key_position
+FROM (
+  SELECT source.*, source.oid AS constraint_oid, generate_subscripts(source.conkey, 1) AS key_position
+  FROM pg_catalog.pg_constraint source
+) c
 INNER JOIN pg_catalog.pg_class r
   ON (c.conrelid = r.oid)
-INNER JOIN generate_subscripts(c.conkey, 1) key_position(position) ON (TRUE)
 INNER JOIN pg_catalog.pg_attribute a
-  ON (r.oid = a.attrelid AND a.attnum = c.conkey[key_position.position])
+  ON (r.oid = a.attrelid AND a.attnum = c.conkey[c.key_position])
 INNER JOIN pg_catalog.pg_namespace nc
   ON (c.connamespace = nc.oid)
 INNER JOIN pg_catalog.pg_namespace nr
@@ -44,4 +46,4 @@ WHERE 1=1
   /*if isNotEmpty(constraintName)*/
   AND c.conname IN /*constraintName*/('%')
   /*end*/
-ORDER BY nr.nspname, r.relname, c.contype, c.conname, key_position.position
+ORDER BY nr.nspname, r.relname, c.contype, c.conname, c.key_position

@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.dialect.postgres.sql;
 
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
 
@@ -29,5 +30,12 @@ import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
  * 
  */
 public class PostgresCreateCheckConstraintFactory extends AbstractCreateCheckConstraintFactory<PostgresSqlBuilder> {
+
+	protected boolean supportsNotValid() { return false; }
+
+	@Override
+	protected void addCheckConstraintAfter(CheckConstraint constraint, PostgresSqlBuilder builder) {
+		PostgresConstraintOptions.appendNotValid(constraint, builder, supportsNotValid());
+	}
 
 }

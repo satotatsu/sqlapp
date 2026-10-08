@@ -169,14 +169,18 @@ view-column comments, same-named FKs on different tables, composite key order,
 constant CHECKs and constraint comments. YSQL 11 does not support ALTER TYPE
 DROP ATTRIBUTE; real dropped-attribute recreation is outside this matrix.
 
-The 2026-10-08 full run after the standalone FK-owner fix passed all 34 cases
-on each baseline (68 total). The standalone TableReader regression covers
-quoted cross-schema composite FKs, both CREATE TABLE and ADD CONSTRAINT,
-re-reading and orphan rejection. The deferrable-FK case covers both initial
-modes, child-before-parent insertion and SET CONSTRAINTS with SQLSTATE 23503.
-The core, all retained dialects, command and plugin regression passed 2,677
-unit tests and skipped one optional YSQL external test; all included test
-tasks executed. Yugabyte assemble was up to date. No external or production
+The 2026-10-08 full run after the FK action and historical-query changes passed
+all 39 cases on each baseline (78 total). The CHECK/FK case covers existing violations,
+standalone regeneration, new-write enforcement (23514/23503), VALIDATE failure
+before repair and success afterward, and unvalidated table recreation with
+comments. View options, permissions and standalone cross-schema FKs remain
+covered by the complete matrix. All five referential actions and forced legacy
+constraint queries also pass on both baselines; historical PostgreSQL servers
+remain unverified. PostgreSQL/YSQL/command tests executed and
+passed 766 cases, with one optional external YSQL test skipped. Gradle reused
+the unchanged plugin result (81 passing cases); Yugabyte assemble was up to
+date. The preceding broader core/all-retained-dialect/command/plugin run passed
+2,677 tests before the view, NOT VALID and FK action changes. No external or production
 database was accessed.
 Reproduce the directly affected regression and the matrix with:
 

@@ -624,6 +624,255 @@ class YugabyteMetadataReaderTest {
 
 
 	@Test
+	void preservesEveryForeignKeyReferentialAction() throws Exception {
+		String schemaName = "ysql_actions_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader(); reader.setSchemaName(schemaName);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				int index = 0;
+				for (var rule : com.sqlapp.data.schemas.CascadeRule.values()) {
+					String parent = schemaName + ".parent" + index;
+					String name = "child" + index++;
+					String child = schemaName + "." + name;
+					String action = rule == com.sqlapp.data.schemas.CascadeRule.None ? "NO ACTION" : rule.getSqlValue();
+					statement.execute("CREATE TABLE " + parent + " (id integer PRIMARY KEY)");
+					statement.execute("INSERT INTO " + parent + " VALUES (0),(1)");
+					statement.execute("CREATE TABLE " + child + " (id integer PRIMARY KEY, parent_id integer DEFAULT 0, "
+							+ "CONSTRAINT parent_fk FOREIGN KEY (parent_id) REFERENCES " + parent + "(id) ON DELETE " + action
+							+ " ON UPDATE " + action + " DEFERRABLE INITIALLY DEFERRED)");
+					reader.setObjectName(name);
+					var model = reader.getAllFull(connection).stream().filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
+					var fk = (ForeignKeyConstraint) model.getConstraints().get("parent_fk");
+					assertEquals(rule, fk.getDeleteRule()); assertEquals(rule, fk.getUpdateRule());
+					statement.execute("DROP TABLE " + child);
+					for (var operation : registry.createSql(model, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("INSERT INTO " + child + " VALUES (10,1)");
+					boolean rejects = rule == com.sqlapp.data.schemas.CascadeRule.None || rule == com.sqlapp.data.schemas.CascadeRule.Restrict;
+					if (rejects) assertEquals("23503", assertThrows(SQLException.class,
+							() -> statement.execute("UPDATE " + parent + " SET id=2 WHERE id=1")).getSQLState());
+					else statement.execute("UPDATE " + parent + " SET id=2 WHERE id=1");
+					try (var rows = statement.executeQuery("SELECT parent_id FROM " + child)) {
+						assertTrue(rows.next());
+						assertEquals(rule == com.sqlapp.data.schemas.CascadeRule.SetNull ? null
+								: rule == com.sqlapp.data.schemas.CascadeRule.SetDefault ? 0
+								: rule == com.sqlapp.data.schemas.CascadeRule.Cascade ? 2 : 1, rows.getObject(1));
+					}
+					statement.execute("DELETE FROM " + child);
+					statement.execute("DELETE FROM " + parent + " WHERE id<>0");
+					statement.execute("INSERT INTO " + parent + " VALUES (1)");
+					statement.execute("INSERT INTO " + child + " VALUES (10,1)");
+					if (rejects) assertEquals("23503", assertThrows(SQLException.class,
+							() -> statement.execute("DELETE FROM " + parent + " WHERE id=1")).getSQLState());
+					else statement.execute("DELETE FROM " + parent + " WHERE id=1");
+					try (var rows = statement.executeQuery("SELECT parent_id FROM " + child)) {
+						if (rule == com.sqlapp.data.schemas.CascadeRule.Cascade) assertFalse(rows.next());
+						else {
+							assertTrue(rows.next());
+							assertEquals(rule == com.sqlapp.data.schemas.CascadeRule.SetNull ? null
+									: rule == com.sqlapp.data.schemas.CascadeRule.SetDefault ? 0 : 1, rows.getObject(1));
+						}
+					}
+					if (rejects) {
+						connection.setAutoCommit(false);
+						try {
+							if (rule == com.sqlapp.data.schemas.CascadeRule.Restrict) {
+								assertEquals("23503", assertThrows(SQLException.class,
+										() -> statement.execute("DELETE FROM " + parent + " WHERE id=1")).getSQLState());
+							} else {
+								statement.execute("DELETE FROM " + parent + " WHERE id=1");
+								statement.execute("DELETE FROM " + child + " WHERE id=10");
+								connection.commit();
+							}
+						} finally { connection.rollback(); connection.setAutoCommit(true); }
+					}
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void executesLegacyAndModernConstraintQueriesWithoutChangingKeyOrder() throws Exception {
+		String schemaName = "ysql_old_queries_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".parent (a integer,b integer,label text,PRIMARY KEY (b,a),UNIQUE (label,a))");
+				statement.execute("CREATE TABLE " + schemaName + ".child (local_a integer,local_b integer,FOREIGN KEY (local_b,local_a) REFERENCES " + schemaName + ".parent(b,a))");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				for (int[] version : new int[][] {{8,3},{8,4},{9,2},{15,0}}) {
+					var forced = new com.sqlapp.data.schemas.ProductVersionInfo().setMajorVersion(version[0]).setMinorVersion(version[1]);
+					var foreignKeys = new com.sqlapp.data.db.dialect.postgres.metadata.PostgresForeignKeyConstraintReader(dialect) {
+						@Override
+						protected com.sqlapp.jdbc.sql.node.SqlNode getSqlSqlNode(com.sqlapp.data.schemas.ProductVersionInfo ignored) {
+							return super.getSqlSqlNode(forced);
+						}
+					};
+					foreignKeys.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+					foreignKeys.setSchemaName(schemaName); foreignKeys.setObjectName("child");
+					var constraints = foreignKeys.getAll(connection); assertEquals(1, constraints.size());
+					assertEquals(List.of("local_b","local_a"), constraints.get(0).getColumns().stream().map(c -> c.getName()).toList());
+					assertEquals(List.of("b","a"), constraints.get(0).getRelatedColumns().stream().map(c -> c.getName()).toList());
+					var uniqueKeys = new com.sqlapp.data.db.dialect.postgres.metadata.PostgresUniqueConstraintReader(dialect) {
+						@Override
+						protected com.sqlapp.jdbc.sql.node.SqlNode getSqlSqlNode(com.sqlapp.data.schemas.ProductVersionInfo ignored) {
+							return super.getSqlSqlNode(forced);
+						}
+					};
+					uniqueKeys.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+					uniqueKeys.setSchemaName(schemaName); uniqueKeys.setObjectName("parent");
+					var unique = uniqueKeys.getAll(connection); assertEquals(2, unique.size());
+					for (var constraint : unique) assertEquals(constraint.isPrimaryKey() ? List.of("b","a") : List.of("label","a"),
+							constraint.getColumns().stream().map(c -> c.getName()).toList());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesNotValidConstraintsAndEnforcesNewWrites() throws Exception {
+		String schemaName = "ysql_not_valid_" + UUID.randomUUID().toString().replace("-", "");
+		String child = schemaName + ".child";
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".parent (id integer PRIMARY KEY)");
+				statement.execute("INSERT INTO " + schemaName + ".parent VALUES (1)");
+				statement.execute("CREATE TABLE " + child + " (id integer, parent_id integer, amount integer)");
+				statement.execute("INSERT INTO " + child + " VALUES (1,999,-1)");
+				statement.execute("ALTER TABLE " + child + " ADD CONSTRAINT positive CHECK (amount > 0) NOT VALID");
+				statement.execute("ALTER TABLE " + child + " ADD CONSTRAINT parent_fk FOREIGN KEY (parent_id) REFERENCES "
+						+ schemaName + ".parent(id) NOT VALID");
+				for (String name : List.of("positive", "parent_fk")) {
+					statement.execute("COMMENT ON CONSTRAINT " + name + " ON " + child + " IS '未検証 ''comment'''");
+				}
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("child");
+				var model = reader.getAllFull(connection).stream().filter(t -> "child".equals(t.getName())).findFirst().orElseThrow();
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (String name : List.of("positive", "parent_fk")) {
+					var constraint = model.getConstraints().get(name);
+					assertEquals("true", constraint.getSpecifics().get("notValid"));
+					assertEquals("未検証 'comment'", constraint.getRemarks());
+					statement.execute("ALTER TABLE " + child + " DROP CONSTRAINT " + name);
+					for (var operation : registry.createSql(constraint, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				try (var rows = statement.executeQuery("SELECT count(*) FROM " + child)) {
+					assertTrue(rows.next()); assertEquals(1, rows.getInt(1));
+				}
+				assertEquals("23514", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + child + " VALUES (2,1,-1)")).getSQLState());
+				assertEquals("23503", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + child + " VALUES (3,999,1)")).getSQLState());
+				assertEquals("23514", assertThrows(SQLException.class,
+						() -> statement.execute("ALTER TABLE " + child + " VALIDATE CONSTRAINT positive")).getSQLState());
+				assertEquals("23503", assertThrows(SQLException.class,
+						() -> statement.execute("ALTER TABLE " + child + " VALIDATE CONSTRAINT parent_fk")).getSQLState());
+				statement.execute("UPDATE " + child + " SET parent_id=1,amount=1");
+				statement.execute("ALTER TABLE " + child + " VALIDATE CONSTRAINT positive");
+				statement.execute("ALTER TABLE " + child + " VALIDATE CONSTRAINT parent_fk");
+				var validated = reader.getAllFull(connection).stream().filter(t -> "child".equals(t.getName())).findFirst().orElseThrow();
+				for (String name : List.of("positive", "parent_fk")) assertNull(validated.getConstraints().get(name).getSpecifics().get("notValid"));
+				statement.execute("DROP TABLE " + child);
+				var operations = registry.createSql(model, SqlType.CREATE);
+				assertFalse(operations.get(0).getSqlText().contains("NOT VALID"));
+				for (var operation : operations) statement.execute(operation.getSqlText());
+				var recreated = reader.getAllFull(connection).stream().filter(t -> "child".equals(t.getName())).findFirst().orElseThrow();
+				for (String name : List.of("positive", "parent_fk")) {
+					assertEquals("true", recreated.getConstraints().get(name).getSpecifics().get("notValid"));
+					assertEquals("未検証 'comment'", recreated.getConstraints().get(name).getRemarks());
+				}
+				statement.execute("INSERT INTO " + child + " VALUES (4,1,1)");
+				assertEquals("23514", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + child + " VALUES (5,1,-1)")).getSQLState());
+				assertEquals("23503", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + child + " VALUES (6,999,1)")).getSQLState());
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void recreatesViewCheckOptionsAndSecurityBarrier() throws Exception {
+		String schemaName = "ysql_view_options_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer, enabled boolean, score integer)");
+				statement.execute("CREATE VIEW " + schemaName + ".enabled AS SELECT * FROM " + schemaName + ".items WHERE enabled");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getViewReader(); reader.setSchemaName(schemaName);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (String mode : List.of("local", "cascaded")) {
+					String name = "visible_" + mode;
+					String viewName = schemaName + "." + name;
+					statement.execute("CREATE VIEW " + viewName + " WITH (security_barrier=true,check_option='" + mode
+							+ "') AS SELECT * FROM " + schemaName + ".enabled WHERE score > 0");
+					reader.setObjectName(name);
+					var model = reader.getAllFull(connection).stream().filter(v -> name.equals(v.getName())).findFirst().orElseThrow();
+					assertEquals("true", model.getSpecifics().get("security_barrier"));
+					assertEquals(mode, model.getSpecifics().get("check_option"));
+					statement.execute("DROP VIEW " + viewName);
+					for (var operation : registry.createSql(model, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("INSERT INTO " + viewName + " VALUES (1,true,1)");
+					assertEquals("44000", assertThrows(SQLException.class,
+							() -> statement.execute("INSERT INTO " + viewName + " VALUES (2,true,-1)")).getSQLState());
+					if ("local".equals(mode)) statement.execute("INSERT INTO " + viewName + " VALUES (3,false,1)");
+					else assertEquals("44000", assertThrows(SQLException.class,
+							() -> statement.execute("INSERT INTO " + viewName + " VALUES (4,false,1)")).getSQLState());
+					var recreated = reader.getAllFull(connection).stream().filter(v -> name.equals(v.getName())).findFirst().orElseThrow();
+					assertEquals(model.getSpecifics(), recreated.getSpecifics());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void recreatesVersionedViewInvokerPermissions() throws Exception {
+		String suffix = UUID.randomUUID().toString().replace("-", "");
+		String schemaName = "ysql_permissions_" + suffix;
+		String role = "ysql_reader_" + suffix;
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			boolean invoker = connection.getMetaData().getDatabaseMajorVersion() >= 15;
+			statement.execute("CREATE ROLE " + role + " NOLOGIN");
+			try {
+				statement.execute("CREATE SCHEMA " + schemaName);
+				try {
+					statement.execute("CREATE TABLE " + schemaName + ".items (id integer)");
+					statement.execute("INSERT INTO " + schemaName + ".items VALUES (1)");
+					statement.execute("CREATE VIEW " + schemaName + ".visible"
+							+ (invoker ? " WITH (security_invoker=true)" : "") + " AS SELECT * FROM " + schemaName + ".items");
+					var dialect = DialectResolver.getInstance().getDialect(connection);
+					var reader = dialect.getCatalogReader().getSchemaReader().getViewReader();
+					reader.setSchemaName(schemaName); reader.setObjectName("visible");
+					var model = reader.getAllFull(connection).stream().filter(v -> "visible".equals(v.getName())).findFirst().orElseThrow();
+					assertEquals(invoker ? "true" : null, model.getSpecifics().get("security_invoker"));
+					statement.execute("DROP VIEW " + schemaName + ".visible");
+					var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+					for (var operation : registry.createSql(model, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					statement.execute("GRANT USAGE ON SCHEMA " + schemaName + " TO " + role);
+					statement.execute("GRANT SELECT ON " + schemaName + ".visible TO " + role);
+					statement.execute("SET ROLE " + role);
+					try {
+						if (invoker) assertEquals("42501", assertThrows(SQLException.class,
+								() -> statement.executeQuery("SELECT * FROM " + schemaName + ".visible")).getSQLState());
+						else try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".visible")) {
+							assertTrue(rows.next()); assertEquals(1, rows.getInt(1));
+						}
+					} finally { statement.execute("RESET ROLE"); }
+					statement.execute("GRANT SELECT ON " + schemaName + ".items TO " + role);
+					statement.execute("SET ROLE " + role);
+					try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".visible")) {
+						assertTrue(rows.next()); assertEquals(1, rows.getInt(1));
+					} finally { statement.execute("RESET ROLE"); }
+				} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+			} finally { statement.execute("DROP ROLE " + role); }
+		}
+	}
+
+	@Test
 	void recreatesStandaloneTableWithCrossSchemaCompositeForeignKey() throws Exception {
 		String suffix = UUID.randomUUID().toString().replace("-", "");
 		String parentSchema = "ysql_parent_" + suffix;

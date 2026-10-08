@@ -21,13 +21,49 @@ class PostgresCompositeQueryVersionTest {
 	}
 
 	@Test
-	void uniqueKeyOrdinalityIsReadOnlyFrom84() {
+	void uniqueQueryUsesGenerateSubscriptsOnlyFrom84() {
 		var reader = new PostgresUniqueConstraintReader(DialectHolder.postgreSQL150);
 		for (int[] version : new int[][] {{8, 3}, {8, 4}, {9, 0}, {11, 0}, {15, 0}}) {
 			String sql = reader.getSqlSqlNode(new ProductVersionInfo().setMajorVersion(version[0])
 					.setMinorVersion(version[1])).toString();
 			assertEquals(version[0] > 8 || version[1] >= 4, sql.contains("generate_subscripts"), sql);
-			assertTrue(sql.contains("obj_description(c.oid, 'pg_constraint')"), sql);
+			assertTrue(sql.contains("obj_description(c.constraint_oid, 'pg_constraint')"), sql);
 		}
 	}
+	@Test
+	void viewOptionsAreReadOnlyFrom92() {
+		var reader = new PostgresViewReader(DialectHolder.postgreSQL150);
+		for (int[] version : new int[][] {{8, 4}, {9, 1}, {9, 2}, {11, 0}, {15, 0}}) {
+			String sql = reader.getSqlSqlNode(new ProductVersionInfo().setMajorVersion(version[0])
+					.setMinorVersion(version[1])).toString();
+			assertEquals(version[0] > 9 || version[0] == 9 && version[1] >= 2, sql.contains("c.reloptions"), sql);
+			assertTrue(sql.contains("AS view_options"), sql);
+		}
+	}
+
+	@Test
+	void constraintOrdinalityAvoidsLateralAndKeepsPre84Fallback() {
+		var foreignKeys = new PostgresForeignKeyConstraintReader(DialectHolder.postgreSQL150);
+		var uniqueKeys = new PostgresUniqueConstraintReader(DialectHolder.postgreSQL150);
+		for (int[] version : new int[][] {{8,0}, {8,3}, {8,4}, {9,2}, {9,3}, {11,0}, {15,0}}) {
+			var info = new ProductVersionInfo().setMajorVersion(version[0]).setMinorVersion(version[1]);
+			String fk = foreignKeys.getSqlSqlNode(info).toString();
+			String unique = uniqueKeys.getSqlSqlNode(info).toString();
+			for (String sql : java.util.List.of(fk,unique)) {
+				boolean modern = version[0] > 8 || version[1] >= 4;
+				assertEquals(modern,sql.contains("generate_subscripts(source.conkey, 1)"),sql);
+				assertEquals(!modern,sql.contains("generate_series(array_lower(source.conkey, 1)"),sql);
+				assertFalse(sql.contains("JOIN generate_"),sql);
+				assertFalse(sql.contains("pg_depend"),sql);
+				assertTrue(sql.contains("AS key_position"),sql);
+				assertTrue(sql.contains("source.oid AS constraint_oid"),sql);
+				assertTrue(sql.contains("c.connamespace = nc.oid"),sql);
+				assertTrue(sql.contains("c.conkey[c.key_position]"),sql);
+			}
+			assertTrue(fk.contains("c.confkey[c.key_position]"),fk);
+			assertFalse(fk.contains("RISTRICT"),fk);
+			assertTrue(fk.contains("THEN 'RESTRICT'"),fk);
+		}
+	}
+
 }

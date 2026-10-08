@@ -35,6 +35,47 @@ import com.sqlapp.data.schemas.View;
  */
 public class PostgresCreateViewFactory extends AbstractCreateViewFactory<PostgresSqlBuilder> {
 
+	public static final String SECURITY_BARRIER = "security_barrier";
+	public static final String CHECK_OPTION = "check_option";
+	public static final String SECURITY_INVOKER = "security_invoker";
+
+	protected boolean supportsViewOption(String name) { return false; }
+
+	@Override
+	protected void addCreateObject(View obj, PostgresSqlBuilder builder) {
+		if (!com.sqlapp.util.CommonUtils.isEmpty(obj.getDefinition())
+				|| com.sqlapp.util.CommonUtils.isEmpty(obj.getStatement())) {
+			super.addCreateObject(obj, builder);
+			return;
+		}
+		var options = new java.util.ArrayList<String>();
+		for (String name : List.of(SECURITY_BARRIER, CHECK_OPTION, SECURITY_INVOKER)) {
+			String value = obj.getSpecifics().get(name);
+			if (value == null) continue;
+			if (!supportsViewOption(name)) {
+				throw new IllegalArgumentException("View option " + name + " is unsupported by this PostgreSQL version.");
+			}
+			value = value.trim().toLowerCase(java.util.Locale.ROOT);
+			if (CHECK_OPTION.equals(name)) {
+				if (!List.of("local", "cascaded").contains(value)) {
+					throw new IllegalArgumentException("View check_option must be local or cascaded.");
+				}
+				value = "'" + value + "'";
+			} else if (!List.of("true", "false").contains(value)) {
+				throw new IllegalArgumentException("View " + name + " must be true or false.");
+			}
+			options.add(name + "=" + value);
+		}
+		if (options.isEmpty()) {
+			super.addCreateObject(obj, builder);
+			return;
+		}
+		createObject(obj, builder);
+		builder.name(obj, getOptions().isDecorateSchemaName()).space()
+				._add("WITH (")._add(String.join(", ", options))._add(")")
+				.lineBreak().as().lineBreak()._add(obj.getStatement());
+	}
+
 	@Override
 	protected void addOtherDefinitions(View table, List<SqlOperation> result) {
 		if (table.getRemarks() != null) {

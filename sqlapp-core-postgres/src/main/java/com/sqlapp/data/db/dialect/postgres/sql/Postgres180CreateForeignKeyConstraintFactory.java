@@ -10,7 +10,7 @@ import com.sqlapp.util.CommonUtils;
  * PostgreSQL 18 temporal foreign key constraint.
  */
 public class Postgres180CreateForeignKeyConstraintFactory
-		extends AbstractCreateForeignKeyConstraintFactory<AbstractSqlBuilder<?>> {
+		extends AbstractCreateForeignKeyConstraintFactory<AbstractSqlBuilder<?>> implements PostgresConstraintOptions.NotValidFactory {
 	public static final String PERIOD = "period";
 
 	@Override
@@ -67,6 +67,7 @@ public class Postgres180CreateForeignKeyConstraintFactory
 		if (Boolean.parseBoolean(constraint.getSpecifics().get(Postgres180CreateCheckConstraintFactory.NOT_ENFORCED))) {
 			builder.space()._add("NOT ENFORCED");
 		}
+		PostgresConstraintOptions.appendNotValid(constraint, builder, true);
 	}
 	@Override
 	protected void addDeferrability(ForeignKeyConstraint obj, AbstractSqlBuilder<?> builder) {
@@ -74,6 +75,18 @@ public class Postgres180CreateForeignKeyConstraintFactory
 		if (deferrability != null && deferrability != com.sqlapp.data.schemas.Deferrability.NotDeferrable) {
 			builder.space()._add("DEFERRABLE").space()._add(deferrability.getSqlValue());
 		}
+	}
+
+	@Override
+	protected void addMatchOption(ForeignKeyConstraint obj, AbstractSqlBuilder<?> builder) {
+		if (obj.getMatchOption() != null) {
+			builder.matchOption(obj);
+		}
+	}
+
+	@Override
+	protected void addCascadeRule(ForeignKeyConstraint obj, AbstractSqlBuilder<?> builder) {
+		PostgresConstraintOptions.appendCascadeRules(obj, builder);
 	}
 
 }

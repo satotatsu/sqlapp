@@ -7,6 +7,8 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import java.util.Locale;
 
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresConstraintOptions;
+import com.sqlapp.data.schemas.Constraint;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateForeignKeyConstraintFactory;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateUniqueConstraintFactory;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
@@ -35,7 +37,11 @@ final class PostgresTemporalConstraintMetadata {
 		applyEnforcement(constraint, definition);
 	}
 
-	private static void applyEnforcement(com.sqlapp.data.schemas.Constraint constraint, String definition) {
+	private static void applyEnforcement(Constraint constraint, String definition) {
+		if (definition != null && definition.toUpperCase(Locale.ROOT).trim()
+				.matches("(?s).*\\sNOT VALID(?:\\s+NOT ENFORCED)?")) {
+			constraint.getSpecifics().put(PostgresConstraintOptions.NOT_VALID, "true");
+		}
 		if (contains(definition, "NOT ENFORCED")) {
 			constraint.getSpecifics().put(
 					com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateCheckConstraintFactory.NOT_ENFORCED,
