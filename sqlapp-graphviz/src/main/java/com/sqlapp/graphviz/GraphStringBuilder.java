@@ -28,17 +28,17 @@ import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
 
-public class GraphStringBuilder implements Serializable{
+public class GraphStringBuilder implements Serializable {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6358515277099678728L;
-	private List<Object> elements=new ArrayList<>();
-	private Map<String,Object> map=new TreeMap<>();
-	
-	private boolean withLineBreak=true;
-	
+	private List<Object> elements = new ArrayList<>();
+	private Map<String, Object> map = new TreeMap<>();
+
+	private boolean withLineBreak = true;
+
 	/**
 	 * インデントレベル
 	 */
@@ -47,90 +47,89 @@ public class GraphStringBuilder implements Serializable{
 	 * インデント文字
 	 */
 	private String indentString = "\t";
-	
-	private String open="[";
-	private String close="]";
-	
-	private boolean withLastSemiColon=true;
-	
+
+	private String open = "[";
+	private String close = "]";
+
+	private boolean withLastSemiColon = true;
+
 	/**
 	 * 現在のインデント文字列
 	 */
 	private String currentIndentString = null;
-	public GraphStringBuilder(){
-		this.name=null;
+
+	public GraphStringBuilder() {
+		this.name = null;
 	}
 
-	public GraphStringBuilder(String name){
-		this.name=name;
+	public GraphStringBuilder(String name) {
+		this.name = name;
 	}
 
 	private String name;
 
-	public GraphStringBuilder put(Object value){
+	public GraphStringBuilder put(Object value) {
 		this.elements.add(value);
 		return instance();
 	}
 
-	public GraphStringBuilder put(String name, Object value){
-		if (value==null){
+	public GraphStringBuilder put(String name, Object value) {
+		if (value == null) {
 			return instance();
 		}
-		if (value instanceof String){
-			return put(name, (String)value);
-		}else if (value instanceof Number){
-			return put(name, (Number)value);
-		}else if (value instanceof Enum){
-			return put(name, (Enum<?>)value);
-		}else if (value instanceof Color[]){
-			return put(name, (Color[])value);
-		}else if (value instanceof ArrowType[]){
-			return put(name, (ArrowType[])value);
+		if (value instanceof String) {
+			return put(name, (String) value);
+		} else if (value instanceof Number) {
+			return put(name, (Number) value);
+		} else if (value instanceof Enum) {
+			return put(name, (Enum<?>) value);
+		} else if (value instanceof Color[]) {
+			return put(name, (Color[]) value);
+		} else if (value instanceof ArrowType[]) {
+			return put(name, (ArrowType[]) value);
 		}
 		return put(name, value.toString());
 	}
-	
-	public GraphStringBuilder put(String name, String value){
-		return putInternal(name, value, ()->escapedValue(value));
+
+	public GraphStringBuilder put(String name, String value) {
+		return putInternal(name, value, () -> escapedValue(value));
 	}
 
-	public GraphStringBuilder putNoEscape(String name, String value){
-		return putInternal(name, value, ()->value);
+	public GraphStringBuilder putNoEscape(String name, String value) {
+		return putInternal(name, value, () -> value);
 	}
 
-	private String escapedValue(String value){
-		return "\""+value+"\"";
-	}
-	
-	public GraphStringBuilder put(String name, Number value){
-		return putInternal(name, value, ()->value.toString());
+	private String escapedValue(String value) {
+		return "\"" + value + "\"";
 	}
 
-	public GraphStringBuilder put(String name, Enum<?> value){
-		return putInternal(name, value, ()->value.toString());
+	public GraphStringBuilder put(String name, Number value) {
+		return putInternal(name, value, () -> value.toString());
 	}
 
-	public GraphStringBuilder put(String name, Color... value){
-		return putInternal(name, value, ()->toString(value));
-	}
-	
-	public GraphStringBuilder put(String name, String... args){
-		return putInternal(name, args, ()->toString(args));
+	public GraphStringBuilder put(String name, Enum<?> value) {
+		return putInternal(name, value, () -> value.toString());
 	}
 
-	public GraphStringBuilder put(String name, double... args){
-		return putInternal(name, args, ()->toString(args));
+	public GraphStringBuilder put(String name, Color... value) {
+		return putInternal(name, value, () -> toString(value));
 	}
 
-	public GraphStringBuilder put(String name, ArrowType... args){
-		return putInternal(name, args, ()->toString(args));
+	public GraphStringBuilder put(String name, String... args) {
+		return putInternal(name, args, () -> toString(args));
 	}
 
-	
+	public GraphStringBuilder put(String name, double... args) {
+		return putInternal(name, args, () -> toString(args));
+	}
 
-	protected <T> GraphStringBuilder putInternal(String name, T value, Supplier<String> supplier){
-		if (value==null){
-			if (map.containsKey(name)){
+	public GraphStringBuilder put(String name, ArrowType... args) {
+		return putInternal(name, args, () -> toString(args));
+	}
+
+	protected <T> GraphStringBuilder putInternal(String name, T value, Supplier<String> supplier) {
+		if (value == null) {
+			if (map.containsKey(name)) {
 				map.remove(name);
 			}
 			return instance();
@@ -138,19 +137,19 @@ public class GraphStringBuilder implements Serializable{
 		map.put(name, supplier.get());
 		return instance();
 	}
-	
-	private String toString(String... args){
-		if (args==null||args.length==0){
+
+	private String toString(String... args) {
+		if (args == null || args.length == 0) {
 			return null;
 		}
-		StringBuilder builder=new StringBuilder();
+		StringBuilder builder = new StringBuilder();
 		builder.append("\"");
-		boolean first=true;
-		for(String arg:args){
-			if (!first){
+		boolean first = true;
+		for (String arg : args) {
+			if (!first) {
 				builder.append(",");
-			} else{
-				first=false;
+			} else {
+				first = false;
 			}
 			builder.append(arg);
 		}
@@ -158,60 +157,60 @@ public class GraphStringBuilder implements Serializable{
 		return builder.toString();
 	}
 
-	private String toString(double... args){
-		if (args==null||args.length==0){
+	private String toString(double... args) {
+		if (args == null || args.length == 0) {
 			return null;
 		}
-		StringBuilder builder=new StringBuilder();
+		StringBuilder builder = new StringBuilder();
 		builder.append("\"");
-		boolean first=true;
-		for(double arg:args){
-			if (!first){
+		boolean first = true;
+		for (double arg : args) {
+			if (!first) {
 				builder.append(",");
-			} else{
-				first=false;
+			} else {
+				first = false;
 			}
 			builder.append(arg);
 		}
 		builder.append("\"");
 		return builder.toString();
 	}
-	
-	private String toString(Color... value){
-		if (value==null||value.length==0){
+
+	private String toString(Color... value) {
+		if (value == null || value.length == 0) {
 			return null;
 		}
-		StringBuilder builder=new StringBuilder();
+		StringBuilder builder = new StringBuilder();
 		builder.append("\"");
-		boolean first=true;
-		for(Color color:value){
-			if (!first){
+		boolean first = true;
+		for (Color color : value) {
+			if (!first) {
 				builder.append(":");
-			} else{
-				first=false;
+			} else {
+				first = false;
 			}
 			builder.append(color);
 		}
 		builder.append("\"");
 		return builder.toString();
 	}
-	
-	private String toString(ArrowType... args){
-		if (args==null||args.length==0){
+
+	private String toString(ArrowType... args) {
+		if (args == null || args.length == 0) {
 			return null;
 		}
-		StringBuilder builder=new StringBuilder();
+		StringBuilder builder = new StringBuilder();
 		builder.append("\"");
-		for(ArrowType arg:args){
+		for (ArrowType arg : args) {
 			builder.append(arg);
 		}
 		builder.append("\"");
 		return builder.toString();
 	}
-	
-	public GraphStringBuilder put(String name, Boolean value){
-		if (value==null){
-			if (map.containsKey(name)){
+
+	public GraphStringBuilder put(String name, Boolean value) {
+		if (value == null) {
+			if (map.containsKey(name)) {
 				map.remove(name);
 			}
 			return instance();
@@ -220,86 +219,86 @@ public class GraphStringBuilder implements Serializable{
 		return instance();
 	}
 
-	protected GraphStringBuilder instance(){
+	protected GraphStringBuilder instance() {
 		return this;
 	}
-	
+
 	@Override
-	public String toString(){
-		StringBuilder builder=new StringBuilder();
-		if (name!=null&&name.length()>0){
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		if (name != null && name.length() > 0) {
 			builder.append(name);
-		} else{
-			if (isEmpty()){
+		} else {
+			if (isEmpty()) {
 				return "";
 			}
 		}
-		if (isEmpty()){
-			if (isWithLastSemiColon()){
+		if (isEmpty()) {
+			if (isWithLastSemiColon()) {
 				builder.append(";");
 			}
 			return builder.toString();
 		}
 		builder.append(" ").append(this.getOpen());
 		this.addIndentLevel(1);
-		for(Object obj:elements){
-			if (obj==null){
+		for (Object obj : elements) {
+			if (obj == null) {
 				continue;
 			}
-			if (withLineBreak){
+			if (withLineBreak) {
 				lineBreak(builder);
 			}
 			builder.append(obj.toString());
 		}
-		boolean first=true;
-		for(Map.Entry<String, Object> entry:map.entrySet()){
-			if (entry.getValue()==null){
+		boolean first = true;
+		for (Map.Entry<String, Object> entry : map.entrySet()) {
+			if (entry.getValue() == null) {
 				continue;
 			}
-			if (withLineBreak){
+			if (withLineBreak) {
 				lineBreak(builder);
 			}
-			if (!first){
+			if (!first) {
 				builder.append(", ");
-			} else{
-				first=false;
+			} else {
+				first = false;
 			}
-			String value=entry.getValue().toString();
+			String value = entry.getValue().toString();
 			builder.append(entry.getKey());
 			builder.append("=");
 			appendValue(builder, value);
 		}
 		this.addIndentLevel(-1);
-		if (withLineBreak){
+		if (withLineBreak) {
 			lineBreak(builder);
 		}
 		builder.append(this.getClose());
-		if (name!=null&&(name.startsWith("graph")||name.startsWith("digraph")||name.startsWith("subgraph"))){
-			if (!";".equals(this.getClose())){
-				if ("}".equals(this.getClose())){
-				} else{
-					if (isWithLastSemiColon()){
+		if (name != null && (name.startsWith("graph") || name.startsWith("digraph") || name.startsWith("subgraph"))) {
+			if (!";".equals(this.getClose())) {
+				if ("}".equals(this.getClose())) {
+				} else {
+					if (isWithLastSemiColon()) {
 						builder.append(";");
 					}
 				}
 			}
-		} else{
-			if (isWithLastSemiColon()){
-				if (!";".equals(this.getClose())){
+		} else {
+			if (isWithLastSemiColon()) {
+				if (!";".equals(this.getClose())) {
 					builder.append(";");
 				}
 			}
 		}
 		return builder.toString();
 	}
-	
-	private GraphStringBuilder lineBreak(StringBuilder builder){
+
+	private GraphStringBuilder lineBreak(StringBuilder builder) {
 		builder.append("\n");
 		indent(builder);
 		return instance();
 	}
 
-	private GraphStringBuilder appendValue(StringBuilder builder, String value){
+	private GraphStringBuilder appendValue(StringBuilder builder, String value) {
 		builder.append(value);
 		return instance();
 	}
@@ -344,8 +343,7 @@ public class GraphStringBuilder implements Serializable{
 	}
 
 	/**
-	 * @param indentLevel
-	 *            the indentLevel to set
+	 * @param indentLevel the indentLevel to set
 	 * @return instance
 	 */
 	public GraphStringBuilder setIndentLevel(int indentLevel) {
@@ -369,8 +367,7 @@ public class GraphStringBuilder implements Serializable{
 	}
 
 	/**
-	 * @param indentString
-	 *            the indentString to set
+	 * @param indentString the indentString to set
 	 * @return instance
 	 */
 	public GraphStringBuilder setIndentString(String indentString) {
@@ -392,10 +389,8 @@ public class GraphStringBuilder implements Serializable{
 	/**
 	 * 指定した文字、長さの文字列を取得します
 	 * 
-	 * @param val
-	 *            指定文字
-	 * @param size
-	 *            長さ
+	 * @param val  指定文字
+	 * @param size 長さ
 	 * @return 指定した文字、長さの文字列
 	 */
 	private String getString(final String val, final int size) {
@@ -405,9 +400,9 @@ public class GraphStringBuilder implements Serializable{
 		}
 		return builder.toString();
 	}
-	
-	public boolean isEmpty(){
-		return map.isEmpty()&&elements.isEmpty()&&map.isEmpty();
+
+	public boolean isEmpty() {
+		return map.isEmpty() && elements.isEmpty() && map.isEmpty();
 	}
 
 	/**
@@ -441,5 +436,5 @@ public class GraphStringBuilder implements Serializable{
 		this.withLastSemiColon = withLastSemiColon;
 		return this.instance();
 	}
-	
+
 }

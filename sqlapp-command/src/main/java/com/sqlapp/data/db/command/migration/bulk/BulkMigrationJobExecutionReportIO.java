@@ -68,8 +68,8 @@ public final class BulkMigrationJobExecutionReportIO {
 		try {
 			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
 					"maxExecutionReportFileSizeBytes", "Bulk migration execution report");
-			final var report = validate(new JsonConverter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), BulkMigrationJobExecutionReport.class));
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationJobExecutionReport.class));
 			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (IOException e) {
 			throw new CommandException("Failed to read bulk migration execution report: " + absolute, e);
@@ -84,8 +84,8 @@ public final class BulkMigrationJobExecutionReportIO {
 	static BulkMigrationJobExecutionReport validate(final BulkMigrationJobExecutionReport report) {
 		if (report == null || report.formatVersion() != BulkMigrationJobExecutionReport.CURRENT_FORMAT_VERSION
 				|| report.completedAt() == null || report.jobId() == null || report.jobId().isBlank()
-				|| report.planFingerprint() == null || report.planFingerprint().isBlank()
-				|| report.processedRows() < 0 || report.alreadyCompleteTasks() < 0 || report.tasks() == null) {
+				|| report.planFingerprint() == null || report.planFingerprint().isBlank() || report.processedRows() < 0
+				|| report.alreadyCompleteTasks() < 0 || report.tasks() == null) {
 			throw new CommandException("Bulk migration execution report header is invalid");
 		}
 		long processedRows = 0;

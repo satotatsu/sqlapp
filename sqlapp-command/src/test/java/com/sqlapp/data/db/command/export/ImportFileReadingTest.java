@@ -182,9 +182,9 @@ class ImportFileReadingTest {
 		table.getConstraints().addPrimaryKeyConstraint("PK_ITEMS", "ID");
 		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "")) {
 			// HSQL intentionally does not register its MERGE_ROWS factory.
-			final var error = assertThrows(IllegalArgumentException.class, () -> command.executeImport(connection,
-					DialectResolver.getInstance().getDialect(connection), table,
-					List.of(directory.resolve("not-read.csv").toFile())));
+			final var error = assertThrows(IllegalArgumentException.class,
+					() -> command.executeImport(connection, DialectResolver.getInstance().getDialect(connection), table,
+							List.of(directory.resolve("not-read.csv").toFile())));
 			assertTrue(error.getMessage().contains("MERGE_ROWS"));
 		}
 	}
@@ -339,14 +339,14 @@ class ImportFileReadingTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({ "csv,1,INSERT", "csv,2,INSERT", "json,1,INSERT", "json,2,INSERT",
-			"csv,1,INSERT_ROWS", "csv,2,INSERT_ROWS", "csv,3,INSERT_ROWS",
-			"json,1,INSERT_ROWS", "json,2,INSERT_ROWS", "json,3,INSERT_ROWS" })
-	void importsFileConstructorBinary(final String format, final int batchSize, final SqlType sqlType) throws Exception {
+	@CsvSource({ "csv,1,INSERT", "csv,2,INSERT", "json,1,INSERT", "json,2,INSERT", "csv,1,INSERT_ROWS",
+			"csv,2,INSERT_ROWS", "csv,3,INSERT_ROWS", "json,1,INSERT_ROWS", "json,2,INSERT_ROWS",
+			"json,3,INSERT_ROWS" })
+	void importsFileConstructorBinary(final String format, final int batchSize, final SqlType sqlType)
+			throws Exception {
 		final byte[] bytes = { 0, 1, 127, (byte) 255 };
 		Files.write(directory.resolve("aaa.png"), bytes);
-		final String data = "csv".equals(format)
-				? "ID,CONTENT\n1,${new File('aaa.png')}\n2,${new File('aaa.png')}\n"
+		final String data = "csv".equals(format) ? "ID,CONTENT\n1,${new File('aaa.png')}\n2,${new File('aaa.png')}\n"
 				: "[{\"ID\":1,\"CONTENT\":\"${new File('aaa.png')}\"},"
 						+ "{\"ID\":2,\"CONTENT\":\"${new File('aaa.png')}\"}]";
 		final Path file = Files.writeString(directory.resolve("items." + format), data);
@@ -402,9 +402,8 @@ class ImportFileReadingTest {
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER, CONTENT BLOB)");
 			connection.setAutoCommit(false);
-			assertEquals(2, command.executeImport(connection,
-					DialectResolver.getInstance().getDialect(connection), table,
-					List.of(first.toFile(), second.toFile())));
+			assertEquals(2, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(first.toFile(), second.toFile())));
 			try (var rows = statement.executeQuery("SELECT CONTENT FROM ITEMS ORDER BY ID")) {
 				assertTrue(rows.next());
 				assertArrayEquals(bytes, rows.getBytes(1));
@@ -428,8 +427,8 @@ class ImportFileReadingTest {
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
 			connection.setAutoCommit(false);
-			assertEquals(0, command.executeImport(connection,
-					DialectResolver.getInstance().getDialect(connection), table, List.of(input.toFile())));
+			assertEquals(0, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(input.toFile())));
 			try (var result = statement.executeQuery("SELECT COUNT(*) FROM ITEMS")) {
 				assertTrue(result.next());
 				assertEquals(0, result.getInt(1));
@@ -449,8 +448,8 @@ class ImportFileReadingTest {
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE ITEMS (ID INTEGER)");
 			connection.setAutoCommit(false);
-			assertEquals(0, command.executeImport(connection,
-					DialectResolver.getInstance().getDialect(connection), table, List.of(input.toFile())));
+			assertEquals(0, command.executeImport(connection, DialectResolver.getInstance().getDialect(connection),
+					table, List.of(input.toFile())));
 		}
 	}
 
@@ -460,8 +459,8 @@ class ImportFileReadingTest {
 		final Path jsonl = Files.writeString(directory.resolve("items.jsonl"), "{\"ID\":2}\n{\"ID\":3}\n");
 		final Table table = new Table("ITEMS");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
-		new TableFileReader().setTableFilesPairs(List.of(
-				new TableFileReader.TableFilesPair(table, toml.toFile(), jsonl.toFile())));
+		new TableFileReader()
+				.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table, toml.toFile(), jsonl.toFile())));
 		int expected = 1;
 		for (var row : table.getRows()) {
 			assertEquals(expected++, ((Number) row.get("ID")).intValue());
@@ -484,8 +483,7 @@ class ImportFileReadingTest {
 
 	@Test
 	void doesNotEvaluateAnExpressionReturnedByAnotherExpression() throws Exception {
-		final Path json = Files.writeString(directory.resolve("items.json"),
-				"[{\"CONTENT\":\"${literal}\"}]");
+		final Path json = Files.writeString(directory.resolve("items.json"), "[{\"CONTENT\":\"${literal}\"}]");
 		final var table = new Table("ITEMS");
 		table.getColumns().add(new Column("CONTENT").setDataType(DataType.VARCHAR).setLength(100));
 		final var command = new ImportDataCommand();
@@ -554,9 +552,8 @@ class ImportFileReadingTest {
 	@Test
 	void rejectsUnknownFormatWithFileName() {
 		final Table table = new Table("ITEMS");
-		final var error = assertThrows(IllegalArgumentException.class, () -> new TableFileReader()
-				.setTableFilesPairs(List.of(new TableFileReader.TableFilesPair(table,
-						directory.resolve("items.unknown").toFile()))));
+		final var error = assertThrows(IllegalArgumentException.class, () -> new TableFileReader().setTableFilesPairs(
+				List.of(new TableFileReader.TableFilesPair(table, directory.resolve("items.unknown").toFile()))));
 		assertTrue(error.getMessage().contains("items.unknown"));
 	}
 

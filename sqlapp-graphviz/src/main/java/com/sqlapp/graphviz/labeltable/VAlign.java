@@ -20,5 +20,5 @@
 package com.sqlapp.graphviz.labeltable;
 
 public enum VAlign {
-	MIDDLE,BOTTOM, TOP
+	MIDDLE, BOTTOM, TOP
 }

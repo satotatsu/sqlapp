@@ -15,7 +15,7 @@ public record BulkMigrationJobExecutionReport(int formatVersion, Instant complet
 		tasks = List.copyOf(Objects.requireNonNull(tasks, "tasks"));
 	}
 
-	public record Task(String taskId, long previouslyProcessedRows, long processedRows,
-			long completedChunks, boolean alreadyComplete) {
+	public record Task(String taskId, long previouslyProcessedRows, long processedRows, long completedChunks,
+			boolean alreadyComplete) {
 	}
 }

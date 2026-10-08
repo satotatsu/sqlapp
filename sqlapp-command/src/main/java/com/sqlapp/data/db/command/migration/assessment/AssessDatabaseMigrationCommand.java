@@ -20,7 +20,10 @@ import com.sqlapp.util.JsonConverter;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Offline logical migration preflight composed from source and target providers. */
+/**
+ * Offline logical migration preflight composed from source and target
+ * providers.
+ */
 @Getter
 @Setter
 public class AssessDatabaseMigrationCommand extends AbstractCommand {
@@ -41,21 +44,21 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 	public record Report(int formatVersion, String sourceFingerprint, String sourceProduct, String targetProduct,
 			String targetVersion, Method migrationMethod, boolean dataScanned, boolean relationshipsCollected,
 			String status, MigrationAssessment assessment,
-			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-			MigrationDataProfile dataProfile,
-			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-			String mappingFingerprint,
-			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-			com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping targetMapping) {
-		public Report(final int formatVersion, final String sourceFingerprint, final String sourceProduct, final String targetProduct,
-				final String targetVersion, final Method migrationMethod, final boolean dataScanned, final boolean relationshipsCollected,
-				final String status, final MigrationAssessment assessment, final MigrationDataProfile dataProfile) {
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) MigrationDataProfile dataProfile,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String mappingFingerprint,
+			@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping targetMapping) {
+		public Report(final int formatVersion, final String sourceFingerprint, final String sourceProduct,
+				final String targetProduct, final String targetVersion, final Method migrationMethod,
+				final boolean dataScanned, final boolean relationshipsCollected, final String status,
+				final MigrationAssessment assessment, final MigrationDataProfile dataProfile) {
 			this(formatVersion, sourceFingerprint, sourceProduct, targetProduct, targetVersion, migrationMethod,
 					dataScanned, relationshipsCollected, status, assessment, dataProfile, null, null);
 		}
-		public Report(final int formatVersion, final String sourceFingerprint, final String sourceProduct, final String targetProduct,
-				final String targetVersion, final Method migrationMethod, final boolean dataScanned, final boolean relationshipsCollected,
-				final String status, final MigrationAssessment assessment) {
+
+		public Report(final int formatVersion, final String sourceFingerprint, final String sourceProduct,
+				final String targetProduct, final String targetVersion, final Method migrationMethod,
+				final boolean dataScanned, final boolean relationshipsCollected, final String status,
+				final MigrationAssessment assessment) {
 			this(formatVersion, sourceFingerprint, sourceProduct, targetProduct, targetVersion, migrationMethod,
 					dataScanned, relationshipsCollected, status, assessment, null, null, null);
 		}
@@ -67,11 +70,13 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 		if (inputFile == null || !inputFile.isFile()) {
 			throw new CommandException("inputFile must be an existing source file");
 		}
-		if (outputFile == null || targetDatabase == null || targetDatabase.isBlank()
-				|| targetVersion == null || targetVersion.isBlank()) {
+		if (outputFile == null || targetDatabase == null || targetDatabase.isBlank() || targetVersion == null
+				|| targetVersion.isBlank()) {
 			throw new CommandException("outputFile, targetDatabase and targetVersion are required");
 		}
-		if (ddlOutputFile != null && mappingFile == null) { throw new CommandException("ddlOutputFile requires mappingFile"); }
+		if (ddlOutputFile != null && mappingFile == null) {
+			throw new CommandException("ddlOutputFile requires mappingFile");
+		}
 		if (ddlPhaseOutputDirectory != null && mappingFile == null) {
 			throw new CommandException("ddlPhaseOutputDirectory requires mappingFile");
 		}
@@ -80,11 +85,14 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 			final var output = outputFile.toPath().toAbsolutePath().normalize();
 			final var htmlOutput = htmlOutputFile == null ? null : htmlOutputFile.toPath().toAbsolutePath().normalize();
 			final var mappingPath = mappingFile == null ? null : mappingFile.toPath().toAbsolutePath().normalize();
-			final var templatePath = mappingTemplateFile == null ? null : mappingTemplateFile.toPath().toAbsolutePath().normalize();
+			final var templatePath = mappingTemplateFile == null ? null
+					: mappingTemplateFile.toPath().toAbsolutePath().normalize();
 			final var ddlPath = ddlOutputFile == null ? null : ddlOutputFile.toPath().toAbsolutePath().normalize();
 			final var phaseDirectory = ddlPhaseOutputDirectory == null ? null
 					: ddlPhaseOutputDirectory.toPath().toAbsolutePath().normalize();
-			if (mappingFile != null && !mappingFile.isFile()) { throw new CommandException("mappingFile must be an existing YAML file"); }
+			if (mappingFile != null && !mappingFile.isFile()) {
+				throw new CommandException("mappingFile must be an existing YAML file");
+			}
 			if (input.equals(output) || Files.exists(output) && Files.isSameFile(input, output)) {
 				throw new CommandException("outputFile must not overwrite inputFile");
 			}
@@ -100,29 +108,34 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 				throw new CommandException("mappingFile must be distinct from inputFile and output files");
 			}
 			if (templatePath != null && (input.equals(templatePath) || output.equals(templatePath)
-					|| htmlOutput != null && htmlOutput.equals(templatePath) || mappingPath != null && mappingPath.equals(templatePath)
+					|| htmlOutput != null && htmlOutput.equals(templatePath)
+					|| mappingPath != null && mappingPath.equals(templatePath)
 					|| Files.exists(templatePath) && (Files.exists(output) && Files.isSameFile(output, templatePath)
-							|| htmlOutput != null && Files.exists(htmlOutput) && Files.isSameFile(htmlOutput, templatePath)
+							|| htmlOutput != null && Files.exists(htmlOutput)
+									&& Files.isSameFile(htmlOutput, templatePath)
 							|| mappingPath != null && Files.isSameFile(mappingPath, templatePath)))) {
-				throw new CommandException("mappingTemplateFile must be distinct from input and other output/configuration files");
+				throw new CommandException(
+						"mappingTemplateFile must be distinct from input and other output/configuration files");
 			}
 			if (ddlPath != null && (input.equals(ddlPath) || output.equals(ddlPath)
 					|| htmlOutput != null && htmlOutput.equals(ddlPath) || mappingPath.equals(ddlPath)
 					|| templatePath != null && templatePath.equals(ddlPath)
 					|| Files.exists(ddlPath) && (Files.exists(output) && Files.isSameFile(output, ddlPath)
 							|| htmlOutput != null && Files.exists(htmlOutput) && Files.isSameFile(htmlOutput, ddlPath)
-							|| Files.isSameFile(mappingPath, ddlPath)
-							|| templatePath != null && Files.exists(templatePath) && Files.isSameFile(templatePath, ddlPath)))) {
-				throw new CommandException("ddlOutputFile must be distinct from input and other output/configuration files");
+							|| Files.isSameFile(mappingPath, ddlPath) || templatePath != null
+									&& Files.exists(templatePath) && Files.isSameFile(templatePath, ddlPath)))) {
+				throw new CommandException(
+						"ddlOutputFile must be distinct from input and other output/configuration files");
 			}
 			if (phaseDirectory != null) {
 				if (Files.exists(phaseDirectory) && !Files.isDirectory(phaseDirectory)) {
 					throw new CommandException("ddlPhaseOutputDirectory must be a directory");
 				}
-				for (final var path : new java.nio.file.Path[] {
-						input, output, htmlOutput, mappingPath, templatePath, ddlPath }) {
+				for (final var path : new java.nio.file.Path[] { input, output, htmlOutput, mappingPath, templatePath,
+						ddlPath }) {
 					if (path != null && (phaseDirectory.equals(path) || path.startsWith(phaseDirectory))) {
-						throw new CommandException("ddlPhaseOutputDirectory must be distinct from input and other output/configuration files");
+						throw new CommandException(
+								"ddlPhaseOutputDirectory must be distinct from input and other output/configuration files");
 					}
 				}
 			}
@@ -131,15 +144,20 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 			if (scanData && (!source.dataScanned() || source.dataProfile() == null)) {
 				throw new CommandException("Source provider did not supply the requested data profile");
 			}
-			final var target = DatabaseMigrationAssessmentProvider.resolve(source.sourceProduct(), targetDatabase, targetVersion);
+			final var target = DatabaseMigrationAssessmentProvider.resolve(source.sourceProduct(), targetDatabase,
+					targetVersion);
 			final String version = target.normalizeTargetVersion(targetVersion);
 			final var targetAssessment = target.assess(source, version);
-			final String mappingFingerprint = mappingFile == null ? null : AssessMigrationCommand.fingerprint(mappingFile);
-			final var targetMapping = mappingFile == null ? null : new MigrationTargetMappingResolver().resolve(mappingFile,
-					mappingFingerprint, fingerprint, targetDatabase, version, source);
-			final var mappingAssessment = targetMapping == null ? new MigrationAssessment(java.util.List.of(), java.util.List.of())
+			final String mappingFingerprint = mappingFile == null ? null
+					: AssessMigrationCommand.fingerprint(mappingFile);
+			final var targetMapping = mappingFile == null ? null
+					: new MigrationTargetMappingResolver().resolve(mappingFile, mappingFingerprint, fingerprint,
+							targetDatabase, version, source);
+			final var mappingAssessment = targetMapping == null
+					? new MigrationAssessment(java.util.List.of(), java.util.List.of())
 					: target.assessMapping(source, version, targetMapping);
-			final var mappingCoverage = targetMapping == null ? new MigrationAssessment(java.util.List.of(), java.util.List.of())
+			final var mappingCoverage = targetMapping == null
+					? new MigrationAssessment(java.util.List.of(), java.util.List.of())
 					: new MigrationTargetMappingCoverage().assess(source, targetMapping);
 			final var findings = new ArrayList<>(targetAssessment.findings());
 			final var inventory = new ArrayList<>(targetAssessment.inventory());
@@ -156,13 +174,15 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 				throw new CommandException("mappingFile changed during assessment; retry with a stable copy");
 			}
 			final var assessment = new MigrationAssessment(findings, inventory);
-			final var result = new Report(targetMapping != null ? 3 : scanData ? 2 : 1, fingerprint, source.sourceProduct(), target.targetProduct(), version,
-					Method.LOGICAL_MIGRATION, source.dataScanned(), source.relationshipsCollected(),
+			final var result = new Report(targetMapping != null ? 3 : scanData ? 2 : 1, fingerprint,
+					source.sourceProduct(), target.targetProduct(), version, Method.LOGICAL_MIGRATION,
+					source.dataScanned(), source.relationshipsCollected(),
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, source.dataProfile(),
 					mappingFingerprint, targetMapping);
-			final String ddl = ddlOutputFile == null && ddlPhaseOutputDirectory == null || mappingAssessment.hasBlockers() ? null
-					: ddlWithProvenance(target.generateTargetDdl(source, targetMapping, version), fingerprint,
-							mappingFingerprint, targetMapping.targetDatabase(), version);
+			final String ddl = ddlOutputFile == null && ddlPhaseOutputDirectory == null
+					|| mappingAssessment.hasBlockers() ? null
+							: ddlWithProvenance(target.generateTargetDdl(source, targetMapping, version), fingerprint,
+									mappingFingerprint, targetMapping.targetDatabase(), version);
 			writeReport(result, source, target, fingerprint, version, ddl);
 		} catch (final Exception e) {
 			throw e instanceof CommandException commandException ? commandException
@@ -172,10 +192,8 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 
 	private static String ddlWithProvenance(final String ddl, final String sourceFingerprint,
 			final String mappingFingerprint, final String targetDatabase, final String targetVersion) {
-		return "-- sqlapp sourceFingerprint: " + sourceFingerprint + "\n"
-				+ "-- sqlapp mappingFingerprint: " + mappingFingerprint + "\n"
-				+ "-- sqlapp target: " + targetDatabase + " " + targetVersion + "\n"
-				+ ddl;
+		return "-- sqlapp sourceFingerprint: " + sourceFingerprint + "\n" + "-- sqlapp mappingFingerprint: "
+				+ mappingFingerprint + "\n" + "-- sqlapp target: " + targetDatabase + " " + targetVersion + "\n" + ddl;
 	}
 
 	/** Publish evidence before applying the failure policy. */
@@ -189,20 +207,25 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 			final String normalizedTargetVersion, final String ddl) throws IOException {
 		final var converter = new JsonConverter();
 		converter.setIndentOutput(true);
-		AtomicMigrationFile.write(outputFile.toPath(), temporary -> converter.writeJsonValue(temporary.toFile(), result));
+		AtomicMigrationFile.write(outputFile.toPath(),
+				temporary -> converter.writeJsonValue(temporary.toFile(), result));
 		report = result;
 		if (htmlOutputFile != null) {
 			final String html = DatabaseMigrationAssessmentHtml.render(result);
-			AtomicMigrationFile.write(htmlOutputFile.toPath(), temporary -> Files.writeString(temporary, html, StandardCharsets.UTF_8));
+			AtomicMigrationFile.write(htmlOutputFile.toPath(),
+					temporary -> Files.writeString(temporary, html, StandardCharsets.UTF_8));
 		}
 		if (mappingTemplateFile != null) {
 			new MigrationTargetMappingTemplateWriter().write(mappingTemplateFile, sourceFingerprint, targetDatabase,
 					normalizedTargetVersion, source, target);
 		}
 		if (ddlOutputFile != null && ddl != null) {
-			AtomicMigrationFile.write(ddlOutputFile.toPath(), temporary -> Files.writeString(temporary, ddl, StandardCharsets.UTF_8));
+			AtomicMigrationFile.write(ddlOutputFile.toPath(),
+					temporary -> Files.writeString(temporary, ddl, StandardCharsets.UTF_8));
 		}
-		if (ddlPhaseOutputDirectory != null && ddl != null) { writeDdlPhases(ddl, outputFile.toPath()); }
+		if (ddlPhaseOutputDirectory != null && ddl != null) {
+			writeDdlPhases(ddl, outputFile.toPath());
+		}
 		info("Database migration assessment: ", report.status());
 		if (failOnBlockers && report.assessment().hasBlockers()) {
 			throw new CommandException("Migration blockers found; review report: " + outputFile);
@@ -211,7 +234,9 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 
 	private void writeDdlPhases(final String ddl, final java.nio.file.Path assessmentReport) throws IOException {
 		final int firstMarker = ddl.indexOf("-- sqlapp:phase-1:begin");
-		if (firstMarker < 0) { throw new IOException("Generated DDL does not contain phase markers"); }
+		if (firstMarker < 0) {
+			throw new IOException("Generated DDL does not contain phase markers");
+		}
 		int provenanceEnd = 0;
 		for (int line = 0; line < 3; line++) {
 			provenanceEnd = ddl.indexOf('\n', provenanceEnd);
@@ -245,7 +270,9 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 		final String end = "-- sqlapp:" + section + ":end";
 		final int start = ddl.indexOf(begin);
 		final int finish = ddl.indexOf(end, start);
-		if (start < 0 || finish < 0) { throw new IOException("Generated DDL has incomplete " + section + " markers"); }
+		if (start < 0 || finish < 0) {
+			throw new IOException("Generated DDL has incomplete " + section + " markers");
+		}
 		final int bodyStart = start + begin.length();
 		return provenance + ddl.substring(start, bodyStart) + "\n" + preamble
 				+ ddl.substring(bodyStart + 1, finish + end.length()) + "\n";
@@ -257,8 +284,7 @@ public class AssessDatabaseMigrationCommand extends AbstractCommand {
 
 	private static String sha256(final byte[] content) {
 		try {
-			final byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
-					.digest(content);
+			final byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(content);
 			return java.util.HexFormat.of().formatHex(digest);
 		} catch (final java.security.NoSuchAlgorithmException e) {
 			throw new IllegalStateException("SHA-256 is unavailable", e);

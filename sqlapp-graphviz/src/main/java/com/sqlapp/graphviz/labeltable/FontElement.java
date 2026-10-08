@@ -28,30 +28,30 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class FontElement extends AbstractHasChildrenHtmlElement<FontElement>{
+@EqualsAndHashCode(callSuper = true)
+public class FontElement extends AbstractHasChildrenHtmlElement<FontElement> {
 
-	private String color=null;
+	private String color = null;
 	/**
 	 * fontname
 	 */
-	private String falce=null;
-	private String pointSize=null;
-	
-	protected String getElementName(){
+	private String falce = null;
+	private String pointSize = null;
+
+	protected String getElementName() {
 		return "font";
 	}
-	
+
 	@Override
 	protected void writeXml(StaxWriter staxWriter) throws XMLStreamException {
 		staxWriter.writeStartElement(getElementName());
 		staxWriter.writeAttribute("color", color);
-		staxWriter.writeAttribute("falce",falce);
-		staxWriter.writeAttribute("point-size",pointSize);
-		for(AbstractHtmlElement child:this.getChildren()){
+		staxWriter.writeAttribute("falce", falce);
+		staxWriter.writeAttribute("point-size", pointSize);
+		for (AbstractHtmlElement child : this.getChildren()) {
 			child.writeXml(staxWriter);
 		}
 		staxWriter.writeEndElement();

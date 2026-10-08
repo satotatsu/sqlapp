@@ -16,12 +16,10 @@ import com.sqlapp.util.JsonConverter;
 /** Reads and atomically writes bulk migration evidence reports. */
 public final class BulkMigrationEvidenceReportIO {
 	private static final Set<String> POLICIES = Set.of(BulkMigrationEvidenceReport.POLICY_SUCCESSFUL_EXECUTION,
-			BulkMigrationEvidenceReport.POLICY_MATCHING_DATA,
-			BulkMigrationEvidenceReport.POLICY_PROVENANCE_REQUIRED);
+			BulkMigrationEvidenceReport.POLICY_MATCHING_DATA, BulkMigrationEvidenceReport.POLICY_PROVENANCE_REQUIRED);
 	private static final Set<String> ARTIFACTS = Set.of(BulkMigrationEvidenceReport.ARTIFACT_OPERATIONAL_REPORT,
 			BulkMigrationEvidenceReport.ARTIFACT_VERIFICATION_REPORT,
-			BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION,
-			BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT,
+			BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION, BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT,
 			BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT,
 			BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT);
 
@@ -38,8 +36,8 @@ public final class BulkMigrationEvidenceReportIO {
 			throw new CommandException("Bulk migration evidence report file is required.");
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(file, maxFileSizeBytes,
-					"maxEvidenceFileSizeBytes", "Bulk migration evidence report");
+			final byte[] bytes = BoundedMigrationFile.read(file, maxFileSizeBytes, "maxEvidenceFileSizeBytes",
+					"Bulk migration evidence report");
 			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationEvidenceReport.class));
 			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
@@ -148,7 +146,8 @@ public final class BulkMigrationEvidenceReportIO {
 		if (report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT)
 				&& (report.provenance() == null || report.provenance().assessmentReportFingerprint() == null)
 				|| report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT)
-						&& (report.provenance() == null || report.provenance().ddlVerificationReportFingerprint() == null)
+						&& (report.provenance() == null
+								|| report.provenance().ddlVerificationReportFingerprint() == null)
 				|| report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION)
 						&& report.provenance() == null
 				|| report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT)
@@ -159,8 +158,7 @@ public final class BulkMigrationEvidenceReportIO {
 		return report;
 	}
 
-	private static BulkMigrationOperationalReport.ExecutionEvent event(
-			final BulkMigrationOperationalReport report) {
+	private static BulkMigrationOperationalReport.ExecutionEvent event(final BulkMigrationOperationalReport report) {
 		return report.execution() == null ? null : report.execution().event();
 	}
 

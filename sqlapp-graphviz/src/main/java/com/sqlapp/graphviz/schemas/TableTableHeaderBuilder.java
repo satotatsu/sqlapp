@@ -31,49 +31,49 @@ import lombok.experimental.Accessors;
 
 import java.util.function.Function;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class TableTableHeaderBuilder extends AbstractSchemaGraphBuilder{
+public class TableTableHeaderBuilder extends AbstractSchemaGraphBuilder {
 
-	private int cellSize=0;
-	
-	private String defaultColor=null;
+	private int cellSize = 0;
 
-	private String defaultBgcolor="#58ACFA";
-	
-	private Function<Table, String> name=(t)->t.getName();
-	
-	private Function<Table, String> color=(t)->this.defaultColor();
+	private String defaultColor = null;
 
-	private Function<Table, String> bgcolor=(t)->this.defaultBgcolor();
+	private String defaultBgcolor = "#58ACFA";
 
-	private TableTableHeaderBuilder(){}
-	
-	
-	public static TableTableHeaderBuilder create(){
-		TableTableHeaderBuilder builder=new TableTableHeaderBuilder();
+	private Function<Table, String> name = (t) -> t.getName();
+
+	private Function<Table, String> color = (t) -> this.defaultColor();
+
+	private Function<Table, String> bgcolor = (t) -> this.defaultBgcolor();
+
+	private TableTableHeaderBuilder() {
+	}
+
+	public static TableTableHeaderBuilder create() {
+		TableTableHeaderBuilder builder = new TableTableHeaderBuilder();
 		return builder;
 	}
 
-	private int colspan=1;
+	private int colspan = 1;
 
-	public int build(Table table, TrElement tr){
+	public int build(Table table, TrElement tr) {
 		createName(table, tr);
 		return cellSize;
 	}
-	
-	private TableTableHeaderBuilder createName(Table table, TrElement tr){
-		String value=name.apply(table);
-		if (value!=null){
-			tr.addCell(cell->{
+
+	private TableTableHeaderBuilder createName(Table table, TrElement tr) {
+		String value = name.apply(table);
+		if (value != null) {
+			tr.addCell(cell -> {
 				setCommonAttribute(table, cell);
 				cell.setAlign(Align.CENTER);
 				cell.setPort(getPortName(table));
 				cell.setValue(value);
-				if (CommonUtils.isEmpty(table.getDisplayRemarks())){
+				if (CommonUtils.isEmpty(table.getDisplayRemarks())) {
 					cell.setTooltip(table.getRemarks());
-				} else{
+				} else {
 					cell.setTooltip(table.getDisplayRemarks());
 				}
 			});
@@ -82,44 +82,43 @@ public class TableTableHeaderBuilder extends AbstractSchemaGraphBuilder{
 		return instance();
 	}
 
-	
-	private String getPortName(Table table){
+	private String getPortName(Table table) {
 		return SchemaGraphUtils.getName(table);
 	}
-	
-	private TableTableHeaderBuilder setCommonAttribute(Table table, TdElement cell){
+
+	private TableTableHeaderBuilder setCommonAttribute(Table table, TdElement cell) {
 		cell.setAlign(Align.CENTER);
-		//cell.setBorder(0);
+		// cell.setBorder(0);
 		cell.setColor(getTableColor(table));
 		cell.setBgcolor(getTableBgcolor(table));
-		if (colspan>1){
+		if (colspan > 1) {
 			cell.setColspan(colspan);
 		}
 		return instance();
 	}
-	
-	private TableTableHeaderBuilder instance(){
+
+	private TableTableHeaderBuilder instance() {
 		return this;
 	}
-	
-	private String getTableColor(Table table){
-		String value=color.apply(table);
-		if (value==null){
+
+	private String getTableColor(Table table) {
+		String value = color.apply(table);
+		if (value == null) {
 			return this.defaultColor();
 		}
 		return value;
 	}
 
-	private String getTableBgcolor(Table table){
-		String value=bgcolor.apply(table);
-		if (value==null){
+	private String getTableBgcolor(Table table) {
+		String value = bgcolor.apply(table);
+		if (value == null) {
 			return this.defaultBgcolor();
 		}
 		return value;
 	}
 
-	private void addCellSize(){
-		cellSize=cellSize+colspan;
+	private void addCellSize() {
+		cellSize = cellSize + colspan;
 	}
 
 }

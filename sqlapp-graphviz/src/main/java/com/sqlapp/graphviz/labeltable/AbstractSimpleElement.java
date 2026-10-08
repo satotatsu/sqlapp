@@ -28,11 +28,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public abstract class AbstractSimpleElement extends AbstractHtmlElement{
+@EqualsAndHashCode(callSuper = true)
+public abstract class AbstractSimpleElement extends AbstractHtmlElement {
 
 	protected abstract String getElementName();
 

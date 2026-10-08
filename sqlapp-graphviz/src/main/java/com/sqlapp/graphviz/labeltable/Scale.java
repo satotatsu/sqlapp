@@ -20,9 +20,5 @@
 package com.sqlapp.graphviz.labeltable;
 
 public enum Scale {
-	FALSE
-	,TRUE
-	,WIDTH
-	,HEIGHT
-	,BOTH
+	FALSE, TRUE, WIDTH, HEIGHT, BOTH
 }

@@ -15,11 +15,10 @@ final class BulkMigrationJobRepairApprovalValidator {
 	private BulkMigrationJobRepairApprovalValidator() {
 	}
 
-	static Validated validate(final File file, final String expectedFingerprint,
-			final Long maxAgeSeconds, final Long maxFileSizeBytes) {
+	static Validated validate(final File file, final String expectedFingerprint, final Long maxAgeSeconds,
+			final Long maxFileSizeBytes) {
 		if (expectedFingerprint != null && !expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
-			throw new CommandException(
-					"expectedApprovedRepairPlanFileFingerprint must be a lowercase SHA-256 value.");
+			throw new CommandException("expectedApprovedRepairPlanFileFingerprint must be a lowercase SHA-256 value.");
 		}
 		if (maxAgeSeconds != null && maxAgeSeconds <= 0) {
 			throw new CommandException("maxApprovedRepairPlanAgeSeconds must be greater than zero.");
@@ -32,9 +31,10 @@ final class BulkMigrationJobRepairApprovalValidator {
 		final var report = snapshot.report();
 		final Instant generatedAt = report.generatedAt();
 		final Instant now = Instant.now();
-		if (generatedAt.isAfter(now) || report.tasks().stream()
-				.anyMatch(task -> task.repairPlan().generatedAt().isAfter(now))) {
-			throw new CommandException("Approved repair plan generatedAt is in the future; check clock synchronization.");
+		if (generatedAt.isAfter(now)
+				|| report.tasks().stream().anyMatch(task -> task.repairPlan().generatedAt().isAfter(now))) {
+			throw new CommandException(
+					"Approved repair plan generatedAt is in the future; check clock synchronization.");
 		}
 		if (maxAgeSeconds != null) {
 			try {

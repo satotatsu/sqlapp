@@ -23,74 +23,74 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class RecordLabelBuilder extends AbstractGraphVizElement{
+public class RecordLabelBuilder extends AbstractGraphVizElement {
 
-	private List<Object> elements=new ArrayList<>();
-	
-	private int brace=0;
-	
-	private RecordLabelBuilder(){}
-	
-	public static RecordLabelBuilder create(){
+	private List<Object> elements = new ArrayList<>();
+
+	private int brace = 0;
+
+	private RecordLabelBuilder() {
+	}
+
+	public static RecordLabelBuilder create() {
 		return new RecordLabelBuilder();
 	}
 
-	public RecordLabelBuilder addWithPort(String port, String value){
-		elements.add("<"+this.escapeName(port)+"> : "+this.escapeName(value));
+	public RecordLabelBuilder addWithPort(String port, String value) {
+		elements.add("<" + this.escapeName(port) + "> : " + this.escapeName(value));
 		return instance();
 	}
 
-	public RecordLabelBuilder add(String value){
+	public RecordLabelBuilder add(String value) {
 		elements.add(this.escapeName(value));
 		return instance();
 	}
 
-	public RecordLabelBuilder add(Consumer<RecordLabelBuilder> c){
-		RecordLabelBuilder child=RecordLabelBuilder.create();
+	public RecordLabelBuilder add(Consumer<RecordLabelBuilder> c) {
+		RecordLabelBuilder child = RecordLabelBuilder.create();
 		this.elements.add(child);
 		c.accept(child);
 		return instance();
 	}
 
-	public RecordLabelBuilder add(RecordLabelBuilder builder){
+	public RecordLabelBuilder add(RecordLabelBuilder builder) {
 		this.elements.add(builder);
 		return instance();
 	}
-	
+
 	public RecordLabelBuilder addBrace() {
-		this.brace=this.brace+1;
+		this.brace = this.brace + 1;
 		return instance();
 	}
 
-	
-	protected RecordLabelBuilder instance(){
+	protected RecordLabelBuilder instance() {
 		return this;
 	}
-	
+
 	@Override
-	public String toString(){
-		StringBuilder builder=new StringBuilder();
-		for(int i=0;i<this.brace;i++){
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < this.brace; i++) {
 			builder.append("{");
 		}
-		if (!elements.isEmpty()){
-			boolean first=true;
-			for(Object element:elements){
-				if (!first){
+		if (!elements.isEmpty()) {
+			boolean first = true;
+			for (Object element : elements) {
+				if (!first) {
 					builder.append(" | ");
-				} else{
+				} else {
 					builder.append(" ");
-					first=false;
+					first = false;
 				}
-				if (element==null){
+				if (element == null) {
 					builder.append("");
-				} else{
+				} else {
 					builder.append(element.toString());
 				}
 			}
 			builder.append(" ");
 		}
-		for(int i=0;i<this.brace;i++){
+		for (int i = 0; i < this.brace; i++) {
 			builder.append("}");
 		}
 		return builder.toString();

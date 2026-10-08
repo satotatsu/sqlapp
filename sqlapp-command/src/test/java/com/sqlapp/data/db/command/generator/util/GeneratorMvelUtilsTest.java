@@ -63,7 +63,8 @@ class GeneratorMvelUtilsTest {
 
 	private static int count(final Iterable<Map<String, Object>> iterable) {
 		int count = 0;
-		for (@SuppressWarnings("unused") final Map<String, Object> row : iterable) {
+		for (@SuppressWarnings("unused")
+		final Map<String, Object> row : iterable) {
 			count++;
 		}
 		return count;

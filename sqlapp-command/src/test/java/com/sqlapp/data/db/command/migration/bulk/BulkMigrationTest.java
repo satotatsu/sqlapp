@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -95,8 +94,7 @@ class BulkMigrationTest {
 		final String manifestFingerprint = "sha256:"
 				+ com.sqlapp.util.MessageDigests.SHA256.checksumAsString(manifestFile.toFile());
 		assertEquals(manifestFingerprint, migration.getNodeManifestFingerprint());
-		assertThrows(CommandException.class,
-				() -> migration.executeModified(manifestFile, manifestFingerprint, 1L));
+		assertThrows(CommandException.class, () -> migration.executeModified(manifestFile, manifestFingerprint, 1L));
 		assertThrows(IllegalArgumentException.class,
 				() -> migration.executeModified(manifestFile, "sha256:" + "0".repeat(64), 1_000_000L));
 		assertThrows(IllegalArgumentException.class,
@@ -112,10 +110,10 @@ class BulkMigrationTest {
 		assertTrue(unchanged.selection().selected().isEmpty());
 		assertNull(unchanged.migration());
 		assertEquals(manifestFingerprint, migration.getApprovedNodeManifestFingerprint());
-		assertEquals(unchanged.current(), new com.sqlapp.data.db.command.migration.verification.MigrationNodeManifestIO()
-				.read(nextManifestFile));
-		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256
-				.checksumAsString(nextManifestFile.toFile()), migration.getNodeManifestFingerprint());
+		assertEquals(unchanged.current(),
+				new com.sqlapp.data.db.command.migration.verification.MigrationNodeManifestIO().read(nextManifestFile));
+		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(nextManifestFile.toFile()),
+				migration.getNodeManifestFingerprint());
 		for (final JDBCDataSource dataSource : List.of(source, target)) {
 			try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
 				statement.execute("CREATE TABLE CUTOVER_EVENTS(UPDATED_AT TIMESTAMP)");
@@ -127,8 +125,8 @@ class BulkMigrationTest {
 			}
 		}
 		final Path cutoverFile = directory.resolve("cutover/decision.json");
-		final var freshness = new MigrationFreshnessCheck("clock", null, "PUBLIC", "CUTOVER_EVENTS", "UPDATED_AT",
-				null, null, Map.of(), Duration.ofMinutes(1));
+		final var freshness = new MigrationFreshnessCheck("clock", null, "PUBLIC", "CUTOVER_EVENTS", "UPDATED_AT", null,
+				null, Map.of(), Duration.ofMinutes(1));
 		final var cutover = migration.assessCutover(List.of(freshness), Instant.now(), Duration.ofMinutes(1),
 				cutoverFile, 1_000_000L);
 		assertEquals(com.sqlapp.data.db.command.migration.verification.MigrationCutoverReport.Status.READY,
@@ -138,21 +136,22 @@ class BulkMigrationTest {
 		final String cutoverFingerprint = migration.getCutoverReportFingerprint();
 		assertThrows(IllegalArgumentException.class, () -> migration.approveCutover(cutoverFile,
 				"sha256:" + "0".repeat(64), Duration.ofMinutes(1), 1_000_000L));
-		assertThrows(CommandException.class, () -> migration.approveCutover(cutoverFile,
-				cutoverFingerprint, Duration.ofMinutes(1), 1L));
-		assertEquals(cutover, migration.approveCutover(cutoverFile, cutoverFingerprint,
-				Duration.ofMinutes(1), 1_000_000L));
+		assertThrows(CommandException.class,
+				() -> migration.approveCutover(cutoverFile, cutoverFingerprint, Duration.ofMinutes(1), 1L));
+		assertEquals(cutover,
+				migration.approveCutover(cutoverFile, cutoverFingerprint, Duration.ofMinutes(1), 1_000_000L));
 		assertEquals(cutoverFingerprint, migration.getApprovedCutoverReportFingerprint());
 		final Path expiredCutoverFile = directory.resolve("cutover/expired.json");
 		final var cutoverIO = new MigrationCutoverReportIO();
 		final var expiredSnapshot = cutoverIO.writeSnapshot(expiredCutoverFile,
 				new MigrationCutoverReport(Instant.now().minus(Duration.ofHours(2)),
-						MigrationCutoverReport.Status.READY, Duration.ZERO, List.of()), null);
+						MigrationCutoverReport.Status.READY, Duration.ZERO, List.of()),
+				null);
 		assertThrows(IllegalArgumentException.class, () -> migration.approveCutover(expiredCutoverFile,
 				expiredSnapshot.fingerprint(), Duration.ofMinutes(1), 1_000_000L));
 		final Path rejectedCutoverFile = directory.resolve("cutover/rejected.json");
-		final var rejectedSnapshot = cutoverIO.writeSnapshot(rejectedCutoverFile,
-				new MigrationCutoverReport(Instant.now(),
+		final var rejectedSnapshot = cutoverIO.writeSnapshot(
+				rejectedCutoverFile, new MigrationCutoverReport(Instant.now(),
 						MigrationCutoverReport.Status.NOT_READY_VERIFICATION_STALE, Duration.ofHours(2), List.of()),
 				null);
 		assertThrows(IllegalStateException.class, () -> migration.approveCutover(rejectedCutoverFile,
@@ -166,8 +165,9 @@ class BulkMigrationTest {
 		assertTrue(Files.isRegularFile(directory.resolve("verification/mismatch.json")));
 		assertFalse(
 				new BulkMigrationVerificationReportIO().read(directory.resolve("verification/mismatch.json")).match());
-		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256
-				.checksumAsString(directory.resolve("verification/mismatch.json").toFile()),
+		assertEquals(
+				"sha256:" + com.sqlapp.util.MessageDigests.SHA256
+						.checksumAsString(directory.resolve("verification/mismatch.json").toFile()),
 				migration.getVerificationReportFingerprint());
 		assertEquals(0, verification.getExpectedRows());
 		assertEquals(1, verification.getActualRows());
@@ -222,8 +222,8 @@ class BulkMigrationTest {
 		assertEquals(1, migration.executeAndVerify().migration().getProcessedRows());
 		assertEquals(1, migration.getExecutionReport().processedRows());
 		assertEquals("PUBLIC.ACCESS_ITEMS", migration.getExecutionReport().tasks().get(0).taskId());
-		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256
-				.checksumAsString(executionReportFile.toFile()), migration.getExecutionReportFingerprint());
+		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(executionReportFile.toFile()),
+				migration.getExecutionReportFingerprint());
 		try (var connection = target.getConnection(); var statement = connection.createStatement()) {
 			statement.executeUpdate("UPDATE ITEMS SET TXT='changed' WHERE ID=1");
 		}
@@ -231,24 +231,20 @@ class BulkMigrationTest {
 		assertTrue(repair.isRequired());
 		final Path repairFile = directory.resolve("mapped-facade-repair.json");
 		final var report = repair.writeJson(repairFile);
-		assertEquals(Map.of("ACCESS_ID", "ID"),
-				report.tasks().get(0).repairPlan().columnMappings());
+		assertEquals(Map.of("ACCESS_ID", "ID"), report.tasks().get(0).repairPlan().columnMappings());
 		assertEquals(1, repair.executeApproved(repairFile).getReplayedRows());
 		final var successfulVerification = migration.verify();
 		assertTrue(successfulVerification.isMatch());
 		final Path verificationFile = directory.resolve("mapped-verification.json");
 		final var verificationIO = new BulkMigrationVerificationReportIO();
-		final var verificationSnapshot = verificationIO.writeSnapshot(verificationFile,
-				verificationIO.fromResult(successfulVerification.getPlanFingerprint(),
-						BulkMigrationVerificationIsolation.DEFAULT,
-						BulkMigrationVerificationReportIO.DEFAULT_MAX_REPORTED_MISMATCHES,
-						successfulVerification, null));
+		final var verificationSnapshot = verificationIO.writeSnapshot(verificationFile, verificationIO.fromResult(
+				successfulVerification.getPlanFingerprint(), BulkMigrationVerificationIsolation.DEFAULT,
+				BulkMigrationVerificationReportIO.DEFAULT_MAX_REPORTED_MISMATCHES, successfulVerification, null));
 		final Path cutoverFile = directory.resolve("mapped-cutover.json");
 		assertThrows(IllegalArgumentException.class, () -> migration.assessCutover(List.of(), verificationFile,
 				"sha256:" + "0".repeat(64), Duration.ofMinutes(5), 1_000_000L, cutoverFile, 1_000_000L));
-		final var cutover = migration.assessCutover(List.of(), verificationFile,
-				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L,
-				cutoverFile, 1_000_000L);
+		final var cutover = migration.assessCutover(List.of(), verificationFile, verificationSnapshot.fingerprint(),
+				Duration.ofMinutes(5), 1_000_000L, cutoverFile, 1_000_000L);
 		assertEquals(MigrationCutoverReport.Status.READY, cutover.status());
 		assertEquals(verificationSnapshot.fingerprint(), migration.getApprovedVerificationReportFingerprint());
 		assertEquals("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(cutoverFile.toFile()),
@@ -256,8 +252,8 @@ class BulkMigrationTest {
 		final Path linkedCutoverFile = directory.resolve("mapped-linked-cutover.json");
 		final Path evidenceFile = directory.resolve("mapped-cutover-evidence.json");
 		final var evidence = migration.assessCutoverAndWriteEvidence(List.of(), verificationFile,
-				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L,
-				linkedCutoverFile, 1_000_000L, evidenceFile, 1_000_000L);
+				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L, linkedCutoverFile, 1_000_000L,
+				evidenceFile, 1_000_000L);
 		assertEquals(verificationSnapshot.report().planFingerprint(), evidence.planFingerprint());
 		assertEquals(verificationSnapshot.fingerprint(), evidence.verificationReportFingerprint());
 		assertEquals(MigrationCutoverReport.Status.READY, evidence.status());
@@ -265,37 +261,33 @@ class BulkMigrationTest {
 				+ com.sqlapp.util.MessageDigests.SHA256.checksumAsString(evidenceFile.toFile());
 		assertEquals(evidenceFingerprint, migration.getCutoverEvidenceFingerprint());
 		assertEquals(evidence, new MigrationCutoverEvidenceIO().read(evidenceFile));
-		assertThrows(IllegalArgumentException.class, () -> migration.approveCutoverEvidence(evidenceFile,
-				"sha256:" + "0".repeat(64), verificationFile, linkedCutoverFile,
-				Duration.ofMinutes(5), 1_000_000L, 1_000_000L, 1_000_000L));
-		assertThrows(CommandException.class, () -> migration.approveCutoverEvidence(evidenceFile,
-				evidenceFingerprint, verificationFile, linkedCutoverFile,
-				Duration.ofMinutes(5), 1L, 1_000_000L, 1_000_000L));
-		assertEquals(evidence, migration.approveCutoverEvidence(evidenceFile, evidenceFingerprint,
-				verificationFile, linkedCutoverFile, Duration.ofMinutes(5),
-				1_000_000L, 1_000_000L, 1_000_000L));
+		assertThrows(IllegalArgumentException.class,
+				() -> migration.approveCutoverEvidence(evidenceFile, "sha256:" + "0".repeat(64), verificationFile,
+						linkedCutoverFile, Duration.ofMinutes(5), 1_000_000L, 1_000_000L, 1_000_000L));
+		assertThrows(CommandException.class, () -> migration.approveCutoverEvidence(evidenceFile, evidenceFingerprint,
+				verificationFile, linkedCutoverFile, Duration.ofMinutes(5), 1L, 1_000_000L, 1_000_000L));
+		assertEquals(evidence, migration.approveCutoverEvidence(evidenceFile, evidenceFingerprint, verificationFile,
+				linkedCutoverFile, Duration.ofMinutes(5), 1_000_000L, 1_000_000L, 1_000_000L));
 		assertEquals(evidenceFingerprint, migration.getApprovedCutoverEvidenceFingerprint());
 		assertEquals(verificationSnapshot.fingerprint(), migration.getApprovedVerificationReportFingerprint());
 		final String previousCutoverFingerprint = migration.getCutoverReportFingerprint();
 		final String previousEvidenceFingerprint = migration.getCutoverEvidenceFingerprint();
 		final Path failedPackage = directory.resolve("release/failed-package");
 		assertThrows(CommandException.class, () -> migration.assessCutoverPackage(List.of(), verificationFile,
-				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L,
-				failedPackage, 1_000_000L, 1L));
+				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L, failedPackage, 1_000_000L, 1L));
 		assertFalse(Files.exists(failedPackage));
 		assertEquals(previousCutoverFingerprint, migration.getCutoverReportFingerprint());
 		assertEquals(previousEvidenceFingerprint, migration.getCutoverEvidenceFingerprint());
 		assertEquals(verificationSnapshot.fingerprint(), migration.getApprovedVerificationReportFingerprint());
 		final Path packageDirectory = directory.resolve("release/cutover-package");
 		final var cutoverPackage = migration.assessCutoverPackage(List.of(), verificationFile,
-				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L,
-				packageDirectory, 1_000_000L, 1_000_000L);
+				verificationSnapshot.fingerprint(), Duration.ofMinutes(5), 1_000_000L, packageDirectory, 1_000_000L,
+				1_000_000L);
 		assertTrue(Files.isRegularFile(packageDirectory.resolve("verification.json")));
 		assertTrue(Files.isRegularFile(packageDirectory.resolve("cutover.json")));
 		assertTrue(Files.isRegularFile(packageDirectory.resolve("evidence.json")));
 		assertEquals(cutoverPackage.evidenceFingerprint(), migration.getCutoverEvidenceFingerprint());
-		final var inspection = migration.inspectCutoverPackage(packageDirectory,
-				1_000_000L, 1_000_000L, 1_000_000L);
+		final var inspection = migration.inspectCutoverPackage(packageDirectory, 1_000_000L, 1_000_000L, 1_000_000L);
 		assertEquals(cutoverPackage.evidence(), inspection.evidence());
 		assertEquals(cutoverPackage.evidenceFingerprint(), inspection.evidenceFingerprint());
 		assertTrue(inspection.verification().match());
@@ -312,20 +304,17 @@ class BulkMigrationTest {
 				cutoverPackage.evidenceFingerprint(), Duration.ofMinutes(5)));
 		Files.move(savedCutover, packagedCutover);
 		assertEquals(cutoverPackage.evidence(), migration.approveCutoverPackage(packageDirectory,
-				cutoverPackage.evidenceFingerprint(), Duration.ofMinutes(5),
-				1_000_000L, 1_000_000L, 1_000_000L));
+				cutoverPackage.evidenceFingerprint(), Duration.ofMinutes(5), 1_000_000L, 1_000_000L, 1_000_000L));
 		assertThrows(CommandException.class, () -> migration.assessCutoverPackage(List.of(), verificationFile,
 				Duration.ofMinutes(5), packageDirectory));
-		Files.writeString(packageDirectory.resolve("verification.json"), "\n",
-				java.nio.file.StandardOpenOption.APPEND);
+		Files.writeString(packageDirectory.resolve("verification.json"), "\n", java.nio.file.StandardOpenOption.APPEND);
 		assertThrows(IllegalArgumentException.class, () -> migration.approveCutoverPackage(packageDirectory,
 				cutoverPackage.evidenceFingerprint(), Duration.ofMinutes(5)));
-		new MigrationCutoverReportIO().write(linkedCutoverFile,
-				new MigrationCutoverReport(evidence.assessedAt().plusMillis(1), MigrationCutoverReport.Status.READY,
-						Duration.ZERO, List.of()));
-		assertThrows(IllegalArgumentException.class, () -> migration.approveCutoverEvidence(evidenceFile,
-				evidenceFingerprint, verificationFile, linkedCutoverFile,
-				Duration.ofMinutes(5), 1_000_000L, 1_000_000L, 1_000_000L));
+		new MigrationCutoverReportIO().write(linkedCutoverFile, new MigrationCutoverReport(
+				evidence.assessedAt().plusMillis(1), MigrationCutoverReport.Status.READY, Duration.ZERO, List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> migration.approveCutoverEvidence(evidenceFile, evidenceFingerprint, verificationFile,
+						linkedCutoverFile, Duration.ofMinutes(5), 1_000_000L, 1_000_000L, 1_000_000L));
 	}
 
 	@Test
@@ -360,10 +349,12 @@ class BulkMigrationTest {
 		schema.getTables().add(child);
 		schema.getTables().add(parent);
 		final BulkMigration migration = BulkMigration.builder().source(source).target(target).schema(schema)
-				.tableOption("ACCESS_PARENTS", BulkMigrationTableOption.builder().targetTable("PUBLIC.PARENTS")
-						.columnMappings(Map.of("ACCESS_ID", "ID")).build())
-				.tableOption("ACCESS_CHILDREN", BulkMigrationTableOption.builder().targetTable("PUBLIC.CHILDREN")
-						.columnMappings(Map.of("ACCESS_ID", "ID", "ACCESS_PARENT_ID", "PARENT_ID")).build())
+				.tableOption("ACCESS_PARENTS",
+						BulkMigrationTableOption.builder().targetTable("PUBLIC.PARENTS")
+								.columnMappings(Map.of("ACCESS_ID", "ID")).build())
+				.tableOption("ACCESS_CHILDREN",
+						BulkMigrationTableOption.builder().targetTable("PUBLIC.CHILDREN")
+								.columnMappings(Map.of("ACCESS_ID", "ID", "ACCESS_PARENT_ID", "PARENT_ID")).build())
 				.build();
 
 		assertEquals(List.of("PUBLIC.ACCESS_PARENTS", "PUBLIC.ACCESS_CHILDREN"),
@@ -459,8 +450,7 @@ class BulkMigrationTest {
 				() -> BulkMigrationTableOption.builder().keysetColumns(List.of("ID", "ID")).build());
 		assertThrows(IllegalArgumentException.class,
 				() -> BulkMigrationTableOption.builder().verificationColumns(List.of(" ")).build());
-		assertThrows(IllegalArgumentException.class,
-				() -> BulkMigrationTableOption.builder().targetTable(" ").build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationTableOption.builder().targetTable(" ").build());
 	}
 
 	@Test

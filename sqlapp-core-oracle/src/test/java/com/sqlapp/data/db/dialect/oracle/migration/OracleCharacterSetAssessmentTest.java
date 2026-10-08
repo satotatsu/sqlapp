@@ -23,7 +23,8 @@ class OracleCharacterSetAssessmentTest {
 		return new Schema("APP").setProductName("Oracle").setProductMajorVersion(10);
 	}
 
-	private Column column(final Schema schema, final String table, final DataType type, final CharacterSemantics semantics) {
+	private Column column(final Schema schema, final String table, final DataType type,
+			final CharacterSemantics semantics) {
 		final var result = new Column("C.with.dot").setDataType(type).setLength(20).setOctetLength(20)
 				.setCharacterSemantics(semantics);
 		final var owner = new Table(table);
@@ -61,7 +62,8 @@ class OracleCharacterSetAssessmentTest {
 		final var result = assess(schema);
 		assertTrue(rules(result).contains("oracle.charset.byte-expansion"));
 		assertTrue(rules(result).contains("oracle.charset.char-byte-limit"));
-		final var byteFinding = result.findings().stream().filter(f -> f.ruleId().endsWith("byte-expansion")).findFirst().orElseThrow();
+		final var byteFinding = result.findings().stream().filter(f -> f.ruleId().endsWith("byte-expansion"))
+				.findFirst().orElseThrow();
 		assertEquals("BYTE.TABLE", byteFinding.object().table());
 		assertEquals("C.with.dot", byteFinding.object().name());
 		assertTrue(byteFinding.reason().contains("UNKNOWN"));

@@ -25,14 +25,14 @@ final class BulkMigrationArtifactProvenanceVerifier {
 		}
 		final String actual;
 		try {
-			actual = BoundedMigrationFile.sha256(file.toPath(), maxFileSizeBytes,
-					"maxApprovalArtifactFileSizeBytes", fileProperty);
+			actual = BoundedMigrationFile.sha256(file.toPath(), maxFileSizeBytes, "maxApprovalArtifactFileSizeBytes",
+					fileProperty);
 		} catch (java.io.IOException e) {
 			throw new CommandException("Could not fingerprint " + fileProperty + ": " + e.getMessage(), e);
 		}
 		if (!expectedFingerprint.equals(actual)) {
-			throw new CommandException(fileProperty + " fingerprint does not match provenance."
-					+ provenanceProperty + ".");
+			throw new CommandException(
+					fileProperty + " fingerprint does not match provenance." + provenanceProperty + ".");
 		}
 	}
 }

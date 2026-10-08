@@ -53,8 +53,7 @@ class BulkMigrationJobRepairExecutionReportIOTest {
 				BulkMigrationJobRepairExecutionReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration", "repair",
 				"sha256:" + "d".repeat(64), 1, 1, 99, 2, 0, List.of(task), null);
 
-		assertThrows(CommandException.class,
-				() -> new BulkMigrationJobRepairExecutionReportIO().write(
-						temporaryDirectory.resolve("invalid.json"), report));
+		assertThrows(CommandException.class, () -> new BulkMigrationJobRepairExecutionReportIO()
+				.write(temporaryDirectory.resolve("invalid.json"), report));
 	}
 }

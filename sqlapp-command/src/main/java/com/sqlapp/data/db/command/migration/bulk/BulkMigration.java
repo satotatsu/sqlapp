@@ -474,14 +474,11 @@ public final class BulkMigration {
 	/** Adds optional SHA-256 and bounded-read checks to state-aware execution. */
 	public StateExecution executeModified(final Path previousManifest, final String expectedManifestFingerprint,
 			final Long maxNodeManifestFileSizeBytes) throws SQLException {
-		if (expectedManifestFingerprint != null
-				&& !expectedManifestFingerprint.matches("sha256:[0-9a-f]{64}")) {
+		if (expectedManifestFingerprint != null && !expectedManifestFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new IllegalArgumentException("expectedManifestFingerprint must be a lowercase SHA-256 value");
 		}
-		final var snapshot = new MigrationNodeManifestIO().readSnapshot(previousManifest,
-				maxNodeManifestFileSizeBytes);
-		if (expectedManifestFingerprint != null
-				&& !expectedManifestFingerprint.equals(snapshot.fingerprint())) {
+		final var snapshot = new MigrationNodeManifestIO().readSnapshot(previousManifest, maxNodeManifestFileSizeBytes);
+		if (expectedManifestFingerprint != null && !expectedManifestFingerprint.equals(snapshot.fingerprint())) {
 			throw new IllegalArgumentException("Migration node manifest fingerprint does not match");
 		}
 		approvedNodeManifestFingerprint = snapshot.fingerprint();
@@ -489,19 +486,21 @@ public final class BulkMigration {
 	}
 
 	/** Executes changed nodes and atomically writes the state for the next run. */
-	public StateExecution executeModifiedAndWriteManifest(final Path previousManifest,
-			final Path currentManifest) throws SQLException {
+	public StateExecution executeModifiedAndWriteManifest(final Path previousManifest, final Path currentManifest)
+			throws SQLException {
 		return executeModifiedAndWriteManifest(previousManifest, currentManifest, null, null);
 	}
 
-	/** Adds input SHA-256 and bounded-read checks to the state rollover operation. */
-	public StateExecution executeModifiedAndWriteManifest(final Path previousManifest,
-			final Path currentManifest, final String expectedPreviousManifestFingerprint,
-			final Long maxPreviousManifestFileSizeBytes) throws SQLException {
-		final StateExecution execution = executeModified(previousManifest,
-				expectedPreviousManifestFingerprint, maxPreviousManifestFileSizeBytes);
-		final var snapshot = new MigrationNodeManifestIO().writeSnapshot(
-				Objects.requireNonNull(currentManifest, "currentManifest"), execution.current(), null);
+	/**
+	 * Adds input SHA-256 and bounded-read checks to the state rollover operation.
+	 */
+	public StateExecution executeModifiedAndWriteManifest(final Path previousManifest, final Path currentManifest,
+			final String expectedPreviousManifestFingerprint, final Long maxPreviousManifestFileSizeBytes)
+			throws SQLException {
+		final StateExecution execution = executeModified(previousManifest, expectedPreviousManifestFingerprint,
+				maxPreviousManifestFileSizeBytes);
+		final var snapshot = new MigrationNodeManifestIO()
+				.writeSnapshot(Objects.requireNonNull(currentManifest, "currentManifest"), execution.current(), null);
 		nodeManifestFingerprint = snapshot.fingerprint();
 		return execution;
 	}
@@ -518,28 +517,27 @@ public final class BulkMigration {
 
 	/** Assesses cutover readiness and atomically writes the measured evidence. */
 	public MigrationCutoverReport assessCutover(final List<MigrationFreshnessCheck> checks,
-			final Instant lastVerifiedAt, final Duration maximumVerificationAge,
-			final Path reportFile) throws SQLException {
+			final Instant lastVerifiedAt, final Duration maximumVerificationAge, final Path reportFile)
+			throws SQLException {
 		return assessCutover(checks, lastVerifiedAt, maximumVerificationAge, reportFile, null);
 	}
 
 	/** Adds an optional output-size limit to persisted cutover evidence. */
 	public MigrationCutoverReport assessCutover(final List<MigrationFreshnessCheck> checks,
-			final Instant lastVerifiedAt, final Duration maximumVerificationAge,
-			final Path reportFile, final Long maxCutoverReportFileSizeBytes) throws SQLException {
+			final Instant lastVerifiedAt, final Duration maximumVerificationAge, final Path reportFile,
+			final Long maxCutoverReportFileSizeBytes) throws SQLException {
 		final MigrationCutoverReport report = assessCutover(checks, lastVerifiedAt, maximumVerificationAge);
-		final var snapshot = new MigrationCutoverReportIO().writeSnapshot(
-				Objects.requireNonNull(reportFile, "reportFile"), report, maxCutoverReportFileSizeBytes);
+		final var snapshot = new MigrationCutoverReportIO()
+				.writeSnapshot(Objects.requireNonNull(reportFile, "reportFile"), report, maxCutoverReportFileSizeBytes);
 		cutoverReportFingerprint = snapshot.fingerprint();
 		return snapshot.report();
 	}
 
 	/** Uses a matching successful verification artifact as cutover evidence. */
 	public MigrationCutoverReport assessCutover(final List<MigrationFreshnessCheck> checks,
-			final Path verificationReport, final Duration maximumVerificationAge,
-			final Path cutoverReport) throws SQLException {
-		return assessCutover(checks, verificationReport, null, maximumVerificationAge, null,
-				cutoverReport, null);
+			final Path verificationReport, final Duration maximumVerificationAge, final Path cutoverReport)
+			throws SQLException {
+		return assessCutover(checks, verificationReport, null, maximumVerificationAge, null, cutoverReport, null);
 	}
 
 	/** Adds SHA-256 and size checks to verification-bound cutover assessment. */
@@ -553,8 +551,7 @@ public final class BulkMigration {
 					"expectedVerificationReportFingerprint must be a lowercase SHA-256 value");
 		}
 		final var verificationSnapshot = new BulkMigrationVerificationReportIO().readSnapshot(
-				Objects.requireNonNull(verificationReport, "verificationReport"),
-				maxVerificationReportFileSizeBytes);
+				Objects.requireNonNull(verificationReport, "verificationReport"), maxVerificationReportFileSizeBytes);
 		if (expectedVerificationReportFingerprint != null
 				&& !expectedVerificationReportFingerprint.equals(verificationSnapshot.fingerprint())) {
 			throw new IllegalArgumentException("Bulk migration verification report fingerprint does not match");
@@ -575,26 +572,23 @@ public final class BulkMigration {
 					verification.generatedAt(), maximumVerificationAge, Instant.now());
 		}
 		final var cutoverSnapshot = new MigrationCutoverReportIO().writeSnapshot(
-				Objects.requireNonNull(cutoverReport, "cutoverReport"), assessed,
-				maxCutoverReportFileSizeBytes);
+				Objects.requireNonNull(cutoverReport, "cutoverReport"), assessed, maxCutoverReportFileSizeBytes);
 		approvedVerificationReportFingerprint = verificationSnapshot.fingerprint();
 		cutoverReportFingerprint = cutoverSnapshot.fingerprint();
 		return cutoverSnapshot.report();
 	}
 
 	/** Validates an exact, recent READY decision for an external cutover gate. */
-	public MigrationCutoverReport approveCutover(final Path reportFile,
-			final String expectedReportFingerprint, final Duration maximumReportAge,
-			final Long maxCutoverReportFileSizeBytes) {
-		if (expectedReportFingerprint == null
-				|| !expectedReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
+	public MigrationCutoverReport approveCutover(final Path reportFile, final String expectedReportFingerprint,
+			final Duration maximumReportAge, final Long maxCutoverReportFileSizeBytes) {
+		if (expectedReportFingerprint == null || !expectedReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new IllegalArgumentException("expectedReportFingerprint must be a lowercase SHA-256 value");
 		}
 		if (maximumReportAge == null || maximumReportAge.isZero() || maximumReportAge.isNegative()) {
 			throw new IllegalArgumentException("maximumReportAge must be greater than zero");
 		}
-		final var snapshot = new MigrationCutoverReportIO().readSnapshot(
-				Objects.requireNonNull(reportFile, "reportFile"), maxCutoverReportFileSizeBytes);
+		final var snapshot = new MigrationCutoverReportIO()
+				.readSnapshot(Objects.requireNonNull(reportFile, "reportFile"), maxCutoverReportFileSizeBytes);
 		if (!expectedReportFingerprint.equals(snapshot.fingerprint())) {
 			throw new IllegalArgumentException("Migration cutover report fingerprint does not match");
 		}
@@ -617,27 +611,32 @@ public final class BulkMigration {
 		return report;
 	}
 
-	/** Assesses cutover and writes a portable link to both input and output reports. */
+	/**
+	 * Assesses cutover and writes a portable link to both input and output reports.
+	 */
 	public MigrationCutoverEvidence assessCutoverAndWriteEvidence(final List<MigrationFreshnessCheck> checks,
-			final Path verificationReport, final Duration maximumVerificationAge,
-			final Path cutoverReport, final Path evidenceFile) throws SQLException {
+			final Path verificationReport, final Duration maximumVerificationAge, final Path cutoverReport,
+			final Path evidenceFile) throws SQLException {
 		return assessCutoverAndWriteEvidence(checks, verificationReport, null, maximumVerificationAge, null,
 				cutoverReport, null, evidenceFile, null);
 	}
 
-	/** Adds exact-input SHA-256 and bounded-file checks to cutover evidence creation. */
+	/**
+	 * Adds exact-input SHA-256 and bounded-file checks to cutover evidence
+	 * creation.
+	 */
 	public MigrationCutoverEvidence assessCutoverAndWriteEvidence(final List<MigrationFreshnessCheck> checks,
 			final Path verificationReport, final String expectedVerificationReportFingerprint,
 			final Duration maximumVerificationAge, final Long maxVerificationReportFileSizeBytes,
-			final Path cutoverReport, final Long maxCutoverReportFileSizeBytes,
-			final Path evidenceFile, final Long maxCutoverEvidenceFileSizeBytes) throws SQLException {
+			final Path cutoverReport, final Long maxCutoverReportFileSizeBytes, final Path evidenceFile,
+			final Long maxCutoverEvidenceFileSizeBytes) throws SQLException {
 		final MigrationCutoverReport cutover = assessCutover(checks, verificationReport,
 				expectedVerificationReportFingerprint, maximumVerificationAge, maxVerificationReportFileSizeBytes,
 				cutoverReport, maxCutoverReportFileSizeBytes);
-		final var verificationSnapshot = new BulkMigrationVerificationReportIO().readSnapshot(
-				verificationReport, maxVerificationReportFileSizeBytes);
-		final var cutoverSnapshot = new MigrationCutoverReportIO().readSnapshot(
-				cutoverReport, maxCutoverReportFileSizeBytes);
+		final var verificationSnapshot = new BulkMigrationVerificationReportIO().readSnapshot(verificationReport,
+				maxVerificationReportFileSizeBytes);
+		final var cutoverSnapshot = new MigrationCutoverReportIO().readSnapshot(cutoverReport,
+				maxCutoverReportFileSizeBytes);
 		if (!verificationSnapshot.fingerprint().equals(approvedVerificationReportFingerprint)
 				|| !cutoverSnapshot.fingerprint().equals(cutoverReportFingerprint)) {
 			throw new IllegalStateException("Cutover reports changed while creating linked evidence");
@@ -652,7 +651,10 @@ public final class BulkMigration {
 		return snapshot.evidence();
 	}
 
-	/** Approves an exact evidence bundle only when both referenced reports still match. */
+	/**
+	 * Approves an exact evidence bundle only when both referenced reports still
+	 * match.
+	 */
 	public MigrationCutoverEvidence approveCutoverEvidence(final Path evidenceFile,
 			final String expectedEvidenceFingerprint, final Path verificationReport, final Path cutoverReport,
 			final Duration maximumReportAge) {
@@ -665,13 +667,12 @@ public final class BulkMigration {
 			final String expectedEvidenceFingerprint, final Path verificationReport, final Path cutoverReport,
 			final Duration maximumReportAge, final Long maxCutoverEvidenceFileSizeBytes,
 			final Long maxVerificationReportFileSizeBytes, final Long maxCutoverReportFileSizeBytes) {
-		if (expectedEvidenceFingerprint == null
-				|| !expectedEvidenceFingerprint.matches("sha256:[0-9a-f]{64}")) {
+		if (expectedEvidenceFingerprint == null || !expectedEvidenceFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new IllegalArgumentException("expectedEvidenceFingerprint must be a lowercase SHA-256 value");
 		}
-		final var inspected = new MigrationCutoverArtifactService().approve(evidenceFile,
-				expectedEvidenceFingerprint, verificationReport, cutoverReport, maximumReportAge,
-				maxCutoverEvidenceFileSizeBytes, maxVerificationReportFileSizeBytes, maxCutoverReportFileSizeBytes);
+		final var inspected = new MigrationCutoverArtifactService().approve(evidenceFile, expectedEvidenceFingerprint,
+				verificationReport, cutoverReport, maximumReportAge, maxCutoverEvidenceFileSizeBytes,
+				maxVerificationReportFileSizeBytes, maxCutoverReportFileSizeBytes);
 		final CutoverPackageInspection inspection = toInspection(inspected);
 		approvedVerificationReportFingerprint = inspection.evidence().verificationReportFingerprint();
 		approvedCutoverReportFingerprint = inspection.evidence().cutoverReportFingerprint();
@@ -679,15 +680,20 @@ public final class BulkMigration {
 		return inspection.evidence();
 	}
 
-	/** Creates a self-contained cutover package and publishes it as one directory. */
+	/**
+	 * Creates a self-contained cutover package and publishes it as one directory.
+	 */
 	public CutoverPackage assessCutoverPackage(final List<MigrationFreshnessCheck> checks,
-			final Path verificationReport, final Duration maximumVerificationAge,
-			final Path packageDirectory) throws SQLException {
-		return assessCutoverPackage(checks, verificationReport, null, maximumVerificationAge,
-				null, packageDirectory, null, null);
+			final Path verificationReport, final Duration maximumVerificationAge, final Path packageDirectory)
+			throws SQLException {
+		return assessCutoverPackage(checks, verificationReport, null, maximumVerificationAge, null, packageDirectory,
+				null, null);
 	}
 
-	/** Adds verification SHA-256 and independent file-size limits to package publication. */
+	/**
+	 * Adds verification SHA-256 and independent file-size limits to package
+	 * publication.
+	 */
 	public CutoverPackage assessCutoverPackage(final List<MigrationFreshnessCheck> checks,
 			final Path verificationReport, final String expectedVerificationReportFingerprint,
 			final Duration maximumVerificationAge, final Long maxVerificationReportFileSizeBytes,
@@ -701,13 +707,13 @@ public final class BulkMigration {
 		final String previousEvidence = cutoverEvidenceFingerprint;
 		try {
 			AtomicMigrationDirectory.writeNew(Objects.requireNonNull(packageDirectory, "packageDirectory"), staging -> {
-				final Path packagedVerification = staging.resolve(
-						MigrationCutoverArtifactService.VERIFICATION_REPORT_FILE);
+				final Path packagedVerification = staging
+						.resolve(MigrationCutoverArtifactService.VERIFICATION_REPORT_FILE);
 				Files.copy(sourceVerification, packagedVerification, StandardCopyOption.COPY_ATTRIBUTES);
 				final Path packagedCutover = staging.resolve(MigrationCutoverArtifactService.CUTOVER_REPORT_FILE);
 				final Path packagedEvidence = staging.resolve(MigrationCutoverArtifactService.EVIDENCE_FILE);
-				final MigrationCutoverEvidence evidence = assessCutoverAndWriteEvidence(checks,
-						packagedVerification, expectedVerificationReportFingerprint, maximumVerificationAge,
+				final MigrationCutoverEvidence evidence = assessCutoverAndWriteEvidence(checks, packagedVerification,
+						expectedVerificationReportFingerprint, maximumVerificationAge,
 						maxVerificationReportFileSizeBytes, packagedCutover, maxCutoverReportFileSizeBytes,
 						packagedEvidence, maxCutoverEvidenceFileSizeBytes);
 				new MigrationCutoverArtifactService().validatePackageDirectory(staging);
@@ -746,15 +752,13 @@ public final class BulkMigration {
 			final Long maxCutoverEvidenceFileSizeBytes, final Long maxVerificationReportFileSizeBytes,
 			final Long maxCutoverReportFileSizeBytes) {
 		return toInspection(new MigrationCutoverArtifactService().inspectPackage(packageDirectory,
-				maxCutoverEvidenceFileSizeBytes, maxVerificationReportFileSizeBytes,
-				maxCutoverReportFileSizeBytes));
+				maxCutoverEvidenceFileSizeBytes, maxVerificationReportFileSizeBytes, maxCutoverReportFileSizeBytes));
 	}
 
 	/** Validates all reports in a package without opening database connections. */
 	public MigrationCutoverEvidence approveCutoverPackage(final Path packageDirectory,
 			final String expectedEvidenceFingerprint, final Duration maximumReportAge) {
-		return approveCutoverPackage(packageDirectory, expectedEvidenceFingerprint, maximumReportAge,
-				null, null, null);
+		return approveCutoverPackage(packageDirectory, expectedEvidenceFingerprint, maximumReportAge, null, null, null);
 	}
 
 	/** Adds independent bounded-file checks to package approval. */
@@ -771,8 +775,7 @@ public final class BulkMigration {
 		return inspection.evidence();
 	}
 
-	private static CutoverPackageInspection toInspection(
-			final MigrationCutoverArtifactService.Inspection inspection) {
+	private static CutoverPackageInspection toInspection(final MigrationCutoverArtifactService.Inspection inspection) {
 		return new CutoverPackageInspection(inspection.evidence(), inspection.evidenceFingerprint(),
 				inspection.verification(), inspection.cutover());
 	}
@@ -1371,8 +1374,7 @@ public final class BulkMigration {
 			tasks.add(BulkMigrationJobRepairTask.builder().taskId(taskId(table))
 					.expectedKeysetSource(keysetSource(sourceConnection, table)).target(targetTable(table))
 					.verificationResult(verified.getVerificationResult())
-					.options(BulkMigrationRepairOption.builder()
-							.columnMappings(tableOption(table).getColumnMappings())
+					.options(BulkMigrationRepairOption.builder().columnMappings(tableOption(table).getColumnMappings())
 							.bulkUpsertOption(targetUpsertOption(table)).build())
 					.build());
 		}
@@ -1397,16 +1399,17 @@ public final class BulkMigration {
 				: new JdbcBulkMigrationKeysetSource(connection, table, columns);
 	}
 
-	private static JdbcBulkMigrationKeysetSource keysetSource(final Connection connection,
-			final Table table, final List<String> columns) {
+	private static JdbcBulkMigrationKeysetSource keysetSource(final Connection connection, final Table table,
+			final List<String> columns) {
 		return new JdbcBulkMigrationKeysetSource(connection, table, columns);
 	}
 
 	private List<String> verificationColumns(final Table table) {
 		final List<String> columns = tableOption(table).getVerificationColumns();
 		return columns.isEmpty()
-				? BulkMigrationVerificationColumns.resolve(targetTable(table), mode, bulkOption(table),
-						targetUpsertOption(table)).stream().map(name -> sourceColumnName(table, name)).toList()
+				? BulkMigrationVerificationColumns
+						.resolve(targetTable(table), mode, bulkOption(table), targetUpsertOption(table)).stream()
+						.map(name -> sourceColumnName(table, name)).toList()
 				: columns;
 	}
 
@@ -1440,8 +1443,8 @@ public final class BulkMigration {
 
 	private String targetColumnName(final Table table, final String sourceName) {
 		return tableOption(table).getColumnMappings().entrySet().stream()
-				.filter(entry -> entry.getKey().equalsIgnoreCase(sourceName)).map(Map.Entry::getValue)
-				.findFirst().orElse(sourceName);
+				.filter(entry -> entry.getKey().equalsIgnoreCase(sourceName)).map(Map.Entry::getValue).findFirst()
+				.orElse(sourceName);
 	}
 
 	private String sourceColumnName(final Table table, final String targetName) {
@@ -1470,8 +1473,10 @@ public final class BulkMigration {
 				throw new IllegalArgumentException("targetTable must be table, schema.table, or catalog.schema.table");
 			}
 			target.setName(names[names.length - 1]);
-			if (names.length >= 2) target.setSchemaName(names[names.length - 2]);
-			if (names.length == 3) target.setCatalogName(names[0]);
+			if (names.length >= 2)
+				target.setSchemaName(names[names.length - 2]);
+			if (names.length == 3)
+				target.setCatalogName(names[0]);
 		}
 		for (final var mapping : option.getColumnMappings().entrySet()) {
 			final var column = target.getColumns().get(mapping.getKey());
@@ -1485,8 +1490,7 @@ public final class BulkMigration {
 
 	private Table configuredTargetTable(final Table source) {
 		final BulkMigrationTableOption option = tableOption(source);
-		return option.getTargetTable() == null && option.getColumnMappings().isEmpty()
-				? null : targetTable(source);
+		return option.getTargetTable() == null && option.getColumnMappings().isEmpty() ? null : targetTable(source);
 	}
 
 	private BulkOption bulkOption(final Table table) {
@@ -1615,8 +1619,8 @@ public final class BulkMigration {
 		final var targetNames = new HashSet<String>();
 		for (final var column : table.getColumns()) {
 			final String targetName = option.getColumnMappings().entrySet().stream()
-					.filter(entry -> entry.getKey().equalsIgnoreCase(column.getName()))
-					.map(Map.Entry::getValue).findFirst().orElse(column.getName());
+					.filter(entry -> entry.getKey().equalsIgnoreCase(column.getName())).map(Map.Entry::getValue)
+					.findFirst().orElse(column.getName());
 			if (targetName == null || targetName.isBlank()
 					|| !targetNames.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
 				throw new IllegalArgumentException("Invalid columnMappings target: " + targetName);
@@ -1720,8 +1724,7 @@ public final class BulkMigration {
 				if (!plan.getFingerprint().equals(approved.planFingerprint())) {
 					throw new IllegalArgumentException("Approved repair plan fingerprint does not match");
 				}
-				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
-						approved.planFingerprint());
+				return BulkMigrationJobRepairExecutor.execute(targetConnection, plan, approved.planFingerprint());
 			}
 		}
 	}

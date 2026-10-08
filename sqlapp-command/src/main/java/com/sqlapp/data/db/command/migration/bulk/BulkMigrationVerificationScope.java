@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;

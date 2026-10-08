@@ -28,17 +28,15 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class ImgElement extends AbstractHtmlElement{
-	private String src=null;
-	private Scale scale=null;
-	
-	
+@EqualsAndHashCode(callSuper = true)
+public class ImgElement extends AbstractHtmlElement {
+	private String src = null;
+	private Scale scale = null;
 
-	protected String getElementName(){
+	protected String getElementName() {
 		return "img";
 	}
 

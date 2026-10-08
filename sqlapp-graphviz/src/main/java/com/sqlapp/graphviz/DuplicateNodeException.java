@@ -19,15 +19,15 @@
 
 package com.sqlapp.graphviz;
 
-public class DuplicateNodeException extends RuntimeException{
+public class DuplicateNodeException extends RuntimeException {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 4027309797116376531L;
-	
-	public DuplicateNodeException(Node obj){
-		super(obj.getName()+" node is duplicated.");
+
+	public DuplicateNodeException(Node obj) {
+		super(obj.getName() + " node is duplicated.");
 	}
 
 }

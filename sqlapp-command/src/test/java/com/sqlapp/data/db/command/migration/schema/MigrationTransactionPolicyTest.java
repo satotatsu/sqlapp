@@ -37,7 +37,8 @@ class MigrationTransactionPolicyTest {
 		command.setRejectNonTransactional(true);
 		final RuntimeException failure = assertThrows(RuntimeException.class, command::run);
 		assertTrue(failure.getMessage().contains("Non-transactional migrations"));
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT COUNT(*) FROM GUARD")) {
 			assertTrue(rows.next());
 			assertEquals(0, rows.getInt(1));
@@ -64,7 +65,8 @@ class MigrationTransactionPolicyTest {
 		command.setRequireDownMigration(true);
 		final RuntimeException failure = assertThrows(RuntimeException.class, command::run);
 		assertTrue(failure.getMessage().contains("Down migration SQL is required"));
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT COUNT(*) FROM GUARD")) {
 			assertTrue(rows.next());
 			assertEquals(0, rows.getInt(1));

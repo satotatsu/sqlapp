@@ -25,47 +25,47 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class NodePort extends AbstractGraphVizElement{
+@EqualsAndHashCode(callSuper = true)
+public class NodePort extends AbstractGraphVizElement {
 
-	private Node node=null;
+	private Node node = null;
 
-	private Port port=null;
+	private Port port = null;
 
-	private Compass commpass=null;
-	
+	private Compass commpass = null;
+
 	@Getter(lombok.AccessLevel.PROTECTED)
 	@Setter(lombok.AccessLevel.PROTECTED)
 	private Edge parent;
-	
-	public NodePort(Node node, Port port, Compass commpass){
-		this.node=node;
-		this.port=port;
-		this.commpass=commpass;
+
+	public NodePort(Node node, Port port, Compass commpass) {
+		this.node = node;
+		this.port = port;
+		this.commpass = commpass;
 	}
 
-	public NodePort(Node node, Port port){
+	public NodePort(Node node, Port port) {
 		this(node, port, null);
 	}
 
-	public NodePort(Node node){
+	public NodePort(Node node) {
 		this(node, null, null);
 	}
 
-	public NodePort(Node node, Compass commpass){
+	public NodePort(Node node, Compass commpass) {
 		this(node, null, commpass);
 	}
 
 	@Override
-	public String toString(){
-		StringBuilder builder=new StringBuilder();
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
 		builder.append(node.getEscapedName());
-		if (port==null||port.toString().length()==0){
+		if (port == null || port.toString().length() == 0) {
 			return builder.toString();
 		}
 		builder.append(":");
 		builder.append(port.toString());
-		if (commpass==null){
+		if (commpass == null) {
 			return builder.toString();
 		}
 		builder.append(":");

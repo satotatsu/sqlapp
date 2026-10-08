@@ -18,21 +18,13 @@
  */
 
 package com.sqlapp.graphviz;
+
 /**
  * 
  * @author satot
  * @see <a href="https://graphviz.org/docs/attr-types/style/">style</a>
  */
 public enum NodeStyle {
-	 solid
-	,dashed
-	,dotted
-	,bold
-	,rounded
-	,diagonals	
-	,filled
-	,striped
-	, wedged
-	,;
-	
+	solid, dashed, dotted, bold, rounded, diagonals, filled, striped, wedged,;
+
 }

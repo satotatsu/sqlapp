@@ -18,19 +18,23 @@ import com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMappi
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.YamlConverter;
 
-/** Reads and resolves concise mapping names against the canonical source Schema. */
+/**
+ * Reads and resolves concise mapping names against the canonical source Schema.
+ */
 final class MigrationTargetMappingResolver {
 	ResolvedMigrationTargetMapping resolve(final File file, final String fingerprint, final String sourceFingerprint,
 			final String targetDatabase, final String targetVersion, final MigrationAssessmentSource source) {
 		final MigrationTargetMapping mapping;
 		try {
 			final var converter = new YamlConverter();
-			// JsonConverter's current feature switch follows its configured strict/indent mode.
+			// JsonConverter's current feature switch follows its configured strict/indent
+			// mode.
 			converter.setIndentOutput(true);
 			converter.setFailOnUnknownProperties(true);
 			mapping = converter.fromJsonString(file, MigrationTargetMapping.class);
+		} catch (final RuntimeException e) {
+			throw new CommandException("Failed to read migration mapping: " + file, e);
 		}
-		catch (final RuntimeException e) { throw new CommandException("Failed to read migration mapping: " + file, e); }
 		if (mapping == null || !MigrationTargetMapping.FORMAT.equals(mapping.format())
 				|| mapping.version() != MigrationTargetMapping.CURRENT_VERSION) {
 			throw new CommandException("Mapping format must be " + MigrationTargetMapping.FORMAT + " version 1");
@@ -38,10 +42,13 @@ final class MigrationTargetMappingResolver {
 		if (!sourceFingerprint.equals(mapping.sourceFingerprint())) {
 			throw new CommandException("Mapping sourceFingerprint does not match inputFile");
 		}
-		if (!targetDatabase.equalsIgnoreCase(text(mapping.targetDatabase())) || !targetVersion.equalsIgnoreCase(text(mapping.targetVersion()))) {
+		if (!targetDatabase.equalsIgnoreCase(text(mapping.targetDatabase()))
+				|| !targetVersion.equalsIgnoreCase(text(mapping.targetVersion()))) {
 			throw new CommandException("Mapping targetDatabase/targetVersion does not match the requested target");
 		}
-		if (mapping.tables().isEmpty()) { throw new CommandException("Mapping must contain at least one table"); }
+		if (mapping.tables().isEmpty()) {
+			throw new CommandException("Mapping must contain at least one table");
+		}
 		final var tables = new ArrayList<ResolvedMigrationTargetMapping.TableMapping>();
 		final Set<ObjectId> sourceTables = new HashSet<>();
 		final Set<String> targets = new HashSet<>();
@@ -49,72 +56,115 @@ final class MigrationTargetMappingResolver {
 			final Table table = table(source.schemas(), configured);
 			final Schema schema = table.getSchema();
 			final var tableId = new ObjectId(schema.getCatalogName(), schema.getName(), "table", table.getName());
-			if (!sourceTables.add(tableId)) { throw new CommandException("Duplicate source table mapping: " + table.getName()); }
+			if (!sourceTables.add(tableId)) {
+				throw new CommandException("Duplicate source table mapping: " + table.getName());
+			}
 			final String targetSchema = blank(configured.targetSchema()) ? null
 					: targetIdentifier(configured.targetSchema().trim(), "targetSchema", table.getName());
 			final String targetTable = targetIdentifier(optional(configured.targetTable(), table.getName()),
 					"targetTable", table.getName());
 			final String targetKey = canonical(configured.targetSchema()) + "." + canonical(targetTable);
-			if (!targets.add(targetKey)) { throw new CommandException("Duplicate target table mapping: " + targetKey); }
+			if (!targets.add(targetKey)) {
+				throw new CommandException("Duplicate target table mapping: " + targetKey);
+			}
 			final var columns = new ArrayList<ResolvedMigrationTargetMapping.ColumnMapping>();
 			final Set<String> sourceColumns = new HashSet<>();
 			final Set<String> targetColumns = new HashSet<>();
 			for (final var configuredColumn : configured.columns()) {
 				final Column column = column(table, configuredColumn.sourceColumn());
-				if (!sourceColumns.add(canonical(column.getName()))) { throw new CommandException("Duplicate source column mapping: " + table.getName() + "." + column.getName()); }
-				final String targetColumn = targetIdentifier(optional(configuredColumn.targetColumn(), column.getName()),
-						"targetColumn", table.getName() + "." + column.getName());
-				if (!targetColumns.add(canonical(targetColumn))) { throw new CommandException("Duplicate target column mapping: " + targetTable + "." + targetColumn); }
+				if (!sourceColumns.add(canonical(column.getName()))) {
+					throw new CommandException(
+							"Duplicate source column mapping: " + table.getName() + "." + column.getName());
+				}
+				final String targetColumn = targetIdentifier(
+						optional(configuredColumn.targetColumn(), column.getName()), "targetColumn",
+						table.getName() + "." + column.getName());
+				if (!targetColumns.add(canonical(targetColumn))) {
+					throw new CommandException("Duplicate target column mapping: " + targetTable + "." + targetColumn);
+				}
 				if (configuredColumn.targetType() == null || configuredColumn.targetType().isBlank()) {
-					throw new CommandException("targetType is required for " + table.getName() + "." + column.getName());
+					throw new CommandException(
+							"targetType is required for " + table.getName() + "." + column.getName());
 				}
 				final String targetType = sqlExpression(configuredColumn.targetType(), "targetType", table, column);
-				if (Boolean.TRUE.equals(configuredColumn.identity()) && Boolean.TRUE.equals(configuredColumn.nullable())) {
-					throw new CommandException("identity cannot be combined with nullable: true: "
-							+ table.getName() + "." + column.getName());
+				if (Boolean.TRUE.equals(configuredColumn.identity())
+						&& Boolean.TRUE.equals(configuredColumn.nullable())) {
+					throw new CommandException("identity cannot be combined with nullable: true: " + table.getName()
+							+ "." + column.getName());
 				}
 				if (Boolean.TRUE.equals(configuredColumn.identity())
 						&& "GUID".equalsIgnoreCase(column.getSpecifics().get("access.sourceType", String.class))) {
-					throw new CommandException("Access GUID AutoNumber cannot use target identity: "
-							+ table.getName() + "." + column.getName());
+					throw new CommandException("Access GUID AutoNumber cannot use target identity: " + table.getName()
+							+ "." + column.getName());
 				}
 				final String defaultExpression = defaultExpression(configuredColumn.defaultExpression(), table, column,
 						configuredColumn.identity());
 				columns.add(new ResolvedMigrationTargetMapping.ColumnMapping(
-						new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(), table.getName()),
-						targetColumn, targetType, configuredColumn.nullable(),
-						configuredColumn.identity(), defaultExpression, configuredColumn.conversion()));
+						new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(),
+								table.getName()),
+						targetColumn, targetType, configuredColumn.nullable(), configuredColumn.identity(),
+						defaultExpression, configuredColumn.conversion()));
 			}
-			if (columns.isEmpty()) { throw new CommandException("Mapping table must contain at least one column: " + table.getName()); }
+			if (columns.isEmpty()) {
+				throw new CommandException("Mapping table must contain at least one column: " + table.getName());
+			}
 			final var checks = new ArrayList<String>();
 			for (final String expression : configured.checkExpressions()) {
 				checks.add(sqlExpression(expression, "checkExpressions", table, null));
 			}
-			tables.add(new ResolvedMigrationTargetMapping.TableMapping(tableId,
-					targetSchema, targetTable, checks, columns));
+			tables.add(new ResolvedMigrationTargetMapping.TableMapping(tableId, targetSchema, targetTable, checks,
+					columns));
 		}
-		return new ResolvedMigrationTargetMapping(fingerprint, targetDatabase.toLowerCase(Locale.ROOT), targetVersion, tables);
+		return new ResolvedMigrationTargetMapping(fingerprint, targetDatabase.toLowerCase(Locale.ROOT), targetVersion,
+				tables);
 	}
 
 	private static Table table(final List<Schema> schemas, final MigrationTargetMapping.TableMapping value) {
-		if (value.sourceTable() == null || value.sourceTable().isBlank()) { throw new CommandException("sourceTable is required"); }
-		final var matches = schemas.stream().filter(s -> blank(value.sourceCatalog()) || equal(s.getCatalogName(), value.sourceCatalog()))
+		if (value.sourceTable() == null || value.sourceTable().isBlank()) {
+			throw new CommandException("sourceTable is required");
+		}
+		final var matches = schemas.stream()
+				.filter(s -> blank(value.sourceCatalog()) || equal(s.getCatalogName(), value.sourceCatalog()))
 				.filter(s -> blank(value.sourceSchema()) || equal(s.getName(), value.sourceSchema()))
 				.flatMap(s -> s.getTables().stream()).filter(t -> equal(t.getName(), value.sourceTable())).toList();
-		if (matches.size() != 1) { throw new CommandException("sourceTable must resolve uniquely: " + value.sourceTable() + " (found " + matches.size() + ")"); }
+		if (matches.size() != 1) {
+			throw new CommandException(
+					"sourceTable must resolve uniquely: " + value.sourceTable() + " (found " + matches.size() + ")");
+		}
 		return matches.getFirst();
 	}
+
 	private static Column column(final Table table, final String name) {
-		if (name == null || name.isBlank()) { throw new CommandException("sourceColumn is required for table " + table.getName()); }
+		if (name == null || name.isBlank()) {
+			throw new CommandException("sourceColumn is required for table " + table.getName());
+		}
 		final var matches = table.getColumns().stream().filter(c -> equal(c.getName(), name)).toList();
-		if (matches.size() != 1) { throw new CommandException("sourceColumn must resolve uniquely: " + table.getName() + "." + name); }
+		if (matches.size() != 1) {
+			throw new CommandException("sourceColumn must resolve uniquely: " + table.getName() + "." + name);
+		}
 		return matches.getFirst();
 	}
-	private static boolean equal(final String left, final String right) { return left != null && right != null && left.equalsIgnoreCase(right.trim()); }
-	private static boolean blank(final String value) { return value == null || value.isBlank(); }
-	private static String optional(final String value, final String fallback) { return blank(value) ? fallback : value.trim(); }
-	private static String canonical(final String value) { return blank(value) ? "" : value.trim().toUpperCase(Locale.ROOT); }
-	private static String text(final String value) { return value == null ? "" : value.trim(); }
+
+	private static boolean equal(final String left, final String right) {
+		return left != null && right != null && left.equalsIgnoreCase(right.trim());
+	}
+
+	private static boolean blank(final String value) {
+		return value == null || value.isBlank();
+	}
+
+	private static String optional(final String value, final String fallback) {
+		return blank(value) ? fallback : value.trim();
+	}
+
+	private static String canonical(final String value) {
+		return blank(value) ? "" : value.trim().toUpperCase(Locale.ROOT);
+	}
+
+	private static String text(final String value) {
+		return value == null ? "" : value.trim();
+	}
+
 	private static String targetIdentifier(final String value, final String property, final String sourceObject) {
 		if (value == null || value.isBlank()) {
 			throw new CommandException(property + " must not be blank for " + sourceObject);
@@ -124,16 +174,24 @@ final class MigrationTargetMappingResolver {
 		}
 		return value;
 	}
+
 	private static String defaultExpression(final String value, final Table table, final Column column,
 			final Boolean identity) {
-		if (blank(value)) { return null; }
+		if (blank(value)) {
+			return null;
+		}
 		if (Boolean.TRUE.equals(identity)) {
-			throw new CommandException("defaultExpression cannot be combined with identity: " + table.getName() + "." + column.getName());
+			throw new CommandException(
+					"defaultExpression cannot be combined with identity: " + table.getName() + "." + column.getName());
 		}
 		return sqlExpression(value, "defaultExpression", table, column);
 	}
-	private static String sqlExpression(final String value, final String property, final Table table, final Column column) {
-		if (blank(value)) { throw new CommandException(property + " must not contain a blank expression: " + table.getName()); }
+
+	private static String sqlExpression(final String value, final String property, final Table table,
+			final Column column) {
+		if (blank(value)) {
+			throw new CommandException(property + " must not contain a blank expression: " + table.getName());
+		}
 		final String expression = value.trim();
 		if (expression.indexOf(';') >= 0 || expression.indexOf('\r') >= 0 || expression.indexOf('\n') >= 0
 				|| expression.contains("--") || expression.contains("/*") || expression.contains("*/")) {

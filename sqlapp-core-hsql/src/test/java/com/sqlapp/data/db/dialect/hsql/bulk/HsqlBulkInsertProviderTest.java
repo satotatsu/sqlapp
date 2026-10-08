@@ -19,8 +19,8 @@ class HsqlBulkInsertProviderTest {
 				statement.execute("CREATE TABLE ITEMS (ID INT PRIMARY KEY, NAME VARCHAR(30))");
 			}
 			final var table = new com.sqlapp.data.schemas.Table("ITEMS");
-			table.getColumns().add(new com.sqlapp.data.schemas.Column("ID")
-					.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+			table.getColumns().add(
+					new com.sqlapp.data.schemas.Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
 			table.getColumns().add(new com.sqlapp.data.schemas.Column("NAME")
 					.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setLength(30));
 			final var row = table.newRow();

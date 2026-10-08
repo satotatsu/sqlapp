@@ -25,39 +25,39 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.graphviz.AbstractTest;
 
-public class TableElementTest extends AbstractTest{
+public class TableElementTest extends AbstractTest {
 
 	@Test
 	public void test1() {
-		TableElement tableElement=new TableElement();
+		TableElement tableElement = new TableElement();
 		assertEquals(this.getResource("table1.txt"), tableElement.toString());
 	}
 
 	@Test
 	public void test2() {
-		TableElement tableElement=new TableElement();
-		tableElement.addRows((tr, i)->{
-			
+		TableElement tableElement = new TableElement();
+		tableElement.addRows((tr, i) -> {
+
 		}, 5);
 		assertEquals(this.getResource("table2.txt"), tableElement.toString());
 	}
-	
+
 	@Test
 	public void test3() {
-		TableElement tableElement=new TableElement();
-		tableElement.addRows((tr, i)->{
-			tr.addCells((cell,j)->{
+		TableElement tableElement = new TableElement();
+		tableElement.addRows((tr, i) -> {
+			tr.addCells((cell, j) -> {
 			}, 3);
 		}, 5);
 		assertEquals(this.getResource("table3.txt"), tableElement.toString());
 	}
-	
+
 	@Test
 	public void test4() {
-		TableElement tableElement=new TableElement();
-		tableElement.addRows((tr, i)->{
-			tr.addCells((cell,j)->{
-				cell.setValue(""+i+"_"+j);
+		TableElement tableElement = new TableElement();
+		tableElement.addRows((tr, i) -> {
+			tr.addCells((cell, j) -> {
+				cell.setValue("" + i + "_" + j);
 			}, 3);
 		}, 5);
 		assertEquals(this.getResource("table4.txt"), tableElement.toString());

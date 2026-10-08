@@ -23,29 +23,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
-public class NodeTest extends AbstractTest{
+public class NodeTest extends AbstractTest {
 
 	@Test
 	public void test() {
-		Node node=new Node("a");
+		Node node = new Node("a");
 		node.setShape(NodeShape.box);
 		node.setLabel("label");
-		String expected=this.getResource("node1.dot");
+		String expected = this.getResource("node1.dot");
 		assertEquals(expected, node.toString());
 	}
 
 	@Test
 	public void test2() {
-		Node node=new Node("a");
+		Node node = new Node("a");
 		node.setShape(NodeShape.box);
-		node.setHtmlLabel(htmlTable->{
-			htmlTable.addRows((tr, i)->{
-				tr.addCells((cell, j)->{
-					cell.setPort("p"+i+"_"+j);
+		node.setHtmlLabel(htmlTable -> {
+			htmlTable.addRows((tr, i) -> {
+				tr.addCells((cell, j) -> {
+					cell.setPort("p" + i + "_" + j);
 				}, 2);
 			}, 2);
 		});
-		String expected=this.getResource("node2.dot");
+		String expected = this.getResource("node2.dot");
 		assertEquals(expected, node.toString());
 	}
 }

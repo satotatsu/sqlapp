@@ -20,8 +20,8 @@ public record BulkMigrationOperationalReport(int formatVersion, Instant generate
 	public static final int MIN_SUPPORTED_FORMAT_VERSION = 2;
 
 	public BulkMigrationOperationalReport(final int formatVersion, final Instant generatedAt, final String jobId,
-			final String planFingerprint, final boolean compatible, final long processedRows,
-			final long completedTasks, final int totalTasks, final List<Task> tasks, final List<Operation> operations,
+			final String planFingerprint, final boolean compatible, final long processedRows, final long completedTasks,
+			final int totalTasks, final List<Task> tasks, final List<Operation> operations,
 			final Maintenance maintenance, final Progress progress, final List<Progress> progressByMigration,
 			final Execution execution) {
 		this(formatVersion, generatedAt, jobId, planFingerprint, compatible, processedRows, completedTasks, totalTasks,

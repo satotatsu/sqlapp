@@ -33,8 +33,8 @@ public final class BulkMigrationVerificationReportIO {
 			throw new CommandException("Bulk migration verification report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
-					"maxEvidenceFileSizeBytes", "Bulk migration verification report");
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes, "maxEvidenceFileSizeBytes",
+					"Bulk migration verification report");
 			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationVerificationReport.class));
 			return new Snapshot(report, fingerprint(bytes));
@@ -111,8 +111,8 @@ public final class BulkMigrationVerificationReportIO {
 					allMismatches.size(), mismatches);
 		}).toList();
 		return validate(new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
-						Instant.now(), planFingerprint, isolation.name(), result.isMatch(), result.getExpectedRows(),
-						result.getActualRows(), result.getMismatchedTasks(), tasks, provenance));
+				Instant.now(), planFingerprint, isolation.name(), result.isMatch(), result.getExpectedRows(),
+				result.getActualRows(), result.getMismatchedTasks(), tasks, provenance));
 	}
 
 	public void write(final Path file, final BulkMigrationVerificationReport report) {

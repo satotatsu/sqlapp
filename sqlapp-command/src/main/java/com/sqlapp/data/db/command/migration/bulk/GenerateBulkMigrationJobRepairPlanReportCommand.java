@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import java.io.File;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -35,8 +34,7 @@ public class GenerateBulkMigrationJobRepairPlanReportCommand extends AbstractCom
 			throw new CommandException("maxRepairPlanReportFileSizeBytes must be greater than zero.");
 		}
 		final var io = new BulkMigrationJobRepairPlanReportIO();
-		final var snapshot = io.writeSnapshot(targetFile.toPath(), io.fromPlan(plan),
-				maxRepairPlanReportFileSizeBytes);
+		final var snapshot = io.writeSnapshot(targetFile.toPath(), io.fromPlan(plan), maxRepairPlanReportFileSizeBytes);
 		report = snapshot.report();
 		reportFingerprint = snapshot.fingerprint();
 		info("Bulk migration job repair plan report: ", targetFile.getAbsolutePath());

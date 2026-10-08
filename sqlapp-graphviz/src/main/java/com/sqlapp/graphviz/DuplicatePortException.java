@@ -19,15 +19,15 @@
 
 package com.sqlapp.graphviz;
 
-public class DuplicatePortException extends RuntimeException{
+public class DuplicatePortException extends RuntimeException {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 4027309797116376531L;
-	
-	public DuplicatePortException(Port obj){
-		super(obj.getValue()+" port is duplicated.");
+
+	public DuplicatePortException(Port obj) {
+		super(obj.getValue() + " port is duplicated.");
 	}
 
 }

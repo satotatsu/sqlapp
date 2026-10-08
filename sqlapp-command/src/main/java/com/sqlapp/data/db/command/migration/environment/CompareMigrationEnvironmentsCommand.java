@@ -40,7 +40,8 @@ public class CompareMigrationEnvironmentsCommand extends AbstractCommand {
 			}
 			final var snapshot = io.read(file.toPath());
 			if (snapshots.putIfAbsent(snapshot.environmentId(), snapshot) != null) {
-				throw new CommandException("Duplicate environmentId in migration snapshots: " + snapshot.environmentId());
+				throw new CommandException(
+						"Duplicate environmentId in migration snapshots: " + snapshot.environmentId());
 			}
 		}
 		if (baselineEnvironmentId != null && baselineEnvironmentId.isBlank()) {
@@ -75,15 +76,14 @@ public class CompareMigrationEnvironmentsCommand extends AbstractCommand {
 		}
 	}
 
-	private void compareDatabase(final MigrationEnvironmentSnapshot baseline,
-			final MigrationEnvironmentSnapshot actual,
+	private void compareDatabase(final MigrationEnvironmentSnapshot baseline, final MigrationEnvironmentSnapshot actual,
 			final List<MigrationEnvironmentComparison.Difference> differences) {
 		final String expected = baseline.databaseIdentity() == null ? null
 				: baseline.databaseIdentity().productName() + " " + baseline.databaseIdentity().productVersion();
 		final String value = actual.databaseIdentity() == null ? null
 				: actual.databaseIdentity().productName() + " " + actual.databaseIdentity().productVersion();
-		addDifference(actual.environmentId(), MigrationEnvironmentComparison.Category.DATABASE_PRODUCT,
-				"database", expected, value, differences);
+		addDifference(actual.environmentId(), MigrationEnvironmentComparison.Category.DATABASE_PRODUCT, "database",
+				expected, value, differences);
 	}
 
 	private void compareVersioned(final MigrationEnvironmentSnapshot baseline,
@@ -107,8 +107,8 @@ public class CompareMigrationEnvironmentsCommand extends AbstractCommand {
 		final Map<String, String> values = new LinkedHashMap<>();
 		actual.repeatables().forEach(entry -> values.put(entry.name(), entry.checksum()));
 		for (final String name : union(expected.keySet(), values.keySet())) {
-			addDifference(actual.environmentId(), MigrationEnvironmentComparison.Category.REPEATABLE,
-					name, expected.get(name), values.get(name), differences);
+			addDifference(actual.environmentId(), MigrationEnvironmentComparison.Category.REPEATABLE, name,
+					expected.get(name), values.get(name), differences);
 		}
 	}
 
@@ -123,8 +123,8 @@ public class CompareMigrationEnvironmentsCommand extends AbstractCommand {
 			final String migration, final String expected, final String actual,
 			final List<MigrationEnvironmentComparison.Difference> differences) {
 		if (!java.util.Objects.equals(expected, actual)) {
-			differences.add(new MigrationEnvironmentComparison.Difference(environmentId, category, migration,
-					expected, actual));
+			differences.add(new MigrationEnvironmentComparison.Difference(environmentId, category, migration, expected,
+					actual));
 		}
 	}
 

@@ -13,12 +13,10 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Table;
 
 /** Rejects MERGE, which is not part of Access SQL. */
-public class MdbUnsupportedMergeFactory
-		extends SimpleSqlFactory<Table, MdbSqlBuilder> {
+public class MdbUnsupportedMergeFactory extends SimpleSqlFactory<Table, MdbSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		throw new UnsupportedOperationException(
-				"Microsoft Access MERGE is not supported by UCanAccess 5.1.6");
+		throw new UnsupportedOperationException("Microsoft Access MERGE is not supported by UCanAccess 5.1.6");
 	}
 }

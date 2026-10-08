@@ -20,20 +20,22 @@
 package com.sqlapp.graphviz;
 
 public interface Polygon {
-	public default Integer getSides(){
+	public default Integer getSides() {
 		return 4;
 	}
+
 	void setSides(Integer sides);
 
-	public default Double getSkew(){
+	public default Double getSkew() {
 		return 0.0;
 	}
+
 	void setSkew(Double skew);
 
-	public default Double getdistortion(){
+	public default Double getdistortion() {
 		return 0.0;
 	}
 
-	void setdistortion (Double distortion);
+	void setdistortion(Double distortion);
 
 }

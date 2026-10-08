@@ -10,6 +10,7 @@ public record BulkMigrationJobFailureReport(int formatVersion, Instant failedAt,
 		String planFingerprint, String stoppedTaskId, String failureType, String failureMessage,
 		List<BulkMigrationJobExecutionReport.Task> completedTasks, BulkMigrationArtifactProvenance provenance) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
+
 	public BulkMigrationJobFailureReport {
 		completedTasks = List.copyOf(Objects.requireNonNull(completedTasks, "completedTasks"));
 	}

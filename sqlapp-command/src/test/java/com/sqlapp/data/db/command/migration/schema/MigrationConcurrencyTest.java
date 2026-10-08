@@ -66,7 +66,8 @@ class MigrationConcurrencyTest {
 	}
 
 	private long count(final String query) throws SQLException {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery(query)) {
 			assertTrue(rows.next());
 			return rows.getLong(1);
@@ -79,8 +80,10 @@ class MigrationConcurrencyTest {
 		final var command = configure(new MigrationCommand() {
 			@Override
 			protected void executeChangeVersion(final Connection connection, final Dialect dialect, final Table table,
-					final List<Row> rows, final List<SqlFile> files, final DbVersionHandler handler) throws SQLException {
-				super.executeChangeVersion(beforeLock(connection, competitor::run), dialect, table, rows, files, handler);
+					final List<Row> rows, final List<SqlFile> files, final DbVersionHandler handler)
+					throws SQLException {
+				super.executeChangeVersion(beforeLock(connection, competitor::run), dialect, table, rows, files,
+						handler);
 			}
 		});
 		final var failure = assertThrows(DbConcurrencyException.class, command::run);
@@ -97,8 +100,10 @@ class MigrationConcurrencyTest {
 		final var command = configure(new MigrationDownCommand() {
 			@Override
 			protected void executeChangeVersion(final Connection connection, final Dialect dialect, final Table table,
-					final List<Row> rows, final List<SqlFile> files, final DbVersionHandler handler) throws SQLException {
-				super.executeChangeVersion(beforeLock(connection, competitor::run), dialect, table, rows, files, handler);
+					final List<Row> rows, final List<SqlFile> files, final DbVersionHandler handler)
+					throws SQLException {
+				super.executeChangeVersion(beforeLock(connection, competitor::run), dialect, table, rows, files,
+						handler);
 			}
 		});
 		command.setLastChangeToApply(0L);
@@ -154,7 +159,8 @@ class MigrationConcurrencyTest {
 							return value;
 						}
 						return Proxy.newProxyInstance(Statement.class.getClassLoader(),
-								new Class<?>[] { Statement.class }, (statementProxy, statementMethod, statementArgs) -> {
+								new Class<?>[] { Statement.class },
+								(statementProxy, statementMethod, statementArgs) -> {
 									if (statementMethod.getName().equals("setQueryTimeout")) {
 										timeout.set((Integer) statementArgs[0]);
 									}
@@ -172,7 +178,10 @@ class MigrationConcurrencyTest {
 		}
 	}
 
-	/** Complete the competing transaction immediately before the real LOCK statement. */
+	/**
+	 * Complete the competing transaction immediately before the real LOCK
+	 * statement.
+	 */
 	private Connection beforeLock(final Connection connection, final Runnable competitor) {
 		final var invoked = new AtomicBoolean();
 		return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
@@ -180,8 +189,10 @@ class MigrationConcurrencyTest {
 					final Object value = invoke(connection, method, args);
 					if (method.getName().equals("createStatement")) {
 						return Proxy.newProxyInstance(Statement.class.getClassLoader(),
-								new Class<?>[] { Statement.class }, (statementProxy, statementMethod, statementArgs) -> {
-									if (statementMethod.getName().equals("execute") && statementArgs[0] instanceof String sql
+								new Class<?>[] { Statement.class },
+								(statementProxy, statementMethod, statementArgs) -> {
+									if (statementMethod.getName().equals("execute")
+											&& statementArgs[0] instanceof String sql
 											&& sql.stripLeading().toUpperCase(Locale.ROOT).startsWith("LOCK TABLE")
 											&& invoked.compareAndSet(false, true)) {
 										competitor.run();

@@ -59,7 +59,8 @@ class MigrationExecutionFailureTest {
 	}
 
 	private Object scalar(final String query) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var result = statement.executeQuery(query)) {
 			assertTrue(result.next());
 			return result.getObject(1);
@@ -152,7 +153,9 @@ class MigrationExecutionFailureTest {
 	void rollbackFailureDoesNotReplaceTheOriginalCauseOrAttemptHistoryCommit() throws Exception {
 		Files.writeString(up.resolve("1_change.sql"), "INSERT INTO sample VALUES(999);");
 		final var command = checkedFailureCommand();
-		command.setRollbackHandler(connection -> { throw new SQLException("rollback unavailable"); });
+		command.setRollbackHandler(connection -> {
+			throw new SQLException("rollback unavailable");
+		});
 		final var thrown = assertThrows(RuntimeException.class, command::run);
 		Throwable original = thrown;
 		while (original.getCause() != null) {

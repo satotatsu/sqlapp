@@ -72,14 +72,11 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	public static MdbJackcessSupport open(final Path file) throws IOException {
 		final Path normalized = normalize(file);
 		if (!OPEN_FILES.add(normalized)) {
-			throw new IllegalStateException(
-					"An MDB Jackcess writer is already open for: " + normalized);
+			throw new IllegalStateException("An MDB Jackcess writer is already open for: " + normalized);
 		}
 		try {
 			return new MdbJackcessSupport(normalized,
-					new DatabaseBuilder().withPath(normalized).withReadOnly(false)
-							.withAutoSync(false)
-							.open());
+					new DatabaseBuilder().withPath(normalized).withReadOnly(false).withAutoSync(false).open());
 		} catch (final IOException | RuntimeException e) {
 			OPEN_FILES.remove(normalized);
 			throw e;
@@ -90,8 +87,8 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	 * Adds rows in one Jackcess bulk call. AutoNumber values are written back to
 	 * the supplied maps.
 	 */
-	public List<Map<String, Object>> insertRows(final String tableName,
-			final List<? extends Map<String, Object>> rows) throws IOException {
+	public List<Map<String, Object>> insertRows(final String tableName, final List<? extends Map<String, Object>> rows)
+			throws IOException {
 		ensureOpen();
 		if (rows.isEmpty()) {
 			return List.of();
@@ -101,10 +98,9 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		for (final Map<String, Object> row : rows) {
 			final Object[] value = new Object[table.getColumnCount()];
 			for (final io.github.spannm.jackcess.Column column : table.getColumns()) {
-				value[column.getColumnIndex()] = column.isAutoNumber()
-						&& !containsKey(row, column.getName())
-								? io.github.spannm.jackcess.Column.AUTO_NUMBER
-								: get(row, column.getName());
+				value[column.getColumnIndex()] = column.isAutoNumber() && !containsKey(row, column.getName())
+						? io.github.spannm.jackcess.Column.AUTO_NUMBER
+						: get(row, column.getName());
 			}
 			values.add(value);
 		}
@@ -126,8 +122,8 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	/** Updates rows through the table primary-key index, without a table scan. */
-	public int updateRowsByPrimaryKey(final String tableName,
-			final List<? extends Map<String, Object>> rows) throws IOException {
+	public int updateRowsByPrimaryKey(final String tableName, final List<? extends Map<String, Object>> rows)
+			throws IOException {
 		ensureOpen();
 		final io.github.spannm.jackcess.Table table = requireTable(tableName);
 		final IndexCursor cursor = primaryKeyCursor(table);
@@ -143,8 +139,8 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	/** Deletes rows through the table primary-key index, without a table scan. */
-	public int deleteRowsByPrimaryKey(final String tableName,
-			final List<? extends Map<String, Object>> keys) throws IOException {
+	public int deleteRowsByPrimaryKey(final String tableName, final List<? extends Map<String, Object>> keys)
+			throws IOException {
 		ensureOpen();
 		final io.github.spannm.jackcess.Table table = requireTable(tableName);
 		final IndexCursor cursor = primaryKeyCursor(table);
@@ -160,8 +156,7 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	/** Creates a non-parameterized saved SELECT or UNION query. */
-	public void createSavedQuery(final String name, final String definition)
-			throws IOException {
+	public void createSavedQuery(final String name, final String definition) throws IOException {
 		ensureOpen();
 		MdbSavedQuerySupport.create(database, name, definition);
 		dirty = true;
@@ -176,12 +171,12 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	/**
-	 * Updates existing rows by primary key and inserts all missing rows in one
-	 * bulk call. Rows without a complete primary key are inserts. AutoNumber
-	 * values for inserted rows are written back to their maps.
+	 * Updates existing rows by primary key and inserts all missing rows in one bulk
+	 * call. Rows without a complete primary key are inserts. AutoNumber values for
+	 * inserted rows are written back to their maps.
 	 */
-	public UpsertResult upsertRowsByPrimaryKey(final String tableName,
-			final List<? extends Map<String, Object>> rows) throws IOException {
+	public UpsertResult upsertRowsByPrimaryKey(final String tableName, final List<? extends Map<String, Object>> rows)
+			throws IOException {
 		ensureOpen();
 		final io.github.spannm.jackcess.Table table = requireTable(tableName);
 		final IndexCursor cursor = primaryKeyCursor(table);
@@ -206,26 +201,22 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	/** Adds a column directly to an existing Access table. */
-	public void addColumn(final String tableName, final Column column)
-			throws IOException {
+	public void addColumn(final String tableName, final Column column) throws IOException {
 		toColumnBuilder(column).addToTable(requireTable(tableName));
 		dirty = true;
 	}
 
 	/** Adds an index directly to an existing Access table. */
-	public void addIndex(final String tableName, final Index index)
-			throws IOException {
+	public void addIndex(final String tableName, final Index index) throws IOException {
 		toIndexBuilder(index).addToTable(requireTable(tableName));
 		dirty = true;
 	}
 
 	/** Adds an Access relationship represented by a Schema foreign key. */
-	public void addRelationship(final ForeignKeyConstraint foreignKey)
-			throws IOException {
+	public void addRelationship(final ForeignKeyConstraint foreignKey) throws IOException {
 		ensureOpen();
 		final String childName = foreignKey.getTable().getName();
-		final RelationshipBuilder builder = new RelationshipBuilder(
-				foreignKey.getRelatedTableName(), childName)
+		final RelationshipBuilder builder = new RelationshipBuilder(foreignKey.getRelatedTableName(), childName)
 				.withName(foreignKey.getName()).withReferentialIntegrity();
 		for (int i = 0; i < foreignKey.getColumns().size(); i++) {
 			builder.addColumns(foreignKey.getRelatedColumns().get(i).getName(),
@@ -278,78 +269,61 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	/**
-	 * Rebuilds an Access database into a new file using the target Schema.
-	 * Existing target-column names are copied automatically. Optional mappings
-	 * are target column name to source column name, grouped by target table.
+	 * Rebuilds an Access database into a new file using the target Schema. Existing
+	 * target-column names are copied automatically. Optional mappings are target
+	 * column name to source column name, grouped by target table.
 	 */
-	public static void rebuild(final Path sourceFile, final Path targetFile,
-			final Schema targetSchema,
-			final Map<String, ? extends Map<String, String>> columnMappings)
-			throws IOException {
+	public static void rebuild(final Path sourceFile, final Path targetFile, final Schema targetSchema,
+			final Map<String, ? extends Map<String, String>> columnMappings) throws IOException {
 		rebuild(sourceFile, targetFile, targetSchema, Map.of(), columnMappings);
 	}
 
 	/**
-	 * Rebuilds an Access database with optional target-to-source table and
-	 * column mappings. A target table absent from the source is created empty.
+	 * Rebuilds an Access database with optional target-to-source table and column
+	 * mappings. A target table absent from the source is created empty.
 	 */
-	public static void rebuild(final Path sourceFile, final Path targetFile,
-			final Schema targetSchema,
-			final Map<String, String> tableMappings,
-			final Map<String, ? extends Map<String, String>> columnMappings)
+	public static void rebuild(final Path sourceFile, final Path targetFile, final Schema targetSchema,
+			final Map<String, String> tableMappings, final Map<String, ? extends Map<String, String>> columnMappings)
 			throws IOException {
 		final Path source = normalize(sourceFile);
 		final Path target = normalize(targetFile);
 		if (source.equals(target)) {
-			throw new IllegalArgumentException(
-					"Rebuild target must differ from the source file");
+			throw new IllegalArgumentException("Rebuild target must differ from the source file");
 		}
 		if (Files.exists(target)) {
-			throw new IllegalArgumentException(
-					"Rebuild target already exists: " + target);
+			throw new IllegalArgumentException("Rebuild target already exists: " + target);
 		}
 		if (!OPEN_FILES.add(source)) {
-			throw new IllegalStateException(
-					"An MDB Jackcess writer is already open for: " + source);
+			throw new IllegalStateException("An MDB Jackcess writer is already open for: " + source);
 		}
 		if (!OPEN_FILES.add(target)) {
 			OPEN_FILES.remove(source);
-			throw new IllegalStateException(
-					"An MDB Jackcess writer is already open for: " + target);
+			throw new IllegalStateException("An MDB Jackcess writer is already open for: " + target);
 		}
 		try {
-			try (Database input = new DatabaseBuilder().withPath(source)
-					.withReadOnly(true).open();
-					Database output = DatabaseBuilder.create(input.getFileFormat(),
-							target.toFile())) {
+			try (Database input = new DatabaseBuilder().withPath(source).withReadOnly(true).open();
+					Database output = DatabaseBuilder.create(input.getFileFormat(), target.toFile())) {
 				for (final Table model : targetSchema.getTables()) {
 					createTable(output, model);
 				}
 				for (final Table model : targetSchema.getTables()) {
-					final String sourceTableName = tableMappings != null
-							&& tableMappings.containsKey(model.getName())
-									? tableMappings.get(model.getName())
-									: model.getName();
-					copyRows(input.getTable(sourceTableName),
-							output.getTable(model.getName()),
-							columnMappings == null ? null
-									: columnMappings.get(model.getName()));
+					final String sourceTableName = tableMappings != null && tableMappings.containsKey(model.getName())
+							? tableMappings.get(model.getName())
+							: model.getName();
+					copyRows(input.getTable(sourceTableName), output.getTable(model.getName()),
+							columnMappings == null ? null : columnMappings.get(model.getName()));
 				}
 				for (final Table model : targetSchema.getTables()) {
-					for (final ForeignKeyConstraint fk : model.getConstraints()
-							.getForeignKeyConstraints()) {
+					for (final ForeignKeyConstraint fk : model.getConstraints().getForeignKeyConstraints()) {
 						addRelationship(output, fk);
 					}
 				}
 				for (final Table view : targetSchema.getViews()) {
 					if (view.getDefinition().isEmpty()) {
-						throw new IllegalArgumentException(
-								"Saved query definition is required: "
-										+ view.getName());
+						throw new IllegalArgumentException("Saved query definition is required: " + view.getName());
 					}
 					MdbSavedQuerySupport.create(output, view.getName(),
-							String.join(System.lineSeparator(),
-									view.getDefinition()));
+							String.join(System.lineSeparator(), view.getDefinition()));
 				}
 			}
 		} catch (final IOException | RuntimeException e) {
@@ -365,50 +339,42 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		}
 	}
 
-	public static void rebuild(final Path sourceFile, final Path targetFile,
-			final Schema targetSchema) throws IOException {
+	public static void rebuild(final Path sourceFile, final Path targetFile, final Schema targetSchema)
+			throws IOException {
 		rebuild(sourceFile, targetFile, targetSchema, Map.of(), Map.of());
 	}
 
 	/**
 	 * Replaces the source with an already completed rebuilt file, retaining the
-	 * original at the requested backup path. All three paths must be distinct
-	 * and an existing backup is never overwritten.
+	 * original at the requested backup path. All three paths must be distinct and
+	 * an existing backup is never overwritten.
 	 */
-	public static void replaceWithRebuilt(final Path sourceFile,
-			final Path rebuiltFile, final Path backupFile) throws IOException {
+	public static void replaceWithRebuilt(final Path sourceFile, final Path rebuiltFile, final Path backupFile)
+			throws IOException {
 		final Path source = normalize(sourceFile);
 		final Path rebuilt = normalize(rebuiltFile);
 		final Path backup = normalize(backupFile);
-		if (source.equals(rebuilt) || source.equals(backup)
-				|| rebuilt.equals(backup)) {
-			throw new IllegalArgumentException(
-					"Source, rebuilt and backup paths must be distinct");
+		if (source.equals(rebuilt) || source.equals(backup) || rebuilt.equals(backup)) {
+			throw new IllegalArgumentException("Source, rebuilt and backup paths must be distinct");
 		}
 		if (!Files.isRegularFile(source)) {
-			throw new IllegalArgumentException(
-					"Access source file not found: " + source);
+			throw new IllegalArgumentException("Access source file not found: " + source);
 		}
 		if (!Files.isRegularFile(rebuilt)) {
-			throw new IllegalArgumentException(
-					"Rebuilt Access file not found: " + rebuilt);
+			throw new IllegalArgumentException("Rebuilt Access file not found: " + rebuilt);
 		}
 		if (Files.exists(backup)) {
-			throw new IllegalArgumentException(
-					"Backup file already exists: " + backup);
+			throw new IllegalArgumentException("Backup file already exists: " + backup);
 		}
-		try (Database validation = new DatabaseBuilder().withPath(rebuilt)
-				.withReadOnly(true).open()) {
+		try (Database validation = new DatabaseBuilder().withPath(rebuilt).withReadOnly(true).open()) {
 			validation.getTableNames();
 		}
 		if (!OPEN_FILES.add(source)) {
-			throw new IllegalStateException(
-					"An MDB Jackcess writer is open for a replacement file");
+			throw new IllegalStateException("An MDB Jackcess writer is open for a replacement file");
 		}
 		if (!OPEN_FILES.add(rebuilt)) {
 			OPEN_FILES.remove(source);
-			throw new IllegalStateException(
-					"An MDB Jackcess writer is open for a replacement file");
+			throw new IllegalStateException("An MDB Jackcess writer is open for a replacement file");
 		}
 		try {
 			move(source, backup);
@@ -428,8 +394,7 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		}
 	}
 
-	private static void move(final Path source, final Path target)
-			throws IOException {
+	private static void move(final Path source, final Path target) throws IOException {
 		try {
 			Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
 		} catch (final java.nio.file.AtomicMoveNotSupportedException e) {
@@ -441,33 +406,26 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	 * Rebuilds a database into a new file while removing one secondary index.
 	 * Primary keys must be changed through an explicitly supplied target Schema.
 	 */
-	public static void rebuildWithoutIndex(final Path sourceFile,
-			final Path targetFile, final String tableName,
+	public static void rebuildWithoutIndex(final Path sourceFile, final Path targetFile, final String tableName,
 			final String indexName) throws IOException {
 		final Schema schema = MdbFileLoader.loadSchema(sourceFile);
 		final Table table = schema.getTables().get(tableName);
 		if (table == null) {
-			throw new IllegalArgumentException(
-					"Access table not found: " + tableName);
+			throw new IllegalArgumentException("Access table not found: " + tableName);
 		}
 		if (table.getIndexes().get(indexName) == null) {
 			if (table.getPrimaryKeyConstraint() != null
-					&& indexName.equalsIgnoreCase(
-							table.getPrimaryKeyConstraint().getName())) {
-				throw new IllegalArgumentException(
-						"Primary key cannot be removed by rebuildWithoutIndex; "
-								+ "supply an explicit target Schema instead: "
-								+ indexName);
+					&& indexName.equalsIgnoreCase(table.getPrimaryKeyConstraint().getName())) {
+				throw new IllegalArgumentException("Primary key cannot be removed by rebuildWithoutIndex; "
+						+ "supply an explicit target Schema instead: " + indexName);
 			}
-			throw new IllegalArgumentException(
-					"Access index not found: " + tableName + "." + indexName);
+			throw new IllegalArgumentException("Access index not found: " + tableName + "." + indexName);
 		}
 		table.getIndexes().remove(indexName);
 		rebuild(sourceFile, targetFile, schema);
 	}
 
-	private static void createTable(final Database database, final Table model)
-			throws IOException {
+	private static void createTable(final Database database, final Table model) throws IOException {
 		final TableBuilder builder = new TableBuilder(model.getName());
 		for (final Column column : model.getColumns()) {
 			builder.addColumn(toColumnBuilder(column));
@@ -483,20 +441,17 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	private static void copyRows(final io.github.spannm.jackcess.Table source,
-			final io.github.spannm.jackcess.Table target,
-			final Map<String, String> mapping) throws IOException {
+			final io.github.spannm.jackcess.Table target, final Map<String, String> mapping) throws IOException {
 		if (source == null) {
 			return;
 		}
 		final List<Object[]> rows = new ArrayList<>();
 		for (final io.github.spannm.jackcess.Row sourceRow : source) {
 			final Object[] row = new Object[target.getColumnCount()];
-			for (final io.github.spannm.jackcess.Column targetColumn : target
-					.getColumns()) {
-				final String sourceName = mapping != null
-						&& mapping.containsKey(targetColumn.getName())
-								? mapping.get(targetColumn.getName())
-								: targetColumn.getName();
+			for (final io.github.spannm.jackcess.Column targetColumn : target.getColumns()) {
+				final String sourceName = mapping != null && mapping.containsKey(targetColumn.getName())
+						? mapping.get(targetColumn.getName())
+						: targetColumn.getName();
 				if (source.getColumn(sourceName) != null) {
 					row[targetColumn.getColumnIndex()] = sourceRow.get(sourceName);
 				} else if (targetColumn.isAutoNumber()) {
@@ -511,11 +466,10 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		}
 	}
 
-	private static void addRelationship(final Database database,
-			final ForeignKeyConstraint foreignKey) throws IOException {
-		final RelationshipBuilder builder = new RelationshipBuilder(
-				foreignKey.getRelatedTableName(), foreignKey.getTable().getName())
-				.withName(foreignKey.getName()).withReferentialIntegrity();
+	private static void addRelationship(final Database database, final ForeignKeyConstraint foreignKey)
+			throws IOException {
+		final RelationshipBuilder builder = new RelationshipBuilder(foreignKey.getRelatedTableName(),
+				foreignKey.getTable().getName()).withName(foreignKey.getName()).withReferentialIntegrity();
 		for (int i = 0; i < foreignKey.getColumns().size(); i++) {
 			builder.addColumns(foreignKey.getRelatedColumns().get(i).getName(),
 					foreignKey.getColumns().get(i).getName());
@@ -530,19 +484,15 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	}
 
 	private static ColumnBuilder toColumnBuilder(final Column column) {
-		final ColumnBuilder builder = new ColumnBuilder(column.getName(),
-				toJackcessType(column));
-		if (column.getLength() != null && column.getLength() > 0
-				&& builder.getType().isTextual()
+		final ColumnBuilder builder = new ColumnBuilder(column.getName(), toJackcessType(column));
+		if (column.getLength() != null && column.getLength() > 0 && builder.getType().isTextual()
 				&& !builder.getType().isLongValue()) {
 			builder.withLengthInUnits(Math.toIntExact(column.getLength()));
 		}
-		if (column.getLength() != null && column.getLength() > 0
-				&& builder.getType().getHasScalePrecision()) {
+		if (column.getLength() != null && column.getLength() > 0 && builder.getType().getHasScalePrecision()) {
 			builder.withPrecision(Math.toIntExact(column.getLength()));
 		}
-		if (column.getScale() != null
-				&& builder.getType().getHasScalePrecision()) {
+		if (column.getScale() != null && builder.getType().getHasScalePrecision()) {
 			builder.withScale(column.getScale());
 		}
 		builder.withAutoNumber(column.isIdentity());
@@ -550,25 +500,20 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			builder.withProperty(PropertyMap.REQUIRED_PROP, true);
 		}
 		if (column.getDefaultValue() != null) {
-			builder.withProperty(PropertyMap.DEFAULT_VALUE_PROP,
-					column.getDefaultValue());
+			builder.withProperty(PropertyMap.DEFAULT_VALUE_PROP, column.getDefaultValue());
 		}
 		if (column.getRemarks() != null) {
-			builder.withProperty(PropertyMap.DESCRIPTION_PROP,
-					column.getRemarks());
+			builder.withProperty(PropertyMap.DESCRIPTION_PROP, column.getRemarks());
 		}
 		if (column.getCheck() != null) {
-			builder.withProperty(PropertyMap.VALIDATION_RULE_PROP,
-					column.getCheck());
+			builder.withProperty(PropertyMap.VALIDATION_RULE_PROP, column.getCheck());
 		}
 		return builder;
 	}
 
-	private static io.github.spannm.jackcess.DataType toJackcessType(
-			final Column column) {
+	private static io.github.spannm.jackcess.DataType toJackcessType(final Column column) {
 		if (column.getDataType() == null) {
-			throw new IllegalArgumentException(
-					"Column data type is required: " + column.getName());
+			throw new IllegalArgumentException("Column data type is required: " + column.getName());
 		}
 		return switch (column.getDataType().getJdbcType()) {
 		case BOOLEAN, BIT -> io.github.spannm.jackcess.DataType.BOOLEAN;
@@ -579,23 +524,21 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		case REAL -> io.github.spannm.jackcess.DataType.FLOAT;
 		case FLOAT, DOUBLE -> io.github.spannm.jackcess.DataType.DOUBLE;
 		case DECIMAL, NUMERIC -> io.github.spannm.jackcess.DataType.NUMERIC;
-		case DATE, TIME, TIME_WITH_TIMEZONE, TIMESTAMP,
-				TIMESTAMP_WITH_TIMEZONE -> io.github.spannm.jackcess.DataType.SHORT_DATE_TIME;
+		case DATE, TIME, TIME_WITH_TIMEZONE, TIMESTAMP, TIMESTAMP_WITH_TIMEZONE ->
+			io.github.spannm.jackcess.DataType.SHORT_DATE_TIME;
 		case BINARY, VARBINARY -> io.github.spannm.jackcess.DataType.BINARY;
 		case LONGVARBINARY, BLOB -> io.github.spannm.jackcess.DataType.OLE;
 		case CHAR, VARCHAR, NCHAR, NVARCHAR -> io.github.spannm.jackcess.DataType.TEXT;
 		case LONGVARCHAR, LONGNVARCHAR, CLOB, NCLOB -> io.github.spannm.jackcess.DataType.MEMO;
 		default -> throw new UnsupportedOperationException(
-				"Jackcess cannot create Access column type "
-						+ column.getDataType() + ": " + column.getName());
+				"Jackcess cannot create Access column type " + column.getDataType() + ": " + column.getName());
 		};
 	}
 
 	private static IndexBuilder toIndexBuilder(final Index index) {
 		final IndexBuilder builder = new IndexBuilder(index.getName());
 		for (final ReferenceColumn column : index.getColumns()) {
-			builder.withColumns(column.getOrder() != Order.Desc,
-					column.getName());
+			builder.withColumns(column.getOrder() != Order.Desc, column.getName());
 		}
 		if (index.isUnique()) {
 			builder.withUnique();
@@ -606,41 +549,32 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		return builder;
 	}
 
-	private static IndexBuilder toIndexBuilder(
-			final UniqueConstraint constraint) {
+	private static IndexBuilder toIndexBuilder(final UniqueConstraint constraint) {
 		final IndexBuilder builder = new IndexBuilder(constraint.getName());
 		for (final ReferenceColumn column : constraint.getColumns()) {
 			builder.withColumns(column.getName());
 		}
-		return constraint.isPrimaryKey() ? builder.withPrimaryKey()
-				: builder.withUnique();
+		return constraint.isPrimaryKey() ? builder.withPrimaryKey() : builder.withUnique();
 	}
 
-	private static IndexCursor primaryKeyCursor(
-			final io.github.spannm.jackcess.Table table) throws IOException {
+	private static IndexCursor primaryKeyCursor(final io.github.spannm.jackcess.Table table) throws IOException {
 		if (table.getPrimaryKeyIndex() == null) {
-			throw new IllegalArgumentException(
-					"Primary key is required for direct update/delete: "
-							+ table.getName());
+			throw new IllegalArgumentException("Primary key is required for direct update/delete: " + table.getName());
 		}
 		return CursorBuilder.createPrimaryKeyCursor(table);
 	}
 
-	private static Object[] primaryKeyValues(
-			final io.github.spannm.jackcess.Table table,
+	private static Object[] primaryKeyValues(final io.github.spannm.jackcess.Table table,
 			final Map<String, Object> row) {
-		return table.getPrimaryKeyIndex().getColumns().stream()
-				.map(column -> required(row, column.getName())).toArray();
+		return table.getPrimaryKeyIndex().getColumns().stream().map(column -> required(row, column.getName()))
+				.toArray();
 	}
 
-	private static Object[] optionalPrimaryKeyValues(
-			final io.github.spannm.jackcess.Table table,
+	private static Object[] optionalPrimaryKeyValues(final io.github.spannm.jackcess.Table table,
 			final Map<String, Object> row) {
-		final Object[] values = new Object[table.getPrimaryKeyIndex().getColumns()
-				.size()];
+		final Object[] values = new Object[table.getPrimaryKeyIndex().getColumns().size()];
 		for (int i = 0; i < values.length; i++) {
-			final String name = table.getPrimaryKeyIndex().getColumns().get(i)
-					.getName();
+			final String name = table.getPrimaryKeyIndex().getColumns().get(i).getName();
 			if (!containsKey(row, name) || get(row, name) == null) {
 				return null;
 			}
@@ -649,12 +583,10 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		return values;
 	}
 
-	private static List<Map<String, Object>> sortedByPrimaryKey(
-			final io.github.spannm.jackcess.Table table,
+	private static List<Map<String, Object>> sortedByPrimaryKey(final io.github.spannm.jackcess.Table table,
 			final List<? extends Map<String, Object>> rows) {
 		final List<Map<String, Object>> sorted = new ArrayList<>(rows);
-		sorted.sort((left, right) -> compareKeys(
-				optionalPrimaryKeyValues(table, left),
+		sorted.sort((left, right) -> compareKeys(optionalPrimaryKeyValues(table, left),
 				optionalPrimaryKeyValues(table, right)));
 		return sorted;
 	}
@@ -686,10 +618,8 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		if (right == null) {
 			return 1;
 		}
-		if (left instanceof Number leftNumber
-				&& right instanceof Number rightNumber) {
-			return new BigDecimal(leftNumber.toString())
-					.compareTo(new BigDecimal(rightNumber.toString()));
+		if (left instanceof Number leftNumber && right instanceof Number rightNumber) {
+			return new BigDecimal(leftNumber.toString()).compareTo(new BigDecimal(rightNumber.toString()));
 		}
 		if (left instanceof byte[] leftBytes && right instanceof byte[] rightBytes) {
 			return Arrays.compareUnsigned(leftBytes, rightBytes);
@@ -697,12 +627,10 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		if (left.getClass().isInstance(right) && left instanceof Comparable value) {
 			return value.compareTo(right);
 		}
-		return Comparator.comparing(Object::toString,
-				String.CASE_INSENSITIVE_ORDER).compare(left, right);
+		return Comparator.comparing(Object::toString, String.CASE_INSENSITIVE_ORDER).compare(left, right);
 	}
 
-	private io.github.spannm.jackcess.Table requireTable(final String name)
-			throws IOException {
+	private io.github.spannm.jackcess.Table requireTable(final String name) throws IOException {
 		ensureOpen();
 		final io.github.spannm.jackcess.Table table = database.getTable(name);
 		if (table == null) {
@@ -721,22 +649,18 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		return path.toAbsolutePath().normalize();
 	}
 
-	private static boolean containsKey(final Map<String, ?> row,
-			final String name) {
+	private static boolean containsKey(final Map<String, ?> row, final String name) {
 		return row.keySet().stream().anyMatch(name::equalsIgnoreCase);
 	}
 
 	private static Object get(final Map<String, ?> row, final String name) {
-		return row.entrySet().stream()
-				.filter(entry -> name.equalsIgnoreCase(entry.getKey()))
-				.map(Map.Entry::getValue).findFirst().orElse(null);
+		return row.entrySet().stream().filter(entry -> name.equalsIgnoreCase(entry.getKey())).map(Map.Entry::getValue)
+				.findFirst().orElse(null);
 	}
 
-	private static Object required(final Map<String, ?> row,
-			final String name) {
+	private static Object required(final Map<String, ?> row, final String name) {
 		if (!containsKey(row, name)) {
-			throw new IllegalArgumentException(
-					"Primary-key value is required: " + name);
+			throw new IllegalArgumentException("Primary-key value is required: " + name);
 		}
 		return get(row, name);
 	}

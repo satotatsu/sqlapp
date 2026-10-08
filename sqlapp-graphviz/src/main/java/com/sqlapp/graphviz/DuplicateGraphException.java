@@ -19,15 +19,15 @@
 
 package com.sqlapp.graphviz;
 
-public class DuplicateGraphException extends RuntimeException{
+public class DuplicateGraphException extends RuntimeException {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 4027309797116376531L;
-	
-	public DuplicateGraphException(Graph obj){
-		super(obj.getName()+" graph is duplicated.");
+
+	public DuplicateGraphException(Graph obj) {
+		super(obj.getName() + " graph is duplicated.");
 	}
 
 }

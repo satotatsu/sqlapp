@@ -21,9 +21,8 @@ class BulkMigrationJobExecutionReportIOTest {
 	@Test
 	void roundTripsBoundedExecutionCountsAndRejectsInconsistentTotals() {
 		final var task = new BulkMigrationJobExecutionReport.Task("ACCESS_ITEMS", 10, 15, 2, false);
-		final var report = new BulkMigrationJobExecutionReport(
-				BulkMigrationJobExecutionReport.CURRENT_FORMAT_VERSION, Instant.now(), "access-job", "plan", 15, 0,
-				List.of(task), null);
+		final var report = new BulkMigrationJobExecutionReport(BulkMigrationJobExecutionReport.CURRENT_FORMAT_VERSION,
+				Instant.now(), "access-job", "plan", 15, 0, List.of(task), null);
 		final Path file = directory.resolve("reports/execution.json");
 		final var io = new BulkMigrationJobExecutionReportIO();
 		final var snapshot = io.writeSnapshot(file, report, 10_000L);
@@ -32,8 +31,8 @@ class BulkMigrationJobExecutionReportIOTest {
 		assertEquals(report, io.read(file, 10_000L));
 		assertThrows(CommandException.class, () -> io.read(file, 1L));
 		assertThrows(CommandException.class, () -> io.writeSnapshot(file,
-				new BulkMigrationJobExecutionReport(1, Instant.now(), "access-job", "plan", 14, 0,
-						List.of(task), null), null));
+				new BulkMigrationJobExecutionReport(1, Instant.now(), "access-job", "plan", 14, 0, List.of(task), null),
+				null));
 	}
 
 	@Test

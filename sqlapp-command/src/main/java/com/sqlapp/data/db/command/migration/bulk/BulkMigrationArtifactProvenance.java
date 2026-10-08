@@ -2,9 +2,8 @@
 package com.sqlapp.data.db.command.migration.bulk;
 
 /** Immutable identities of the approved artifacts behind a declarative job. */
-public record BulkMigrationArtifactProvenance(String configurationFingerprint,
-		String assessmentReportFingerprint, String ddlVerificationReportFingerprint,
-		String targetValidationReportFingerprint) {
+public record BulkMigrationArtifactProvenance(String configurationFingerprint, String assessmentReportFingerprint,
+		String ddlVerificationReportFingerprint, String targetValidationReportFingerprint) {
 	public BulkMigrationArtifactProvenance(final String configurationFingerprint,
 			final String assessmentReportFingerprint, final String ddlVerificationReportFingerprint) {
 		this(configurationFingerprint, assessmentReportFingerprint, ddlVerificationReportFingerprint, null);

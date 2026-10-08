@@ -27,25 +27,25 @@ import com.sqlapp.graphviz.AbstractGraphVizElement;
 import com.sqlapp.graphviz.Node;
 import com.sqlapp.util.StaxWriter;
 
-public abstract class AbstractHtmlElement extends AbstractGraphVizElement{
+public abstract class AbstractHtmlElement extends AbstractGraphVizElement {
 
-	protected abstract void writeXml(StaxWriter staxWriter)throws XMLStreamException;
-	
-	private AbstractHtmlElement parent=null;
-	
+	protected abstract void writeXml(StaxWriter staxWriter) throws XMLStreamException;
+
+	private AbstractHtmlElement parent = null;
+
 	private Node node;
-	
-	protected AbstractHtmlElement(){
-		
+
+	protected AbstractHtmlElement() {
+
 	}
 
-	protected AbstractHtmlElement(Node node){
-		this.node=node;
+	protected AbstractHtmlElement(Node node) {
+		this.node = node;
 	}
 
 	@Override
-	public String toString(){
-		StringWriter writer=new StringWriter();
+	public String toString() {
+		StringWriter writer = new StringWriter();
 		StaxWriter staxWriter;
 		try {
 			staxWriter = new StaxWriter(writer);
@@ -57,8 +57,8 @@ public abstract class AbstractHtmlElement extends AbstractGraphVizElement{
 		}
 	}
 
-	public String toString(int indentSize){
-		StringWriter writer=new StringWriter();
+	public String toString(int indentSize) {
+		StringWriter writer = new StringWriter();
 		StaxWriter staxWriter;
 		try {
 			staxWriter = new StaxWriter(writer);
@@ -70,7 +70,7 @@ public abstract class AbstractHtmlElement extends AbstractGraphVizElement{
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 	/**
 	 * @return the node
 	 */
@@ -85,23 +85,23 @@ public abstract class AbstractHtmlElement extends AbstractGraphVizElement{
 		this.node = node;
 	}
 
-	protected void setParent(AbstractHtmlElement parent){
-		this.parent=parent;
+	protected void setParent(AbstractHtmlElement parent) {
+		this.parent = parent;
 	}
 
 	@SuppressWarnings("unchecked")
-	protected <T extends AbstractHtmlElement> T getParent(){
-		return (T)parent;
+	protected <T extends AbstractHtmlElement> T getParent() {
+		return (T) parent;
 	}
 
-	protected <T extends AbstractHtmlElement> T getRoot(){
+	protected <T extends AbstractHtmlElement> T getRoot() {
 		return getParent(this);
 	}
 
 	@SuppressWarnings("unchecked")
-	protected <T extends AbstractHtmlElement> T getParent(AbstractHtmlElement element){
-		if (element.parent==null){
-			return (T)element;
+	protected <T extends AbstractHtmlElement> T getParent(AbstractHtmlElement element) {
+		if (element.parent == null) {
+			return (T) element;
 		}
 		return getParent(element.parent);
 	}

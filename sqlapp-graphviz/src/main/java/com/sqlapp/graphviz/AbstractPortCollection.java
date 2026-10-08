@@ -22,47 +22,45 @@ package com.sqlapp.graphviz;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public abstract class AbstractPortCollection extends AbstractElementCollection<Port>{
+public abstract class AbstractPortCollection extends AbstractElementCollection<Port> {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6685111479972906357L;
 
-	protected AbstractPortCollection(){
+	protected AbstractPortCollection() {
 	}
-	
-	private Map<String,Port> map=new LinkedHashMap<>();
+
+	private Map<String, Port> map = new LinkedHashMap<>();
 
 	@Override
-	protected void renew(){
-		Map<String,Port> newMap=new LinkedHashMap<>();
-		this.getList().forEach(c->{
+	protected void renew() {
+		Map<String, Port> newMap = new LinkedHashMap<>();
+		this.getList().forEach(c -> {
 			newMap.put(c.getValue(), c);
 			newMap.put(c.getEscapedValue(), c);
 			initializePort(c);
 		});
-		synchronized(this){
-			this.map=newMap;
+		synchronized (this) {
+			this.map = newMap;
 		}
 	}
 
-	
-	protected void initializePort(Port port){
-		
+	protected void initializePort(Port port) {
+
 	}
-	
-	public Port get(String name){
+
+	public Port get(String name) {
 		return map.get(name);
 	}
 
-	public Port remove(String name){
-		Port node=get(name);
-		if (node!=null){
+	public Port remove(String name) {
+		Port node = get(name);
+		if (node != null) {
 			super.remove(node);
 		}
 		return node;
 	}
-	
 
 }

@@ -30,8 +30,8 @@ public final class MigrationExecutionReportIO {
 		try {
 			final JsonConverter converter = new JsonConverter();
 			converter.setIndentOutput(true);
-			AtomicMigrationFile.write(absolute,
-					temporary -> converter.writeJsonValue(temporary.toFile(), Objects.requireNonNull(report, "report")));
+			AtomicMigrationFile.write(absolute, temporary -> converter.writeJsonValue(temporary.toFile(),
+					Objects.requireNonNull(report, "report")));
 		} catch (final IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;

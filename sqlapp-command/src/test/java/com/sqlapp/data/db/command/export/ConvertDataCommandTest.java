@@ -58,8 +58,8 @@ public class ConvertDataCommandTest extends AbstractTest {
 
 	@ParameterizedTest
 	@MethodSource("additionalInputFormats")
-	void convertsFormatsSupportedByImport(final String fileName, final String content,
-			@TempDir final Path directory) throws Exception {
+	void convertsFormatsSupportedByImport(final String fileName, final String content, @TempDir final Path directory)
+			throws Exception {
 		final Path input = Files.writeString(directory.resolve(fileName), content);
 		Files.writeString(directory.resolve("items.json"), "stale");
 		final ConvertDataCommand command = new ConvertDataCommand();
@@ -155,8 +155,7 @@ public class ConvertDataCommandTest extends AbstractTest {
 	}
 
 	private static Stream<Arguments> additionalInputFormats() {
-		return Stream.of(
-				Arguments.of("items.jsonl", "{\"ID\":1}\n{\"ID\":2}"),
+		return Stream.of(Arguments.of("items.jsonl", "{\"ID\":1}\n{\"ID\":2}"),
 				Arguments.of("items.yaml", "---\n- ID: 1\n- ID: 2\n"));
 	}
 

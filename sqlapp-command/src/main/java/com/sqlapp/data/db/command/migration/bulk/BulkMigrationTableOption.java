@@ -31,8 +31,8 @@ public class BulkMigrationTableOption {
 	@Builder
 	public BulkMigrationTableOption(final String migrationId, final Integer chunkSize,
 			final Integer verificationChunkSize, final List<String> keysetColumns,
-			final List<String> verificationColumns, final String targetTable,
-			final Map<String, String> columnMappings, final BulkUpsertOption upsertOption, final BulkOption bulkOption,
+			final List<String> verificationColumns, final String targetTable, final Map<String, String> columnMappings,
+			final BulkUpsertOption upsertOption, final BulkOption bulkOption,
 			final BulkMigrationRetryOption retryOption, final BulkMigrationCheckpointStore checkpointStore) {
 		if (migrationId != null && migrationId.isBlank()) {
 			throw new IllegalArgumentException("migrationId must not be empty");

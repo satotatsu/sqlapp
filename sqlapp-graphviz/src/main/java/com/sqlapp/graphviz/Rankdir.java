@@ -19,46 +19,48 @@
 
 package com.sqlapp.graphviz;
 
-public enum Rankdir implements Default{
-	TopToBottom("top to bottom"){
+public enum Rankdir implements Default {
+	TopToBottom("top to bottom") {
 		@Override
-		public boolean isDefault(){
+		public boolean isDefault() {
 			return true;
 		}
+
 		@Override
-		public String toString(){
+		public String toString() {
 			return "TB";
 		}
-	}
-	, LeftToRight("left to right"){
+	},
+	LeftToRight("left to right") {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "LR";
 		}
-	}
-	, BottomToTop("bottom to top"){
+	},
+	BottomToTop("bottom to top") {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "BT";
 		}
-	}
-	, RightToLeft("right to left"){
+	},
+	RightToLeft("right to left") {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "RL";
 		}
-	}
-	,;
+	},;
 
-	private  final String comment;
-	private Rankdir(String comment){
-		this.comment=comment;
+	private final String comment;
+
+	private Rankdir(String comment) {
+		this.comment = comment;
 	}
+
 	/**
 	 * @return the comment
 	 */
 	public String getComment() {
 		return comment;
 	}
-	
+
 }

@@ -19,10 +19,10 @@ public record BulkMigrationJobRepairExecutionReport(int formatVersion, Instant c
 	public record Task(String taskId, int mismatchChunks, int replayedChunks, long replayedRows, long affectedRows,
 			List<Long> chunksWithExtraActualRows, List<Long> chunksWithoutExpectedRows) {
 		public Task {
-			chunksWithExtraActualRows = List.copyOf(Objects.requireNonNull(chunksWithExtraActualRows,
-					"chunksWithExtraActualRows"));
-			chunksWithoutExpectedRows = List.copyOf(Objects.requireNonNull(chunksWithoutExpectedRows,
-					"chunksWithoutExpectedRows"));
+			chunksWithExtraActualRows = List
+					.copyOf(Objects.requireNonNull(chunksWithExtraActualRows, "chunksWithExtraActualRows"));
+			chunksWithoutExpectedRows = List
+					.copyOf(Objects.requireNonNull(chunksWithoutExpectedRows, "chunksWithoutExpectedRows"));
 		}
 	}
 }

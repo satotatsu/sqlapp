@@ -27,72 +27,73 @@ import com.sqlapp.graphviz.Edge;
 import com.sqlapp.graphviz.EdgeStyle;
 
 public enum ERDrawMethod {
-	IDEF1X(){
+	IDEF1X() {
 		@Override
-		protected void drawDependent(ForeignKeyConstraint fk, Edge edge){
+		protected void drawDependent(ForeignKeyConstraint fk, Edge edge) {
 			edge.setDir(DirType.back);
 			edge.setArrowhead(ArrowType.none);
 			edge.setArrowtail(ArrowType.dot);
 		}
+
 		@Override
-		protected void drawNoDependent(ForeignKeyConstraint fk, Edge edge){
-			drawDependent(fk,edge);
+		protected void drawNoDependent(ForeignKeyConstraint fk, Edge edge) {
+			drawDependent(fk, edge);
 			edge.setArrowhead(ArrowType.odiamond);
 			edge.setStyle(EdgeStyle.dashed);
 		}
-	}, 
-	IE(){
+	},
+	IE() {
 		@Override
-		protected void drawDependent(ForeignKeyConstraint fk, Edge edge){
+		protected void drawDependent(ForeignKeyConstraint fk, Edge edge) {
 			edge.setDir(DirType.back);
 			edge.setArrowhead(ArrowType.none, ArrowType.tee, ArrowType.tee);
-			if (isPrimary(fk)){
+			if (isPrimary(fk)) {
 				edge.setArrowtail(ArrowType.none, ArrowType.tee, ArrowType.odot);
-			} else{
+			} else {
 				edge.setArrowtail(ArrowType.crow, ArrowType.tee, ArrowType.odot);
 			}
 		}
+
 		@Override
-		protected void drawNoDependent(ForeignKeyConstraint fk, Edge edge){
+		protected void drawNoDependent(ForeignKeyConstraint fk, Edge edge) {
 			edge.setDir(DirType.back);
 			edge.setArrowhead(ArrowType.none, ArrowType.odot);
-			if (isPrimary(fk)){
+			if (isPrimary(fk)) {
 				edge.setArrowtail(ArrowType.none, ArrowType.tee, ArrowType.odot);
-			} else{
+			} else {
 				edge.setArrowtail(ArrowType.crow, ArrowType.tee, ArrowType.odot);
 			}
 		}
-	}, ;
-	
-	public void draw(ForeignKeyConstraint fk, Edge edge){
-		if(isDependent(fk)){
-			drawDependent(fk,edge);
-		} else{
-			drawNoDependent(fk,edge);
+	},;
+
+	public void draw(ForeignKeyConstraint fk, Edge edge) {
+		if (isDependent(fk)) {
+			drawDependent(fk, edge);
+		} else {
+			drawNoDependent(fk, edge);
 		}
 	}
 
-	protected void drawDependent(ForeignKeyConstraint fk, Edge edge){
-		
+	protected void drawDependent(ForeignKeyConstraint fk, Edge edge) {
+
 	}
 
-	protected void drawNoDependent(ForeignKeyConstraint fk, Edge edge){
-		
+	protected void drawNoDependent(ForeignKeyConstraint fk, Edge edge) {
+
 	}
 
-
-	public boolean isPrimary(ForeignKeyConstraint fk){
-		for(Column column:fk.getColumns()){
-			if (!column.isPrimaryKey()){
+	public boolean isPrimary(ForeignKeyConstraint fk) {
+		for (Column column : fk.getColumns()) {
+			if (!column.isPrimaryKey()) {
 				return false;
 			}
 		}
 		return true;
 	}
-	
-	public boolean isDependent(ForeignKeyConstraint fk){
-		for(Column column:fk.getColumns()){
-			if (!column.isNotNull()){
+
+	public boolean isDependent(ForeignKeyConstraint fk) {
+		for (Column column : fk.getColumns()) {
+			if (!column.isNotNull()) {
 				return false;
 			}
 		}

@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -77,9 +76,10 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertNotNull(new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
 				final String configurationFingerprint = "sha256:"
 						+ MessageDigests.SHA256.checksumAsString(configurationFile);
-				assertEquals(configurationFingerprint, new BulkMigrationJobConfigurationResolver()
-						.resolveJob(configurationFile, connection, configurationFingerprint)
-						.provenance().configurationFingerprint());
+				assertEquals(configurationFingerprint,
+						new BulkMigrationJobConfigurationResolver()
+								.resolveJob(configurationFile, connection, configurationFingerprint).provenance()
+								.configurationFingerprint());
 				assertThrows(CommandException.class, () -> new BulkMigrationJobConfigurationResolver()
 						.resolveJob(configurationFile, connection, "sha256:" + "f".repeat(64)));
 			}
@@ -120,8 +120,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			configuration.setSchemaFile(schemaFile.getName());
 			configuration.setTasks(List.of());
 			final var provenance = new BulkMigrationJobConfiguration.Provenance();
-			provenance.setAssessmentReportFingerprint(
-					"sha256:" + MessageDigests.SHA256.checksumAsString(assessmentFile));
+			provenance
+					.setAssessmentReportFingerprint("sha256:" + MessageDigests.SHA256.checksumAsString(assessmentFile));
 			provenance.setDdlVerificationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(ddlVerificationFile));
 			configuration.setProvenance(provenance);
@@ -138,8 +138,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			command.setMaxApprovalArtifactFileSizeBytes(Files.size(assessmentFile.toPath()) - 1);
 			assertEquals("assessmentReportFile exceeds maxApprovalArtifactFileSizeBytes.",
 					assertThrows(CommandException.class, command::run).getMessage());
-			command.setMaxApprovalArtifactFileSizeBytes(Math.max(Files.size(assessmentFile.toPath()),
-					Files.size(ddlVerificationFile.toPath())));
+			command.setMaxApprovalArtifactFileSizeBytes(
+					Math.max(Files.size(assessmentFile.toPath()), Files.size(ddlVerificationFile.toPath())));
 			assertDoesNotThrow(command::run);
 
 			Files.writeString(assessmentFile.toPath(), "{\"status\":\"CHANGED\"}");
@@ -183,11 +183,11 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				catalogName = targetConnection.getCatalog();
 				schemaName = targetConnection.getSchema();
 			}
-			reportIO.write(evidence.toPath(), new BulkMigrationTargetValidationReport(
-					BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
-					resolved.plan().getJobId(), resolved.plan().getFingerprint(),
-					resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
-					resolved.provenance(), "production", productName, productVersion, catalogName, schemaName));
+			reportIO.write(evidence.toPath(),
+					new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+							Instant.now(), resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+							resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+							resolved.provenance(), "production", productName, productVersion, catalogName, schemaName));
 
 			final var command = new ExecuteBulkMigrationJobCommand();
 			command.setDataSource(target);
@@ -212,11 +212,12 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(evidence),
 					executedReport.provenance().targetValidationReportFingerprint());
 
-			reportIO.write(evidence.toPath(), new BulkMigrationTargetValidationReport(
-					BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
-					resolved.plan().getJobId(), resolved.plan().getFingerprint(),
-					resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
-					resolved.provenance(), "production", "different-product", productVersion, catalogName, schemaName));
+			reportIO.write(evidence.toPath(),
+					new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+							Instant.now(), resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+							resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+							resolved.provenance(), "production", "different-product", productVersion, catalogName,
+							schemaName));
 			command.setExpectedTargetValidationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
 			assertThrows(CommandException.class, command::run);
@@ -225,11 +226,12 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
 					rejectedReport.execution().event());
 
-			reportIO.write(evidence.toPath(), new BulkMigrationTargetValidationReport(
-					BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now().minusSeconds(120),
-					resolved.plan().getJobId(), resolved.plan().getFingerprint(),
-					resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
-					resolved.provenance(), "production", productName, productVersion, catalogName, schemaName));
+			reportIO.write(evidence.toPath(),
+					new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+							Instant.now().minusSeconds(120), resolved.plan().getJobId(),
+							resolved.plan().getFingerprint(), resolved.provenance().configurationFingerprint(),
+							resolved.plan().getTaskIds(), resolved.provenance(), "production", productName,
+							productVersion, catalogName, schemaName));
 			command.setExpectedTargetValidationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
 			assertThrows(CommandException.class, command::run);
@@ -361,8 +363,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertEquals(90, resolution.leaseConfiguration().duration().toSeconds());
 				assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
 						resolution.provenance().configurationFingerprint());
-				assertEquals("sha256:" + "a".repeat(64),
-						resolution.provenance().assessmentReportFingerprint());
+				assertEquals("sha256:" + "a".repeat(64), resolution.provenance().assessmentReportFingerprint());
 				final var options = plan.getTasks().get(0).getOptions();
 				assertEquals(250, options.getBulkOption().getBatchSize());
 				assertEquals(true, options.getBulkOption().isKeepNulls());
@@ -459,12 +460,12 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 					operationalArtifact.execution().event());
 			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
 					operationalArtifact.provenance().configurationFingerprint());
-			assertEquals("sha256:" + "a".repeat(64),
-					operationalArtifact.provenance().assessmentReportFingerprint());
+			assertEquals("sha256:" + "a".repeat(64), operationalArtifact.provenance().assessmentReportFingerprint());
 			final var mismatchArtifact = new BulkMigrationVerificationReportIO()
 					.read(temporaryDirectory.resolve("reports/mismatch-verification.json"));
-			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(
-					temporaryDirectory.resolve("reports/mismatch-verification.json").toFile()),
+			assertEquals(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(
+							temporaryDirectory.resolve("reports/mismatch-verification.json").toFile()),
 					mismatchCommand.getVerificationReportFingerprint());
 			assertEquals(false, mismatchArtifact.match());
 			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
@@ -478,11 +479,12 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertNotNull(mismatchChunk.actualLastKey());
 			final var repairArtifact = new BulkMigrationJobRepairPlanReportIO()
 					.read(temporaryDirectory.resolve("reports/mismatch-repair.json"));
-			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(
-					temporaryDirectory.resolve("reports/mismatch-repair.json").toFile()),
+			assertEquals(
+					"sha256:" + MessageDigests.SHA256
+							.checksumAsString(temporaryDirectory.resolve("reports/mismatch-repair.json").toFile()),
 					mismatchCommand.getRepairPlanReportFingerprint());
-			assertEquals(List.of("items"), repairArtifact.tasks().stream()
-					.map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
+			assertEquals(List.of("items"),
+					repairArtifact.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
 			assertEquals(0, repairArtifact.estimatedReplayRows());
 
 			final var twoMismatches = new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 2, 2,
@@ -630,8 +632,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
 				final var plan = new BulkMigrationJobConfigurationResolver().resolve(job, sourceConnection);
 				assertEquals("CUSTOMERS", plan.getTasks().getFirst().getEffectiveTargetTable().getName());
-				assertEquals("CUSTOMER_ID", plan.getTasks().getFirst().getEffectiveTargetTable()
-						.getColumns().get(0).getName());
+				assertEquals("CUSTOMER_ID",
+						plan.getTasks().getFirst().getEffectiveTargetTable().getColumns().get(0).getName());
 				final SQLException nonUnique = assertThrows(SQLException.class,
 						() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
 				assertEquals(true, nonUnique.getMessage().contains("unique index"));
@@ -641,7 +643,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				assertEquals(true, ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1).isMatch());
 				task.setRequireEmptyTarget(true);
 				new YamlConverter().writeJsonValue(job, configuration);
-				final var emptyRequiredPlan = new BulkMigrationJobConfigurationResolver().resolve(job, sourceConnection);
+				final var emptyRequiredPlan = new BulkMigrationJobConfigurationResolver().resolve(job,
+						sourceConnection);
 				final SQLException notEmpty = assertThrows(SQLException.class,
 						() -> BulkMigrationTargetValidator.validate(targetConnection, emptyRequiredPlan));
 				assertEquals(true, notEmpty.getMessage().contains("must be empty"));
@@ -907,8 +910,9 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 				new BulkMigrationJobRepairPlanReportIO().write(approval, plan);
 				final var metadata = targetConnection.getMetaData();
 				new BulkMigrationTargetValidationReportIO().write(targetValidation,
-						new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
-								Instant.now(), resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+						new BulkMigrationTargetValidationReport(
+								BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
+								resolved.plan().getJobId(), resolved.plan().getFingerprint(),
 								resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
 								resolved.provenance(), "repair-test", metadata.getDatabaseProductName(),
 								metadata.getDatabaseProductVersion(), targetConnection.getCatalog(),
@@ -958,9 +962,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			assertEquals("changed", itemName(target));
 			command.setTargetEnvironmentId("repair-test");
 			final var approvedTarget = new BulkMigrationTargetValidationReportIO().read(targetValidation);
-			new BulkMigrationTargetValidationReportIO().write(targetValidation,
-					withTargetValidationIdentity(approvedTarget, Instant.now().minusSeconds(120),
-							approvedTarget.databaseProductName()));
+			new BulkMigrationTargetValidationReportIO().write(targetValidation, withTargetValidationIdentity(
+					approvedTarget, Instant.now().minusSeconds(120), approvedTarget.databaseProductName()));
 			command.setExpectedTargetValidationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
 			final var staleRejection = assertThrows(CommandException.class, command::run);
@@ -1072,8 +1075,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final Path incompleteVerification = temporaryDirectory.resolve("incomplete-post-repair-verification.json");
 			new BulkMigrationVerificationReportIO().write(incompleteVerification,
 					new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
-							Instant.now(), postRepairArtifact.planFingerprint(), postRepairArtifact.isolation(), true, 0, 0,
-							0, List.of(), postRepairArtifact.provenance()));
+							Instant.now(), postRepairArtifact.planFingerprint(), postRepairArtifact.isolation(), true,
+							0, 0, 0, List.of(), postRepairArtifact.provenance()));
 			evidence.setPostRepairVerificationReportFile(incompleteVerification.toFile());
 			evidence.setExpectedPostRepairVerificationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(incompleteVerification.toFile()));
@@ -1100,8 +1103,7 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 
 	@Test
 	void writesFailureEvidenceWhenApprovedRepairExecutionFails() throws Exception {
-		try (var source = dataSource("failed_job_repair_source");
-				var target = dataSource("failed_job_repair_target")) {
+		try (var source = dataSource("failed_job_repair_source"); var target = dataSource("failed_job_repair_target")) {
 			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(100))");
 			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'value-too-long-for-target')");
 			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(5))");
@@ -1193,8 +1195,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 		return new BulkMigrationJobRepairExecutionReport(report.formatVersion(), completedAt,
 				report.migrationPlanFingerprint(), report.repairPlanFingerprint(),
 				report.approvedRepairPlanFileFingerprint(), report.mismatchChunks(), report.replayedChunks(),
-				report.replayedRows(), report.affectedRows(), report.tasksRequiringManualReconciliation(), report.tasks(),
-				report.provenance());
+				report.replayedRows(), report.affectedRows(), report.tasksRequiringManualReconciliation(),
+				report.tasks(), report.provenance());
 	}
 
 	private static BulkMigrationTargetValidationReport withTargetValidationIdentity(
@@ -1202,8 +1204,8 @@ class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
 			final String databaseProductName) {
 		return new BulkMigrationTargetValidationReport(report.formatVersion(), generatedAt, report.jobId(),
 				report.planFingerprint(), report.configurationFingerprint(), report.taskIds(), report.provenance(),
-				report.targetEnvironmentId(), databaseProductName, report.databaseProductVersion(), report.catalogName(),
-				report.schemaName());
+				report.targetEnvironmentId(), databaseProductName, report.databaseProductVersion(),
+				report.catalogName(), report.schemaName());
 	}
 
 	private static String itemName(final HikariDataSource dataSource) throws SQLException {

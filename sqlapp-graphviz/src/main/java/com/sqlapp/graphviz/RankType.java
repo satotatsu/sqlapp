@@ -19,23 +19,22 @@
 
 package com.sqlapp.graphviz;
 
-public enum RankType implements Default{
-	same("all nodes are placed on the same rank.")
-	, min("all nodes are placed on the minimum rank.")
-	, source("all nodes are placed on the minimum rank, and the only nodes on the minimum rank belong to some subgraph whose rank attribute is \"source\" or \"min\".")
-	, max("all nodes are placed on the maximum rank.")
-	, sink("")
-	,;
+public enum RankType implements Default {
+	same("all nodes are placed on the same rank."), min("all nodes are placed on the minimum rank."),
+	source("all nodes are placed on the minimum rank, and the only nodes on the minimum rank belong to some subgraph whose rank attribute is \"source\" or \"min\"."),
+	max("all nodes are placed on the maximum rank."), sink(""),;
 
-	private  final String comment;
-	private RankType(String comment){
-		this.comment=comment;
+	private final String comment;
+
+	private RankType(String comment) {
+		this.comment = comment;
 	}
+
 	/**
 	 * @return the comment
 	 */
 	public String getComment() {
 		return comment;
 	}
-	
+
 }

@@ -76,8 +76,7 @@ public final class GeneratorMvelUtils {
 		return recursive
 				? FileIterables.readAllRecursiveAsMap(path, filterExpression,
 						CachedMvelEvaluatorUtils.getCachedMvelEvaluator())
-				: FileIterables.readAllAsMap(path, filterExpression,
-						CachedMvelEvaluatorUtils.getCachedMvelEvaluator());
+				: FileIterables.readAllAsMap(path, filterExpression, CachedMvelEvaluatorUtils.getCachedMvelEvaluator());
 	}
 
 	private static List<Iterable<Map<String, Object>>> read(final Path path, final boolean recursive,
@@ -90,8 +89,7 @@ public final class GeneratorMvelUtils {
 		return recursive
 				? FileIterables.readAllRecursiveAsMap(path, filterExpression,
 						CachedMvelEvaluatorUtils.getCachedMvelEvaluator())
-				: FileIterables.readAllAsMap(path, filterExpression,
-						CachedMvelEvaluatorUtils.getCachedMvelEvaluator());
+				: FileIterables.readAllAsMap(path, filterExpression, CachedMvelEvaluatorUtils.getCachedMvelEvaluator());
 	}
 
 	private static void validatePath(final Path path) {

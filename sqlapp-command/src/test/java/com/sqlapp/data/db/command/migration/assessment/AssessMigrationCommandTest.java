@@ -25,7 +25,8 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Method;
 import com.sqlapp.exceptions.CommandException;
 
 class AssessMigrationCommandTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	private AssessMigrationCommand command() throws Exception {
 		final var input = directory.resolve("schema.xml").toFile();
@@ -146,13 +147,20 @@ class AssessMigrationCommandTest {
 				new Class<?>[] { Connection.class }, (proxy, method, args) -> switch (method.getName()) {
 				case "getMetaData" -> metadata;
 				case "isReadOnly" -> readOnly[0];
-				case "setReadOnly" -> { readOnly[0] = (boolean) args[0]; yield null; }
-				case "close" -> { closed[0] = true; yield null; }
+				case "setReadOnly" -> {
+					readOnly[0] = (boolean) args[0];
+					yield null;
+				}
+				case "close" -> {
+					closed[0] = true;
+					yield null;
+				}
 				default -> defaultValue(method.getReturnType());
 				});
 		final DataSource dataSource = (DataSource) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[] { DataSource.class }, (proxy, method, args) ->
-						"getConnection".equals(method.getName()) ? connection : defaultValue(method.getReturnType()));
+				new Class<?>[] { DataSource.class },
+				(proxy, method, args) -> "getConnection".equals(method.getName()) ? connection
+						: defaultValue(method.getReturnType()));
 		command.setDataSource(dataSource);
 		assertThrows(CommandException.class, command::run);
 		assertTrue(readOnly[0]);
@@ -178,14 +186,21 @@ class AssessMigrationCommandTest {
 				new Class<?>[] { Connection.class }, (proxy, method, args) -> switch (method.getName()) {
 				case "getMetaData" -> metadata;
 				case "isReadOnly" -> readOnly[0];
-				case "setReadOnly" -> { readOnly[0] = (boolean) args[0]; yield null; }
+				case "setReadOnly" -> {
+					readOnly[0] = (boolean) args[0];
+					yield null;
+				}
 				case "prepareStatement" -> statement((String) args[0]);
-				case "close" -> { closed[0] = true; yield null; }
+				case "close" -> {
+					closed[0] = true;
+					yield null;
+				}
 				default -> defaultValue(method.getReturnType());
 				});
 		final DataSource dataSource = (DataSource) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[] { DataSource.class }, (proxy, method, args) ->
-						"getConnection".equals(method.getName()) ? connection : defaultValue(method.getReturnType()));
+				new Class<?>[] { DataSource.class },
+				(proxy, method, args) -> "getConnection".equals(method.getName()) ? connection
+						: defaultValue(method.getReturnType()));
 		command.setDataSource(dataSource);
 		command.setScanCharacterData(true);
 		command.setScanQueryTimeoutSeconds(45);
@@ -207,12 +222,11 @@ class AssessMigrationCommandTest {
 	private PreparedStatement statement(final String sql) {
 		return (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[] { PreparedStatement.class }, (proxy, method, args) -> {
-					if (!"executeQuery".equals(method.getName())) return defaultValue(method.getReturnType());
+					if (!"executeQuery".equals(method.getName()))
+						return defaultValue(method.getReturnType());
 					if (sql.contains("nls_database_parameters")) {
-						return resultSet(new String[][] {
-							{ "NLS_CHARACTERSET", "JA16SJIS" },
-							{ "NLS_NCHAR_CHARACTERSET", "AL16UTF16" }
-						});
+						return resultSet(new String[][] { { "NLS_CHARACTERSET", "JA16SJIS" },
+								{ "NLS_NCHAR_CHARACTERSET", "AL16UTF16" } });
 					}
 					return resultSet(new String[0][]);
 				});
@@ -229,10 +243,14 @@ class AssessMigrationCommandTest {
 	}
 
 	private static Object defaultValue(final Class<?> type) {
-		if (!type.isPrimitive()) return null;
-		if (type == boolean.class) return false;
-		if (type == int.class) return 0;
-		if (type == long.class) return 0L;
+		if (!type.isPrimitive())
+			return null;
+		if (type == boolean.class)
+			return false;
+		if (type == int.class)
+			return 0;
+		if (type == long.class)
+			return 0L;
 		return 0;
 	}
 }

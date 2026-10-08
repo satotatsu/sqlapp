@@ -5,7 +5,6 @@
  */
 package com.sqlapp.data.db.command.migration.legacy;
 
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;

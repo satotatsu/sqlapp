@@ -6,10 +6,11 @@ import java.util.List;
 import java.util.Objects;
 
 /** Stable JSON evidence for an unsuccessful migration job repair. */
-public record BulkMigrationJobRepairFailureReport(int formatVersion, Instant failedAt,
-		String migrationPlanFingerprint, String repairPlanFingerprint, String approvedRepairPlanFileFingerprint,
-		String postRepairVerificationReportFingerprint, String phase, String failedTaskId, String failureType, String failureMessage,
-		List<BulkMigrationJobRepairExecutionReport.Task> completedTasks, BulkMigrationArtifactProvenance provenance) {
+public record BulkMigrationJobRepairFailureReport(int formatVersion, Instant failedAt, String migrationPlanFingerprint,
+		String repairPlanFingerprint, String approvedRepairPlanFileFingerprint,
+		String postRepairVerificationReportFingerprint, String phase, String failedTaskId, String failureType,
+		String failureMessage, List<BulkMigrationJobRepairExecutionReport.Task> completedTasks,
+		BulkMigrationArtifactProvenance provenance) {
 	public static final int CURRENT_FORMAT_VERSION = 2;
 
 	public BulkMigrationJobRepairFailureReport {

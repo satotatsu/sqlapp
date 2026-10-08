@@ -57,8 +57,8 @@ class HsqlBulkUpsertProviderTest {
 			final Table inserts = table();
 			row(inserts, 1, "ignored", "IGNORED");
 			row(inserts, 2, "inserted", "NEW");
-			BulkUpsertResolver.execute(connection, inserts, BulkUpsertOption.builder().keyColumn("ID")
-					.updateWhenMatched(false).build());
+			BulkUpsertResolver.execute(connection, inserts,
+					BulkUpsertOption.builder().keyColumn("ID").updateWhenMatched(false).build());
 			assertEquals("updated|KEEP", value(connection, 1));
 			assertEquals("inserted|NEW", value(connection, 2));
 		}
@@ -68,7 +68,8 @@ class HsqlBulkUpsertProviderTest {
 	void rollsBackTheBatchAndRestoresAutoCommitOnFailure() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_bulk_upsert_rollback", "SA", "")) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE ITEMS (ID INT PRIMARY KEY, NAME VARCHAR(30) NOT NULL, STATUS VARCHAR(10))");
+				statement.execute(
+						"CREATE TABLE ITEMS (ID INT PRIMARY KEY, NAME VARCHAR(30) NOT NULL, STATUS VARCHAR(10))");
 				statement.execute("INSERT INTO ITEMS VALUES (1, 'old', 'KEEP')");
 			}
 			final Table table = table();
@@ -87,7 +88,8 @@ class HsqlBulkUpsertProviderTest {
 	void repairsMappedAccessColumnsFromAnApprovedPlan() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:hsqldb:mem:hsql_mapped_repair", "SA", "")) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE ITEMS (TARGET_ID INT PRIMARY KEY, NAME VARCHAR(30), STATUS VARCHAR(10))");
+				statement.execute(
+						"CREATE TABLE ITEMS (TARGET_ID INT PRIMARY KEY, NAME VARCHAR(30), STATUS VARCHAR(10))");
 				statement.execute("INSERT INTO ITEMS VALUES (1, 'old', 'KEEP')");
 			}
 			final Table expected = new Table("ACCESS_ITEMS");

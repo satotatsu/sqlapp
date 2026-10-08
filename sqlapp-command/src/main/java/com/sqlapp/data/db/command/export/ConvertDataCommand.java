@@ -140,8 +140,8 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					table[0] = SchemaUtils.readXml(file);
 				});
 			} else {
-				final RowIteratorHandler rowIteratorHandler = FileRowIteratorFactory.create(file, getCsvEncoding(),
-						0, 0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> value);
+				final RowIteratorHandler rowIteratorHandler = FileRowIteratorFactory.create(file, getCsvEncoding(), 0,
+						0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> value);
 				table[0].setRowIteratorHandler(rowIteratorHandler);
 			}
 			execute(() -> {
@@ -186,8 +186,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 	private OutputFiles createOutputFiles(final File input) throws IOException {
 		final File inputParent = input.getAbsoluteFile().getParentFile();
 		final File outputParent;
-		if (getOutputDirectory() != null
-				&& !CommonUtils.eq(getOutputDirectory(), getDirectory())
+		if (getOutputDirectory() != null && !CommonUtils.eq(getOutputDirectory(), getDirectory())
 				&& !CommonUtils.eq(getOutputDirectory(), input.getParentFile())) {
 			outputParent = new File(getOutputDirectory(), inputParent.getName());
 		} else {
@@ -210,8 +209,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 			throw new IllegalArgumentException("Output data format is required.");
 		}
 		if (getOutputFileType().isToml()) {
-			throw new IllegalArgumentException(
-					"TOML output is not supported because TOML has no root array.");
+			throw new IllegalArgumentException("TOML output is not supported because TOML has no root array.");
 		}
 	}
 

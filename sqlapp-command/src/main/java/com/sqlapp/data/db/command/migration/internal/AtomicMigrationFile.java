@@ -47,7 +47,8 @@ public final class AtomicMigrationFile {
 		}
 	}
 
-	public static void writeProperties(final Path file, final Properties values, final String comment) throws IOException {
+	public static void writeProperties(final Path file, final Properties values, final String comment)
+			throws IOException {
 		write(file, temporary -> {
 			try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE,
 					StandardOpenOption.TRUNCATE_EXISTING); var output = Channels.newOutputStream(channel)) {

@@ -73,8 +73,8 @@ public final class BulkMigrationJobRepairPlanReportIO {
 		try {
 			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
 					"maxApprovedRepairPlanFileSizeBytes", "Approved repair plan file");
-			final var report = validate(new JsonConverter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), BulkMigrationJobRepairPlanReport.class));
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationJobRepairPlanReport.class));
 			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (IOException | RuntimeException e) {
 			if (e instanceof CommandException commandException) {

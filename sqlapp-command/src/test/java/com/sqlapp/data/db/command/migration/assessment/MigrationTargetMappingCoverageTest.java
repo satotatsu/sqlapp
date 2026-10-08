@@ -29,22 +29,25 @@ class MigrationTargetMappingCoverageTest {
 		schema.getTables().add(table);
 		final var tableId = new ObjectId(null, "source", "table", "RandomKeys");
 		final var columnId = new ObjectId(null, "source", "column", "ID", "RandomKeys");
-		final var profile = new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile(List.of(
-				new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.TableProfile(tableId, 2, List.of(
-						new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile(columnId, "LONG",
-								com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.Coverage.SCANNED, 0L, null,
+		final var profile = new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile(
+				List.of(new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.TableProfile(tableId, 2,
+						List.of(new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile(
+								columnId, "LONG",
+								com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.Coverage.SCANNED, 0L,
+								null,
 								new com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.NumericStatistics(
-										new java.math.BigDecimal("-2147483648"), new java.math.BigDecimal("17"), 10, 0, 0), null)))));
-		final var mappedColumn = new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int", false,
-				true, null, null);
+										new java.math.BigDecimal("-2147483648"), new java.math.BigDecimal("17"), 10, 0,
+										0),
+								null)))));
+		final var mappedColumn = new ResolvedMigrationTargetMapping.ColumnMapping(columnId, "ID", "int", false, true,
+				null, null);
 		final var mapping = new ResolvedMigrationTargetMapping("fp", "sqlserver", "2022", List.of(
 				new ResolvedMigrationTargetMapping.TableMapping(tableId, "dbo", "RandomKeys", List.of(mappedColumn))));
-		final var assessment = new MigrationTargetMappingCoverage().assess(
-				new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true,
-						profile), mapping);
+		final var assessment = new MigrationTargetMappingCoverage().assess(new MigrationAssessmentSource(
+				List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true, profile), mapping);
 		final var finding = assessment.findings().stream()
-				.filter(f -> f.ruleId().equals("migration.mapping.observed-negative-autonumber"))
-				.findFirst().orElseThrow();
+				.filter(f -> f.ruleId().equals("migration.mapping.observed-negative-autonumber")).findFirst()
+				.orElseThrow();
 		assertEquals(MigrationAssessment.Severity.WARNING, finding.severity());
 		assertEquals(MigrationAssessment.Evidence.DATABASE, finding.evidence());
 		assertTrue(finding.action().contains("New Values uses Random"));
@@ -77,31 +80,41 @@ class MigrationTargetMappingCoverageTest {
 		final var mapped = new ResolvedMigrationTargetMapping.TableMapping(tableId, "TARGET", "SAMPLE_T", List.of(
 				new ResolvedMigrationTargetMapping.ColumnMapping(id, "ID", "int", true, null, null, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(value, "VALUE", "int", false, null, "0", null)));
-		final var assessment = new MigrationTargetMappingCoverage().assess(
-				new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), false, true),
-				new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)));
+		final var assessment = new MigrationTargetMappingCoverage()
+				.assess(new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()),
+						false, true), new ResolvedMigrationTargetMapping("fp", "target", "1", List.of(mapped)));
 
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.identity-change")
-				&& f.reason().contains("Access AutoNumber")
-				&& f.action().contains("Increment or Random")
-				&& f.action().contains("first new row")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")
-				&& f.object().equals(id) && f.reason().contains("from required to nullable")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.identity-change")
+						&& f.reason().contains("Access AutoNumber") && f.action().contains("Increment or Random")
+						&& f.action().contains("first new row")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")));
+		assertTrue(
+				assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.nullability-change")
+						&& f.object().equals(id) && f.reason().contains("from required to nullable")));
 		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.default-change")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.allow-zero-length")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.calculated-expression")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.column-validation-expression")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")
-				&& f.reason().startsWith("Mapped table changes")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.relationship-action")
-				&& f.reason().startsWith("Mapped relationship changes")
-				&& f.reason().contains("Access relationship actions to Sample")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.index-null-handling")
-				&& f.reason().contains("Access IgnoreNulls")));
-		assertTrue(assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.unique-index-design")
-				&& f.reason().contains("Access standalone unique index")));
+		assertTrue(
+				assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.allow-zero-length")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.calculated-expression")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.column-validation-expression")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.table-validation-expression")
+						&& f.reason().startsWith("Mapped table changes")));
+		assertTrue(assessment.findings().stream()
+				.anyMatch(f -> f.ruleId().equals("migration.mapping.relationship-action")
+						&& f.reason().startsWith("Mapped relationship changes")
+						&& f.reason().contains("Access relationship actions to Sample")));
+		assertTrue(
+				assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.index-null-handling")
+						&& f.reason().contains("Access IgnoreNulls")));
+		assertTrue(
+				assessment.findings().stream().anyMatch(f -> f.ruleId().equals("migration.mapping.unique-index-design")
+						&& f.reason().contains("Access standalone unique index")));
 		assertEquals(11, assessment.inventory().stream().filter(i -> i.type().equals("mappingSemanticDifferences"))
 				.findFirst().orElseThrow().count());
 		assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("unresolvedAutoNumberStrategies"))

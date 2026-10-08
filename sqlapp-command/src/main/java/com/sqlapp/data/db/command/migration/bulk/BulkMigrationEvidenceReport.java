@@ -6,11 +6,10 @@ import java.util.List;
 import java.util.Objects;
 
 /** Portable result of an offline bulk migration evidence audit. */
-public record BulkMigrationEvidenceReport(int formatVersion, Instant generatedAt, String jobId,
-		String planFingerprint, String operationalReportFingerprint, String verificationReportFingerprint,
+public record BulkMigrationEvidenceReport(int formatVersion, Instant generatedAt, String jobId, String planFingerprint,
+		String operationalReportFingerprint, String verificationReportFingerprint,
 		BulkMigrationOperationalReport.ExecutionEvent executionEvent, boolean dataMatch,
-		BulkMigrationArtifactProvenance provenance, List<String> verificationPolicies,
-		List<String> verifiedArtifacts) {
+		BulkMigrationArtifactProvenance provenance, List<String> verificationPolicies, List<String> verifiedArtifacts) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
 	public static final String POLICY_SUCCESSFUL_EXECUTION = "SUCCESSFUL_EXECUTION";
 	public static final String POLICY_MATCHING_DATA = "MATCHING_DATA";

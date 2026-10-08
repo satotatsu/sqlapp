@@ -39,12 +39,11 @@ public final class MigrationNodeManifestIO {
 			throw new CommandException("Migration node manifest does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
-					"maxNodeManifestFileSizeBytes", "Migration node manifest");
-			final var manifest = validate(new JsonConverter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), MigrationNodeManifest.class));
-			return new Snapshot(manifest,
-					"sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes, "maxNodeManifestFileSizeBytes",
+					"Migration node manifest");
+			final var manifest = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					MigrationNodeManifest.class));
+			return new Snapshot(manifest, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (IOException e) {
 			throw new CommandException("Failed to read migration node manifest: " + absolute, e);
 		} catch (RuntimeException e) {
@@ -59,8 +58,7 @@ public final class MigrationNodeManifestIO {
 		writeSnapshot(file, manifest, null);
 	}
 
-	public Snapshot writeSnapshot(final Path file, final MigrationNodeManifest manifest,
-			final Long maxFileSizeBytes) {
+	public Snapshot writeSnapshot(final Path file, final MigrationNodeManifest manifest, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		final MigrationNodeManifest validated = validate(manifest);
 		try {

@@ -27,15 +27,15 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public abstract class AbstractNode<T extends AbstractNode<?>> extends AbstractCommonElement<T>{
+@EqualsAndHashCode(callSuper = true)
+public abstract class AbstractNode<T extends AbstractNode<?>> extends AbstractCommonElement<T> {
 
-	
 	protected abstract String getName();
 
-	protected String getEscapedName(){
+	protected String getEscapedName() {
 		return getName();
 	}
+
 	@Props
 	private String comment;
 	/**
@@ -43,7 +43,7 @@ public abstract class AbstractNode<T extends AbstractNode<?>> extends AbstractCo
 	 */
 	@Props
 	private Color[] fillcolor;
-	
+
 	@Props
 	private String fixedsize;
 
@@ -52,10 +52,10 @@ public abstract class AbstractNode<T extends AbstractNode<?>> extends AbstractCo
 	private String group;
 	@Props
 	private String image;
-	
+
 	@Props
 	private NodeShape shape;
-	
+
 	@Props
 	private Double labelangle;
 	/**
@@ -76,28 +76,28 @@ public abstract class AbstractNode<T extends AbstractNode<?>> extends AbstractCo
 	@Props
 	private Double z;
 
-	protected GraphStringBuilder createGraphStringBuilder(){
-		GraphStringBuilder builder=new GraphStringBuilder(getEscapedName());
+	protected GraphStringBuilder createGraphStringBuilder() {
+		GraphStringBuilder builder = new GraphStringBuilder(getEscapedName());
 		return builder;
 	}
 
-	public T setFillColor(Color... fillcolor){
-		this.fillcolor=fillcolor;
+	public T setFillColor(Color... fillcolor) {
+		this.fillcolor = fillcolor;
 		return instance();
 	}
 
-	public T setFillColor(Color fillcolor){
-		if (fillcolor==null){
-			this.fillcolor=null;
-		} else{
-			this.fillcolor=new Color[]{fillcolor};
+	public T setFillColor(Color fillcolor) {
+		if (fillcolor == null) {
+			this.fillcolor = null;
+		} else {
+			this.fillcolor = new Color[] { fillcolor };
 		}
 		return instance();
 	}
-	
+
 	@Override
-	protected Map<String,Object> getProperties(){
-		Map<String,Object> props=super.getProperties();
+	protected Map<String, Object> getProperties() {
+		Map<String, Object> props = super.getProperties();
 		put(props, "comment", comment);
 		put(props, "fillcolor", fillcolor);
 		put(props, "gradientangle", gradientangle);
@@ -112,15 +112,15 @@ public abstract class AbstractNode<T extends AbstractNode<?>> extends AbstractCo
 		return props;
 	}
 
-	public T setZ(String z){
-		if ("MAXFLOAT".equalsIgnoreCase(z)){
-			this.z=Double.MAX_VALUE;
+	public T setZ(String z) {
+		if ("MAXFLOAT".equalsIgnoreCase(z)) {
+			this.z = Double.MAX_VALUE;
 			return instance();
-		}else if ("-MAXFLOAT".equalsIgnoreCase(z)){
-			this.z=Double.MAX_VALUE;
+		} else if ("-MAXFLOAT".equalsIgnoreCase(z)) {
+			this.z = Double.MAX_VALUE;
 			return instance();
 		}
-		throw new IllegalArgumentException("z="+z);
+		throw new IllegalArgumentException("z=" + z);
 	}
-	
+
 }

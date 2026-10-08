@@ -20,9 +20,9 @@ import io.github.spannm.jackcess.DatabaseBuilder;
 import io.github.spannm.jackcess.DateTimeType;
 
 /**
- * Lazily streams one Access table directly from its MDB/ACCDB file.
- * Iterators are {@link AutoCloseable}; callers stopping before exhaustion must
- * close them so that the Access file is released immediately.
+ * Lazily streams one Access table directly from its MDB/ACCDB file. Iterators
+ * are {@link AutoCloseable}; callers stopping before exhaustion must close them
+ * so that the Access file is released immediately.
  */
 public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 
@@ -40,16 +40,14 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 		return new MdbIterator(rows, file, tableName);
 	}
 
-	private static class MdbIterator
-			extends AbstractRowIterator<io.github.spannm.jackcess.Row> {
+	private static class MdbIterator extends AbstractRowIterator<io.github.spannm.jackcess.Row> {
 
 		private final Path file;
 		private final String tableName;
 		private Database database;
 		private Iterator<io.github.spannm.jackcess.Row> iterator;
 
-		MdbIterator(final RowCollection rows, final Path file,
-				final String tableName) {
+		MdbIterator(final RowCollection rows, final Path file, final String tableName) {
 			super(rows, 0L, (row, column, value) -> value);
 			this.file = file;
 			this.tableName = tableName;
@@ -57,14 +55,11 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void preInitialize() throws Exception {
-			database = new DatabaseBuilder().withPath(file).withReadOnly(true)
-					.open();
+			database = new DatabaseBuilder().withPath(file).withReadOnly(true).open();
 			database.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
-			final io.github.spannm.jackcess.Table source = database
-					.getTable(tableName);
+			final io.github.spannm.jackcess.Table source = database.getTable(tableName);
 			if (source == null) {
-				throw new IllegalArgumentException(
-						"Access table not found: " + tableName);
+				throw new IllegalArgumentException("Access table not found: " + tableName);
 			}
 			iterator = source.iterator();
 		}
@@ -84,14 +79,12 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 		}
 
 		@Override
-		protected void set(final io.github.spannm.jackcess.Row source,
-				final Row row) {
+		protected void set(final io.github.spannm.jackcess.Row source, final Row row) {
 			row.setDataSourceInfo(file.toString());
 			row.setDataSourceDetailInfo(tableName);
 			row.setDataSourceRowNumber(count);
 			for (final Column column : table.getColumns()) {
-				put(row, column, normalizeValue(column,
-						source.get(column.getName())));
+				put(row, column, normalizeValue(column, source.get(column.getName())));
 			}
 		}
 
@@ -101,15 +94,14 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 			}
 			if (value instanceof io.github.spannm.jackcess.complex.ComplexValueForeignKey) {
 				throw new UnsupportedOperationException(
-						"Access complex/attachment column is not supported: "
-								+ tableName + "." + column.getName());
+						"Access complex/attachment column is not supported: " + tableName + "." + column.getName());
 			}
 			if (value instanceof Blob blob) {
 				try {
 					return blob.getBytes(1L, Math.toIntExact(blob.length()));
 				} catch (final Exception e) {
-					throw new RuntimeException("Failed to read Access OLE column: "
-							+ tableName + "." + column.getName(), e);
+					throw new RuntimeException(
+							"Failed to read Access OLE column: " + tableName + "." + column.getName(), e);
 				} finally {
 					try {
 						blob.free();
@@ -127,8 +119,7 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 				try {
 					database.close();
 				} catch (final Exception e) {
-					throw new RuntimeException("Failed to close Access database: "
-							+ file, e);
+					throw new RuntimeException("Failed to close Access database: " + file, e);
 				}
 			}
 		}

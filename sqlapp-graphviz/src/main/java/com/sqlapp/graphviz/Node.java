@@ -32,15 +32,14 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class Node extends AbstractNode<Node>{
+@EqualsAndHashCode(callSuper = true)
+public class Node extends AbstractNode<Node> {
 
 	@Setter(lombok.AccessLevel.PRIVATE)
-	private String name=null;
+	private String name = null;
 
-	
-	public Node(String name){
-		this.name=name;
+	public Node(String name) {
+		this.name = name;
 	}
 
 	public String getEscapedName() {
@@ -53,89 +52,89 @@ public class Node extends AbstractNode<Node>{
 
 	@Props
 	private String group;
-	
+
 	@Getter(lombok.AccessLevel.PUBLIC)
 	@Setter(lombok.AccessLevel.PROTECTED)
 	private NodeCollection parent;
 
 	@Getter(lombok.AccessLevel.PROTECTED)
 	@Setter(lombok.AccessLevel.PROTECTED)
-	private PortCollection ports=new PortCollection(this);
+	private PortCollection ports = new PortCollection(this);
 
-	public Graph getRoot(){
-		Graph graph=this.getGraph();
-		if (graph.getParent()==null){
+	public Graph getRoot() {
+		Graph graph = this.getGraph();
+		if (graph.getParent() == null) {
 			return null;
 		}
-		if (this.getParent().getParent()==null){
+		if (this.getParent().getParent() == null) {
 			return null;
 		}
 		return graph.getRoot();
 	}
-	
-	public Graph getGraph(){
-		if (this.getParent()==null){
+
+	public Graph getGraph() {
+		if (this.getParent() == null) {
 			return null;
 		}
 		return this.getParent().getParent();
 	}
 
-	private static Pattern PORT_PATTERN=Pattern.compile("<([^>]+?)>", Pattern.DOTALL+Pattern.MULTILINE);
-	
+	private static Pattern PORT_PATTERN = Pattern.compile("<([^>]+?)>", Pattern.DOTALL + Pattern.MULTILINE);
+
 	@Override
-	public Node setLabel(String label){
+	public Node setLabel(String label) {
 		super.setLabel(label);
 		ports.clear();
-		if (label==null){
-		} else{
-			String val=label.trim();
-			if (val.startsWith("<")&&val.endsWith(">")){
+		if (label == null) {
+		} else {
+			String val = label.trim();
+			if (val.startsWith("<") && val.endsWith(">")) {
 				return instance();
 			}
-			Matcher matcher=PORT_PATTERN.matcher(label);
-			while(matcher.find()){
-				String value=matcher.group(1);
+			Matcher matcher = PORT_PATTERN.matcher(label);
+			while (matcher.find()) {
+				String value = matcher.group(1);
 				this.getPorts().add(new Port(value));
 			}
 		}
 		return instance();
 	}
 
-	public Node setLabel(Consumer<RecordLabelBuilder> c){
-		RecordLabelBuilder builder=RecordLabelBuilder.create();
+	public Node setLabel(Consumer<RecordLabelBuilder> c) {
+		RecordLabelBuilder builder = RecordLabelBuilder.create();
 		c.accept(builder);
 		return setLabel(builder.toString());
 	}
 
-	public Node setHtmlLabel(Consumer<TableElement> c){
-		TableElement element=new TableElement(this);
+	public Node setHtmlLabel(Consumer<TableElement> c) {
+		TableElement element = new TableElement(this);
 		c.accept(element);
-		super.setLabel("<\n"+element.toString()+">");
+		super.setLabel("<\n" + element.toString() + ">");
 		return instance();
 	}
-	
+
 	@Override
-	protected void initializeLabel(GraphStringBuilder builder){
-		if (getLabel()==null){
+	protected void initializeLabel(GraphStringBuilder builder) {
+		if (getLabel() == null) {
 			return;
 		}
-		String val=getLabel().trim();
-		if (val.startsWith("<")&&val.endsWith(">")){
+		String val = getLabel().trim();
+		if (val.startsWith("<") && val.endsWith(">")) {
 			builder.putNoEscape("label", getLabel());
-		} else{
+		} else {
 			builder.put("label", getLabel());
 		}
 	}
-	
-	public Port getPort(String name){
+
+	public Port getPort(String name) {
 		return this.getPorts().get(name);
 	}
-	
+
 	@Override
-	protected Map<String,Object> getProperties(){
-		Map<String,Object> props=super.getProperties();
+	protected Map<String, Object> getProperties() {
+		Map<String, Object> props = super.getProperties();
 		put(props, "group", group);
 		return props;
 	}
-	
+
 }

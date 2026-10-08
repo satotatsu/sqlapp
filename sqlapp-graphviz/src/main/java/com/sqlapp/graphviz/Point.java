@@ -25,19 +25,19 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class Point extends AbstractGraphVizElement{
-	
-	public Point(double x, double y){
-		this.x=x;
-		this.y=y;
+@EqualsAndHashCode(callSuper = true)
+public class Point extends AbstractGraphVizElement {
+
+	public Point(double x, double y) {
+		this.x = x;
+		this.y = y;
 	}
 
 	private final double x;
 	private final double y;
-	
+
 	@Override
-	public String toString(){
-		return String.format("%f,%f", x,y);
+	public String toString() {
+		return String.format("%f,%f", x, y);
 	}
 }

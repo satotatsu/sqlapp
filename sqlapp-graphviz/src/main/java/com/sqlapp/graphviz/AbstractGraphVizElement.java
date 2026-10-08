@@ -24,16 +24,16 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
 @EqualsAndHashCode
 public abstract class AbstractGraphVizElement {
 
-	protected String escapeName(String value){
-		if (value==null){
+	protected String escapeName(String value) {
+		if (value == null) {
 			return null;
 		}
-		return "\""+value.replace("\"", "\\\"")+"\"";
+		return "\"" + value.replace("\"", "\\\"") + "\"";
 	}
 }

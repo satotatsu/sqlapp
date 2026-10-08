@@ -29,8 +29,8 @@ public final class BulkMigrationTargetValidationReportIO {
 		try {
 			final byte[] bytes = BoundedMigrationFile.read(file, maxFileSizeBytes,
 					"maxTargetValidationReportFileSizeBytes", "Target validation report file");
-			final var report = validate(new JsonConverter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), BulkMigrationTargetValidationReport.class));
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					BulkMigrationTargetValidationReport.class));
 			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (final CommandException e) {
 			throw e;
@@ -70,7 +70,8 @@ public final class BulkMigrationTargetValidationReportIO {
 		write(file, report);
 		final var snapshot = readSnapshot(file, maxFileSizeBytes);
 		if (!report.equals(snapshot.report())) {
-			throw new CommandException("Written bulk migration target validation report does not match its source model.");
+			throw new CommandException(
+					"Written bulk migration target validation report does not match its source model.");
 		}
 		return snapshot;
 	}

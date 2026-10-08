@@ -20,7 +20,9 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Re-verifies and executes an explicitly approved declarative job repair plan. */
+/**
+ * Re-verifies and executes an explicitly approved declarative job repair plan.
+ */
 @Getter
 @Setter
 public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceCommand {
@@ -150,8 +152,8 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		if (!plan.getFingerprint().equals(approvedRepairPlanReport.planFingerprint())) {
 			throw new CommandException("Bulk migration job repair plan fingerprint mismatch");
 		}
-		final var executionProvenance = BulkMigrationExecutionApprovalValidator.executionProvenance(
-				resolved.provenance(), approvedTargetValidationReportFingerprint);
+		final var executionProvenance = BulkMigrationExecutionApprovalValidator
+				.executionProvenance(resolved.provenance(), approvedTargetValidationReportFingerprint);
 		clearPreviousOutcomeArtifacts();
 		try {
 			result = BulkMigrationJobRepairExecutor.execute(targetConnection, plan,
@@ -161,8 +163,8 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 				try {
 					final var failureIO = new BulkMigrationJobRepairFailureReportIO();
 					final var failureSnapshot = failureIO.writeSnapshot(repairFailureReportFile.toPath(),
-							failureIO.fromFailure(resolved.plan().getFingerprint(),
-									approvedRepairPlanFileFingerprint, failure, executionProvenance));
+							failureIO.fromFailure(resolved.plan().getFingerprint(), approvedRepairPlanFileFingerprint,
+									failure, executionProvenance));
 					repairFailureReportFingerprint = failureSnapshot.fingerprint();
 					publishOutcome();
 				} catch (RuntimeException evidenceFailure) {
@@ -174,8 +176,8 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 		if (repairExecutionReportFile != null) {
 			final var executionIO = new BulkMigrationJobRepairExecutionReportIO();
 			final var executionSnapshot = executionIO.writeSnapshot(repairExecutionReportFile.toPath(),
-					executionIO.fromResult(resolved.plan().getFingerprint(), approvedRepairPlanFileFingerprint,
-						result, executionProvenance));
+					executionIO.fromResult(resolved.plan().getFingerprint(), approvedRepairPlanFileFingerprint, result,
+							executionProvenance));
 			repairExecutionReportFingerprint = executionSnapshot.fingerprint();
 		}
 		verificationResult = ExecuteBulkMigrationJobCommand.verifyWithIsolation(resolved.plan(), targetConnection,
@@ -196,11 +198,9 @@ public class ExecuteBulkMigrationJobRepairCommand extends AbstractDataSourceComm
 				try {
 					final var failureIO = new BulkMigrationJobRepairFailureReportIO();
 					final var failureSnapshot = failureIO.writeSnapshot(repairFailureReportFile.toPath(),
-							failureIO.fromVerificationFailure(
-									resolved.plan().getFingerprint(),
-									approvedRepairPlanFileFingerprint,
-									postRepairVerificationReportFingerprint, result, verificationResult,
-									executionProvenance));
+							failureIO.fromVerificationFailure(resolved.plan().getFingerprint(),
+									approvedRepairPlanFileFingerprint, postRepairVerificationReportFingerprint, result,
+									verificationResult, executionProvenance));
 					repairFailureReportFingerprint = failureSnapshot.fingerprint();
 					publishOutcome();
 				} catch (RuntimeException evidenceFailure) {

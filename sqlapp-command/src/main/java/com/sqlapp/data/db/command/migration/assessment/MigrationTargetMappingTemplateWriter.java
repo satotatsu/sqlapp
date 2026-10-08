@@ -13,10 +13,14 @@ import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
 import com.sqlapp.data.schemas.migration.assessment.MigrationTargetMapping;
 import com.sqlapp.util.YamlConverter;
 
-/** Writes a complete editable skeleton; unsupported types remain explicit null TODOs. */
+/**
+ * Writes a complete editable skeleton; unsupported types remain explicit null
+ * TODOs.
+ */
 final class MigrationTargetMappingTemplateWriter {
 	void write(final File file, final String sourceFingerprint, final String targetDatabase, final String targetVersion,
-			final MigrationAssessmentSource source, final DatabaseMigrationAssessmentProvider provider) throws IOException {
+			final MigrationAssessmentSource source, final DatabaseMigrationAssessmentProvider provider)
+			throws IOException {
 		final Map<String, Object> root = new LinkedHashMap<>();
 		root.put("format", MigrationTargetMapping.FORMAT);
 		root.put("version", MigrationTargetMapping.CURRENT_VERSION);
@@ -27,8 +31,12 @@ final class MigrationTargetMappingTemplateWriter {
 		for (final var schema : source.schemas()) {
 			for (final var table : schema.getTables()) {
 				final Map<String, Object> tableValue = new LinkedHashMap<>();
-				if (schema.getCatalogName() != null && !schema.getCatalogName().isBlank()) { tableValue.put("sourceCatalog", schema.getCatalogName()); }
-				if (schema.getName() != null && !schema.getName().isBlank()) { tableValue.put("sourceSchema", schema.getName()); }
+				if (schema.getCatalogName() != null && !schema.getCatalogName().isBlank()) {
+					tableValue.put("sourceCatalog", schema.getCatalogName());
+				}
+				if (schema.getName() != null && !schema.getName().isBlank()) {
+					tableValue.put("sourceSchema", schema.getName());
+				}
 				tableValue.put("sourceTable", table.getName());
 				final var columns = new ArrayList<Map<String, Object>>();
 				for (final var column : table.getColumns()) {
@@ -36,7 +44,9 @@ final class MigrationTargetMappingTemplateWriter {
 					columnValue.put("sourceColumn", column.getName());
 					columnValue.put("targetType", provider.suggestTargetType(column, targetVersion));
 					columnValue.put("nullable", column.isIdentity() ? false : !column.isNotNull());
-					if (column.isIdentity()) { columnValue.put("identity", null); }
+					if (column.isIdentity()) {
+						columnValue.put("identity", null);
+					}
 					columns.add(columnValue);
 				}
 				tableValue.put("columns", columns);

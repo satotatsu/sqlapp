@@ -216,8 +216,8 @@ class VerifyBulkMigrationEvidenceCommandTest {
 	private void writeVerification(final Path file, final String plan,
 			final BulkMigrationArtifactProvenance provenance) {
 		final var report = new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
-				Instant.parse("2026-10-02T00:01:00Z"), plan, BulkMigrationVerificationIsolation.DEFAULT.name(), true,
-				0, 0, 0, List.of(), provenance);
+				Instant.parse("2026-10-02T00:01:00Z"), plan, BulkMigrationVerificationIsolation.DEFAULT.name(), true, 0,
+				0, 0, List.of(), provenance);
 		new BulkMigrationVerificationReportIO().write(file, report);
 	}
 

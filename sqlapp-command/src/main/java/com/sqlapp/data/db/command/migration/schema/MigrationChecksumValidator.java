@@ -26,7 +26,8 @@ final class MigrationChecksumValidator {
 				continue;
 			}
 			final String expected = table.getColumns().contains(DbVersionHandler.CHECKSUM_COLUMN)
-					? (String) row.get(DbVersionHandler.CHECKSUM_COLUMN) : null;
+					? (String) row.get(DbVersionHandler.CHECKSUM_COLUMN)
+					: null;
 			if (expected == null) {
 				entries.add(new Entry(version, State.UNVERIFIED, null, null));
 				continue;

@@ -31,30 +31,30 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(fluent=false, chain=true) 
+@Accessors(fluent = false, chain = true)
 @Getter
 @Setter
 @EqualsAndHashCode
 public class DrawOptions {
-	private ERDrawMethod erDrawMethod=ERDrawMethod.IE;
+	private ERDrawMethod erDrawMethod = ERDrawMethod.IE;
 
-	private Predicate<Schema> schemaFilter=(schema)->true;
+	private Predicate<Schema> schemaFilter = (schema) -> true;
 
-	private TablePredicate tableFilter=(table)->true;
+	private TablePredicate tableFilter = (table) -> true;
 
-	private TablePredicate inheritsTableFilter=(table)->true;
+	private TablePredicate inheritsTableFilter = (table) -> true;
 
-	private ColumnPredicate columnFilter=(column)->true;
-	
-	private boolean withRelationName=true;
+	private ColumnPredicate columnFilter = (column) -> true;
 
-	private boolean withRelationCascadeOption=true;
+	private boolean withRelationName = true;
 
-	private String font="Helvetica";
+	private boolean withRelationCascadeOption = true;
 
-	private Double nodeFontsize=10d;
+	private String font = "Helvetica";
 
-	private Double edgeFontsize=10d;
+	private Double nodeFontsize = 10d;
 
-	private Locale locale=Locale.getDefault();
+	private Double edgeFontsize = 10d;
+
+	private Locale locale = Locale.getDefault();
 }

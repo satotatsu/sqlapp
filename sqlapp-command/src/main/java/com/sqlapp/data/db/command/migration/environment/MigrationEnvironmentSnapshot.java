@@ -14,8 +14,8 @@ import java.util.Objects;
 
 /** Tamper-evident migration state captured from one environment. */
 public record MigrationEnvironmentSnapshot(int formatVersion, String fingerprint, String environmentId,
-		long capturedAtEpochMillis, MigrationPlan.DatabaseIdentity databaseIdentity,
-		List<VersionedEntry> versioned, List<RepeatableEntry> repeatables) {
+		long capturedAtEpochMillis, MigrationPlan.DatabaseIdentity databaseIdentity, List<VersionedEntry> versioned,
+		List<RepeatableEntry> repeatables) {
 	public static final int CURRENT_FORMAT_VERSION = 1;
 
 	public MigrationEnvironmentSnapshot {
@@ -26,7 +26,8 @@ public record MigrationEnvironmentSnapshot(int formatVersion, String fingerprint
 		versioned = List.copyOf(versioned);
 		repeatables = List.copyOf(repeatables);
 		if (new HashSet<>(versioned.stream().map(VersionedEntry::version).toList()).size() != versioned.size()
-				|| new HashSet<>(repeatables.stream().map(RepeatableEntry::name).toList()).size() != repeatables.size()) {
+				|| new HashSet<>(repeatables.stream().map(RepeatableEntry::name).toList()).size() != repeatables
+						.size()) {
 			throw new IllegalArgumentException("Duplicate migration identity in environment snapshot");
 		}
 		if (!fingerprint(environmentId, capturedAtEpochMillis, databaseIdentity, versioned, repeatables)
@@ -54,11 +55,11 @@ public record MigrationEnvironmentSnapshot(int formatVersion, String fingerprint
 			final List<RepeatableEntry> repeatables) {
 		Objects.requireNonNull(versioned, "versioned");
 		Objects.requireNonNull(repeatables, "repeatables");
-		final String value = environmentId + "\n" + capturedAtEpochMillis + "\n" + databaseIdentity + "\n"
-				+ versioned + "\n" + repeatables;
+		final String value = environmentId + "\n" + capturedAtEpochMillis + "\n" + databaseIdentity + "\n" + versioned
+				+ "\n" + repeatables;
 		try {
-			return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-					.digest(value.getBytes(StandardCharsets.UTF_8)));
+			return "sha256:" + HexFormat.of()
+					.formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
 		} catch (final NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}

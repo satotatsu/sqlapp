@@ -41,7 +41,8 @@ class RepeatableMigrationTest {
 	}
 
 	private long count(final String query) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery(query)) {
 			rows.next();
 			return rows.getLong(1);
@@ -83,7 +84,8 @@ class RepeatableMigrationTest {
 		final var migration = configure(new MigrationCommand());
 		migration.setExpectedPlanFile(planFile.toFile());
 		assertThrows(RuntimeException.class, migration::run);
-		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='changelog_repeatable'"));
+		assertEquals(0,
+				count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='changelog_repeatable'"));
 	}
 
 	@Test
@@ -95,7 +97,8 @@ class RepeatableMigrationTest {
 		final var entry = command.getPlan().pendingRepeatables().get(0);
 		assertEquals("refresh", entry.name());
 		assertNull(entry.previousChecksum());
-		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='CHANGELOG_REPEATABLE'"));
+		assertEquals(0,
+				count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='CHANGELOG_REPEATABLE'"));
 	}
 
 	@Test

@@ -16,15 +16,14 @@ public class MdbUpdateFactory extends AbstractUpdateFactory<MdbSqlBuilder> {
 	}
 
 	@Override
-	protected void addKeyColumnsCondition(final Table table,
-			final SqlSignature signature, final MdbSqlBuilder builder) {
+	protected void addKeyColumnsCondition(final Table table, final SqlSignature signature,
+			final MdbSqlBuilder builder) {
 		super.addKeyColumnsCondition(table, signature, null, builder);
 		addLockVersionColumnCondition(table, builder);
 	}
 
 	@Override
-	protected String getColumnParameterExpression(final Column column,
-			final String defaultValue) {
+	protected String getColumnParameterExpression(final Column column, final String defaultValue) {
 		return MdbParameterExpression.of(column, defaultValue);
 	}
 }

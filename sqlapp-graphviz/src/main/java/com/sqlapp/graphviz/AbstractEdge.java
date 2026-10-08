@@ -27,26 +27,25 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCommonElement<T>{
-	
-	public AbstractEdge(){
+@EqualsAndHashCode(callSuper = true)
+public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCommonElement<T> {
+
+	public AbstractEdge() {
 	}
-	
+
 	/**
 	 * default normal
 	 */
 	@Props
-	private ArrowType[] arrowhead=null;
+	private ArrowType[] arrowhead = null;
 	/**
-	 * default 1.0
-	 * Minimum 0.0
+	 * default 1.0 Minimum 0.0
 	 */
 	@Props
-	private Double arrowsize=null;
-	
+	private Double arrowsize = null;
+
 	@Props
-	private ArrowType[] arrowtail=null;
+	private ArrowType[] arrowtail = null;
 	/**
 	 * default black
 	 */
@@ -58,22 +57,20 @@ public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCo
 	@Props
 	private String comment;
 	/**
-	 * default true
-	 * dot only
+	 * default true dot only
 	 */
 	@Props
-	private Boolean constraint=null;
+	private Boolean constraint = null;
 	/**
-	 * default false
-	 * dot only
+	 * default false dot only
 	 */
 	@Props
-	private Boolean decorate=null;
+	private Boolean decorate = null;
 	/**
 	 * default forward(directed) none(undirected)
 	 */
 	@Props
-	private DirType dir=null;
+	private DirType dir = null;
 	/**
 	 * svg, map only
 	 */
@@ -144,14 +141,14 @@ public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCo
 	private String tailtooltip;
 	@Props
 	private String tailURL;
-	
+
 	@Getter(lombok.AccessLevel.PUBLIC)
 	@Setter(lombok.AccessLevel.PROTECTED)
 	private EdgeCollection parent;
-	
+
 	@Override
-	protected Map<String,Object> getProperties(){
-		Map<String,Object> props=super.getProperties();
+	protected Map<String, Object> getProperties() {
+		Map<String, Object> props = super.getProperties();
 		put(props, "arrowhead", arrowhead);
 		put(props, "arrowsize", arrowsize);
 		put(props, "arrowtail", arrowtail);
@@ -189,66 +186,66 @@ public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCo
 	}
 
 	@Override
-	protected GraphStringBuilder createGraphStringBuilder(){
-		GraphStringBuilder builder=new GraphStringBuilder(getNodeName());
+	protected GraphStringBuilder createGraphStringBuilder() {
+		GraphStringBuilder builder = new GraphStringBuilder(getNodeName());
 		return builder;
 	}
-	
+
 	protected abstract String getNodeName();
 
-	public T setColor(Color... color){
-		this.color=color;
+	public T setColor(Color... color) {
+		this.color = color;
 		return instance();
 	}
 
-	public T setColor(Color color){
-		if (color==null){
-			this.color=null;
-		} else{
-			this.color=new Color[]{color};
+	public T setColor(Color color) {
+		if (color == null) {
+			this.color = null;
+		} else {
+			this.color = new Color[] { color };
 		}
 		return instance();
 	}
 
-	public T setFillColor(Color... fillcolor){
-		this.fillcolor=fillcolor;
+	public T setFillColor(Color... fillcolor) {
+		this.fillcolor = fillcolor;
 		return instance();
 	}
 
-	public T setFillColor(Color fillcolor){
-		if (fillcolor==null){
-			this.fillcolor=null;
-		} else{
-			this.fillcolor=new Color[]{fillcolor};
+	public T setFillColor(Color fillcolor) {
+		if (fillcolor == null) {
+			this.fillcolor = null;
+		} else {
+			this.fillcolor = new Color[] { fillcolor };
 		}
 		return instance();
 	}
-	
-	public T setPoint(double x, double y){
-		this.head_lp=new Point(x,y);
+
+	public T setPoint(double x, double y) {
+		this.head_lp = new Point(x, y);
 		return instance();
 	}
 
-	public T setPoint(double x, double y, double z){
-		this.head_lp=new Point3D(x,y,z);
+	public T setPoint(double x, double y, double z) {
+		this.head_lp = new Point3D(x, y, z);
 		return instance();
 	}
 
-	public T setArrowhead(ArrowType... arrowhead){
-		this.arrowhead=arrowhead;
+	public T setArrowhead(ArrowType... arrowhead) {
+		this.arrowhead = arrowhead;
 		return instance();
 	}
 
-	public T setArrowtail(ArrowType... arrowtail){
-		this.arrowtail=arrowtail;
+	public T setArrowtail(ArrowType... arrowtail) {
+		this.arrowtail = arrowtail;
 		return instance();
 	}
 
-	public T setStyle(EdgeStyle style){
-		if (style!=null){
+	public T setStyle(EdgeStyle style) {
+		if (style != null) {
 			super.setStyle(style.toString());
-		} else{
-			super.setStyle((String)null);
+		} else {
+			super.setStyle((String) null);
 		}
 		return instance();
 	}

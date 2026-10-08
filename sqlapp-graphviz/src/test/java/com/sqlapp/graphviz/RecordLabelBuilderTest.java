@@ -23,53 +23,52 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
-public class RecordLabelBuilderTest extends AbstractTest{
+public class RecordLabelBuilderTest extends AbstractTest {
 
 	@Test
 	public void test0() {
-		RecordLabelBuilder builder=RecordLabelBuilder.create();
-		String ret=builder.toString();
-		String expected=this.getResource("record0.dot");
+		RecordLabelBuilder builder = RecordLabelBuilder.create();
+		String ret = builder.toString();
+		String expected = this.getResource("record0.dot");
 		assertEquals(expected, ret);
 	}
 
 	@Test
 	public void test1() {
-		RecordLabelBuilder builder=RecordLabelBuilder.create();
+		RecordLabelBuilder builder = RecordLabelBuilder.create();
 		builder.add("a");
-		String ret=builder.toString();
-		String expected=this.getResource("record1.dot");
+		String ret = builder.toString();
+		String expected = this.getResource("record1.dot");
 		assertEquals(expected, ret);
 	}
 
 	@Test
 	public void test2() {
-		RecordLabelBuilder builder=RecordLabelBuilder.create();
+		RecordLabelBuilder builder = RecordLabelBuilder.create();
 		builder.add("a").add("b").add("d");
-		String ret=builder.toString();
-		String expected=this.getResource("record2.dot");
+		String ret = builder.toString();
+		String expected = this.getResource("record2.dot");
 		assertEquals(expected, ret);
 	}
-	
+
 	@Test
 	public void test3() {
-		RecordLabelBuilder builder=RecordLabelBuilder.create();
+		RecordLabelBuilder builder = RecordLabelBuilder.create();
 		builder.addWithPort("p1", "a").add("b").addWithPort("p2", "d");
-		String ret=builder.toString();
-		String expected=this.getResource("record3.dot");
+		String ret = builder.toString();
+		String expected = this.getResource("record3.dot");
 		assertEquals(expected, ret);
 	}
 
 	@Test
 	public void test4() {
-		RecordLabelBuilder builder=RecordLabelBuilder.create();
-		builder.addWithPort("p1", "a").add(child->{
+		RecordLabelBuilder builder = RecordLabelBuilder.create();
+		builder.addWithPort("p1", "a").add(child -> {
 			child.addBrace().add("b").add("c").add("d");
 		});
-		String ret=builder.toString();
-		String expected=this.getResource("record4.dot");
+		String ret = builder.toString();
+		String expected = this.getResource("record4.dot");
 		assertEquals(expected, ret);
 	}
 
-	
 }

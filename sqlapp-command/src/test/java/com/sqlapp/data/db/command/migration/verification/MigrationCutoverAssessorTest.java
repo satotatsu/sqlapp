@@ -5,7 +5,6 @@
  */
 package com.sqlapp.data.db.command.migration.verification;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

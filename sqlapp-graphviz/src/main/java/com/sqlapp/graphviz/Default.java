@@ -20,7 +20,7 @@
 package com.sqlapp.graphviz;
 
 public interface Default {
-	default boolean isDefault(){
+	default boolean isDefault() {
 		return false;
 	}
 }

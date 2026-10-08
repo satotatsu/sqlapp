@@ -15,13 +15,17 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
 import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.*;
 
-/** Metadata preflight for a logical Access migration. Does not generate or execute SQL. */
+/**
+ * Metadata preflight for a logical Access migration. Does not generate or
+ * execute SQL.
+ */
 public final class AccessOracleMigrationAssessment {
 	private static final Set<String> TARGETS = Set.of("19c", "21c", "23ai", "26ai");
 	private static final String TYPES = "https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Data-Types.html";
 	private static final String NULLS = "https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Nulls.html";
 
-	private AccessOracleMigrationAssessment() { }
+	private AccessOracleMigrationAssessment() {
+	}
 
 	public static boolean supportsTargetVersion(final String version) {
 		return version != null && TARGETS.contains(version.toLowerCase(Locale.ROOT));
@@ -34,7 +38,9 @@ public final class AccessOracleMigrationAssessment {
 		return version.toLowerCase(Locale.ROOT);
 	}
 
-	/** Requires Access native type IDs in column specifics under access.sourceType. */
+	/**
+	 * Requires Access native type IDs in column specifics under access.sourceType.
+	 */
 	public static MigrationAssessment assess(final Schema schema, final String targetVersion) {
 		final String version = validateTargetVersion(targetVersion);
 		if (schema == null || !"Microsoft Access".equals(schema.getProductName())) {
@@ -56,7 +62,8 @@ public final class AccessOracleMigrationAssessment {
 				identifier(findings, constraintId);
 				if (constraint instanceof CheckConstraint) {
 					add(findings, "access.oracle.check-expression", Severity.REVIEW, constraintId,
-							"An Access table validation expression is present.", "Translate and test its Oracle and NULL semantics.");
+							"An Access table validation expression is present.",
+							"Translate and test its Oracle and NULL semantics.");
 				} else if (constraint instanceof ForeignKeyConstraint foreignKey) {
 					relationships++;
 					if (foreignKey.getUpdateRule() == CascadeRule.Cascade) {
@@ -88,12 +95,16 @@ public final class AccessOracleMigrationAssessment {
 				}
 				final String action = typeAction(nativeType, version);
 				add(findings, "access.oracle.type", action == null ? Severity.BLOCKER : Severity.REVIEW, columnId,
-						"Source type: " + (nativeType == null ? "unknown" : nativeType) + ". No value conversion has been performed.",
-						action == null ? "Supply a supported native type and an explicit lossless conversion plan." : action);
+						"Source type: " + (nativeType == null ? "unknown" : nativeType)
+								+ ". No value conversion has been performed.",
+						action == null ? "Supply a supported native type and an explicit lossless conversion plan."
+								: action);
 				if (Set.of("TEXT", "MEMO", "GUID").contains(nativeType == null ? "" : nativeType)) {
 					findings.add(new Finding("access.oracle.empty-string", Severity.WARNING, Evidence.DOCUMENTED_RULE,
-							columnId, "Oracle scalar character columns treat empty strings as NULL; this metadata rule alone does not establish whether empty values exist.",
-							"Count NULL and empty values, decide their intended meaning, and verify NOT NULL and unique constraints after conversion.", NULLS));
+							columnId,
+							"Oracle scalar character columns treat empty strings as NULL; this metadata rule alone does not establish whether empty values exist.",
+							"Count NULL and empty values, decide their intended meaning, and verify NOT NULL and unique constraints after conversion.",
+							NULLS));
 				}
 				if (column.isIdentity()) {
 					add(findings, "access.oracle.autonumber", Severity.REVIEW, columnId,
@@ -114,27 +125,37 @@ public final class AccessOracleMigrationAssessment {
 	}
 
 	private static String typeAction(final String type, final String version) {
-		if (type == null) { return null; }
+		if (type == null) {
+			return null;
+		}
 		return switch (type) {
 		case "BOOLEAN" -> Set.of("23ai", "26ai").contains(version)
 				? "Consider BOOLEAN after verifying Access/ODBC client support, or use an explicit numeric truth-value mapping."
 				: "Choose NUMBER(1) with a check constraint and an explicit truth-value mapping; verify Access true/false encoding.";
-		case "BYTE", "INT", "LONG", "BIG_INT" -> "Consider NUMBER with sufficient integer precision; validate source ranges and target constraints.";
+		case "BYTE", "INT", "LONG", "BIG_INT" ->
+			"Consider NUMBER with sufficient integer precision; validate source ranges and target constraints.";
 		case "MONEY" -> "Consider NUMBER(19,4); preserve exact decimal values and reconcile monetary totals.";
 		case "NUMERIC" -> "Use NUMBER(p,s) after checking the Schema precision and scale and profiling actual values.";
-		case "FLOAT", "DOUBLE" -> "Choose binary floating point or NUMBER deliberately; define rounding and reconciliation tolerances.";
-		case "SHORT_DATE_TIME", "EXT_DATE_TIME" -> "Choose DATE or TIMESTAMP with explicit fractional precision; preserve time-of-day and decide timezone semantics without assuming a timezone.";
-		case "TEXT" -> "Choose VARCHAR2 with explicit CHAR/BYTE semantics or NVARCHAR2 after checking target character sets and actual encoded byte lengths.";
+		case "FLOAT", "DOUBLE" ->
+			"Choose binary floating point or NUMBER deliberately; define rounding and reconciliation tolerances.";
+		case "SHORT_DATE_TIME", "EXT_DATE_TIME" ->
+			"Choose DATE or TIMESTAMP with explicit fractional precision; preserve time-of-day and decide timezone semantics without assuming a timezone.";
+		case "TEXT" ->
+			"Choose VARCHAR2 with explicit CHAR/BYTE semantics or NVARCHAR2 after checking target character sets and actual encoded byte lengths.";
 		case "MEMO" -> "Consider CLOB/NCLOB; verify Unicode, rich-text markup, empty LOB handling and client behavior.";
-		case "GUID" -> "Choose a documented GUID representation (character or RAW) and consistent conversion of all referencing keys.";
+		case "GUID" ->
+			"Choose a documented GUID representation (character or RAW) and consistent conversion of all referencing keys.";
 		case "BINARY" -> "Consider RAW or BLOB after checking maximum payload sizes and client bindings.";
-		case "OLE" -> "Decide whether to preserve the OLE container in BLOB or extract its embedded payload; verify content checksums.";
+		case "OLE" ->
+			"Decide whether to preserve the OLE container in BLOB or extract its embedded payload; verify content checksums.";
 		default -> null;
 		};
 	}
 
 	private static void identifier(final List<Finding> findings, final ObjectId id) {
-		if (id.name() == null) { return; }
+		if (id.name() == null) {
+			return;
+		}
 		if (!id.name().matches("[A-Za-z][A-Za-z0-9_$#]*")) {
 			add(findings, "access.oracle.identifier", Severity.REVIEW, id,
 					"The name requires an explicit Oracle naming/quoting decision.",
@@ -152,5 +173,7 @@ public final class AccessOracleMigrationAssessment {
 				"access.oracle.type".equals(rule) ? TYPES : null));
 	}
 
-	private static boolean hasText(final String value) { return value != null && !value.isBlank(); }
+	private static boolean hasText(final String value) {
+		return value != null && !value.isBlank();
+	}
 }

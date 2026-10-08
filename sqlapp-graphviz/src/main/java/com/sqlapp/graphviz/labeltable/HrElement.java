@@ -24,14 +24,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class HrElement extends AbstractSimpleElement{
+@EqualsAndHashCode(callSuper = true)
+public class HrElement extends AbstractSimpleElement {
 
 	@Override
-	protected String getElementName(){
+	protected String getElementName() {
 		return "hr";
 	}
 }

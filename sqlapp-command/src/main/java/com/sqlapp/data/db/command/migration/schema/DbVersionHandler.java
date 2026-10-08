@@ -737,8 +737,7 @@ public class DbVersionHandler {
 		}
 	}
 
-	public Table getTable(final Connection connection, final Dialect dialect, final Table table)
-			throws SQLException {
+	public Table getTable(final Connection connection, final Dialect dialect, final Table table) throws SQLException {
 		final TableReader tableReader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 		tableReader.setSchemaName(table.getSchemaName());
 		tableReader.setObjectName(table.getName());

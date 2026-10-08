@@ -17,16 +17,17 @@ class DatabaseMigrationAssessmentHtmlTest {
 	void rendersEscapedStandaloneReviewWithProfileAndIntegrityDetails() {
 		final var table = new ObjectId(null, "s&", "table", "T<script>");
 		final var column = new ObjectId(null, "s&", "column", "C<script>", "T<script>");
-		final var profile = new MigrationDataProfile(List.of(new TableProfile(table, 2, List.of(
-				new ColumnProfile(column, "NUMERIC", Coverage.SCANNED, 0L, null,
-						new NumericStatistics(new BigDecimal("1.2"), new BigDecimal("3.4"), 1, 1, 0), null)))),
+		final var profile = new MigrationDataProfile(
+				List.of(new TableProfile(table, 2,
+						List.of(new ColumnProfile(column, "NUMERIC", Coverage.SCANNED, 0L, null,
+								new NumericStatistics(new BigDecimal("1.2"), new BigDecimal("3.4"), 1, 1, 0), null)))),
 				List.of(new IntegrityCheck(new ObjectId(null, "s&", "key", "PK<script>", "T<script>"),
-						IntegrityKind.PRIMARY_KEY, IntegrityCoverage.CHECKED, List.of("C<script>"), null, List.of(),
-						2L, 0L, 1L, "unsafe <reason>")));
-		final var assessment = new MigrationAssessment(List.of(
-				new Finding("rule<script>", Severity.BLOCKER, Evidence.DATABASE, column,
-						"bad <value>", "fix & verify", null),
-				new Finding("review", Severity.REVIEW, Evidence.MANUAL_CHECK, null, "review", "act", null)),
+						IntegrityKind.PRIMARY_KEY, IntegrityCoverage.CHECKED, List.of("C<script>"), null, List.of(), 2L,
+						0L, 1L, "unsafe <reason>")));
+		final var assessment = new MigrationAssessment(
+				List.of(new Finding("rule<script>", Severity.BLOCKER, Evidence.DATABASE, column, "bad <value>",
+						"fix & verify", null),
+						new Finding("review", Severity.REVIEW, Evidence.MANUAL_CHECK, null, "review", "act", null)),
 				List.of(new Inventory(null, "s&", "tables", 1)));
 		final var report = new AssessDatabaseMigrationCommand.Report(2, "abc", "Access <source>", "Oracle", "19c",
 				Method.LOGICAL_MIGRATION, true, true, "BLOCKED", assessment, profile);

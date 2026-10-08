@@ -20,10 +20,5 @@
 package com.sqlapp.graphviz;
 
 public enum EdgeStyle {
-	 solid
-	,dashed
-	,dotted
-	,bold
-	,invis
-	,;
+	solid, dashed, dotted, bold, invis,;
 }

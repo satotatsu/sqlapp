@@ -18,8 +18,7 @@ public class MdbSchemaFileLoader implements SchemaFileLoader {
 
 	@Override
 	public boolean supports(final Path file) {
-		final String name = file.getFileName().toString()
-				.toLowerCase(Locale.ROOT);
+		final String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
 		return name.endsWith(".mdb") || name.endsWith(".accdb");
 	}
 
@@ -29,8 +28,7 @@ public class MdbSchemaFileLoader implements SchemaFileLoader {
 	}
 
 	@Override
-	public Table loadTable(final Path file, final String tableName)
-			throws IOException {
+	public Table loadTable(final Path file, final String tableName) throws IOException {
 		return MdbFileLoader.loadTable(file, tableName);
 	}
 }

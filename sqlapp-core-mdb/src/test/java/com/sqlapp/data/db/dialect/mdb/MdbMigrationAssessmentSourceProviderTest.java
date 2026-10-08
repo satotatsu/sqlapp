@@ -18,8 +18,7 @@ import com.sqlapp.data.schemas.Table;
 class MdbMigrationAssessmentSourceProviderTest {
 	@Test
 	void classifiesSavedQueriesWithoutCollectingSqlText() {
-		final var queries = List.of(
-				new MdbAssessmentSnapshot.SavedQuery("visible", "SELECT", false, false),
+		final var queries = List.of(new MdbAssessmentSnapshot.SavedQuery("visible", "SELECT", false, false),
 				new MdbAssessmentSnapshot.SavedQuery("union", "UNION", false, false),
 				new MdbAssessmentSnapshot.SavedQuery("hidden", "SELECT", true, false),
 				new MdbAssessmentSnapshot.SavedQuery("parameter", "SELECT", false, true),
@@ -58,11 +57,12 @@ class MdbMigrationAssessmentSourceProviderTest {
 		final var table = new Table("orders");
 		table.getColumns().add(new com.sqlapp.data.schemas.Column("ID").setIdentity(true));
 		table.getColumns().add(new com.sqlapp.data.schemas.Column("Created").setDefaultValue("Now()"));
-		table.getColumns().add(new com.sqlapp.data.schemas.Column("Total").setFormula("[Qty] * [Price]").setCheck(">= 0"));
+		table.getColumns()
+				.add(new com.sqlapp.data.schemas.Column("Total").setFormula("[Qty] * [Price]").setCheck(">= 0"));
 		table.getConstraints().addCheckConstraint("CK_ORDERS", "[Qty] >= 0");
 		schema.getTables().add(table);
-		final Map<String, Integer> counts = MdbMigrationAssessmentSourceProvider.columnSemanticsInventory(schema).stream()
-				.collect(Collectors.toMap(item -> item.type(), item -> item.count()));
+		final Map<String, Integer> counts = MdbMigrationAssessmentSourceProvider.columnSemanticsInventory(schema)
+				.stream().collect(Collectors.toMap(item -> item.type(), item -> item.count()));
 		assertEquals(1, counts.get("accessAutoNumberColumns"));
 		assertEquals(1, counts.get("accessColumnsWithDefaults"));
 		assertEquals(1, counts.get("accessCalculatedColumns"));

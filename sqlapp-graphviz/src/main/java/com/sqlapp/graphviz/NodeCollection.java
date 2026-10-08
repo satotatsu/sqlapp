@@ -22,51 +22,51 @@ package com.sqlapp.graphviz;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class NodeCollection extends AbstractElementCollection<Node>{
+public class NodeCollection extends AbstractElementCollection<Node> {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6685111479972906357L;
 
-	protected NodeCollection(Graph parent){
-		this.parent=parent;
+	protected NodeCollection(Graph parent) {
+		this.parent = parent;
 	}
-	
+
 	private Graph parent;
-	
-	private Map<String,Node> map=new LinkedHashMap<>();
+
+	private Map<String, Node> map = new LinkedHashMap<>();
 
 	@Override
-	protected void renew(){
-		Map<String,Node> newMap=new LinkedHashMap<>();
-		this.getList().forEach(c->{
-			if (newMap.containsKey(c.getName())){
+	protected void renew() {
+		Map<String, Node> newMap = new LinkedHashMap<>();
+		this.getList().forEach(c -> {
+			if (newMap.containsKey(c.getName())) {
 				throw new DuplicateNodeException(c);
 			}
 			newMap.put(c.getName(), c);
 			newMap.put(c.getEscapedName(), c);
 			c.setParent(this);
 		});
-		synchronized(this){
-			this.map=newMap;
+		synchronized (this) {
+			this.map = newMap;
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	public <T extends Node> T get(String name){
-		return (T)map.get(name);
+	public <T extends Node> T get(String name) {
+		return (T) map.get(name);
 	}
 
-	public <T extends Node> T remove(String name){
-		T node=get(name);
-		if (node!=null){
+	public <T extends Node> T remove(String name) {
+		T node = get(name);
+		if (node != null) {
 			super.remove(node);
 		}
 		return node;
 	}
-	
-	protected Graph getParent(){
+
+	protected Graph getParent() {
 		return parent;
 	}
 

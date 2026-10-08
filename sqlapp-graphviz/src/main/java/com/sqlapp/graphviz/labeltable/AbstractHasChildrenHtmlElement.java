@@ -24,84 +24,84 @@ import java.util.function.Consumer;
 
 import com.sqlapp.util.CommonUtils;
 
-public abstract class AbstractHasChildrenHtmlElement<T extends AbstractHasChildrenHtmlElement<?>> extends AbstractHtmlElement{
-	
-	private List<AbstractHtmlElement> children=CommonUtils.list();
-	
-	protected List<AbstractHtmlElement> getChildren(){
+public abstract class AbstractHasChildrenHtmlElement<T extends AbstractHasChildrenHtmlElement<?>>
+		extends AbstractHtmlElement {
+
+	private List<AbstractHtmlElement> children = CommonUtils.list();
+
+	protected List<AbstractHtmlElement> getChildren() {
 		return this.children;
 	}
 
-	protected void clearChildren(){
-		this.children.forEach(c->{
+	protected void clearChildren() {
+		this.children.forEach(c -> {
 			c.setParent(null);
 		});
 		this.children.clear();
 	}
 
-	
-	protected void appenChild(AbstractHtmlElement element){
+	protected void appenChild(AbstractHtmlElement element) {
 		this.getChildren().add(element);
 		element.setParent(this);
 	}
-	
-	public T setValue(String value){
-		CharactersElement element=new CharactersElement(value);
+
+	public T setValue(String value) {
+		CharactersElement element = new CharactersElement(value);
 		clearChildren();
 		appenChild(element);
 		return instance();
 	}
-	
-	public T addCharacters(String value){
-		CharactersElement element=new CharactersElement(value);
+
+	public T addCharacters(String value) {
+		CharactersElement element = new CharactersElement(value);
 		appenChild(element);
 		return instance();
 	}
 
-	public T addFont(Consumer<FontElement> c){
-		FontElement element=new FontElement();
+	public T addFont(Consumer<FontElement> c) {
+		FontElement element = new FontElement();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
 
-	public T addBr(Consumer<BrElement> c){
-		BrElement element=new BrElement();
+	public T addBr(Consumer<BrElement> c) {
+		BrElement element = new BrElement();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
 
-	public T addBr(){
-		BrElement element=new BrElement();
+	public T addBr() {
+		BrElement element = new BrElement();
 		appenChild(element);
 		return instance();
 	}
 
-	public T addImg(Consumer<ImgElement> c){
-		ImgElement element=new ImgElement();
+	public T addImg(Consumer<ImgElement> c) {
+		ImgElement element = new ImgElement();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
-	
-	public T addVr(Consumer<VrElement> c){
-		VrElement element=new VrElement();
+
+	public T addVr(Consumer<VrElement> c) {
+		VrElement element = new VrElement();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
-	
-	public T addHr(Consumer<HrElement> c){
-		HrElement element=new HrElement();
+
+	public T addHr(Consumer<HrElement> c) {
+		HrElement element = new HrElement();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
 
 	@SuppressWarnings("unchecked")
-	protected T instance(){
-		return (T)this;
+	protected T instance() {
+		return (T) this;
 	}
 
 }

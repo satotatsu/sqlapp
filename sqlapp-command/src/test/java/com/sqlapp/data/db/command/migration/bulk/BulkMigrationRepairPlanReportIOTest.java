@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -92,7 +91,7 @@ class BulkMigrationRepairPlanReportIOTest {
 				"expected-keyset", "actual-keyset", "SQLite", "3.50", "com.example.SqliteBulkUpsertExecutor", true,
 				false, "repair_stage", 1, estimatedRows, 100, true, List.of("ID", "TXT"), List.of("ID"),
 				List.of("ID", "TXT"), List.of("TXT"), Map.of("ACCESS_ID", "ID"),
-				List.of(new BulkMigrationRepairPlanReport.Chunk(0, 1, 1,
-						"expected-hash", "actual-hash", "first", "last", "first", "last")));
+				List.of(new BulkMigrationRepairPlanReport.Chunk(0, 1, 1, "expected-hash", "actual-hash", "first",
+						"last", "first", "last")));
 	}
 }

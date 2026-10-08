@@ -40,12 +40,12 @@ class OracleMigrationAssessmentProviderTest {
 		}
 		assertThrows(IllegalArgumentException.class,
 				() -> provider.assess(List.of(schema(27)), "26ai", Method.DIRECT_UPGRADE));
-		assertThrows(IllegalArgumentException.class,
-				() -> provider.assess(List.of(new Schema("S").setProductName("Oracle")), "26ai", Method.DIRECT_UPGRADE));
+		assertThrows(IllegalArgumentException.class, () -> provider
+				.assess(List.of(new Schema("S").setProductName("Oracle")), "26ai", Method.DIRECT_UPGRADE));
 		assertThrows(IllegalArgumentException.class,
 				() -> provider.assess(List.of(schema(10)), "19c", Method.DIRECT_UPGRADE));
-		assertThrows(IllegalArgumentException.class,
-				() -> provider.assess(List.of(schema(10), schema(10).setProductName("PostgreSQL")), "26ai", Method.DIRECT_UPGRADE));
+		assertThrows(IllegalArgumentException.class, () -> provider
+				.assess(List.of(schema(10), schema(10).setProductName("PostgreSQL")), "26ai", Method.DIRECT_UPGRADE));
 		assertThrows(NullPointerException.class, () -> provider.assess(List.of(schema(10)), "26ai", null));
 	}
 
@@ -60,7 +60,8 @@ class OracleMigrationAssessmentProviderTest {
 		final var before = schema.clone();
 		final var result = provider.assess(List.of(schema), "26ai", Method.LOGICAL_MIGRATION);
 		assertEquals(before, schema);
-		final var invalid = result.findings().stream().filter(f -> f.ruleId().equals("oracle.object.invalid")).findFirst().orElseThrow();
+		final var invalid = result.findings().stream().filter(f -> f.ruleId().equals("oracle.object.invalid"))
+				.findFirst().orElseThrow();
 		assertEquals("V.with.dot", invalid.object().name());
 		assertEquals("業務", invalid.object().schema());
 		assertEquals(Evidence.SCHEMA, invalid.evidence());
@@ -73,7 +74,8 @@ class OracleMigrationAssessmentProviderTest {
 
 	@Test
 	void discoversProviderAndRejectsUnimplementedTargets() {
-		assertInstanceOf(OracleMigrationAssessmentProvider.class, MigrationAssessmentProvider.resolve("Oracle", "26ai"));
+		assertInstanceOf(OracleMigrationAssessmentProvider.class,
+				MigrationAssessmentProvider.resolve("Oracle", "26ai"));
 		assertThrows(IllegalArgumentException.class, () -> MigrationAssessmentProvider.resolve("Oracle", "19c"));
 	}
 

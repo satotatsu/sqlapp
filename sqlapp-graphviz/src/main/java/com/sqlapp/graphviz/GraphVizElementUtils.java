@@ -20,18 +20,18 @@
 package com.sqlapp.graphviz;
 
 public class GraphVizElementUtils {
-	public static void setParent(Port port, Node node){
+	public static void setParent(Port port, Node node) {
 		node.getPorts().add(port);
 	}
-	
-	public static PortCollection getPorts(Node node){
+
+	public static PortCollection getPorts(Node node) {
 		return node.getPorts();
 	}
-	
-	public static void setNodeAndPort(Node from, Port portFrom, Node to, Port portTo, Edge edge){
+
+	public static void setNodeAndPort(Node from, Port portFrom, Node to, Port portTo, Edge edge) {
 		edge.setNode(from, portFrom, to, portTo);
 	}
-	
+
 	public static String escapeName(String name) {
 		return name.replace(".", "_dot_");
 	}

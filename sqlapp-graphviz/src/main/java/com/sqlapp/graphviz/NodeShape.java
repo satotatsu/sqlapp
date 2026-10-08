@@ -18,75 +18,26 @@
  */
 
 package com.sqlapp.graphviz;
+
 /**
  * 
  * @author satot
  * @see <a href="https://www.graphviz.org/doc/info/shapes.html">shapes</a>
  */
 public enum NodeShape {
-	 box
-	, polygon(){
+	box, polygon() {
 		@Override
-		public Polygon toPolygon(Node node){
-			return (Polygon)node;
+		public Polygon toPolygon(Node node) {
+			return (Polygon) node;
 		}
-	 }
-	, ellipse
-	, oval
-	, circle
-	, point
-	, egg
-	, triangle
-	, plaintext
-	, plain
-	, diamond
-	, trapezium
-	, parallelogram	
-	, house
-	, pentagon
-	, hexagon
-	, septagon
-	, octagon
-	, doublecircle
-	, doubleoctagon
-	, tripleoctagon
-	, invtriangle
-	, invtrapezium
-	, invhouse
-	, Mdiamond
-	, Msquare
-	, Mcircle
-	, rect
-	, rectangle
-	, square
-	, star
-	, none
-	, folder
-	, box3d
-	, component
-	, promoter
-	, cds
-	, terminator
-	, utr
-	, primersite
-	, restrictionsite
-	, fivepoverhang
-	, threepoverhang
-	, noverhang
-	, assembly
-	, signature
-	, insulator
-	, ribosite
-	, rnastab
-	, proteasesite
-	, proteinstab
-	, rpromoter
-	, rarrow
-	, larrow
-	, lpromoter
-	,;
+	},
+	ellipse, oval, circle, point, egg, triangle, plaintext, plain, diamond, trapezium, parallelogram, house, pentagon,
+	hexagon, septagon, octagon, doublecircle, doubleoctagon, tripleoctagon, invtriangle, invtrapezium, invhouse,
+	Mdiamond, Msquare, Mcircle, rect, rectangle, square, star, none, folder, box3d, component, promoter, cds,
+	terminator, utr, primersite, restrictionsite, fivepoverhang, threepoverhang, noverhang, assembly, signature,
+	insulator, ribosite, rnastab, proteasesite, proteinstab, rpromoter, rarrow, larrow, lpromoter,;
 
-	public Polygon toPolygon(Node node){
+	public Polygon toPolygon(Node node) {
 		return null;
 	}
 }

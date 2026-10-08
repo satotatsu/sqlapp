@@ -18,20 +18,19 @@
  */
 
 package com.sqlapp.graphviz;
+
 /**
  * 
  * @author tatsuo satoh
  * @see <a href="https://graphviz.org/Gallery/directed/cluster.html">cluster</a>
  */
-public enum ClusterMode implements Default{
-	local(){
+public enum ClusterMode implements Default {
+	local() {
 		@Override
-		public boolean isDefault(){
+		public boolean isDefault() {
 			return true;
 		}
-	}
-	,global
-	,none
-	,;
-	
+	},
+	global, none,;
+
 }

@@ -32,44 +32,41 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class TdElement extends AbstractHasChildrenHtmlElement<TdElement>{
-	
+@EqualsAndHashCode(callSuper = true)
+public class TdElement extends AbstractHasChildrenHtmlElement<TdElement> {
+
 	/**
 	 * default CENTER
 	 */
-	private Align align=null;
+	private Align align = null;
 	/**
 	 * default CENTER
 	 */
-	private Align balign=null;
+	private Align balign = null;
 	private String bgcolor;
 	/**
-	 * default 1
-	 * maximum 255
+	 * default 1 maximum 255
 	 */
-	private Integer border=null;
+	private Integer border = null;
 	/**
-	 * default 2
-	 * maximum 255
+	 * default 2 maximum 255
 	 */
-	private Integer cellpadding=null;
+	private Integer cellpadding = null;
 	/**
-	 * default 2
-	 * maximum 127
+	 * default 2 maximum 127
 	 */
 	private Integer cellspacing;
 	private String color;
-	private Integer colspan=null;
-	private boolean fixedsize=false;
+	private Integer colspan = null;
+	private boolean fixedsize = false;
 	private String gradientAngle;
 	private String height;
 	private String href;
 	private String id;
-	private Integer rowspan=null;
+	private Integer rowspan = null;
 	private Port port;
 	private String sides;
 	private String style;
@@ -79,30 +76,30 @@ public class TdElement extends AbstractHasChildrenHtmlElement<TdElement>{
 	private String width;
 	private VAlign valign;
 
-	public TdElement setFont(Consumer<FontElement> c){
-		FontElement element=new FontElement();
+	public TdElement setFont(Consumer<FontElement> c) {
+		FontElement element = new FontElement();
 		clearChildren();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
 
-	public TdElement setTable(Consumer<TableElement> c){
-		TableElement element=new TableElement();
+	public TdElement setTable(Consumer<TableElement> c) {
+		TableElement element = new TableElement();
 		clearChildren();
 		appenChild(element);
 		c.accept(element);
 		return instance();
 	}
 
-	public TdElement setPort(String value){
-		Port port=new Port(value);
+	public TdElement setPort(String value) {
+		Port port = new Port(value);
 		GraphVizElementUtils.setParent(port, this.getRoot().getNode());
-		this.port=port;
+		this.port = port;
 		return instance();
 	}
 
-	protected String getElementName(){
+	protected String getElementName() {
 		return "td";
 	}
 
@@ -117,7 +114,7 @@ public class TdElement extends AbstractHasChildrenHtmlElement<TdElement>{
 		staxWriter.writeAttribute("cellspacing", cellspacing);
 		staxWriter.writeAttribute("color", color);
 		staxWriter.writeAttribute("colspan", colspan);
-		if (fixedsize){
+		if (fixedsize) {
 			staxWriter.writeAttribute("fixedsize", fixedsize);
 		}
 		staxWriter.writeAttribute("gradientangle", gradientAngle);
@@ -125,7 +122,7 @@ public class TdElement extends AbstractHasChildrenHtmlElement<TdElement>{
 		staxWriter.writeAttribute("href", href);
 		staxWriter.writeAttribute("id", id);
 		staxWriter.writeAttribute("rowspan", rowspan);
-		if (port!=null){
+		if (port != null) {
 			staxWriter.writeAttribute("port", port.getValue());
 		}
 		staxWriter.writeAttribute("sides", sides);
@@ -136,13 +133,13 @@ public class TdElement extends AbstractHasChildrenHtmlElement<TdElement>{
 		staxWriter.writeAttribute("width", width);
 		staxWriter.writeAttribute("valign", valign);
 		staxWriter.addIndentLevel(1);
-		int count=0;
-		for(AbstractHtmlElement child:this.getChildren()){
-			if (child instanceof AbstractHasChildrenHtmlElement){
+		int count = 0;
+		for (AbstractHtmlElement child : this.getChildren()) {
+			if (child instanceof AbstractHasChildrenHtmlElement) {
 				staxWriter.newLine();
 				staxWriter.indent();
 				count++;
-			} else if (child instanceof TableElement){
+			} else if (child instanceof TableElement) {
 				staxWriter.newLine();
 				staxWriter.indent();
 				count++;
@@ -150,7 +147,7 @@ public class TdElement extends AbstractHasChildrenHtmlElement<TdElement>{
 			child.writeXml(staxWriter);
 		}
 		staxWriter.addIndentLevel(-1);
-		if (count>0){
+		if (count > 0) {
 			staxWriter.newLine();
 			staxWriter.indent();
 		}

@@ -36,26 +36,25 @@ public class VerifyMigrationExecutionReportCommand extends AbstractCommand {
 			throw new CommandException("maxReportAgeSeconds must be a positive duration that fits in milliseconds");
 		}
 		report = new MigrationExecutionReportIO().read(reportFile.toPath());
-		if (expectedReportFingerprint != null
-				&& !expectedReportFingerprint.equals(report.reportFingerprint())) {
-			throw new CommandException("Migration execution report does not match expectedReportFingerprint: "
-					+ reportFile);
+		if (expectedReportFingerprint != null && !expectedReportFingerprint.equals(report.reportFingerprint())) {
+			throw new CommandException(
+					"Migration execution report does not match expectedReportFingerprint: " + reportFile);
 		}
 		if (expectedPlanFingerprint != null && !expectedPlanFingerprint.equals(report.planFingerprint())) {
-			throw new CommandException("Migration execution report does not match expectedPlanFingerprint: "
-					+ reportFile);
+			throw new CommandException(
+					"Migration execution report does not match expectedPlanFingerprint: " + reportFile);
 		}
-		if (expectedDatabaseConnectionFingerprint != null
-				&& (report.databaseIdentity() == null || !expectedDatabaseConnectionFingerprint
-						.equals(report.databaseIdentity().connectionFingerprint()))) {
+		if (expectedDatabaseConnectionFingerprint != null && (report.databaseIdentity() == null
+				|| !expectedDatabaseConnectionFingerprint.equals(report.databaseIdentity().connectionFingerprint()))) {
 			throw new CommandException(
 					"Migration execution report does not match expectedDatabaseConnectionFingerprint: " + reportFile);
 		}
 		if (maxReportAgeSeconds != null) {
 			final long now = System.currentTimeMillis();
 			if (report.finishedAtEpochMillis() > now) {
-				throw new CommandException("Migration execution report completion time is in the future; check clock synchronization: "
-						+ reportFile);
+				throw new CommandException(
+						"Migration execution report completion time is in the future; check clock synchronization: "
+								+ reportFile);
 			}
 			if (now - report.finishedAtEpochMillis() > maxReportAgeSeconds * 1_000L) {
 				throw new CommandException("Migration execution report has expired: " + reportFile);
@@ -67,8 +66,8 @@ public class VerifyMigrationExecutionReportCommand extends AbstractCommand {
 		if (requireAllSelectedCommitted
 				&& (!report.executionRequested() || !report.selectedVersions().equals(report.committedVersions())
 						|| !report.selectedRepeatables().equals(report.committedRepeatables()))) {
-			throw new CommandException("Migration execution report does not show all selected versions committed: "
-					+ reportFile);
+			throw new CommandException(
+					"Migration execution report does not show all selected versions committed: " + reportFile);
 		}
 		info("Migration execution report verified: ", reportFile.getAbsolutePath());
 	}

@@ -10,7 +10,9 @@ import java.util.Objects;
 
 import com.sqlapp.exceptions.CommandException;
 
-/** Shared approval validation for declarative migration and repair execution. */
+/**
+ * Shared approval validation for declarative migration and repair execution.
+ */
 final class BulkMigrationExecutionApprovalValidator {
 	private BulkMigrationExecutionApprovalValidator() {
 	}
@@ -18,8 +20,7 @@ final class BulkMigrationExecutionApprovalValidator {
 	static void validateConfigurationInputs(final File configurationFile, final String expectedFingerprint,
 			final Long maxFileSizeBytes) {
 		if (configurationFile == null && (expectedFingerprint != null || maxFileSizeBytes != null)) {
-			throw new CommandException(
-					"Configuration approval properties require configurationFile.");
+			throw new CommandException("Configuration approval properties require configurationFile.");
 		}
 		if (expectedFingerprint != null && !expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
@@ -28,7 +29,6 @@ final class BulkMigrationExecutionApprovalValidator {
 			throw new CommandException("maxConfigurationFileSizeBytes must be greater than zero.");
 		}
 	}
-
 
 	static void validateArtifactInputs(final File configurationFile, final File assessmentReportFile,
 			final File ddlVerificationReportFile, final Long maxFileSizeBytes) {
@@ -77,14 +77,13 @@ final class BulkMigrationExecutionApprovalValidator {
 				provenance == null ? null : provenance.assessmentReportFingerprint(), "assessmentReportFile",
 				"assessmentReportFingerprint", maxFileSizeBytes);
 		BulkMigrationArtifactProvenanceVerifier.verify(ddlVerificationReportFile,
-				provenance == null ? null : provenance.ddlVerificationReportFingerprint(),
-				"ddlVerificationReportFile", "ddlVerificationReportFingerprint", maxFileSizeBytes);
+				provenance == null ? null : provenance.ddlVerificationReportFingerprint(), "ddlVerificationReportFile",
+				"ddlVerificationReportFingerprint", maxFileSizeBytes);
 	}
 
 	static ValidatedTargetReport validateTargetReport(final File targetValidationReportFile,
 			final String expectedFingerprint, final String targetEnvironmentId, final long maxAgeSeconds,
-			final Long maxFileSizeBytes,
-			final BulkMigrationJobConfigurationResolver.Resolution resolved) {
+			final Long maxFileSizeBytes, final BulkMigrationJobConfigurationResolver.Resolution resolved) {
 		if (targetValidationReportFile == null) {
 			return null;
 		}
@@ -97,9 +96,9 @@ final class BulkMigrationExecutionApprovalValidator {
 		final var report = snapshot.report();
 		final var plan = resolved.plan();
 		if (!plan.getJobId().equals(report.jobId()) || !plan.getFingerprint().equals(report.planFingerprint())
-				|| !plan.getTaskIds().equals(report.taskIds()) || !Objects.equals(resolved.provenance(), report.provenance())
-				|| resolved.provenance() == null || !resolved.provenance().configurationFingerprint()
-						.equals(report.configurationFingerprint())) {
+				|| !plan.getTaskIds().equals(report.taskIds())
+				|| !Objects.equals(resolved.provenance(), report.provenance()) || resolved.provenance() == null
+				|| !resolved.provenance().configurationFingerprint().equals(report.configurationFingerprint())) {
 			throw new CommandException("Target validation report does not match the resolved migration job.");
 		}
 		if (!Objects.equals(targetEnvironmentId, report.targetEnvironmentId())) {

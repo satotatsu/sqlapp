@@ -20,35 +20,31 @@
 package com.sqlapp.graphviz;
 
 public enum GraphLayout {
-	circo
-	,dot
-	,fdp(){
+	circo, dot, fdp() {
 		@Override
-		public boolean forGraph(){
+		public boolean forGraph() {
 			return true;
 		}
-	}
-	,neato(){
+	},
+	neato() {
 		@Override
-		public boolean forGraph(){
+		public boolean forGraph() {
 			return true;
 		}
-	}
-	,osage
-	,sfdp(){
+	},
+	osage, sfdp() {
 		@Override
-		public boolean forGraph(){
+		public boolean forGraph() {
 			return fdp.forGraph();
 		}
-	}
-	,twopi
-	,;
-	
-	public boolean forDigraph(){
+	},
+	twopi,;
+
+	public boolean forDigraph() {
 		return false;
 	}
 
-	public boolean forGraph(){
+	public boolean forGraph() {
 		return false;
 	}
 

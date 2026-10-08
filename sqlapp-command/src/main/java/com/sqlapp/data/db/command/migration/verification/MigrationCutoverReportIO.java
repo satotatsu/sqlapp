@@ -36,12 +36,11 @@ public final class MigrationCutoverReportIO {
 			throw new CommandException("Migration cutover report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
-					"maxCutoverReportFileSizeBytes", "Migration cutover report");
-			final var report = validate(new JsonConverter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), MigrationCutoverReport.class));
-			return new Snapshot(report,
-					"sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes, "maxCutoverReportFileSizeBytes",
+					"Migration cutover report");
+			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					MigrationCutoverReport.class));
+			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (IOException e) {
 			throw new CommandException("Failed to read migration cutover report: " + absolute, e);
 		} catch (RuntimeException e) {
@@ -56,8 +55,7 @@ public final class MigrationCutoverReportIO {
 		writeSnapshot(file, report, null);
 	}
 
-	public Snapshot writeSnapshot(final Path file, final MigrationCutoverReport report,
-			final Long maxFileSizeBytes) {
+	public Snapshot writeSnapshot(final Path file, final MigrationCutoverReport report, final Long maxFileSizeBytes) {
 		final Path absolute = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
 		final MigrationCutoverReport validated = validate(report);
 		try {
@@ -75,14 +73,13 @@ public final class MigrationCutoverReportIO {
 	}
 
 	private static MigrationCutoverReport validate(final MigrationCutoverReport report) {
-		if (report == null || report.assessedAt() == null || report.status() == null
-				|| report.freshness() == null) {
+		if (report == null || report.assessedAt() == null || report.status() == null || report.freshness() == null) {
 			throw new CommandException("Migration cutover report header is invalid");
 		}
 		final var ids = new HashSet<String>();
 		for (final var freshness : report.freshness()) {
-			if (freshness == null || freshness.id() == null || freshness.id().isBlank()
-					|| freshness.status() == null || !ids.add(freshness.id())) {
+			if (freshness == null || freshness.id() == null || freshness.id().isBlank() || freshness.status() == null
+					|| !ids.add(freshness.id())) {
 				throw new CommandException("Migration cutover report contains invalid or duplicate freshness checks");
 			}
 		}

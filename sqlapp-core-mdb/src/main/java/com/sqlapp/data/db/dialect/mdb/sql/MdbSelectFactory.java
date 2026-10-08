@@ -8,8 +8,7 @@ import com.sqlapp.data.schemas.Column;
 /** Access key SELECT using ordinal Row expressions. */
 public class MdbSelectFactory extends AbstractSelectFactory<MdbSqlBuilder> {
 	@Override
-	protected String getColumnParameterExpression(final Column column,
-			final String defaultValue) {
+	protected String getColumnParameterExpression(final Column column, final String defaultValue) {
 		return MdbParameterExpression.of(column, defaultValue);
 	}
 }

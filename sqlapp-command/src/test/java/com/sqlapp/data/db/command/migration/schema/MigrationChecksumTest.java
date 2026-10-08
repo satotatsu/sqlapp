@@ -58,7 +58,8 @@ class MigrationChecksumTest {
 	}
 
 	private Object scalar(final String sql) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery(sql)) {
 			assertTrue(rows.next());
 			return rows.getObject(1);

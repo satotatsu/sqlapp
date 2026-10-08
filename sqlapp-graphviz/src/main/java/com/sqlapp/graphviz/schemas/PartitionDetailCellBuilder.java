@@ -30,130 +30,129 @@ import lombok.experimental.Accessors;
 
 import java.util.function.Function;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class PartitionDetailCellBuilder extends AbstractSchemaGraphBuilder{
+public class PartitionDetailCellBuilder extends AbstractSchemaGraphBuilder {
 
-	private String defaultColor=null;
+	private String defaultColor = null;
 
-	private String defaultBgcolor="#A9D0F5";
-	
-	private Function<Partition, String> name=(c)->c.getName();
+	private String defaultBgcolor = "#A9D0F5";
 
-	private Function<Partition, String> color=(c)->this.defaultColor();
+	private Function<Partition, String> name = (c) -> c.getName();
 
-	private Function<Partition, String> bgcolor=(c)->this.defaultBgcolor();
+	private Function<Partition, String> color = (c) -> this.defaultColor();
 
-	private boolean createEmptyCell=true;
-	
-	
-	private PartitionDetailCellBuilder(){}
-	
-	
-	public static PartitionDetailCellBuilder create(){
-		PartitionDetailCellBuilder builder=new PartitionDetailCellBuilder();
+	private Function<Partition, String> bgcolor = (c) -> this.defaultBgcolor();
+
+	private boolean createEmptyCell = true;
+
+	private PartitionDetailCellBuilder() {
+	}
+
+	public static PartitionDetailCellBuilder create() {
+		PartitionDetailCellBuilder builder = new PartitionDetailCellBuilder();
 		return builder;
 	}
 
-	public static PartitionDetailCellBuilder createSimple(){
-		PartitionDetailCellBuilder builder=new PartitionDetailCellBuilder();
+	public static PartitionDetailCellBuilder createSimple() {
+		PartitionDetailCellBuilder builder = new PartitionDetailCellBuilder();
 		builder.createEmptyCell(false);
-		builder.highValue(c->c.getLowValue());
-		builder.lowValue(c->c.getHighValue());
+		builder.highValue(c -> c.getLowValue());
+		builder.lowValue(c -> c.getHighValue());
 		return builder;
 	}
 
-	private Function<Partition, String> highValue=(c)->{
+	private Function<Partition, String> highValue = (c) -> {
 		return c.getHighValue();
 	};
 
-	private Function<Partition, String> lowValue=(c)->{
+	private Function<Partition, String> lowValue = (c) -> {
 		return c.getLowValue();
 	};
 
-	private int colspan=1;
+	private int colspan = 1;
 
-	public void build(Partition partition, TrElement tr){
+	public void build(Partition partition, TrElement tr) {
 		createHead(partition, tr);
 		createLowValue(partition, tr);
 		createHighValue(partition, tr);
 		createTail(partition, tr);
 	}
-	
-	private PartitionDetailCellBuilder createHead(Partition partition, TrElement tr){
-		tr.addCell(cell->{
-			setCommonAttribute(partition, cell);
-			cell.setValue("");
-		});
-		return instance();
-	}
-	
-	private PartitionDetailCellBuilder createTail(Partition partition, TrElement tr){
-		tr.addCell(cell->{
+
+	private PartitionDetailCellBuilder createHead(Partition partition, TrElement tr) {
+		tr.addCell(cell -> {
 			setCommonAttribute(partition, cell);
 			cell.setValue("");
 		});
 		return instance();
 	}
 
-	private void addEmptyCell(Partition partition, TrElement tr){
-		if (this.createEmptyCell){
-			tr.addCell(cell->{
+	private PartitionDetailCellBuilder createTail(Partition partition, TrElement tr) {
+		tr.addCell(cell -> {
+			setCommonAttribute(partition, cell);
+			cell.setValue("");
+		});
+		return instance();
+	}
+
+	private void addEmptyCell(Partition partition, TrElement tr) {
+		if (this.createEmptyCell) {
+			tr.addCell(cell -> {
 				setCommonAttribute(partition, cell);
 				cell.setValue("");
 			});
 		}
 	}
 
-	private PartitionDetailCellBuilder createLowValue(Partition partition, TrElement tr){
-		String value=lowValue.apply(partition);
-		if (value!=null){
-			tr.addCell(cell->{
+	private PartitionDetailCellBuilder createLowValue(Partition partition, TrElement tr) {
+		String value = lowValue.apply(partition);
+		if (value != null) {
+			tr.addCell(cell -> {
 				setCommonAttribute(partition, cell);
 				cell.setValue(value);
 			});
-		} else{
+		} else {
 			addEmptyCell(partition, tr);
 		}
 		return instance();
 	}
 
-	private PartitionDetailCellBuilder createHighValue(Partition partition, TrElement tr){
-		String value=highValue.apply(partition);
-		if (value!=null){
-			tr.addCell(cell->{
+	private PartitionDetailCellBuilder createHighValue(Partition partition, TrElement tr) {
+		String value = highValue.apply(partition);
+		if (value != null) {
+			tr.addCell(cell -> {
 				setCommonAttribute(partition, cell);
 				cell.setValue(value);
 			});
-		} else{
+		} else {
 			addEmptyCell(partition, tr);
 		}
 		return instance();
 	}
 
-	private PartitionDetailCellBuilder setCommonAttribute(Partition partition, TdElement cell){
+	private PartitionDetailCellBuilder setCommonAttribute(Partition partition, TdElement cell) {
 		cell.setAlign(Align.LEFT);
 		cell.setColor(getPartitionColor(partition));
 		cell.setBgcolor(getBgcolor(partition));
 		return instance();
 	}
-	
-	private PartitionDetailCellBuilder instance(){
+
+	private PartitionDetailCellBuilder instance() {
 		return this;
 	}
-	
-	private String getPartitionColor(Partition partition){
-		String value=color.apply(partition);
-		if (value==null){
+
+	private String getPartitionColor(Partition partition) {
+		String value = color.apply(partition);
+		if (value == null) {
 			return this.defaultColor();
 		}
 		return value;
 	}
 
-	private String getBgcolor(Partition partition){
-		String value=bgcolor.apply(partition);
-		if (value==null){
+	private String getBgcolor(Partition partition) {
+		String value = bgcolor.apply(partition);
+		if (value == null) {
 			return this.defaultBgcolor();
 		}
 		return value;

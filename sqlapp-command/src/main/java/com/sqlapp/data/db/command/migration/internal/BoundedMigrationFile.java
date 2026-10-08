@@ -10,7 +10,9 @@ import java.security.NoSuchAlgorithmException;
 
 import com.sqlapp.exceptions.CommandException;
 
-/** Shared bounded byte-snapshot and fingerprint reader for migration artifacts. */
+/**
+ * Shared bounded byte-snapshot and fingerprint reader for migration artifacts.
+ */
 public final class BoundedMigrationFile {
 	private BoundedMigrationFile() {
 	}

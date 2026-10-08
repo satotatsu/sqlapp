@@ -35,25 +35,25 @@ import com.sqlapp.graphviz.Graph;
 import com.sqlapp.graphviz.Node;
 import com.sqlapp.graphviz.Rankdir;
 
-public class PartitionNodeBuilderTest extends AbstractTest{
+public class PartitionNodeBuilderTest extends AbstractTest {
 
 	@Test
 	public void test() throws XMLStreamException, IOException {
-		Graph graph=new Graph("ER");
-		graph.addGraphSetting(setting->{
+		Graph graph = new Graph("ER");
+		graph.addGraphSetting(setting -> {
 			setting.setRankdir(Rankdir.RightToLeft);
 		});
-		Table table=new Table("TableA");
+		Table table = new Table("TableA");
 		table.toPartitioning();
-		table.getPartitioning().getPartitions().add(p->{
+		table.getPartitioning().getPartitions().add(p -> {
 			p.setName("partition1");
 			p.setLowValue(10);
 			p.setHighValue(11);
 		});
 		Statistics.ROWS.setValue(table.getPartitioning().getPartitions().get(0), 1115);
-		PartitionNodeBuilder builder=PartitionNodeBuilder.create();
+		PartitionNodeBuilder builder = PartitionNodeBuilder.create();
 		builder.drawOption().setLocale(Locale.ENGLISH);
-		Node node=builder.build(table.getPartitioning().getPartitions().get(0), graph);
+		Node node = builder.build(table.getPartitioning().getPartitions().get(0), graph);
 		assertEquals(this.getResource("partition1.txt"), node.toString());
 	}
 

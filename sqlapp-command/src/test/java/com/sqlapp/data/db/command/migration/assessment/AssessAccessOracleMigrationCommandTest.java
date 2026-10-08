@@ -23,18 +23,19 @@ import io.github.spannm.jackcess.DataType;
 import io.github.spannm.jackcess.TableBuilder;
 
 class AssessAccessOracleMigrationCommandTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	private AssessAccessOracleMigrationCommand command(final boolean linked) throws Exception {
 		final var input = directory.resolve("業務.accdb");
 		try (final var database = DatabaseBuilder.create(Database.FileFormat.V2010, input.toFile())) {
-			new TableBuilder("顧客")
-					.addColumn(new ColumnBuilder("ID", DataType.LONG).withAutoNumber(true))
+			new TableBuilder("顧客").addColumn(new ColumnBuilder("ID", DataType.LONG).withAutoNumber(true))
 					.addColumn(new ColumnBuilder("名前", DataType.TEXT))
-					.addColumn(new ColumnBuilder("金額", DataType.MONEY))
-					.toTable(database).addRow(io.github.spannm.jackcess.Column.AUTO_NUMBER, "秘密の行データ", 12.34);
+					.addColumn(new ColumnBuilder("金額", DataType.MONEY)).toTable(database)
+					.addRow(io.github.spannm.jackcess.Column.AUTO_NUMBER, "秘密の行データ", 12.34);
 			if (linked) {
-				database.createLinkedTable("外部顧客", directory.resolve("missing-secret-source.accdb").toString(), "REMOTE");
+				database.createLinkedTable("外部顧客", directory.resolve("missing-secret-source.accdb").toString(),
+						"REMOTE");
 			}
 		}
 		final var command = new AssessAccessOracleMigrationCommand();
@@ -71,7 +72,8 @@ class AssessAccessOracleMigrationCommandTest {
 		final var command = command(false);
 		command.run();
 		assertTrue(command.getReport().relationshipsCollected());
-		assertTrue(command.getReport().assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.application-coverage")));
+		assertTrue(command.getReport().assessment().findings().stream()
+				.anyMatch(f -> f.ruleId().equals("access.application-coverage")));
 	}
 
 	@Test

@@ -59,10 +59,12 @@ public class HsqlBulkUpsertExecutor implements BulkUpsertExecutor {
 	private String mergeSql(final Table table, final List<Column> staged, final List<Column> keys,
 			final List<Column> updates, final BulkUpsertOption option) {
 		final StringBuilder sql = new StringBuilder("MERGE INTO ").append(name(table))
-				.append(" AS target USING (VALUES (").append(params(staged.size()))
-				.append(")) AS source (").append(list(staged, null)).append(") ON (");
+				.append(" AS target USING (VALUES (").append(params(staged.size())).append(")) AS source (")
+				.append(list(staged, null)).append(") ON (");
 		for (int i = 0; i < keys.size(); i++) {
-			if (i > 0) { sql.append(" AND "); }
+			if (i > 0) {
+				sql.append(" AND ");
+			}
 			final String column = quote(keys.get(i).getName());
 			sql.append("target.").append(column).append(" = source.").append(column);
 		}
@@ -70,7 +72,9 @@ public class HsqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		if (option.isUpdateWhenMatched() && !updates.isEmpty()) {
 			sql.append(" WHEN MATCHED THEN UPDATE SET ");
 			for (int i = 0; i < updates.size(); i++) {
-				if (i > 0) { sql.append(", "); }
+				if (i > 0) {
+					sql.append(", ");
+				}
 				final String column = quote(updates.get(i).getName());
 				sql.append("target.").append(column).append(" = source.").append(column);
 			}
@@ -89,8 +93,12 @@ public class HsqlBulkUpsertExecutor implements BulkUpsertExecutor {
 	private String list(final List<Column> columns, final String alias) {
 		final StringBuilder result = new StringBuilder();
 		for (int i = 0; i < columns.size(); i++) {
-			if (i > 0) { result.append(", "); }
-			if (alias != null) { result.append(alias).append('.'); }
+			if (i > 0) {
+				result.append(", ");
+			}
+			if (alias != null) {
+				result.append(alias).append('.');
+			}
 			result.append(quote(columns.get(i).getName()));
 		}
 		return result.toString();

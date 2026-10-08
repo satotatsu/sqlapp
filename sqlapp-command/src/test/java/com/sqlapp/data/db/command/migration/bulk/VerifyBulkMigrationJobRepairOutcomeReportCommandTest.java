@@ -29,8 +29,8 @@ class VerifyBulkMigrationJobRepairOutcomeReportCommandTest {
 		final Path approvalFile = directory.resolve("approval.json");
 		new BulkMigrationJobRepairPlanReportIO().write(approvalFile, approval);
 		final var provenance = new BulkMigrationArtifactProvenance(sha('c'), null, null);
-		final var completed = new BulkMigrationJobRepairExecutionReport.Task("parent", 1, 1, 1, 1,
-				List.of(), List.of());
+		final var completed = new BulkMigrationJobRepairExecutionReport.Task("parent", 1, 1, 1, 1, List.of(),
+				List.of());
 		final var failure = new BulkMigrationJobRepairFailureReport(
 				BulkMigrationJobRepairFailureReport.CURRENT_FORMAT_VERSION, Instant.now(), "migration",
 				approval.planFingerprint(), fingerprint(approvalFile), null, "EXECUTION", "child",
@@ -56,8 +56,7 @@ class VerifyBulkMigrationJobRepairOutcomeReportCommandTest {
 		assertEquals(generate.getOutcomeReport(), verify.getReport());
 
 		final var saved = generate.getOutcomeReport();
-		new BulkMigrationJobRepairOutcomeReportIO().write(outcomeFile,
-				copy(saved, saved.generatedAt(), sha('f')));
+		new BulkMigrationJobRepairOutcomeReportIO().write(outcomeFile, copy(saved, saved.generatedAt(), sha('f')));
 		verify.setExpectedOutcomeReportFingerprint(null);
 		assertThrows(CommandException.class, verify::run);
 		assertNull(verify.getReport());
@@ -68,8 +67,8 @@ class VerifyBulkMigrationJobRepairOutcomeReportCommandTest {
 		assertNull(verify.getReport());
 	}
 
-	private static VerifyBulkMigrationJobRepairOutcomeReportCommand command(final Path outcome,
-			final Path approval, final Path failure) {
+	private static VerifyBulkMigrationJobRepairOutcomeReportCommand command(final Path outcome, final Path approval,
+			final Path failure) {
 		final var command = new VerifyBulkMigrationJobRepairOutcomeReportCommand();
 		command.setOutcomeReportFile(outcome.toFile());
 		command.setApprovedRepairPlanFile(approval.toFile());
@@ -87,8 +86,7 @@ class VerifyBulkMigrationJobRepairOutcomeReportCommandTest {
 	}
 
 	private static BulkMigrationJobRepairPlanReport approval() throws Exception {
-		final var tasks = List.of(
-				new BulkMigrationJobRepairPlanReport.Task("parent", child("parent-plan")),
+		final var tasks = List.of(new BulkMigrationJobRepairPlanReport.Task("parent", child("parent-plan")),
 				new BulkMigrationJobRepairPlanReport.Task("child", child("child-plan")));
 		final MessageDigest digest = MessageDigest.getInstance("SHA-256");
 		for (final var task : tasks) {
@@ -98,17 +96,16 @@ class VerifyBulkMigrationJobRepairOutcomeReportCommandTest {
 				digest.update(bytes);
 			}
 		}
-		return new BulkMigrationJobRepairPlanReport(1, Instant.now(), HexFormat.of().formatHex(digest.digest()),
-				2, 2, true, tasks);
+		return new BulkMigrationJobRepairPlanReport(1, Instant.now(), HexFormat.of().formatHex(digest.digest()), 2, 2,
+				true, tasks);
 	}
 
 	private static BulkMigrationRepairPlanReport child(final String fingerprint) {
 		return new BulkMigrationRepairPlanReport(1, Instant.now(), fingerprint,
 				new BulkMigrationRepairPlanReport.Relation(null, null, "SOURCE_ROWS"),
-				new BulkMigrationRepairPlanReport.Relation(null, null, "TARGET_ROWS"), false, null, null, "HSQLDB",
-				"2", "executor", true, false, "stage", 1, 1, 100, true, List.of("ID"), List.of("ID"),
-				List.of("ID"), List.of(), List.of(new BulkMigrationRepairPlanReport.Chunk(0, 1, 0, "a", "b",
-						null, null, null, null)));
+				new BulkMigrationRepairPlanReport.Relation(null, null, "TARGET_ROWS"), false, null, null, "HSQLDB", "2",
+				"executor", true, false, "stage", 1, 1, 100, true, List.of("ID"), List.of("ID"), List.of("ID"),
+				List.of(), List.of(new BulkMigrationRepairPlanReport.Chunk(0, 1, 0, "a", "b", null, null, null, null)));
 	}
 
 	private static String fingerprint(final Path file) {

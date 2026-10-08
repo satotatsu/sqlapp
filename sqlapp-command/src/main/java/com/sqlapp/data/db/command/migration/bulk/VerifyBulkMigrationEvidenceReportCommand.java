@@ -44,8 +44,8 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 		optionalFile(targetValidationReportFile, "targetValidationReportFile");
 		validateExpectedTargetEnvironment();
 		validateLimits();
-		final var evidenceSnapshot = new BulkMigrationEvidenceReportIO()
-				.readSnapshot(evidenceReportFile.toPath(), maxEvidenceFileSizeBytes);
+		final var evidenceSnapshot = new BulkMigrationEvidenceReportIO().readSnapshot(evidenceReportFile.toPath(),
+				maxEvidenceFileSizeBytes);
 		evidenceReportFingerprint = evidenceSnapshot.fingerprint();
 		if (expectedEvidenceReportFingerprint != null) {
 			if (!expectedEvidenceReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
@@ -81,8 +81,7 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 		verifySourceArtifact(assessmentReportFile, BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT,
 				report.provenance() == null ? null : report.provenance().assessmentReportFingerprint(),
 				"assessmentReportFile", "assessmentReportFingerprint");
-		verifySourceArtifact(ddlVerificationReportFile,
-				BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT,
+		verifySourceArtifact(ddlVerificationReportFile, BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT,
 				report.provenance() == null ? null : report.provenance().ddlVerificationReportFingerprint(),
 				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
 		verifyTargetValidationArtifact(targetValidationSnapshot);
@@ -98,7 +97,8 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 		if (maxEvidenceAgeSeconds != null) {
 			final java.time.Instant now = java.time.Instant.now();
 			if (report.generatedAt().isAfter(now)) {
-				throw new CommandException("Evidence report generatedAt is in the future; check clock synchronization.");
+				throw new CommandException(
+						"Evidence report generatedAt is in the future; check clock synchronization.");
 			}
 			try {
 				if (report.generatedAt().plusSeconds(maxEvidenceAgeSeconds).isBefore(now)) {
@@ -116,17 +116,16 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 		if (targetReport == null) {
 			return;
 		}
-		final var executedTaskIds = operational.tasks().stream()
-				.map(BulkMigrationOperationalReport.Task::taskId).toList();
+		final var executedTaskIds = operational.tasks().stream().map(BulkMigrationOperationalReport.Task::taskId)
+				.toList();
 		final var provenance = report.provenance();
-		final var approvalProvenance = provenance == null ? null : new BulkMigrationArtifactProvenance(
-				provenance.configurationFingerprint(), provenance.assessmentReportFingerprint(),
-				provenance.ddlVerificationReportFingerprint());
+		final var approvalProvenance = provenance == null ? null
+				: new BulkMigrationArtifactProvenance(provenance.configurationFingerprint(),
+						provenance.assessmentReportFingerprint(), provenance.ddlVerificationReportFingerprint());
 		if (!report.jobId().equals(targetReport.jobId())
 				|| !report.planFingerprint().equals(targetReport.planFingerprint())
 				|| !executedTaskIds.equals(targetReport.taskIds())
-				|| targetReport.generatedAt().isAfter(operational.generatedAt())
-				|| provenance == null
+				|| targetReport.generatedAt().isAfter(operational.generatedAt()) || provenance == null
 				|| !provenance.configurationFingerprint().equals(targetReport.configurationFingerprint())
 				|| !java.util.Objects.equals(approvalProvenance, targetReport.provenance())
 				|| expectedTargetEnvironmentId != null
@@ -146,8 +145,7 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 		final String expected = report.provenance() == null ? null
 				: report.provenance().targetValidationReportFingerprint();
 		if (expected == null || !expected.equals(snapshot.fingerprint())) {
-			throw new CommandException(
-					"targetValidationReportFile does not match targetValidationReportFingerprint.");
+			throw new CommandException("targetValidationReportFile does not match targetValidationReportFingerprint.");
 		}
 	}
 
@@ -159,8 +157,7 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 			throw new CommandException("expectedTargetEnvironmentId must not be blank.");
 		}
 		if (targetValidationReportFile == null) {
-			throw new CommandException(
-					"expectedTargetEnvironmentId requires targetValidationReportFile.");
+			throw new CommandException("expectedTargetEnvironmentId requires targetValidationReportFile.");
 		}
 	}
 
@@ -185,7 +182,8 @@ public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
 			throw new CommandException(fileProperty + " was not verified by the saved evidence report.");
 		}
 		final Long maxFileSizeBytes = BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT.equals(artifact)
-				? maxTargetValidationReportFileSizeBytes : maxApprovalArtifactFileSizeBytes;
+				? maxTargetValidationReportFileSizeBytes
+				: maxApprovalArtifactFileSizeBytes;
 		BulkMigrationArtifactProvenanceVerifier.verify(file, expectedFingerprint, fileProperty, provenanceProperty,
 				maxFileSizeBytes);
 	}

@@ -534,8 +534,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
 		String iframeStyle = toIframeStyle(svgResult);
 		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
-		holder.setMermaidFile(writeMermaid(name, catalog.getSchemas().stream()
-				.flatMap(schema -> schema.getTables().stream()).toList(), svgCreator));
+		holder.setMermaidFile(writeMermaid(name,
+				catalog.getSchemas().stream().flatMap(schema -> schema.getTables().stream()).toList(), svgCreator));
 		return holder;
 	}
 

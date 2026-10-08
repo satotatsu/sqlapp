@@ -32,21 +32,15 @@ final class MdbSavedQuerySupport {
 	private static final int UNION_OBJECT_FLAG = 128;
 	private static final String UNION_PART1 = "X7YZ_____1";
 	private static final String UNION_PART2 = "X7YZ_____2";
-	private static final Pattern SELECT = Pattern.compile(
-			"(?is)^SELECT\\s+(DISTINCT\\s+)?(.+?)\\s+FROM\\s+"
-					+ "(\\[[^]]+]|[A-Za-z0-9_$]+)"
-					+ "(?:\\s+WHERE\\s+(.+?))?"
-					+ "(?:\\s+ORDER\\s+BY\\s+(.+))?$"
-			);
+	private static final Pattern SELECT = Pattern.compile("(?is)^SELECT\\s+(DISTINCT\\s+)?(.+?)\\s+FROM\\s+"
+			+ "(\\[[^]]+]|[A-Za-z0-9_$]+)" + "(?:\\s+WHERE\\s+(.+?))?" + "(?:\\s+ORDER\\s+BY\\s+(.+))?$");
 
 	private MdbSavedQuerySupport() {
 	}
 
-	static void create(final Database database, final String name,
-			final String definition) throws IOException {
+	static void create(final Database database, final String name, final String definition) throws IOException {
 		if (findQueryObject(database, name) != null) {
-			throw new IllegalArgumentException(
-					"Access saved query already exists: " + name);
+			throw new IllegalArgumentException("Access saved query already exists: " + name);
 		}
 		final String sql = stripTerminator(definition);
 		final UnionParts union = splitUnion(sql);
@@ -65,30 +59,26 @@ final class MdbSavedQuerySupport {
 		}
 	}
 
-	static boolean drop(final Database database, final String name)
-			throws IOException {
+	static boolean drop(final Database database, final String name) throws IOException {
 		final Row object = findQueryObject(database, name);
 		if (object == null) {
 			return false;
 		}
 		final int objectId = object.getInt("Id");
-		deleteRows(database.getSystemTable("MSysQueries"), "ObjectId",
-				objectId);
+		deleteRows(database.getSystemTable("MSysQueries"), "ObjectId", objectId);
 		deleteRows(database.getSystemTable("MSysObjects"), "Id", objectId);
 		return true;
 	}
 
-	private static void addSelectRows(final Database database,
-			final int objectId, final String sql) throws IOException {
+	private static void addSelectRows(final Database database, final int objectId, final String sql)
+			throws IOException {
 		final Matcher matcher = SELECT.matcher(sql);
 		if (!matcher.matches()) {
-			throw new UnsupportedOperationException(
-					"Direct saved SELECT currently supports SELECT columns FROM "
-							+ "one-table [WHERE ...] [ORDER BY ...]: " + sql);
+			throw new UnsupportedOperationException("Direct saved SELECT currently supports SELECT columns FROM "
+					+ "one-table [WHERE ...] [ORDER BY ...]: " + sql);
 		}
 		final List<Map<String, Object>> rows = new ArrayList<>();
-		rows.add(queryRow(objectId, TYPE_ATTRIBUTE, null, (short) 1, null,
-				null));
+		rows.add(queryRow(objectId, TYPE_ATTRIBUTE, null, (short) 1, null, null));
 		short selectFlags = 0;
 		if (matcher.group(1) != null) {
 			selectFlags |= 0x02;
@@ -97,61 +87,49 @@ final class MdbSavedQuerySupport {
 		if ("*".equals(columns)) {
 			selectFlags |= 0x01;
 		}
-		rows.add(queryRow(objectId, FLAG_ATTRIBUTE, null, selectFlags, null,
-				null));
-		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, null, null,
-				unquote(matcher.group(3)), null));
+		rows.add(queryRow(objectId, FLAG_ATTRIBUTE, null, selectFlags, null, null));
+		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, null, null, unquote(matcher.group(3)), null));
 		if (!"*".equals(columns)) {
 			for (final String column : splitComma(columns)) {
-				rows.add(queryRow(objectId, COLUMN_ATTRIBUTE, column.trim(),
-						(short) 0, null, null));
+				rows.add(queryRow(objectId, COLUMN_ATTRIBUTE, column.trim(), (short) 0, null, null));
 			}
 		}
 		if (matcher.group(4) != null) {
-			rows.add(queryRow(objectId, WHERE_ATTRIBUTE,
-					matcher.group(4).trim(), null, null, null));
+			rows.add(queryRow(objectId, WHERE_ATTRIBUTE, matcher.group(4).trim(), null, null, null));
 		}
 		if (matcher.group(5) != null) {
 			for (String order : splitComma(matcher.group(5))) {
 				order = order.trim();
-				final boolean descending = order.toUpperCase(Locale.ROOT)
-						.endsWith(" DESC");
+				final boolean descending = order.toUpperCase(Locale.ROOT).endsWith(" DESC");
 				if (descending) {
 					order = order.substring(0, order.length() - 5).trim();
 				}
-				rows.add(queryRow(objectId, ORDER_ATTRIBUTE, order, null,
-						descending ? "D" : null, null));
+				rows.add(queryRow(objectId, ORDER_ATTRIBUTE, order, null, descending ? "D" : null, null));
 			}
 		}
 		addRowOrder(rows);
 		database.getSystemTable("MSysQueries").addRowsFromMaps(rows);
 	}
 
-	private static void addUnionRows(final Database database,
-			final int objectId, final UnionParts union) throws IOException {
+	private static void addUnionRows(final Database database, final int objectId, final UnionParts union)
+			throws IOException {
 		final List<Map<String, Object>> rows = new ArrayList<>();
-		rows.add(queryRow(objectId, TYPE_ATTRIBUTE, null, (short) 9, null,
-				null));
-		rows.add(queryRow(objectId, FLAG_ATTRIBUTE, null,
-				(short) (union.all ? 1 : 3), null, null));
-		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, union.first, null, null,
-				UNION_PART1));
-		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, union.second, null, null,
-				UNION_PART2));
+		rows.add(queryRow(objectId, TYPE_ATTRIBUTE, null, (short) 9, null, null));
+		rows.add(queryRow(objectId, FLAG_ATTRIBUTE, null, (short) (union.all ? 1 : 3), null, null));
+		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, union.first, null, null, UNION_PART1));
+		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, union.second, null, null, UNION_PART2));
 		addRowOrder(rows);
 		database.getSystemTable("MSysQueries").addRowsFromMaps(rows);
 	}
 
 	private static void addRowOrder(final List<Map<String, Object>> rows) {
 		for (int i = 0; i < rows.size(); i++) {
-			rows.get(i).put("Order", new byte[] { 0, 0,
-					(byte) (i >>> 8), (byte) i });
+			rows.get(i).put("Order", new byte[] { 0, 0, (byte) (i >>> 8), (byte) i });
 		}
 	}
 
-	private static Map<String, Object> queryRow(final int objectId,
-			final byte attribute, final String expression, final Short flag,
-			final String name1, final String name2) {
+	private static Map<String, Object> queryRow(final int objectId, final byte attribute, final String expression,
+			final Short flag, final String name1, final String name2) {
 		final Map<String, Object> row = new LinkedHashMap<>();
 		row.put("ObjectId", objectId);
 		row.put("Attribute", attribute);
@@ -162,8 +140,7 @@ final class MdbSavedQuerySupport {
 		return row;
 	}
 
-	private static void addCatalogRow(final Database database,
-			final int objectId, final String name, final int flags)
+	private static void addCatalogRow(final Database database, final int objectId, final String name, final int flags)
 			throws IOException {
 		final Map<String, Object> row = new LinkedHashMap<>();
 		row.put("Id", objectId);
@@ -177,11 +154,9 @@ final class MdbSavedQuerySupport {
 		database.getSystemTable("MSysObjects").addRowFromMap(row);
 	}
 
-	private static int queryParentId(final Database database)
-			throws IOException {
+	private static int queryParentId(final Database database) throws IOException {
 		for (final Row row : database.getSystemTable("MSysObjects")) {
-			if ("Tables".equalsIgnoreCase(row.getString("Name"))
-					&& Short.valueOf((short) 3).equals(row.get("Type"))) {
+			if ("Tables".equalsIgnoreCase(row.getString("Name")) && Short.valueOf((short) 3).equals(row.get("Type"))) {
 				return row.getInt("Id");
 			}
 		}
@@ -200,19 +175,16 @@ final class MdbSavedQuerySupport {
 		return candidate;
 	}
 
-	private static Row findQueryObject(final Database database,
-			final String name) throws IOException {
+	private static Row findQueryObject(final Database database, final String name) throws IOException {
 		for (final Row row : database.getSystemTable("MSysObjects")) {
-			if (QUERY_OBJECT_TYPE == row.getShort("Type")
-					&& name.equalsIgnoreCase(row.getString("Name"))) {
+			if (QUERY_OBJECT_TYPE == row.getShort("Type") && name.equalsIgnoreCase(row.getString("Name"))) {
 				return row;
 			}
 		}
 		return null;
 	}
 
-	private static void deleteRows(final Table table, final String column,
-			final Object value) throws IOException {
+	private static void deleteRows(final Table table, final String column, final Object value) throws IOException {
 		final Cursor cursor = table.getDefaultCursor();
 		cursor.beforeFirst();
 		while (cursor.findNextRow(table.getColumn(column), value)) {
@@ -229,11 +201,9 @@ final class MdbSavedQuerySupport {
 	}
 
 	private static UnionParts splitUnion(final String sql) {
-		final Matcher matcher = Pattern.compile("(?is)^(.+)\\s+UNION(\\s+ALL)?\\s+(.+)$")
-				.matcher(sql);
+		final Matcher matcher = Pattern.compile("(?is)^(.+)\\s+UNION(\\s+ALL)?\\s+(.+)$").matcher(sql);
 		return matcher.matches()
-				? new UnionParts(matcher.group(1).trim(), matcher.group(3).trim(),
-						matcher.group(2) != null)
+				? new UnionParts(matcher.group(1).trim(), matcher.group(3).trim(), matcher.group(2) != null)
 				: null;
 	}
 
@@ -257,8 +227,7 @@ final class MdbSavedQuerySupport {
 	}
 
 	private static String unquote(final String identifier) {
-		return identifier.startsWith("[") && identifier.endsWith("]")
-				? identifier.substring(1, identifier.length() - 1)
+		return identifier.startsWith("[") && identifier.endsWith("]") ? identifier.substring(1, identifier.length() - 1)
 				: identifier;
 	}
 

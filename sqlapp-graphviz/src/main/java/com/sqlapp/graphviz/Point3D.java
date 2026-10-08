@@ -25,19 +25,18 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class Point3D extends Point{
+@EqualsAndHashCode(callSuper = true)
+public class Point3D extends Point {
 
-	public Point3D(double x, double y, double z){
-		super(x,y);
-		this.z=z;
+	public Point3D(double x, double y, double z) {
+		super(x, y);
+		this.z = z;
 	}
 
-	
 	private final double z;
-	
+
 	@Override
-	public String toString(){
-		return String.format("%f,%f,%f", this.getX(),this.getY(),z);
+	public String toString() {
+		return String.format("%f,%f,%f", this.getX(), this.getY(), z);
 	}
 }

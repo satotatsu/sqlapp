@@ -26,18 +26,19 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-public abstract class AbstractElementCollection<S> extends AbstractGraphVizElement implements List<S>, Serializable,Cloneable{
+public abstract class AbstractElementCollection<S> extends AbstractGraphVizElement
+		implements List<S>, Serializable, Cloneable {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1981317165486457961L;
-	private List<S> list=new ArrayList<>();
-	
-	protected List<S> getList(){
+	private List<S> list = new ArrayList<>();
+
+	protected List<S> getList() {
 		return list;
 	}
-	
+
 	@Override
 	public int size() {
 		return getList().size();
@@ -70,8 +71,8 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 
 	@Override
 	public boolean add(S e) {
-		boolean bool= getList().add(e);
-		if (bool){
+		boolean bool = getList().add(e);
+		if (bool) {
 			renew();
 		}
 		return bool;
@@ -79,8 +80,8 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 
 	@Override
 	public boolean remove(Object o) {
-		boolean bool= getList().remove(o);
-		if (bool){
+		boolean bool = getList().remove(o);
+		if (bool) {
 			renew();
 		}
 		return bool;
@@ -93,21 +94,21 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 
 	@Override
 	public boolean addAll(Collection<? extends S> c) {
-		boolean bool= getList().addAll(c);
+		boolean bool = getList().addAll(c);
 		renew();
 		return bool;
 	}
 
 	@Override
 	public boolean addAll(int index, Collection<? extends S> c) {
-		boolean bool= getList().addAll(index, c);
+		boolean bool = getList().addAll(index, c);
 		renew();
 		return bool;
 	}
 
 	@Override
 	public boolean removeAll(Collection<?> c) {
-		boolean bool= getList().removeAll(c);
+		boolean bool = getList().removeAll(c);
 		renew();
 		return bool;
 	}
@@ -130,7 +131,7 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 
 	@Override
 	public S set(int index, S element) {
-		S S= getList().set(index, element);
+		S S = getList().set(index, element);
 		renew();
 		return S;
 	}
@@ -143,13 +144,13 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 
 	@Override
 	public S remove(int index) {
-		S S= getList().remove(index);
+		S S = getList().remove(index);
 		renew();
 		return S;
 	}
-	
-	protected void renew(){
-		
+
+	protected void renew() {
+
 	}
 
 	@Override
@@ -176,14 +177,14 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 	public List<S> subList(int fromIndex, int toIndex) {
 		return getList().subList(fromIndex, toIndex);
 	}
-	
+
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public AbstractElementCollection<S> clone(){
+	public AbstractElementCollection<S> clone() {
 		AbstractElementCollection clone;
 		try {
 			clone = (AbstractElementCollection) super.clone();
-			clone.list=new ArrayList<>();
+			clone.list = new ArrayList<>();
 			clone.addAll(this);
 			clone.renew();
 			return clone;
@@ -191,15 +192,15 @@ public abstract class AbstractElementCollection<S> extends AbstractGraphVizEleme
 			throw new RuntimeException(e);
 		}
 	}
-	
+
 	@Override
-	public String toString(){
-		StringBuilder builder=new StringBuilder();
-		for(S val:this){
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		for (S val : this) {
 			builder.append(val);
 			builder.append("\n");
 		}
-		return builder.substring(0, builder.length()-1);
+		return builder.substring(0, builder.length() - 1);
 	}
 
 }

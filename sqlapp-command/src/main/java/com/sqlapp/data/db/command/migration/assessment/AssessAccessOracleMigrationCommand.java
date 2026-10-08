@@ -1,9 +1,14 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.assessment;
 
-/** Compatibility entry point. Prefer AssessDatabaseMigrationCommand with targetDatabase=oracle. */
+/**
+ * Compatibility entry point. Prefer AssessDatabaseMigrationCommand with
+ * targetDatabase=oracle.
+ */
 public class AssessAccessOracleMigrationCommand extends AssessDatabaseMigrationCommand {
-	public AssessAccessOracleMigrationCommand() { super.setTargetDatabase("oracle"); }
+	public AssessAccessOracleMigrationCommand() {
+		super.setTargetDatabase("oracle");
+	}
 
 	@Override
 	public void setTargetDatabase(final String database) {

@@ -33,8 +33,8 @@ final class MigrationTargetMappingCoverage {
 		});
 		final var profiles = new HashMap<ObjectId, com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile>();
 		if (source.dataProfile() != null) {
-			source.dataProfile().tables().forEach(table -> table.columns()
-					.forEach(column -> profiles.put(column.column(), column)));
+			source.dataProfile().tables()
+					.forEach(table -> table.columns().forEach(column -> profiles.put(column.column(), column)));
 		}
 		final var findings = new ArrayList<Finding>();
 		int omittedTables = 0;
@@ -48,7 +48,8 @@ final class MigrationTargetMappingCoverage {
 					omittedTables++;
 					findings.add(new Finding("migration.mapping.unmapped-table", Severity.REVIEW, Evidence.SCHEMA,
 							tableId, "The source table is not present in the target mapping.",
-							"Add it to the mapping, or record that the table is intentionally outside the migration scope.", null));
+							"Add it to the mapping, or record that the table is intentionally outside the migration scope.",
+							null));
 					continue;
 				}
 				final var tableMapping = mappingsByTable.get(tableId);
@@ -56,7 +57,8 @@ final class MigrationTargetMappingCoverage {
 					if (constraint instanceof CheckConstraint check && expression(check.getExpression()) != null) {
 						semanticDifferences++;
 						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
-								constraint.getName() == null ? "<unnamed validation>" : constraint.getName(), table.getName());
+								constraint.getName() == null ? "<unnamed validation>" : constraint.getName(),
+								table.getName());
 						findings.add(semanticFinding("table-validation-expression", constraintId, "table",
 								"Access table validation expression", value(expression(check.getExpression())),
 								"mapped CHECK expressions require translation review"));
@@ -66,12 +68,15 @@ final class MigrationTargetMappingCoverage {
 									|| foreignKey.getDeleteRule() == CascadeRule.Cascade)) {
 						semanticDifferences++;
 						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
-								constraint.getName() == null ? "<unnamed relationship>" : constraint.getName(), table.getName());
-						final String relatedTable = foreignKey.getRelatedTable() == null
-								? "<unresolved>" : foreignKey.getRelatedTable().getName();
-						findings.add(semanticFinding("relationship-action", constraintId, "relationship",
-								"Access relationship actions to " + relatedTable, "update=" + foreignKey.getUpdateRule()
-										+ ", delete=" + foreignKey.getDeleteRule(), "target cascade clauses omitted"));
+								constraint.getName() == null ? "<unnamed relationship>" : constraint.getName(),
+								table.getName());
+						final String relatedTable = foreignKey.getRelatedTable() == null ? "<unresolved>"
+								: foreignKey.getRelatedTable().getName();
+						findings.add(
+								semanticFinding("relationship-action", constraintId, "relationship",
+										"Access relationship actions to " + relatedTable, "update="
+												+ foreignKey.getUpdateRule() + ", delete=" + foreignKey.getDeleteRule(),
+										"target cascade clauses omitted"));
 					}
 				}
 				for (final var index : table.getIndexes()) {
@@ -79,8 +84,8 @@ final class MigrationTargetMappingCoverage {
 							index.getName() == null ? "<unnamed index>" : index.getName(), table.getName());
 					if (Boolean.TRUE.equals(index.getSpecifics().get("IGNORE_NULLS", Boolean.class))) {
 						semanticDifferences++;
-						findings.add(semanticFinding("index-null-handling", indexId, "index",
-								"Access IgnoreNulls", "true", "target index design unspecified"));
+						findings.add(semanticFinding("index-null-handling", indexId, "index", "Access IgnoreNulls",
+								"true", "target index design unspecified"));
 					}
 					if (index.isUnique()) {
 						semanticDifferences++;
@@ -97,7 +102,8 @@ final class MigrationTargetMappingCoverage {
 						omittedColumns++;
 						findings.add(new Finding("migration.mapping.unmapped-column", Severity.REVIEW, Evidence.SCHEMA,
 								columnId, "The source column is not present in the target mapping.",
-								"Add it to the mapping, or record that the column is intentionally excluded or derived.", null));
+								"Add it to the mapping, or record that the column is intentionally excluded or derived.",
+								null));
 						continue;
 					}
 					final var columnMapping = tableMapping.columns().stream()
@@ -107,38 +113,41 @@ final class MigrationTargetMappingCoverage {
 					}
 					final boolean sourceRequired = column.isNotNull() || column.isIdentity();
 					final String sourceNullability = sourceRequired ? "required" : "nullable";
-					final String targetNullability = targetNullability(table, column.getName(), primaryComplete, columnMapping.nullable());
+					final String targetNullability = targetNullability(table, column.getName(), primaryComplete,
+							columnMapping.nullable());
 					if ((!"unspecified".equals(targetNullability) && !sourceNullability.equals(targetNullability))
 							|| (sourceRequired && "unspecified".equals(targetNullability))) {
 						semanticDifferences++;
-						findings.add(semanticFinding("nullability-change", columnId, "nullability",
-								sourceNullability, targetNullability));
+						findings.add(semanticFinding("nullability-change", columnId, "nullability", sourceNullability,
+								targetNullability));
 					}
 					if (column.isIdentity() != Boolean.TRUE.equals(columnMapping.identity())) {
 						semanticDifferences++;
-						final String targetIdentity = columnMapping.identity() == null
-								? "unspecified" : columnMapping.identity().toString();
+						final String targetIdentity = columnMapping.identity() == null ? "unspecified"
+								: columnMapping.identity().toString();
 						if (column.isIdentity()) {
-							findings.add(new Finding("migration.mapping.identity-change", Severity.REVIEW, Evidence.SCHEMA,
-									columnId, "Mapped Access AutoNumber generation changes from true to "
-											+ targetIdentity + ".",
+							findings.add(new Finding("migration.mapping.identity-change", Severity.REVIEW,
+									Evidence.SCHEMA, columnId,
+									"Mapped Access AutoNumber generation changes from true to " + targetIdentity + ".",
 									"Check the Access New Values setting (Increment or Random; GUID uses a separate generator), "
 											+ "then explicitly select target identity generation or a documented alternative and test the first new row.",
 									null));
 						} else {
-							findings.add(semanticFinding("identity-change", columnId, "identity", "false", targetIdentity));
+							findings.add(
+									semanticFinding("identity-change", columnId, "identity", "false", targetIdentity));
 						}
 					}
 					final var profile = profiles.get(columnId);
-					if (column.isIdentity() && Boolean.TRUE.equals(columnMapping.identity())
-							&& profile != null && profile.numeric() != null && profile.numeric().minimum() != null
+					if (column.isIdentity() && Boolean.TRUE.equals(columnMapping.identity()) && profile != null
+							&& profile.numeric() != null && profile.numeric().minimum() != null
 							&& profile.numeric().minimum().signum() < 0) {
 						semanticDifferences++;
 						findings.add(new Finding("migration.mapping.observed-negative-autonumber", Severity.WARNING,
 								Evidence.DATABASE, columnId,
 								"Negative Access AutoNumber values were observed while target identity generation is enabled.",
 								"Check whether Access New Values uses Random. Preserve existing keys and references, then approve "
-										+ "the intentional change to sequential target generation or define a compatible alternative.", null));
+										+ "the intentional change to sequential target generation or define a compatible alternative.",
+								null));
 					}
 					final String sourceDefault = expression(column.getDefaultValue());
 					final String targetDefault = expression(columnMapping.defaultExpression());
@@ -169,27 +178,33 @@ final class MigrationTargetMappingCoverage {
 				}
 			}
 		}
-		return new MigrationAssessment(findings, java.util.List.of(
-				new Inventory(null, "", "unmappedTables", omittedTables),
-				new Inventory(null, "", "unmappedColumnsInMappedTables", omittedColumns),
-				new Inventory(null, "", "mappingSemanticDifferences", semanticDifferences),
-				new Inventory(null, "", "unresolvedAutoNumberStrategies", unresolvedAutoNumberStrategies)));
+		return new MigrationAssessment(findings,
+				java.util.List.of(new Inventory(null, "", "unmappedTables", omittedTables),
+						new Inventory(null, "", "unmappedColumnsInMappedTables", omittedColumns),
+						new Inventory(null, "", "mappingSemanticDifferences", semanticDifferences),
+						new Inventory(null, "", "unresolvedAutoNumberStrategies", unresolvedAutoNumberStrategies)));
 	}
 
 	private static boolean primaryComplete(final Table table,
 			final ResolvedMigrationTargetMapping.TableMapping mapping) {
 		final var primary = table.getConstraints().getPrimaryKeyConstraint();
-		if (primary == null || primary.getColumns().isEmpty()) { return false; }
+		if (primary == null || primary.getColumns().isEmpty()) {
+			return false;
+		}
 		final var mapped = new HashSet<String>();
 		mapping.columns().forEach(column -> mapped.add(key(column.sourceColumn().name())));
 		return primary.getColumns().stream().allMatch(column -> mapped.contains(key(column.getName())));
 	}
 
-	private static String targetNullability(final Table table, final String columnName,
-			final boolean primaryComplete, final Boolean nullable) {
+	private static String targetNullability(final Table table, final String columnName, final boolean primaryComplete,
+			final Boolean nullable) {
 		if (primaryComplete && table.getConstraints().getPrimaryKeyConstraint().getColumns().stream()
-				.anyMatch(column -> key(column.getName()).equals(key(columnName)))) { return "required"; }
-		if (nullable == null) { return "unspecified"; }
+				.anyMatch(column -> key(column.getName()).equals(key(columnName)))) {
+			return "required";
+		}
+		if (nullable == null) {
+			return "unspecified";
+		}
 		return nullable ? "nullable" : "required";
 	}
 
@@ -209,6 +224,11 @@ final class MigrationTargetMappingCoverage {
 		return value == null || value.isBlank() ? null : value.trim();
 	}
 
-	private static String value(final String value) { return value == null ? "<none>" : value; }
-	private static String key(final String value) { return value.toUpperCase(Locale.ROOT); }
+	private static String value(final String value) {
+		return value == null ? "<none>" : value;
+	}
+
+	private static String key(final String value) {
+		return value.toUpperCase(Locale.ROOT);
+	}
 }

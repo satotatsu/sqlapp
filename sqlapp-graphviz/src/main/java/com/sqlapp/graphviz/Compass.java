@@ -20,70 +20,68 @@
 package com.sqlapp.graphviz;
 
 public enum Compass {
-	North(){
+	North() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "n";
 		}
-	}
-	, NorthEast(){
+	},
+	NorthEast() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "ne";
 		}
-	}
-	, East(){
+	},
+	East() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "e";
 		}
-	}
-	, SouthEast(){
+	},
+	SouthEast() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "se";
 		}
-	}
-	, South(){
+	},
+	South() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "s";
 		}
-	}
-	, SouthWest(){
+	},
+	SouthWest() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "sw";
 		}
-	}
-	, West(){
+	},
+	West() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "w";
 		}
-	}
-	, NorthWest(){
+	},
+	NorthWest() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "nw";
 		}
-	}
-	, Center(){
+	},
+	Center() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "c";
 		}
-	}
-	, Underscore(){
+	},
+	Underscore() {
 		@Override
-		public String toString(){
+		public String toString() {
 			return "_";
 		}
+	},;
+
+	private Compass() {
 	}
-	,;
-	
-	private Compass(){
-	}
-	
-	
+
 }

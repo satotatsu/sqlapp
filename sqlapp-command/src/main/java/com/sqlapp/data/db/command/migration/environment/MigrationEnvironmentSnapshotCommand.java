@@ -56,8 +56,8 @@ public class MigrationEnvironmentSnapshotCommand extends MigrationCommand {
 			final Table repeatableDefinition = repeatableHandler.definition(getSchemaChangeLogTableName());
 			final Table repeatableHistory = handler.getTable(connection, dialect, repeatableDefinition);
 			if (repeatableHistory != null) {
-				for (final Map.Entry<String, String> entry : repeatableHandler.load(connection, dialect,
-						repeatableHistory).entrySet()) {
+				for (final Map.Entry<String, String> entry : repeatableHandler
+						.load(connection, dialect, repeatableHistory).entrySet()) {
 					repeatables.add(new MigrationEnvironmentSnapshot.RepeatableEntry(entry.getKey(), entry.getValue()));
 				}
 			}

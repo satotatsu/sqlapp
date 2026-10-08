@@ -25,59 +25,58 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class Rank extends AbstractGraphVizElement implements ToGraphStringBuilder{
-	
+@EqualsAndHashCode(callSuper = true)
+public class Rank extends AbstractGraphVizElement implements ToGraphStringBuilder {
+
 	private final RankType rank;
-	
+
 	private final Node[] nodes;
-	
-	public Rank(final RankType rank, final Node... nodes){
-		this.rank=rank;
-		this.nodes=nodes;
+
+	public Rank(final RankType rank, final Node... nodes) {
+		this.rank = rank;
+		this.nodes = nodes;
 	}
 
-	public Rank(final Node... nodes){
-		this.rank=RankType.same;
-		this.nodes=nodes;
+	public Rank(final Node... nodes) {
+		this.rank = RankType.same;
+		this.nodes = nodes;
 	}
 
 	@Getter(lombok.AccessLevel.PROTECTED)
 	@Setter(lombok.AccessLevel.PROTECTED)
 	private RankCollection parent;
-	
+
 	@Override
-	public String toString(){
-		if (isEmpty()){
+	public String toString() {
+		if (isEmpty()) {
 			return "";
 		}
-		final GraphStringBuilder builder=toGraphStringBuilder();
+		final GraphStringBuilder builder = toGraphStringBuilder();
 		return builder.toString();
 	}
-	
+
 	@Override
-	public GraphStringBuilder toGraphStringBuilder(){
-		final GraphStringBuilder builder=createGraphStringBuilder();
+	public GraphStringBuilder toGraphStringBuilder() {
+		final GraphStringBuilder builder = createGraphStringBuilder();
 		builder.putNoEscape("rank", getRankValue());
 		return builder;
 	}
-	
-	public boolean isEmpty(){
-		return nodes==null||nodes.length==0;
+
+	public boolean isEmpty() {
+		return nodes == null || nodes.length == 0;
 	}
-	
-	protected GraphStringBuilder createGraphStringBuilder(){
-		final GraphStringBuilder builder=new GraphStringBuilder("");
+
+	protected GraphStringBuilder createGraphStringBuilder() {
+		final GraphStringBuilder builder = new GraphStringBuilder("");
 		builder.setOpen("{").setClose("}");
 		builder.setWithLineBreak(false);
 		return builder;
 	}
 
-	
-	private String getRankValue(){
-		final StringBuilder builder=new StringBuilder();
+	private String getRankValue() {
+		final StringBuilder builder = new StringBuilder();
 		builder.append(rank);
-		for(final Node node:nodes){
+		for (final Node node : nodes) {
 			builder.append("; ");
 			builder.append(node.getEscapedName());
 		}

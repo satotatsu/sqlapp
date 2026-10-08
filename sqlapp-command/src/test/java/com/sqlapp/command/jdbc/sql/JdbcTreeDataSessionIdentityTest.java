@@ -272,7 +272,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 				for (int batchIndex = 0; batchIndex < (loop + 1); batchIndex++) {
 					Row row = session.newRow(tab);
 					row.put("TXT", tab.getName() + "_TXT_" + batchIndex + "_UPDATED");// If the number of calls to this
-																				// method in the root
+					// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.

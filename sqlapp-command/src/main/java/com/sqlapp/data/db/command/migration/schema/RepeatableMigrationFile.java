@@ -68,8 +68,8 @@ public record RepeatableMigrationFile(String name, File source, List<SplitResult
 
 	private static String checksum(final String sql) {
 		try {
-			return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-					.digest(sql.getBytes(StandardCharsets.UTF_8)));
+			return "sha256:" + HexFormat.of()
+					.formatHex(MessageDigest.getInstance("SHA-256").digest(sql.getBytes(StandardCharsets.UTF_8)));
 		} catch (final NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}

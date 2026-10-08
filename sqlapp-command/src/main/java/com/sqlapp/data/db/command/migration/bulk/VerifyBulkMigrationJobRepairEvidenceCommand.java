@@ -12,7 +12,10 @@ import com.sqlapp.exceptions.CommandException;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Verifies saved repair approval, execution and post-repair evidence without database access. */
+/**
+ * Verifies saved repair approval, execution and post-repair evidence without
+ * database access.
+ */
 @Getter
 @Setter
 public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand {
@@ -67,13 +70,13 @@ public class VerifyBulkMigrationJobRepairEvidenceCommand extends AbstractCommand
 		final var verification = verificationSnapshot.report();
 		if (!approved.fingerprint().equals(execution.approvedRepairPlanFileFingerprint())
 				|| !approval.planFingerprint().equals(execution.repairPlanFingerprint())
-				|| !approval.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList()
-						.equals(execution.tasks().stream().map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList())) {
+				|| !approval.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList().equals(
+						execution.tasks().stream().map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList())) {
 			throw new CommandException("Repair execution report does not match approvedRepairPlanFile.");
 		}
 		if (!verification.match() || !execution.migrationPlanFingerprint().equals(verification.planFingerprint())
-				|| !execution.tasks().stream().map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList()
-						.equals(verification.tasks().stream().map(BulkMigrationVerificationReport.Task::taskId).toList())
+				|| !execution.tasks().stream().map(BulkMigrationJobRepairExecutionReport.Task::taskId).toList().equals(
+						verification.tasks().stream().map(BulkMigrationVerificationReport.Task::taskId).toList())
 				|| !Objects.equals(execution.provenance(), verification.provenance())
 				|| execution.completedAt().isBefore(approval.generatedAt())
 				|| verification.generatedAt().isBefore(execution.completedAt())) {

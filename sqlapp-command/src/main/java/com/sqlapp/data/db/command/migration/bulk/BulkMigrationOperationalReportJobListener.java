@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -64,8 +63,7 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final Supplier<BulkMigrationMaintenanceState> maintenanceSupplier,
 			final Supplier<BulkMigrationProgressSnapshot> progressSupplier,
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
-			final Consumer<RuntimeException> failureConsumer,
-			final BulkMigrationArtifactProvenance provenance) {
+			final Consumer<RuntimeException> failureConsumer, final BulkMigrationArtifactProvenance provenance) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier, () -> Map.of(), failurePolicy, failureConsumer,
 				new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO(), provenance);
 	}
@@ -77,7 +75,8 @@ public final class BulkMigrationOperationalReportJobListener implements BulkMigr
 			final BulkMigrationOperationalReportFailurePolicy failurePolicy,
 			final Consumer<RuntimeException> failureConsumer) {
 		this(plan, targetFile, maintenanceSupplier, progressSupplier, progressSnapshotsSupplier, failurePolicy,
-				failureConsumer, new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO(), null);
+				failureConsumer, new BulkMigrationOperationalReportBuilder(), new BulkMigrationOperationalReportIO(),
+				null);
 	}
 
 	BulkMigrationOperationalReportJobListener(final BulkMigrationJobPlan plan, final Path targetFile,

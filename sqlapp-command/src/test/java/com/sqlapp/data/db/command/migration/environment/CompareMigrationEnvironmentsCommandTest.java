@@ -45,10 +45,9 @@ class CompareMigrationEnvironmentsCommandTest {
 		assertEquals("production", command.getComparison().baselineEnvironmentId());
 		assertFalse(command.getComparison().matches());
 		assertEquals(List.of(MigrationEnvironmentComparison.Category.DATABASE_PRODUCT,
-				MigrationEnvironmentComparison.Category.VERSIONED,
-				MigrationEnvironmentComparison.Category.REPEATABLE),
-				command.getComparison().differences().stream()
-						.map(MigrationEnvironmentComparison.Difference::category).toList());
+				MigrationEnvironmentComparison.Category.VERSIONED, MigrationEnvironmentComparison.Category.REPEATABLE),
+				command.getComparison().differences().stream().map(MigrationEnvironmentComparison.Difference::category)
+						.toList());
 		final var gate = new CompareMigrationEnvironmentsCommand();
 		gate.setSnapshotFiles(List.of(production.toFile(), staging.toFile()));
 		gate.setFailOnDifferences(true);

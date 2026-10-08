@@ -122,9 +122,9 @@ public class VerifyBulkMigrationJobRepairFailureEvidenceCommand extends Abstract
 	private void verifyPostRepairVerification(final BulkMigrationJobRepairFailureReport failure,
 			final List<String> approvedTaskIds) {
 		if (failure.postRepairVerificationReportFingerprint() == null) {
-			if (postRepairVerificationReportFile != null
-					|| expectedPostRepairVerificationReportFingerprint != null) {
-				throw new CommandException("Repair failure evidence does not reference a post-repair verification report.");
+			if (postRepairVerificationReportFile != null || expectedPostRepairVerificationReportFingerprint != null) {
+				throw new CommandException(
+						"Repair failure evidence does not reference a post-repair verification report.");
 			}
 			return;
 		}
@@ -141,8 +141,8 @@ public class VerifyBulkMigrationJobRepairFailureEvidenceCommand extends Abstract
 		}
 		final var verification = verificationSnapshot.report();
 		if (verification.match() || !failure.migrationPlanFingerprint().equals(verification.planFingerprint())
-				|| !approvedTaskIds.equals(verification.tasks().stream()
-						.map(BulkMigrationVerificationReport.Task::taskId).toList())
+				|| !approvedTaskIds.equals(
+						verification.tasks().stream().map(BulkMigrationVerificationReport.Task::taskId).toList())
 				|| verification.tasks().stream().filter(task -> !task.match())
 						.noneMatch(task -> task.taskId().equals(failure.failedTaskId()))
 				|| !java.util.Objects.equals(failure.provenance(), verification.provenance())

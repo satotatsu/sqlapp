@@ -8,8 +8,7 @@ import com.sqlapp.data.schemas.Column;
 /** Access INSERT using ordinal Row expressions for arbitrary column names. */
 public class MdbInsertFactory extends AbstractInsertFactory<MdbSqlBuilder> {
 	@Override
-	protected String getColumnParameterExpression(final Column column,
-			final String defaultValue) {
+	protected String getColumnParameterExpression(final Column column, final String defaultValue) {
 		return MdbParameterExpression.of(column, defaultValue);
 	}
 }

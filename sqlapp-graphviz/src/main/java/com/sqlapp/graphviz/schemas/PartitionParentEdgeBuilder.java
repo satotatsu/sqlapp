@@ -35,58 +35,59 @@ import lombok.experimental.Accessors;
 
 import java.util.function.BiConsumer;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class PartitionParentEdgeBuilder extends AbstractSchemaGraphBuilder{
-	
-	private BiConsumer<ForeignKeyConstraint, Edge> setAttribute=null;
-	
-	private PartitionParentEdgeBuilder(){}
+public class PartitionParentEdgeBuilder extends AbstractSchemaGraphBuilder {
 
-	public static PartitionParentEdgeBuilder create(){
-		PartitionParentEdgeBuilder builder=new PartitionParentEdgeBuilder();
+	private BiConsumer<ForeignKeyConstraint, Edge> setAttribute = null;
+
+	private PartitionParentEdgeBuilder() {
+	}
+
+	public static PartitionParentEdgeBuilder create() {
+		PartitionParentEdgeBuilder builder = new PartitionParentEdgeBuilder();
 		return builder;
 	}
 
-	public void build(Table table, Graph graph){
-		if(table.getPartitionParent()!=null){
-			Table parent=table.getPartitionParent().getTable();
-			String name=SchemaGraphUtils.getName(table);
-			Node tableNode=graph.getNode(name);
-			String portName=SchemaGraphUtils.getName(table);
-			Port fromPort=tableNode.getPort(portName);
-			Node inheritsNode=graph.getNode(SchemaGraphUtils.getName(parent));
-			String toPortName="footer_"+SchemaGraphUtils.getName(parent);
-			if (inheritsNode==null){
+	public void build(Table table, Graph graph) {
+		if (table.getPartitionParent() != null) {
+			Table parent = table.getPartitionParent().getTable();
+			String name = SchemaGraphUtils.getName(table);
+			Node tableNode = graph.getNode(name);
+			String portName = SchemaGraphUtils.getName(table);
+			Port fromPort = tableNode.getPort(portName);
+			Node inheritsNode = graph.getNode(SchemaGraphUtils.getName(parent));
+			String toPortName = "footer_" + SchemaGraphUtils.getName(parent);
+			if (inheritsNode == null) {
 				return;
 			}
-			Port toPort=inheritsNode.getPort(toPortName);
-			NodePort nodePort1=new NodePort(tableNode, fromPort, Compass.North);
-			NodePort nodePort2=new NodePort(inheritsNode, toPort, Compass.South);
-			if (toPort==null){
-				nodePort2=new NodePort(inheritsNode, Compass.South);
-			} else{
-				nodePort2=new NodePort(inheritsNode, toPort, Compass.South);
+			Port toPort = inheritsNode.getPort(toPortName);
+			NodePort nodePort1 = new NodePort(tableNode, fromPort, Compass.North);
+			NodePort nodePort2 = new NodePort(inheritsNode, toPort, Compass.South);
+			if (toPort == null) {
+				nodePort2 = new NodePort(inheritsNode, Compass.South);
+			} else {
+				nodePort2 = new NodePort(inheritsNode, toPort, Compass.South);
 			}
-			Edge edge=graph.addEdge(nodePort1, nodePort2);
-			setArrow(table, parent , edge);
+			Edge edge = graph.addEdge(nodePort1, nodePort2);
+			setArrow(table, parent, edge);
 			edge.setWeight(10);
 			edge.setLabel(createLabel(table, parent));
 		}
 	}
-	
-	private String createLabel(Table table, Table parent){
-		StringBuilder builder=new StringBuilder();
+
+	private String createLabel(Table table, Table parent) {
+		StringBuilder builder = new StringBuilder();
 		builder.append("Partitioning");
 		return builder.toString();
 	}
-	
-	protected void setArrow(Table table, Table parent , Edge edge){
+
+	protected void setArrow(Table table, Table parent, Edge edge) {
 		edge.setArrowhead(ArrowType.empty);
 	}
 
-	protected PartitionParentEdgeBuilder instance(){
+	protected PartitionParentEdgeBuilder instance() {
 		return this;
 	}
 

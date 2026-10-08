@@ -26,17 +26,18 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class GraphSetting extends AbstractCommonElement<GraphSetting>{
+@EqualsAndHashCode(callSuper = true)
+public class GraphSetting extends AbstractCommonElement<GraphSetting> {
 
 	private final Graph parent;
-	
-	public GraphSetting(Graph parent){
-		this.parent=parent;
+
+	public GraphSetting(Graph parent) {
+		this.parent = parent;
 	}
+
 	@Props
 	private Rect bb;
 	@Props
@@ -55,8 +56,7 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private ClusterMode clusterrank;
 	/**
-	 * dot only
-	 * default false
+	 * dot only default false
 	 */
 	@Props
 	private Boolean compound;
@@ -66,9 +66,7 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private Boolean concentrate;
 	/**
-	 * default 0.99
-	 * Minimum 0.0
-	 * neato only
+	 * default 0.99 Minimum 0.0 neato only
 	 */
 	@Props
 	private Double Damping;
@@ -78,19 +76,17 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private Double dpi;
 	/**
-	 * 	neato only
+	 * neato only
 	 */
 	@Props
 	private Double defaultdist;
 	/**
-	 * sfdp, fdp, neato only
-	 * default 2
+	 * sfdp, fdp, neato only default 2
 	 */
 	@Props
 	private Integer dim;
 	/**
-	 * sfdp, fdp, neato only
-	 * default 2
+	 * sfdp, fdp, neato only default 2
 	 */
 	@Props
 	private Integer dimen;
@@ -100,12 +96,12 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private String diredgeconstraints;
 	/**
-	 * 	neato only
+	 * neato only
 	 */
 	@Props
 	private String epsilon;
 	/**
-	 * 	not dot
+	 * not dot
 	 */
 	@Props
 	private Double esep;
@@ -122,7 +118,7 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private Double labelangle;
 	/**
-	 * 	sfdp only
+	 * sfdp only
 	 */
 	@Props
 	private Integer label_scheme;
@@ -165,8 +161,7 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private Rankdir rankdir;
 	/**
-	 * default 0.25
-	 * min 0.02
+	 * default 0.25 min 0.02
 	 */
 	@Props
 	private Double nodesep;
@@ -196,18 +191,18 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 	@Props
 	private Double width;
 
-	protected GraphSetting instance(){
+	protected GraphSetting instance() {
 		return this;
 	}
-	
-	protected GraphStringBuilder createGraphStringBuilder(){
-		GraphStringBuilder builder=new GraphStringBuilder("graph");
+
+	protected GraphStringBuilder createGraphStringBuilder() {
+		GraphStringBuilder builder = new GraphStringBuilder("graph");
 		return builder;
 	}
-	
+
 	@Override
-	protected Map<String,Object> getProperties(){
-		Map<String,Object> props=super.getProperties();
+	protected Map<String, Object> getProperties() {
+		Map<String, Object> props = super.getProperties();
 		put(props, "bb", bb);
 		put(props, "_background", _background);
 		put(props, "bgcolor", bgcolor);
@@ -259,31 +254,31 @@ public class GraphSetting extends AbstractCommonElement<GraphSetting>{
 
 		return props;
 	}
-	
-	public GraphSetting setRanksep(double...args){
-		this.ranksep=args;
+
+	public GraphSetting setRanksep(double... args) {
+		this.ranksep = args;
 		return instance();
 	}
 
-	public GraphSetting setBgcolor(String bgcolor){
-		this.bgcolor=bgcolor;
+	public GraphSetting setBgcolor(String bgcolor) {
+		this.bgcolor = bgcolor;
 		return instance();
 	}
-	
-	public GraphSetting setBgcolor(Color bgcolor){
-		if (bgcolor!=null){
-			this.bgcolor=bgcolor.toString();
-		} else{
-			this.bgcolor=null;
+
+	public GraphSetting setBgcolor(Color bgcolor) {
+		if (bgcolor != null) {
+			this.bgcolor = bgcolor.toString();
+		} else {
+			this.bgcolor = null;
 		}
 		return instance();
 	}
-	
-	public GraphSetting setBgcolor(int bgcolor){
-		if (this.getColorscheme()!=null){
-			this.bgcolor=""+this.getColorscheme().mod(bgcolor);
-		} else{
-			this.bgcolor=""+bgcolor;
+
+	public GraphSetting setBgcolor(int bgcolor) {
+		if (this.getColorscheme() != null) {
+			this.bgcolor = "" + this.getColorscheme().mod(bgcolor);
+		} else {
+			this.bgcolor = "" + bgcolor;
 		}
 		return instance();
 	}

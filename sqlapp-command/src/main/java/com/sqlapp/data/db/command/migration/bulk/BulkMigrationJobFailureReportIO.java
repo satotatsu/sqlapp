@@ -12,10 +12,15 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobPausedException;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
 
-/** Builds failure summaries and persists them through the bounded execution-report format. */
+/**
+ * Builds failure summaries and persists them through the bounded
+ * execution-report format.
+ */
 public final class BulkMigrationJobFailureReportIO {
 	private static final int MAX_MESSAGE_LENGTH = 2_000;
-	public record Snapshot(BulkMigrationJobFailureReport report, String fingerprint) { }
+
+	public record Snapshot(BulkMigrationJobFailureReport report, String fingerprint) {
+	}
 
 	public BulkMigrationJobFailureReport fromFailure(final BulkMigrationJobPlan plan, final Throwable failure,
 			final BulkMigrationArtifactProvenance provenance) {
@@ -41,14 +46,14 @@ public final class BulkMigrationJobFailureReportIO {
 					result.getProcessedRows(), result.getCompletedChunks(), result.isAlreadyComplete());
 		}).toList();
 		final String message = failure.getMessage() == null ? "" : failure.getMessage();
-		return validate(new BulkMigrationJobFailureReport(BulkMigrationJobFailureReport.CURRENT_FORMAT_VERSION,
-				Instant.now(), status, plan.getJobId(), plan.getFingerprint(), stoppedTask,
-				failure.getClass().getName(), message.substring(0, Math.min(message.length(), MAX_MESSAGE_LENGTH)),
-				tasks, provenance));
+		return validate(
+				new BulkMigrationJobFailureReport(BulkMigrationJobFailureReport.CURRENT_FORMAT_VERSION, Instant.now(),
+						status, plan.getJobId(), plan.getFingerprint(), stoppedTask, failure.getClass().getName(),
+						message.substring(0, Math.min(message.length(), MAX_MESSAGE_LENGTH)), tasks, provenance));
 	}
 
-	public Snapshot writeSnapshot(final Path file,
-			final BulkMigrationJobFailureReport report, final Long maxFileSizeBytes) {
+	public Snapshot writeSnapshot(final Path file, final BulkMigrationJobFailureReport report,
+			final Long maxFileSizeBytes) {
 		validate(report);
 		return FailureWriter.write(file, report, maxFileSizeBytes);
 	}
@@ -59,10 +64,10 @@ public final class BulkMigrationJobFailureReportIO {
 
 	private static BulkMigrationJobFailureReport validate(final BulkMigrationJobFailureReport report) {
 		if (report == null || report.formatVersion() != 1 || report.failedAt() == null
-				|| !("FAILED".equals(report.status()) || "PAUSED".equals(report.status()))
-				|| report.jobId() == null || report.jobId().isBlank() || report.planFingerprint() == null
-				|| report.planFingerprint().isBlank() || report.failureType() == null || report.failureType().isBlank()
-				|| report.failureMessage() == null || report.failureMessage().length() > MAX_MESSAGE_LENGTH) {
+				|| !("FAILED".equals(report.status()) || "PAUSED".equals(report.status())) || report.jobId() == null
+				|| report.jobId().isBlank() || report.planFingerprint() == null || report.planFingerprint().isBlank()
+				|| report.failureType() == null || report.failureType().isBlank() || report.failureMessage() == null
+				|| report.failureMessage().length() > MAX_MESSAGE_LENGTH) {
 			throw new CommandException("Bulk migration failure report header is invalid");
 		}
 		final var ids = new HashSet<String>();
@@ -76,8 +81,7 @@ public final class BulkMigrationJobFailureReportIO {
 	}
 
 	private static final class FailureWriter {
-		static Snapshot write(final Path file,
-				final BulkMigrationJobFailureReport report,
+		static Snapshot write(final Path file, final BulkMigrationJobFailureReport report,
 				final Long maxFileSizeBytes) {
 			try {
 				final var converter = new com.sqlapp.util.JsonConverter();
@@ -86,18 +90,19 @@ public final class BulkMigrationJobFailureReportIO {
 						temporary -> converter.writeJsonValue(temporary.toFile(), report));
 				final byte[] bytes = com.sqlapp.data.db.command.migration.internal.BoundedMigrationFile.read(file,
 						maxFileSizeBytes, "maxExecutionReportFileSizeBytes", "Bulk migration failure report");
-				return new Snapshot(report,
-						"sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+				return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 			} catch (java.io.IOException e) {
 				throw new CommandException("Failed to write bulk migration failure report: " + file, e);
 			}
 		}
+
 		static BulkMigrationJobFailureReport read(final Path file, final Long maxFileSizeBytes) {
 			try {
 				final byte[] bytes = com.sqlapp.data.db.command.migration.internal.BoundedMigrationFile.read(file,
 						maxFileSizeBytes, "maxExecutionReportFileSizeBytes", "Bulk migration failure report");
 				return validate(new com.sqlapp.util.JsonConverter().fromJsonString(
-						new String(bytes, java.nio.charset.StandardCharsets.UTF_8), BulkMigrationJobFailureReport.class));
+						new String(bytes, java.nio.charset.StandardCharsets.UTF_8),
+						BulkMigrationJobFailureReport.class));
 			} catch (java.io.IOException e) {
 				throw new CommandException("Failed to read bulk migration failure report: " + file, e);
 			}

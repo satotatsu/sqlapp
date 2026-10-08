@@ -5,7 +5,6 @@
  */
 package com.sqlapp.data.db.command.migration.legacy;
 
-
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;

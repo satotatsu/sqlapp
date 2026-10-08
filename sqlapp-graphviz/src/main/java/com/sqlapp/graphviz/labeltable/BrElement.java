@@ -28,14 +28,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class BrElement extends AbstractHtmlElement{
-	private Align align=null;
+@EqualsAndHashCode(callSuper = true)
+public class BrElement extends AbstractHtmlElement {
+	private Align align = null;
 
-	protected String getElementName(){
+	protected String getElementName() {
 		return "br";
 	}
 

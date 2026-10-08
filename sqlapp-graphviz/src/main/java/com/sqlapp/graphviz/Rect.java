@@ -25,22 +25,22 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class Rect extends AbstractGraphVizElement{
+@EqualsAndHashCode(callSuper = true)
+public class Rect extends AbstractGraphVizElement {
 	private final double llx;
 	private final double lly;
 	private final double urx;
 	private final double ury;
 
-	public Rect(double llx, double lly, double urx, double ury){
-		this.llx=llx;
-		this.lly=lly;
-		this.urx=urx;
-		this.ury=ury;
+	public Rect(double llx, double lly, double urx, double ury) {
+		this.llx = llx;
+		this.lly = lly;
+		this.urx = urx;
+		this.ury = ury;
 	}
-	
+
 	@Override
-	public String toString(){
+	public String toString() {
 		return String.format("%f,%f,%f,%f", llx, lly, urx, ury);
 	}
 }

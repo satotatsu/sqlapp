@@ -12,17 +12,14 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 /** Generates UCanAccess-compatible conditional INSERT SQL. */
-public class MdbInsertSelectNotExistsFactory
-		extends AbstractInsertSelectNotExistsTableFactory<MdbSqlBuilder> {
+public class MdbInsertSelectNotExistsFactory extends AbstractInsertSelectNotExistsTableFactory<MdbSqlBuilder> {
 	@Override
-	protected String getColumnParameterExpression(final Column column,
-			final String defaultValue) {
+	protected String getColumnParameterExpression(final Column column, final String defaultValue) {
 		return MdbParameterExpression.of(column, defaultValue);
 	}
 
 	@Override
-	protected void addInsertSelectTable(final Table table,
-			final SqlSignature signature, final MdbSqlBuilder builder) {
+	protected void addInsertSelectTable(final Table table, final SqlSignature signature, final MdbSqlBuilder builder) {
 		builder.insert().into();
 		builder.name(table, getOptions().isDecorateSchemaName());
 		addTableComment(table, builder);
@@ -30,12 +27,10 @@ public class MdbInsertSelectNotExistsFactory
 		builder.lineBreak().brackets(() -> {
 			builder.indent(() -> {
 				for (final Column column : table.getColumns()) {
-					if (!isInsertable(column) || isAutoIncrementColumn(column)
-							|| isFormulaColumn(column)) {
+					if (!isInsertable(column) || isAutoIncrementColumn(column) || isFormulaColumn(column)) {
 						continue;
 					}
-					builder.lineBreak().comma(count[0] > 0)
-							.space(2, count[0] == 0).name(column);
+					builder.lineBreak().comma(count[0] > 0).space(2, count[0] == 0).name(column);
 					count[0]++;
 				}
 			});
@@ -45,12 +40,10 @@ public class MdbInsertSelectNotExistsFactory
 		count[0] = 0;
 		builder.indent(() -> {
 			for (final Column column : table.getColumns()) {
-				if (!isInsertable(column) || isAutoIncrementColumn(column)
-						|| isFormulaColumn(column)) {
+				if (!isInsertable(column) || isAutoIncrementColumn(column) || isFormulaColumn(column)) {
 					continue;
 				}
-				builder.lineBreak().comma(count[0] > 0).space(2, count[0] == 0)
-						._add(getValueDefinitionSimple(column));
+				builder.lineBreak().comma(count[0] > 0).space(2, count[0] == 0)._add(getValueDefinitionSimple(column));
 				count[0]++;
 			}
 		});
@@ -58,8 +51,7 @@ public class MdbInsertSelectNotExistsFactory
 		builder.lineBreak().where().not().exists().lineBreak();
 		builder.brackets(true, () -> {
 			builder.select().space()._add("1");
-			builder.lineBreak().from().name(table,
-					getOptions().isDecorateSchemaName());
+			builder.lineBreak().from().name(table, getOptions().isDecorateSchemaName());
 			addKeyColumnsCondition(table, signature, builder);
 		});
 	}

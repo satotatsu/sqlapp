@@ -23,14 +23,14 @@ import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.util.StaxWriter;
 
-public class CharactersElement extends AbstractHtmlElement{
+public class CharactersElement extends AbstractHtmlElement {
 
 	private final String value;
-	
-	protected CharactersElement(String value){
-		this.value=value;
+
+	protected CharactersElement(String value) {
+		this.value = value;
 	}
-	
+
 	@Override
 	protected void writeXml(StaxWriter staxWriter) throws XMLStreamException {
 		staxWriter.writeCharacters(value);

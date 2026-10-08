@@ -18,7 +18,6 @@ public class MdbUnsupportedViewFactory extends SimpleSqlFactory<View, MdbSqlBuil
 	@Override
 	public List<SqlOperation> createSql(final View view) {
 		throw new UnsupportedOperationException(
-				"UCanAccess 5.1.6 does not support CREATE or DROP VIEW for Access saved queries: "
-						+ view.getName());
+				"UCanAccess 5.1.6 does not support CREATE or DROP VIEW for Access saved queries: " + view.getName());
 	}
 }

@@ -345,8 +345,8 @@ public class ImportDataCommand extends AbstractExportCommand
 	}
 
 	private RowValueConverter createRowValueConverter() {
-		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(),
-				getContext(), (r, c, v) -> getRowValueConverter() == null ? v : getRowValueConverter().apply(r, c, v));
+		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(), getContext(),
+				(r, c, v) -> getRowValueConverter() == null ? v : getRowValueConverter().apply(r, c, v));
 	}
 
 	private void readImportFiles(final Table table, final List<File> files)
@@ -375,9 +375,9 @@ public class ImportDataCommand extends AbstractExportCommand
 
 	private void readFiles(final Table table, final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
-		table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(),
-				getCsvSkipHeaderRowsSize(), getExcelSkipHeaderRowsSize(), getJsonConverter(),
-				getYamlConverter(), getTomlConverter(), createRowValueConverter()));
+		table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(), getCsvSkipHeaderRowsSize(),
+				getExcelSkipHeaderRowsSize(), getJsonConverter(), getYamlConverter(), getTomlConverter(),
+				createRowValueConverter()));
 	}
 
 	protected void readFileAsXml(final Table table, final File file, final DataFormat workbookFileType)

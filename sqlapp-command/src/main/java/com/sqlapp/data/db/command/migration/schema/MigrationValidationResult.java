@@ -3,7 +3,9 @@ package com.sqlapp.data.db.command.migration.schema;
 
 import java.util.List;
 
-/** Checksum results for applied migrations; unverified entries are not failures. */
+/**
+ * Checksum results for applied migrations; unverified entries are not failures.
+ */
 public record MigrationValidationResult(List<Entry> entries) {
 	public MigrationValidationResult {
 		entries = List.copyOf(entries);

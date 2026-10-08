@@ -25,32 +25,32 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class Port extends AbstractGraphVizElement{
+@EqualsAndHashCode(callSuper = true)
+public class Port extends AbstractGraphVizElement {
 
 	private String value;
 
-	public Port(final String value){
-		this.value=value;
+	public Port(final String value) {
+		this.value = value;
 	}
 
-	@Getter(value=lombok.AccessLevel.PUBLIC)
-	@Setter(value=lombok.AccessLevel.PROTECTED)
+	@Getter(value = lombok.AccessLevel.PUBLIC)
+	@Setter(value = lombok.AccessLevel.PROTECTED)
 	private PortCollection parent;
 
 	@Override
-	public String toString(){
-		if (getValue()==null||getValue().length()==0){
+	public String toString() {
+		if (getValue() == null || getValue().length() == 0) {
 			return "";
 		}
 		return escapeName(getValue().replace(" ", "_"));
 	}
-	
-	public String getValue(){
+
+	public String getValue() {
 		return value;
 	}
-	
-	public String getEscapedValue(){
+
+	public String getEscapedValue() {
 		return this.escapeName(value);
 	}
 }

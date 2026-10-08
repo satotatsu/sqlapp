@@ -18,18 +18,12 @@
  */
 
 package com.sqlapp.graphviz;
+
 /**
  * 
  * @author tatsuo satoh
  * @see <a href="https://graphviz.org/docs/layouts/">layouts</a>
  */
 public enum Layout {
-	dot(),
-	neato(),
-	twopi(),
-	circo(),
-	fdp(),
-	osage(),
-	patchwork(),
-	sfdp(),
+	dot(), neato(), twopi(), circo(), fdp(), osage(), patchwork(), sfdp(),
 }

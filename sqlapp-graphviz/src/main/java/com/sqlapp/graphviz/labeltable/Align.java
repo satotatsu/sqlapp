@@ -20,5 +20,5 @@
 package com.sqlapp.graphviz.labeltable;
 
 public enum Align {
-	CENTER,LEFT, RIGHT,TEXT
+	CENTER, LEFT, RIGHT, TEXT
 }

@@ -322,8 +322,8 @@ public class DbVersionFileHandler implements EncodingProperty {
 				throw new IllegalStateException("SQL source unavailable for checksum: " + versionNumber);
 			}
 			try {
-				return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-						.digest(upSqlText.getBytes(StandardCharsets.UTF_8)));
+				return "sha256:" + HexFormat.of().formatHex(
+						MessageDigest.getInstance("SHA-256").digest(upSqlText.getBytes(StandardCharsets.UTF_8)));
 			} catch (final NoSuchAlgorithmException e) {
 				throw new IllegalStateException(e);
 			}

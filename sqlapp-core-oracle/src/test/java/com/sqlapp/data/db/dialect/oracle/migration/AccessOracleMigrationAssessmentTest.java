@@ -18,42 +18,56 @@ class AccessOracleMigrationAssessmentTest {
 	@Test
 	void mappedBooleanAndTypeBoundariesRespectOracleVersion() {
 		final var schema = schema("BOOLEAN");
-		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), false, true);
+		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()),
+				false, true);
 		final var id = new MigrationAssessment.ObjectId(null, "source", "column", "値", "顧客");
 		final var tableId = new MigrationAssessment.ObjectId(null, "source", "table", "顧客");
 		final var provider = new OracleDatabaseMigrationAssessmentProvider();
-		assertEquals("NUMBER(1,0)", provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "19c"));
-		assertEquals("BOOLEAN", provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "23ai"));
+		assertEquals("NUMBER(1,0)",
+				provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "19c"));
+		assertEquals("BOOLEAN",
+				provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "23ai"));
 		for (final var entry : java.util.Map.of("19c", "BOOLEAN", "23ai", "BOOLEAN", "26ai", "RAW(2001)").entrySet()) {
-			final var mapping = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping("fp", "oracle", entry.getKey(), List.of(
-					new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "T", List.of(
-							new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.ColumnMapping(id, "C", entry.getValue(), true, null)))));
+			final var mapping = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping("fp",
+					"oracle", entry.getKey(),
+					List.of(new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(
+							tableId, "APP", "T",
+							List.of(new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.ColumnMapping(
+									id, "C", entry.getValue(), true, null)))));
 			final var result = provider.assessMapping(source, entry.getKey(), mapping);
 			assertEquals(!entry.getKey().equals("23ai"), result.hasBlockers(), entry.toString());
 		}
-		final var invalidIdentity = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping("fp", "oracle", "23ai", List.of(
-				new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(tableId, "APP", "T", List.of(
-						new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.ColumnMapping(
+		final var invalidIdentity = new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping(
+				"fp", "oracle", "23ai",
+				List.of(new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.TableMapping(
+						tableId, "APP", "T",
+						List.of(new com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping.ColumnMapping(
 								id, "C", "BOOLEAN", true, true, null)))));
 		assertTrue(provider.assessMapping(source, "23ai", invalidIdentity).findings().stream()
 				.anyMatch(f -> f.ruleId().equals("access.oracle.mapping.identity")));
 	}
+
 	@Test
 	void observedEmptyStringsRespectRequiredColumnsAndQualifiedIdentity() {
 		final var schema = schema("TEXT");
 		final var id = new MigrationAssessment.ObjectId(null, "source", "column", "値", "顧客");
 		final var profile = new MigrationDataProfile(List.of(new TableProfile(
-				new MigrationAssessment.ObjectId(null, "source", "table", "顧客"), 1,
-				List.of(new ColumnProfile(id, "TEXT", Coverage.SCANNED, 0L, new TextStatistics(1, 0L, 0L, 0L), null, null)))));
-		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true, profile);
+				new MigrationAssessment.ObjectId(null, "source", "table", "顧客"), 1, List.of(new ColumnProfile(id,
+						"TEXT", Coverage.SCANNED, 0L, new TextStatistics(1, 0L, 0L, 0L), null, null)))));
+		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()),
+				true, true, profile);
 		final var provider = new OracleDatabaseMigrationAssessmentProvider();
-		assertEquals(MigrationAssessment.Severity.WARNING, provider.assess(source, "19c").findings().stream()
-				.filter(f -> f.ruleId().equals("access.oracle.observed-empty-string")).findFirst().orElseThrow().severity());
+		assertEquals(MigrationAssessment.Severity.WARNING,
+				provider.assess(source, "19c").findings().stream()
+						.filter(f -> f.ruleId().equals("access.oracle.observed-empty-string")).findFirst().orElseThrow()
+						.severity());
 		schema.getTables().getFirst().getColumns().getFirst().setNotNull(true);
 		assertTrue(provider.assess(source, "19c").hasBlockers());
 		schema.setName("different-source");
-		assertFalse(provider.assess(source, "19c").findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.observed-empty-string")));
+		assertFalse(provider.assess(source, "19c").findings().stream()
+				.anyMatch(f -> f.ruleId().equals("access.oracle.observed-empty-string")));
 	}
+
 	@Test
 	void serviceProviderRejectsUnimplementedPairsAndVersions() {
 		final var provider = com.sqlapp.data.schemas.migration.assessment.DatabaseMigrationAssessmentProvider
@@ -64,9 +78,12 @@ class AccessOracleMigrationAssessmentTest {
 		assertFalse(provider.supports("Microsoft Access", "oracle", "future"));
 		assertFalse(provider.supports("Microsoft Access", "oracle", null));
 		final var source = new com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource(
-				java.util.List.of(schema("BOOLEAN")), new MigrationAssessment(java.util.List.of(), java.util.List.of()), false, true);
-		assertTrue(provider.assess(source, "19c").findings().stream().anyMatch(f -> f.ruleId().equals("access.oracle.environment")));
+				java.util.List.of(schema("BOOLEAN")), new MigrationAssessment(java.util.List.of(), java.util.List.of()),
+				false, true);
+		assertTrue(provider.assess(source, "19c").findings().stream()
+				.anyMatch(f -> f.ruleId().equals("access.oracle.environment")));
 	}
+
 	private Schema schema(final String type) {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var table = new Table("顧客");
@@ -83,8 +100,10 @@ class AccessOracleMigrationAssessmentTest {
 		final var before = schema.clone();
 		for (final String version : new String[] { "19c", "21c", "23ai", "26ai" }) {
 			final var result = AccessOracleMigrationAssessment.assess(schema, version);
-			final var type = result.findings().stream().filter(f -> f.ruleId().equals("access.oracle.type")).findFirst().orElseThrow();
-			assertTrue(type.action().contains(version.equals("19c") || version.equals("21c") ? "NUMBER(1)" : "BOOLEAN"));
+			final var type = result.findings().stream().filter(f -> f.ruleId().equals("access.oracle.type")).findFirst()
+					.orElseThrow();
+			assertTrue(
+					type.action().contains(version.equals("19c") || version.equals("21c") ? "NUMBER(1)" : "BOOLEAN"));
 			assertEquals(MigrationAssessment.Severity.REVIEW, type.severity());
 			assertFalse(result.hasBlockers());
 		}
@@ -116,9 +135,11 @@ class AccessOracleMigrationAssessmentTest {
 	@Test
 	void rejectsUnknownTargetsAndOtherSources() {
 		for (final String version : new String[] { null, "", "12c", "19", "future" }) {
-			assertThrows(IllegalArgumentException.class, () -> AccessOracleMigrationAssessment.assess(schema("TEXT"), version));
+			assertThrows(IllegalArgumentException.class,
+					() -> AccessOracleMigrationAssessment.assess(schema("TEXT"), version));
 		}
-		assertThrows(IllegalArgumentException.class, () -> AccessOracleMigrationAssessment.assess(new Schema("x"), "19c"));
+		assertThrows(IllegalArgumentException.class,
+				() -> AccessOracleMigrationAssessment.assess(new Schema("x"), "19c"));
 		assertEquals("26ai", AccessOracleMigrationAssessment.validateTargetVersion("26AI"));
 	}
 }

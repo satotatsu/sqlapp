@@ -18,61 +18,51 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 
 /** Generates the subset of Access ALTER TABLE supported by UCanAccess. */
-public class MdbAlterTableFactory
-		extends AbstractAlterTableFactory<MdbSqlBuilder> {
+public class MdbAlterTableFactory extends AbstractAlterTableFactory<MdbSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createDiffSql(final DbObjectDifference difference) {
 		final Table original = difference.getOriginal(Table.class);
 		final Table target = difference.getTarget(Table.class);
-		if (original != null && target != null
-				&& !Objects.equals(original.getName(), target.getName())) {
+		if (original != null && target != null && !Objects.equals(original.getName(), target.getName())) {
 			throw unsupported("table rename");
 		}
 		return super.createDiffSql(difference);
 	}
 
 	@Override
-	protected void addDeleteColumn(final Table originalTable,
-			final Table table, final DbObjectDifference diff,
+	protected void addDeleteColumn(final Table originalTable, final Table table, final DbObjectDifference diff,
 			final List<SqlOperation> result) {
 		throw unsupported("DROP COLUMN");
 	}
 
 	@Override
-	protected void addAlterColumn(final Table originalTable, final Table table,
-			final Column oldColumn, final Column column,
-			final DbObjectDifference diff,
-			final List<SqlOperation> result) {
+	protected void addAlterColumn(final Table originalTable, final Table table, final Column oldColumn,
+			final Column column, final DbObjectDifference diff, final List<SqlOperation> result) {
 		throw unsupported("column definition alteration");
 	}
 
 	@Override
-	protected void addRenameColumn(final Table originalTable,
-			final Table table, final Column oldColumn, final Column column,
-			final DbObjectDifference diff,
-			final List<SqlOperation> result) {
+	protected void addRenameColumn(final Table originalTable, final Table table, final Column oldColumn,
+			final Column column, final DbObjectDifference diff, final List<SqlOperation> result) {
 		throw unsupported("column rename");
 	}
 
 	@Override
-	protected void addDropConstraintDefinition(final Table originalTable,
-			final Table table, final Constraint originalConstraint,
-			final Constraint constraint, final DbObjectDifference diff,
+	protected void addDropConstraintDefinition(final Table originalTable, final Table table,
+			final Constraint originalConstraint, final Constraint constraint, final DbObjectDifference diff,
 			final List<SqlOperation> result) {
 		throw unsupported("DROP CONSTRAINT");
 	}
 
 	@Override
-	protected void addDropIndexDefinition(final Table originalTable,
-			final Table table, final Index originalIndex, final Index index,
-			final DbObjectDifference diff,
-			final List<SqlOperation> result) {
+	protected void addDropIndexDefinition(final Table originalTable, final Table table, final Index originalIndex,
+			final Index index, final DbObjectDifference diff, final List<SqlOperation> result) {
 		throw unsupported("DROP INDEX");
 	}
 
 	private UnsupportedOperationException unsupported(final String operation) {
-		return new UnsupportedOperationException("Microsoft Access " + operation
-				+ " is not persistently supported by UCanAccess 5.1.6");
+		return new UnsupportedOperationException(
+				"Microsoft Access " + operation + " is not persistently supported by UCanAccess 5.1.6");
 	}
 }

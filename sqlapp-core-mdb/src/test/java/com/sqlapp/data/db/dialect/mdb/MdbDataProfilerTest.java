@@ -17,13 +17,12 @@ class MdbDataProfilerTest {
 	void handlesUnsignedBytesLargeIntegersGuidsBooleansAndExtendedDates() throws Exception {
 		final Path file = directory.resolve("native.accdb");
 		try (var database = DatabaseBuilder.create(Database.FileFormat.V2019, file.toFile())) {
-			new TableBuilder("Native")
-					.addColumn(new ColumnBuilder("Byte", DataType.BYTE))
+			new TableBuilder("Native").addColumn(new ColumnBuilder("Byte", DataType.BYTE))
 					.addColumn(new ColumnBuilder("Big", DataType.BIG_INT))
 					.addColumn(new ColumnBuilder("Guid", DataType.GUID))
 					.addColumn(new ColumnBuilder("Flag", DataType.BOOLEAN))
-					.addColumn(new ColumnBuilder("Extended", DataType.EXT_DATE_TIME)).toTable(database)
-					.addRow(255, Long.MAX_VALUE, "{12345678-1234-1234-1234-1234567890AB}", true,
+					.addColumn(new ColumnBuilder("Extended", DataType.EXT_DATE_TIME)).toTable(database).addRow(255,
+							Long.MAX_VALUE, "{12345678-1234-1234-1234-1234567890AB}", true,
 							LocalDateTime.of(2026, 1, 2, 3, 4, 5, 123456700));
 		}
 		final var table = provider.load(file, true).dataProfile().tables().getFirst();
@@ -33,8 +32,11 @@ class MdbDataProfilerTest {
 		assertEquals(Coverage.SCANNED, column(table, "Flag").coverage());
 		assertEquals(7, column(table, "Extended").dateTime().maximumFractionalDigits());
 	}
-	@TempDir Path directory;
+
+	@TempDir
+	Path directory;
 	private final MdbMigrationAssessmentSourceProvider provider = new MdbMigrationAssessmentSourceProvider();
+
 	private ColumnProfile column(TableProfile table, String name) {
 		return table.columns().stream().filter(c -> c.column().name().equals(name)).findFirst().orElseThrow();
 	}
@@ -44,15 +46,18 @@ class MdbDataProfilerTest {
 		final Path file = directory.resolve("profile.accdb");
 		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, file.toFile())) {
 			final var table = new TableBuilder("顧客")
-					.addColumn(new ColumnBuilder("Text", DataType.TEXT).withProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, true))
+					.addColumn(new ColumnBuilder("Text", DataType.TEXT).withProperty(PropertyMap.ALLOW_ZERO_LEN_PROP,
+							true))
 					.addColumn(new ColumnBuilder("Amount", DataType.NUMERIC).withPrecision(12).withScale(4))
 					.addColumn(new ColumnBuilder("Date", DataType.SHORT_DATE_TIME))
 					.addColumn(new ColumnBuilder("AllNull", DataType.TEXT))
 					.addColumn(new ColumnBuilder("Payload", DataType.OLE)).toTable(database);
 			table.addRow(null, null, null, null, new byte[] { 1, 2, 3 });
 			table.addRow("", new BigDecimal("-12.3400"), LocalDateTime.of(1600, 1, 2, 0, 0), null, null);
-			table.addRow("あ😀", new BigDecimal("123.4500"), LocalDateTime.of(2026, 1, 2, 3, 4, 5, 123000000), null, null);
-			// Existing invalid rows can survive a later metadata change; the profiler must report them.
+			table.addRow("あ😀", new BigDecimal("123.4500"), LocalDateTime.of(2026, 1, 2, 3, 4, 5, 123000000), null,
+					null);
+			// Existing invalid rows can survive a later metadata change; the profiler must
+			// report them.
 			table.getColumn("Text").getProperties().put(PropertyMap.REQUIRED_PROP, true);
 			table.getColumn("Text").getProperties().save();
 			database.createLinkedTable("External", directory.resolve("missing.accdb").toString(), "T");
@@ -65,8 +70,7 @@ class MdbDataProfilerTest {
 				.anyMatch(finding -> finding.ruleId().equals("access.allow-zero-length")
 						&& finding.object().name().equals("Text")));
 		assertEquals(1, metadata.assessment().inventory().stream()
-				.filter(item -> item.type().equals("accessAllowZeroLengthColumns"))
-				.findFirst().orElseThrow().count());
+				.filter(item -> item.type().equals("accessAllowZeroLengthColumns")).findFirst().orElseThrow().count());
 		final var result = provider.load(file, true);
 		assertTrue(result.dataScanned());
 		assertFalse(result.relationshipsCollected());
@@ -90,9 +94,12 @@ class MdbDataProfilerTest {
 		assertNull(column(table, "AllNull").text().maximumCodePoints());
 		assertEquals(Coverage.UNSUPPORTED, column(table, "Payload").coverage());
 		assertNull(column(table, "Payload").nullCount());
-		assertTrue(result.assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.data.required-null") && f.severity() == Severity.BLOCKER));
-		assertFalse(result.assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.data-not-scanned")));
-		assertTrue(result.assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.data-scan-coverage")));
+		assertTrue(result.assessment().findings().stream()
+				.anyMatch(f -> f.ruleId().equals("access.data.required-null") && f.severity() == Severity.BLOCKER));
+		assertFalse(
+				result.assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.data-not-scanned")));
+		assertTrue(
+				result.assessment().findings().stream().anyMatch(f -> f.ruleId().equals("access.data-scan-coverage")));
 		assertTrue(result.schemas().getFirst().getTables().getFirst().getRows().isEmpty());
 		assertFalse(result.dataProfile().toString().contains("あ😀"));
 		assertArrayEquals(before, Files.readAllBytes(file));
@@ -103,16 +110,19 @@ class MdbDataProfilerTest {
 	void countsRowsEvenWhenEveryColumnIsExcludedAndDistinguishesEmptyTables() throws Exception {
 		final Path file = directory.resolve("binary.mdb");
 		try (var database = DatabaseBuilder.create(Database.FileFormat.V2000, file.toFile())) {
-			final var table = new TableBuilder("BinaryOnly").addColumn(new ColumnBuilder("B", DataType.OLE)).toTable(database);
+			final var table = new TableBuilder("BinaryOnly").addColumn(new ColumnBuilder("B", DataType.OLE))
+					.toTable(database);
 			table.addRow(new byte[] { 1 });
 			table.addRow(new Object[] { null });
 			new TableBuilder("Empty").addColumn(new ColumnBuilder("N", DataType.LONG)).toTable(database);
 		}
 		final var profile = provider.load(file, true).dataProfile();
-		final var binary = profile.tables().stream().filter(t -> t.table().name().equals("BinaryOnly")).findFirst().orElseThrow();
+		final var binary = profile.tables().stream().filter(t -> t.table().name().equals("BinaryOnly")).findFirst()
+				.orElseThrow();
 		assertEquals(2, binary.rowCount());
 		assertEquals(Coverage.UNSUPPORTED, binary.columns().getFirst().coverage());
-		final var empty = profile.tables().stream().filter(t -> t.table().name().equals("Empty")).findFirst().orElseThrow();
+		final var empty = profile.tables().stream().filter(t -> t.table().name().equals("Empty")).findFirst()
+				.orElseThrow();
 		assertEquals(0, empty.rowCount());
 		assertEquals(0L, empty.columns().getFirst().nullCount());
 		assertNull(empty.columns().getFirst().numeric().minimum());
@@ -123,7 +133,8 @@ class MdbDataProfilerTest {
 		final Path file = directory.resolve("numbers.accdb");
 		try (var database = DatabaseBuilder.create(Database.FileFormat.V2010, file.toFile())) {
 			final var table = new TableBuilder("Numbers").addColumn(new ColumnBuilder("N", DataType.DOUBLE))
-					.addColumn(new ColumnBuilder("Zero", DataType.NUMERIC).withPrecision(4).withScale(2)).toTable(database);
+					.addColumn(new ColumnBuilder("Zero", DataType.NUMERIC).withPrecision(4).withScale(2))
+					.toTable(database);
 			table.addRow(Double.NaN, BigDecimal.ZERO);
 			table.addRow(Double.POSITIVE_INFINITY, BigDecimal.ZERO);
 			table.addRow(-1.25, BigDecimal.ZERO);

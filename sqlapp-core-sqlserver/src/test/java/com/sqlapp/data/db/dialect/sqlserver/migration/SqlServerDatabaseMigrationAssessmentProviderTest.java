@@ -16,36 +16,49 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 		final var schema = schema("TEXT", "NUMERIC", "SHORT_DATE_TIME", "TEXT");
 		final var ids = java.util.stream.IntStream.range(0, 4)
 				.mapToObj(i -> new ObjectId(null, "source", "column", "C" + i, "顧客")).toList();
-		final var profile = new MigrationDataProfile(List.of(new TableProfile(new ObjectId(null, "source", "table", "顧客"), 1, List.of(
-				new ColumnProfile(ids.get(0), "TEXT", Coverage.SCANNED, 1L, new TextStatistics(0, 2L, 3L, 7L), null, null),
-				new ColumnProfile(ids.get(1), "NUMERIC", Coverage.SCANNED, 0L, null, new NumericStatistics(new java.math.BigDecimal("123.45"), new java.math.BigDecimal("123.45"), 3, 2, 0), null),
-				new ColumnProfile(ids.get(2), "SHORT_DATE_TIME", Coverage.SCANNED, 0L, null, null, new DateTimeStatistics("1600-01-01T00:00", "1600-01-01T00:00", 0)),
-				new ColumnProfile(ids.get(3), "TEXT", Coverage.SCANNED, 0L, new TextStatistics(0, 1L, 1L, 1L), null, null)))));
-		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), true, true, profile);
+		final var profile = new MigrationDataProfile(
+				List.of(new TableProfile(new ObjectId(null, "source", "table", "顧客"), 1,
+						List.of(new ColumnProfile(ids.get(0), "TEXT", Coverage.SCANNED, 1L,
+								new TextStatistics(0, 2L, 3L, 7L), null, null),
+								new ColumnProfile(ids.get(1), "NUMERIC", Coverage.SCANNED, 0L, null,
+										new NumericStatistics(new java.math.BigDecimal("123.45"),
+												new java.math.BigDecimal("123.45"), 3, 2, 0),
+										null),
+								new ColumnProfile(ids.get(2), "SHORT_DATE_TIME", Coverage.SCANNED, 0L, null, null,
+										new DateTimeStatistics("1600-01-01T00:00", "1600-01-01T00:00", 0)),
+								new ColumnProfile(ids.get(3), "TEXT", Coverage.SCANNED, 0L,
+										new TextStatistics(0, 1L, 1L, 1L), null, null)))));
+		final var source = new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()),
+				true, true, profile);
 		final var columns = List.of(
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(0), "C0", "nvarchar(2)", false, true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(1), "C1", "decimal(4,2)", true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(2), "C2", "datetime", true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(3), "C3", "nvarchar(5000)", true, null),
 				new ResolvedMigrationTargetMapping.ColumnMapping(ids.get(3), "F", "float(53)", true, null));
-		final var mapping = new ResolvedMigrationTargetMapping("fp", "sqlserver", "2022", List.of(
-				new ResolvedMigrationTargetMapping.TableMapping(new ObjectId(null, "source", "table", "顧客"), "dbo", "A".repeat(129), columns)));
+		final var mapping = new ResolvedMigrationTargetMapping("fp", "sqlserver", "2022",
+				List.of(new ResolvedMigrationTargetMapping.TableMapping(new ObjectId(null, "source", "table", "顧客"),
+						"dbo", "A".repeat(129), columns)));
 		final var result = provider.assessMapping(source, "2022", mapping);
 		assertTrue(result.hasBlockers());
 		final var rules = result.findings().stream().map(Finding::ruleId).toList();
-		assertTrue(rules.containsAll(List.of("access.sqlserver.mapping.observed-null", "access.sqlserver.mapping.observed-text-overflow",
-				"access.sqlserver.mapping.observed-number-overflow", "access.sqlserver.mapping.observed-datetime-range",
-				"access.sqlserver.mapping.type", "access.sqlserver.mapping.identifier-length", "access.sqlserver.mapping.identity")));
-		assertEquals(1, result.findings().stream().filter(f -> f.ruleId().equals("access.sqlserver.mapping.type")).count());
-		assertEquals(5, result.inventory().stream().filter(i -> i.type().equals("mappedColumns")).findFirst().orElseThrow().count());
+		assertTrue(rules.containsAll(List.of("access.sqlserver.mapping.observed-null",
+				"access.sqlserver.mapping.observed-text-overflow", "access.sqlserver.mapping.observed-number-overflow",
+				"access.sqlserver.mapping.observed-datetime-range", "access.sqlserver.mapping.type",
+				"access.sqlserver.mapping.identifier-length", "access.sqlserver.mapping.identity")));
+		assertEquals(1,
+				result.findings().stream().filter(f -> f.ruleId().equals("access.sqlserver.mapping.type")).count());
+		assertEquals(5, result.inventory().stream().filter(i -> i.type().equals("mappedColumns")).findFirst()
+				.orElseThrow().count());
 	}
+
 	@Test
 	void observedDatesWarnAboutLegacyDatetimeOnlyBelowItsBoundary() {
 		for (final String date : List.of("1752-12-31T23:59:59", "1753-01-01T00:00:00")) {
-			final var column = new ColumnProfile(new ObjectId(null, "source", "column", "C0", "顧客"),
-					"SHORT_DATE_TIME", Coverage.SCANNED, 0L, null, null, new DateTimeStatistics(date, date, 0));
-			final var profile = new MigrationDataProfile(List.of(new TableProfile(
-					new ObjectId(null, "source", "table", "顧客"), 1, List.of(column))));
+			final var column = new ColumnProfile(new ObjectId(null, "source", "column", "C0", "顧客"), "SHORT_DATE_TIME",
+					Coverage.SCANNED, 0L, null, null, new DateTimeStatistics(date, date, 0));
+			final var profile = new MigrationDataProfile(
+					List.of(new TableProfile(new ObjectId(null, "source", "table", "顧客"), 1, List.of(column))));
 			final var source = new MigrationAssessmentSource(List.of(schema("SHORT_DATE_TIME")),
 					new MigrationAssessment(List.of(), List.of()), true, true, profile);
 			final var result = provider.assess(source, "2022");
@@ -53,6 +66,7 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 			assertFalse(result.hasBlockers());
 		}
 	}
+
 	private final SqlServerDatabaseMigrationAssessmentProvider provider = new SqlServerDatabaseMigrationAssessmentProvider();
 
 	private Schema schema(String... types) {
@@ -60,18 +74,24 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 		final var table = new Table("顧客");
 		for (int i = 0; i < types.length; i++) {
 			final var column = new Column("C" + i);
-			if (types[i] != null) { column.getSpecifics().put("access.sourceType", types[i]); }
+			if (types[i] != null) {
+				column.getSpecifics().put("access.sourceType", types[i]);
+			}
 			table.getColumns().add(column);
 		}
 		schema.getTables().add(table);
 		return schema;
 	}
+
 	private MigrationAssessment assess(Schema schema) {
 		return provider.assess(source(schema), "2022");
 	}
+
 	private MigrationAssessmentSource source(Schema schema) {
-		return new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), false, true);
+		return new MigrationAssessmentSource(List.of(schema), new MigrationAssessment(List.of(), List.of()), false,
+				true);
 	}
+
 	private List<Finding> rule(MigrationAssessment assessment, String rule) {
 		return assessment.findings().stream().filter(f -> f.ruleId().equals("access.sqlserver." + rule)).toList();
 	}
@@ -91,18 +111,19 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 		}
 		assertFalse(provider.supports("Oracle", "sqlserver", "2022"));
 		assertFalse(provider.supports("Microsoft Access", "oracle", "2022"));
-		assertThrows(IllegalArgumentException.class, () -> provider.assess(source(new Schema("s").setProductName("Oracle")), "2022"));
+		assertThrows(IllegalArgumentException.class,
+				() -> provider.assess(source(new Schema("s").setProductName("Oracle")), "2022"));
 	}
 
 	@Test
 	void coversScalarTypesWithoutMutatingTheSchema() {
 		final var mappings = Map.ofEntries(Map.entry("BOOLEAN", "bit"), Map.entry("BYTE", "tinyint"),
 				Map.entry("INT", "smallint"), Map.entry("LONG", "int"), Map.entry("BIG_INT", "bigint"),
-				Map.entry("MONEY", "decimal(19,4)"), Map.entry("NUMERIC", "decimal(p,s)"),
-				Map.entry("FLOAT", "real"), Map.entry("DOUBLE", "float(53)"),
-				Map.entry("SHORT_DATE_TIME", "datetime2"), Map.entry("EXT_DATE_TIME", "datetime2"),
-				Map.entry("TEXT", "nvarchar(n)"), Map.entry("MEMO", "nvarchar(max)"),
-				Map.entry("GUID", "uniqueidentifier"), Map.entry("BINARY", "varbinary"), Map.entry("OLE", "varbinary(max)"));
+				Map.entry("MONEY", "decimal(19,4)"), Map.entry("NUMERIC", "decimal(p,s)"), Map.entry("FLOAT", "real"),
+				Map.entry("DOUBLE", "float(53)"), Map.entry("SHORT_DATE_TIME", "datetime2"),
+				Map.entry("EXT_DATE_TIME", "datetime2"), Map.entry("TEXT", "nvarchar(n)"),
+				Map.entry("MEMO", "nvarchar(max)"), Map.entry("GUID", "uniqueidentifier"),
+				Map.entry("BINARY", "varbinary"), Map.entry("OLE", "varbinary(max)"));
 		for (final var mapping : mappings.entrySet()) {
 			final var schema = schema(mapping.getKey());
 			final var before = schema.clone();
@@ -110,8 +131,10 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 			assertFalse(assessment.hasBlockers(), mapping.getKey());
 			assertTrue(rule(assessment, "type").getFirst().action().contains(mapping.getValue()), mapping.getKey());
 			assertEquals(before, schema);
-			assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("columns")).findFirst().orElseThrow().count());
-			assertNotNull(provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "2022"), mapping.getKey());
+			assertEquals(1, assessment.inventory().stream().filter(i -> i.type().equals("columns")).findFirst()
+					.orElseThrow().count());
+			assertNotNull(provider.suggestTargetType(schema.getTables().getFirst().getColumns().getFirst(), "2022"),
+					mapping.getKey());
 		}
 	}
 
@@ -119,7 +142,8 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 	void blocksComplexUnknownAndMissingNativeTypesWithColumnIdentity() {
 		for (final String type : new String[] { "COMPLEX_TYPE", "FUTURE", null }) {
 			final var assessment = assess(schema(type));
-			final var blocker = assessment.findings().stream().filter(f -> f.severity() == Severity.BLOCKER).findFirst().orElseThrow();
+			final var blocker = assessment.findings().stream().filter(f -> f.severity() == Severity.BLOCKER).findFirst()
+					.orElseThrow();
 			assertEquals("顧客", blocker.object().table());
 			assertEquals("C0", blocker.object().name());
 		}
@@ -128,7 +152,9 @@ class SqlServerDatabaseMigrationAssessmentProviderTest {
 	@Test
 	void distinguishesGuidAndNumericAutonumberAndRetainsExpressionReviews() {
 		final var schema = schema("GUID", "LONG");
-		for (final var column : schema.getTables().getFirst().getColumns()) { column.setIdentity(true); }
+		for (final var column : schema.getTables().getFirst().getColumns()) {
+			column.setIdentity(true);
+		}
 		schema.getTables().getFirst().getColumns().getFirst().setDefaultValue("GenGUID()");
 		final var result = assess(schema);
 		assertTrue(rule(result, "autonumber").get(0).action().contains("GUID generator"));

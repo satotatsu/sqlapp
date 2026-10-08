@@ -17,12 +17,14 @@ import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
 import com.sqlapp.util.YamlConverter;
 
 class GenerateAccessBulkMigrationJobConfigurationCommandTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void generatesExistingBulkJobConfiguration() throws Exception {
 		final Path schema = Files.writeString(directory.resolve("source.xml"), schema(true));
-		final Path report = Files.writeString(directory.resolve("assessment.json"), report(schema, "CUSTOMERS", "ID", null));
+		final Path report = Files.writeString(directory.resolve("assessment.json"),
+				report(schema, "CUSTOMERS", "ID", null));
 		final Path output = directory.resolve("access-load.yaml");
 		final var command = new GenerateAccessBulkMigrationJobConfigurationCommand();
 		command.setAssessmentReportFile(report.toFile());
@@ -71,7 +73,8 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 	@Test
 	void canDisablePostLoadVerification() throws Exception {
 		final Path schema = Files.writeString(directory.resolve("source.xml"), schema(true));
-		final Path report = Files.writeString(directory.resolve("assessment.json"), report(schema, "CUSTOMERS", "ID", null));
+		final Path report = Files.writeString(directory.resolve("assessment.json"),
+				report(schema, "CUSTOMERS", "ID", null));
 		final Path output = directory.resolve("job.yaml");
 		final var command = command(schema, report, output);
 		command.setVerification(false);
@@ -117,7 +120,8 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 
 		command.setCheckpointMode(BulkMigrationCheckpointMode.DATABASE);
 		command.setCheckpointDirectory("state");
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("requires checkpointMode=FILE"));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("requires checkpointMode=FILE"));
 	}
 
 	@Test
@@ -153,7 +157,8 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 		final String assessmentFingerprint = AssessMigrationCommand.fingerprint(report.toFile());
 		final String sourceFingerprint = AssessMigrationCommand.fingerprint(schema.toFile());
 		final Path ddlVerification = directory.resolve("ddl-verification.json");
-		Files.writeString(ddlVerification, ddlVerification(assessmentFingerprint, sourceFingerprint, "DEPLOYMENT_READY"));
+		Files.writeString(ddlVerification,
+				ddlVerification(assessmentFingerprint, sourceFingerprint, "DEPLOYMENT_READY"));
 		final var command = command(schema, report, directory.resolve("job.yaml"));
 		command.setDdlVerificationReportFile(ddlVerification.toFile());
 		command.setExpectedDdlVerificationReportFingerprint(
@@ -183,8 +188,7 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 				.contains("expectedDdlVerificationReportFingerprint"));
 
 		command.setExpectedDdlVerificationReportFingerprint("SHA256:" + "0".repeat(64));
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
-				.contains("lowercase SHA-256"));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("lowercase SHA-256"));
 
 		command.setDdlVerificationReportFile(null);
 		command.setExpectedDdlVerificationReportFingerprint("sha256:" + "0".repeat(64));
@@ -195,23 +199,23 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 	@Test
 	void rejectsMappingsTheExistingExecutorCannotApply() throws Exception {
 		final Path schema = Files.writeString(directory.resolve("source.xml"), schema(true));
-		final Path report = Files.writeString(directory.resolve("assessment.json"), report(schema, "CUSTOMERS_NEW", "ID", null));
+		final Path report = Files.writeString(directory.resolve("assessment.json"),
+				report(schema, "CUSTOMERS_NEW", "ID", null));
 		final Path output = directory.resolve("job.yaml");
 		final var command = command(schema, report, output);
 		command.run();
-		final var generated = new YamlConverter().fromJsonString(output.toFile(),
-				BulkMigrationJobConfiguration.class);
+		final var generated = new YamlConverter().fromJsonString(output.toFile(), BulkMigrationJobConfiguration.class);
 		assertEquals("access.CUSTOMERS_NEW", generated.getTasks().getFirst().getTargetTable());
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "CUSTOMER_ID", null));
 		command.run();
 		final var renamedColumn = new YamlConverter().fromJsonString(output.toFile(),
 				BulkMigrationJobConfiguration.class);
-		assertEquals(java.util.Map.of("ID", "CUSTOMER_ID"),
-				renamedColumn.getTasks().getFirst().getColumnMappings());
+		assertEquals(java.util.Map.of("ID", "CUSTOMER_ID"), renamedColumn.getTasks().getFirst().getColumnMappings());
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "ID", "CAST(ID AS BIGINT)"));
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("cannot apply mapping conversion"));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("cannot apply mapping conversion"));
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null)
 				.replace("\"type\":\"unmappedTables\",\"count\":0", "\"type\":\"unmappedTables\",\"count\":1"));
@@ -225,10 +229,12 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 	@Test
 	void rejectsInconsistentMappingFingerprints() throws Exception {
 		final Path schema = Files.writeString(directory.resolve("source.xml"), schema(true));
-		final Path report = Files.writeString(directory.resolve("assessment.json"), report(schema, "CUSTOMERS", "ID", null)
-				.replaceFirst("sha256:" + "2".repeat(64), "sha256:" + "3".repeat(64)));
+		final Path report = Files.writeString(directory.resolve("assessment.json"),
+				report(schema, "CUSTOMERS", "ID", null).replaceFirst("sha256:" + "2".repeat(64),
+						"sha256:" + "3".repeat(64)));
 		final var command = command(schema, report, directory.resolve("job.yaml"));
-		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("fingerprints do not match"));
+		assertTrue(
+				assertThrows(CommandException.class, command::run).getMessage().contains("fingerprints do not match"));
 	}
 
 	@Test
@@ -247,12 +253,12 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 		final Path report = directory.resolve("assessment.json");
 		final var command = command(schema, report, directory.resolve("job.yaml"));
 
-		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null)
-				.replace("\"targetProduct\":\"sqlserver\"", "\"targetProduct\":\"oracle\""));
+		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null).replace("\"targetProduct\":\"sqlserver\"",
+				"\"targetProduct\":\"oracle\""));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("target product"));
 
-		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null)
-				.replaceFirst("\"targetVersion\":\"2022\"", "\"targetVersion\":\"2019\""));
+		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null).replaceFirst("\"targetVersion\":\"2022\"",
+				"\"targetVersion\":\"2019\""));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage().contains("target version"));
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null)
@@ -314,6 +320,6 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 				 "mappingFingerprint":"sha256:%s","targetDatabase":"sqlserver","targetVersion":"2022",
 				 "verificationPolicies":["%s"],"ddlFingerprints":{}}
 				""".formatted("4".repeat(64), assessmentFingerprint, sourceFingerprint.substring("sha256:".length()),
-					"2".repeat(64), policy);
+				"2".repeat(64), policy);
 	}
 }

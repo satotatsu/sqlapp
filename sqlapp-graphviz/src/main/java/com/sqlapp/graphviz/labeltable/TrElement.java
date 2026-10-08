@@ -33,37 +33,37 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class TrElement extends AbstractHtmlElement{
-	
-	private List<TdElement> cells=new ArrayList<>();
-	
-	protected String getElementName(){
+@EqualsAndHashCode(callSuper = true)
+public class TrElement extends AbstractHtmlElement {
+
+	private List<TdElement> cells = new ArrayList<>();
+
+	protected String getElementName() {
 		return "tr";
 	}
 
-	public TrElement addCell(Consumer<TdElement> c){
-		TdElement element=new TdElement();
+	public TrElement addCell(Consumer<TdElement> c) {
+		TdElement element = new TdElement();
 		element.setParent(this);
 		this.cells.add(element);
 		c.accept(element);
 		return instance();
 	}
 
-	public TrElement addCell(int index, Consumer<TdElement> c){
-		TdElement element=new TdElement();
+	public TrElement addCell(int index, Consumer<TdElement> c) {
+		TdElement element = new TdElement();
 		element.setParent(this);
 		this.cells.add(index, element);
 		c.accept(element);
 		return instance();
 	}
 
-	public TrElement addCells(BiConsumer<TdElement, Integer> c, int cellSize){
-		for(int i=0;i<cellSize;i++){
-			TdElement element=new TdElement();
+	public TrElement addCells(BiConsumer<TdElement, Integer> c, int cellSize) {
+		for (int i = 0; i < cellSize; i++) {
+			TdElement element = new TdElement();
 			element.setParent(this);
 			this.cells.add(element);
 			c.accept(element, i);
@@ -71,14 +71,14 @@ public class TrElement extends AbstractHtmlElement{
 		return instance();
 	}
 
-	protected TrElement instance(){
+	protected TrElement instance() {
 		return this;
 	}
-	
+
 	@Override
 	protected void writeXml(StaxWriter staxWriter) throws XMLStreamException {
 		staxWriter.writeStartElement(getElementName());
-		for(TdElement td:cells){
+		for (TdElement td : cells) {
 			td.writeXml(staxWriter);
 		}
 		staxWriter.writeEndElement();

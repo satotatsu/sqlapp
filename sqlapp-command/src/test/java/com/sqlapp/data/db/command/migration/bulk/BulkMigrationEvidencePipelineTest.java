@@ -47,8 +47,7 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 			final File assessment = write("access-assessment.json", "{\"status\":\"REVIEW_REQUIRED\"}");
 			final File ddlVerification = write("oracle-ddl-verification.json", "{\"status\":\"VERIFIED\"}");
 			final File job = directory.resolve("access-to-oracle-load.yaml").toFile();
-			new YamlConverter().writeJsonValue(job,
-					configuration(schemaFile, assessment, ddlVerification));
+			new YamlConverter().writeJsonValue(job, configuration(schemaFile, assessment, ddlVerification));
 			final String configurationFingerprint = fingerprint(job);
 
 			final File targetValidation = directory.resolve("target-validation.json").toFile();
@@ -119,8 +118,8 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 	void appliesDuplicateKeyPolicyToMappedAccessColumns() throws Exception {
 		try (var source = dataSource("bulk_mapped_duplicate_source");
 				var target = dataSource("bulk_mapped_duplicate_target")) {
-			executeSql(source, "CREATE TABLE PUBLIC.ACCESS_CUSTOMERS "
-					+ "(ACCESS_ID INT NOT NULL, CUSTOMER_NAME VARCHAR(30))");
+			executeSql(source,
+					"CREATE TABLE PUBLIC.ACCESS_CUSTOMERS " + "(ACCESS_ID INT NOT NULL, CUSTOMER_NAME VARCHAR(30))");
 			executeSql(source, "INSERT INTO PUBLIC.ACCESS_CUSTOMERS VALUES (1, 'first'), (1, 'duplicate')");
 			executeSql(target, "CREATE TABLE PUBLIC.CUSTOMERS "
 					+ "(CUSTOMER_ID INT NOT NULL PRIMARY KEY, CUSTOMER_NAME VARCHAR(30))");
@@ -201,7 +200,8 @@ class BulkMigrationEvidencePipelineTest extends AbstractDbCommandTest {
 	}
 
 	private static int countRows(final HikariDataSource dataSource, final String table) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var resultSet = statement.executeQuery("SELECT COUNT(*) FROM " + table)) {
 			resultSet.next();
 			return resultSet.getInt(1);

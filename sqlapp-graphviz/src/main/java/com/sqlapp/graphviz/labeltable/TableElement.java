@@ -37,44 +37,42 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class TableElement extends AbstractHtmlElement{
-	
-	public TableElement(){}
+@EqualsAndHashCode(callSuper = true)
+public class TableElement extends AbstractHtmlElement {
 
-	public TableElement(Node node){
+	public TableElement() {
+	}
+
+	public TableElement(Node node) {
 		super(node);
 	}
-	
+
 	/**
 	 * default CENTER
 	 */
-	private Align align=null;
+	private Align align = null;
 	/**
 	 * default CENTER
 	 */
-	private Align balign=null;
+	private Align balign = null;
 	private String bgcolor;
 	/**
-	 * default 1
-	 * maximum 255
+	 * default 1 maximum 255
 	 */
-	private Integer border=null;
+	private Integer border = null;
 	/**
-	 * default 2
-	 * maximum 255
+	 * default 2 maximum 255
 	 */
-	private Integer cellpadding=null;
+	private Integer cellpadding = null;
 	/**
-	 * default 2
-	 * maximum 127
+	 * default 2 maximum 127
 	 */
 	private Integer cellspacing;
 	private String color;
-	private boolean fixedsize=false;
+	private boolean fixedsize = false;
 	private String gradientAngle;
 	private String height;
 	private String href;
@@ -87,55 +85,54 @@ public class TableElement extends AbstractHtmlElement{
 	private String tooltip;
 	private String width;
 	private VAlign valign;
-	
-	private List<TrElement> rows=new ArrayList<>();
 
-	protected PortCollection getPorts(){
+	private List<TrElement> rows = new ArrayList<>();
+
+	protected PortCollection getPorts() {
 		return GraphVizElementUtils.getPorts(this.getRoot().getNode());
 	}
-	
-	
-	protected String getElementName(){
+
+	protected String getElementName() {
 		return "table";
 	}
-	
-	public TableElement setPort(String value){
-		Port port=new Port(value);
+
+	public TableElement setPort(String value) {
+		Port port = new Port(value);
 		GraphVizElementUtils.setParent(port, this.getRoot().getNode());
-		this.port=port;
+		this.port = port;
 		return instance();
 	}
 
-	public TableElement addRow(Consumer<TrElement> c){
-		TrElement tr=new TrElement();
+	public TableElement addRow(Consumer<TrElement> c) {
+		TrElement tr = new TrElement();
 		tr.setParent(this);
 		this.rows.add(tr);
 		c.accept(tr);
 		return instance();
 	}
-	
-	public TableElement addRow(int index, Consumer<TrElement> c){
-		TrElement tr=new TrElement();
+
+	public TableElement addRow(int index, Consumer<TrElement> c) {
+		TrElement tr = new TrElement();
 		tr.setParent(this);
 		this.rows.add(index, tr);
 		c.accept(tr);
 		return instance();
 	}
-	
-	public TableElement addRows(BiConsumer<TrElement, Integer> c, int rowSize){
-		for(int i=0;i<rowSize;i++){
-			TrElement tr=new TrElement();
+
+	public TableElement addRows(BiConsumer<TrElement, Integer> c, int rowSize) {
+		for (int i = 0; i < rowSize; i++) {
+			TrElement tr = new TrElement();
 			tr.setParent(this);
 			this.rows.add(tr);
 			c.accept(tr, i);
 		}
 		return instance();
 	}
-	
-	protected TableElement instance(){
+
+	protected TableElement instance() {
 		return this;
 	}
-	
+
 	@Override
 	protected void writeXml(StaxWriter staxWriter) throws XMLStreamException {
 		staxWriter.writeStartElement(getElementName());
@@ -146,14 +143,14 @@ public class TableElement extends AbstractHtmlElement{
 		staxWriter.writeAttribute("cellpadding", cellpadding);
 		staxWriter.writeAttribute("cellspacing", cellspacing);
 		staxWriter.writeAttribute("color", color);
-		if (fixedsize){
+		if (fixedsize) {
 			staxWriter.writeAttribute("fixedsize", fixedsize);
 		}
 		staxWriter.writeAttribute("gradientangle", gradientAngle);
 		staxWriter.writeAttribute("height", height);
 		staxWriter.writeAttribute("href", href);
 		staxWriter.writeAttribute("id", id);
-		if (port!=null){
+		if (port != null) {
 			staxWriter.writeAttribute("port", port.getValue());
 		}
 		staxWriter.writeAttribute("sides", sides);
@@ -163,9 +160,9 @@ public class TableElement extends AbstractHtmlElement{
 		staxWriter.writeAttribute("tooltip", tooltip);
 		staxWriter.writeAttribute("width", width);
 		staxWriter.writeAttribute("valign", valign);
-		if (!rows.isEmpty()){
+		if (!rows.isEmpty()) {
 			staxWriter.addIndentLevel(1);
-			for(TrElement element:rows){
+			for (TrElement element : rows) {
 				staxWriter.newLine();
 				staxWriter.indent();
 				element.writeXml(staxWriter);

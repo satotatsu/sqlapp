@@ -21,25 +21,25 @@ package com.sqlapp.graphviz;
 
 import lombok.Getter;
 
-public class EdgeCollection extends AbstractElementCollection<Edge>{
+public class EdgeCollection extends AbstractElementCollection<Edge> {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6685111479972906357L;
 
-	protected EdgeCollection(Graph parent){
-		this.parent=parent;
+	protected EdgeCollection(Graph parent) {
+		this.parent = parent;
 	}
-	
-	@Getter(value=lombok.AccessLevel.PUBLIC)
+
+	@Getter(value = lombok.AccessLevel.PUBLIC)
 	private final Graph parent;
 
 	@Override
-	protected void renew(){
-		this.getList().forEach(c->{
+	protected void renew() {
+		this.getList().forEach(c -> {
 			c.setParent(this);
 		});
 	}
-	
+
 }

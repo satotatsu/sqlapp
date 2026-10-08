@@ -21,7 +21,10 @@ import com.sqlapp.util.MessageDigests;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Inspects Schema XML and optionally its source database, then writes a reviewable JSON report. */
+/**
+ * Inspects Schema XML and optionally its source database, then writes a
+ * reviewable JSON report.
+ */
 @Getter
 @Setter
 public class AssessMigrationCommand extends AbstractDataSourceCommand {
@@ -37,7 +40,9 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 	private Report report;
 
 	public record Source(String catalog, String schema, String product, Integer majorVersion, Integer minorVersion,
-			Integer revision) { }
+			Integer revision) {
+	}
+
 	public record Report(int formatVersion, String schemaFingerprint, String targetVersion,
 			MigrationAssessment.Method migrationMethod, List<Source> sources, String status,
 			MigrationAssessment assessment, String targetCharacterSet, String databaseProductName,
@@ -49,18 +54,21 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment, null,
 					null, null, false, false, null);
 		}
+
 		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
 				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
 				final MigrationAssessment assessment, final String targetCharacterSet) {
 			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment,
 					targetCharacterSet, null, null, false, false, null);
 		}
+
 		public Report(final int formatVersion, final String schemaFingerprint, final String targetVersion,
 				final MigrationAssessment.Method migrationMethod, final List<Source> sources, final String status,
 				final MigrationAssessment assessment, final String targetCharacterSet, final String databaseProductName,
 				final String databaseProductVersion) {
 			this(formatVersion, schemaFingerprint, targetVersion, migrationMethod, sources, status, assessment,
-					targetCharacterSet, databaseProductName, databaseProductVersion, databaseProductName != null, false, null);
+					targetCharacterSet, databaseProductName, databaseProductVersion, databaseProductName != null, false,
+					null);
 		}
 	}
 
@@ -71,7 +79,8 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 			throw new CommandException("schemaFile must be an existing Schema or Catalog XML file");
 		}
 		if (outputFile == null || targetVersion == null || targetVersion.isBlank() || migrationMethod == null) {
-			throw new CommandException("outputFile, targetVersion and migrationMethod (DIRECT_UPGRADE or LOGICAL_MIGRATION) are required");
+			throw new CommandException(
+					"outputFile, targetVersion and migrationMethod (DIRECT_UPGRADE or LOGICAL_MIGRATION) are required");
 		}
 		if (scanCharacterData && getDataSource() == null) {
 			throw new CommandException("scanCharacterData=true requires a configured dataSource");
@@ -98,7 +107,8 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 			if (schemas.isEmpty()) {
 				throw new CommandException("schemaFile must contain at least one Schema");
 			}
-			final var provider = MigrationAssessmentProvider.resolve(schemas.getFirst().getProductName(), targetVersion);
+			final var provider = MigrationAssessmentProvider.resolve(schemas.getFirst().getProductName(),
+					targetVersion);
 			final MigrationAssessment assessment;
 			final String[] databaseProduct = new String[2];
 			if (getDataSource() == null) {
@@ -120,9 +130,11 @@ public class AssessMigrationCommand extends AbstractDataSourceCommand {
 			if (!fingerprint.equals(fingerprint(schemaFile))) {
 				throw new CommandException("schemaFile changed during assessment; retry with a stable snapshot");
 			}
-			final var sources = schemas.stream().map(schema -> new Source(schema.getCatalogName(), schema.getName(),
-					schema.getProductName(), schema.getProductMajorVersion(), schema.getProductMinorVersion(),
-					schema.getProductRevision())).toList();
+			final var sources = schemas.stream()
+					.map(schema -> new Source(schema.getCatalogName(), schema.getName(), schema.getProductName(),
+							schema.getProductMajorVersion(), schema.getProductMinorVersion(),
+							schema.getProductRevision()))
+					.toList();
 			report = new Report(1, fingerprint, targetVersion, migrationMethod, sources,
 					assessment.hasBlockers() ? "BLOCKED" : "REVIEW_REQUIRED", assessment, targetCharacterSet,
 					databaseProduct[0], databaseProduct[1], getDataSource() != null, scanCharacterData,

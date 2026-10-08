@@ -20,17 +20,15 @@
 package com.sqlapp.graphviz;
 
 public enum OutputOrderMode {
-	breadthfirst(){
+	breadthfirst() {
 		@Override
-		public boolean isDefault(){
+		public boolean isDefault() {
 			return true;
 		}
-	}
-	, nodesfirst
-	, edgesfirst
-	,;
-	
-	public boolean isDefault(){
+	},
+	nodesfirst, edgesfirst,;
+
+	public boolean isDefault() {
 		return false;
 	}
 }

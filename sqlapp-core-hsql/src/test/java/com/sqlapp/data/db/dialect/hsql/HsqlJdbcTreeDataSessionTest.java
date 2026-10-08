@@ -51,7 +51,8 @@ class HsqlJdbcTreeDataSessionTest {
 				statement.execute("CREATE SEQUENCE parent_seq AS BIGINT START WITH 10 INCREMENT BY 3");
 				statement.execute("CREATE SEQUENCE child_seq AS BIGINT START WITH 100 INCREMENT BY 2");
 				statement.execute("CREATE TABLE parent_table (id BIGINT PRIMARY KEY, txt VARCHAR(256))");
-				statement.execute("CREATE TABLE child_table (id BIGINT PRIMARY KEY, parent_id BIGINT NOT NULL REFERENCES parent_table(id), txt VARCHAR(256))");
+				statement.execute(
+						"CREATE TABLE child_table (id BIGINT PRIMARY KEY, parent_id BIGINT NOT NULL REFERENCES parent_table(id), txt VARCHAR(256))");
 			}
 			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC", "PARENT_TABLE", "CHILD_TABLE").orElseThrow();
 			Table parent = schema.getTables().get("PARENT_TABLE");
@@ -77,7 +78,8 @@ class HsqlJdbcTreeDataSessionTest {
 												size.set((Integer) a[1]);
 											}
 											if (m.getName().equals("executeQuery")) {
-												allocations.add((sql.contains("PARENT_SEQ") ? "parent:" : "child:") + size.get());
+												allocations.add((sql.contains("PARENT_SEQ") ? "parent:" : "child:")
+														+ size.get());
 											}
 											try {
 												return m.invoke(statement, a);
@@ -103,8 +105,9 @@ class HsqlJdbcTreeDataSessionTest {
 			});
 			assertEquals(List.of("parent:3", "child:6", "parent:2", "child:4"), allocations);
 			assertEquals(2, sequenceStatements.get());
-			try (Statement statement = connection.createStatement(); ResultSet rows = statement.executeQuery(
-					"SELECT p.id, c.id, c.parent_id FROM parent_table p JOIN child_table c ON c.parent_id=p.id ORDER BY c.id")) {
+			try (Statement statement = connection.createStatement();
+					ResultSet rows = statement.executeQuery(
+							"SELECT p.id, c.id, c.parent_id FROM parent_table p JOIN child_table c ON c.parent_id=p.id ORDER BY c.id")) {
 				for (int i = 0; i < 10; i++) {
 					assertTrue(rows.next());
 					assertEquals(10 + 3 * (i / 2), rows.getLong(1));

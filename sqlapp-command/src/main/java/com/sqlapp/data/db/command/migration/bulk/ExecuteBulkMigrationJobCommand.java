@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import java.io.File;
 import java.nio.file.Files;
 import java.sql.Connection;
@@ -231,8 +230,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 						leaseConnection.setAutoCommit(true);
 						final BulkMigrationJobLeaseManager manager = BulkMigrationJobLeaseManagerFactory
 								.create(leaseConnection, executionLeaseConfiguration);
-						result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan, executionListener,
-								chunkListener, manager);
+						result = BulkMigrationJobExecutor.executePlan(targetConnection, effectivePlan,
+								executionListener, chunkListener, manager);
 					}
 				}
 			} catch (SQLException | RuntimeException | Error failure) {
@@ -250,13 +249,13 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 					if (verificationConfiguration.targetFile() != null) {
 						final var verificationIO = new BulkMigrationVerificationReportIO();
 						final var verificationReport = verificationIO.fromResult(effectivePlan.getFingerprint(),
-								verificationConfiguration.isolation(), verificationConfiguration.maxReportedMismatches(),
-								verificationResult, provenance);
+								verificationConfiguration.isolation(),
+								verificationConfiguration.maxReportedMismatches(), verificationResult, provenance);
 						verificationReportFingerprint = verificationIO
-								.writeSnapshot(verificationConfiguration.targetFile(), verificationReport).fingerprint();
+								.writeSnapshot(verificationConfiguration.targetFile(), verificationReport)
+								.fingerprint();
 					}
-					if (!verificationResult.isMatch()
-							&& verificationConfiguration.repairPlanOnMismatchFile() != null) {
+					if (!verificationResult.isMatch() && verificationConfiguration.repairPlanOnMismatchFile() != null) {
 						repairPlanReportFingerprint = writeRepairPlan(effectivePlan, targetConnection,
 								verificationResult, verificationConfiguration.repairPlanOnMismatchFile());
 					}
@@ -340,8 +339,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		for (int i = 0; i < plan.getTasks().size(); i++) {
 			final BulkMigrationJobTask task = plan.getTasks().get(i);
 			if (task.getKeysetSource() == null) {
-				throw new CommandException("Declarative repair planning requires a JDBC keyset source: "
-						+ task.getTaskId());
+				throw new CommandException(
+						"Declarative repair planning requires a JDBC keyset source: " + task.getTaskId());
 			}
 			tasks.add(BulkMigrationJobRepairTask.builder().taskId(task.getTaskId())
 					.expectedKeysetSource(task.getKeysetSource()).target(task.getEffectiveTargetTable())
@@ -381,8 +380,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				throw new CommandException(
 						"Declarative verification requires a JDBC keyset source: " + task.getTaskId());
 			}
-			final List<String> targetKeys = source.getKeyColumnNames().stream()
-					.map(task::getTargetColumnName).toList();
+			final List<String> targetKeys = source.getKeyColumnNames().stream().map(task::getTargetColumnName).toList();
 			final var target = new JdbcBulkMigrationKeysetSource(targetConnection, task.getEffectiveTargetTable(),
 					targetKeys);
 			final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(), defaultVerificationColumns(task));
@@ -413,8 +411,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId()).sourceTable(task.getSourceTable())
 					.keysetSource(task.getKeysetSource()).targetTable(task.getTargetTable())
 					.columnMappings(task.getColumnMappings()).requireEmptyTarget(task.isRequireEmptyTarget())
-					.options(task.getOptions())
-					.chunkListener(task.getChunkListener())
+					.options(task.getOptions()).chunkListener(task.getChunkListener())
 					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,
 							task.getOptions().getCheckpointTableName()))
 					.build());

@@ -115,7 +115,10 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Opt-in recording and validation of up SQL source checksums. */
 	private boolean checksumValidation = false;
 
-	/** Optional strict rejection of pending versions below the latest completed version. */
+	/**
+	 * Optional strict rejection of pending versions below the latest completed
+	 * version.
+	 */
 	private boolean rejectOutOfOrder = false;
 
 	/** Optional rejection of selected migration files that bypass transactions. */
@@ -124,7 +127,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	/** Optional requirement that every selected migration has down SQL. */
 	private boolean requireDownMigration = false;
 
-	/** Opt-in support for R__*.sql migrations reapplied when their content changes. */
+	/**
+	 * Opt-in support for R__*.sql migrations reapplied when their content changes.
+	 */
 	private boolean repeatableMigrations = false;
 
 	/** Optional reviewed plan that must match the selected execution. */
@@ -221,69 +226,72 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		final List<Long> selectedVersions = new ArrayList<>();
 		RuntimeException runFailure = null;
 		try {
-		execute(getDataSource(), connection -> {
-			databaseIdentity[0] = MigrationPlanCommand.databaseIdentity(connection);
-			Dialect dialect = this.getDialect(connection);
-			if (preMigrationSchemaFile != null) {
-				schemaDriftReport = assessPreMigrationDrift(connection);
-				if (!schemaDriftReport.isCompatible()) {
-					throw new CommandException("Breaking pre-migration schema drift detected: "
-							+ schemaDriftReport.changes());
+			execute(getDataSource(), connection -> {
+				databaseIdentity[0] = MigrationPlanCommand.databaseIdentity(connection);
+				Dialect dialect = this.getDialect(connection);
+				if (preMigrationSchemaFile != null) {
+					schemaDriftReport = assessPreMigrationDrift(connection);
+					if (!schemaDriftReport.isCompatible()) {
+						throw new CommandException(
+								"Breaking pre-migration schema drift detected: " + schemaDriftReport.changes());
+					}
 				}
-			}
-			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
-			dbVersionFileHandler.setEncoding(this.getEncoding());
-			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
-			final RepeatableMigrationHandler repeatableHandler = new RepeatableMigrationHandler();
-			Table repeatableTable = null;
-			pendingRepeatables = List.of();
-			repeatablePreviousChecksums = Map.of();
-			if (repeatableMigrations) {
-				final List<RepeatableMigrationFile> repeatables = RepeatableMigrationFile.read(sqlDirectory, recursive,
-						getEncoding(), dialect.createSqlSplitter());
-				repeatableTable = repeatableHandler.definition(schemaChangeLogTableName);
-				if (!repeatables.isEmpty()) {
-					final Table existingRepeatableTable = dbVersionHandler.getTable(connection, dialect, repeatableTable);
-					repeatablePreviousChecksums = existingRepeatableTable == null ? Map.of()
-							: repeatableHandler.load(connection, dialect, existingRepeatableTable);
-					pendingRepeatables = selectPendingRepeatables(repeatables, repeatablePreviousChecksums);
-					selectedRepeatableNames = pendingRepeatables.stream().map(RepeatableMigrationFile::name).toList();
+				dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
+				dbVersionFileHandler.setEncoding(this.getEncoding());
+				DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
+				final RepeatableMigrationHandler repeatableHandler = new RepeatableMigrationHandler();
+				Table repeatableTable = null;
+				pendingRepeatables = List.of();
+				repeatablePreviousChecksums = Map.of();
+				if (repeatableMigrations) {
+					final List<RepeatableMigrationFile> repeatables = RepeatableMigrationFile.read(sqlDirectory,
+							recursive, getEncoding(), dialect.createSqlSplitter());
+					repeatableTable = repeatableHandler.definition(schemaChangeLogTableName);
+					if (!repeatables.isEmpty()) {
+						final Table existingRepeatableTable = dbVersionHandler.getTable(connection, dialect,
+								repeatableTable);
+						repeatablePreviousChecksums = existingRepeatableTable == null ? Map.of()
+								: repeatableHandler.load(connection, dialect, existingRepeatableTable);
+						pendingRepeatables = selectPendingRepeatables(repeatables, repeatablePreviousChecksums);
+						selectedRepeatableNames = pendingRepeatables.stream().map(RepeatableMigrationFile::name)
+								.toList();
+					}
 				}
-			}
-			selectedVersions.clear();
-			for (final Row row : holder.rows) {
-				final Long version = dbVersionHandler.getId(row);
-				if (version != null) {
-					selectedVersions.add(version);
+				selectedVersions.clear();
+				for (final Row row : holder.rows) {
+					final Long version = dbVersionHandler.getId(row);
+					if (version != null) {
+						selectedVersions.add(version);
+					}
 				}
-			}
-			validateExpectedPlan(connection, holder, dbVersionHandler);
-			previousTable = holder.table;
-			previousState = lastState;
-			if (!isShowVersionOnly()) {
-				if (!holder.rows.isEmpty() || !pendingRepeatables.isEmpty()) {
-					this.info("");
-					repeatableHistoryTable = repeatableTable;
-					repeatableMigrationHandler = repeatableHandler;
-					executeChangeVersion(connection, holder.dialect, holder.table, holder.rows, holder.sqlFiles,
-							dbVersionHandler);
-					holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
-					table = holder.table;
-				} else {
-					executeEmptyVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
-					holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
-					table = holder.table;
+				validateExpectedPlan(connection, holder, dbVersionHandler);
+				previousTable = holder.table;
+				previousState = lastState;
+				if (!isShowVersionOnly()) {
+					if (!holder.rows.isEmpty() || !pendingRepeatables.isEmpty()) {
+						this.info("");
+						repeatableHistoryTable = repeatableTable;
+						repeatableMigrationHandler = repeatableHandler;
+						executeChangeVersion(connection, holder.dialect, holder.table, holder.rows, holder.sqlFiles,
+								dbVersionHandler);
+						holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
+						table = holder.table;
+					} else {
+						executeEmptyVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles,
+								dbVersionHandler);
+						holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
+						table = holder.table;
+					}
 				}
-			}
-		});
+			});
 		} catch (final RuntimeException e) {
 			runFailure = e;
 			throw e;
 		} finally {
 			executionReport = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, startedAt,
 					System.currentTimeMillis(), runFailure == null, !isShowVersionOnly(), databaseIdentity[0],
-					validatedPlanFingerprint,
-					selectedVersions, appliedVersions, selectedRepeatableNames, appliedRepeatables, executionFailure);
+					validatedPlanFingerprint, selectedVersions, appliedVersions, selectedRepeatableNames,
+					appliedRepeatables, executionFailure);
 			if (executionReportFile != null) {
 				try {
 					new MigrationExecutionReportIO().write(executionReportFile.toPath(), executionReport);
@@ -323,10 +331,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		}
 		final MigrationPlanArtifact artifact = new MigrationPlanIO().read(expectedPlanFile.toPath());
 		validatedPlanFingerprint = artifact.planFingerprint();
-		if (expectedPlanFingerprint != null
-				&& !expectedPlanFingerprint.equals(artifact.planFingerprint())) {
-			throw new CommandException("expectedPlanFile fingerprint does not match expectedPlanFingerprint: "
-					+ expectedPlanFile);
+		if (expectedPlanFingerprint != null && !expectedPlanFingerprint.equals(artifact.planFingerprint())) {
+			throw new CommandException(
+					"expectedPlanFile fingerprint does not match expectedPlanFingerprint: " + expectedPlanFile);
 		}
 		validateExpectedPlanAge(artifact);
 		final MigrationPlan expected = artifact.plan();
@@ -336,8 +343,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		Long current = null;
 		for (final Row row : holder.table.getRows()) {
 			final Long version = handler.getId(row);
-			if (version != null && handler.getStatus(row).isCompleted()
-					&& (current == null || version > current)) {
+			if (version != null && handler.getStatus(row).isCompleted() && (current == null || version > current)) {
 				current = version;
 			}
 		}
@@ -364,9 +370,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 						entry.transactional(), entry.checksumWillBeRecorded(), entry.rollbackAvailable(),
 						entry.sourceChecksum()))
 				.toList();
-		final List<MigrationPlan.RepeatableEntry> reviewedRepeatables = expected.pendingRepeatables().stream()
-				.map(entry -> new MigrationPlan.RepeatableEntry(entry.name(), null, entry.statements(),
-						entry.transactional(), entry.sourceChecksum(), entry.previousChecksum()))
+		final List<MigrationPlan.RepeatableEntry> reviewedRepeatables = expected
+				.pendingRepeatables().stream().map(entry -> new MigrationPlan.RepeatableEntry(entry.name(), null,
+						entry.statements(), entry.transactional(), entry.sourceChecksum(), entry.previousChecksum()))
 				.toList();
 		final List<MigrationPlan.RepeatableEntry> currentRepeatables = pendingRepeatables.stream()
 				.map(file -> new MigrationPlan.RepeatableEntry(file.name(), null, file.statements().size(),
@@ -380,8 +386,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 				|| expected.setupStatements() != read(holder.dialect, getSetupSqlDirectory()).size()
 				|| expected.finalizeStatements() != read(holder.dialect, getFinalizeSqlDirectory()).size()
 				|| !reviewed.equals(pending) || !reviewedRepeatables.equals(currentRepeatables)) {
-			throw new CommandException("Current migration execution does not match expectedPlanFile: "
-					+ expectedPlanFile);
+			throw new CommandException(
+					"Current migration execution does not match expectedPlanFile: " + expectedPlanFile);
 		}
 	}
 
@@ -390,8 +396,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			throw new CommandException(
 					"expectedPlanFile is required when expectedPlanMaxAge or expectedPlanFingerprint is configured");
 		}
-		if (expectedPlanFingerprint != null
-				&& !expectedPlanFingerprint.matches("sha256:[0-9a-f]{64}")) {
+		if (expectedPlanFingerprint != null && !expectedPlanFingerprint.matches("sha256:[0-9a-f]{64}")) {
 			throw new CommandException("expectedPlanFingerprint must be a lowercase SHA-256 value");
 		}
 		if (lockTimeoutSeconds != null && lockTimeoutSeconds <= 0) {
@@ -433,16 +438,14 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		}
 	}
 
-	protected void validateChecksums(final Table history, final DbVersionHandler handler,
-			final List<SqlFile> files) {
+	protected void validateChecksums(final Table history, final DbVersionHandler handler, final List<SqlFile> files) {
 		validationResult = MigrationChecksumValidator.validate(history, handler, files);
 		for (final MigrationValidationResult.Entry entry : validationResult.entries()) {
 			info("Migration " + entry.version() + ": " + entry.state());
 		}
 		if (validationResult.hasFailures()) {
 			throw new IllegalStateException("Migration validation failed: " + validationResult.entries()
-					+ ". Restore the applied SQL source; "
-					+ "checksums are never automatically rewritten.");
+					+ ". Restore the applied SQL source; " + "checksums are never automatically rewritten.");
 		}
 	}
 
@@ -538,8 +541,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			}
 		}
 		if (!outOfOrder.isEmpty()) {
-			throw new CommandException("Out-of-order migrations precede completed version " + latestCompleted
-					+ ": " + outOfOrder + ". Disable rejectOutOfOrder only after reviewing them.");
+			throw new CommandException("Out-of-order migrations precede completed version " + latestCompleted + ": "
+					+ outOfOrder + ". Disable rejectOutOfOrder only after reviewing them.");
 		}
 	}
 
@@ -684,8 +687,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	private void executeChangeVersion(final Connection connection, final Dialect dialect, final Table table,
 			final List<Row> rows, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler,
-			final Table repeatableTable, final RepeatableMigrationHandler repeatableHandler)
-			throws SQLException {
+			final Table repeatableTable, final RepeatableMigrationHandler repeatableHandler) throws SQLException {
 		final Map<Long, SqlFile> sqlFileMap = CommonUtils.map();
 		for (final SqlFile sqlFile : sqlFiles) {
 			sqlFileMap.put(sqlFile.getVersionNumber(), sqlFile);
@@ -713,7 +715,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			refreshRepeatablesAfterLock(connection, dialect, dbVersionHandler);
 			validateExpectedPlanAfterLock(connection, dialect, sqlFiles, dbVersionHandler);
 			final List<RepeatableMigrationFile> repeatablesToRun = pendingRepeatables;
-			if (!repeatablesToRun.isEmpty() && dbVersionHandler.getTable(connection, dialect, repeatableTable) == null) {
+			if (!repeatablesToRun.isEmpty()
+					&& dbVersionHandler.getTable(connection, dialect, repeatableTable) == null) {
 				dbVersionHandler.createTable(connection, dialect, repeatableTable);
 				info("New repeatable migration history table [" + getName(repeatableTable) + "] was created.");
 			}
@@ -949,8 +952,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (!repeatableMigrations) {
 			return;
 		}
-		final List<RepeatableMigrationFile> files = RepeatableMigrationFile.read(sqlDirectory, recursive,
-				getEncoding(), dialect.createSqlSplitter());
+		final List<RepeatableMigrationFile> files = RepeatableMigrationFile.read(sqlDirectory, recursive, getEncoding(),
+				dialect.createSqlSplitter());
 		if (files.isEmpty()) {
 			pendingRepeatables = List.of();
 			repeatablePreviousChecksums = Map.of();
@@ -987,9 +990,9 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 	}
 
 	private DbConcurrencyException concurrentHistoryChange(final Long id) {
-		return new DbConcurrencyException("Migration history changed concurrently for version " + id
-				+ " in " + getSchemaChangeLogTableName()
-				+ ". Stop competing migrations, inspect the current history, then retry.");
+		return new DbConcurrencyException(
+				"Migration history changed concurrently for version " + id + " in " + getSchemaChangeLogTableName()
+						+ ". Stop competing migrations, inspect the current history, then retry.");
 	}
 
 	protected File getFile(final SqlFile sqlFile) {
@@ -1061,7 +1064,8 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
 		if (dbVersionHandler.updateVersion(connection, dialect, table, row, id, Status.Started, Status.Errored) == 0
 				&& !dbVersionHandler.exists(dialect, connection, table, id)) {
-			// Rollback may have removed Started even when SQL on another connection committed.
+			// Rollback may have removed Started even when SQL on another connection
+			// committed.
 			dbVersionHandler.insertVersion(connection, dialect, table, row, id, Status.Errored);
 		}
 	}

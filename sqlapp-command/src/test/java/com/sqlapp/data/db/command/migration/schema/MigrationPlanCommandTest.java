@@ -46,7 +46,8 @@ class MigrationPlanCommandTest {
 	}
 
 	private long count(final String query) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery(query)) {
 			assertTrue(rows.next());
 			return rows.getLong(1);
@@ -97,8 +98,7 @@ class MigrationPlanCommandTest {
 		assertTrue(artifact.createdAtEpochMillis() > 0);
 		assertTrue(artifact.planFingerprint().matches("sha256:[0-9a-f]{64}"));
 		final Path tampered = directory.resolve("reports/tampered-plan.json");
-		Files.writeString(tampered, Files.readString(output).replace(
-				artifact.plan().pending().get(0).sourceChecksum(),
+		Files.writeString(tampered, Files.readString(output).replace(artifact.plan().pending().get(0).sourceChecksum(),
 				"sha256:0000000000000000000000000000000000000000000000000000000000000000"));
 		assertThrows(RuntimeException.class, () -> new MigrationPlanIO().read(tampered));
 		assertEquals(0, count("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='PUBLIC'"));
@@ -181,8 +181,8 @@ class MigrationPlanCommandTest {
 		assertTrue(report.reportFingerprint().matches("sha256:[0-9a-f]{64}"));
 		assertEquals(report, migration.getExecutionReport());
 		final Path tampered = directory.resolve("reports/tampered-execution.json");
-		Files.writeString(tampered, Files.readString(reportFile).replace("\"successful\" : true",
-				"\"successful\" : false"));
+		Files.writeString(tampered,
+				Files.readString(reportFile).replace("\"successful\" : true", "\"successful\" : false"));
 		assertThrows(RuntimeException.class, () -> new MigrationExecutionReportIO().read(tampered));
 	}
 
@@ -214,8 +214,7 @@ class MigrationPlanCommandTest {
 
 	@Test
 	void embeddedUndoSatisfiesRequiredRollbackPolicy() throws Exception {
-		Files.writeString(up.resolve("1_create.sql"),
-				"CREATE TABLE sample(id INT);\n-- //@UNDO\nDROP TABLE sample;");
+		Files.writeString(up.resolve("1_create.sql"), "CREATE TABLE sample(id INT);\n-- //@UNDO\nDROP TABLE sample;");
 		final var command = configure(new MigrationPlanCommand());
 		command.setRequireDownMigration(true);
 		command.run();
@@ -269,7 +268,8 @@ class MigrationPlanCommandTest {
 		migration.setSqlDirectory(up.toFile());
 		migration.setExpectedPlanFile(artifact.toFile());
 		assertThrows(RuntimeException.class, migration::run);
-		try (var connection = other.getConnection(); var statement = connection.createStatement();
+		try (var connection = other.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
 						+ "WHERE TABLE_SCHEMA='PUBLIC' AND TABLE_NAME='SAMPLE'")) {
 			assertTrue(rows.next());
@@ -403,7 +403,8 @@ class MigrationPlanCommandTest {
 	}
 
 	private Object scalar(final String query) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery(query)) {
 			assertTrue(rows.next());
 			return rows.getObject(1);

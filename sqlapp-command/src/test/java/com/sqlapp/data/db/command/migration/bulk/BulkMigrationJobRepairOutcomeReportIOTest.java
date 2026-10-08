@@ -19,8 +19,8 @@ class BulkMigrationJobRepairOutcomeReportIOTest {
 
 	@Test
 	void roundTripsSuccessfulOutcome() {
-		final var report = new BulkMigrationJobRepairOutcomeReport(1, Instant.now(), "SUCCEEDED", "migration",
-				"repair", sha('a'), sha('b'), null, sha('c'), null, null,
+		final var report = new BulkMigrationJobRepairOutcomeReport(1, Instant.now(), "SUCCEEDED", "migration", "repair",
+				sha('a'), sha('b'), null, sha('c'), null, null,
 				new BulkMigrationArtifactProvenance(sha('d'), null, null));
 		final Path file = directory.resolve("outcome.json");
 
@@ -38,11 +38,11 @@ class BulkMigrationJobRepairOutcomeReportIOTest {
 		final var successWithFailure = new BulkMigrationJobRepairOutcomeReport(1, Instant.now(), "SUCCEEDED",
 				"migration", "repair", sha('a'), sha('b'), sha('c'), sha('d'), "EXECUTION", "task", null);
 		final var executionFailureWithVerification = new BulkMigrationJobRepairOutcomeReport(1, Instant.now(),
-				"EXECUTION_FAILED", "migration", "repair", sha('a'), null, sha('b'), sha('c'), "EXECUTION",
-				"task", null);
+				"EXECUTION_FAILED", "migration", "repair", sha('a'), null, sha('b'), sha('c'), "EXECUTION", "task",
+				null);
 		final var verificationFailureWithoutVerification = new BulkMigrationJobRepairOutcomeReport(1, Instant.now(),
-				"VERIFICATION_FAILED", "migration", "repair", sha('a'), sha('b'), sha('c'), null,
-				"POST_VERIFICATION", "task", null);
+				"VERIFICATION_FAILED", "migration", "repair", sha('a'), sha('b'), sha('c'), null, "POST_VERIFICATION",
+				"task", null);
 
 		assertThrows(CommandException.class, () -> BulkMigrationJobRepairOutcomeReportIO.validate(successWithFailure));
 		assertThrows(CommandException.class,

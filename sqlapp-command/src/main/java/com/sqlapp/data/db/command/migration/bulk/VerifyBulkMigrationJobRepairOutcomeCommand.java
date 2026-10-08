@@ -12,11 +12,16 @@ import com.sqlapp.exceptions.CommandException;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Selects and verifies the saved outcome of one approved repair without database access. */
+/**
+ * Selects and verifies the saved outcome of one approved repair without
+ * database access.
+ */
 @Getter
 @Setter
 public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand {
-	public enum Status { SUCCEEDED, EXECUTION_FAILED, VERIFICATION_FAILED }
+	public enum Status {
+		SUCCEEDED, EXECUTION_FAILED, VERIFICATION_FAILED
+	}
 
 	private File approvedRepairPlanFile;
 	private String expectedApprovedRepairPlanFileFingerprint;
@@ -84,7 +89,8 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 			verifier.run();
 			final var verifiedFailure = verifier.getReport();
 			final Status selectedStatus = "POST_VERIFICATION".equals(verifiedFailure.phase())
-					? Status.VERIFICATION_FAILED : Status.EXECUTION_FAILED;
+					? Status.VERIFICATION_FAILED
+					: Status.EXECUTION_FAILED;
 			verifyFailureCompanions(selectedStatus, verifiedFailure);
 			failureReport = verifiedFailure;
 			failureReportFingerprint = verifier.getReportFingerprint();
@@ -134,10 +140,18 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 			throw new CommandException("repairReportDirectory must be an existing directory.");
 		}
 		final var resolved = BulkMigrationJobRepairReportFiles.resolve(repairReportDirectory);
-		if (repairExecutionReportFile == null) { repairExecutionReportFile = resolved.execution(); }
-		if (repairFailureReportFile == null) { repairFailureReportFile = resolved.failure(); }
-		if (postRepairVerificationReportFile == null) { postRepairVerificationReportFile = resolved.verification(); }
-		if (outcomeReportFile == null) { outcomeReportFile = resolved.outcome(); }
+		if (repairExecutionReportFile == null) {
+			repairExecutionReportFile = resolved.execution();
+		}
+		if (repairFailureReportFile == null) {
+			repairFailureReportFile = resolved.failure();
+		}
+		if (postRepairVerificationReportFile == null) {
+			postRepairVerificationReportFile = resolved.verification();
+		}
+		if (outcomeReportFile == null) {
+			outcomeReportFile = resolved.outcome();
+		}
 	}
 
 	private void validateExpectedStatus() {
@@ -153,8 +167,8 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 
 	private void enforceExpectedStatus() {
 		if (expectedStatus != null && !expectedStatus.equals(status.name())) {
-			throw new CommandException("Repair outcome status " + status + " does not match expectedStatus "
-					+ expectedStatus + ".");
+			throw new CommandException(
+					"Repair outcome status " + status + " does not match expectedStatus " + expectedStatus + ".");
 		}
 	}
 
@@ -175,7 +189,8 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 			if (outcomeReportFile != null) {
 				validateOutputPath();
 				outcomeReportFingerprint = new BulkMigrationJobRepairOutcomeReportIO()
-						.writeSnapshot(outcomeReportFile.toPath(), outcomeReport, maxEvidenceFileSizeBytes).fingerprint();
+						.writeSnapshot(outcomeReportFile.toPath(), outcomeReport, maxEvidenceFileSizeBytes)
+						.fingerprint();
 			}
 		} catch (RuntimeException e) {
 			status = null;
@@ -194,8 +209,8 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 
 	private void validateOutputPath() {
 		final var output = outcomeReportFile.toPath().toAbsolutePath().normalize();
-		for (final File input : new File[] { approvedRepairPlanFile, repairExecutionReportFile,
-				repairFailureReportFile, postRepairVerificationReportFile }) {
+		for (final File input : new File[] { approvedRepairPlanFile, repairExecutionReportFile, repairFailureReportFile,
+				postRepairVerificationReportFile }) {
 			if (input != null && output.equals(input.toPath().toAbsolutePath().normalize())) {
 				throw new CommandException("outcomeReportFile must not overwrite an input report.");
 			}
@@ -210,8 +225,8 @@ public class VerifyBulkMigrationJobRepairOutcomeCommand extends AbstractCommand 
 		try {
 			Files.deleteIfExists(outcomeReportFile.toPath().toAbsolutePath().normalize());
 		} catch (IOException e) {
-			throw new CommandException("Failed to remove stale bulk migration job repair outcome report: "
-					+ outcomeReportFile, e);
+			throw new CommandException(
+					"Failed to remove stale bulk migration job repair outcome report: " + outcomeReportFile, e);
 		}
 	}
 

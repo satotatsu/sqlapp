@@ -43,9 +43,10 @@ public final class RepeatableMigrationHandler {
 	public Map<String, String> load(final Connection connection, final Dialect dialect, final Table table)
 			throws SQLException {
 		final Map<String, String> result = new LinkedHashMap<>();
-		final String sql = "SELECT " + dialect.quote(NAME_COLUMN) + ", " + dialect.quote(CHECKSUM_COLUMN)
-				+ " FROM " + qualified(dialect, table) + " ORDER BY " + dialect.quote(EXECUTION_ID_COLUMN);
-		try (PreparedStatement statement = connection.prepareStatement(sql); ResultSet rows = statement.executeQuery()) {
+		final String sql = "SELECT " + dialect.quote(NAME_COLUMN) + ", " + dialect.quote(CHECKSUM_COLUMN) + " FROM "
+				+ qualified(dialect, table) + " ORDER BY " + dialect.quote(EXECUTION_ID_COLUMN);
+		try (PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet rows = statement.executeQuery()) {
 			while (rows.next()) {
 				result.put(rows.getString(1), rows.getString(2));
 			}
@@ -57,10 +58,9 @@ public final class RepeatableMigrationHandler {
 			final RepeatableMigrationFile migration) throws SQLException {
 		final long executionId = nextExecutionId(connection, dialect, table);
 		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
-		builder.insert().into().space().name(table).space()._add("(")
-				.name(EXECUTION_ID_COLUMN).comma().name(NAME_COLUMN).comma().name(CHECKSUM_COLUMN).comma()
-				.name(APPLIED_BY_COLUMN).comma().name(APPLIED_AT_COLUMN)._add(")").values().space()
-				._add("(?,?,?,?,?)");
+		builder.insert().into().space().name(table).space()._add("(").name(EXECUTION_ID_COLUMN).comma()
+				.name(NAME_COLUMN).comma().name(CHECKSUM_COLUMN).comma().name(APPLIED_BY_COLUMN).comma()
+				.name(APPLIED_AT_COLUMN)._add(")").values().space()._add("(?,?,?,?,?)");
 		try (PreparedStatement insert = connection.prepareStatement(builder.toString())) {
 			insert.setLong(1, executionId);
 			insert.setString(2, migration.name());
@@ -73,8 +73,7 @@ public final class RepeatableMigrationHandler {
 
 	private long nextExecutionId(final Connection connection, final Dialect dialect, final Table table)
 			throws SQLException {
-		final String sql = "SELECT MAX(" + dialect.quote(EXECUTION_ID_COLUMN) + ") FROM "
-				+ qualified(dialect, table);
+		final String sql = "SELECT MAX(" + dialect.quote(EXECUTION_ID_COLUMN) + ") FROM " + qualified(dialect, table);
 		try (PreparedStatement statement = connection.prepareStatement(sql); ResultSet row = statement.executeQuery()) {
 			return row.next() ? row.getLong(1) + 1L : 1L;
 		}

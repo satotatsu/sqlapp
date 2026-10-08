@@ -5,7 +5,6 @@
  */
 package com.sqlapp.data.db.command.migration.legacy;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -182,8 +181,8 @@ class GenerateLegacyRdbLoaderCommandTest {
 				.contains("occurrence configuration is invalid"));
 
 		var inconsistentOccurrenceTarget = contract();
-		inconsistentOccurrenceTarget.getDataSets().getLast().getFields().stream()
-				.filter(Field::isOccurrenceIndex).findFirst().orElseThrow().setTargetColumn("OTHER_NO");
+		inconsistentOccurrenceTarget.getDataSets().getLast().getFields().stream().filter(Field::isOccurrenceIndex)
+				.findFirst().orElseThrow().setTargetColumn("OTHER_NO");
 		assertTrue(assertThrows(CommandException.class,
 				() -> new LegacyMigrationContractValidator().validate(inconsistentOccurrenceTarget)).getMessage()
 				.contains("occurrence field is invalid"));

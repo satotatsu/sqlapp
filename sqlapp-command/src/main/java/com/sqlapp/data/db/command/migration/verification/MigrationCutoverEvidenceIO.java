@@ -33,10 +33,9 @@ public final class MigrationCutoverEvidenceIO {
 		try {
 			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
 					"maxCutoverEvidenceFileSizeBytes", "Migration cutover evidence");
-			final var evidence = validate(new JsonConverter().fromJsonString(
-					new String(bytes, StandardCharsets.UTF_8), MigrationCutoverEvidence.class));
-			return new Snapshot(evidence,
-					"sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
+			final var evidence = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
+					MigrationCutoverEvidence.class));
+			return new Snapshot(evidence, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
 		} catch (IOException e) {
 			throw new CommandException("Failed to read migration cutover evidence: " + absolute, e);
 		} catch (RuntimeException e) {

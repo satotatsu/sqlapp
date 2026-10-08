@@ -81,8 +81,7 @@ public final class BulkMigrationRepairPlanReportIO {
 		}
 	}
 
-	Snapshot writeSnapshot(final Path file, final BulkMigrationRepairPlanReport report,
-			final Long maxFileSizeBytes) {
+	Snapshot writeSnapshot(final Path file, final BulkMigrationRepairPlanReport report, final Long maxFileSizeBytes) {
 		write(file, report);
 		final var snapshot = readSnapshot(file, maxFileSizeBytes);
 		if (!report.equals(snapshot.report())) {

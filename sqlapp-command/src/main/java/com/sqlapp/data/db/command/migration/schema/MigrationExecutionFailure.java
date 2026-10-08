@@ -3,11 +3,13 @@ package com.sqlapp.data.db.command.migration.schema;
 
 import java.util.List;
 
-/** Observed execution progress, not a guarantee that database effects were undone. */
-public record MigrationExecutionFailure(Phase phase, Long version, String source,
-		int attemptedStatement, int completedStatements, boolean nonTransactional,
-		List<Long> committedVersions, String sqlState, Integer vendorErrorCode,
-		RecoveryOutcome rollback, RecoveryOutcome historyRecovery) {
+/**
+ * Observed execution progress, not a guarantee that database effects were
+ * undone.
+ */
+public record MigrationExecutionFailure(Phase phase, Long version, String source, int attemptedStatement,
+		int completedStatements, boolean nonTransactional, List<Long> committedVersions, String sqlState,
+		Integer vendorErrorCode, RecoveryOutcome rollback, RecoveryOutcome historyRecovery) {
 	public MigrationExecutionFailure {
 		committedVersions = List.copyOf(committedVersions);
 	}
@@ -16,7 +18,10 @@ public record MigrationExecutionFailure(Phase phase, Long version, String source
 		SETUP, PRECHECK, MIGRATION, HISTORY_COMPLETION, VERSION_COMMIT, REPEATABLE, FINALIZE, FINAL_COMMIT
 	}
 
-	/** RETURNED means the operation returned normally, not that all effects were reversed. */
+	/**
+	 * RETURNED means the operation returned normally, not that all effects were
+	 * reversed.
+	 */
 	public enum RecoveryOutcome {
 		NOT_ATTEMPTED, RETURNED, FAILED
 	}

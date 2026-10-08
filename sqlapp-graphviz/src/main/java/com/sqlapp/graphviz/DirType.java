@@ -18,22 +18,21 @@
  */
 
 package com.sqlapp.graphviz;
+
 /**
  * 
  * @author tatsuo satoh
  * @see <a href="https://graphviz.org/docs/attrs/dir/">dir</a>
  */
 public enum DirType {
-	forward("start-→end")
-	,back  ("start←-end")
-	,both  ("start←→end")
-	,none  ("start--end")
-	,;
-	
-	private  final String comment;
-	private DirType(String comment){
-		this.comment=comment;
+	forward("start-→end"), back("start←-end"), both("start←→end"), none("start--end"),;
+
+	private final String comment;
+
+	private DirType(String comment) {
+		this.comment = comment;
 	}
+
 	/**
 	 * @return the comment
 	 */

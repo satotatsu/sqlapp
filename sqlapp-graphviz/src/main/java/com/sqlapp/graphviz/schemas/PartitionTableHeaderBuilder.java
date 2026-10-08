@@ -31,49 +31,49 @@ import lombok.experimental.Accessors;
 
 import java.util.function.Function;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class PartitionTableHeaderBuilder extends AbstractSchemaGraphBuilder{
+public class PartitionTableHeaderBuilder extends AbstractSchemaGraphBuilder {
 
-	private int cellSize=0;
-	
-	private String defaultColor=null;
+	private int cellSize = 0;
 
-	private String defaultBgcolor="#58ACFA";
-	
-	private Function<Partition, String> name=(t)->t.getName();
-	
-	private Function<Partition, String> color=(t)->this.defaultColor();
+	private String defaultColor = null;
 
-	private Function<Partition, String> bgcolor=(t)->this.defaultBgcolor();
+	private String defaultBgcolor = "#58ACFA";
 
-	private PartitionTableHeaderBuilder(){}
-	
-	
-	public static PartitionTableHeaderBuilder create(){
-		PartitionTableHeaderBuilder builder=new PartitionTableHeaderBuilder();
+	private Function<Partition, String> name = (t) -> t.getName();
+
+	private Function<Partition, String> color = (t) -> this.defaultColor();
+
+	private Function<Partition, String> bgcolor = (t) -> this.defaultBgcolor();
+
+	private PartitionTableHeaderBuilder() {
+	}
+
+	public static PartitionTableHeaderBuilder create() {
+		PartitionTableHeaderBuilder builder = new PartitionTableHeaderBuilder();
 		return builder;
 	}
 
-	private int colspan=1;
+	private int colspan = 1;
 
-	public int build(Partition partition, TrElement tr){
+	public int build(Partition partition, TrElement tr) {
 		createName(partition, tr);
 		return cellSize;
 	}
-	
-	private PartitionTableHeaderBuilder createName(Partition partition, TrElement tr){
-		String value=name.apply(partition);
-		if (value!=null){
-			tr.addCell(cell->{
+
+	private PartitionTableHeaderBuilder createName(Partition partition, TrElement tr) {
+		String value = name.apply(partition);
+		if (value != null) {
+			tr.addCell(cell -> {
 				setCommonAttribute(partition, cell);
 				cell.setAlign(Align.CENTER);
 				cell.setPort(getPortName(partition));
 				cell.setValue(value);
-				if (CommonUtils.isEmpty(partition.getDisplayRemarks())){
+				if (CommonUtils.isEmpty(partition.getDisplayRemarks())) {
 					cell.setTooltip(partition.getRemarks());
-				} else{
+				} else {
 					cell.setTooltip(partition.getDisplayRemarks());
 				}
 			});
@@ -82,44 +82,43 @@ public class PartitionTableHeaderBuilder extends AbstractSchemaGraphBuilder{
 		return instance();
 	}
 
-	
-	private String getPortName(Partition partition){
+	private String getPortName(Partition partition) {
 		return SchemaGraphUtils.getName(partition);
 	}
-	
-	private PartitionTableHeaderBuilder setCommonAttribute(Partition partition, TdElement cell){
+
+	private PartitionTableHeaderBuilder setCommonAttribute(Partition partition, TdElement cell) {
 		cell.setAlign(Align.CENTER);
-		//cell.setBorder(0);
+		// cell.setBorder(0);
 		cell.setColor(getTableColor(partition));
 		cell.setBgcolor(getTableBgcolor(partition));
-		if (colspan>1){
+		if (colspan > 1) {
 			cell.setColspan(colspan);
 		}
 		return instance();
 	}
-	
-	private PartitionTableHeaderBuilder instance(){
+
+	private PartitionTableHeaderBuilder instance() {
 		return this;
 	}
-	
-	private String getTableColor(Partition partition){
-		String value=color.apply(partition);
-		if (value==null){
+
+	private String getTableColor(Partition partition) {
+		String value = color.apply(partition);
+		if (value == null) {
 			return this.defaultColor();
 		}
 		return value;
 	}
 
-	private String getTableBgcolor(Partition partition){
-		String value=bgcolor.apply(partition);
-		if (value==null){
+	private String getTableBgcolor(Partition partition) {
+		String value = bgcolor.apply(partition);
+		if (value == null) {
 			return this.defaultBgcolor();
 		}
 		return value;
 	}
 
-	private void addCellSize(){
-		cellSize=cellSize+colspan;
+	private void addCellSize() {
+		cellSize = cellSize + colspan;
 	}
 
 }

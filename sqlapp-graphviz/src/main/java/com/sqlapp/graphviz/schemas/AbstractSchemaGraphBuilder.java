@@ -25,24 +25,24 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
 public class AbstractSchemaGraphBuilder {
-	
-	private DrawOptions drawOption=new DrawOptions();
-	
+
+	private DrawOptions drawOption = new DrawOptions();
+
 	@Getter(lombok.AccessLevel.PROTECTED)
 	@Setter(lombok.AccessLevel.PROTECTED)
 	private AbstractSchemaGraphBuilder parent;
-	
-	protected <T extends AbstractSchemaGraphBuilder> T getRoot(){
+
+	protected <T extends AbstractSchemaGraphBuilder> T getRoot() {
 		return getParent(this);
 	}
 
-	protected DrawOptions getDrawOption(){
-		AbstractSchemaGraphBuilder root=this.getRoot();
-		if (root!=this){
+	protected DrawOptions getDrawOption() {
+		AbstractSchemaGraphBuilder root = this.getRoot();
+		if (root != this) {
 			return root.getDrawOption();
 		}
 		return drawOption;
@@ -51,15 +51,15 @@ public class AbstractSchemaGraphBuilder {
 	@SuppressWarnings("unchecked")
 	public <T extends AbstractSchemaGraphBuilder> T drawOption(Consumer<DrawOptions> cons) {
 		cons.accept(this.getDrawOption());
-		return (T)this;
+		return (T) this;
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	protected <T extends AbstractSchemaGraphBuilder> T getParent(AbstractSchemaGraphBuilder element){
-		if (element.parent()==null){
-			return (T)element;
+	protected <T extends AbstractSchemaGraphBuilder> T getParent(AbstractSchemaGraphBuilder element) {
+		if (element.parent() == null) {
+			return (T) element;
 		}
-		return (T)getParent(element.parent());
+		return (T) getParent(element.parent());
 	}
 
 }

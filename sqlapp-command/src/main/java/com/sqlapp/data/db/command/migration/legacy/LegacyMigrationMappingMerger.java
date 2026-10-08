@@ -5,7 +5,6 @@
  */
 package com.sqlapp.data.db.command.migration.legacy;
 
-
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;

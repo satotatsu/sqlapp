@@ -82,8 +82,7 @@ public class Mdb extends Dialect {
 		// LONGNVARCHAR
 		getDbDataTypes().addLongNVarchar("MEMO", LEN_1GB, type -> {
 			type.setColumnTypeMatcher("LONGTEXT", "MEMO");
-			type.setLiteral("'", "'").setCreateFormat("MEMO")
-					.setDefaultValueLiteral("''");
+			type.setLiteral("'", "'").setCreateFormat("MEMO").setDefaultValueLiteral("''");
 		});
 		// NCLOB
 		getDbDataTypes().addNClob("MEMO", LEN_1GB, type -> {
@@ -255,8 +254,7 @@ public class Mdb extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		return rule == CascadeRule.None || rule == CascadeRule.Cascade
-				|| rule == CascadeRule.SetNull;
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade || rule == CascadeRule.SetNull;
 	}
 
 	@Override

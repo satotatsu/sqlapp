@@ -27,8 +27,7 @@ public class MdbCatalogReader extends JdbcCatalogReader {
 	}
 
 	@Override
-	protected List<Catalog> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Catalog> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		return list(new Catalog(""));
 	}

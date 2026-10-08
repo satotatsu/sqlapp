@@ -28,10 +28,10 @@ class MigrationCutoverArtifactServiceTest {
 				BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION, verifiedAt, "plan",
 				BulkMigrationVerificationIsolation.DEFAULT.name(), true, 0, 0, 0, List.of(), null);
 		final Path verificationFile = directory.resolve(MigrationCutoverArtifactService.VERIFICATION_REPORT_FILE);
-		final var verificationSnapshot = new BulkMigrationVerificationReportIO()
-				.writeSnapshot(verificationFile, verification);
-		final var cutover = new MigrationCutoverReport(verifiedAt.plusSeconds(5),
-				MigrationCutoverReport.Status.READY, Duration.ofSeconds(5), List.of());
+		final var verificationSnapshot = new BulkMigrationVerificationReportIO().writeSnapshot(verificationFile,
+				verification);
+		final var cutover = new MigrationCutoverReport(verifiedAt.plusSeconds(5), MigrationCutoverReport.Status.READY,
+				Duration.ofSeconds(5), List.of());
 		final Path cutoverFile = directory.resolve(MigrationCutoverArtifactService.CUTOVER_REPORT_FILE);
 		final var cutoverSnapshot = new MigrationCutoverReportIO().writeSnapshot(cutoverFile, cutover, null);
 		final var evidence = new MigrationCutoverEvidence(MigrationCutoverEvidence.CURRENT_FORMAT_VERSION,
@@ -45,10 +45,10 @@ class MigrationCutoverArtifactServiceTest {
 		assertEquals(evidence, inspected.evidence());
 		assertEquals(verification, inspected.verification());
 		assertEquals(cutover, inspected.cutover());
-		assertEquals(inspected, service.approvePackage(directory, evidenceSnapshot.fingerprint(),
-				Duration.ofMinutes(5), 10_000L, 10_000L, 10_000L));
-		assertThrows(IllegalArgumentException.class, () -> service.approvePackage(directory,
-				"sha256:" + "0".repeat(64), Duration.ofMinutes(5), null, null, null));
+		assertEquals(inspected, service.approvePackage(directory, evidenceSnapshot.fingerprint(), Duration.ofMinutes(5),
+				10_000L, 10_000L, 10_000L));
+		assertThrows(IllegalArgumentException.class, () -> service.approvePackage(directory, "sha256:" + "0".repeat(64),
+				Duration.ofMinutes(5), null, null, null));
 		assertThrows(IllegalArgumentException.class, () -> service.approvePackage(directory,
 				evidenceSnapshot.fingerprint(), Duration.ofSeconds(1), null, null, null));
 

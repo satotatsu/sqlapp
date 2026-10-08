@@ -5,7 +5,6 @@
  */
 package com.sqlapp.data.db.command.migration.legacy;
 
-
 import java.util.Locale;
 
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;

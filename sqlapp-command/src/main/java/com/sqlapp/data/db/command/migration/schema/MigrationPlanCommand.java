@@ -22,7 +22,9 @@ import com.sqlapp.exceptions.CommandException;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Builds a migration plan without creating/upgrading history or executing SQL. */
+/**
+ * Builds a migration plan without creating/upgrading history or executing SQL.
+ */
 @Getter
 @Setter
 public class MigrationPlanCommand extends MigrationCommand {
@@ -51,7 +53,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 			reader.setSqlSplitter(dialect.createSqlSplitter());
 			final var files = reader.read();
 			final List<RepeatableMigrationFile> repeatableFiles = isRepeatableMigrations()
-					? RepeatableMigrationFile.read(getSqlDirectory(), isRecursive(), getEncoding(), dialect.createSqlSplitter())
+					? RepeatableMigrationFile.read(getSqlDirectory(), isRecursive(), getEncoding(),
+							dialect.createSqlSplitter())
 					: List.of();
 			final Table definition = handler.createVersionTableDefinition(getSchemaChangeLogTableName());
 			final Table existing = handler.getTable(connection, dialect, definition);
@@ -115,14 +118,15 @@ public class MigrationPlanCommand extends MigrationCommand {
 					if (!repeatable.checksum().equals(previous)) {
 						repeatablePending.add(new MigrationPlan.RepeatableEntry(repeatable.name(),
 								repeatable.source().getAbsolutePath(), repeatable.statements().size(),
-								!getNoTransactionFileFilter().test(repeatable.source()), repeatable.checksum(), previous));
+								!getNoTransactionFileFilter().test(repeatable.source()), repeatable.checksum(),
+								previous));
 					}
 				}
 			}
-			plan = new MigrationPlan(existing != null, current, target,
-					read(dialect, getSetupSqlDirectory()).size(), read(dialect, getFinalizeSqlDirectory()).size(),
-					pending, issues, validation, drift, outOfOrder, isRejectOutOfOrder(), isRejectNonTransactional(),
-					isRequireDownMigration(), databaseIdentity(connection), repeatablePending);
+			plan = new MigrationPlan(existing != null, current, target, read(dialect, getSetupSqlDirectory()).size(),
+					read(dialect, getFinalizeSqlDirectory()).size(), pending, issues, validation, drift, outOfOrder,
+					isRejectOutOfOrder(), isRejectNonTransactional(), isRequireDownMigration(),
+					databaseIdentity(connection), repeatablePending);
 			if (outputFile != null) {
 				new MigrationPlanIO().write(outputFile.toPath(), plan);
 			}
@@ -148,8 +152,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 			if (!selected.contains(file.getVersionNumber())) {
 				continue;
 			}
-			final String name = file.getUpSqlFile() == null ? "" : file.getUpSqlFile().getName()
-					.replace('\r', '_').replace('\n', '_');
+			final String name = file.getUpSqlFile() == null ? ""
+					: file.getUpSqlFile().getName().replace('\r', '_').replace('\n', '_');
 			sql.append("\n-- migration ").append(file.getVersionNumber()).append(": ").append(name)
 					.append(isNoTransactionFile(file) ? " [non-transactional]" : " [transactional]").append('\n');
 			appendStatements(sql, file.getUpSqls());
@@ -161,8 +165,9 @@ public class MigrationPlanCommand extends MigrationCommand {
 				continue;
 			}
 			sql.append("\n-- repeatable ").append(repeatable.name())
-					.append(getNoTransactionFileFilter().test(repeatable.source())
-							? " [non-transactional]" : " [transactional]").append('\n');
+					.append(getNoTransactionFileFilter().test(repeatable.source()) ? " [non-transactional]"
+							: " [transactional]")
+					.append('\n');
 			appendStatements(sql, repeatable.statements());
 		}
 		appendSection(sql, "finalize", read(dialect, getFinalizeSqlDirectory()));
@@ -182,8 +187,7 @@ public class MigrationPlanCommand extends MigrationCommand {
 		return file.getUpSqlFile() != null && getNoTransactionFileFilter().test(file.getUpSqlFile());
 	}
 
-	private static void appendSection(final StringBuilder sql, final String name,
-			final List<SplitResult> statements) {
+	private static void appendSection(final StringBuilder sql, final String name, final List<SplitResult> statements) {
 		if (statements == null || statements.isEmpty()) {
 			return;
 		}
@@ -208,8 +212,8 @@ public class MigrationPlanCommand extends MigrationCommand {
 		final String location = String.valueOf(metadata.getURL()) + "\n" + String.valueOf(connection.getCatalog())
 				+ "\n" + String.valueOf(connection.getSchema());
 		try {
-			final String fingerprint = "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-					.digest(location.getBytes(StandardCharsets.UTF_8)));
+			final String fingerprint = "sha256:" + HexFormat.of()
+					.formatHex(MessageDigest.getInstance("SHA-256").digest(location.getBytes(StandardCharsets.UTF_8)));
 			return new MigrationPlan.DatabaseIdentity(metadata.getDatabaseProductName(),
 					metadata.getDatabaseProductVersion(), fingerprint);
 		} catch (final NoSuchAlgorithmException e) {

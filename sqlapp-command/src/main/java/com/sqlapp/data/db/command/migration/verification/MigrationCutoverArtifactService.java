@@ -20,8 +20,8 @@ public final class MigrationCutoverArtifactService {
 	public static final String VERIFICATION_REPORT_FILE = "verification.json";
 	public static final String CUTOVER_REPORT_FILE = "cutover.json";
 	public static final String EVIDENCE_FILE = "evidence.json";
-	private static final Set<String> PACKAGE_FILES = Set.of(VERIFICATION_REPORT_FILE,
-			CUTOVER_REPORT_FILE, EVIDENCE_FILE);
+	private static final Set<String> PACKAGE_FILES = Set.of(VERIFICATION_REPORT_FILE, CUTOVER_REPORT_FILE,
+			EVIDENCE_FILE);
 
 	public record Inspection(MigrationCutoverEvidence evidence, String evidenceFingerprint,
 			BulkMigrationVerificationReport verification, MigrationCutoverReport cutover) {
@@ -33,9 +33,9 @@ public final class MigrationCutoverArtifactService {
 		}
 	}
 
-	public Inspection inspect(final Path evidenceFile, final Path verificationReport,
-			final Path cutoverReport, final Long maxEvidenceFileSizeBytes,
-			final Long maxVerificationFileSizeBytes, final Long maxCutoverFileSizeBytes) {
+	public Inspection inspect(final Path evidenceFile, final Path verificationReport, final Path cutoverReport,
+			final Long maxEvidenceFileSizeBytes, final Long maxVerificationFileSizeBytes,
+			final Long maxCutoverFileSizeBytes) {
 		return inspect(evidenceFile, null, verificationReport, cutoverReport, maxEvidenceFileSizeBytes,
 				maxVerificationFileSizeBytes, maxCutoverFileSizeBytes);
 	}
@@ -56,8 +56,8 @@ public final class MigrationCutoverArtifactService {
 			final Long maxVerificationFileSizeBytes, final Long maxCutoverFileSizeBytes) {
 		final Path directory = validatePackageDirectory(packageDirectory);
 		return inspect(directory.resolve(EVIDENCE_FILE), directory.resolve(VERIFICATION_REPORT_FILE),
-				directory.resolve(CUTOVER_REPORT_FILE), maxEvidenceFileSizeBytes,
-				maxVerificationFileSizeBytes, maxCutoverFileSizeBytes);
+				directory.resolve(CUTOVER_REPORT_FILE), maxEvidenceFileSizeBytes, maxVerificationFileSizeBytes,
+				maxCutoverFileSizeBytes);
 	}
 
 	public Inspection approvePackage(final Path packageDirectory, final String expectedEvidenceFingerprint,
@@ -65,14 +65,13 @@ public final class MigrationCutoverArtifactService {
 			final Long maxVerificationFileSizeBytes, final Long maxCutoverFileSizeBytes) {
 		final Path directory = validatePackageDirectory(packageDirectory);
 		return approve(directory.resolve(EVIDENCE_FILE), expectedEvidenceFingerprint,
-				directory.resolve(VERIFICATION_REPORT_FILE), directory.resolve(CUTOVER_REPORT_FILE),
-				maximumReportAge, maxEvidenceFileSizeBytes, maxVerificationFileSizeBytes,
-				maxCutoverFileSizeBytes);
+				directory.resolve(VERIFICATION_REPORT_FILE), directory.resolve(CUTOVER_REPORT_FILE), maximumReportAge,
+				maxEvidenceFileSizeBytes, maxVerificationFileSizeBytes, maxCutoverFileSizeBytes);
 	}
 
 	public Path validatePackageDirectory(final Path packageDirectory) {
-		final Path directory = Objects.requireNonNull(packageDirectory, "packageDirectory")
-				.toAbsolutePath().normalize();
+		final Path directory = Objects.requireNonNull(packageDirectory, "packageDirectory").toAbsolutePath()
+				.normalize();
 		if (Files.isSymbolicLink(directory) || !Files.isDirectory(directory)) {
 			throw new CommandException(
 					"Migration cutover package does not exist or is not a regular directory: " + directory);
@@ -98,8 +97,8 @@ public final class MigrationCutoverArtifactService {
 	private Inspection inspect(final Path evidenceFile, final String expectedEvidenceFingerprint,
 			final Path verificationReport, final Path cutoverReport, final Long maxEvidenceFileSizeBytes,
 			final Long maxVerificationFileSizeBytes, final Long maxCutoverFileSizeBytes) {
-		final var evidenceSnapshot = new MigrationCutoverEvidenceIO().readSnapshot(
-				Objects.requireNonNull(evidenceFile, "evidenceFile"), maxEvidenceFileSizeBytes);
+		final var evidenceSnapshot = new MigrationCutoverEvidenceIO()
+				.readSnapshot(Objects.requireNonNull(evidenceFile, "evidenceFile"), maxEvidenceFileSizeBytes);
 		if (expectedEvidenceFingerprint != null
 				&& !expectedEvidenceFingerprint.equals(evidenceSnapshot.fingerprint())) {
 			throw new IllegalArgumentException("Migration cutover evidence fingerprint does not match");
@@ -116,8 +115,8 @@ public final class MigrationCutoverArtifactService {
 				|| !evidence.verifiedAt().equals(verification.generatedAt()) || !verification.match()) {
 			throw new IllegalArgumentException("Migration verification report does not match cutover evidence");
 		}
-		final var cutoverSnapshot = new MigrationCutoverReportIO().readSnapshot(
-				Objects.requireNonNull(cutoverReport, "cutoverReport"), maxCutoverFileSizeBytes);
+		final var cutoverSnapshot = new MigrationCutoverReportIO()
+				.readSnapshot(Objects.requireNonNull(cutoverReport, "cutoverReport"), maxCutoverFileSizeBytes);
 		final MigrationCutoverReport cutover = cutoverSnapshot.report();
 		if (!evidence.cutoverReportFingerprint().equals(cutoverSnapshot.fingerprint())
 				|| !evidence.assessedAt().equals(cutover.assessedAt()) || evidence.status() != cutover.status()) {
@@ -138,8 +137,8 @@ public final class MigrationCutoverArtifactService {
 		}
 	}
 
-	private static void validateReadyAndRecent(final MigrationCutoverReport report,
-			final Duration maximumReportAge, final Instant now) {
+	private static void validateReadyAndRecent(final MigrationCutoverReport report, final Duration maximumReportAge,
+			final Instant now) {
 		if (report.assessedAt().isAfter(now)) {
 			throw new IllegalArgumentException("Migration cutover report assessedAt is in the future");
 		}

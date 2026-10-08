@@ -33,9 +33,9 @@ import io.github.spannm.jackcess.query.Query;
  * <p>
  * Table rows are read lazily. Non-parameterized saved SELECT and UNION queries
  * are represented as views whose definition contains the Access SQL. Action,
- * hidden and parameterized queries are not represented as views. Access
- * complex columns remain unsupported by the row iterator because a single
- * Schema column cannot preserve attachment or multi-value structure.
+ * hidden and parameterized queries are not represented as views. Access complex
+ * columns remain unsupported by the row iterator because a single Schema column
+ * cannot preserve attachment or multi-value structure.
  * </p>
  */
 public final class MdbFileLoader {
@@ -45,7 +45,9 @@ public final class MdbFileLoader {
 	public static final String SOURCE_TYPE = "access.sourceType";
 	/** Native Jet/ACE file format retained by the assessment snapshot. */
 	public static final String SOURCE_FILE_FORMAT = "access.fileFormat";
-	/** Access text-column empty-string policy retained by the assessment snapshot. */
+	/**
+	 * Access text-column empty-string policy retained by the assessment snapshot.
+	 */
 	public static final String ALLOW_ZERO_LENGTH = "access.allowZeroLength";
 
 	private MdbFileLoader() {
@@ -56,8 +58,8 @@ public final class MdbFileLoader {
 		final Schema schema = new Schema("").setProductName("Microsoft Access");
 		final List<String> links = new ArrayList<>();
 		final List<MdbAssessmentSnapshot.SavedQuery> queries = new ArrayList<>();
-		try (Database database = new DatabaseBuilder().withPath(file.toAbsolutePath().normalize())
-				.withReadOnly(true).open()) {
+		try (Database database = new DatabaseBuilder().withPath(file.toAbsolutePath().normalize()).withReadOnly(true)
+				.open()) {
 			schema.getSpecifics().put(SOURCE_FILE_FORMAT, database.getFileFormat().name());
 			database.setLinkResolver((source, name) -> {
 				throw new IOException("Linked databases must not be opened during assessment");
@@ -72,8 +74,8 @@ public final class MdbFileLoader {
 					final var source = metadata.open(database);
 					final Table table = toTable(source);
 					for (final var column : source.getColumns()) {
-						table.getColumns().get(column.getName()).getSpecifics()
-							.put(SOURCE_TYPE, column.getType().name());
+						table.getColumns().get(column.getName()).getSpecifics().put(SOURCE_TYPE,
+								column.getType().name());
 					}
 					schema.getTables().add(table);
 				}
@@ -90,8 +92,8 @@ public final class MdbFileLoader {
 	static List<MdbAssessmentSnapshot.SavedQuery> assessmentQueries(final Iterable<Query> source) {
 		final var queries = new ArrayList<MdbAssessmentSnapshot.SavedQuery>();
 		for (final Query query : source) {
-			queries.add(new MdbAssessmentSnapshot.SavedQuery(query.getName(), query.getType().name(),
-					query.isHidden(), !query.getParameters().isEmpty()));
+			queries.add(new MdbAssessmentSnapshot.SavedQuery(query.getName(), query.getType().name(), query.isHidden(),
+					!query.getParameters().isEmpty()));
 		}
 		return List.copyOf(queries);
 	}
@@ -103,8 +105,7 @@ public final class MdbFileLoader {
 	public static Schema loadSchema(final Path file) throws IOException {
 		final Path normalized = file.toAbsolutePath().normalize();
 		final Schema schema = new Schema("");
-		try (Database database = new DatabaseBuilder().withPath(normalized)
-				.withReadOnly(true).open()) {
+		try (Database database = new DatabaseBuilder().withPath(normalized).withReadOnly(true).open()) {
 			loadTables(database, normalized, schema);
 			loadRelationships(database, schema);
 			loadQueries(database.getQueries(), schema);
@@ -112,12 +113,10 @@ public final class MdbFileLoader {
 		return schema;
 	}
 
-	static void loadQueries(final Iterable<Query> queries,
-			final Schema schema) {
+	static void loadQueries(final Iterable<Query> queries, final Schema schema) {
 		for (final Query query : queries) {
 			if (query.isHidden() || !query.getParameters().isEmpty()
-					|| (query.getType() != Query.Type.SELECT
-							&& query.getType() != Query.Type.UNION)) {
+					|| (query.getType() != Query.Type.SELECT && query.getType() != Query.Type.UNION)) {
 				continue;
 			}
 			final View view = new View(query.getName());
@@ -126,40 +125,33 @@ public final class MdbFileLoader {
 		}
 	}
 
-	public static Table loadTable(final Path file, final String tableName)
-			throws IOException {
+	public static Table loadTable(final Path file, final String tableName) throws IOException {
 		final Path normalized = file.toAbsolutePath().normalize();
-		try (Database database = new DatabaseBuilder().withPath(normalized)
-				.withReadOnly(true).open()) {
+		try (Database database = new DatabaseBuilder().withPath(normalized).withReadOnly(true).open()) {
 			final Schema schema = new Schema("");
 			loadTables(database, normalized, schema);
 			loadRelationships(database, schema);
 			final Table table = schema.getTables().get(tableName);
 			if (table == null) {
-				throw new IllegalArgumentException(
-						"Access table not found: " + tableName);
+				throw new IllegalArgumentException("Access table not found: " + tableName);
 			}
 			return table;
 		}
 	}
 
-	private static void loadTables(final Database database,
-			final Path file, final Schema schema) throws IOException {
+	private static void loadTables(final Database database, final Path file, final Schema schema) throws IOException {
 		for (final String tableName : database.getTableNames()) {
-			final io.github.spannm.jackcess.Table source = database
-					.getTable(tableName);
+			final io.github.spannm.jackcess.Table source = database.getTable(tableName);
 			if (source == null || source.isSystem()) {
 				continue;
 			}
 			final Table table = toTable(source);
-			table.setRowIteratorHandler(
-					new MdbRowIteratorHandler(file, tableName));
+			table.setRowIteratorHandler(new MdbRowIteratorHandler(file, tableName));
 			schema.getTables().add(table);
 		}
 	}
 
-	private static Table toTable(
-			final io.github.spannm.jackcess.Table source) throws IOException {
+	private static Table toTable(final io.github.spannm.jackcess.Table source) throws IOException {
 		final Table table = new Table(source.getName());
 		if (source.getCreatedDate() != null) {
 			table.setCreatedAt(Timestamp.valueOf(source.getCreatedDate()));
@@ -168,38 +160,29 @@ public final class MdbFileLoader {
 			table.setLastAlteredAt(Timestamp.valueOf(source.getUpdatedDate()));
 		}
 		final PropertyMap tableProperties = source.getProperties();
-		table.setRemarks(toString(
-				tableProperties.getValue(PropertyMap.DESCRIPTION_PROP)));
-		final String validationRule = toString(
-				tableProperties.getValue(PropertyMap.VALIDATION_RULE_PROP));
+		table.setRemarks(toString(tableProperties.getValue(PropertyMap.DESCRIPTION_PROP)));
+		final String validationRule = toString(tableProperties.getValue(PropertyMap.VALIDATION_RULE_PROP));
 		if (validationRule != null) {
 			table.getConstraints().addCheckConstraint(null, validationRule);
 		}
-		for (final io.github.spannm.jackcess.Column sourceColumn : source
-				.getColumns()) {
+		for (final io.github.spannm.jackcess.Column sourceColumn : source.getColumns()) {
 			final Column column = new Column(sourceColumn.getName());
 			column.setDataType(toDataType(sourceColumn.getType()));
 			column.setDataTypeName(sourceColumn.getType().getTypeName());
 			column.setIdentity(sourceColumn.isAutoNumber());
 			final PropertyMap properties = sourceColumn.getProperties();
-			column.setNotNull(Boolean.TRUE.equals(
-					properties.getValue(PropertyMap.REQUIRED_PROP)));
-			column.setDefaultValue(toString(properties
-					.getValue(PropertyMap.DEFAULT_VALUE_PROP)));
-			column.setRemarks(toString(properties
-					.getValue(PropertyMap.DESCRIPTION_PROP)));
-			column.setCheck(toString(properties
-					.getValue(PropertyMap.VALIDATION_RULE_PROP)));
+			column.setNotNull(Boolean.TRUE.equals(properties.getValue(PropertyMap.REQUIRED_PROP)));
+			column.setDefaultValue(toString(properties.getValue(PropertyMap.DEFAULT_VALUE_PROP)));
+			column.setRemarks(toString(properties.getValue(PropertyMap.DESCRIPTION_PROP)));
+			column.setCheck(toString(properties.getValue(PropertyMap.VALIDATION_RULE_PROP)));
 			final Object allowZeroLength = properties.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP);
 			if (allowZeroLength instanceof Boolean) {
 				column.getSpecifics().put(ALLOW_ZERO_LENGTH, allowZeroLength.toString());
 			}
 			if (sourceColumn.isCalculated()) {
-				column.setFormula(toString(properties
-						.getValue(PropertyMap.EXPRESSION_PROP)));
+				column.setFormula(toString(properties.getValue(PropertyMap.EXPRESSION_PROP)));
 			}
-			if (sourceColumn.getType().isTextual()
-					&& !sourceColumn.getType().isLongValue()) {
+			if (sourceColumn.getType().isTextual() && !sourceColumn.getType().isLongValue()) {
 				column.setLength((long) sourceColumn.getLengthInUnits());
 			}
 			if (sourceColumn.getType().getHasScalePrecision()) {
@@ -208,29 +191,24 @@ public final class MdbFileLoader {
 			}
 			table.getColumns().add(column);
 		}
-		for (final io.github.spannm.jackcess.Index sourceIndex : source
-				.getIndexes()) {
+		for (final io.github.spannm.jackcess.Index sourceIndex : source.getIndexes()) {
 			final List<Column> keyColumns = new ArrayList<>();
-			for (final io.github.spannm.jackcess.Index.Column sourceColumn : sourceIndex
-					.getColumns()) {
+			for (final io.github.spannm.jackcess.Index.Column sourceColumn : sourceIndex.getColumns()) {
 				keyColumns.add(table.getColumns().get(sourceColumn.getName()));
 			}
 			if (sourceIndex.isPrimaryKey()) {
-				table.setPrimaryKey(sourceIndex.getName(),
-						keyColumns.toArray(Column[]::new));
+				table.setPrimaryKey(sourceIndex.getName(), keyColumns.toArray(Column[]::new));
 				continue;
 			}
 			final Index index = new Index(sourceIndex.getName());
 			index.setUnique(sourceIndex.isUnique());
 			if (sourceIndex.shouldIgnoreNulls()) {
-				index.getSpecifics().put(INDEX_IGNORE_NULLS,
-						Boolean.TRUE.toString());
+				index.getSpecifics().put(INDEX_IGNORE_NULLS, Boolean.TRUE.toString());
 			}
 			for (int i = 0; i < sourceIndex.getColumns().size(); i++) {
-				final io.github.spannm.jackcess.Index.Column sourceColumn = sourceIndex
-						.getColumns().get(i);
-				index.getColumns().add(new ReferenceColumn(keyColumns.get(i),
-						sourceColumn.isAscending() ? Order.Asc : Order.Desc));
+				final io.github.spannm.jackcess.Index.Column sourceColumn = sourceIndex.getColumns().get(i);
+				index.getColumns().add(
+						new ReferenceColumn(keyColumns.get(i), sourceColumn.isAscending() ? Order.Asc : Order.Desc));
 			}
 			table.getIndexes().add(index);
 		}
@@ -241,43 +219,32 @@ public final class MdbFileLoader {
 		return value == null ? null : value.toString();
 	}
 
-	private static void loadRelationships(final Database database,
-			final Schema schema) throws IOException {
-		for (final io.github.spannm.jackcess.Relationship relationship : database
-				.getRelationships()) {
-			final Table relatedTable = schema.getTables()
-					.get(relationship.getFromTable().getName());
-			final Table table = schema.getTables()
-					.get(relationship.getToTable().getName());
+	private static void loadRelationships(final Database database, final Schema schema) throws IOException {
+		for (final io.github.spannm.jackcess.Relationship relationship : database.getRelationships()) {
+			final Table relatedTable = schema.getTables().get(relationship.getFromTable().getName());
+			final Table table = schema.getTables().get(relationship.getToTable().getName());
 			if (table == null || relatedTable == null) {
 				continue;
 			}
-			final ForeignKeyConstraint foreignKey = new ForeignKeyConstraint(
-					relationship.getName());
+			final ForeignKeyConstraint foreignKey = new ForeignKeyConstraint(relationship.getName());
 			foreignKey.setRelatedTableName(relatedTable.getName());
 			final List<Column> columns = new ArrayList<>();
-			for (final io.github.spannm.jackcess.Column sourceColumn : relationship
-					.getToColumns()) {
+			for (final io.github.spannm.jackcess.Column sourceColumn : relationship.getToColumns()) {
 				columns.add(table.getColumns().get(sourceColumn.getName()));
 			}
 			foreignKey.addColumns(columns);
 			final List<Column> relatedColumns = new ArrayList<>();
-			for (final io.github.spannm.jackcess.Column sourceColumn : relationship
-					.getFromColumns()) {
-				relatedColumns.add(
-						relatedTable.getColumns().get(sourceColumn.getName()));
+			for (final io.github.spannm.jackcess.Column sourceColumn : relationship.getFromColumns()) {
+				relatedColumns.add(relatedTable.getColumns().get(sourceColumn.getName()));
 			}
 			foreignKey.addRelatedColumns(relatedColumns);
-			foreignKey.setUpdateRule(relationship.cascadeUpdates()
-					? CascadeRule.Cascade : CascadeRule.None);
-			foreignKey.setDeleteRule(relationship.cascadeDeletes()
-					? CascadeRule.Cascade : CascadeRule.None);
+			foreignKey.setUpdateRule(relationship.cascadeUpdates() ? CascadeRule.Cascade : CascadeRule.None);
+			foreignKey.setDeleteRule(relationship.cascadeDeletes() ? CascadeRule.Cascade : CascadeRule.None);
 			table.getConstraints().add(foreignKey);
 		}
 	}
 
-	private static DataType toDataType(
-			final io.github.spannm.jackcess.DataType type) {
+	private static DataType toDataType(final io.github.spannm.jackcess.DataType type) {
 		return switch (type) {
 		case BOOLEAN -> DataType.BOOLEAN;
 		case BYTE -> DataType.TINYINT;

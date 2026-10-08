@@ -17,8 +17,8 @@ class VerifyMigrationExecutionReportCommandTest {
 	@Test
 	void readsPreviousFormatWithoutRepeatableFields() {
 		final long now = System.currentTimeMillis();
-		final var report = new MigrationExecutionReport(2, now, now, true, true, null, null,
-				List.of(1L), List.of(1L), null);
+		final var report = new MigrationExecutionReport(2, now, now, true, true, null, null, List.of(1L), List.of(1L),
+				null);
 		final Path file = directory.resolve("version-2.json");
 		new MigrationExecutionReportIO().write(file, report);
 		assertEquals(report, new MigrationExecutionReportIO().read(file));
@@ -27,8 +27,8 @@ class VerifyMigrationExecutionReportCommandTest {
 	@Test
 	void freshnessIsOptionalAndRejectsFutureCompletionTimes() {
 		final long future = System.currentTimeMillis() + 120_000;
-		final var report = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION,
-				future, future, true, true, null, null, List.of(), List.of(), null);
+		final var report = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, future, future,
+				true, true, null, null, List.of(), List.of(), null);
 		final Path file = directory.resolve("future.json");
 		new MigrationExecutionReportIO().write(file, report);
 		final var command = new VerifyMigrationExecutionReportCommand();
@@ -55,9 +55,8 @@ class VerifyMigrationExecutionReportCommandTest {
 		final long now = System.currentTimeMillis();
 		final String planFingerprint = "sha256:" + "1".repeat(64);
 		final String connectionFingerprint = "sha256:" + "2".repeat(64);
-		final var report = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, now,
-				now, true, true,
-				new MigrationPlan.DatabaseIdentity("HSQL Database Engine", "2.7.4", connectionFingerprint),
+		final var report = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, now, now, true,
+				true, new MigrationPlan.DatabaseIdentity("HSQL Database Engine", "2.7.4", connectionFingerprint),
 				planFingerprint, List.of(1L), List.of(1L), null);
 		final Path file = directory.resolve("execution.json");
 		new MigrationExecutionReportIO().write(file, report);
@@ -83,8 +82,8 @@ class VerifyMigrationExecutionReportCommandTest {
 		wrongDatabase.setReportFile(file.toFile());
 		wrongDatabase.setExpectedDatabaseConnectionFingerprint("sha256:" + "0".repeat(64));
 		assertThrows(RuntimeException.class, wrongDatabase::run);
-		final var expired = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION,
-				now - 120_000, now - 120_000, true, true,
+		final var expired = new MigrationExecutionReport(MigrationExecutionReport.CURRENT_FORMAT_VERSION, now - 120_000,
+				now - 120_000, true, true,
 				new MigrationPlan.DatabaseIdentity("HSQL Database Engine", "2.7.4", connectionFingerprint),
 				planFingerprint, List.of(1L), List.of(1L), null);
 		final Path expiredFile = directory.resolve("expired-execution.json");

@@ -19,19 +19,18 @@
 
 package com.sqlapp.graphviz.labeltable;
 
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class VrElement extends AbstractSimpleElement{
+@EqualsAndHashCode(callSuper = true)
+public class VrElement extends AbstractSimpleElement {
 
-	protected String getElementName(){
+	protected String getElementName() {
 		return "vr";
 	}
 

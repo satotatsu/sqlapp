@@ -188,8 +188,7 @@ public class GenerateHtmlDocsCommandTest {
 			assertTrue(all.contains(": \"partition of\""));
 		}
 		assertTableDetailsHaveDdlAndNoRelations(output);
-		String parentHtml = Files.readString(
-				output.resolve("tables/" + HtmlUtils.objectFullPath(parent) + ".html"));
+		String parentHtml = Files.readString(output.resolve("tables/" + HtmlUtils.objectFullPath(parent) + ".html"));
 		assertTrue(parentHtml.contains("&lt;unsafe&gt;"));
 		assertFalse(parentHtml.contains("<unsafe>"));
 		assertFalse(Files.exists(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + ".svg")));
@@ -239,7 +238,8 @@ public class GenerateHtmlDocsCommandTest {
 			for (Path html : paths.filter(path -> path.toString().endsWith(".html")).toList()) {
 				var matcher = pattern.matcher(Files.readString(html));
 				while (matcher.find()) {
-					String target = java.net.URLDecoder.decode(matcher.group(1), java.nio.charset.StandardCharsets.UTF_8);
+					String target = java.net.URLDecoder.decode(matcher.group(1),
+							java.nio.charset.StandardCharsets.UTF_8);
 					assertTrue(Files.isRegularFile(html.getParent().resolve(target)), target);
 					links++;
 				}

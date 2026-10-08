@@ -26,9 +26,8 @@ public record MigrationPlanArtifact(int formatVersion, long createdAtEpochMillis
 			}
 		} else if (createdAtEpochMillis <= 0) {
 			throw new IllegalArgumentException("Migration plan createdAtEpochMillis must be positive");
-		} else if (!(formatVersion == PREVIOUS_FORMAT_VERSION
-				? fingerprint(createdAtEpochMillis, plan, false) : fingerprint(createdAtEpochMillis, plan))
-				.equals(planFingerprint)) {
+		} else if (!(formatVersion == PREVIOUS_FORMAT_VERSION ? fingerprint(createdAtEpochMillis, plan, false)
+				: fingerprint(createdAtEpochMillis, plan)).equals(planFingerprint)) {
 			throw new IllegalArgumentException("Migration plan fingerprint mismatch");
 		}
 	}
@@ -111,8 +110,8 @@ public record MigrationPlanArtifact(int formatVersion, long createdAtEpochMillis
 			}
 		}
 		try {
-			return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-					.digest(value.toString().getBytes(StandardCharsets.UTF_8)));
+			return "sha256:" + HexFormat.of().formatHex(
+					MessageDigest.getInstance("SHA-256").digest(value.toString().getBytes(StandardCharsets.UTF_8)));
 		} catch (final NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}

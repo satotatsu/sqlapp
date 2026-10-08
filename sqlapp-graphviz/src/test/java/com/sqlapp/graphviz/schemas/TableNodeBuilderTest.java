@@ -34,20 +34,20 @@ import com.sqlapp.graphviz.Graph;
 import com.sqlapp.graphviz.Node;
 import com.sqlapp.graphviz.Rankdir;
 
-public class TableNodeBuilderTest extends AbstractTest{
+public class TableNodeBuilderTest extends AbstractTest {
 
 	@Test
 	public void test() throws XMLStreamException, IOException {
-		Graph graph=new Graph("ER");
-		graph.addGraphSetting(setting->{
+		Graph graph = new Graph("ER");
+		graph.addGraphSetting(setting -> {
 			setting.setRankdir(Rankdir.RightToLeft);
 		});
-		Table table=new Table("TableA");
-		table.getColumns().add(c->{
+		Table table = new Table("TableA");
+		table.getColumns().add(c -> {
 			c.setName("cola");
 		});
 		Statistics.ROWS.setValue(table, 10L);
-		Node node=TableNodeBuilder.create().build(table, graph);
+		Node node = TableNodeBuilder.create().build(table, graph);
 		assertEquals(this.getResource("table1.txt"), node.toString());
 	}
 

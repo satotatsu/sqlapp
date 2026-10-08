@@ -11,12 +11,10 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 
 /** Generates Access CREATE INDEX syntax, which has no IF NOT EXISTS clause. */
-public class MdbCreateIndexFactory
-		extends AbstractCreateIndexFactory<MdbSqlBuilder> {
+public class MdbCreateIndexFactory extends AbstractCreateIndexFactory<MdbSqlBuilder> {
 
 	@Override
-	protected void addUnique(final Index index, final Table table,
-			final MdbSqlBuilder builder) {
+	protected void addUnique(final Index index, final Table table, final MdbSqlBuilder builder) {
 		builder.unique(index.isUnique()).index().space();
 	}
 }

@@ -52,8 +52,8 @@ public final class BulkMigrationJobRepairOutcomeReportIO {
 			throw new CommandException("Bulk migration job repair outcome report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
-					"maxEvidenceFileSizeBytes", "Bulk migration job repair outcome report");
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes, "maxEvidenceFileSizeBytes",
+					"Bulk migration job repair outcome report");
 			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationJobRepairOutcomeReport.class));
 			return new Snapshot(report, fingerprint(bytes));
@@ -94,10 +94,9 @@ public final class BulkMigrationJobRepairOutcomeReportIO {
 					|| blank(report.failedTaskId())) {
 				throw new CommandException("Failed job repair outcome report evidence is invalid");
 			}
-			if ("EXECUTION_FAILED".equals(report.status())
-					&& (report.repairExecutionReportFingerprint() != null
-							|| report.postRepairVerificationReportFingerprint() != null
-							|| "POST_VERIFICATION".equals(report.failurePhase()))) {
+			if ("EXECUTION_FAILED".equals(report.status()) && (report.repairExecutionReportFingerprint() != null
+					|| report.postRepairVerificationReportFingerprint() != null
+					|| "POST_VERIFICATION".equals(report.failurePhase()))) {
 				throw new CommandException("Execution-failed job repair outcome report evidence is invalid");
 			}
 			if ("VERIFICATION_FAILED".equals(report.status())

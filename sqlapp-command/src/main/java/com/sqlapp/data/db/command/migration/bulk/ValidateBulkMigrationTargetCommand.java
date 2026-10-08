@@ -13,7 +13,10 @@ import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Validates a declarative bulk migration job against its live target without writing data. */
+/**
+ * Validates a declarative bulk migration job against its live target without
+ * writing data.
+ */
 @Getter
 @Setter
 public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceCommand {
@@ -71,18 +74,19 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 			final String configurationFingerprint = resolution.provenance().configurationFingerprint();
 			executeNoTranAndClose(getDataSource(), targetConnection -> {
 				BulkMigrationTargetValidator.validate(targetConnection, plan);
-				final var validated = new BulkMigrationTargetValidationResult(plan.getFingerprint(), configurationFingerprint,
-						plan.getTasks().stream().map(task -> task.getTaskId()).toList());
+				final var validated = new BulkMigrationTargetValidationResult(plan.getFingerprint(),
+						configurationFingerprint, plan.getTasks().stream().map(task -> task.getTaskId()).toList());
 				if (reportFile != null) {
 					final var metadata = targetConnection.getMetaData();
 					final var reportIO = new BulkMigrationTargetValidationReportIO();
 					final var snapshot = reportIO.writeSnapshot(reportFile.toPath(),
 							new BulkMigrationTargetValidationReport(
 									BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
-									plan.getJobId(), plan.getFingerprint(), configurationFingerprint, validated.taskIds(),
-									resolution.provenance(), targetEnvironmentId, metadata.getDatabaseProductName(),
-									metadata.getDatabaseProductVersion(), targetConnection.getCatalog(),
-									targetConnection.getSchema()), maxTargetValidationReportFileSizeBytes);
+									plan.getJobId(), plan.getFingerprint(), configurationFingerprint,
+									validated.taskIds(), resolution.provenance(), targetEnvironmentId,
+									metadata.getDatabaseProductName(), metadata.getDatabaseProductVersion(),
+									targetConnection.getCatalog(), targetConnection.getSchema()),
+							maxTargetValidationReportFileSizeBytes);
 					targetValidationReportFingerprint = snapshot.fingerprint();
 				}
 				result = validated;
@@ -102,9 +106,8 @@ public class ValidateBulkMigrationTargetCommand extends AbstractDataSourceComman
 				provenance == null ? null : provenance.assessmentReportFingerprint(), "assessmentReportFile",
 				"assessmentReportFingerprint", maxApprovalArtifactFileSizeBytes);
 		BulkMigrationArtifactProvenanceVerifier.verify(ddlVerificationReportFile,
-				provenance == null ? null : provenance.ddlVerificationReportFingerprint(),
-				"ddlVerificationReportFile", "ddlVerificationReportFingerprint",
-				maxApprovalArtifactFileSizeBytes);
+				provenance == null ? null : provenance.ddlVerificationReportFingerprint(), "ddlVerificationReportFile",
+				"ddlVerificationReportFingerprint", maxApprovalArtifactFileSizeBytes);
 	}
 
 }

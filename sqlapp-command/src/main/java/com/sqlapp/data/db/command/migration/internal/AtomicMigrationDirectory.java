@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
 
-/** Publishes a newly created artifact directory only after all files are ready. */
+/**
+ * Publishes a newly created artifact directory only after all files are ready.
+ */
 public final class AtomicMigrationDirectory {
 	@FunctionalInterface
 	public interface TemporaryDirectoryWriter {

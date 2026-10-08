@@ -32,78 +32,78 @@ import lombok.experimental.Accessors;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class TableLabelBuilder extends AbstractSchemaGraphBuilder{
+public class TableLabelBuilder extends AbstractSchemaGraphBuilder {
 
-	private String defaultColor=null;
+	private String defaultColor = null;
 
-	private String defaultBgcolor="#EFFBFB";
-	
-	private Function<Table, String> color=(t)->this.defaultColor();
+	private String defaultBgcolor = "#EFFBFB";
 
-	private Function<Table, String> bgcolor=(t)->this.defaultBgcolor();
-	
-	private TableTableHeaderBuilder tableTableHeaderBuilder=TableTableHeaderBuilder.create();
-	
-	private TableColumnCellBuilder tableColumnCellBuilder=TableColumnCellBuilder.create();
+	private Function<Table, String> color = (t) -> this.defaultColor();
 
-	private BiConsumer<Table, TableElement> setAttribute=null;
-	
-	private TableLabelBuilder(){}
-	
-	
-	public static TableLabelBuilder create(){
-		TableLabelBuilder builder=new TableLabelBuilder();
+	private Function<Table, String> bgcolor = (t) -> this.defaultBgcolor();
+
+	private TableTableHeaderBuilder tableTableHeaderBuilder = TableTableHeaderBuilder.create();
+
+	private TableColumnCellBuilder tableColumnCellBuilder = TableColumnCellBuilder.create();
+
+	private BiConsumer<Table, TableElement> setAttribute = null;
+
+	private TableLabelBuilder() {
+	}
+
+	public static TableLabelBuilder create() {
+		TableLabelBuilder builder = new TableLabelBuilder();
 		return builder;
 	}
 
-	public static TableLabelBuilder createSimple(){
-		TableLabelBuilder builder=new TableLabelBuilder();
-		builder.tableColumnCellBuilder=TableColumnCellBuilder.createSimple();
+	public static TableLabelBuilder createSimple() {
+		TableLabelBuilder builder = new TableLabelBuilder();
+		builder.tableColumnCellBuilder = TableColumnCellBuilder.createSimple();
 		return builder;
 	}
 
-	private int colspan=1;
+	private int colspan = 1;
 
-	public void build(Table table, TableElement element){
+	public void build(Table table, TableElement element) {
 		element.setCellpadding(0);
 		element.setCellspacing(0);
 		element.setBorder(0);
 		element.setColor(this.color().apply(table));
 		element.setBgcolor(this.bgcolor().apply(table));
-		//Header
-		if (tableTableHeaderBuilder!=null) {
-			element.addRow(tr->{
-				tr.addCell(cell->{
+		// Header
+		if (tableTableHeaderBuilder != null) {
+			element.addRow(tr -> {
+				tr.addCell(cell -> {
 					cell.setBorder(1);
-					cell.setTable(tableElement->{
+					cell.setTable(tableElement -> {
 						tableElement.setCellpadding(1);
 						tableElement.setCellspacing(0);
 						tableElement.setBorder(0);
-						tableElement.addRow(row->{
+						tableElement.addRow(row -> {
 							tableTableHeaderBuilder.parent(this);
 							tableTableHeaderBuilder.build(table, row);
 						});
 					});
-					
+
 				});
 			});
 		}
-		if (tableColumnCellBuilder!=null) {
-			//Column
-			if (table.getColumns().size()>0){
-				element.addRow(tr->{
-					tr.addCell(cell->{
+		if (tableColumnCellBuilder != null) {
+			// Column
+			if (table.getColumns().size() > 0) {
+				element.addRow(tr -> {
+					tr.addCell(cell -> {
 						cell.setBorder(1);
-						cell.setTable(tableElement->{
+						cell.setTable(tableElement -> {
 							tableElement.setCellpadding(1);
 							tableElement.setCellspacing(0);
 							tableElement.setBorder(0);
-							for(Column column:table.getColumns()){
-								if(this.getDrawOption().getColumnFilter().test(column)){
-									tableElement.addRow(row->{
+							for (Column column : table.getColumns()) {
+								if (this.getDrawOption().getColumnFilter().test(column)) {
+									tableElement.addRow(row -> {
 										tableColumnCellBuilder.parent(this);
 										tableColumnCellBuilder.build(column, row);
 									});
@@ -114,42 +114,42 @@ public class TableLabelBuilder extends AbstractSchemaGraphBuilder{
 				});
 			}
 		}
-		String rows=Statistics.ROWS.getFormatedValue(table, this.getDrawOption().getLocale());
+		String rows = Statistics.ROWS.getFormatedValue(table, this.getDrawOption().getLocale());
 		if (!CommonUtils.isEmpty(rows)) {
-			element.addRow(tr->{
-				tr.addCell(cell->{
+			element.addRow(tr -> {
+				tr.addCell(cell -> {
 					cell.setBorder(1);
-					cell.setTable(tableElement->{
+					cell.setTable(tableElement -> {
 						tableElement.setCellpadding(1);
 						tableElement.setCellspacing(0);
 						tableElement.setBorder(0);
-						tableElement.addRow(row->{
-							row.addCell(td->{
-								td.setValue(rows+" rows");
+						tableElement.addRow(row -> {
+							row.addCell(td -> {
+								td.setValue(rows + " rows");
 							});
 						});
 					});
 				});
 			});
 		}
-		//Dummy
-		if (table.getColumns().size()>0){
-			element.addRow(tr->{
-				tr.addCell(cell->{
+		// Dummy
+		if (table.getColumns().size() > 0) {
+			element.addRow(tr -> {
+				tr.addCell(cell -> {
 					cell.setBorder(0);
-					cell.setTable(tableElement->{
+					cell.setTable(tableElement -> {
 						tableElement.setCellpadding(0);
 						tableElement.setCellspacing(0);
 						tableElement.setBorder(0);
-						tableElement.addRow(row->{
-							row.addCell(td->{
+						tableElement.addRow(row -> {
+							row.addCell(td -> {
 								td.setValue("");
 							});
-							row.addCell(td->{
+							row.addCell(td -> {
 								td.setValue("");
-								td.setPort("footer_"+SchemaGraphUtils.getName(table));
+								td.setPort("footer_" + SchemaGraphUtils.getName(table));
 							});
-							row.addCell(td->{
+							row.addCell(td -> {
 								td.setValue("");
 							});
 						});
@@ -157,12 +157,12 @@ public class TableLabelBuilder extends AbstractSchemaGraphBuilder{
 				});
 			});
 		}
-		if (setAttribute!=null){
+		if (setAttribute != null) {
 			setAttribute.accept(table, element);
 		}
 	}
-	
-	protected TableLabelBuilder instance(){
+
+	protected TableLabelBuilder instance() {
 		return this;
 	}
 

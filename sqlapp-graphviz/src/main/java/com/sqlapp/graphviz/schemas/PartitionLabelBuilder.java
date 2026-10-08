@@ -31,73 +31,73 @@ import lombok.experimental.Accessors;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class PartitionLabelBuilder extends AbstractSchemaGraphBuilder{
+public class PartitionLabelBuilder extends AbstractSchemaGraphBuilder {
 
-	private String defaultColor=null;
+	private String defaultColor = null;
 
-	private String defaultBgcolor="#EFFBFB";
-	
-	private Function<Partition, String> color=(t)->this.defaultColor();
+	private String defaultBgcolor = "#EFFBFB";
 
-	private Function<Partition, String> bgcolor=(t)->this.defaultBgcolor();
-	
-	private PartitionTableHeaderBuilder partitionTableHeaderBuilder=PartitionTableHeaderBuilder.create();
-	
-	private PartitionDetailCellBuilder partitionDetailCellBuilder=PartitionDetailCellBuilder.create();
+	private Function<Partition, String> color = (t) -> this.defaultColor();
 
-	private BiConsumer<Partition, TableElement> setAttribute=null;
-	
-	private PartitionLabelBuilder(){}
-	
-	
-	public static PartitionLabelBuilder create(){
-		PartitionLabelBuilder builder=new PartitionLabelBuilder();
+	private Function<Partition, String> bgcolor = (t) -> this.defaultBgcolor();
+
+	private PartitionTableHeaderBuilder partitionTableHeaderBuilder = PartitionTableHeaderBuilder.create();
+
+	private PartitionDetailCellBuilder partitionDetailCellBuilder = PartitionDetailCellBuilder.create();
+
+	private BiConsumer<Partition, TableElement> setAttribute = null;
+
+	private PartitionLabelBuilder() {
+	}
+
+	public static PartitionLabelBuilder create() {
+		PartitionLabelBuilder builder = new PartitionLabelBuilder();
 		return builder;
 	}
 
-	public static PartitionLabelBuilder createSimple(){
-		PartitionLabelBuilder builder=new PartitionLabelBuilder();
-		builder.partitionDetailCellBuilder=PartitionDetailCellBuilder.createSimple();
+	public static PartitionLabelBuilder createSimple() {
+		PartitionLabelBuilder builder = new PartitionLabelBuilder();
+		builder.partitionDetailCellBuilder = PartitionDetailCellBuilder.createSimple();
 		return builder;
 	}
 
-	private int colspan=1;
+	private int colspan = 1;
 
-	public void build(Partition partition, TableElement element){
+	public void build(Partition partition, TableElement element) {
 		element.setCellpadding(0);
 		element.setCellspacing(0);
 		element.setBorder(0);
 		element.setColor(this.color().apply(partition));
 		element.setBgcolor(this.bgcolor().apply(partition));
-		//Header
-		element.addRow(tr->{
-			tr.addCell(cell->{
+		// Header
+		element.addRow(tr -> {
+			tr.addCell(cell -> {
 				cell.setBorder(1);
-				cell.setTable(tableElement->{
+				cell.setTable(tableElement -> {
 					tableElement.setCellpadding(1);
 					tableElement.setCellspacing(0);
 					tableElement.setBorder(0);
-					tableElement.addRow(row->{
+					tableElement.addRow(row -> {
 						partitionTableHeaderBuilder.parent(this);
 						partitionTableHeaderBuilder.build(partition, row);
 					});
 				});
-				
+
 			});
 		});
-		if (partitionDetailCellBuilder!=null) {
-			//Column
-			element.addRow(tr->{
-				tr.addCell(cell->{
+		if (partitionDetailCellBuilder != null) {
+			// Column
+			element.addRow(tr -> {
+				tr.addCell(cell -> {
 					cell.setBorder(1);
-					cell.setTable(tableElement->{
+					cell.setTable(tableElement -> {
 						tableElement.setCellpadding(1);
 						tableElement.setCellspacing(0);
 						tableElement.setBorder(0);
-						tableElement.addRow(row->{
+						tableElement.addRow(row -> {
 							partitionDetailCellBuilder.parent(this);
 							partitionDetailCellBuilder.build(partition, row);
 						});
@@ -105,53 +105,53 @@ public class PartitionLabelBuilder extends AbstractSchemaGraphBuilder{
 				});
 			});
 		}
-		String rows=Statistics.ROWS.getFormatedValue(partition, this.getDrawOption().getLocale());
+		String rows = Statistics.ROWS.getFormatedValue(partition, this.getDrawOption().getLocale());
 		if (!CommonUtils.isEmpty(rows)) {
-			element.addRow(tr->{
-				tr.addCell(cell->{
+			element.addRow(tr -> {
+				tr.addCell(cell -> {
 					cell.setBorder(1);
-					cell.setTable(tableElement->{
+					cell.setTable(tableElement -> {
 						tableElement.setCellpadding(1);
 						tableElement.setCellspacing(0);
 						tableElement.setBorder(0);
-						tableElement.addRow(row->{
-							row.addCell(td->{
-								td.setValue(rows+" rows");
+						tableElement.addRow(row -> {
+							row.addCell(td -> {
+								td.setValue(rows + " rows");
 							});
 						});
 					});
 				});
 			});
 		}
-		//Dummy
-		element.addRow(tr->{
-			tr.addCell(cell->{
+		// Dummy
+		element.addRow(tr -> {
+			tr.addCell(cell -> {
 				cell.setBorder(0);
-				cell.setTable(tableElement->{
+				cell.setTable(tableElement -> {
 					tableElement.setCellpadding(0);
 					tableElement.setCellspacing(0);
 					tableElement.setBorder(0);
-					tableElement.addRow(row->{
-						row.addCell(td->{
+					tableElement.addRow(row -> {
+						row.addCell(td -> {
 							td.setValue("");
 						});
-						row.addCell(td->{
+						row.addCell(td -> {
 							td.setValue("");
-							td.setPort("footer_"+SchemaGraphUtils.getName(partition));
+							td.setPort("footer_" + SchemaGraphUtils.getName(partition));
 						});
-						row.addCell(td->{
+						row.addCell(td -> {
 							td.setValue("");
 						});
 					});
 				});
 			});
 		});
-		if (setAttribute!=null){
+		if (setAttribute != null) {
 			setAttribute.accept(partition, element);
 		}
 	}
-	
-	protected PartitionLabelBuilder instance(){
+
+	protected PartitionLabelBuilder instance() {
 		return this;
 	}
 

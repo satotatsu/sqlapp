@@ -12,7 +12,10 @@ import com.sqlapp.exceptions.CommandException;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Revalidates a saved repair outcome summary against its authoritative evidence. */
+/**
+ * Revalidates a saved repair outcome summary against its authoritative
+ * evidence.
+ */
 @Getter
 @Setter
 public class VerifyBulkMigrationJobRepairOutcomeReportCommand extends AbstractCommand {
@@ -46,8 +49,8 @@ public class VerifyBulkMigrationJobRepairOutcomeReportCommand extends AbstractCo
 		validateExpectedFingerprint();
 		validateExpectedStatus();
 		validateMaxAge();
-		final var savedSnapshot = new BulkMigrationJobRepairOutcomeReportIO()
-				.readSnapshot(outcomeReportFile.toPath(), maxEvidenceFileSizeBytes);
+		final var savedSnapshot = new BulkMigrationJobRepairOutcomeReportIO().readSnapshot(outcomeReportFile.toPath(),
+				maxEvidenceFileSizeBytes);
 		validateExpectedFingerprint(savedSnapshot.fingerprint());
 		final var saved = savedSnapshot.report();
 		verifyAge(saved.generatedAt());
@@ -83,10 +86,18 @@ public class VerifyBulkMigrationJobRepairOutcomeReportCommand extends AbstractCo
 			throw new CommandException("repairReportDirectory must be an existing directory.");
 		}
 		final var resolved = BulkMigrationJobRepairReportFiles.resolve(repairReportDirectory);
-		if (outcomeReportFile == null) { outcomeReportFile = resolved.outcome(); }
-		if (repairExecutionReportFile == null) { repairExecutionReportFile = resolved.execution(); }
-		if (repairFailureReportFile == null) { repairFailureReportFile = resolved.failure(); }
-		if (postRepairVerificationReportFile == null) { postRepairVerificationReportFile = resolved.verification(); }
+		if (outcomeReportFile == null) {
+			outcomeReportFile = resolved.outcome();
+		}
+		if (repairExecutionReportFile == null) {
+			repairExecutionReportFile = resolved.execution();
+		}
+		if (repairFailureReportFile == null) {
+			repairFailureReportFile = resolved.failure();
+		}
+		if (postRepairVerificationReportFile == null) {
+			postRepairVerificationReportFile = resolved.verification();
+		}
 	}
 
 	private void validateExpectedFingerprint() {
@@ -99,8 +110,7 @@ public class VerifyBulkMigrationJobRepairOutcomeReportCommand extends AbstractCo
 	}
 
 	private void validateExpectedFingerprint(final String actualFingerprint) {
-		if (expectedOutcomeReportFingerprint != null
-				&& !expectedOutcomeReportFingerprint.equals(actualFingerprint)) {
+		if (expectedOutcomeReportFingerprint != null && !expectedOutcomeReportFingerprint.equals(actualFingerprint)) {
 			throw new CommandException(
 					"outcomeReportFile fingerprint does not match expectedOutcomeReportFingerprint.");
 		}
@@ -111,7 +121,8 @@ public class VerifyBulkMigrationJobRepairOutcomeReportCommand extends AbstractCo
 			try {
 				VerifyBulkMigrationJobRepairOutcomeCommand.Status.valueOf(expectedStatus);
 			} catch (IllegalArgumentException e) {
-				throw new CommandException("expectedStatus must be SUCCEEDED, EXECUTION_FAILED or VERIFICATION_FAILED.");
+				throw new CommandException(
+						"expectedStatus must be SUCCEEDED, EXECUTION_FAILED or VERIFICATION_FAILED.");
 			}
 		}
 	}
@@ -125,7 +136,8 @@ public class VerifyBulkMigrationJobRepairOutcomeReportCommand extends AbstractCo
 	private void verifyAge(final Instant generatedAt) {
 		final Instant now = Instant.now();
 		if (generatedAt.isAfter(now)) {
-			throw new CommandException("Repair outcome report generatedAt is in the future; check clock synchronization.");
+			throw new CommandException(
+					"Repair outcome report generatedAt is in the future; check clock synchronization.");
 		}
 		if (maxEvidenceAgeSeconds != null) {
 			try {

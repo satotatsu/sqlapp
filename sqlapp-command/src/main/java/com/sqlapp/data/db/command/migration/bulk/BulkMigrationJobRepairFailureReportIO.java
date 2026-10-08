@@ -34,8 +34,8 @@ public final class BulkMigrationJobRepairFailureReportIO {
 		return validate(new BulkMigrationJobRepairFailureReport(CURRENT_VERSION, Instant.now(),
 				migrationPlanFingerprint, failure.getCompletedResult().getPlanFingerprint(),
 				approvedRepairPlanFileFingerprint, null, failure.getPhase().name(), failure.getFailedTaskId(),
-				cause.getClass().getName(), message.substring(0, Math.min(message.length(), MAX_FAILURE_MESSAGE_LENGTH)),
-				tasks, provenance));
+				cause.getClass().getName(),
+				message.substring(0, Math.min(message.length(), MAX_FAILURE_MESSAGE_LENGTH)), tasks, provenance));
 	}
 
 	public BulkMigrationJobRepairFailureReport fromVerificationFailure(final String migrationPlanFingerprint,
@@ -97,8 +97,8 @@ public final class BulkMigrationJobRepairFailureReportIO {
 			throw new CommandException("Bulk migration job repair failure report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
-					"maxEvidenceFileSizeBytes", "Bulk migration job repair failure report");
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes, "maxEvidenceFileSizeBytes",
+					"Bulk migration job repair failure report");
 			final var report = validate(new JsonConverter().fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationJobRepairFailureReport.class));
 			return new Snapshot(report, fingerprint(bytes));

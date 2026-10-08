@@ -49,8 +49,8 @@ public final class BulkMigrationOperationalReportIO {
 			throw new CommandException("Bulk migration report does not exist: " + absolute);
 		}
 		try {
-			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes,
-					"maxEvidenceFileSizeBytes", "Bulk migration operational report");
+			final byte[] bytes = BoundedMigrationFile.read(absolute, maxFileSizeBytes, "maxEvidenceFileSizeBytes",
+					"Bulk migration operational report");
 			final var report = validate(converter.fromJsonString(new String(bytes, StandardCharsets.UTF_8),
 					BulkMigrationOperationalReport.class));
 			return new Snapshot(report, "sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes));
@@ -100,8 +100,7 @@ public final class BulkMigrationOperationalReportIO {
 		}
 	}
 
-	Snapshot writeSnapshot(final Path file, final BulkMigrationOperationalReport report,
-			final Long maxFileSizeBytes) {
+	Snapshot writeSnapshot(final Path file, final BulkMigrationOperationalReport report, final Long maxFileSizeBytes) {
 		write(file, report);
 		final var snapshot = readSnapshot(file, maxFileSizeBytes);
 		if (!report.equals(snapshot.report())) {

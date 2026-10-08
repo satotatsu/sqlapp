@@ -5,7 +5,9 @@ import com.sqlapp.data.db.command.migration.schema.MigrationPlan;
 
 import java.util.List;
 
-/** Differences between one baseline migration snapshot and other environments. */
+/**
+ * Differences between one baseline migration snapshot and other environments.
+ */
 public record MigrationEnvironmentComparison(String baselineEnvironmentId, List<Environment> environments,
 		List<Difference> differences) {
 	public MigrationEnvironmentComparison {
@@ -17,8 +19,8 @@ public record MigrationEnvironmentComparison(String baselineEnvironmentId, List<
 			MigrationPlan.DatabaseIdentity databaseIdentity) {
 	}
 
-	public record Difference(String environmentId, Category category, String migration,
-			String baselineValue, String environmentValue) {
+	public record Difference(String environmentId, Category category, String migration, String baselineValue,
+			String environmentValue) {
 	}
 
 	public enum Category {

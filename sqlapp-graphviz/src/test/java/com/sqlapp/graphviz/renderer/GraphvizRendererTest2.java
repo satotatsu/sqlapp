@@ -32,13 +32,13 @@ class GraphvizRendererTest2 extends AbstractTest {
 
 	@Test
 	void test() {
-        ScriptEngineManager manager = new ScriptEngineManager();
-        for (var factory : manager.getEngineFactories()) {
-            System.out.println(factory.getEngineName() + " : " + factory.getNames());
-        }
+		ScriptEngineManager manager = new ScriptEngineManager();
+		for (var factory : manager.getEngineFactories()) {
+			System.out.println(factory.getEngineName() + " : " + factory.getNames());
+		}
 
-        ScriptEngine engine = manager.getEngineByName("nashorn");
-        System.out.println(engine);
+		ScriptEngine engine = manager.getEngineByName("nashorn");
+		System.out.println(engine);
 	}
 
 }

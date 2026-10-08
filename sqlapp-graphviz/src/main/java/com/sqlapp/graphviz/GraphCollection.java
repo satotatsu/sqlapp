@@ -24,37 +24,37 @@ import java.util.Map;
 
 import lombok.Getter;
 
-public class GraphCollection extends AbstractElementCollection<Graph>{
+public class GraphCollection extends AbstractElementCollection<Graph> {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6685111479972906357L;
 
-	protected GraphCollection(Graph parent){
-		this.parent=parent;
+	protected GraphCollection(Graph parent) {
+		this.parent = parent;
 	}
-	
-	@Getter(value=lombok.AccessLevel.PUBLIC)
+
+	@Getter(value = lombok.AccessLevel.PUBLIC)
 	private final Graph parent;
-	
-	private Map<String,Graph> map=new LinkedHashMap<>();
+
+	private Map<String, Graph> map = new LinkedHashMap<>();
 
 	@Override
-	protected void renew(){
+	protected void renew() {
 		map.clear();
-		this.getList().forEach(c->{
-			if (map.containsKey(c.getName())){
+		this.getList().forEach(c -> {
+			if (map.containsKey(c.getName())) {
 				throw new DuplicateGraphException(c);
 			}
 			map.put(c.getName(), c);
 			c.setParent(this);
 		});
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	public <T extends Graph> T get(String name){
-		return (T)map.get(name);
+	public <T extends Graph> T get(String name) {
+		return (T) map.get(name);
 	}
 
 }

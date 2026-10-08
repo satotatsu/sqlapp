@@ -53,8 +53,10 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 				if (!expectedAssessmentReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
 					throw new CommandException("expectedAssessmentReportFingerprint must be a lowercase SHA-256 value");
 				}
-				if (!expectedAssessmentReportFingerprint.equals(AssessMigrationCommand.fingerprint(assessmentReportFile))) {
-					throw new CommandException("assessmentReportFile fingerprint does not match expectedAssessmentReportFingerprint");
+				if (!expectedAssessmentReportFingerprint
+						.equals(AssessMigrationCommand.fingerprint(assessmentReportFile))) {
+					throw new CommandException(
+							"assessmentReportFile fingerprint does not match expectedAssessmentReportFingerprint");
 				}
 			}
 			final var report = new JsonConverter().fromJsonString(assessmentReportFile,
@@ -67,7 +69,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			}
 			if (report.sourceFingerprint() != null && !report.sourceFingerprint().isBlank()
 					&& !report.sourceFingerprint().equals(AssessMigrationCommand.fingerprint(schemaFile))) {
-				throw new CommandException("schemaFile fingerprint does not match assessmentReportFile sourceFingerprint");
+				throw new CommandException(
+						"schemaFile fingerprint does not match assessmentReportFile sourceFingerprint");
 			}
 			if (report.assessment() == null || report.assessment().hasBlockers()
 					|| !"REVIEW_REQUIRED".equalsIgnoreCase(report.status())) {
@@ -75,21 +78,21 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			}
 			requireZero(report, "unmappedTables");
 			requireZero(report, "unmappedColumnsInMappedTables");
-				requireZero(report, "unresolvedAutoNumberStrategies");
+			requireZero(report, "unresolvedAutoNumberStrategies");
 			if (ddlVerificationReportFile != null) {
 				validateDdlVerificationReport(report);
 			}
 			final DbCommonObject<?> schema = SchemaUtils.readXml(schemaFile);
 			final var configuration = configuration(report, SchemaUtils.toTables(schema),
-					AssessMigrationCommand.fingerprint(assessmentReportFile),
-					ddlVerificationReportFile == null ? null
+					AssessMigrationCommand.fingerprint(assessmentReportFile), ddlVerificationReportFile == null ? null
 							: AssessMigrationCommand.fingerprint(ddlVerificationReportFile));
 			AtomicMigrationFile.write(outputFile.toPath().toAbsolutePath().normalize(),
 					temporary -> new YamlConverter().writeJsonValue(temporary.toFile(), configuration));
 		} catch (final CommandException e) {
 			throw e;
 		} catch (final Exception e) {
-			throw new CommandException("Could not generate Access bulk migration job configuration: " + e.getMessage(), e);
+			throw new CommandException("Could not generate Access bulk migration job configuration: " + e.getMessage(),
+					e);
 		}
 		info("Access bulk migration job configuration generated: ", outputFile.getAbsolutePath());
 	}
@@ -102,7 +105,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		final String mappingFingerprint = mappingFingerprint(report, mapping);
 		final var configuration = new BulkMigrationJobConfiguration();
 		final String effectiveJobId = jobId == null || jobId.isBlank()
-				? "access-to-" + mapping.targetDatabase().toLowerCase(Locale.ROOT) : jobId;
+				? "access-to-" + mapping.targetDatabase().toLowerCase(Locale.ROOT)
+				: jobId;
 		configuration.setJobId(effectiveJobId);
 		configuration.setSchemaFile(relativePath(outputFile, schemaFile));
 		configuration.setSchemaFingerprint(report.sourceFingerprint());
@@ -119,7 +123,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 					table.sourceTable().name());
 			final String taskId = "access:" + sourceTableName;
 			if (taskId.length() > com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.ID_MAX_LENGTH) {
-				throw new CommandException("Mapped Access table name is too long for a checkpoint ID: " + sourceTableName);
+				throw new CommandException(
+						"Mapped Access table name is too long for a checkpoint ID: " + sourceTableName);
 			}
 			if (!taskIds.add(taskId.toLowerCase(Locale.ROOT))) {
 				throw new CommandException("Mapped Access table produces a duplicate task ID: " + sourceTableName);
@@ -127,8 +132,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			task.setId(taskId);
 			final String migrationId = effectiveJobId + ":" + sourceTableName;
 			if (migrationId.length() > com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint.ID_MAX_LENGTH) {
-				throw new CommandException("jobId and mapped Access table name are too long for a checkpoint ID: "
-						+ sourceTableName);
+				throw new CommandException(
+						"jobId and mapped Access table name are too long for a checkpoint ID: " + sourceTableName);
 			}
 			task.setMigrationId(migrationId);
 			task.setTable(sourceTableName);
@@ -141,11 +146,10 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 					task.getColumnMappings().put(column.sourceColumn().name(), column.targetColumn());
 				}
 			}
-			task.setKeysetColumns(sourceTable.getPrimaryKeyConstraint().getColumns().stream()
-					.map(reference -> reference.getColumn() == null ? reference.getName() : reference.getColumn().getName())
+			task.setKeysetColumns(sourceTable.getPrimaryKeyConstraint().getColumns().stream().map(
+					reference -> reference.getColumn() == null ? reference.getName() : reference.getColumn().getName())
 					.toList());
-			task.setVerificationColumns(sourceTable.getColumns().stream()
-					.filter(column -> !column.isHidden())
+			task.setVerificationColumns(sourceTable.getColumns().stream().filter(column -> !column.isHidden())
 					.filter(column -> column.getFormula() == null || column.getFormula().isEmpty())
 					.map(column -> column.getName()).toList());
 			if (task.getVerificationColumns().isEmpty()) {
@@ -159,7 +163,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			task.setCheckpointMode(checkpointMode);
 			if (checkpointMode == BulkMigrationCheckpointMode.FILE) {
 				task.setCheckpointDirectory(checkpointDirectory == null || checkpointDirectory.isBlank()
-						? defaultReportFile(outputFile, "-checkpoints") : checkpointDirectory);
+						? defaultReportFile(outputFile, "-checkpoints")
+						: checkpointDirectory);
 			}
 			task.setSourceFingerprint(report.sourceFingerprint());
 			task.setTargetFingerprint(mappingFingerprint);
@@ -175,16 +180,19 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			verificationConfiguration.setChunkSize(chunkSize);
 			verificationConfiguration.setFailOnMismatch(true);
 			verificationConfiguration.setTargetFile(verificationReportFile == null || verificationReportFile.isBlank()
-					? defaultVerificationReportFile(outputFile) : verificationReportFile);
-			verificationConfiguration.setRepairPlanOnMismatchFile(
-					repairPlanOnMismatchFile == null || repairPlanOnMismatchFile.isBlank()
-							? defaultReportFile(outputFile, "-repair-plan.json") : repairPlanOnMismatchFile);
+					? defaultVerificationReportFile(outputFile)
+					: verificationReportFile);
+			verificationConfiguration
+					.setRepairPlanOnMismatchFile(repairPlanOnMismatchFile == null || repairPlanOnMismatchFile.isBlank()
+							? defaultReportFile(outputFile, "-repair-plan.json")
+							: repairPlanOnMismatchFile);
 			configuration.setVerification(verificationConfiguration);
 		}
 		if (operationalReport) {
 			final var reportConfiguration = new BulkMigrationJobConfiguration.Report();
 			reportConfiguration.setTargetFile(operationalReportFile == null || operationalReportFile.isBlank()
-					? defaultReportFile(outputFile, "-operations.json") : operationalReportFile);
+					? defaultReportFile(outputFile, "-operations.json")
+					: operationalReportFile);
 			configuration.setReport(reportConfiguration);
 		}
 		if (leaseOwnerId != null && !leaseOwnerId.isBlank()) {
@@ -203,19 +211,21 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		final var matches = sourceTables.stream().filter(table -> same(id.name(), table.getName())
 				&& same(id.schema(), table.getSchemaName()) && same(id.catalog(), table.getCatalogName())).toList();
 		if (matches.size() != 1) {
-			throw new CommandException(matches.isEmpty() ? "Mapped Access table was not found in schemaFile: " + id.name()
-					: "Mapped Access table is ambiguous in schemaFile: " + id.name());
+			throw new CommandException(
+					matches.isEmpty() ? "Mapped Access table was not found in schemaFile: " + id.name()
+							: "Mapped Access table is ambiguous in schemaFile: " + id.name());
 		}
 		final Table table = matches.getFirst();
 		if (table.getPrimaryKeyConstraint() == null || table.getPrimaryKeyConstraint().getColumns().isEmpty()) {
-			throw new CommandException("Mapped Access table requires a primary key for resumable loading: " + id.name());
+			throw new CommandException(
+					"Mapped Access table requires a primary key for resumable loading: " + id.name());
 		}
 		for (final var reference : table.getPrimaryKeyConstraint().getColumns()) {
 			final var primaryKeyColumn = reference.getColumn() == null ? table.getColumns().get(reference.getName())
 					: reference.getColumn();
 			if (primaryKeyColumn == null) {
-				throw new CommandException("Mapped Access primary key column was not found in schemaFile: "
-						+ id.name() + "." + reference.getName());
+				throw new CommandException("Mapped Access primary key column was not found in schemaFile: " + id.name()
+						+ "." + reference.getName());
 			}
 			if (!primaryKeyColumn.isNotNull()) {
 				throw new CommandException("Mapped Access primary key column must be NOT NULL for resumable loading: "
@@ -230,8 +240,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			final String name = column.sourceColumn().name();
 			final var source = table.getColumns().get(name);
 			if (source == null || !names.add(source.getName().toLowerCase(Locale.ROOT))) {
-				throw new CommandException("Mapped Access column is missing or duplicated in schemaFile: "
-						+ id.name() + "." + name);
+				throw new CommandException(
+						"Mapped Access column is missing or duplicated in schemaFile: " + id.name() + "." + name);
 			}
 		}
 		return table;
@@ -241,8 +251,8 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		final var source = table.sourceTable();
 		for (final var column : table.columns()) {
 			if (column.conversion() != null && !column.conversion().isBlank()) {
-				throw new CommandException("Existing bulk migration cannot apply mapping conversion: "
-						+ source.name() + "." + column.sourceColumn().name());
+				throw new CommandException("Existing bulk migration cannot apply mapping conversion: " + source.name()
+						+ "." + column.sourceColumn().name());
 			}
 		}
 	}
@@ -260,17 +270,21 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		if (ddlVerificationReportFile != null && !ddlVerificationReportFile.isFile()) {
 			throw new CommandException("ddlVerificationReportFile must be an existing verification JSON file");
 		}
-		if (expectedDdlVerificationReportFingerprint != null
-				&& !expectedDdlVerificationReportFingerprint.isBlank() && ddlVerificationReportFile == null) {
+		if (expectedDdlVerificationReportFingerprint != null && !expectedDdlVerificationReportFingerprint.isBlank()
+				&& ddlVerificationReportFile == null) {
 			throw new CommandException("expectedDdlVerificationReportFingerprint requires ddlVerificationReportFile");
 		}
-		if (chunkSize <= 0) { throw new CommandException("chunkSize must be greater than zero"); }
-		if (checkpointMode == null) { throw new CommandException("checkpointMode must not be null"); }
+		if (chunkSize <= 0) {
+			throw new CommandException("chunkSize must be greater than zero");
+		}
+		if (checkpointMode == null) {
+			throw new CommandException("checkpointMode must not be null");
+		}
 		if (checkpointMode == BulkMigrationCheckpointMode.CUSTOM) {
 			throw new CommandException("checkpointMode=CUSTOM is not available in generated YAML");
 		}
-		if (checkpointMode != BulkMigrationCheckpointMode.FILE
-				&& checkpointDirectory != null && !checkpointDirectory.isBlank()) {
+		if (checkpointMode != BulkMigrationCheckpointMode.FILE && checkpointDirectory != null
+				&& !checkpointDirectory.isBlank()) {
 			throw new CommandException("checkpointDirectory requires checkpointMode=FILE");
 		}
 		if (leaseOwnerId != null && !leaseOwnerId.isBlank()) {
@@ -284,16 +298,14 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		}
 		final Path output = outputFile.toPath().toAbsolutePath().normalize();
 		if (output.equals(assessmentReportFile.toPath().toAbsolutePath().normalize())
-				|| output.equals(schemaFile.toPath().toAbsolutePath().normalize())
-				|| ddlVerificationReportFile != null
+				|| output.equals(schemaFile.toPath().toAbsolutePath().normalize()) || ddlVerificationReportFile != null
 						&& output.equals(ddlVerificationReportFile.toPath().toAbsolutePath().normalize())) {
 			throw new CommandException("outputFile must not overwrite an input file");
 		}
 	}
 
 	private void validateDdlVerificationReport(final AssessDatabaseMigrationCommand.Report report) throws Exception {
-		if (expectedDdlVerificationReportFingerprint != null
-				&& !expectedDdlVerificationReportFingerprint.isBlank()) {
+		if (expectedDdlVerificationReportFingerprint != null && !expectedDdlVerificationReportFingerprint.isBlank()) {
 			if (!expectedDdlVerificationReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
 				throw new CommandException(
 						"expectedDdlVerificationReportFingerprint must be a lowercase SHA-256 value");
@@ -306,8 +318,7 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		}
 		final var verification = new JsonConverter().fromJsonString(ddlVerificationReportFile,
 				VerifyDatabaseMigrationDdlPhasesCommand.VerificationReport.class);
-		if (verification == null || verification.formatVersion() != 2
-				|| !"VERIFIED".equals(verification.status())) {
+		if (verification == null || verification.formatVersion() != 2 || !"VERIFIED".equals(verification.status())) {
 			throw new CommandException("ddlVerificationReportFile must be a VERIFIED formatVersion=2 report");
 		}
 		if (verification.verificationPolicies() == null
@@ -352,17 +363,18 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 
 	private static void validateTargetIdentity(final AssessDatabaseMigrationCommand.Report report,
 			final ResolvedMigrationTargetMapping mapping) {
-		if (report.targetProduct() == null || report.targetProduct().isBlank()
-				|| mapping.targetDatabase() == null || mapping.targetDatabase().isBlank()
+		if (report.targetProduct() == null || report.targetProduct().isBlank() || mapping.targetDatabase() == null
+				|| mapping.targetDatabase().isBlank()
 				|| !report.targetProduct().equalsIgnoreCase(mapping.targetDatabase())) {
 			throw new CommandException("assessmentReportFile target product does not match targetMapping database");
 		}
-		if (report.targetVersion() == null || report.targetVersion().isBlank()
-				|| mapping.targetVersion() == null || mapping.targetVersion().isBlank()
+		if (report.targetVersion() == null || report.targetVersion().isBlank() || mapping.targetVersion() == null
+				|| mapping.targetVersion().isBlank()
 				|| !report.targetVersion().equalsIgnoreCase(mapping.targetVersion())) {
 			throw new CommandException("assessmentReportFile target version does not match targetMapping version");
 		}
-		if (report.migrationMethod() != com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Method.LOGICAL_MIGRATION) {
+		if (report
+				.migrationMethod() != com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Method.LOGICAL_MIGRATION) {
 			throw new CommandException("assessmentReportFile migrationMethod must be LOGICAL_MIGRATION");
 		}
 	}

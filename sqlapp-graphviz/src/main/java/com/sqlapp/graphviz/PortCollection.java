@@ -19,30 +19,30 @@
 
 package com.sqlapp.graphviz;
 
-public class PortCollection extends AbstractPortCollection{
+public class PortCollection extends AbstractPortCollection {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 6685111479972906357L;
 
-	protected PortCollection(Node parent){
-		this.parent=parent;
+	protected PortCollection(Node parent) {
+		this.parent = parent;
 	}
 
 	@Override
-	protected void initializePort(Port port){
+	protected void initializePort(Port port) {
 		port.setParent(this);
 	}
-	
+
 	private final Node parent;
 
 	@Override
-	public Port remove(String name){
+	public Port remove(String name) {
 		return super.remove(name);
 	}
-	
-	protected Node getParent(){
+
+	protected Node getParent() {
 		return parent;
 	}
 

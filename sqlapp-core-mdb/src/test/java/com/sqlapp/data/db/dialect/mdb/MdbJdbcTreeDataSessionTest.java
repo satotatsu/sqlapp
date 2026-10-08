@@ -51,11 +51,9 @@ class MdbJdbcTreeDataSessionTest {
 		try (Connection connection = open(database)) {
 			connection.setAutoCommit(false);
 			create(connection, dialect, parent, child);
-			final Set<PreparedStatement> statements = Collections
-					.newSetFromMap(new IdentityHashMap<>());
+			final Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			final AtomicInteger executions = new AtomicInteger();
-			new JdbcTreeDataSession(connection,
-					parent, child).execute(session -> {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -74,13 +72,12 @@ class MdbJdbcTreeDataSessionTest {
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());
-			try (Statement statement = connection.createStatement();
-					ResultSet rows = statement.executeQuery("""
-							SELECT p.ID, p.TXT, c.PARENT_ID, c.TXT
-							FROM TREE_PARENT p
-							INNER JOIN TREE_CHILD c ON c.PARENT_ID = p.ID
-							ORDER BY p.ID
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet rows = statement.executeQuery("""
+					SELECT p.ID, p.TXT, c.PARENT_ID, c.TXT
+					FROM TREE_PARENT p
+					INNER JOIN TREE_CHILD c ON c.PARENT_ID = p.ID
+					ORDER BY p.ID
+					""")) {
 				for (int i = 1; i <= 5; i++) {
 					assertTrue(rows.next());
 					assertEquals(i, rows.getInt(1));
@@ -105,8 +102,7 @@ class MdbJdbcTreeDataSessionTest {
 			connection.setAutoCommit(false);
 			create(connection, dialect, parent, child);
 			final Row[] parentRow = new Row[1];
-			new JdbcTreeDataSession(connection,
-					parent, child).execute(session -> {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				parentRow[0] = session.newRow(parent);
 				parentRow[0].put("TXT", "parent");
@@ -114,12 +110,11 @@ class MdbJdbcTreeDataSessionTest {
 				childRow.put("TXT", "child");
 			});
 			assertNotNull(parentRow[0].get("ID"));
-			try (Statement statement = connection.createStatement();
-					ResultSet row = statement.executeQuery("""
-							SELECT p.ID, c.PARENT_ID
-							FROM TREE_PARENT p
-							INNER JOIN TREE_CHILD c ON c.PARENT_ID = p.ID
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet row = statement.executeQuery("""
+					SELECT p.ID, c.PARENT_ID
+					FROM TREE_PARENT p
+					INNER JOIN TREE_CHILD c ON c.PARENT_ID = p.ID
+					""")) {
 				assertTrue(row.next());
 				assertEquals(row.getInt(1), row.getInt(2));
 			}
@@ -127,8 +122,7 @@ class MdbJdbcTreeDataSessionTest {
 	}
 
 	@Test
-	void multipleAutoNumberRowsFallBackToReusableSingleRowStatement()
-			throws Exception {
+	void multipleAutoNumberRowsFallBackToReusableSingleRowStatement() throws Exception {
 		final Path database = tempDirectory.resolve("tree-identity-batch.accdb");
 		final Dialect dialect = DialectHolder.defaultDialect;
 		final Table parent = createTables(dialect, true)[0];
@@ -136,12 +130,10 @@ class MdbJdbcTreeDataSessionTest {
 		try (Connection connection = open(database)) {
 			connection.setAutoCommit(false);
 			create(connection, dialect, parent);
-			final Set<PreparedStatement> statements = Collections
-					.newSetFromMap(new IdentityHashMap<>());
+			final Set<PreparedStatement> statements = Collections.newSetFromMap(new IdentityHashMap<>());
 			final AtomicInteger executions = new AtomicInteger();
 			final Row[] inserted = new Row[2];
-			new JdbcTreeDataSession(connection,
-					parent).execute(session -> {
+			new JdbcTreeDataSession(connection, parent).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -159,8 +151,7 @@ class MdbJdbcTreeDataSessionTest {
 			assertNotNull(inserted[1].get("ID"));
 			assertFalse(inserted[0].get("ID").equals(inserted[1].get("ID")));
 			try (Statement statement = connection.createStatement();
-					ResultSet rows = statement.executeQuery(
-							"SELECT COUNT(*) FROM TREE_PARENT")) {
+					ResultSet rows = statement.executeQuery("SELECT COUNT(*) FROM TREE_PARENT")) {
 				assertTrue(rows.next());
 				assertEquals(2, rows.getInt(1));
 			}
@@ -168,16 +159,15 @@ class MdbJdbcTreeDataSessionTest {
 	}
 
 	private Connection open(final Path database) throws Exception {
-		return DriverManager.getConnection("jdbc:ucanaccess://"
-				+ database.toAbsolutePath() + ";newDatabaseVersion=V2010");
+		return DriverManager
+				.getConnection("jdbc:ucanaccess://" + database.toAbsolutePath() + ";newDatabaseVersion=V2010");
 	}
 
-	private void create(final Connection connection, final Dialect dialect,
-			final Table... tables) throws Exception {
+	private void create(final Connection connection, final Dialect dialect, final Table... tables) throws Exception {
 		try (Statement statement = connection.createStatement()) {
 			for (final Table table : tables) {
-				for (final SqlOperation operation : dialect.createSqlFactoryRegistry()
-						.createSql(table, SqlType.CREATE)) {
+				for (final SqlOperation operation : dialect.createSqlFactoryRegistry().createSql(table,
+						SqlType.CREATE)) {
 					statement.execute(operation.getSqlText());
 				}
 			}
@@ -185,30 +175,23 @@ class MdbJdbcTreeDataSessionTest {
 		connection.commit();
 	}
 
-	private Table[] createTables(final Dialect dialect,
-			final boolean identity) {
+	private Table[] createTables(final Dialect dialect, final boolean identity) {
 		final Table parent = new Table("TREE_PARENT");
 		parent.setDialect(dialect);
-		final Column parentId = new Column("ID").setDataType(DataType.INT)
-				.setIdentity(identity).setNotNull(true);
+		final Column parentId = new Column("ID").setDataType(DataType.INT).setIdentity(identity).setNotNull(true);
 		parent.getColumns().add(parentId);
-		parent.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR)
-				.setLength(80L));
+		parent.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(80L));
 		parent.setPrimaryKey("PK_TREE_PARENT", parentId);
 
 		final Table child = new Table("TREE_CHILD");
 		child.setDialect(dialect);
-		final Column childId = new Column("ID").setDataType(DataType.INT)
-				.setIdentity(identity).setNotNull(true);
-		final Column childParentId = new Column("PARENT_ID")
-				.setDataType(DataType.INT).setNotNull(true);
+		final Column childId = new Column("ID").setDataType(DataType.INT).setIdentity(identity).setNotNull(true);
+		final Column childParentId = new Column("PARENT_ID").setDataType(DataType.INT).setNotNull(true);
 		child.getColumns().add(childId);
 		child.getColumns().add(childParentId);
-		child.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR)
-				.setLength(80L));
+		child.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(80L));
 		child.setPrimaryKey("PK_TREE_CHILD", childId);
-		child.getConstraints().addForeignKeyConstraint("FK_TREE_PARENT",
-				childParentId, parentId);
+		child.getConstraints().addForeignKeyConstraint("FK_TREE_PARENT", childParentId, parentId);
 		return new Table[] { parent, child };
 	}
 }

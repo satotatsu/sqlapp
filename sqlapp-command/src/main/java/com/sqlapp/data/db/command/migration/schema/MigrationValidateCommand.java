@@ -3,7 +3,9 @@ package com.sqlapp.data.db.command.migration.schema;
 
 import com.sqlapp.data.schemas.Table;
 
-/** Explicit, read-only checksum validation, independent of the migration opt-in. */
+/**
+ * Explicit, read-only checksum validation, independent of the migration opt-in.
+ */
 public class MigrationValidateCommand extends MigrationCommand {
 	@Override
 	protected void doRun() {

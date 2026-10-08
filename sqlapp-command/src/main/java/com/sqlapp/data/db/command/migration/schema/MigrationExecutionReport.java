@@ -12,15 +12,16 @@ import java.util.Objects;
 /** Machine-readable audit result for one migration command invocation. */
 public record MigrationExecutionReport(int formatVersion, String reportFingerprint, long startedAtEpochMillis,
 		long finishedAtEpochMillis, boolean successful, boolean executionRequested,
-		MigrationPlan.DatabaseIdentity databaseIdentity, String planFingerprint,
-		List<Long> selectedVersions, List<Long> committedVersions, List<String> selectedRepeatables,
-		List<String> committedRepeatables, MigrationExecutionFailure failure) {
+		MigrationPlan.DatabaseIdentity databaseIdentity, String planFingerprint, List<Long> selectedVersions,
+		List<Long> committedVersions, List<String> selectedRepeatables, List<String> committedRepeatables,
+		MigrationExecutionFailure failure) {
 	public static final int CURRENT_FORMAT_VERSION = 3;
 	private static final int PREVIOUS_FORMAT_VERSION = 2;
 
 	public MigrationExecutionReport {
 		if (formatVersion != PREVIOUS_FORMAT_VERSION && formatVersion != CURRENT_FORMAT_VERSION) {
-			throw new IllegalArgumentException("Unsupported migration execution report formatVersion: " + formatVersion);
+			throw new IllegalArgumentException(
+					"Unsupported migration execution report formatVersion: " + formatVersion);
 		}
 		selectedVersions = List.copyOf(selectedVersions);
 		committedVersions = List.copyOf(committedVersions);
@@ -49,7 +50,8 @@ public record MigrationExecutionReport(int formatVersion, String reportFingerpri
 			throw new IllegalArgumentException("A successful execution must commit every selected version in order");
 		}
 		if (successful && executionRequested && !selectedRepeatables.equals(committedRepeatables)) {
-			throw new IllegalArgumentException("A successful execution must commit every selected repeatable migration in order");
+			throw new IllegalArgumentException(
+					"A successful execution must commit every selected repeatable migration in order");
 		}
 		if (successful && failure != null) {
 			throw new IllegalArgumentException("A successful migration report cannot contain failure details");
@@ -81,8 +83,9 @@ public record MigrationExecutionReport(int formatVersion, String reportFingerpri
 				fingerprint(formatVersion, startedAtEpochMillis, finishedAtEpochMillis, successful, executionRequested,
 						databaseIdentity, planFingerprint, selectedVersions, committedVersions, selectedRepeatables,
 						committedRepeatables, failure, formatVersion == CURRENT_FORMAT_VERSION),
-				startedAtEpochMillis, finishedAtEpochMillis, successful, executionRequested, databaseIdentity, planFingerprint,
-				selectedVersions, committedVersions, selectedRepeatables, committedRepeatables, failure);
+				startedAtEpochMillis, finishedAtEpochMillis, successful, executionRequested, databaseIdentity,
+				planFingerprint, selectedVersions, committedVersions, selectedRepeatables, committedRepeatables,
+				failure);
 	}
 
 	public static String fingerprint(final int formatVersion, final long startedAtEpochMillis,
@@ -134,8 +137,8 @@ public record MigrationExecutionReport(int formatVersion, String reportFingerpri
 		}
 		add(value, failure);
 		try {
-			return "sha256:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-					.digest(value.toString().getBytes(StandardCharsets.UTF_8)));
+			return "sha256:" + HexFormat.of().formatHex(
+					MessageDigest.getInstance("SHA-256").digest(value.toString().getBytes(StandardCharsets.UTF_8)));
 		} catch (final NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}

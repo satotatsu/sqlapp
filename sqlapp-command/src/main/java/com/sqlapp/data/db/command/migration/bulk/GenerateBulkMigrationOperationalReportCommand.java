@@ -1,7 +1,6 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.bulk;
 
-
 import java.io.File;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -43,7 +42,8 @@ public class GenerateBulkMigrationOperationalReportCommand extends AbstractComma
 		if (maxOperationalReportFileSizeBytes != null && maxOperationalReportFileSizeBytes <= 0) {
 			throw new CommandException("maxOperationalReportFileSizeBytes must be greater than zero.");
 		}
-		final var requested = new BulkMigrationOperationalReportBuilder().build(plan, status, maintenanceState, progress);
+		final var requested = new BulkMigrationOperationalReportBuilder().build(plan, status, maintenanceState,
+				progress);
 		final var snapshot = new BulkMigrationOperationalReportIO().writeSnapshot(targetFile.toPath(), requested,
 				maxOperationalReportFileSizeBytes);
 		report = snapshot.report();

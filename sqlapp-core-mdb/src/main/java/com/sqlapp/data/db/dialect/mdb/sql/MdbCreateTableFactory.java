@@ -12,12 +12,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Generates Access table DDL, including inline AutoNumber primary keys. */
-public class MdbCreateTableFactory
-		extends AbstractCreateTableFactory<MdbSqlBuilder> {
+public class MdbCreateTableFactory extends AbstractCreateTableFactory<MdbSqlBuilder> {
 
 	@Override
-	protected void addColumnDefinition(final Column column,
-			final MdbSqlBuilder builder) {
+	protected void addColumnDefinition(final Column column, final MdbSqlBuilder builder) {
 		super.addColumnDefinition(column, builder);
 		if (isInlineAutoNumberPrimaryKey(column)) {
 			builder.space().primaryKey();
@@ -25,10 +23,8 @@ public class MdbCreateTableFactory
 	}
 
 	@Override
-	protected void addUniqueConstraintDefinitions(final Table table,
-			final MdbSqlBuilder builder) {
-		for (final UniqueConstraint constraint : table.getConstraints()
-				.getUniqueConstraints()) {
+	protected void addUniqueConstraintDefinitions(final Table table, final MdbSqlBuilder builder) {
+		for (final UniqueConstraint constraint : table.getConstraints().getUniqueConstraints()) {
 			if (constraint.isPrimaryKey() && constraint.getColumns().size() == 1
 					&& constraint.getColumns().get(0).getColumn() != null
 					&& constraint.getColumns().get(0).getColumn().isIdentity()) {
@@ -42,8 +38,7 @@ public class MdbCreateTableFactory
 		if (!column.isIdentity() || column.getTable() == null) {
 			return false;
 		}
-		final UniqueConstraint primaryKey = column.getTable().getConstraints()
-				.getPrimaryKeyConstraint();
+		final UniqueConstraint primaryKey = column.getTable().getConstraints().getPrimaryKeyConstraint();
 		return primaryKey != null && primaryKey.getColumns().size() == 1
 				&& primaryKey.getColumns().get(0).getColumn() == column;
 	}

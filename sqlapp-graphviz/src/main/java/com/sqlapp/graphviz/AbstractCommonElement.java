@@ -28,31 +28,31 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(chain=true) 
+@Accessors(chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public abstract class AbstractCommonElement<T extends AbstractCommonElement<?>> extends AbstractGraphVizElement implements ToGraphStringBuilder{
+@EqualsAndHashCode(callSuper = true)
+public abstract class AbstractCommonElement<T extends AbstractCommonElement<?>> extends AbstractGraphVizElement
+		implements ToGraphStringBuilder {
 
-	private String label=null;
-	
+	private String label = null;
+
 	@Props("URL")
-	private String url=null;
-	
-	@Props
-	private BrewerColorScheme colorscheme=null;
-	
-	@Props
-	private Color fontcolor=null;
+	private String url = null;
 
 	@Props
-	private String fontname=null;
+	private BrewerColorScheme colorscheme = null;
+
+	@Props
+	private Color fontcolor = null;
+
+	@Props
+	private String fontname = null;
 	/**
-	 * default 14.0
-	 * Minimum 1.0
+	 * default 14.0 Minimum 1.0
 	 */
 	@Props
-	private Double fontsize=null;
+	private Double fontsize = null;
 	/**
 	 * svg, postscript, map only
 	 */
@@ -68,7 +68,7 @@ public abstract class AbstractCommonElement<T extends AbstractCommonElement<?>> 
 	 */
 	@Props
 	private Boolean nojustify;
-	
+
 	@Props
 	private String style;
 	/**
@@ -76,36 +76,36 @@ public abstract class AbstractCommonElement<T extends AbstractCommonElement<?>> 
 	 */
 	@Props
 	private String target;
-	
-	private Object _context=null;
-	
+
+	private Object _context = null;
+
 	@Override
-	public String toString(){
-		GraphStringBuilder builder=toGraphStringBuilder();
+	public String toString() {
+		GraphStringBuilder builder = toGraphStringBuilder();
 		return builder.toString();
 	}
 
 	@Override
-	public GraphStringBuilder toGraphStringBuilder(){
-		GraphStringBuilder builder=createGraphStringBuilder();
+	public GraphStringBuilder toGraphStringBuilder() {
+		GraphStringBuilder builder = createGraphStringBuilder();
 		initializeProperties(builder);
 		return builder;
 	}
-	
-	private void initializeProperties(GraphStringBuilder builder){
-		Map<String,Object> props=getProperties();
-		props.forEach((k,v)->{
+
+	private void initializeProperties(GraphStringBuilder builder) {
+		Map<String, Object> props = getProperties();
+		props.forEach((k, v) -> {
 			builder.put(k, v);
 		});
 		initializeLabel(builder);
 	}
 
-	protected void initializeLabel(GraphStringBuilder builder){
+	protected void initializeLabel(GraphStringBuilder builder) {
 		builder.put("label", getLabel());
 	}
 
-	protected Map<String,Object> getProperties(){
-		Map<String,Object> props=CommonUtils.linkedMap();
+	protected Map<String, Object> getProperties() {
+		Map<String, Object> props = CommonUtils.linkedMap();
 		put(props, "colorscheme", colorscheme);
 		put(props, "fontcolor", fontcolor);
 		put(props, "fontname", fontname);
@@ -118,59 +118,59 @@ public abstract class AbstractCommonElement<T extends AbstractCommonElement<?>> 
 		put(props, "target", target);
 		return props;
 	}
-	
-	protected void put(Map<String,Object> props, String name, Object value){
-		if (value!=null){
+
+	protected void put(Map<String, Object> props, String name, Object value) {
+		if (value != null) {
 			props.put(name, value);
 		}
 	}
-	
+
 	protected abstract GraphStringBuilder createGraphStringBuilder();
-	
+
 	@Props
-	public String getLabel(){
-		if (label==null){
+	public String getLabel() {
+		if (label == null) {
 			return null;
 		}
 		return label;
 	}
 
-	public T setLabel(String label){
-		this.label=label;
+	public T setLabel(String label) {
+		this.label = label;
 		return instance();
 	}
-	
-	public T setColorscheme(BrewerColorScheme colorScheme){
-		this.colorscheme=colorScheme;
+
+	public T setColorscheme(BrewerColorScheme colorScheme) {
+		this.colorscheme = colorScheme;
 		return instance();
 	}
 
 	@SuppressWarnings("unchecked")
-	protected T instance(){
-		return (T)this;
+	protected T instance() {
+		return (T) this;
 	}
-	
-	public T setFontsize(int size){
-		this.fontsize=0.0+size;
+
+	public T setFontsize(int size) {
+		this.fontsize = 0.0 + size;
 		return instance();
 	}
 
-	public T setFontsize(double size){
-		this.fontsize=size;
+	public T setFontsize(double size) {
+		this.fontsize = size;
 		return instance();
 	}
 
-	public T setFontsize(Number size){
-		if (size==null){
-			
-		} else{
+	public T setFontsize(Number size) {
+		if (size == null) {
+
+		} else {
 			return setFontsize(size.doubleValue());
 		}
 		return instance();
 	}
 
 	@SuppressWarnings("unchecked")
-	public <S> S get_context(){
-		return (S)this._context;
+	public <S> S get_context() {
+		return (S) this._context;
 	}
 }

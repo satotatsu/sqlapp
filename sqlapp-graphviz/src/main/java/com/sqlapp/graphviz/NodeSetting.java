@@ -24,26 +24,26 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-@Accessors(fluent=true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-@EqualsAndHashCode(callSuper=true)
-public class NodeSetting extends AbstractNode<NodeSetting>{
+@EqualsAndHashCode(callSuper = true)
+public class NodeSetting extends AbstractNode<NodeSetting> {
 
 	private final Graph parent;
-	public NodeSetting(Graph parent){
-		this.parent=parent;
+
+	public NodeSetting(Graph parent) {
+		this.parent = parent;
 	}
 
 	@Override
-	public String toString(){
+	public String toString() {
 		return super.toString();
 	}
-	
+
 	@Override
-	public String getName(){
+	public String getName() {
 		return "node";
 	}
-
 
 }

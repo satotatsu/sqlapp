@@ -66,8 +66,7 @@ class ValidateBulkMigrationTargetCommandTest extends AbstractDbCommandTest {
 			Files.writeString(assessment.toPath(), "{\"status\":\"REVIEW_REQUIRED\"}");
 			Files.writeString(ddlVerification.toPath(), "{\"status\":\"VERIFIED\"}");
 			final var provenance = new BulkMigrationJobConfiguration.Provenance();
-			provenance.setAssessmentReportFingerprint(
-					"sha256:" + MessageDigests.SHA256.checksumAsString(assessment));
+			provenance.setAssessmentReportFingerprint("sha256:" + MessageDigests.SHA256.checksumAsString(assessment));
 			provenance.setDdlVerificationReportFingerprint(
 					"sha256:" + MessageDigests.SHA256.checksumAsString(ddlVerification));
 			configuration.setProvenance(provenance);
@@ -84,13 +83,12 @@ class ValidateBulkMigrationTargetCommandTest extends AbstractDbCommandTest {
 			command.setDdlVerificationReportFile(ddlVerification);
 			command.setReportFile(report);
 			command.setTargetEnvironmentId("production-oracle");
-			command.setExpectedConfigurationFingerprint(
-					"sha256:" + MessageDigests.SHA256.checksumAsString(job));
+			command.setExpectedConfigurationFingerprint("sha256:" + MessageDigests.SHA256.checksumAsString(job));
 			command.setMaxApprovalArtifactFileSizeBytes(Files.size(assessment.toPath()) - 1);
 			assertEquals("assessmentReportFile exceeds maxApprovalArtifactFileSizeBytes.",
 					assertThrows(CommandException.class, command::run).getMessage());
-			command.setMaxApprovalArtifactFileSizeBytes(Math.max(Files.size(assessment.toPath()),
-					Files.size(ddlVerification.toPath())));
+			command.setMaxApprovalArtifactFileSizeBytes(
+					Math.max(Files.size(assessment.toPath()), Files.size(ddlVerification.toPath())));
 			command.setMaxConfigurationFileSizeBytes(Files.size(job.toPath()) - 1);
 			assertEquals("Configuration file exceeds maxConfigurationFileSizeBytes.",
 					assertThrows(CommandException.class, command::run).getMessage());
@@ -136,7 +134,8 @@ class ValidateBulkMigrationTargetCommandTest extends AbstractDbCommandTest {
 	}
 
 	private static int countRows(final HikariDataSource dataSource, final String table) throws Exception {
-		try (var connection = dataSource.getConnection(); var statement = connection.createStatement();
+		try (var connection = dataSource.getConnection();
+				var statement = connection.createStatement();
 				var resultSet = statement.executeQuery("SELECT COUNT(*) FROM " + table)) {
 			resultSet.next();
 			return resultSet.getInt(1);

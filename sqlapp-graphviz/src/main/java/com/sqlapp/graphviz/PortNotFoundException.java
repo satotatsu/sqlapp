@@ -19,15 +19,15 @@
 
 package com.sqlapp.graphviz;
 
-public class PortNotFoundException extends RuntimeException{
+public class PortNotFoundException extends RuntimeException {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 4027309797116376531L;
-	
-	public PortNotFoundException(String node, String port){
-		super("Port not found. node="+node+", port="+port);
+
+	public PortNotFoundException(String node, String port) {
+		super("Port not found. node=" + node + ", port=" + port);
 	}
 
 }

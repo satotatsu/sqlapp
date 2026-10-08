@@ -22,8 +22,8 @@ class MigrationCutoverEvidenceIOTest {
 		final Instant verifiedAt = Instant.parse("2026-10-07T00:00:00Z");
 		final Instant assessedAt = verifiedAt.plusSeconds(30);
 		final var evidence = new MigrationCutoverEvidence(MigrationCutoverEvidence.CURRENT_FORMAT_VERSION,
-				assessedAt.plusSeconds(1), "plan", "sha256:" + "1".repeat(64), verifiedAt,
-				"sha256:" + "2".repeat(64), assessedAt, MigrationCutoverReport.Status.READY);
+				assessedAt.plusSeconds(1), "plan", "sha256:" + "1".repeat(64), verifiedAt, "sha256:" + "2".repeat(64),
+				assessedAt, MigrationCutoverReport.Status.READY);
 		final Path file = directory.resolve("nested/evidence.json");
 		final var snapshot = new MigrationCutoverEvidenceIO().writeSnapshot(file, evidence, 10_000L);
 
@@ -35,9 +35,9 @@ class MigrationCutoverEvidenceIOTest {
 
 		Files.writeString(file, "{}\n");
 		assertThrows(CommandException.class, () -> new MigrationCutoverEvidenceIO().read(file));
-		assertThrows(CommandException.class, () -> new MigrationCutoverEvidenceIO().write(file,
-				new MigrationCutoverEvidence(1, verifiedAt, "plan", "sha256:" + "1".repeat(64),
-						verifiedAt, "sha256:" + "2".repeat(64), assessedAt,
-						MigrationCutoverReport.Status.READY)));
+		assertThrows(CommandException.class,
+				() -> new MigrationCutoverEvidenceIO().write(file,
+						new MigrationCutoverEvidence(1, verifiedAt, "plan", "sha256:" + "1".repeat(64), verifiedAt,
+								"sha256:" + "2".repeat(64), assessedAt, MigrationCutoverReport.Status.READY)));
 	}
 }
