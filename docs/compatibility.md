@@ -218,3 +218,19 @@ The pre-9.0 readers and factories are unchanged.
 TRUNCATE is now retained in the event metadata. Complete trigger definitions
 remain authoritative for recreating WHEN conditions and row/statement triggers.
 Firing-state syntax: [PostgreSQL 9.0 ALTER TABLE](https://www.postgresql.org/docs/9.0/sql-altertable.html).
+
+## PostgreSQL/YSQL covering partial indexes
+
+CREATE INDEX now emits INCLUDE before storage options and WHERE, following
+PostgreSQL's clause order. This fixes recreation of partial covering indexes;
+indexes without INCLUDE retain their existing ordering. The owning PostgreSQL
+factory hook remains available and now runs immediately after the key columns.
+
+PostgreSQL 11+ index queries, inherited by YSQL 11/15, read partial predicates
+with `pg_get_expr(indpred, indrelid)` and key ASC/DESC flags from the catalog for
+B-tree/LSM indexes. They no longer infer those fields from a regular expression
+over the complete CREATE INDEX statement. The pre-11 metadata query and parsing
+path are unchanged. No public API, configuration or Schema XML format changes
+are required. Physical YugabyteDB index layout remains outside the support scope.
+
+Clause order: [PostgreSQL 11 CREATE INDEX](https://www.postgresql.org/docs/11/sql-createindex.html).

@@ -39,11 +39,6 @@ import com.sqlapp.util.CommonUtils;
 public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
 	public static final String NULLS_NOT_DISTINCT = "nullsNotDistinct";
 
-	@Override
-	public void addCreateObject(final Index obj, final PostgresSqlBuilder builder) {
-		super.addCreateObject(obj, builder);
-		addObjectDetailAfter(obj, obj.getTable(), builder);
-	}
 
 	@Override
 	protected void addUnique(final Index obj, final Table table, final PostgresSqlBuilder builder) {
@@ -56,6 +51,7 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 	@Override
 	public void addObjectDetail(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 		super.addObjectDetail(obj, table, builder);
+		addObjectDetailAfter(obj, table, builder);
 		addWith(obj, table, builder);
 		addFilter(obj, table, builder);
 	}

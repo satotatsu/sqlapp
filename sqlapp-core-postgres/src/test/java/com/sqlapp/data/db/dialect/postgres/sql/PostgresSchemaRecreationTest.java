@@ -61,4 +61,26 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(update.contains("DO UPDATE"), update);
 		assertTrue(update.contains("SET label"), update);
 	}
+	@Test
+	void coveringPartialIndexPlacesIncludesBeforeStorageAndPredicate() {
+		for (int major : new int[] {11, 15}) {
+			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
+					.getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
+			Table table = new Table("items").setSchemaName("tenant");
+			table.getColumns().add("id", c -> c.setDataType(DataType.INT));
+			table.getColumns().add("label", c -> c.setDataType(DataType.VARCHAR));
+			var index = new com.sqlapp.data.schemas.Index("active_items");
+			table.getIndexes().add(index);
+			index.getColumns().add("id", com.sqlapp.data.schemas.Order.Desc);
+			index.getIncludes().add("label");
+			index.getSpecifics().put("fillfactor", "80");
+			index.setWhere("length(label) > 0");
+			String sql = registry.createSql(index, SqlType.CREATE).get(0).getSqlText();
+			assertTrue(sql.contains("DESC"), sql);
+			assertTrue(sql.indexOf("INCLUDE") > 0, sql);
+			assertTrue(sql.indexOf("INCLUDE") < sql.indexOf("WITH"), sql);
+			assertTrue(sql.indexOf("WITH") < sql.indexOf("WHERE"), sql);
+		}
+	}
+
 }

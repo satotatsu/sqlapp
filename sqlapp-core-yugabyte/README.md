@@ -79,8 +79,8 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, all 19 tests passed on each image (38 real-engine tests).
-The latest PostgreSQL/YSQL/command regression run passed 744 unit tests; one
+On 2026-10-08, all 20 tests passed on each image (40 real-engine tests).
+The latest PostgreSQL/YSQL/command regression run passed 746 unit tests; one
 external-database YSQL test was skipped. Gradle reused the unchanged plugin
 task result (81 previously passing tests). The earlier wider core and dialect
 run passed 2,655 tests. Packaging and SPI descriptors were
@@ -90,6 +90,8 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 
 - Schema-based table, PK/FK/unique/check constraint, index, view and sequence recreation.
 - Complete FK-bearing Schema recreation excluding internal implementation triggers.
+- Covering partial unique-index recreation with descending keys, unchanged catalog
+  definitions and conditional duplicate rejection.
 - Generated parent/child identity alignment across root batches and final partial batches.
 - Composite JDBC keyset resume after a persisted cursor.
 - Quoted identifiers, identity, numeric, boolean, date/time, UUID, JSONB, bytea and text-array columns.

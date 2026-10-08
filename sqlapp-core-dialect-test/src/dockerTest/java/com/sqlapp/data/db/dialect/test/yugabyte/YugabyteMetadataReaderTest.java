@@ -741,4 +741,47 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+	@Test
+	void recreatesCoveringPartialUniqueIndexAndDescendingKey() throws Exception {
+		String schemaName = "ysql_indexes_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, code integer, label text, deleted boolean)");
+				statement.execute("CREATE UNIQUE INDEX active_code ON " + schemaName
+						+ ".items (code DESC) INCLUDE (label) WHERE (NOT deleted) AND (length(label) > 0)");
+				String originalDefinition;
+				try (var rows = statement.executeQuery("SELECT pg_get_indexdef('" + schemaName + ".active_code'::regclass)")) {
+					assertTrue(rows.next()); originalDefinition = rows.getString(1);
+				}
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName);
+				var table = reader.getAllFull(connection).stream().filter(v -> "items".equals(v.getName())).findFirst().orElseThrow();
+				var index = table.getIndexes().get("active_code");
+				assertNotNull(index);
+				assertTrue(index.isUnique());
+				assertEquals(1, index.getColumns().size());
+				assertEquals("code", index.getColumns().get(0).getName());
+				assertEquals(com.sqlapp.data.schemas.Order.Desc, index.getColumns().get(0).getOrder());
+				assertNotNull(index.getIncludes().get("label"));
+				assertTrue(index.getWhere().contains("length(label)"), index.getWhere());
+				statement.execute("DROP INDEX " + schemaName + ".active_code");
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var op : registry.createSql(index, SqlType.CREATE)) statement.execute(op.getSqlText());
+				try (var rows = statement.executeQuery("SELECT pg_get_indexdef('" + schemaName + ".active_code'::regclass)")) {
+					assertTrue(rows.next()); assertEquals(originalDefinition, rows.getString(1));
+				}
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (1,7,'active',false),(2,7,'deleted',true),(3,7,'',false)");
+				SQLException duplicate = assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + schemaName + ".items VALUES (4,7,'duplicate',false)"));
+				assertEquals("23505", duplicate.getSQLState());
+				assertEquals(3, scalar(connection, "SELECT count(*) FROM " + schemaName + ".items"));
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
 }

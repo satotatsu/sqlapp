@@ -2,6 +2,8 @@ SELECT current_database() AS catalog_name,n.nspname AS schema_name,
  ci.relname AS index_name,ti.relname AS table_name,i.indnatts,i.indnkeyatts,
  i.indnullsnotdistinct,i.indisunique AS is_unique,i.indisprimary AS is_primary,
  i.indexprs,CASE WHEN i.indexprs IS NULL THEN a.attname ELSE pg_get_indexdef(ci.oid,a.attnum,false) END AS column_name,
+ pg_get_expr(i.indpred,i.indrelid) AS predicate,
+ CASE WHEN am.amname IN ('btree','lsm') THEN (i.indoption[a.attnum-1] & 1)=1 ELSE false END AS is_desc,
  am.amname AS index_type,a.attnum AS num,pg_get_indexdef(ci.oid) AS definition,
  obj_description(i.indexrelid,current_database()) AS remarks
 FROM pg_catalog.pg_index i

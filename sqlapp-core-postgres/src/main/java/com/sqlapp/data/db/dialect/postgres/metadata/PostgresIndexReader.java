@@ -76,6 +76,8 @@ public class PostgresIndexReader extends IndexReader {
 	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final boolean catalogDetails = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 11;
 		final List<Index> result = list();
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
 		final Map<String, String> columnsMap = map();
@@ -106,15 +108,19 @@ public class PostgresIndexReader extends IndexReader {
 					if (indexType != null) {
 						index.setIndexType(indexType);
 					}
-					Matcher matcher = indexWherePattern.matcher(definition);
-					if (matcher.matches()) {
-						columnsMap.put(index.getName(), matcher.group(1));
-						String condition = matcher.group(2);
-						index.setWhere(unwrap(condition, '(', ')'));
+					if (catalogDetails) {
+						index.setWhere(getString(rs, "predicate"));
 					} else {
-						matcher = indexPattern.matcher(definition);
+						Matcher matcher = indexWherePattern.matcher(definition);
 						if (matcher.matches()) {
 							columnsMap.put(index.getName(), matcher.group(1));
+							String condition = matcher.group(2);
+							index.setWhere(unwrap(condition, '(', ')'));
+						} else {
+							matcher = indexPattern.matcher(definition);
+							if (matcher.matches()) {
+								columnsMap.put(index.getName(), matcher.group(1));
+							}
 						}
 					}
 					index.setUnique(isUnique);
@@ -128,6 +134,10 @@ public class PostgresIndexReader extends IndexReader {
 				String columnName = getString(rs, COLUMN_NAME);
 				if (rs.getInt("num") > rs.getInt("indnkeyatts")) {
 					index.getIncludes().add(columnName);
+					return;
+				}
+				if (catalogDetails) {
+					index.getColumns().add(columnName, rs.getBoolean("is_desc") ? Order.Desc : Order.Asc);
 					return;
 				}
 				String columns = columnsMap.get(index.getName());
