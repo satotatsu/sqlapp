@@ -142,12 +142,15 @@ The suite verifies schema metadata and executable recreation, COPY/upsert,
 large-batch rollback, identity/type handling, checkpoint/resume, verification
 and repair, lease contention, savepoints and write conflicts. It also recreates
 a complete FK-bearing Schema without implementation triggers, verifies generated
-parent/child keys across partial root batches, and resumes a composite JDBC keyset. See the
+parent/child keys across partial root batches, and resumes a composite JDBC keyset.
+Key-only generated/bulk upserts and nested text/integer, primitive-byte numeric
+and bytea array COPY/upsert cases are verified by JDBC readback. See the
 [full support scope and limits](../sqlapp-core-yugabyte/README.md).
 
-The 2026-10-08 run passed all 16 cases on each baseline (32 total). The related
-PostgreSQL/YSQL/command/Gradle-plugin regression passed 822 unit tests, with one
-external YSQL test skipped. Reproduce the regression plus the matrix with:
+The 2026-10-08 run passed all 18 cases on each baseline (36 total). The related
+PostgreSQL/YSQL/command regression passed 743 unit tests, with one external
+YSQL test skipped; the unchanged Gradle-plugin result (81 passing tests) was
+reused as up-to-date. Reproduce the regression plus the matrix with:
 
 ```shell
 ./gradlew :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest

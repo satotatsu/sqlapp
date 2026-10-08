@@ -72,16 +72,18 @@ The reproducible local compatibility matrix is:
 ./gradlew :sqlapp-core-yugabyte:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest
 ```
 
+The configured JDBC driver is `org.postgresql:postgresql:42.7.11`.
 It starts fresh disposable single-node containers, without external database
 credentials or host data volumes, using these fixed images:
 
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, all 16 tests passed on each image (32 real-engine tests).
-The latest PostgreSQL/YSQL/command/Gradle-plugin regression run passed 822 unit
-tests; one external-database YSQL test was skipped. The earlier wider core and
-dialect run passed 2,655 tests. Packaging and SPI descriptors were
+On 2026-10-08, all 18 tests passed on each image (36 real-engine tests).
+The latest PostgreSQL/YSQL/command regression run passed 743 unit tests; one
+external-database YSQL test was skipped. Gradle reused the unchanged plugin
+task result (81 previously passing tests). The earlier wider core and dialect
+run passed 2,655 tests. Packaging and SPI descriptors were
 also verified. No external or production database was accessed.
 
 The matrix asserts the actual JDBC engine major and tests both engines for:
@@ -94,6 +96,8 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 - Enum/domain, function and trigger metadata and executable recreation.
 - COPY beyond the 20,000-row auto-commit boundary, atomic failure rollback,
   Unicode, null/empty strings, decimals, binary, arrays and explicit identities.
+- Key-only generated upsert and bulk upsert, including duplicate no-op behavior.
+- Nested integer/text COPY and upsert, primitive-byte numeric arrays and bytea arrays.
 - Staging upsert, duplicate policies, insert/update-only actions, caller rollback
   and temporary-table cleanup.
 - Chunked checkpoint atomicity, pause/resume, sustained loads, keyset verification
@@ -104,8 +108,8 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 The verified builds are compatibility baselines, not a claim that every
 PostgreSQL statement works on every YugabyteDB release. Sharding/colocation,
 hash/range physical index layout, placement/tablespaces, extensions, multi-node
-failover and performance tuning are not covered. COPY tests cover one-dimensional
-text arrays, not every array element type or multidimensional bulk input.
+failover and performance tuning are not covered. COPY tests cover nested integer/text arrays, primitive-byte smallint arrays and
+one-dimensional bytea arrays; other array element types remain unverified.
 Sequence metadata covers configuration, not live-position migration or ownership.
 
 DDL transaction guarantees and isolation behavior depend on YSQL version and

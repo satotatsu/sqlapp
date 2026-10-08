@@ -185,3 +185,18 @@ unchanged; exported trigger collections may contain fewer implementation objects
 
 Catalog boundaries: [PostgreSQL 9.0](https://www.postgresql.org/docs/9.0/catalog-pg-trigger.html)
 and [PostgreSQL 8.4](https://www.postgresql.org/docs/8.4/catalog-pg-trigger.html).
+
+## PostgreSQL/YSQL upsert and COPY array boundaries
+
+The PostgreSQL 9.5–14 ON CONFLICT SQL factory, also used by YSQL 11/15, now
+emits `DO NOTHING` when no non-key column can be updated. A table containing
+only its conflict key can therefore be inserted repeatedly without generating
+an empty `DO UPDATE`. Tables with updateable columns retain their update path.
+
+The shared PostgreSQL COPY reader now retains nested Java array dimensions.
+It distinguishes primitive byte arrays used as numeric array values from
+scalar `bytea` elements inside binary array columns. Existing scalar binary
+COPY and null/empty-string handling are retained. YSQL tests verify integer
+and text matrices, primitive-byte smallint arrays and bytea arrays through
+COPY, staging upsert and JDBC readback. Public APIs and configuration formats
+are unchanged.

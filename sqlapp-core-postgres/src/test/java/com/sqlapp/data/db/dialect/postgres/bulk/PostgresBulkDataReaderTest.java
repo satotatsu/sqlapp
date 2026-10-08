@@ -55,6 +55,22 @@ class PostgresBulkDataReaderTest {
 				() -> executor.execute(connection, createTable(), BulkOption.builder().tableLock(true).build()));
 	}
 
+	@Test
+	void streamsNestedAndPrimitiveByteArraysWithoutJavaObjectNames() throws Exception {
+		Table table = new Table("arrays");
+		table.getColumns().add("matrix", c -> c.setDataType(DataType.INT).setArrayDimension(2));
+		table.getColumns().add("numbers", c -> c.setDataType(DataType.SMALLINT).setArrayDimension(1));
+		table.getRows().add(row -> {
+			row.put("matrix", new int[][] {{1,2},{3,4}});
+			row.put("numbers", new byte[] {5,6});
+		});
+		try (var reader = new PostgresBulkDataReader(table, BulkOption.defaults())) {
+			var writer = new StringWriter();
+			reader.transferTo(writer);
+			assertEquals("\"{{\"\"1\"\",\"\"2\"\"},{\"\"3\"\",\"\"4\"\"}}\",\"{\"\"5\"\",\"\"6\"\"}\"\n", writer.toString());
+		}
+	}
+
 	private Table createTable() {
 		final Table table = new Table("copy_target");
 		table.setDialect(DialectHolder.postgreSQL180);

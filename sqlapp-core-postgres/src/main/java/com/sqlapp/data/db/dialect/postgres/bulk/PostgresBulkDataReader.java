@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -83,7 +84,16 @@ public class PostgresBulkDataReader extends Reader {
 			}
 			final Object value = row.get(columns.get(i).getOrdinal());
 			if (value != null) {
-				appendCsv(builder, toText(value));
+				final Column column = columns.get(i);
+				if ((column.getArrayDimension() > 0 || column.getDataType() == DataType.ARRAY)
+						&& value.getClass().isArray()) {
+					// A byte[] is a scalar bytea element only for binary array columns.
+					boolean binaryElements = column.getDataType() != null
+							&& column.getDataType().getDefaultClass() == byte[].class;
+					appendCsv(builder, toArrayText(value, binaryElements));
+				} else {
+					appendCsv(builder, toText(value));
+				}
 			}
 		}
 		return builder.append('\n').toString();
@@ -100,25 +110,29 @@ public class PostgresBulkDataReader extends Reader {
 			return builder.toString();
 		}
 		if (value.getClass().isArray()) {
-			final StringBuilder builder = new StringBuilder("{");
-			for (int i = 0; i < Array.getLength(value); i++) {
-				if (i > 0) {
-					builder.append(',');
-				}
-				final Object element = Array.get(value, i);
-				if (element == null) {
-					builder.append("NULL");
-				} else {
-					builder.append('"').append(element.toString().replace("\\", "\\\\").replace("\"", "\\\""))
-							.append('"');
-				}
-			}
-			return builder.append('}').toString();
+			return toArrayText(value, false);
 		}
 		if (value instanceof TemporalAccessor) {
 			return value.toString();
 		}
 		return value.toString();
+	}
+
+	private String toArrayText(final Object value, final boolean binaryElements) {
+		final StringBuilder builder = new StringBuilder("{");
+		for (int i = 0; i < Array.getLength(value); i++) {
+			if (i > 0) builder.append(',');
+			final Object element = Array.get(value, i);
+			if (element == null) {
+				builder.append("NULL");
+			} else if (element.getClass().isArray() && !(binaryElements && element instanceof byte[])) {
+				builder.append(toArrayText(element, binaryElements));
+			} else {
+				builder.append('"').append(toText(element).replace("\\", "\\\\").replace("\"", "\\\""))
+						.append('"');
+			}
+		}
+		return builder.append('}').toString();
 	}
 
 	private void appendCsv(final StringBuilder builder, final String value) {

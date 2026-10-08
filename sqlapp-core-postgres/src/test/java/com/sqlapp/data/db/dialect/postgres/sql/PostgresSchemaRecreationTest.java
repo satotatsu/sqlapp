@@ -47,4 +47,18 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(enumSql.contains("CREATE TYPE tenant.status AS ENUM"), enumSql);
 		assertTrue(enumSql.contains("'it''s new'"), enumSql);
 	}
+	@Test
+	void keyOnlyUpsertDoesNothingOnConflict() {
+		Table table = new Table("keys");
+		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		table.setPrimaryKey("keys_pkey", table.getColumns().get("id"));
+		SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.MERGE);
+		String sql = factory.createSql(table).get(0).getSqlText();
+		assertTrue(sql.contains("DO NOTHING"), sql);
+		assertFalse(sql.contains("DO UPDATE"), sql);
+		table.getColumns().add("label", c -> c.setDataType(DataType.VARCHAR).setLength(20));
+		String update = factory.createSql(table).get(0).getSqlText();
+		assertTrue(update.contains("DO UPDATE"), update);
+		assertTrue(update.contains("SET label"), update);
+	}
 }

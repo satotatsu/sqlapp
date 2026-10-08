@@ -486,6 +486,71 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void executesKeyOnlyGeneratedAndBulkUpserts() throws Exception {
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE public.ysql_key_only (id integer PRIMARY KEY)");
+			var dialect = DialectResolver.getInstance().getDialect(connection);
+			Table table = new Table("ysql_key_only").setSchemaName("public");
+			table.getColumns().add("id", c -> c.setDataType(DataType.INT));
+			table.setPrimaryKey("ysql_key_only_pkey", table.getColumns().get("id"));
+			var registry = dialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			var nodes = registry.createSqlNodes(table, SqlType.MERGE);
+			assertEquals(1, nodes.size());
+			var context = new com.sqlapp.data.parameter.ParametersContext();
+			context.put("id", 7);
+			var handler = new com.sqlapp.jdbc.sql.JdbcHandler(nodes.get(0));
+			handler.execute(connection, context);
+			handler.execute(connection, context);
+			assertEquals(1, scalar(connection, "SELECT count(*) FROM public.ysql_key_only WHERE id=7"));
+			table.getRows().add(row -> row.put("id", 7));
+			table.getRows().add(row -> row.put("id", 8));
+			assertEquals(1, BulkUpsertResolver.resolve(dialect).execute(connection, table, BulkUpsertOption.defaults()));
+			assertEquals(2, scalar(connection, "SELECT count(*) FROM public.ysql_key_only"));
+		}
+	}
+
+	@Test
+	void copiesAndUpsertsNestedTextNumericAndBinaryArrays() throws Exception {
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE public.ysql_nested_arrays (id integer PRIMARY KEY, matrix integer[][], labels text[][], numbers smallint[], payloads bytea[])");
+			var dialect = DialectResolver.getInstance().getDialect(connection);
+			var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+			reader.setSchemaName("public");
+			reader.setObjectName("ysql_nested_arrays");
+			Table table = reader.getAllFull(connection).stream().filter(t -> "ysql_nested_arrays".equals(t.getName())).findFirst().orElseThrow();
+			String[][] labels = {{"日本語,\"\\\n", ""}, {"NULL", null}};
+			table.getRows().add(row -> {
+				row.put("id", 1);
+				row.put("matrix", new int[][] {{1,2},{3,4}});
+				row.put("labels", labels);
+				row.put("numbers", new byte[] {-1,127});
+				row.put("payloads", new byte[][] {{0,(byte)255},{1,2}});
+			});
+			assertEquals(1, BulkInsertResolver.resolve(dialect).execute(connection, table, BulkOption.defaults()));
+			for (int iteration = 0; iteration < 2; iteration++) {
+				if (iteration == 1) {
+					table.getRows().get(0).put("matrix", new int[][] {{5,6},{7,8}});
+					assertEquals(1, BulkUpsertResolver.resolve(dialect).execute(connection, table, BulkUpsertOption.defaults()));
+				}
+				try (var rows = statement.executeQuery("SELECT * FROM public.ysql_nested_arrays WHERE id=1")) {
+					assertTrue(rows.next());
+					Object[] matrix = (Object[]) rows.getArray("matrix").getArray();
+					assertArrayEquals(iteration == 0 ? new Integer[] {1,2} : new Integer[] {5,6}, (Object[]) matrix[0]);
+					assertArrayEquals(iteration == 0 ? new Integer[] {3,4} : new Integer[] {7,8}, (Object[]) matrix[1]);
+					Object[] actualLabels = (Object[]) rows.getArray("labels").getArray();
+					assertArrayEquals(labels[0], (Object[]) actualLabels[0]);
+					assertArrayEquals(labels[1], (Object[]) actualLabels[1]);
+					assertArrayEquals(new Short[] {-1,127}, (Object[]) rows.getArray("numbers").getArray());
+					Object[] payloads = (Object[]) rows.getArray("payloads").getArray();
+					assertArrayEquals(new byte[] {0,(byte)255}, (byte[]) payloads[0]);
+					assertArrayEquals(new byte[] {1,2}, (byte[]) payloads[1]);
+				}
+			}
+		}
+	}
+
+	@Test
 	void readsWholeSchemaAndRecreatesFunctionAndTrigger() throws Exception {
 		String schemaName = "ysql_objects_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {
