@@ -20,7 +20,7 @@ allprojects {
 }
 
 wrapper {
-	gradleVersion = '9.6.1'
+	gradleVersion = '9.8.1'
 }
 
 java {
@@ -119,7 +119,7 @@ subprojects {
 
 eclipse {
 	wrapper {
-		gradleVersion = '9.5.1'
+		gradleVersion = '9.8.1'
 	}
 	
 	project {

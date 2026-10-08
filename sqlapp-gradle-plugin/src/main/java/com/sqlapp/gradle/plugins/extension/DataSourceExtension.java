@@ -28,6 +28,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -54,6 +55,7 @@ public abstract class DataSourceExtension {
 	}
 
 	/** Whether enough intent exists to create an optional task DataSource. */
+	@Internal
 	public boolean isConfigured() {
 		return getJdbcUrl().isPresent() || getDataSourceClassName().isPresent()
 				|| getDriverClassName().isPresent() || !getProperties().isEmpty();

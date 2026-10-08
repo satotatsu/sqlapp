@@ -10,10 +10,12 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.ExportSchemaFileXmlCommand;
 
 /** Common task contract for exporting a database file as Schema XML. */
+@DisableCachingByDefault(because = "Database file exports may depend on vendor-specific runtime behavior")
 public abstract class AbstractExportSchemaFileXmlTask extends AbstractTask<ExportSchemaFileXmlCommand> {
 
 	@InputFile

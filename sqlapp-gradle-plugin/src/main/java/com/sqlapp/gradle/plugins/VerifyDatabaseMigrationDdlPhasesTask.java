@@ -1,6 +1,8 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
@@ -14,6 +16,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import com.sqlapp.data.db.command.migration.assessment.VerifyDatabaseMigrationDdlPhasesCommand;
 
 /** Verifies phase-separated database migration DDL without opening a database connection. */
+@DisableCachingByDefault(because = "Command execution has not been validated for build caching")
 public abstract class VerifyDatabaseMigrationDdlPhasesTask
 		extends AbstractTask<VerifyDatabaseMigrationDdlPhasesCommand> {
 	public VerifyDatabaseMigrationDdlPhasesTask() {

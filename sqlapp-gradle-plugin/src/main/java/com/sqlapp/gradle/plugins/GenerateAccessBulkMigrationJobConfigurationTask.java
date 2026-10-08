@@ -1,6 +1,8 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
@@ -14,6 +16,7 @@ import com.sqlapp.data.db.command.migration.assessment.GenerateAccessBulkMigrati
 import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
 
 /** Generates an executeBulkMigrationJob YAML file from an Access assessment. */
+@DisableCachingByDefault(because = "Command execution has not been validated for build caching")
 public abstract class GenerateAccessBulkMigrationJobConfigurationTask
 		extends AbstractTask<GenerateAccessBulkMigrationJobConfigurationCommand> {
 	public GenerateAccessBulkMigrationJobConfigurationTask() {

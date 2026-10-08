@@ -1,6 +1,8 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
@@ -15,6 +17,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import com.sqlapp.data.db.command.migration.bulk.VerifyBulkMigrationJobRepairEvidenceCommand;
 
 /** Verifies repair evidence files without database access. */
+@DisableCachingByDefault(because = "Command execution has not been validated for build caching")
 public abstract class VerifyBulkMigrationJobRepairEvidenceTask
 		extends AbstractTask<VerifyBulkMigrationJobRepairEvidenceCommand> {
 	public void call(final Action<VerifyBulkMigrationJobRepairEvidenceTask> action) {

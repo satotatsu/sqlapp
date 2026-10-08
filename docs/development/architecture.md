@@ -2,7 +2,7 @@
 
 [Documentation index](../README.md) · [Section index](README.md)
 
-sqlapp is a Java 21 and Gradle multi-project database utility. Its central
+sqlapp is a Java 21 and Gradle 9.8.1 multi-project database utility. Its central
 design decision is that the shared Schema model represents database structure;
 metadata readers populate that model, commands transform or consume it, and
 dialects generate database-specific SQL from it.

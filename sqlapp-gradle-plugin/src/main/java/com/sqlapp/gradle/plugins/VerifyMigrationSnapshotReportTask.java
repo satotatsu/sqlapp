@@ -1,6 +1,8 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import org.gradle.api.Action;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
@@ -11,6 +13,7 @@ import org.gradle.api.tasks.Optional;
 import com.sqlapp.data.db.command.migration.snapshot.VerifyMigrationSnapshotReportCommand;
 
 /** Verifies an SCD2 success report against its exact approval artifact. */
+@DisableCachingByDefault(because = "Command execution has not been validated for build caching")
 public abstract class VerifyMigrationSnapshotReportTask extends AbstractTask<VerifyMigrationSnapshotReportCommand> {
 	public void call(final Action<VerifyMigrationSnapshotReportTask> action) {
 		action.execute(this);
