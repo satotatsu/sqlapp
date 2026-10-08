@@ -441,3 +441,82 @@ planning for arbitrary composite-type graphs remain unverified. Existing APIs,
 XML formats and dependencies are unchanged. Objects with comments may yield
 additional SET_COMMENT operations. The changed checkConstraints.sql resource
 was converted from its legacy CP932 text encoding to UTF-8.
+
+
+## Deferrable foreign keys
+
+PostgreSQL foreign-key SQL generation preserves the Schema model's existing
+Deferrability setting for both CREATE TABLE and standalone ALTER TABLE ADD
+CONSTRAINT. InitiallyDeferred and InitiallyImmediate emit DEFERRABLE followed
+by the initial mode. NotDeferrable and an absent setting retain the ordinary,
+non-deferrable default without adding a clause. The PostgreSQL 18 temporal
+foreign-key factory uses the same behavior. Public APIs, XML formats and
+module dependencies are unchanged.
+
+This change concerns foreign keys. YugabyteDB does not support deferrable
+primary-key or UNIQUE constraints; no support for those is implied. View
+security/check options and NOT VALID constraint preservation remain separate
+follow-up work.
+
+The integration case reads a full Schema containing the referenced parent,
+recreates both initial modes, and checks child-before-parent insertion,
+SET CONSTRAINTS DEFERRED and rejection with SQLSTATE 23503 when switching back
+to immediate checking. The immediate case also drops and recreates the FK
+through standalone ALTER TABLE generation. The first test attempt using a
+standalone TableReader exposed a separate reference-resolution issue:
+the generated FK referenced the child table. The shared reader fix described
+below now covers that standalone path as well.
+See YugabyteDB's [ALTER TABLE reference](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_alter_table/)
+for its foreign-key-only deferrability support.
+
+Validation: the focused PostgreSQL FK test class passed both tests; the full
+PostgreSQL/YSQL/command regression then passed 758 unit tests (one optional
+external test skipped), with 81 unchanged plugin tests reused. Both local
+YSQL compatibility tasks passed all 33 cases each (66 total), including the
+composite-array correction from the preceding batch. Yugabyte packaging passed.
+No generated files were intentionally edited and no external/production
+database was accessed. The first focused integration attempt failed on the
+standalone TableReader reference-resolution limitation described above; the
+final full-Schema test and complete matrix passed.
+
+
+## Standalone foreign-key reference ownership
+
+The shared ForeignKeyConstraintReader constructed a referenced Table but left
+its referenced Columns detached. Their catalog/schema/table identifiers were
+read correctly. When no parent Table was available in a containing Schema,
+ReferenceColumnCollection.getTable() fell back to the owning child Table;
+SQL generation then used that incorrect resolved Table. This was a model
+ownership problem after catalog reading, not a YSQL deferrability restriction
+or a missing REFERENCES clause in the SQL factory.
+
+The helper now attaches referenced Columns to the referenced Table it already
+constructs. A standalone read retains an owner with the correct identity;
+when a complete Schema is available, getRelatedTable() continues to prefer
+the canonical Table resolved from it. The helper is shared by PostgreSQL,
+DB2, MySQL, Oracle, H2, SQL Server and other readers, so the fix belongs in
+sqlapp-core rather than a PostgreSQL-only SQL-generation workaround. No
+public API, XML format, dependency or vendor-version boundary changes.
+
+The core regression reproduces the incorrect parent before the fix and
+checks same-named child columns, catalog/schema identity, composite-column
+order, full-Schema resolution and self references. Local YSQL 11/15 tests
+read only the child through TableReader, recreate a quoted cross-schema
+composite FK through CREATE TABLE and standalone ADD CONSTRAINT, read it
+back and reject orphan inserts with SQLSTATE 23503. The retained referenced
+Table contains only the referenced columns; it is not a full parent-table
+metadata snapshot. Other database engines have unit regressions, not new
+real-database verification for this fix.
+
+Final validation on 2026-10-08: the focused core reader tests passed 2/2;
+the focused standalone TableReader case passed on both local YSQL engines.
+The broad Gradle run executed :sqlapp-core:test, :test for every retained
+dialect module in settings.gradle, :sqlapp-command:test and
+:sqlapp-gradle-plugin:test: 2,677 passed, one optional external test skipped.
+:sqlapp-core-dialect-test:yugabyte11CompatibilityTest and
+:sqlapp-core-dialect-test:yugabyte15CompatibilityTest each passed 34 cases
+(68 total). :sqlapp-core-yugabyte:assemble was up to date. The initial new
+unit test first needed API/type corrections to compile, then reproduced the
+ownership failure before the implementation fix; all final checks passed.
+No external or production database was accessed, and no generated output
+was intentionally edited.

@@ -51,4 +51,12 @@ public class PostgresCreateForeignKeyConstraintFactory
 		}
 	}
 
+	@Override
+	protected void addDeferrability(ForeignKeyConstraint obj, PostgresSqlBuilder builder) {
+		var deferrability = obj.getDeferrability();
+		if (deferrability != null && deferrability != com.sqlapp.data.schemas.Deferrability.NotDeferrable) {
+			builder.space()._add("DEFERRABLE").space()._add(deferrability.getSqlValue());
+		}
+	}
+
 }

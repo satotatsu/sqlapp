@@ -622,6 +622,111 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+
+	@Test
+	void recreatesStandaloneTableWithCrossSchemaCompositeForeignKey() throws Exception {
+		String suffix = UUID.randomUUID().toString().replace("-", "");
+		String parentSchema = "ysql_parent_" + suffix;
+		String childSchema = "ysql_child_" + suffix;
+		String parent = parentSchema + ".\"Parent table\"";
+		String child = childSchema + ".\"Child table\"";
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + parentSchema);
+			statement.execute("CREATE SCHEMA " + childSchema);
+			try {
+				statement.execute("CREATE TABLE " + parent + " (a integer, b integer, PRIMARY KEY (b,a))");
+				statement.execute("INSERT INTO " + parent + " VALUES (1,2)");
+				statement.execute("CREATE TABLE " + child + " (a integer, b integer, CONSTRAINT \"Parent link\" "
+						+ "FOREIGN KEY (b,a) REFERENCES " + parent + " (b,a) DEFERRABLE INITIALLY DEFERRED)");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(childSchema); reader.setObjectName("Child table");
+				var model = reader.getAllFull(connection).stream().filter(t -> "Child table".equals(t.getName())).findFirst().orElseThrow();
+				var fk = (ForeignKeyConstraint) model.getConstraints().get("Parent link");
+				assertEquals("Parent table", fk.getRelatedTableName());
+				assertEquals(parentSchema, fk.getRelatedTableSchemaName());
+				assertEquals("Parent table", fk.getRelatedTable().getName());
+				assertEquals(parentSchema, fk.getRelatedTable().getSchemaName());
+				assertEquals(List.of("b", "a"), fk.getRelatedColumns().stream().map(c -> c.getName()).toList());
+				for (var column : fk.getRelatedColumns()) {
+					assertEquals("Parent table", column.getColumn().getTable().getName());
+					assertNotSame(model.getColumns().get(column.getName()), column.getColumn());
+				}
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				statement.execute("DROP TABLE " + child);
+				for (var operation : registry.createSql(model, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO " + child + " VALUES (1,2)");
+				assertEquals("23503", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + child + " VALUES (9,9)")).getSQLState());
+				statement.execute("ALTER TABLE " + child + " DROP CONSTRAINT \"Parent link\"");
+				for (var operation : registry.createSql(fk, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				assertEquals("23503", assertThrows(SQLException.class,
+						() -> statement.execute("INSERT INTO " + child + " VALUES (8,8)")).getSQLState());
+				var recreated = reader.getAllFull(connection).stream().filter(t -> "Child table".equals(t.getName())).findFirst().orElseThrow();
+				var recreatedFk = (ForeignKeyConstraint) recreated.getConstraints().get("Parent link");
+				assertEquals(parentSchema, recreatedFk.getRelatedTable().getSchemaName());
+				assertEquals("Parent table", recreatedFk.getRelatedTable().getName());
+			} finally {
+				statement.execute("DROP SCHEMA " + childSchema + " CASCADE");
+				statement.execute("DROP SCHEMA " + parentSchema + " CASCADE");
+			}
+		}
+	}
+
+	@Test
+	void recreatesDeferrableForeignKeysAndPreservesTransactionChecks() throws Exception {
+		String schemaName = "ysql_deferred_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".parent (id integer PRIMARY KEY)");
+				for (String mode : List.of("DEFERRED", "IMMEDIATE")) {
+					String childName = "child_" + mode.toLowerCase(java.util.Locale.ROOT);
+					String child = schemaName + "." + childName;
+					statement.execute("CREATE TABLE " + child + " (id integer, CONSTRAINT parent_fk FOREIGN KEY (id) REFERENCES "
+							+ schemaName + ".parent(id) DEFERRABLE INITIALLY " + mode + ")");
+					var dialect = DialectResolver.getInstance().getDialect(connection);
+					var reader = dialect.getCatalogReader().getSchemaReader();
+					reader.setSchemaName(schemaName);
+					var model = reader.getAllFull(connection).stream().filter(t -> schemaName.equals(t.getName()))
+							.findFirst().orElseThrow().getTables().get(childName);
+					var expected = "DEFERRED".equals(mode) ? com.sqlapp.data.schemas.Deferrability.InitiallyDeferred
+							: com.sqlapp.data.schemas.Deferrability.InitiallyImmediate;
+					assertEquals(expected, ((ForeignKeyConstraint) model.getConstraints().get("parent_fk")).getDeferrability());
+					statement.execute("DROP TABLE " + child);
+					var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+					for (var operation : registry.createSql(model, SqlType.CREATE)) statement.execute(operation.getSqlText());
+					if ("IMMEDIATE".equals(mode)) {
+						statement.execute("ALTER TABLE " + child + " DROP CONSTRAINT parent_fk");
+						for (var operation : registry.createSql(model.getConstraints().get("parent_fk"), SqlType.CREATE)) {
+							statement.execute(operation.getSqlText());
+						}
+					}
+					connection.setAutoCommit(false);
+					try {
+						if ("IMMEDIATE".equals(mode)) {
+							assertEquals("23503", assertThrows(SQLException.class,
+									() -> statement.execute("INSERT INTO " + child + " VALUES (100)")).getSQLState());
+							connection.rollback();
+							statement.execute("SET CONSTRAINTS ALL DEFERRED");
+						}
+						int id = "DEFERRED".equals(mode) ? 1 : 2;
+						statement.execute("INSERT INTO " + child + " VALUES (" + id + ")");
+						statement.execute("INSERT INTO " + schemaName + ".parent VALUES (" + id + ")");
+						connection.commit();
+						statement.execute("SET CONSTRAINTS ALL DEFERRED");
+						statement.execute("INSERT INTO " + child + " VALUES (999)");
+						assertEquals("23503", assertThrows(SQLException.class,
+								() -> statement.execute("SET CONSTRAINTS ALL IMMEDIATE")).getSQLState());
+					} finally { connection.rollback(); connection.setAutoCommit(true); }
+					var recreated = reader.getAllFull(connection).stream().filter(t -> schemaName.equals(t.getName()))
+							.findFirst().orElseThrow().getTables().get(childName);
+					assertEquals(expected, ((ForeignKeyConstraint) recreated.getConstraints().get("parent_fk")).getDeferrability());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
 	@Test
 	void migratesWithAtomicDatabaseCheckpointsAndResume() throws Exception {
 		try (var connection = connect(); var statement = connection.createStatement()) {

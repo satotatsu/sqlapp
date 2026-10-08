@@ -79,21 +79,19 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, the full matrix passed all 32 tests on each image (64 real-engine tests).
-The PostgreSQL/YSQL/command regression passed 757 unit tests and skipped the
-optional YSQL external-database test. Gradle reused the unchanged plugin
-result (81 previously passing tests). The earlier wider core/retained-dialect/
-command/plugin run passed 2,664 tests. Packaging and SPI descriptors were also
-verified. No external or production database was accessed.
-
-After the final composite array-dimension correction, all 32 YSQL 11 cases,
-the YSQL 15 composite-type case, and 214 PostgreSQL/YSQL unit tests passed again
-(with the optional external test skipped). The other YSQL 15 cases were last
-run in the preceding full matrix. Packaging also passed after the correction.
+On 2026-10-08, after the standalone FK-owner correction, the full matrix
+passed all 34 tests on each image (68 real-engine tests). The core, all retained
+dialects, command and plugin regression passed 2,677 unit tests and skipped
+one optional YSQL external-database test. Every included test task executed;
+the Yugabyte assemble task was up to date. No external or production database
+was accessed.
 
 The matrix asserts the actual JDBC engine major and tests both engines for:
 
 - Schema-based table, PK/FK/unique/check constraint, index, view and sequence recreation.
+- Standalone TableReader recreation with quoted cross-schema composite FK references.
+- Deferrable FKs in both initial modes, standalone ADD CONSTRAINT, child-before-parent
+  insertion and SET CONSTRAINTS checking with SQLSTATE 23503.
 - Sequence comments with Unicode/apostrophes, configuration and nextval checks.
 - Smallint/integer/bigint sequence types with ascending and descending increments.
 - Full signed type bounds, CYCLE wraparound and non-cycling SQLSTATE 2200H
@@ -145,6 +143,10 @@ constraint names are not retained. Composite ALTER, extension-specific attribute
 dependency graphs remain unverified. YSQL 11 rejects ALTER TYPE DROP ATTRIBUTE;
 real dropped-attribute recreation is not covered.
 Sequence metadata covers configuration, not live-position migration or ownership.
+FK recreation also covers standalone TableReader reads with quoted, cross-schema
+composite references. Referenced columns retain their parent-table owner even
+when the complete parent table is not loaded. View security/check options and NOT VALID constraint
+preservation remain unimplemented.
 
 DDL transaction guarantees and isolation behavior depend on YSQL version and
 server flags. DDL recreation tests execute outside caller transactions; they do
