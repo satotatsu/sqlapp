@@ -2,6 +2,14 @@
 
 [Documentation index](../README.md) · [Migration workflows](README.md)
 
+## On this page
+
+- [JDBC lease storage](#jdbc-lease-storage)
+- [File lease storage](#file-lease-storage)
+- [Lease configuration and resume assessment](#lease-configuration-and-resume-assessment)
+- [High-level facade and declarative execution](#high-level-facade-and-declarative-execution)
+
+
 ## Leases and execution fencing
 
 For execution fencing, `BulkMigrationJobLeaseStore` defines an atomic,
@@ -37,6 +45,10 @@ durably completed chunk is never replayed merely because its post-chunk renewal
 failed. Configure the lease duration above the maximum expected duration of a
 single chunk because renewal occurs at chunk boundaries rather than on a
 background thread.
+
+
+## JDBC lease storage
+
 `JdbcBulkMigrationJobLeaseStore` is the multi-process default building block.
 An existing JDBC lease table must have `JOB_ID` as its sole primary-key
 column. Both stores reject missing or composite primary keys, which would allow
@@ -60,12 +72,20 @@ each read-modify-write operation at `TRANSACTION_SERIALIZABLE`, without
 handwritten vendor DML. Give it a dedicated auto-commit connection: the store
 temporarily owns that connection's transaction and isolation settings and must
 not share the data-writing connection used by the chunk executor.
+
+
+## File lease storage
+
 `FileBulkMigrationJobLeaseStore` is the switchable filesystem alternative. It
 uses a stable per-plan lock file for OS-level cross-process exclusion, an
 in-process lock to avoid overlapping Java file locks, and atomic replacement of
 the separate lease state file. Lock files intentionally remain after release;
 the owner-conditioned lease state file is removed, while the stable lock path
 continues coordinating later executions.
+
+
+## Lease configuration and resume assessment
+
 `BulkMigrationJobLeaseConfiguration.database(ownerId)` is the default built-in
 configuration and uses a five-minute lease in
 `sqlapp_bulk_job_lease`. `file(ownerId, directory)` explicitly selects the file
@@ -110,6 +130,10 @@ back from one bounded snapshot before the accepted report and SHA-256
 fingerprint are exposed. Unified repair outcome publication uses the same
 write, reread, model-comparison, and fingerprint sequence under
 `maxEvidenceFileSizeBytes`.
+
+
+
+## High-level facade and declarative execution
 
 The high-level `BulkMigration` facade uses the same write-and-reread checks for
 explicit dry-run, verification, and repair-plan JSON. After those operations,

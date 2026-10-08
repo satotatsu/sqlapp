@@ -2,6 +2,18 @@
 
 [Documentation index](../README.md) · [Migration workflows](README.md)
 
+## On this page
+
+- [Validate the target before loading](#validate-the-target-before-loading)
+- [Execute with approved validation evidence](#execute-with-approved-validation-evidence)
+- [Verify post-load evidence](#verify-post-load-evidence)
+- [End-to-end workflow](#end-to-end-workflow)
+- [Deployment-readiness policies](#deployment-readiness-policies)
+- [Generated load order and row-count baselines](#generated-load-order-and-row-count-baselines)
+- [Mapping identity and target column options](#mapping-identity-and-target-column-options)
+- [Target type validation and failures](#target-type-validation-and-failures)
+
+
 ## Generate an initial data-load job
 
 After the mapped assessment is reviewed, generate a YAML configuration for the
@@ -83,6 +95,10 @@ lowercase `sha256:...` value. The executor verifies the entire configuration
 file before parsing it or opening the source connection. This final gate is
 optional for interactive runs.
 
+
+
+## Validate the target before loading
+
 Before the load window, validate that exact YAML against the live target without
 moving any rows:
 
@@ -114,6 +130,10 @@ records the configuration, plan, job, task and provenance identities for CI.
 It also records the database product, version, catalog and schema. Set the
 optional `targetEnvironmentId` when separate environments expose the same
 database identity values.
+
+
+
+## Execute with approved validation evidence
 
 Require that evidence when executing the load:
 
@@ -150,6 +170,10 @@ reviewed inputs, executed plan, progress and verification outcome. Readers
 continue to accept operational report format 2 and verification report format
 5; those older reports have no provenance field.
 
+
+
+## Verify post-load evidence
+
 After the load, `verifyBulkMigrationEvidence` performs the corresponding
 offline audit:
 
@@ -184,6 +208,10 @@ provenance match the execution evidence. The recorded validation time must not
 be later than the operational report, and the validated task IDs must exactly
 match the executed task IDs. Set `expectedTargetEnvironmentId` to
 reject otherwise valid evidence created for another deployment environment.
+
+
+
+## End-to-end workflow
 
 The complete supported workflow is therefore: generate or review the job,
 run `validateBulkMigrationTarget`, execute with the approved target-validation
@@ -264,6 +292,10 @@ Generated Access initial-load tasks also set `requireEmptyTarget: true`. The
 preflight opens an ordered target read and rejects a table containing any row.
 Handwritten generic jobs default this option to `false`, preserving append and
 upsert workflows; enable it explicitly for other initial-load jobs.
+
+
+
+## Deployment-readiness policies
 
 Set `requireDeploymentReady` to `true` for the common deployment path. It
 combines the blocker, incomplete-mapping and unresolved-AutoNumber gates below,
@@ -382,6 +414,10 @@ never executes this SQL. If mapping validation finds an
 invalid target type or another mapping blocker, the JSON/HTML evidence is
 published but an existing DDL preview is left unchanged.
 
+
+
+## Generated load order and row-count baselines
+
 The DDL ends with a suggested data load order derived from the fully mapped
 foreign keys that it emits. Parent tables precede their children. Self
 references do not affect table order. Tables in a foreign-key cycle, along with
@@ -410,6 +446,10 @@ gets a commented anti-join count that excludes child rows with any NULL key
 component, matching the preflight orphan-check scope. Run these after loading
 to detect target duplicates and orphan rows introduced by conversion or load
 behavior. Keys omitted from the DDL are omitted from these queries as well.
+
+
+
+## Mapping identity and target column options
 
 Only `sourceTable` and `sourceColumn` are required for source identity in the
 common case. Matching is case-insensitive. A short table name must resolve to
@@ -456,6 +496,10 @@ must be nonblank, single-line, comment-free and contain no semicolon. Column
 references use target names and their quoting is the mapping author's
 responsibility; the target database must still validate the expression.
 
+
+
+## Target type validation and failures
+
 Oracle validation accepts explicit `NUMBER`, character types with lengths,
 `DATE`, `TIMESTAMP`, LOBs, `RAW`, binary floating types and version-appropriate
 `BOOLEAN`. SQL Server validation accepts explicit decimal/numeric, sized
@@ -477,4 +521,3 @@ See [Access-to-Oracle coverage](../gradle-plugin/access-oracle-migration-assessm
 and limitations. Access files are read-only; rows are read only with `scanData=true`.
 Linked sources are never read. Forms, reports, VBA, macros, data reconciliation and migration execution
 remain outside this assessment.
-

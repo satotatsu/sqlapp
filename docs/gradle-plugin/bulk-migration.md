@@ -2,6 +2,22 @@
 
 [Documentation index](../README.md)
 
+## On this page
+
+- [Declarative configuration](#declarative-configuration)
+- [Execution reports](#execution-reports)
+- [Target-validation approval gates](#target-validation-approval-gates)
+- [Validate before the deployment window](#validate-before-the-deployment-window)
+- [Job identity and checkpoint configuration](#job-identity-and-checkpoint-configuration)
+- [Operational reports](#operational-reports)
+- [Post-migration verification](#post-migration-verification)
+- [Execute an approved repair](#execute-an-approved-repair)
+- [Verify repair failure evidence](#verify-repair-failure-evidence)
+- [Unified repair outcome](#unified-repair-outcome)
+- [Verify a saved repair outcome](#verify-a-saved-repair-outcome)
+- [Verification columns and lease configuration](#verification-columns-and-lease-configuration)
+
+
 ### `executeBulkMigrationJob`
 
 This task synchronously executes either a programmatically assembled
@@ -24,6 +40,10 @@ executeBulkMigrationJob {
 }
 ```
 
+
+
+## Declarative configuration
+
 The equivalent declarative task uses independent source and target connections:
 
 ```groovy
@@ -35,6 +55,10 @@ executeBulkMigrationJob {
     executionFailureReportFile = layout.buildDirectory.file('reports/migration-failure.json')
 }
 ```
+
+
+
+## Execution reports
 
 `executionReportFile` is the concise committed-work result: it records the job
 and plan fingerprints, total processed rows, already-complete task count, and
@@ -51,6 +75,10 @@ completed dependency-order prefix. Success and failure use separate files;
 both previous outputs are removed when a valid new execution attempt begins.
 Failure-report publication errors are attached as suppressed exceptions so the
 original database or pause failure remains primary.
+
+
+
+## Target-validation approval gates
 
 To require the reviewed live-target check during execution, add its evidence
 and an explicit freshness limit:
@@ -97,6 +125,10 @@ The offline `verifyBulkMigrationEvidence` and
 evidence, and target-validation JSON are each parsed and fingerprinted from one
 bounded byte snapshot. A generated evidence report is atomically written and
 read back before its accepted SHA-256 is exposed by the command.
+
+
+
+## Validate before the deployment window
 
 Run the same plan resolution and target checks before the deployment window:
 
@@ -185,6 +217,10 @@ tasks:
       sqlStates: ['40001']
 ```
 
+
+
+## Job identity and checkpoint configuration
+
 `jobId` is optional, but a stable explicit value is recommended for recurring
 jobs. It keeps leases, maintenance recovery, and operational reports associated
 with the same logical job when task options change. When omitted, the plan derives
@@ -203,10 +239,18 @@ resolved from the YAML location. File checkpoints provide at-least-once replay;
 chunk retry is therefore limited to transactional DATABASE checkpoints.
 `CUSTOM` checkpoint stores remain available only to programmatic plans.
 
+
+
+## Operational reports
+
 The optional top-level `report` block refreshes the operational JSON report at
 job and task boundaries. Its path is relative to the YAML file. `FAIL_JOB`
 preserves strict reporting; `CONTINUE_JOB` records a reporting failure without
 stopping data migration.
+
+
+
+## Post-migration verification
 
 The optional `verification` block re-reads source and target in the configured
 unique keyset order after migration, then compares total counts and normalized
@@ -223,6 +267,10 @@ job repair plan before `failOnMismatch` is evaluated. The plan reuses the live
 verification boundaries, source-name column mappings, UPSERT policy, and
 source Schema dependency order. It never executes repair; an operator must
 review the JSON and use an approved fingerprint through the repair executor.
+
+
+## Execute an approved repair
+
 The registered `executeBulkMigrationJobRepair` task performs that final step.
 It resolves the original YAML, re-runs verification, rebuilds the live repair
 plan, and requires the reviewed JSON fingerprint to match before writing:
@@ -292,6 +340,10 @@ verifyBulkMigrationJobRepairEvidence {
 }
 ```
 
+
+
+## Verify repair failure evidence
+
 Failed runs can be checked independently, without requiring a success or
 post-repair verification report:
 
@@ -314,6 +366,10 @@ The optional expected post-repair verification fingerprint provides a second,
 externally supplied pin in addition to the SHA stored inside failure evidence.
 Both evidence tasks accept the same `repairReportDirectory` used by repair
 execution. Individual report-file properties remain available as overrides.
+
+
+
+## Unified repair outcome
 
 For the common audit path, `verifyBulkMigrationJobRepairOutcome` selects the
 failure report when it exists; otherwise it verifies the execution and
@@ -354,6 +410,10 @@ verified execution or post-verification failure then writes the actual outcome
 report and fails the task with both actual and expected statuses. Leave it
 unset when all three verified states are valid audit results. An invalid status
 value is rejected before an existing outcome output is removed.
+
+
+
+## Verify a saved repair outcome
 
 Use `verifyBulkMigrationJobRepairOutcomeReport` when consuming that saved
 summary later or in a separate CI stage:
@@ -428,6 +488,10 @@ level stabilizes each database's verification view but is not a distributed
 snapshot across the source and target; quiesce application writes when an
 atomic cross-database comparison is required.
 
+
+
+## Verification columns and lease configuration
+
 Per-task `verificationColumns` may restrict comparison to columns whose values
 must be identical. When omitted, INSERT verifies writable inserted columns and
 UPSERT verifies staging columns. Hidden columns, formula columns, and target-
@@ -438,4 +502,3 @@ For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be
 supplied either in YAML or through the task's `leaseConfiguration` property,
 but not both.
-
