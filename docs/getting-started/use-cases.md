@@ -6,6 +6,15 @@ Start with the outcome you need. The examples below show representative inputs
 and outputs; they are illustrations, not evidence of a run against your database.
 The linked guides contain configuration, required dependencies, and limitations.
 
+## On this page
+
+- [Understand and share a database](#understand-and-share-a-database)
+- [Review and manage schema changes](#review-and-manage-schema-changes)
+- [Move related data and verify it](#move-related-data-and-verify-it)
+- [Process parent and child records together](#process-parent-and-child-records-together)
+- [Choose the operation you actually need](#choose-the-operation-you-actually-need)
+- [Choose an integration](#choose-an-integration)
+
 ## Understand and share a database
 
 Use this when a team needs to browse an existing database's tables and
@@ -19,6 +28,10 @@ downloadable Mermaid sources, and table DDL.
 Database metadata -> Schema XML -> HTML reference + ER diagrams + DDL
 ```
 
+To see a complete example before configuring a database, run the
+[offline customer/order demo](offline-demo.md). It supplies its own fictional
+Schema XML and generates the static site through the existing command API.
+
 With the [Gradle getting-started configuration](../gradle-plugin/getting-started.md),
 run `./gradlew generateHtmlDocs` and open `build/docs/database/index.html`.
 For example, a model with `CUSTOMER` and `ORDER` tables and a modeled foreign
@@ -26,6 +39,24 @@ key lets readers follow their relationship in the ER diagram and open the
 corresponding table definition. The repository includes a
 [Mermaid example](../examples/sqlapp-er-diagram.mmd) showing customer/order
 relationships and additional inheritance and partition relationships.
+
+A minimal relationship example (illustrative, not captured database output):
+
+```mermaid
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    CUSTOMER {
+        BIGINT CUSTOMER_ID PK
+        VARCHAR CUSTOMER_NAME
+    }
+    ORDER {
+        BIGINT ORDER_ID PK
+        BIGINT CUSTOMER_ID FK
+    }
+```
+
+In the generated HTML, the SVG version links table headings to their detail
+pages; the downloadable Mermaid source is available for reuse elsewhere.
 
 Representative output layout:
 
@@ -68,6 +99,15 @@ with `diffSchemaXml`, then generate the corresponding change SQL with
 `generateDiffSql`. Review the generated SQL for the chosen database dialect
 before placing it in your deployment workflow. The comparison task logs its
 result; it does not itself write migration SQL.
+
+For that example, a reviewer should be able to answer:
+
+| Review question | Artifact to inspect |
+|---|---|
+| What changed in the desired model? | The before/after XML and comparison log |
+| What will the database execute? | The generated dialect-specific SQL |
+| Which script versions are pending? | The separately configured versioned migration plan |
+| What actually ran? | Migration execution history and failure details |
 
 **Why this is useful:** the shared model keeps comparison and database-specific
 SQL generation connected. Gradle tasks let a build produce artifacts that
@@ -124,6 +164,69 @@ Continue with the [Java migration entry point](../migration/verification-and-rec
 [repair planning](../migration/repair.md). For an Access source, start with
 [migration assessment](../gradle-plugin/database-migration-assessment.md) and
 the [initial-load workflow](../migration/access-initial-load.md).
+
+## Process parent and child records together
+
+Use this when the goal is business processing within a database: calculate an
+order total from its lines, validate a parent and its children, or port
+hierarchical COBOL-style logic to Java.
+
+**Input:** a JDBC connection, related Schema tables, a root selection, and the
+application's business rules. **Output:** updated records and an execution
+result distinguishing executed operations from confirmed commits.
+
+`JdbcTreeDataSession` lets application code traverse parents and children with
+ordinary loops. The session loads selected descendants for batches of roots
+and groups marked writes by table and operation. Generated parent keys can
+propagate to children; inserts follow parent-first order and explicitly marked
+deletes follow child-first order.
+
+The repository's [H2 order-processing example](../../sqlapp-core-h2/src/test/java/com/sqlapp/data/db/dialect/h2/examples/JdbcTreeDataSessionOrderExampleTest.java)
+contains a complete fixture and success/rollback assertions. Its documented
+successful outcomes include:
+
+| Selected order | Business operation | Expected result in the fixture |
+|---|---|---|
+| READY order with two lines | Calculate line amounts and header total | DONE with a total of 250.00 |
+| CANCELLED order | Mark its lines and header for deletion | Children and parent removed |
+| HOLD order outside the root query | No processing | Unchanged |
+
+**Why this is useful:** business rules stay visible in record-oriented code,
+while the session handles grouped child reads and buffered database execution.
+This is an execution strategy, not a claim of a measured speedup for every workload.
+
+**Boundary:** the model must form a supported rooted tree. Periodic commits
+change rollback boundaries, custom queries must supply appropriate restrictions,
+and SQL issued directly by callbacks is outside automatic batching. This API
+does not add the migration facade's checkpoint/resume workflow.
+
+See [hierarchical JDBC processing](../data/jdbc-tree-data-session.md) for the
+complete example, its focused Gradle test command, and transaction controls.
+For a procedural migration walkthrough, see the
+[COBOL example](../data/jdbc-tree-data-cobol-migration-example.md).
+
+## Choose the operation you actually need
+
+These workflows can share a model while serving different goals. Begin with
+the smallest one that produces your required result.
+
+| Your immediate requirement | Choose | What that choice does |
+|---|---|---|
+| Share structure without changing database rows | HTML/ER documentation | Reads a saved model and writes a static site |
+| Review structural differences | Snapshot comparison and SQL generation | Reports differences and generates SQL for review |
+| Apply a versioned set of SQL scripts | Versioned SQL migration | Runs configured scripts and records history |
+| Transfer data between sources and targets | Bulk migration | Plans table order, transfers rows, and can verify results |
+| Apply business rules to a parent/child unit | JDBC tree data session | Groups reads and marked writes around application logic |
+| Move or reformat saved files | Data export/conversion tasks | Reads/writes files according to the selected task |
+| Prepare related test records | GenerateDataConfigTask / GenerateDataTask | Configures and loads generated relational test data |
+| Assess a legacy replacement | Access assessment or legacy workflows | Produces findings, mappings, or extraction/load artifacts |
+
+Advanced migration leases, maintenance stores, repair approval, and cutover
+packages become relevant when operating a migration; they are optional to the
+documentation and model-building workflows. See the
+[task reference](../gradle-plugin/task-reference.md#public-task-types-without-fixed-names)
+for task registration and database effects, and the
+[migration index](../migration/README.md) for operational controls.
 
 ## Choose an integration
 

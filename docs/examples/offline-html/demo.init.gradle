@@ -1,0 +1,28 @@
+// Optional repository demo; it does not add tasks to ordinary builds.
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    // Init scripts also run for included builds such as build-logic.
+    if (root.findProject(':sqlapp-command') == null) {
+        return
+    }
+    def command = root.project(':sqlapp-command')
+    def dialect = root.project(':sqlapp-core-hsql')
+    def demoClasspath = command.sourceSets.main.runtimeClasspath + dialect.sourceSets.main.runtimeClasspath
+    def compileDemo = root.tasks.register('compileDocumentationDemo', JavaCompile) {
+        dependsOn(command.tasks.named('classes'), dialect.tasks.named('classes'))
+        source(root.file('docs/examples/offline-html/GenerateDemo.java'))
+        classpath = demoClasspath
+        destinationDirectory = root.layout.buildDirectory.dir('classes/offline-demo')
+        options.encoding = 'UTF-8'
+        options.release = 21
+    }
+    root.tasks.register('demoDatabaseDocumentation', JavaExec) {
+        group = 'documentation'
+        description = 'Generate HTML and ER diagrams from a fictional Schema XML, without a database.'
+        dependsOn(compileDemo)
+        classpath = demoClasspath + root.files(compileDemo.flatMap { it.destinationDirectory })
+        mainClass = 'GenerateDemo'
+        args(root.file('docs/examples/offline-html/catalog.xml').absolutePath,
+                root.layout.buildDirectory.dir('docs/offline-demo').get().asFile.absolutePath)
+    }
+}

@@ -29,15 +29,26 @@ Database support and transaction guarantees depend on the dialect and workflow.
 See the [compatibility evidence](docs/compatibility.md) and
 [use-case guide](docs/getting-started/use-cases.md) for boundaries and examples.
 
-For a first result, follow the quick start below: export metadata, generate the
+Try the [customer/order demo without a database](docs/getting-started/offline-demo.md)
+to see the generated HTML, DDL, and clickable ER diagram from a fictional model.
+
+For your own database, follow the quick start below: export metadata, generate the
 HTML site, and open its `index.html`. For an existing Schema XML file, the
 [HTML-only workflow](docs/gradle-plugin/getting-started.md#3-generate-html-from-the-xml)
 needs no database connection.
 
-Other capabilities include data-file import/export and conversion, relational
-test-data generation, logical names and virtual foreign keys, and Access
-migration assessment for Oracle or SQL Server. Explore them through the
-[documentation index](docs/README.md) after choosing your main workflow.
+## More ways to use the same model
+
+| When you need to... | sqlapp provides | Guide |
+|---|---|---|
+| Port parent/child business processing to Java | Record-oriented loops with grouped child reads, buffered writes, and execution results | [Hierarchical processing](docs/getting-started/use-cases.md#process-parent-and-child-records-together) |
+| Evaluate an Access replacement before loading data | Offline assessment, reviewed target mappings, and DDL verification for supported Oracle/SQL Server targets | [Migration assessment](docs/gradle-plugin/database-migration-assessment.md) |
+| Extract and reshape legacy data | Normalization planning, PL/I import, extraction contracts, and hierarchy loading | [Legacy workflows](docs/gradle-plugin/normalization-and-legacy-migration.md) |
+| Exchange data files or prepare test data | Import/export, format conversion, and relational test-data task types | [Data task guide](docs/gradle-plugin/custom-tasks-and-migrations.md) |
+| Make a large schema easier to discuss | Logical names, virtual foreign keys, and named table viewpoints | [HTML and ER documentation](docs/schema/html-documentation.md#viewpoints-and-dictionaries) |
+
+See [how the workflows fit together](docs/getting-started/use-cases.md#choose-the-operation-you-actually-need)
+before selecting advanced migration options.
 
 ## Requirements
 

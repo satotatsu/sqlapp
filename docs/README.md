@@ -26,6 +26,7 @@ references at the documentation root. Old page paths retain links to the current
 | Goal | Start with | Continue with |
 |---|---|---|
 | Understand what sqlapp is useful for | [Use cases and example outputs](getting-started/use-cases.md) | [Getting started](getting-started/README.md) |
+| Try sqlapp without a database | [Offline customer/order demo](getting-started/offline-demo.md) | [HTML documentation](schema/html-documentation.md) |
 | Add sqlapp tasks to a Gradle build | [Gradle plugin getting started](gradle-plugin/getting-started.md) | [Task reference](gradle-plugin/task-reference.md) |
 | Run the companion example | [Runnable Gradle example map](gradle-plugin/example-project.md) | [`sqlapp-gradle-example`](https://github.com/satotatsu/sqlapp-gradle-example) |
 | Use the Schema model or SQL APIs from Java | [Java API getting started](getting-started/java-api.md) | [Published artifacts](artifacts.md) |
