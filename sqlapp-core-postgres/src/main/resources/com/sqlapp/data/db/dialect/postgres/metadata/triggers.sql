@@ -19,7 +19,7 @@ SELECT
 , CASE WHEN t.tgtype & 16 = 16 THEN 'UPDATE' ELSE '' END
  AS is_update
 , tgenabled
-, obj_description(t.oid, current_database()) as remarks
+, obj_description(t.oid, 'pg_trigger') as remarks
 , t.*
 FROM pg_catalog.pg_namespace n
 INNER JOIN pg_catalog.pg_class c

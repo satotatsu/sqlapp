@@ -80,7 +80,7 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
 On 2026-10-08, all 23 tests passed on each image (46 real-engine tests).
-The latest PostgreSQL/YSQL/command regression passed 748 unit tests; one
+The latest PostgreSQL/YSQL/command regression passed 749 unit tests; one
 external-database YSQL test was skipped. Gradle reused the unchanged plugin
 result (81 previously passing tests). The earlier wider core/retained-dialect/
 command/plugin run passed 2,664 tests. Packaging and SPI descriptors were also
@@ -104,6 +104,7 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
   trigger on a view that cannot be automatically updated.
 - Disabled/ALWAYS/REPLICA trigger-state recreation, WHEN conditions, statement
   triggers and TRUNCATE events in an ordinary session.
+- Table/view trigger-comment preservation, including Unicode and apostrophes.
 - COPY beyond the 20,000-row auto-commit boundary, atomic failure rollback,
   Unicode, null/empty strings, decimals, binary, arrays and explicit identities.
 - Key-only generated upsert and bulk upsert, including duplicate no-op behavior.

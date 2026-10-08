@@ -83,6 +83,18 @@ public class PostgresTriggerFactoryTest extends AbstractPostgresSqlFactoryTest {
 		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(missingTable, SqlType.CREATE));
 	}
 
+	@Test
+	void recreatesTriggerCommentWithQuotedIdentifiersAndEscapedText() {
+		Trigger trigger = getTrigger("Trigger Name").setSchemaName("tenant");
+		trigger.setRemarks("日本語 'quoted'").setEnable(false);
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		var operations = sqlFactoryRegistry.createSql(trigger, SqlType.CREATE);
+		assertEquals(3, operations.size());
+		String comment = operations.get(2).getSqlText();
+		assertTrue(comment.contains("COMMENT ON TRIGGER \"Trigger Name\" ON tenant.\"tableA\""), comment);
+		assertTrue(comment.contains("'日本語 ''quoted'''"), comment);
+	}
+
 //	@Test
 //	public void testAlter1() {
 //		Trigger obj1 = getTrigger("triggerA");

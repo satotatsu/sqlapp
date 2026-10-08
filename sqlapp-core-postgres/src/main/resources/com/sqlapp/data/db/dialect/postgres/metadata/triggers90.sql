@@ -22,7 +22,7 @@ SELECT
 , CASE WHEN t.tgtype & 32 = 32 THEN 'TRUNCATE' ELSE '' END
  AS is_truncate
 , tgenabled
-, obj_description(t.oid, current_database()) as remarks
+, obj_description(t.oid, 'pg_trigger') as remarks
 , t.*
 FROM pg_catalog.pg_namespace n
 INNER JOIN pg_catalog.pg_class c

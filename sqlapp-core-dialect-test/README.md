@@ -147,7 +147,8 @@ Key-only generated/bulk upserts and nested text/integer, primitive-byte numeric
 and bytea array COPY/upsert cases are verified by JDBC readback. Trigger tests
 verify disabled/ALWAYS/REPLICA state recreation, WHEN conditions, statement
 triggers and TRUNCATE events in an ordinary session. INSTEAD OF view triggers
-retain their timing and perform INSERT/UPDATE/DELETE after recreation. Covering partial unique
+retain their timing and perform INSERT/UPDATE/DELETE after recreation. Table
+and view trigger comments also survive, including Unicode and apostrophes. Covering partial unique
 indexes retain descending keys, their catalog definitions and conditional
 duplicate rejection after recreation. Explicit NULLS FIRST/LAST and
 function-expression indexes are recreated with matching catalog definitions
@@ -156,7 +157,7 @@ NULL duplicate rejection; PG11 ignores the option and allows repeated NULL keys.
 [full support scope and limits](../sqlapp-core-yugabyte/README.md).
 
 The 2026-10-08 run passed all 23 cases on each baseline (46 total). The latest
-PostgreSQL/YSQL/command regression passed 748 unit tests, with one external YSQL
+PostgreSQL/YSQL/command regression passed 749 unit tests, with one external YSQL
 test skipped; Gradle reused the unchanged plugin result (81 passing tests).
 The earlier wider core/retained-dialect/command/plugin run passed 2,664 tests.
 Reproduce the directly affected regression and the matrix with:

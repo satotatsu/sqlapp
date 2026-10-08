@@ -293,3 +293,24 @@ uses a UNION ALL view that cannot be automatically updated, recreates its
 INSTEAD OF trigger, and checks INSERT, UPDATE and DELETE through the view.
 
 Version boundary: [PostgreSQL 9.1 CREATE TRIGGER](https://www.postgresql.org/docs/9.1/sql-createtrigger.html).
+
+## PostgreSQL/YSQL trigger comments
+
+Both legacy and 9.0+ PostgreSQL trigger queries now use
+`obj_description(trigger_oid, 'pg_trigger')`. The second argument identifies
+the containing catalog, not the current database; the previous database-name
+argument could lose comments. Other trigger version boundaries are unchanged.
+
+The PostgreSQL CREATE TRIGGER factory, inherited by YSQL 11/15, now restores
+modeled `remarks` with a separate COMMENT ON TRIGGER statement after creation
+and firing-state restoration. Trigger names are unqualified; the target table
+or view follows the existing schema-decoration option. Identifier and SQL
+literal quoting use the dialect builder. No-comment objects retain the
+existing operation count. Comment restoration requires the modeled target
+table/view name, including when CREATE is supplied as a full definition; readers
+already supply that name. Public APIs and Schema XML formats are unchanged.
+
+Verification covers table-trigger comments across ordinary, disabled, ALWAYS
+and REPLICA states, plus Japanese text and apostrophes on a recreated INSTEAD
+OF view trigger. Comment lookup: [PostgreSQL system information functions](https://www.postgresql.org/docs/15/functions-info.html).
+Comment syntax: [PostgreSQL COMMENT](https://www.postgresql.org/docs/15/sql-comment.html).

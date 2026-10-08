@@ -16,8 +16,10 @@ class PostgresTriggerQueryVersionTest {
 			assertEquals(version >= 9, ((PostgresTriggerReader) reader).getSqlSqlNode(null).toString().contains("AND NOT t.tgisinternal"));
 		}
 		assertFalse(query("triggers.sql").contains("tgisinternal"));
+		assertTrue(query("triggers.sql").contains("obj_description(t.oid, 'pg_trigger')"));
 		String modern = query("triggers90.sql");
 		assertTrue(modern.contains("AND NOT t.tgisinternal"));
+		assertTrue(modern.contains("obj_description(t.oid, 'pg_trigger')"));
 		assertTrue(modern.contains("pg_get_triggerdef(t.oid) AS definition"));
 		assertTrue(modern.contains("WHEN t.tgtype & 64 = 64 THEN 'INSTEAD OF'"));
 		assertFalse(query("triggers.sql").contains("INSTEAD OF"));

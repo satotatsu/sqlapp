@@ -695,6 +695,7 @@ class YugabyteMetadataReaderTest {
 						+ ".items FOR EACH STATEMENT EXECUTE PROCEDURE " + schemaName + ".statement_log()");
 				statement.execute("CREATE TRIGGER truncate_log AFTER TRUNCATE ON " + schemaName
 						+ ".items FOR EACH STATEMENT EXECUTE PROCEDURE " + schemaName + ".truncate_log()");
+				statement.execute("COMMENT ON TRIGGER row_log ON " + schemaName + ".items IS 'row note'");
 				var dialect = DialectResolver.getInstance().getDialect(connection);
 				var registry = dialect.createSqlFactoryRegistry();
 				registry.getOptions().setDecorateSchemaName(true);
@@ -711,6 +712,7 @@ class YugabyteMetadataReaderTest {
 					var schema = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
 					var row = schema.getTriggers().get("row_log");
 					assertEquals(!mode.equals("D"), row.isEnable());
+					assertEquals("row note", row.getRemarks());
 					assertEquals(mode.equals("A") ? "ALWAYS" : mode.equals("R") ? "REPLICA" : null,
 							row.getSpecifics().get("TRIGGER_FIRING_MODE"));
 					assertTrue(String.join("\n", row.getDefinition()).contains("WHEN"), row.getDefinition().toString());
@@ -891,6 +893,7 @@ class YugabyteMetadataReaderTest {
 						+ "ELSE INSERT INTO " + schemaName + ".items VALUES (NEW.id,upper(NEW.label)); RETURN NEW; END IF; END $$");
 				statement.execute("CREATE TRIGGER edit_item INSTEAD OF INSERT OR UPDATE OR DELETE ON " + schemaName
 						+ ".editable FOR EACH ROW EXECUTE PROCEDURE " + schemaName + ".edit_item()");
+				statement.execute("COMMENT ON TRIGGER edit_item ON " + schemaName + ".editable IS '日本語 ''quoted'''");
 				var dialect = DialectResolver.getInstance().getDialect(connection);
 				var reader = dialect.getCatalogReader().getSchemaReader();
 				reader.setSchemaName(schemaName);
@@ -898,6 +901,7 @@ class YugabyteMetadataReaderTest {
 				var trigger = schema.getTriggers().get("edit_item");
 				assertNotNull(trigger);
 				assertEquals("INSTEAD OF", trigger.getActionTiming());
+				assertEquals("日本語 'quoted'", trigger.getRemarks());
 				assertEquals("ROW", trigger.getActionOrientation());
 				assertEquals("editable", trigger.getTableName());
 				assertTrue(trigger.getEventManipulation().containsAll(List.of("INSERT", "UPDATE", "DELETE")));
@@ -906,6 +910,11 @@ class YugabyteMetadataReaderTest {
 				var registry = dialect.createSqlFactoryRegistry();
 				registry.getOptions().setDecorateSchemaName(true);
 				for (var op : registry.createSql(trigger, SqlType.CREATE)) statement.execute(op.getSqlText());
+				try (var rows = statement.executeQuery("SELECT obj_description(t.oid,'pg_trigger') FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid "
+						+ "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='" + schemaName + "' AND t.tgname='edit_item'")) {
+					assertTrue(rows.next()); assertEquals("日本語 'quoted'", rows.getString(1));
+				}
+
 				assertEquals(2, statement.executeUpdate("INSERT INTO " + schemaName + ".editable VALUES (1,'first'),(2,'second')"));
 				assertEquals(2, scalar(connection, "SELECT count(*) FROM " + schemaName + ".items WHERE label IN ('FIRST','SECOND')"));
 				assertEquals(1, statement.executeUpdate("UPDATE " + schemaName + ".editable SET label='changed' WHERE id=1"));

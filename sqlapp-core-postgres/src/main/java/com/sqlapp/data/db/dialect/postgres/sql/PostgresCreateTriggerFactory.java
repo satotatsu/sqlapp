@@ -19,7 +19,13 @@
 
 package com.sqlapp.data.db.dialect.postgres.sql;
 
+import java.util.List;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.data.db.sql.AbstractCreateTriggerFactory;
 
 /**
@@ -30,4 +36,19 @@ import com.sqlapp.data.db.sql.AbstractCreateTriggerFactory;
  */
 public class PostgresCreateTriggerFactory extends AbstractCreateTriggerFactory<PostgresSqlBuilder> {
 
+	@Override
+	protected void addOtherDefinitions(final Trigger obj, List<SqlOperation> sqlList) {
+		super.addOtherDefinitions(obj, sqlList);
+		if (obj.getRemarks() == null) return;
+		if (CommonUtils.isEmpty(obj.getTableName())) {
+			throw new IllegalArgumentException("Trigger comment requires tableName: " + obj.getName());
+		}
+		String schemaName = CommonUtils.notEmpty(obj.getTableSchemaName(), obj.getSchemaName());
+		Table table = new Table(obj.getTableName()).setSchemaName(schemaName);
+		PostgresSqlBuilder builder = createSqlBuilder();
+		builder.comment().on().trigger().space().name(obj, false).on()
+				.name(table, getOptions().isDecorateSchemaName() || !CommonUtils.eq(schemaName, obj.getSchemaName()))
+				.is().sqlChar(obj.getRemarks());
+		addSql(sqlList, builder, SqlType.SET_COMMENT, obj);
+	}
 }
