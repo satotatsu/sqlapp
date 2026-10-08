@@ -144,11 +144,13 @@ and repair, lease contention, savepoints and write conflicts. It also recreates
 a complete FK-bearing Schema without implementation triggers, verifies generated
 parent/child keys across partial root batches, and resumes a composite JDBC keyset.
 Key-only generated/bulk upserts and nested text/integer, primitive-byte numeric
-and bytea array COPY/upsert cases are verified by JDBC readback. See the
+and bytea array COPY/upsert cases are verified by JDBC readback. Trigger tests
+verify disabled/ALWAYS/REPLICA state recreation, WHEN conditions, statement
+triggers and TRUNCATE events in an ordinary session. See the
 [full support scope and limits](../sqlapp-core-yugabyte/README.md).
 
-The 2026-10-08 run passed all 18 cases on each baseline (36 total). The related
-PostgreSQL/YSQL/command regression passed 743 unit tests, with one external
+The 2026-10-08 run passed all 19 cases on each baseline (38 total). The related
+PostgreSQL/YSQL/command regression passed 744 unit tests, with one external
 YSQL test skipped; the unchanged Gradle-plugin result (81 passing tests) was
 reused as up-to-date. Reproduce the regression plus the matrix with:
 

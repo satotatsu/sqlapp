@@ -675,4 +675,70 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+	@Test
+	void recreatesConditionalStatementAndDisabledTriggerStates() throws Exception {
+		String schemaName = "ysql_triggers_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY)");
+				statement.execute("CREATE TABLE " + schemaName + ".audit (value integer)");
+				for (String name : List.of("row_log", "statement_log", "truncate_log")) {
+					String value = name.equals("row_log") ? "NEW.id" : name.equals("statement_log") ? "0" : "-1";
+					statement.execute("CREATE FUNCTION " + schemaName + "." + name
+							+ "() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO " + schemaName
+							+ ".audit VALUES (" + value + "); RETURN NULL; END $$");
+				}
+				statement.execute("CREATE TRIGGER row_log AFTER INSERT ON " + schemaName
+						+ ".items FOR EACH ROW WHEN (NEW.id > 1) EXECUTE PROCEDURE " + schemaName + ".row_log()");
+				statement.execute("CREATE TRIGGER statement_log AFTER INSERT ON " + schemaName
+						+ ".items FOR EACH STATEMENT EXECUTE PROCEDURE " + schemaName + ".statement_log()");
+				statement.execute("CREATE TRIGGER truncate_log AFTER TRUNCATE ON " + schemaName
+						+ ".items FOR EACH STATEMENT EXECUTE PROCEDURE " + schemaName + ".truncate_log()");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (String mode : List.of("O", "D", "R", "A")) {
+					String alter = switch (mode) {
+						case "D" -> "DISABLE TRIGGER";
+						case "R" -> "ENABLE REPLICA TRIGGER";
+						case "A" -> "ENABLE ALWAYS TRIGGER";
+						default -> "ENABLE TRIGGER";
+					};
+					statement.execute("ALTER TABLE " + schemaName + ".items " + alter + " row_log");
+					var reader = dialect.getCatalogReader().getSchemaReader();
+					reader.setSchemaName(schemaName);
+					var schema = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+					var row = schema.getTriggers().get("row_log");
+					assertEquals(!mode.equals("D"), row.isEnable());
+					assertEquals(mode.equals("A") ? "ALWAYS" : mode.equals("R") ? "REPLICA" : null,
+							row.getSpecifics().get("TRIGGER_FIRING_MODE"));
+					assertTrue(String.join("\n", row.getDefinition()).contains("WHEN"), row.getDefinition().toString());
+					assertEquals("STATEMENT", schema.getTriggers().get("statement_log").getActionOrientation());
+					assertTrue(schema.getTriggers().get("truncate_log").getEventManipulation().contains("TRUNCATE"));
+					for (var trigger : schema.getTriggers()) {
+						statement.execute("DROP TRIGGER " + trigger.getName() + " ON " + schemaName + ".items");
+						SqlFactory<com.sqlapp.data.schemas.Trigger> factory = registry.getSqlFactory(trigger, SqlType.CREATE);
+						for (var op : factory.createSql(trigger)) statement.execute(op.getSqlText());
+					}
+					try (var rows = statement.executeQuery("SELECT t.tgenabled FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid "
+							+ "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='" + schemaName + "' AND t.tgname='row_log'")) {
+						assertTrue(rows.next());
+						assertEquals(mode, rows.getString(1));
+					}
+					statement.execute("DELETE FROM " + schemaName + ".items");
+					statement.execute("DELETE FROM " + schemaName + ".audit");
+					statement.execute("INSERT INTO " + schemaName + ".items VALUES (1),(2),(3)");
+					assertEquals(mode.equals("O") || mode.equals("A") ? 2 : 0,
+							scalar(connection, "SELECT count(*) FROM " + schemaName + ".audit WHERE value > 0"));
+					assertEquals(1, scalar(connection, "SELECT count(*) FROM " + schemaName + ".audit WHERE value=0"));
+					statement.execute("TRUNCATE " + schemaName + ".items");
+					assertEquals(1, scalar(connection, "SELECT count(*) FROM " + schemaName + ".audit WHERE value=-1"));
+				}
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			}
+		}
+	}
+
 }

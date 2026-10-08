@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.data.db.dialect.postgres.sql.Postgres90CreateTriggerFactory;
 
 /**
  * Postgresのトリガー読み込み
@@ -54,6 +55,12 @@ public class Postgres90TriggerReader extends PostgresTriggerReader {
 		obj.addEventManipulation(getString(rs, "is_insert"));
 		obj.addEventManipulation(getString(rs, "is_update"));
 		obj.addEventManipulation(getString(rs, "is_delete"));
+		obj.addEventManipulation(getString(rs, "is_truncate"));
+		String enabled = getString(rs, "tgenabled");
+		if ("A".equals(enabled) || "R".equals(enabled)) {
+			obj.getSpecifics().put(Postgres90CreateTriggerFactory.FIRING_MODE,
+					"A".equals(enabled) ? "ALWAYS" : "REPLICA");
+		}
 		obj.setRemarks(getString(rs, "remarks"));
 		obj.setWhen(getString(rs, "tgqual"));
 		return obj;

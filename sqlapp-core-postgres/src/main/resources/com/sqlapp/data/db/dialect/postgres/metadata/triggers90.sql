@@ -18,6 +18,8 @@ SELECT
  AS is_delete
 , CASE WHEN t.tgtype & 16 = 16 THEN 'UPDATE' ELSE '' END
  AS is_update
+, CASE WHEN t.tgtype & 32 = 32 THEN 'TRUNCATE' ELSE '' END
+ AS is_truncate
 , tgenabled
 , obj_description(t.oid, current_database()) as remarks
 , t.*

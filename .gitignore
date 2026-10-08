@@ -7,3 +7,6 @@
 /.settings/
 /.project
 /.tmp
+/.tmp-ysql-triggerstate-final.log
+/.tmp-ysql-triggerstate-regression.log
+/.tmp-ysql-triggerstate-unit.log

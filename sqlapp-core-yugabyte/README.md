@@ -79,8 +79,8 @@ credentials or host data volumes, using these fixed images:
 - `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
 - `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
 
-On 2026-10-08, all 18 tests passed on each image (36 real-engine tests).
-The latest PostgreSQL/YSQL/command regression run passed 743 unit tests; one
+On 2026-10-08, all 19 tests passed on each image (38 real-engine tests).
+The latest PostgreSQL/YSQL/command regression run passed 744 unit tests; one
 external-database YSQL test was skipped. Gradle reused the unchanged plugin
 task result (81 previously passing tests). The earlier wider core and dialect
 run passed 2,655 tests. Packaging and SPI descriptors were
@@ -94,6 +94,8 @@ The matrix asserts the actual JDBC engine major and tests both engines for:
 - Composite JDBC keyset resume after a persisted cursor.
 - Quoted identifiers, identity, numeric, boolean, date/time, UUID, JSONB, bytea and text-array columns.
 - Enum/domain, function and trigger metadata and executable recreation.
+- Disabled/ALWAYS/REPLICA trigger-state recreation, WHEN conditions, statement
+  triggers and TRUNCATE events in an ordinary session.
 - COPY beyond the 20,000-row auto-commit boundary, atomic failure rollback,
   Unicode, null/empty strings, decimals, binary, arrays and explicit identities.
 - Key-only generated upsert and bulk upsert, including duplicate no-op behavior.

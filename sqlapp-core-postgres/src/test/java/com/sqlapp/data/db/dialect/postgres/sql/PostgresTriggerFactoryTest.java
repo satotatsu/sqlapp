@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.postgres.sql;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
@@ -56,6 +56,31 @@ public class PostgresTriggerFactoryTest extends AbstractPostgresSqlFactoryTest {
 		System.out.println(list);
 		String expected = getResource("create_trigger1.sql");
 		assertEquals(expected, operation.getSqlText());
+	}
+
+	@Test
+	void restoresDisabledAndSpecialFiringModesWithoutChangingOrdinaryCreate() {
+		Trigger trigger = getTrigger("triggerA").setSchemaName("tenant");
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		assertEquals(1, sqlFactoryRegistry.createSql(trigger, SqlType.CREATE).size());
+		trigger.setEnable(false);
+		var disabled = sqlFactoryRegistry.createSql(trigger, SqlType.CREATE);
+		assertEquals(2, disabled.size());
+		assertTrue(disabled.get(1).getSqlText().contains("DISABLE TRIGGER"));
+		assertTrue(disabled.get(1).getSqlText().contains("tenant."));
+		assertTrue(disabled.get(1).getSqlText().contains("tableA"));
+		for (String mode : List.of("ALWAYS", "REPLICA")) {
+			trigger.setEnable(true);
+			trigger.getSpecifics().put(Postgres90CreateTriggerFactory.FIRING_MODE, mode);
+			var enabled = sqlFactoryRegistry.createSql(trigger, SqlType.CREATE);
+			assertEquals(2, enabled.size());
+			assertTrue(enabled.get(1).getSqlText().contains("ENABLE " + mode + " TRIGGER"));
+		}
+		trigger.getSpecifics().put(Postgres90CreateTriggerFactory.FIRING_MODE, "invalid");
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(trigger, SqlType.CREATE));
+		trigger.getSpecifics().clear();
+		Trigger missingTable = new Trigger("missing").setEnable(false);
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(missingTable, SqlType.CREATE));
 	}
 
 //	@Test

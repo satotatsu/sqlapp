@@ -200,3 +200,21 @@ COPY and null/empty-string handling are retained. YSQL tests verify integer
 and text matrices, primitive-byte smallint arrays and bytea arrays through
 COPY, staging upsert and JDBC readback. Public APIs and configuration formats
 are unchanged.
+
+## PostgreSQL/YSQL trigger firing state
+
+PostgreSQL 9.0+ trigger readers and SQL factories, inherited by YSQL 11/15,
+retain disabled triggers and the `ALWAYS`/`REPLICA` firing modes during
+recreation. CREATE is followed by the required ALTER TABLE statement. Ordinary
+enabled triggers keep their existing single CREATE statement.
+
+The optional existing `Trigger.specifics` map entry `TRIGGER_FIRING_MODE` accepts
+`ALWAYS` or `REPLICA`; `enable=false` restores the disabled state. Invalid values
+fail explicitly, and restoring a special state requires the modeled table name.
+The public factory constant `Postgres90CreateTriggerFactory.FIRING_MODE` is an
+additive API. Schema XML uses its existing optional vendor-attribute format.
+The pre-9.0 readers and factories are unchanged.
+
+TRUNCATE is now retained in the event metadata. Complete trigger definitions
+remain authoritative for recreating WHEN conditions and row/statement triggers.
+Firing-state syntax: [PostgreSQL 9.0 ALTER TABLE](https://www.postgresql.org/docs/9.0/sql-altertable.html).
