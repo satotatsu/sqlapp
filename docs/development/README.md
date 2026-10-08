@@ -7,6 +7,7 @@
 | Understand modules and dependency direction | [Architecture](architecture.md) |
 | Set up Java 21 and run focused checks | [Building and testing](build-and-test.md) |
 | Check documentation links and navigation offline | [Documentation checks](build-and-test.md#documentation-checks) |
+| Refresh the generated product previews | [Demo previews](build-and-test.md#refresh-readme-demo-previews) |
 | Review planned work | [Roadmap](roadmap.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
 | Validate Oracle assessment against a source database | [Oracle assessment verification](oracle-assessment-verification.md) |

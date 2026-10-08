@@ -216,3 +216,23 @@ When changing the checker, run its negative and boundary fixtures:
 ```shell
 python -B -m unittest discover -s docs/development -p test_check_documentation.py -v
 ```
+
+## Refresh README demo previews
+
+The README embeds actual generated Mermaid, change SQL, and migration summary
+text. After changing the demos, run the complete tour successfully, then refresh
+the saved previews with the optional Python contributor tool:
+
+```shell
+./gradlew --init-script docs/examples/offline-html/demo.init.gradle demoSqlapp
+python -B docs/development/refresh_demo_previews.py
+python -B -m unittest discover -s docs/development -p test_refresh_demo_previews.py -v
+python -B docs/development/check_documentation.py
+```
+
+On Windows, replace `./gradlew` with `.\gradlew.bat`. The refresh script reads
+`build/docs` and updates the three marked README blocks and text files under
+`docs/examples/previews`. It checks that the verification reports contain the
+expected match and deliberate mismatch for the same plan. Missing inputs or
+invalid markers fail before writing any preview. It does not run the demos or
+capture screenshots; review the generated documentation in a browser separately.

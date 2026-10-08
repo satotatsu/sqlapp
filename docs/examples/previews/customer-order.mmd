@@ -1,0 +1,13 @@
+erDiagram
+    t0["Sales demo.PUBLIC.CUSTOMER"]
+    t0 {
+        BIGINT CUSTOMER_ID PK "NOT NULL"
+        VARCHAR CUSTOMER_NAME "NOT NULL"
+    }
+    t1["Sales demo.PUBLIC.CUSTOMER_ORDER"]
+    t1 {
+        BIGINT ORDER_ID PK "NOT NULL"
+        BIGINT CUSTOMER_ID FK "NOT NULL"
+        DATE ORDER_DATE "NOT NULL"
+    }
+    t0 ||..o{ t1 : "FK_ORDER_CUSTOMER"
