@@ -180,3 +180,5 @@ sqlapp is licensed under the
   Preserve examples, safety requirements, and failure behavior.
 - When moving sections, check relative links and retain old heading anchors
   with links to the new location for existing bookmarks.
+- Run the [offline documentation checker](development/build-and-test.md#documentation-checks)
+  after updating links, headings, indexes, or page locations.

@@ -185,3 +185,34 @@ when the execution environment requires isolation:
 ```
 
 The local cache directory must remain uncommitted.
+
+## Documentation checks
+
+For documentation-only changes, run the offline checker from the repository
+root. This optional contributor tool uses Python 3.8 or later and the standard
+library; Java builds and application users do not require Python.
+
+```shell
+python -B docs/development/check_documentation.py
+```
+
+The checker validates local inline Markdown links and images in `README.md`,
+`CONTRIBUTING.md`, and `docs/**/*.md`, including heading fragments, duplicate
+heading suffixes, and closed fenced code blocks. It also checks that every
+current documentation page is reachable through links from `docs/README.md`.
+Pages containing the existing `This guide has moved to` notice are excluded
+from that reachability requirement, but their links are still checked.
+Failures produce diagnostics and a nonzero exit code. The checker reads files
+only and does not access external URLs or databases.
+
+This is a check for the repository's current Markdown conventions, not a full
+Markdown renderer: reference-style links, raw HTML links/anchors, and complex
+nested link destinations are not validated. Review those manually if added.
+It does not validate the claims on external pages or execute documentation
+examples.
+
+When changing the checker, run its negative and boundary fixtures:
+
+```shell
+python -B -m unittest discover -s docs/development -p test_check_documentation.py -v
+```
