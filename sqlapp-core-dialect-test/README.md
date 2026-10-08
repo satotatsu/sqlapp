@@ -139,7 +139,8 @@ To investigate another explicitly chosen image:
 ```
 
 The suite verifies schema metadata and executable recreation, COPY/upsert,
-large-batch rollback, identity/type handling, checkpoint/resume, verification
+large-batch rollback, identity/type handling, sequence-comment/configuration
+round trips and nextval behavior, checkpoint/resume, verification
 and repair, lease contention, savepoints and write conflicts. It also recreates
 a complete FK-bearing Schema without implementation triggers, verifies generated
 parent/child keys across partial root batches, and resumes a composite JDBC keyset.
@@ -156,9 +157,9 @@ and verified expression uniqueness. PG15 NULLS NOT DISTINCT indexes retain
 NULL duplicate rejection; PG11 ignores the option and allows repeated NULL keys. See the
 [full support scope and limits](../sqlapp-core-yugabyte/README.md).
 
-The 2026-10-08 run passed all 23 cases on each baseline (46 total). The latest
-PostgreSQL/YSQL/command regression passed 749 unit tests, with one external YSQL
-test skipped; Gradle reused the unchanged plugin result (81 passing tests).
+The 2026-10-08 run passed all 23 cases on each baseline (46 total). The YSQL
+module run passed four unit tests and skipped its optional external test. The
+preceding PostgreSQL/YSQL/command regression passed 749 unit tests; Gradle reused the unchanged plugin result (81 passing tests).
 The earlier wider core/retained-dialect/command/plugin run passed 2,664 tests.
 Reproduce the directly affected regression and the matrix with:
 

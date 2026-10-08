@@ -314,3 +314,17 @@ Verification covers table-trigger comments across ordinary, disabled, ALWAYS
 and REPLICA states, plus Japanese text and apostrophes on a recreated INSTEAD
 OF view trigger. Comment lookup: [PostgreSQL system information functions](https://www.postgresql.org/docs/15/functions-info.html).
 Comment syntax: [PostgreSQL COMMENT](https://www.postgresql.org/docs/15/sql-comment.html).
+
+## YSQL sequence comments
+
+The YugabyteDB YSQL 11/15 sequence reader now obtains comments with
+`pg_catalog.obj_description(sequence_oid, 'pg_class')` alongside the existing
+`pg_sequence` configuration fields. The inherited PostgreSQL sequence factory
+already emits COMMENT ON SEQUENCE for modeled remarks, so no SQL-generation
+change is needed. API and Schema XML formats remain unchanged; full metadata
+exports now retain an additional existing remarks field when a comment exists.
+
+The real-engine round trip checks Japanese/apostrophe comments, start and
+increment values, and the resulting nextval values. Live sequence position and
+ownership remain outside the supported recreation scope. Ordinary PostgreSQL
+sequence readers are unchanged.

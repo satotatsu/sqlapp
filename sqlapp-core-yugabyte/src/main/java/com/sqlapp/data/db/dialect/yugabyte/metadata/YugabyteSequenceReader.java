@@ -15,7 +15,8 @@ public class YugabyteSequenceReader extends PostgresSequenceReader {
 
 	@Override
 	protected void setMetadataDetail(Connection connection, Sequence sequence) throws SQLException {
-		String sql = "SELECT s.seqstart, s.seqincrement, s.seqmin, s.seqmax, s.seqcache, s.seqcycle "
+		String sql = "SELECT s.seqstart, s.seqincrement, s.seqmin, s.seqmax, s.seqcache, s.seqcycle, "
+				+ "pg_catalog.obj_description(c.oid, 'pg_class') AS remarks "
 				+ "FROM pg_catalog.pg_sequence s JOIN pg_catalog.pg_class c ON c.oid = s.seqrelid "
 				+ "JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = ? AND c.relname = ?";
 		try (var statement = connection.prepareStatement(sql)) {
@@ -29,6 +30,7 @@ public class YugabyteSequenceReader extends PostgresSequenceReader {
 				sequence.setMaxValue(rows.getBigDecimal("seqmax"));
 				sequence.setCacheSize(rows.getBigDecimal("seqcache"));
 				sequence.setCycle(rows.getBoolean("seqcycle"));
+				sequence.setRemarks(rows.getString("remarks"));
 			}
 		}
 	}

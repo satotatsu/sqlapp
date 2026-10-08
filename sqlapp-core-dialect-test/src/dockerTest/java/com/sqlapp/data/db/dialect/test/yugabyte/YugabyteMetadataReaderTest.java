@@ -129,6 +129,7 @@ class YugabyteMetadataReaderTest {
 				statement.execute("CREATE UNIQUE INDEX child_label_idx ON " + schemaName + ".child(label)");
 				statement.execute("CREATE VIEW " + schemaName + ".child_view AS SELECT id, label FROM " + schemaName + ".child");
 				statement.execute("CREATE SEQUENCE " + schemaName + ".sample_seq START WITH 10 INCREMENT BY 3 MINVALUE 10 MAXVALUE 1000 CACHE 100");
+				statement.execute("COMMENT ON SEQUENCE " + schemaName + ".sample_seq IS '採番 ''sequence'''");
 				var schemaReader = dialect.getCatalogReader().getSchemaReader();
 				var tableReader = schemaReader.getTableReader();
 				tableReader.setSchemaName(schemaName);
@@ -146,6 +147,7 @@ class YugabyteMetadataReaderTest {
 				sequenceReader.setSchemaName(schemaName);
 				sequenceReader.setObjectName("sample_seq");
 				Sequence sequence = sequenceReader.getAllFull(connection).stream().filter(t -> "sample_seq".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals("採番 'sequence'", sequence.getRemarks());
 				assertEquals(3, sequence.getIncrementBy().intValueExact());
 				assertEquals(10, sequence.getStartValue().intValueExact());
 				assertEquals(10, sequence.getMinValue().intValueExact());
@@ -168,6 +170,11 @@ class YugabyteMetadataReaderTest {
 				for (var operation : sequenceFactory.createSql(sequence)) {
 					statement.execute(operation.getSqlText());
 				}
+				Sequence recreated = sequenceReader.getAllFull(connection).stream()
+						.filter(t -> "sample_seq".equals(t.getName())).findFirst().orElseThrow();
+				assertEquals(sequence.getRemarks(), recreated.getRemarks());
+				assertEquals(sequence.getIncrementBy(), recreated.getIncrementBy());
+				assertEquals(sequence.getStartValue(), recreated.getStartValue());
 				statement.execute("INSERT INTO " + schemaName + ".parent VALUES (1)");
 				statement.execute("INSERT INTO " + schemaName + ".child VALUES (1, 1, 'linked')");
 				assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName + ".child VALUES (2, 999, 'orphan')"));
