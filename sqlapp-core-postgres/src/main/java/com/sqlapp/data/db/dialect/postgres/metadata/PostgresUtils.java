@@ -88,6 +88,13 @@ public class PostgresUtils extends ReaderUtils {
 		// while scale is reserved for numeric types. Keep explicit precision zero.
 		Long precision = typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale);
 		dialect.setDbType(productDataType, precision, numericScale, column);
+		String kind = rs.getString("typtype");
+		if ((column.getDataType() == com.sqlapp.data.db.datatype.DataType.OTHER && rs.getString("atttypid") != null)
+				|| "e".equals(kind) || "d".equals(kind) || "c".equals(kind)
+				|| "r".equals(kind) || "m".equals(kind)) {
+			NamedArgument type = getTypeInfoById(rs.getStatement().getConnection(), dialect, rs.getString("atttypid"));
+			column.setDataType(type.getDataType()).setDataTypeName(type.getDataTypeName());
+		}
 		if (!isEmpty(sequenceName)) {
 			String[] names = sequenceName.split("[.]");
 			Sequence sequence = new Sequence(names[names.length - 1]);

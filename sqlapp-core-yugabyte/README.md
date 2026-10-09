@@ -276,3 +276,9 @@ are required; mixed COST/SET or signature changes are rejected. Forward/reverse
 SQL and PLpgSQL function results are tested on both YSQL engines, with procedure
 results on YSQL 15. See the
 [independent snapshot limits](../docs/compatibility.md#independent-routine-snapshots-for-body-differences).
+
+
+Whole-schema acceptance now exercises the standard CREATE registry and a
+metadata/XML/data/COPY/UPSERT round-trip with related tables, custom types,
+functions, a view, a trigger and comments on both supported YSQL engines.
+See the [acceptance scope and limits](../docs/compatibility.md#whole-schema-and-data-acceptance-on-ysql).

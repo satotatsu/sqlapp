@@ -2311,6 +2311,63 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void roundTripsWholeSchemaAndDataThroughStandardCreateAndBulkPaths() throws Exception {
+		String schemaName = "ysql_acceptance_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TYPE " + schemaName + ".state AS ENUM ('new','done')");
+				statement.execute("CREATE DOMAIN " + schemaName + ".positive AS integer CHECK (VALUE>0)");
+				statement.execute("CREATE SEQUENCE " + schemaName + ".ticket START 10 INCREMENT 2");
+				statement.execute("CREATE TABLE " + schemaName + ".parent (id integer PRIMARY KEY, label text NOT NULL, amount numeric(12,3), payload bytea, tags text[], state " + schemaName + ".state, priority " + schemaName + ".positive)");
+				statement.execute("CREATE TABLE " + schemaName + ".child (id integer PRIMARY KEY, parent_id integer NOT NULL REFERENCES " + schemaName + ".parent(id), label text)");
+				statement.execute("CREATE FUNCTION " + schemaName + ".state_text(value " + schemaName + ".state) RETURNS text LANGUAGE sql IMMUTABLE AS $$ SELECT value::text $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".mark_label() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.label:=upper(NEW.label); RETURN NEW; END $$");
+				statement.execute("CREATE TRIGGER mark_label BEFORE INSERT ON " + schemaName + ".parent FOR EACH ROW EXECUTE PROCEDURE " + schemaName + ".mark_label()");
+				statement.execute("CREATE VIEW " + schemaName + ".summary AS SELECT p.id,p.label,c.label AS child_label," + schemaName + ".state_text(p.state) AS state FROM " + schemaName + ".parent p JOIN " + schemaName + ".child c ON c.parent_id=p.id");
+				statement.execute("COMMENT ON TABLE " + schemaName + ".parent IS 'acceptance parent'");
+				statement.execute("COMMENT ON COLUMN " + schemaName + ".parent.label IS 'Unicode label'");
+				statement.execute("INSERT INTO " + schemaName + ".parent VALUES (1,'雪,quote',12.345,decode('00ff','hex'),ARRAY['雪',NULL,'a,b'],'done',2),(2,'empty',NULL,NULL,ARRAY[]::text[],'new',1)");
+				statement.execute("INSERT INTO " + schemaName + ".child VALUES (1,1,'child'),(2,2,NULL)");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader(); reader.setSchemaName(schemaName);
+				var original = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+				for (String name : List.of("parent", "child")) {
+					try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + "." + name + " ORDER BY id")) { original.getTables().get(name).readData(rows); }
+				}
+				assertEquals((Object) 1, original.getTables().get("child").getRows().get(0).get("parent_id"), "before XML");
+				com.sqlapp.data.schemas.Schema restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+				assertEquals(2, restored.getTables().get("parent").getRows().size());
+				assertEquals((Object) 1, restored.getTables().get("child").getRows().get(0).get("parent_id"), "after XML");
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				var operations = registry.createSql(restored, SqlType.CREATE); assertFalse(operations.isEmpty());
+				for (var operation : operations) statement.execute(operation.getSqlText());
+				for (String name : List.of("parent", "child")) assertEquals(2, BulkInsertResolver.execute(connection, restored.getTables().get(name), BulkOption.defaults()));
+				try (var result = statement.executeQuery("SELECT label,amount,payload,tags,state::text,priority FROM " + schemaName + ".parent ORDER BY id")) {
+					assertTrue(result.next()); assertEquals("雪,QUOTE",result.getString(1)); assertEquals(new BigDecimal("12.345"),result.getBigDecimal(2));
+					assertArrayEquals(new byte[]{0,(byte)255},result.getBytes(3)); assertArrayEquals(new String[]{"雪",null,"a,b"},(String[])result.getArray(4).getArray());
+					assertEquals("done",result.getString(5)); assertEquals(2,result.getInt(6));
+					assertTrue(result.next()); assertNull(result.getBigDecimal(2)); assertNull(result.getBytes(3)); assertEquals(0,((Object[])result.getArray(4).getArray()).length);
+				}
+				var parent = restored.getTables().get("parent"); parent.getRows().clear();
+				parent.getRows().add(r -> { r.put("id",1); r.put("label","updated"); r.put("amount",new BigDecimal("99.123")); r.put("state","done"); r.put("priority",3); });
+				assertEquals(1, BulkUpsertResolver.execute(connection, parent, BulkUpsertOption.defaults()));
+				try (var result = statement.executeQuery("SELECT p.label,p.amount,p.payload,p.tags,s.child_label,s.state FROM " + schemaName + ".parent p JOIN " + schemaName + ".summary s ON s.id=p.id WHERE p.id=1")) {
+					assertTrue(result.next()); assertEquals("UPDATED",result.getString(1)); assertEquals(new BigDecimal("99.123"),result.getBigDecimal(2)); assertEquals("child",result.getString(5)); assertEquals("done",result.getString(6));
+				}
+				assertEquals(10,scalar(connection,"SELECT nextval('" + schemaName + ".ticket')"));
+				SQLException fk = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName + ".child VALUES (3,999,'invalid')")); assertEquals("23503",fk.getSQLState());
+				SQLException check = assertThrows(SQLException.class, () -> statement.execute("SELECT (-1)::" + schemaName + ".positive")); assertEquals("23514",check.getSQLState());
+				var actual = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+				assertEquals(restored.getTables().size(),actual.getTables().size()); assertEquals(restored.getFunctions().size(),actual.getFunctions().size()); assertEquals(restored.getDomains().size(),actual.getDomains().size());
+				assertEquals("acceptance parent",actual.getTables().get("parent").getRemarks()); assertEquals("Unicode label",actual.getTables().get("parent").getColumns().get("label").getRemarks());
+				assertNotNull(actual.getViews().get("summary")); assertNotNull(actual.getTriggers().get("mark_label"));
+			} finally { statement.execute("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void readsWholeSchemaAndRecreatesFunctionAndTrigger() throws Exception {
 		String schemaName = "ysql_objects_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

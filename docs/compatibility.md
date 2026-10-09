@@ -1498,3 +1498,52 @@ Executed final command:
 ```powershell
 .\gradlew.bat :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
 ```
+
+
+## Whole-schema and data acceptance on YSQL
+
+The standard Schema CREATE registry is exercised on both local YSQL 11 and 15
+through metadata reading, Schema XML serialization including rows, schema drop,
+recreation, parent-first COPY and UPSERT. The fixture combines non-public-schema
+enums and domains, sequences, primary/foreign keys, SQL and trigger functions,
+a dependent view, triggers and table/column comments. Data assertions cover
+Unicode and commas, exact decimals, binary data, arrays with null elements,
+empty arrays and null values. Recreated triggers, foreign keys and domain
+checks are executed, and metadata is read again after restoration.
+
+This acceptance path exposed three defects that are fixed:
+
+- Schema CREATE now retains its declared collection order and isolates each
+  factory's optional order extensions. Types and domains precede functions,
+  then tables, views and triggers. This is not a general dependency graph solver.
+- PostgreSQL column metadata resolves custom type OIDs to qualified names,
+  allowing enum/domain columns outside the search path to be recreated. Existing
+  version-specific catalog queries remain unchanged; this also benefits YSQL.
+- Constraint column resolution copies its input list before resolving references.
+  XML constraint parsing previously overwrote table-column ordinals and could
+  silently lose row values. The fix also preserves self-assignment and the
+  ownership of supplied table columns for all dialects.
+
+Public APIs, configuration and Schema XML formats are unchanged. The affected
+implementation modules are sqlapp-core and sqlapp-core-postgres, with acceptance
+coverage in sqlapp-core-dialect-test. The real-engine verification targets YSQL
+11/15; PostgreSQL uses the shared metadata implementation but was not separately
+verified on a real PostgreSQL server in this batch.
+
+This fixture deliberately copies parent rows before child rows. Arbitrary cyclic
+object dependencies, automatic owner/ACL replay, sequence high-water restoration,
+YCQL, distributed topology and performance qualification are outside this
+acceptance claim. Tests use disposable local containers and UUID schemas only;
+no external or production database is accessed.
+
+Final acceptance regression passed 2,738 ordinary tests (one optional external
+case skipped) and 62 cases on each local YSQL engine (124 real-engine passes),
+with zero failures/errors. Yugabyte assembly succeeded. Focused tests first
+reproduced and then verified the fixes for CREATE order, custom column types and
+constraint XML row loss. No generated files were intentionally edited.
+
+Executed final command:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-db2:test :sqlapp-core-firebird:test :sqlapp-core-h2:test :sqlapp-core-hsql:test :sqlapp-core-informix:test :sqlapp-core-mariadb:test :sqlapp-core-mdb:test :sqlapp-core-mysql:test :sqlapp-core-oracle:test :sqlapp-core-phoenix:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-saphana:test :sqlapp-core-spanner:test :sqlapp-core-sqlite:test :sqlapp-core-sqlserver:test :sqlapp-core-sybase:test :sqlapp-core-virtica:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
+```

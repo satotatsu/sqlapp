@@ -41,7 +41,7 @@ import com.sqlapp.util.CommonUtils;
 public abstract class AbstractCreateSchemaFactory<S extends AbstractSqlBuilder<?>>
 		extends SimpleSqlFactory<Schema, S> {
 
-	private static final Set<String> createCollectionOrder = CommonUtils.set();
+	private final Set<String> createCollectionOrder = CommonUtils.linkedSet();
 
 	public AbstractCreateSchemaFactory() {
 		initialize();
