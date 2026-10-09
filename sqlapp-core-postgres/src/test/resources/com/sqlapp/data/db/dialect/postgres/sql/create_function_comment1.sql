@@ -1,1 +1,1 @@
-COMMENT ON FUNCTION add IS'comment1'
+COMMENT ON FUNCTION add(INT, INT) IS'comment1'

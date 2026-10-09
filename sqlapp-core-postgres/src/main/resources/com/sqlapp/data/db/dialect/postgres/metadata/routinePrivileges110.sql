@@ -9,7 +9,7 @@ SELECT
   , r.privilege_type
   , r.is_grantable
   , null AS with_hierarchy
-  , 'FUNCTION' AS routine_kind
+  , CASE WHEN p.prokind='p' THEN 'PROCEDURE' ELSE 'FUNCTION' END AS routine_kind
   , p.pronargs
   , p.proargtypes
   , p.proargnames

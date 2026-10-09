@@ -25,6 +25,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.RoutinePrivilege;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Operator;
 import com.sqlapp.data.schemas.OperatorClass;
@@ -92,6 +93,9 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Sequence.class, SqlType.CREATE, PostgresCreateSequenceFactory.class);
 		//
 		registerSqlFactory(Function.class, SqlType.CREATE, PostgresCreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.DROP, PostgresDropFunctionFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, PostgresGrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, PostgresRevokeRoutinePrivilegeFactory.class);
 		//
 		registerSqlFactory(Table.class, SqlType.DEFRAG, PostgresDefragTableFactory.class);
 		//

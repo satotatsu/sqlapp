@@ -80,6 +80,7 @@ public class PostgresFunctionReader extends FunctionReader {
 		// function.setCatalogName(getString(rs, "function_catalog"));
 		obj.setSchemaName(getString(rs, "function_schema"));
 		obj.setLanguage(getString(rs, "lanname"));
+		obj.setRemarks(getString(rs, "remarks"));
 		if (this.getReaderOptions().isReadStatement()) {
 			obj.setStatement(getString(rs, "prosrc"));
 		}

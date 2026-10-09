@@ -4,6 +4,7 @@ SELECT
 , p.proname AS function_name
 , l.lanname
 , p.oid
+, obj_description(p.oid, 'pg_proc') AS remarks
 , p.*
 FROM pg_catalog.pg_proc p
 INNER JOIN pg_catalog.pg_namespace n
