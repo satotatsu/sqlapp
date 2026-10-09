@@ -22,22 +22,22 @@ SELECT
 	      else null
 	 end  AS sequence_name
 	,case when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042, 1043) /*CHAR,VARCHAR*/
-	      then a.atttypmod -4
+	      then CASE WHEN a.atttypmod < 0 THEN null ELSE a.atttypmod -4 END
 	      when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1560, 1562) /*BIT,VARBIT*/
-	      then a.atttypmod
+	      then CASE WHEN a.atttypmod < 0 THEN null ELSE a.atttypmod END
 	      else null
 	 end AS max_length
 	,case (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	      when 1700 then
 	           case when a.atttypmod = -1 then null
-	                else (a.atttypmod>>16) &65535
+	                else ((a.atttypmod-4)>>16) &65535
 	           end
 	      else null
 	 end AS numeric_precision
 	,case (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	      when 1700 then
 	           case when a.atttypmod = -1 then null
-	                else (a.atttypmod-4) &65535
+	                else (((a.atttypmod-4) &2047) #1024)-1024
 	           end
 	      else null
 	 end AS numeric_scale

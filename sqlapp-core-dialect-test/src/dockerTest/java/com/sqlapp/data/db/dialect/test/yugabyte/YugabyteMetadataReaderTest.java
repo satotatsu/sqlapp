@@ -390,6 +390,186 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void preservesUnconstrainedNumericAndVarcharColumnsArraysAndDomains() throws Exception {
+		String schemaName = "ysql_unbounded_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, amount numeric, label varchar, amounts numeric[], labels varchar[])");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("items");
+				Table table = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(reader.getAllFull(connection).get(0).asXml()));
+				statement.execute("DROP TABLE " + schemaName + ".items");
+				for (var operation : registry.createSql(table, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				for (String declaration : List.of("n AS numeric", "v AS varchar", "ns AS numeric[]", "vs AS varchar[]")) {
+					statement.execute("CREATE DOMAIN " + schemaName + "." + declaration);
+				}
+				var domainReader = dialect.getCatalogReader().getSchemaReader().getDomainReader(); domainReader.setSchemaName(schemaName);
+				for (var domain : domainReader.getAllFull(connection)) {
+					assertNull(domain.getLength(), domain.asXml());
+					com.sqlapp.data.schemas.Domain restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
+					assertNull(restored.getLength(), restored.asXml());
+					statement.execute("DROP DOMAIN " + schemaName + "." + domain.getName());
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				BigDecimal amount = new BigDecimal("1" + "0".repeat(1500) + ".123456789");
+				String label = "雪".repeat(40000);
+				table.getRows().add(r -> { r.put("id", 1); r.put("amount", amount); r.put("label", label);
+					r.put("amounts", new BigDecimal[] { amount, null }); r.put("labels", new String[] { label, null }); });
+				assertEquals(1, BulkInsertResolver.execute(connection, table, BulkOption.defaults()));
+				statement.execute("CREATE TABLE " + schemaName + ".domain_items (amount " + schemaName + ".n, label "
+						+ schemaName + ".v, amounts " + schemaName + ".ns, labels " + schemaName + ".vs)");
+				statement.execute("INSERT INTO " + schemaName + ".domain_items SELECT amount,label,amounts,labels FROM " + schemaName + ".items");
+				for (String name : List.of("items", "domain_items")) {
+					try (var rows = statement.executeQuery("SELECT amount,label,amounts[1],labels[1],amounts[2],labels[2] FROM " + schemaName + "." + name)) {
+						assertTrue(rows.next()); assertEquals(amount, rows.getBigDecimal(1)); assertEquals(label, rows.getString(2));
+						assertEquals(amount, rows.getBigDecimal(3)); assertEquals(label, rows.getString(4));
+						assertNull(rows.getBigDecimal(5)); assertNull(rows.getString(6));
+					}
+				}
+				assertEquals(4, scalar(connection, "SELECT count(*) FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid "
+						+ "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='" + schemaName
+						+ "' AND c.relname='items' AND a.attname IN ('amount','label','amounts','labels') AND a.atttypmod=-1"));
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesIntervalFieldsAndFractionalPrecisionAcrossXmlRecreation() throws Exception {
+		String schemaName = "ysql_intervals_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				var declarations = List.of("interval", "interval year", "interval month", "interval day", "interval hour", "interval minute", "interval second", "interval year to month", "interval day to hour", "interval day to minute", "interval day to second", "interval hour to minute", "interval hour to second", "interval minute to second", "interval(0)", "interval(3)", "interval second(0)", "interval day to second(3)", "interval hour to second(6)", "interval minute to second(0)");
+				var columns = new java.util.StringJoiner(","); var domainColumns = new java.util.StringJoiner(","); var values = new java.util.StringJoiner(",");
+				String literal = "INTERVAL '1 year 2 months 3 days 04:05:06.789123'";
+				for (int i = 0; i < declarations.size(); i++) {
+					String declaration = declarations.get(i);
+					columns.add("v" + i + " " + declaration).add("a" + i + " " + declaration + "[]");
+					values.add(literal).add("ARRAY[" + literal + ",NULL]");
+					statement.execute("CREATE DOMAIN " + schemaName + ".d" + i + " AS " + declaration + " DEFAULT " + literal);
+					statement.execute("CREATE DOMAIN " + schemaName + ".da" + i + " AS " + declaration + "[] DEFAULT ARRAY[" + literal + ",NULL]");
+					domainColumns.add("v" + i + " " + schemaName + ".d" + i).add("a" + i + " " + schemaName + ".da" + i);
+				}
+				statement.execute("CREATE TABLE " + schemaName + ".items (" + columns + ")");
+				String createDomainTable = "CREATE TABLE " + schemaName + ".domain_items (" + domainColumns + ")";
+				statement.execute(createDomainTable);
+				String insert = "INSERT INTO " + schemaName + ".items VALUES (" + values + ")";
+				statement.execute(insert); statement.execute("INSERT INTO " + schemaName + ".domain_items DEFAULT VALUES");
+				var expected = new java.util.ArrayList<String>(); var domainExpected = new java.util.ArrayList<String>();
+				try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".items")) { assertTrue(rows.next()); for (int i = 1; i <= declarations.size() * 2; i++) expected.add(rows.getString(i)); }
+				try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".domain_items")) { assertTrue(rows.next()); for (int i = 1; i <= declarations.size() * 2; i++) domainExpected.add(rows.getString(i)); }
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader(); reader.setSchemaName(schemaName); reader.setObjectName("items");
+				Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(reader.getAllFull(connection).get(0).asXml()));
+				var domainReader = dialect.getCatalogReader().getSchemaReader().getDomainReader(); domainReader.setSchemaName(schemaName);
+				var domains = new java.util.ArrayList<com.sqlapp.data.schemas.Domain>();
+				for (var domain : domainReader.getAllFull(connection)) domains.add(com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(domain.asXml())));
+				assertEquals(declarations.size() * 2, domains.size());
+				statement.execute("DROP TABLE " + schemaName + ".items"); statement.execute("DROP TABLE " + schemaName + ".domain_items");
+				for (var domain : domains) statement.execute("DROP DOMAIN " + schemaName + "." + domain.getName());
+				for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				for (var domain : domains) for (var operation : registry.createSql(domain, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				statement.execute(createDomainTable); statement.execute(insert); statement.execute("INSERT INTO " + schemaName + ".domain_items DEFAULT VALUES");
+				try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".items")) { assertTrue(rows.next()); for (int i = 1; i <= expected.size(); i++) assertEquals(expected.get(i - 1), rows.getString(i), declarations.get((i - 1) / 2)); }
+				try (var rows = statement.executeQuery("SELECT * FROM " + schemaName + ".domain_items")) { assertTrue(rows.next()); for (int i = 1; i <= domainExpected.size(); i++) assertEquals(domainExpected.get(i - 1), rows.getString(i), declarations.get((i - 1) / 2)); }
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesBitStringLengthsAcrossColumnsArraysAndDomains() throws Exception {
+		String schemaName = "ysql_bits_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".items (id integer PRIMARY KEY, unlimited bit varying, bounded bit varying(7), fixed bit(7), single bit, bits bit varying[])");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName(schemaName); reader.setObjectName("items");
+				Table table = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(reader.getAllFull(connection).get(0).asXml()));
+				assertNull(table.getColumns().get("unlimited").getLength());
+				assertNull(table.getColumns().get("bits").getLength());
+				assertEquals(7L, table.getColumns().get("bounded").getLength());
+				assertEquals(7L, table.getColumns().get("fixed").getLength());
+				assertEquals(1L, table.getColumns().get("single").getLength());
+				statement.execute("DROP TABLE " + schemaName + ".items");
+				for (var operation : registry.createSql(table, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				for (String declaration : List.of("v AS bit varying", "vs AS bit varying[]", "b AS bit varying(7)", "f AS bit(7)")) {
+					statement.execute("CREATE DOMAIN " + schemaName + "." + declaration);
+				}
+				var domainReader = dialect.getCatalogReader().getSchemaReader().getDomainReader(); domainReader.setSchemaName(schemaName);
+				for (var domain : domainReader.getAllFull(connection)) {
+					com.sqlapp.data.schemas.Domain restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
+					if (domain.getName().equals("v") || domain.getName().equals("vs")) assertNull(restored.getLength(), restored.asXml());
+					statement.execute("DROP DOMAIN " + schemaName + "." + domain.getName());
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				String bits = "1010011".repeat(6000);
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (1, B'" + bits + "', B'101', B'1010011', B'1', ARRAY[B'" + bits + "',NULL,B'']::bit varying[])");
+				statement.execute("CREATE TABLE " + schemaName + ".domain_items (v " + schemaName + ".v, vs " + schemaName + ".vs, b " + schemaName + ".b, f " + schemaName + ".f)");
+				statement.execute("INSERT INTO " + schemaName + ".domain_items SELECT unlimited,bits,bounded,fixed FROM " + schemaName + ".items");
+				for (String query : List.of("SELECT unlimited,bits[1],bits[2],bits[3] FROM " + schemaName + ".items", "SELECT v,vs[1],vs[2],vs[3] FROM " + schemaName + ".domain_items")) {
+					try (var rows = statement.executeQuery(query)) {
+						assertTrue(rows.next()); assertEquals(bits, rows.getString(1)); assertEquals(bits, rows.getString(2));
+						assertNull(rows.getString(3)); assertEquals("", rows.getString(4));
+					}
+				}
+				assertEquals("22001", assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName + ".items (id,bounded) VALUES (2,B'10101010')")).getSQLState());
+				assertEquals("22026", assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName + ".items (id,fixed) VALUES (3,B'101')")).getSQLState());
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesNegativeAndExcessNumericScaleAtEngineBoundary() throws Exception {
+		String schemaName = "ysql_numeric_scale_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				if (connection.getMetaData().getDatabaseMajorVersion() < 15) {
+					SQLException unsupported = assertThrows(SQLException.class,
+							() -> statement.execute("CREATE TABLE " + schemaName + ".items (amount numeric(2,-3))"));
+					assertEquals("22023", unsupported.getSQLState()); return;
+				}
+				statement.execute("CREATE TABLE " + schemaName + ".items (amount numeric(2,-3), amounts numeric(2,-3)[], fraction numeric(3,5))");
+				statement.execute("CREATE DOMAIN " + schemaName + ".rounded AS numeric(2,-3) DEFAULT 12345");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader(); reader.setSchemaName(schemaName); reader.setObjectName("items");
+				Table table = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(reader.getAllFull(connection).get(0).asXml()));
+				assertEquals(-3, table.getColumns().get("amount").getScale());
+				assertEquals(-3, table.getColumns().get("amounts").getScale());
+				assertEquals(5, table.getColumns().get("fraction").getScale());
+				statement.execute("DROP TABLE " + schemaName + ".items");
+				for (var operation : registry.createSql(table, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				var domains = dialect.getCatalogReader().getSchemaReader().getDomainReader(); domains.setSchemaName(schemaName);
+				var domain = domains.getAllFull(connection).get(0); assertEquals(-3, domain.getScale());
+				com.sqlapp.data.schemas.Domain restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
+				statement.execute("DROP DOMAIN " + schemaName + ".rounded");
+				for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO " + schemaName + ".items VALUES (12345,ARRAY[12345,-12345],0.00123456)");
+				try (var rows = statement.executeQuery("SELECT amount,amounts[1],amounts[2],fraction FROM " + schemaName + ".items")) {
+					assertTrue(rows.next()); assertEquals(new BigDecimal("12000"), rows.getBigDecimal(1));
+					assertEquals(new BigDecimal("12000"), rows.getBigDecimal(2)); assertEquals(new BigDecimal("-12000"), rows.getBigDecimal(3));
+					assertEquals(new BigDecimal("0.00123"), rows.getBigDecimal(4));
+				}
+				statement.execute("CREATE TABLE " + schemaName + ".domain_items (amount " + schemaName + ".rounded)");
+				statement.execute("INSERT INTO " + schemaName + ".domain_items DEFAULT VALUES");
+				assertEquals(12000, scalar(connection, "SELECT amount FROM " + schemaName + ".domain_items"));
+				for (String values : List.of("(99500,NULL,NULL)", "(NULL,NULL,0.01)")) {
+					SQLException overflow = assertThrows(SQLException.class, () -> statement.execute("INSERT INTO " + schemaName + ".items VALUES " + values));
+					assertEquals("22003", overflow.getSQLState());
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void recreatesArrayDomainsWithPrecisionDefaultsAndConstraints() throws Exception {
 		String schemaName = "ysql_array_domains_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

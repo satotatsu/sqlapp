@@ -84,9 +84,9 @@ public class PostgresDomainReader extends DomainReader {
 		productDataType = notEmpty(intervalTypeName, productDataType);
 		Long maxLength = getLong(rs, "max_length");
 		Long numericPrecision = getLong(rs, "numeric_precision");
-		Integer numericScale = getInt(rs, "numeric_scale");
-		Integer datetimeScale = getInt(rs, "datetime_scale");
-		Integer intervalScale = getInt(rs, "interval_scale");
+		Integer numericScale = getInteger(rs, "numeric_scale");
+		Integer datetimeScale = getInteger(rs, "datetime_scale");
+		Integer intervalScale = getInteger(rs, "interval_scale");
 		Domain obj = new Domain(getString(rs, "domain_name"));
 		obj.setNullable(!rs.getBoolean("typnotnull"));
 		getDialect().setDbType(productDataType,

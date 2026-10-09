@@ -14,25 +14,25 @@ SELECT
 	 THEN
 	   CASE t.typtypmod
 	   WHEN -1
-	   THEN CAST(2^30 AS integer)
+	   THEN null
 	   ELSE
 	     t.typtypmod -4
 	   END
 	 WHEN et.oid IN (1560, 1562) /*BIT,VARBIT*/
-	 THEN t.typtypmod
+	 THEN CASE WHEN t.typtypmod < 0 THEN null ELSE t.typtypmod END
 	 ELSE null
 	 end AS max_length
 	,CASE et.oid
 	      WHEN 1700 THEN
 	           CASE WHEN t.typtypmod = -1 THEN null
-	                ELSE (t.typtypmod>>16) &65535
+	                ELSE ((t.typtypmod-4)>>16) &65535
 	           END
 	      ELSE null
 	 end AS numeric_precision
 	,CASE et.oid
 	      WHEN 1700 THEN
 	           CASE WHEN t.typtypmod = -1 THEN null
-	                ELSE (t.typtypmod-4) &65535
+	                ELSE (((t.typtypmod-4) &2047) #1024)-1024
 	           END
 	      ELSE null
 	 end AS numeric_scale

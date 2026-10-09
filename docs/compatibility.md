@@ -955,3 +955,102 @@ date. No external or production database was accessed and no generated files
 were edited manually. Historical PostgreSQL and PostgreSQL 18 real engines,
 arbitrary domain dependency graphs, interval field qualifiers and single
 unqualified quoted type-name normalization remain outside this verified scope.
+
+
+## Unconstrained numeric and varchar, and PostgreSQL 15 numeric scale
+
+PostgreSQL metadata and SQL generation now preserve omitted numeric precision
+and varchar length, including arrays and domains. The catalog queries keep
+unconstrained varchar length NULL instead of -5 or an artificial 1 GiB limit.
+Domain readers retain SQL NULL for optional precision fields instead of treating
+it as zero. SQL generation emits bare NUMERIC, DECIMAL and VARCHAR when the
+modifier is absent, preserving the server's unconstrained semantics.
+
+Numeric catalog modifiers decode scale as a signed 11-bit value. This decoding
+also preserves legacy nonnegative scales and uses no new catalog columns.
+PostgreSQL 15 and later accept negative scale and scale greater than precision;
+type-name matching also accepts negative-scale NUMERIC/DECIMAL arrays from 15.
+Generation validates precision 1..1000 and scale -1000..1000, and rejects extended
+scale on pre-15 dialects rather than changing its rounding semantics. An explicit
+nonzero scale requires precision. Existing public APIs, XML and dependencies
+are unchanged. SQL changes cover all four PostgreSQL column query versions and
+the shared domain query; PostgreSQL-compatible dialects inherit these fixes.
+
+The real-engine regression recreates scalar/array columns and domains through
+Schema XML, then stores a 1,501-digit integer with fractional digits and a
+40,000-character Unicode string through bulk insertion. It checks exact values,
+NULL array elements and unconstrained catalog modifiers. The 15 baseline also
+checks numeric(2,-3) rounding, numeric(3,5) fractional rounding, domain defaults
+and overflow SQLSTATE 22003; the 11 baseline checks rejection of negative scale.
+
+References: [PostgreSQL 15 numeric types](https://www.postgresql.org/docs/15/datatype-numeric.html)
+and [numeric typmod implementation](https://github.com/postgres/postgres/blob/REL_15_STABLE/src/backend/utils/adt/numeric.c).
+
+
+Validation on 2026-10-09: the focused boundary cases first reproduced invalid
+varchar modifiers and loss of signed numeric scale; all focused cases passed
+after correction. The final invocation executed PostgreSQL, Yugabyte and command
+`test` tasks, Yugabyte `assemble`, and both full YSQL compatibility tasks:
+BUILD SUCCESSFUL in 7m 7s. PostgreSQL passed 234 cases, Yugabyte passed 4 with one
+optional external test skipped, and command passed 543 (781 ordinary passes).
+Both engines passed all 48 cases each (96 real-engine passes). Public APIs,
+configuration, XML format and module dependencies are unchanged. Invalid numeric
+modifiers now fail explicitly instead of being clipped. Only disposable local
+containers were used; no external/production database was accessed and generated
+files were not edited manually. Historical PostgreSQL and PostgreSQL 18 real
+engines remain unverified; their SQL/type boundaries are covered by unit tests.
+
+
+## Bit strings and interval field restrictions
+
+PostgreSQL column queries (all supported query variants) and domain queries now
+keep an omitted bit varying length NULL rather than -1. SQL generation emits
+bare VARBIT for the unconstrained type; explicit BIT/VARBIT lengths remain
+unchanged. Type matching recognizes the catalog spelling BIT VARYING, including
+length modifiers and arrays. BIT without a length still resolves from catalog
+metadata as BIT(1). Bytea behavior is unchanged.
+
+PostgreSQL 12+ column queries now decode interval field masks instead of reporting
+every qualified interval as unrestricted INTERVAL. Historical column readers and
+domains already decode these masks. SQL generation preserves YEAR, YEAR TO MONTH,
+DAY TO HOUR, DAY TO MINUTE, DAY TO SECOND, HOUR TO MINUTE, HOUR TO SECOND, MINUTE
+TO SECOND and single-field restrictions. The YEAR spelling is corrected. Native
+PostgreSQL interval matching uses fractional precision after the field clause,
+with no SQL-standard leading precision defaults. Explicit fractional precision
+0..6 is retained for INTERVAL and clauses ending in SECOND, including arrays.
+
+A common Schema issue also affected other dialects: AbstractColumn omitted
+interval modifiers from XML and ignored interval length when comparing objects.
+Column, Domain, TypeColumn and NamedArgument now retain existing length/scale
+attributes through XML, and precision changes affect equality. This uses existing
+XML attributes and APIs; old XML without modifiers remains readable with absent
+values. No vendor-specific conditional was added to core. For PostgreSQL,
+length represents fractional precision; other dialects retain their existing
+interpretation of model length/scale. This correction may expose real interval
+precision differences previously omitted from migration comparisons.
+
+The focused engine tests cover unlimited, bounded and fixed bit strings, scalar
+and array columns, domains, 42,000-bit values, NULL and empty array elements, and
+length mismatch errors. Interval coverage compares values before and after
+Schema XML recreation for 20 field/precision declarations, scalar/array columns,
+scalar/array domains and defaults, including precision zero and fractional
+rounding. These tests use disposable local YSQL 11 and 15 containers.
+
+References: [bit string types](https://www.postgresql.org/docs/15/datatype-bit.html)
+and [interval fields and precision](https://www.postgresql.org/docs/15/datatype-datetime.html).
+
+
+Validation on 2026-10-09: focused tests reproduced -1 bit varying length and
+loss of interval YEAR field restrictions and precision-zero rounding. The
+initial common test incorrectly treated TypeColumn as a standalone XML root;
+it was corrected to round-trip Type/Procedure owners for type attributes and
+arguments. The final focused common XML/equality tests and PostgreSQL native
+type matching/generation tests passed, as did both focused engine runs.
+The final regression selected core and every retained dialect `test` task,
+command/plugin tests, Yugabyte assemble and both full YSQL compatibility tasks:
+BUILD SUCCESSFUL in 9m 51s. Results total 2,711 ordinary passes with one optional
+external YSQL case skipped, and 50 passes on each engine (100 real-engine passes),
+with no failures or errors. No external/production database was accessed, no
+module dependency/version/configuration was changed, and no generated files
+were edited manually. Historical PostgreSQL and PostgreSQL 18 remain unverified
+on real engines; unit tests cover type generation and matching at those boundaries.

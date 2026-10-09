@@ -81,6 +81,48 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 				return super.typeDefinition(column);
 			}
 		} else {
+			if (column.getDataType() != null && column.getDataType().isInterval()) {
+				String typeName = column.getDataType().getTypeName();
+				_add(typeName);
+				if (column.getLength() != null && (column.getDataType() == DataType.INTERVAL || typeName.endsWith("SECOND"))) {
+					if (column.getLength() < 0 || column.getLength() > 6) {
+						throw new IllegalArgumentException("PostgreSQL interval fractional precision must be 0..6.");
+					}
+					_add("(" + column.getLength() + ")");
+				}
+				return this;
+			}
+			if (column.getDataType() == DataType.VARBINARY && column.getLength() == null) {
+				_add("VARBIT");
+				return this;
+			}
+			if (column.getDataType() == DataType.NUMERIC || column.getDataType() == DataType.DECIMAL) {
+				Long precision = column.getLength();
+				Integer scale = column.getScale();
+				if (precision == null) {
+					if (scale != null && scale != 0) {
+						throw new IllegalArgumentException("PostgreSQL numeric scale requires an explicit precision.");
+					}
+					_add(column.getDataType().name());
+					return this;
+				}
+				int resolvedScale = scale == null ? 0 : scale;
+				if (precision < 1 || precision > 1000 || resolvedScale < -1000 || resolvedScale > 1000) {
+					throw new IllegalArgumentException("PostgreSQL numeric precision must be 1..1000 and scale -1000..1000: "
+							+ precision + "," + resolvedScale);
+				}
+				if ((resolvedScale < 0 || resolvedScale > precision)
+						&& getDialect().compareTo(postgresVersionResolver.getDialect(15, 0, 0)) < 0) {
+					throw new IllegalArgumentException("Negative numeric scale or scale greater than precision requires PostgreSQL 15 or later.");
+				}
+				_add(column.getDataType().name() + "(" + precision + "," + resolvedScale + ")");
+				return this;
+			}
+			if (column.getDataType() == DataType.VARCHAR && column.getLength() == null
+					&& !"text".equalsIgnoreCase(column.getDataTypeName())) {
+				_add("VARCHAR");
+				return this;
+			}
 			return super.typeDefinition(column);
 		}
 		return this;

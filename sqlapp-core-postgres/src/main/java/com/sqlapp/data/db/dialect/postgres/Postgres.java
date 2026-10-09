@@ -71,6 +71,8 @@ import com.sqlapp.data.db.dialect.postgres.util.PostgresJdbcHandler;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlSplitter;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -99,6 +101,16 @@ public class Postgres extends Dialect {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -7843214207236066501L;
+
+	private static void registerIntervalMatcher(DbDataType<?> type) {
+		String name = type.getDataType().getTypeName();
+		boolean seconds = type.getDataType() == DataType.INTERVAL || name.endsWith("SECOND");
+		type.setColumnTypeMatcher(new RegexColumnTypeMatcher(name.replace(" ", "\\s+")
+				+ (seconds ? "(?:\\s*\\(\\s*(?<length>[0-9]+)\\s*\\))?" : ""),
+				(matcher, information) -> {
+					if (seconds && matcher.group("length") != null) information.setLength(matcher.group("length"));
+				}));
+	}
 
 	protected static final Function<ColumnTypeMatcher, ColumnTypeMatcher> columnTypeMatcherConverter = (
 			matcher) -> new PostgresArrayColumnTypeMatcher(matcher);
@@ -168,6 +180,7 @@ public class Postgres extends Dialect {
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARBIT", LEN_1GB, type -> {
 			type.setLiteral("decode('", "', 'hex')");
+			type.addColumnTypeMatcher("BIT\\s+VARYING");
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
@@ -276,17 +289,23 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL
 		getDbDataTypes().addInterval(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
-		// INTERVAL YAER
+		// INTERVAL YEAR
 		getDbDataTypes().addIntervalYear(type -> {
-			type.setCreateFormat("INTERVAL YAER").setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter()));
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
+			type.setCreateFormat("INTERVAL YEAR").setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter()));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL MONTH
 		getDbDataTypes().addIntervalMonth(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL MONTH")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalMonthConverter()));
 			type.setSupportsArray(true);
@@ -294,18 +313,24 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL DAY
 		getDbDataTypes().addIntervalDay(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL DAY").setJdbcTypeHandler(getIntervalConverter(new IntervalDayConverter()));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL HOUR
 		getDbDataTypes().addIntervalHour(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL HOUR").setJdbcTypeHandler(getIntervalConverter(new IntervalHourConverter()));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL MINUTE
 		getDbDataTypes().addIntervalMinute(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL MINUTE")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteConverter()));
 			type.setSupportsArray(true);
@@ -313,20 +338,26 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL SECOND
 		getDbDataTypes().addIntervalSecond(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL SECOND")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalSecondConverter()));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
-		// INTERVAL YAER TO MONTH
+		// INTERVAL YEAR TO MONTH
 		getDbDataTypes().addIntervalYearToMonth(type -> {
-			type.setCreateFormat("INTERVAL YAER TO MONTH")
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
+			type.setCreateFormat("INTERVAL YEAR TO MONTH")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalYearToMonthConverter()));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL DAY TO HOUR
 		getDbDataTypes().addIntervalDayToHour(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL DAY TO HOUR")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToHourConverter()));
 			type.setSupportsArray(true);
@@ -334,6 +365,8 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL DAY TO MINUTE
 		getDbDataTypes().addIntervalDayToMinute(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL DAY TO MINUTE")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToMinuteConverter()));
 			type.setSupportsArray(true);
@@ -341,6 +374,9 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL DAY TO SECOND
 		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
+			type.setDefaultScale(null);
 			type.setCreateFormat("INTERVAL DAY TO SECOND")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToSecondConverter()));
 			type.setSupportsArray(true);
@@ -348,6 +384,8 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL HOUR TO MINUTE
 		getDbDataTypes().addIntervalHourToMinute(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL HOUR TO MINUTE")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToMinuteConverter()));
 			type.setSupportsArray(true);
@@ -355,6 +393,8 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL HOUR TO SECOND
 		getDbDataTypes().addIntervalHourToSecond(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL HOUR TO SECOND")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToSecondConverter()));
 			type.setSupportsArray(true);
@@ -363,6 +403,8 @@ public class Postgres extends Dialect {
 
 		// INTERVAL MINUTE TO SECOND
 		getDbDataTypes().addIntervalMinuteToSecond(type -> {
+			type.setDefaultPrecision(null);
+			registerIntervalMatcher(type);
 			type.setCreateFormat("INTERVAL MINUTE TO SECOND")
 					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteToSecondConverter()));
 			type.setSupportsArray(true);

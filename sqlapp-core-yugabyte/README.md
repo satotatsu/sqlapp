@@ -186,3 +186,33 @@ server flags. DDL recreation tests execute outside caller transactions; they do
 not promise PostgreSQL transactional-DDL semantics. Test production topology,
 settings and load separately. See the
 [integration-test guide](../sqlapp-core-dialect-test/README.md#yugabytedb-ysql-compatibility).
+
+
+Additional numeric boundary coverage preserves unconstrained numeric/varchar
+columns, arrays and domains through XML and recreation, with 1,501-digit values,
+40,000-character Unicode strings and NULL array elements. The PostgreSQL 15
+baseline checks negative and excess numeric scale, rounding, domain defaults
+and overflow; the 11 baseline verifies the unsupported syntax boundary.
+See [compatibility details](../docs/compatibility.md#unconstrained-numeric-and-varchar-and-postgresql-15-numeric-scale).
+
+Latest validation on 2026-10-09 after these numeric boundary fixes: both full
+matrices passed 48 cases each (96 real-engine cases). PostgreSQL/Yugabyte/command
+regression passed 781 cases with one optional external YSQL test skipped;
+Yugabyte assemble and the final Gradle invocation succeeded. The earlier
+46-case/2,703-case totals above describe the preceding batch and are retained
+as historical evidence, not the scope executed for this update.
+
+
+Bit and interval preservation coverage now includes unlimited bit varying,
+fixed/bounded bit strings, empty/NULL array elements, and 20 interval
+field/precision declarations. Scalar/array columns and scalar/array domains
+(including defaults) are compared before and after Schema XML recreation.
+The shared model also retains interval precision in XML and comparison.
+See [bit/interval compatibility details](../docs/compatibility.md#bit-strings-and-interval-field-restrictions).
+
+Latest validation on 2026-10-09 after bit/interval and shared interval XML fixes:
+50 tests passed on each baseline (100 real-engine tests). Core/all-retained-
+dialect/command/plugin regression results total 2,711 passes and one optional
+external YSQL skip. The final invocation and Yugabyte assemble succeeded.
+The earlier totals above describe preceding batches. No external or production
+database was accessed; historical PostgreSQL and PostgreSQL 18 were not run.

@@ -25,22 +25,22 @@ SELECT
 	,a.attidentity
 	,'' AS attgenerated
 	,CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042, 1043) /*CHAR,VARCHAR*/
-	 THEN a.atttypmod -4
+	 THEN CASE WHEN a.atttypmod < 0 THEN null ELSE a.atttypmod -4 END
 	 WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1560, 1562) /*BIT,VARBIT*/
-	 THEN a.atttypmod
+	 THEN CASE WHEN a.atttypmod < 0 THEN null ELSE a.atttypmod END
 	 else null
 	END AS max_length
 	,CASE (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	 WHEN 1700 then
 	     case WHEN a.atttypmod = -1 THEN null
-	     else (a.atttypmod>>16) &65535
+	     else ((a.atttypmod-4)>>16) &65535
 	     end
 	 else null
 	END AS numeric_precision
 	,CASE (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)
 	 WHEN 1700 then
 	     case WHEN a.atttypmod = -1 THEN null
-	     else (a.atttypmod-4) &65535
+	     else (((a.atttypmod-4) &2047) #1024)-1024
 	     end
 	 else null
 	END AS numeric_scale

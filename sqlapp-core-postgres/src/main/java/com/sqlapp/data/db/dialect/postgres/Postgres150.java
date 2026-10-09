@@ -21,6 +21,9 @@ package com.sqlapp.data.db.dialect.postgres;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.metadata.Postgres150CatalogReader;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres150SqlFactoryRegistry;
@@ -46,6 +49,14 @@ public class Postgres150 extends Postgres140 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		for (DataType dataType : new DataType[] { DataType.NUMERIC, DataType.DECIMAL }) {
+			getDbDataTypes().getDbType(dataType).addColumnTypeMatcher(columnTypeMatcherConverter.apply(
+					new RegexColumnTypeMatcher(dataType.name() + "\\s*\\(\\s*(?<length>[0-9]+)\\s*,\\s*(?<scale>-[0-9]+)\\s*\\)",
+							(matcher, information) -> {
+								information.setLength(matcher.group("length"), null);
+								information.setScale(matcher.group("scale"));
+							})));
+		}
 	}
 
 	/*
