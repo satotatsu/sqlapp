@@ -221,3 +221,11 @@ dialect/command/plugin regression results total 2,711 passes and one optional
 external YSQL skip. The final invocation and Yugabyte assemble succeeded.
 The earlier totals above describe preceding batches. No external or production
 database was accessed; historical PostgreSQL and PostgreSQL 18 were not run.
+
+
+Routine type regression now covers independent OID lookups across connections,
+quoted enum renames, unsigned OID validation, UUID/custom-enum array returns,
+and scalar/array function overload identity and invocation after XML recreation.
+The PostgreSQL generator preserves routine array dimensions and honors schema
+qualification. Complex default/TABLE-return parsing is outside this new coverage.
+See [routine OID and array details](../docs/compatibility.md#routine-oid-isolation-and-array-type-identity).

@@ -96,7 +96,7 @@ public class Postgres83FunctionFamilyReader extends FunctionFamilyReader {
 				SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
 				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(connection, this.getDialect(), argArray);
 				for (NamedArgument argument : arguments) {
-					builder.add(argument.getDataTypeName());
+					builder.add(PostgresUtils.typeName(argument));
 				}
 				function.setSpecificName(function.getName() + "(" + builder.toString() + ")");
 			}

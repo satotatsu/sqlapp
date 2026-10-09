@@ -150,8 +150,7 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 				argument.setDirection(diretion[0]);
 				argument.setDefaultValue(defaultValue);
 				setVariadic(variadic[0], argument);
-				builder.add(argument.getDataTypeName() != null ? argument.getDataTypeName()
-						: argument.getDataType().toString());
+				builder.add(PostgresUtils.typeName(argument));
 			});
 		}
 		obj.setSpecificName(obj.getName() + "(" + builder.toString() + ")");

@@ -24,15 +24,12 @@ import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.ltrim;
 import static com.sqlapp.util.CommonUtils.notEmpty;
 
-import java.lang.ref.WeakReference;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -121,8 +118,6 @@ public class PostgresUtils extends ReaderUtils {
 		}
 	}
 
-	private static Map<String, WeakReference<NamedArgument>> TYPE_CACHE = new HashMap<>();
-
 	/**
 	 * IDから型情報を取得します
 	 * 
@@ -132,29 +127,13 @@ public class PostgresUtils extends ReaderUtils {
 	 * @return 型情報
 	 */
 	public static NamedArgument getTypeInfoById(Connection connection, final Dialect dialect, final String typeId) {
-		WeakReference<NamedArgument> ref = TYPE_CACHE.get(typeId);
-		NamedArgument arg = null;
-		if (ref != null) {
-			arg = ref.get();
-			if (arg != null) {
-				return arg;
-			} else {
-				synchronized (TYPE_CACHE) {
-					Set<String> keySet = CommonUtils.set();
-					for (Map.Entry<String, WeakReference<NamedArgument>> entry : TYPE_CACHE.entrySet()) {
-						if (entry.getValue() == null || entry.getValue().get() == null) {
-							keySet.add(entry.getKey());
-						}
-					}
-					for (String key : keySet) {
-						TYPE_CACHE.remove(key);
-					}
-				}
-			}
+		long oid = Long.parseLong(typeId);
+		if (oid < 0 || oid > 0xffffffffL) {
+			throw new IllegalArgumentException("PostgreSQL type OID must be an unsigned 32-bit value: " + typeId);
 		}
 		SqlNode node = getSqlNodeCache().getString("typeById.sql");
 		final ParametersContext context = new ParametersContext();
-		context.put("typeId", Integer.valueOf(typeId));
+		context.put("typeId", oid);
 		final NamedArgument obj = new NamedArgument();
 		obj.setDialect(dialect);
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -163,15 +142,18 @@ public class PostgresUtils extends ReaderUtils {
 				String typeName = rs.getString("type_name");
 				obj.setDialect(dialect);
 				obj.setDataTypeName(typeName);
-				synchronized (TYPE_CACHE) {
-					TYPE_CACHE.put(typeId, new WeakReference<>(obj));
-				}
+				obj.setArrayDimension(rs.getInt("array_dimension"));
 			}
 		});
 		if (obj.getDataTypeName() == null && obj.getDataType() == null) {
-			throw new RuntimeException("typeId=" + typeId);
+			throw new IllegalArgumentException("PostgreSQL type OID not found: " + typeId);
 		}
 		return obj;
+	}
+
+	static String typeName(NamedArgument argument) {
+		String name = isEmpty(argument.getDataTypeName()) ? argument.getDataType().getTypeName() : argument.getDataTypeName();
+		return name + "[]".repeat(argument.getArrayDimension());
 	}
 
 	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,

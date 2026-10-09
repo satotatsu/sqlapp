@@ -83,7 +83,7 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 				SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
 				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(connection, this.getDialect(), argArray);
 				for (NamedArgument argument : arguments) {
-					builder.add(argument.getDataTypeName());
+					builder.add(PostgresUtils.typeName(argument));
 				}
 				obj.setSpecificName(function.getName() + "(" + builder.toString() + ")");
 			}

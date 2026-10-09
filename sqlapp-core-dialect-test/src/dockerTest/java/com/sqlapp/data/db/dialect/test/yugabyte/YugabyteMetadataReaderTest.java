@@ -850,6 +850,93 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void isolatesOidTypeLookupsAndRefreshesRenamedQuotedTypes() throws Exception {
+		String schemaName = "ysql_oid_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var second = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TYPE " + schemaName + ".\"State.Type\" AS ENUM ('new','done')");
+				String oid;
+				try (var rows = statement.executeQuery("SELECT '" + schemaName + ".\"State.Type\"'::regtype::oid::text")) { assertTrue(rows.next()); oid = rows.getString(1); }
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var first = com.sqlapp.data.db.dialect.postgres.metadata.PostgresUtils.getTypeInfoById(connection, dialect, oid);
+				first.setName("changed").setDefaultValue("'done'").setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Output);
+				var independent = com.sqlapp.data.db.dialect.postgres.metadata.PostgresUtils.getTypeInfoById(second, dialect, oid);
+				assertNotSame(first, independent); assertNull(independent.getName()); assertNull(independent.getDefaultValue());
+				assertEquals(com.sqlapp.jdbc.sql.ParameterDirection.Input, independent.getDirection());
+				assertEquals(schemaName + ".\"State.Type\"", independent.getDataTypeName());
+				statement.execute("ALTER TYPE " + schemaName + ".\"State.Type\" RENAME TO \"Renamed Type\"");
+				var renamed = com.sqlapp.data.db.dialect.postgres.metadata.PostgresUtils.getTypeInfoById(connection, dialect, oid);
+				assertEquals(schemaName + ".\"Renamed Type\"", renamed.getDataTypeName());
+				IllegalArgumentException absent = assertThrows(IllegalArgumentException.class, () -> com.sqlapp.data.db.dialect.postgres.metadata.PostgresUtils.getTypeInfoById(connection, dialect, "4294967295"));
+				assertTrue(absent.getMessage().contains("4294967295"));
+				var arguments = com.sqlapp.data.db.dialect.postgres.metadata.PostgresUtils.getTypeInfoById(connection, dialect,
+						new String[] { "23", "23" }, new String[] { "left", "right" }, new String[] { "i", "o" });
+				assertNotSame(arguments.get(0), arguments.get(1)); assertEquals("left", arguments.get(0).getName()); assertEquals("right", arguments.get(1).getName());
+				assertEquals(com.sqlapp.jdbc.sql.ParameterDirection.Input, arguments.get(0).getDirection());
+				assertEquals(com.sqlapp.jdbc.sql.ParameterDirection.Output, arguments.get(1).getDirection());
+
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesFunctionArrayReturnsAndQualifiedCustomTypesThroughXml() throws Exception {
+		String schemaName = "ysql_return_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TYPE " + schemaName + ".\"State.Type\" AS ENUM ('new','done')");
+				statement.execute("CREATE FUNCTION " + schemaName + ".ids() RETURNS uuid[] LANGUAGE SQL AS $$ SELECT ARRAY['123e4567-e89b-12d3-a456-426614174000'::uuid,NULL] $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".states() RETURNS " + schemaName + ".\"State.Type\"[] LANGUAGE SQL AS $$ SELECT ARRAY['new','done']::" + schemaName + ".\"State.Type\"[] $$");
+				statement.execute("SET search_path TO " + schemaName + ",pg_catalog");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName);
+				var functions = reader.getAllFull(connection);
+				assertEquals(2, functions.size());
+				statement.execute("RESET search_path");
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var function : functions) {
+					com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+					assertEquals(1, restored.getReturning().getArrayDimension(), restored.asXml());
+					if (function.getName().equals("ids")) assertEquals(DataType.UUID, restored.getReturning().getDataType());
+					else assertEquals(schemaName + ".\"State.Type\"", restored.getReturning().getDataTypeName());
+					statement.execute("DROP FUNCTION " + schemaName + "." + function.getName() + "()");
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				try (var rows = statement.executeQuery("SELECT (" + schemaName + ".ids())[1]::text,(" + schemaName + ".ids())[2],(" + schemaName + ".states())[2]::text")) {
+					assertTrue(rows.next()); assertEquals("123e4567-e89b-12d3-a456-426614174000", rows.getString(1)); assertNull(rows.getObject(2)); assertEquals("done", rows.getString(3));
+				}
+			} finally { statement.execute("RESET search_path"); statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesScalarAndArrayOverloadIdentityAndArguments() throws Exception {
+		String schemaName = "ysql_overload_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE FUNCTION " + schemaName + ".f(value uuid) RETURNS integer LANGUAGE SQL AS $$ SELECT 1 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".f(value uuid[]) RETURNS integer LANGUAGE SQL AS $$ SELECT 2 $$");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName); reader.setObjectName("f");
+				var functions = reader.getAllFull(connection); assertEquals(2, functions.size());
+				assertNotEquals(functions.get(0).getSpecificName(), functions.get(1).getSpecificName());
+				assertEquals(java.util.Set.of(0,1), functions.stream().map(f -> f.getArguments().get(0).getArrayDimension()).collect(java.util.stream.Collectors.toSet()));
+				statement.execute("DROP FUNCTION " + schemaName + ".f(uuid)"); statement.execute("DROP FUNCTION " + schemaName + ".f(uuid[])");
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var function : functions) {
+					com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				assertEquals(1, scalar(connection, "SELECT " + schemaName + ".f(NULL::uuid)"));
+				assertEquals(2, scalar(connection, "SELECT " + schemaName + ".f(NULL::uuid[])"));
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void recreatesCompositeTypeDefinitionAttributesCollationAndComments() throws Exception {
 		String schemaName = "ysql_composite_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

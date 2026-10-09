@@ -34,7 +34,7 @@ public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory
 	protected void addCreateObject(final Function obj, PostgresSqlBuilder builder) {
 		builder.create().or().replace();
 		builder.function();
-		builder.name(obj);
+		builder.name(obj, getOptions().isDecorateSchemaName());
 		builder.space().arguments(obj.getArguments());
 		builder.lineBreak().returns();
 		builder.space()._add(obj.getReturning());

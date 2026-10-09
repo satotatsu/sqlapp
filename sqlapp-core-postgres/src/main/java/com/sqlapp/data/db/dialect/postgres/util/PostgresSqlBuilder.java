@@ -24,6 +24,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.resolver.PostgresDialectResolver.PostgresVersionResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.FunctionReturning;
+import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -48,6 +50,23 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	private PostgresVersionResolver postgresVersionResolver = new PostgresVersionResolver();
 
 	private Dialect postgres92 = postgresVersionResolver.getDialect(9, 2, 0);
+
+	@Override
+	protected PostgresSqlBuilder typeDefinition(FunctionReturning returning) {
+		return typeDefinition((DataTypeSetProperties<?>) returning);
+	}
+
+	@Override
+	protected PostgresSqlBuilder typeDefinition(AbstractColumn<?> column) {
+		return typeDefinition((DataTypeSetProperties<?>) column);
+	}
+
+	@Override
+	protected PostgresSqlBuilder typeDefinition(DataTypeSetProperties<?> value) {
+		Column column = new Column().setDataType(value.getDataType()).setDataTypeName(value.getDataTypeName())
+				.setLength(value.getLength()).setScale(value.getScale()).setArrayDimension(value.getArrayDimension());
+		return typeDefinition(column);
+	}
 
 	/**
 	 * カラムの型の定義を追加します

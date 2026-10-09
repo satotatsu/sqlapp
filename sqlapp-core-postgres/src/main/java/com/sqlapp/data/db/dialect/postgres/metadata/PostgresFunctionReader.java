@@ -114,6 +114,7 @@ public class PostgresFunctionReader extends FunctionReader {
 		obj.getReturning().setDataType(routineArgument.getDataType());
 		obj.getReturning().setLength(routineArgument.getLength());
 		obj.getReturning().setScale(routineArgument.getScale());
+		obj.getReturning().setArrayDimension(routineArgument.getArrayDimension());
 		int argNo = rs.getInt("pronargs");
 		if (argNo > 0) {
 			setArguments(rs, obj);
@@ -133,7 +134,7 @@ public class PostgresFunctionReader extends FunctionReader {
 			List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(),
 					this.getDialect(), argArray, argNameArray, argModeArray);
 			for (NamedArgument argument : arguments) {
-				builder.add(argument.getDataTypeName());
+				builder.add(PostgresUtils.typeName(argument));
 			}
 			obj.setSpecificName(obj.getName() + "(" + builder.toString() + ")");
 			obj.getArguments().addAll(arguments);

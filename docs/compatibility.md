@@ -1054,3 +1054,55 @@ with no failures or errors. No external/production database was accessed, no
 module dependency/version/configuration was changed, and no generated files
 were edited manually. Historical PostgreSQL and PostgreSQL 18 remain unverified
 on real engines; unit tests cover type generation and matching at those boundaries.
+
+
+## Routine OID isolation and array type identity
+
+PostgreSQL routine type lookup no longer shares mutable NamedArgument instances
+through a process-wide cache keyed only by OID. Each lookup now reads the supplied
+connection and returns a fresh type object, so argument names, directions,
+defaults, database-local OIDs and renamed types cannot leak between lookups.
+This deliberately trades cache hits for correct connection/DDL visibility;
+metadata lookup performance has not been benchmarked. OID parameters accept the
+unsigned 32-bit range through JDBC long binding, and missing/out-of-range OIDs
+produce explicit unchecked errors containing the OID.
+
+The typeById query reads the element type and a separate array dimension for true
+array types. Builtin names use format_type; custom names always use separately
+quoted schema/type identifiers. No new-version catalog columns are introduced.
+Array function returns now retain their dimension in the Schema model and XML.
+PostgreSQL SQL generation preserves array dimensions for routine arguments,
+returns and other AbstractColumn/type-property entry points. CREATE FUNCTION
+honors the existing decorateSchemaName option. Routine identity strings include
+array suffixes in modern and legacy function, function-family and privilege
+readers, and retain a builtin fallback when the model omits dataTypeName.
+Public signatures, configuration, XML attributes and dependencies are unchanged.
+
+The real-engine tests mutate a first lookup, repeat it on another connection,
+rename a quoted enum, read it again, and verify independent legacy arguments
+with the same integer OID. They also exercise the maximum unsigned OID as a
+missing type. UUID-array and quoted-enum-array returns are read with the custom
+schema on search_path, round-tripped through XML, and recreated after resetting
+search_path. Scalar f(uuid) and array f(uuid[]) overloads retain distinct model
+identities and invoke their original behavior after XML recreation.
+
+This batch covers routine OID type lookup and native array signature preservation;
+complex quoted/default argument tokenization, TABLE return parsing and procedure
+recreation were not expanded. Historical PostgreSQL servers and PostgreSQL 18
+were not run against real engines; generation unit tests cover 8.3/11/15/18.
+
+References: [pg_type](https://www.postgresql.org/docs/11/catalog-pg-type.html)
+and [OID representation](https://www.postgresql.org/docs/11/datatype-oid.html).
+
+
+Validation on 2026-10-09: focused tests reproduced mutable OID lookup leakage,
+array return/argument loss and scalar/array overload collisions. The corrected
+focused unit tests and three real-engine cases passed on both engines. The final
+regression ran PostgreSQL/Yugabyte unit tests, command/plugin tests, Yugabyte
+assemble and both complete YSQL compatibility tasks: BUILD SUCCESSFUL in 7m 36s.
+Results were 867 ordinary passes, one optional external-database test skipped,
+and 53 passes on each local YSQL engine (106 real-engine passes), with zero
+failures/errors. No external or production database was accessed. No public API,
+configuration format, XML attributes or dependency versions changed; no generated
+files were manually edited. Historical PostgreSQL and PostgreSQL 18 real engines
+and the performance impact of uncached type lookup remain unverified.
