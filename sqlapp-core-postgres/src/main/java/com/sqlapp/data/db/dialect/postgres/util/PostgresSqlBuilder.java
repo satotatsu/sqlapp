@@ -25,6 +25,10 @@ import com.sqlapp.data.db.dialect.postgres.resolver.PostgresDialectResolver.Post
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.FunctionReturning;
+import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.Routine;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.CommonUtils;
@@ -52,7 +56,46 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	private Dialect postgres92 = postgresVersionResolver.getDialect(9, 2, 0);
 
 	@Override
+	public PostgresSqlBuilder specificName(Routine<?> routine, boolean withSchemaName) {
+		if (!(routine instanceof Function function)) return super.specificName(routine, withSchemaName);
+		name(routine, withSchemaName)._add("(");
+		boolean first = true;
+		for (NamedArgument argument : function.getArguments()) {
+			if (argument.getDirection() == ParameterDirection.Output) continue;
+			if (!first) _add(", ");
+			first = false;
+			typeDefinition(argument);
+		}
+		return _add(")");
+	}
+
+	@Override
+	public PostgresSqlBuilder argument(NamedArgument argument) {
+		if (Boolean.parseBoolean(argument.getSpecifics().get("VARIADIC"))) _add("VARIADIC").space();
+		else argumentDirection(argument);
+		if (argument.getName() != null && !Boolean.parseBoolean(argument.getSpecifics().get("UNNAMED_ARGUMENT"))) {
+			String name = argument.getName();
+			_add(isQuateObjectName() && getDialect().needQuote(name) ? getDialect().quote(name) : name).space();
+		}
+		typeDefinition(argument);
+		if (argument.getDirection() != ParameterDirection.Output && argument.getDefaultValue() != null)
+			space()._add("DEFAULT").space()._add(argument.getDefaultValue());
+		return this;
+	}
+
+	@Override
 	protected PostgresSqlBuilder typeDefinition(FunctionReturning returning) {
+		if (returning.getTable() != null) {
+			_add("TABLE(");
+			boolean first = true;
+			for (Column column : returning.getTable().getColumns()) {
+				if (!first) _add(", ");
+				first = false;
+				name(column.getName()).space();
+				typeDefinition(column);
+			}
+			return _add(")");
+		}
 		return typeDefinition((DataTypeSetProperties<?>) returning);
 	}
 

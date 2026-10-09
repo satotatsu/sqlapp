@@ -96,12 +96,24 @@ public abstract class Routine<T extends Routine<T>> extends
 			this.specificName = specificName;
 			return instance();
 		}
-		String[] names = specificName.split("\\.");
-		int i = 0;
-		if (names.length > 1) {
-			this.setSchemaName(names[i++]);
+		if (getName() != null && specificName.startsWith(getName() + "(")) {
+			this.specificName = specificName;
+			return instance();
 		}
-		this.specificName = names[i++];
+		boolean quoted = false;
+		int separator = -1;
+		for (int i = 0; i < specificName.length(); i++) {
+			char c = specificName.charAt(i);
+			if (c == '"') {
+				if (quoted && i + 1 < specificName.length() && specificName.charAt(i + 1) == '"') i++;
+				else quoted = !quoted;
+			} else if (!quoted && c == '(') break;
+			else if (!quoted && c == '.') { separator = i; break; }
+		}
+		if (separator >= 0) {
+			this.setSchemaName(specificName.substring(0, separator));
+			this.specificName = specificName.substring(separator + 1);
+		} else this.specificName = specificName;
 		return instance();
 	}
 

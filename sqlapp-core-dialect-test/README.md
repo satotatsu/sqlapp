@@ -229,3 +229,30 @@ and scalar/array function overload identity and invocation after XML recreation.
 The PostgreSQL generator preserves routine array dimensions and honors schema
 qualification. Complex default/TABLE-return parsing is outside this new coverage.
 See [routine OID and array details](../docs/compatibility.md#routine-oid-isolation-and-array-type-identity).
+
+
+Routine recreation coverage also includes catalog-derived argument names/modes,
+complex defaults, OUT/INOUT/VARIADIC, TABLE/SETOF, custom array arguments, quoted
+dotted function names and colliding body delimiters. Procedure/local SET cases
+use executable definition and are verified after dropping the originals. The expanded
+cases use generated signature-aware DROP operations and verify restored function
+and procedure comments. See
+[compatibility details](../docs/compatibility.md#routine-catalog-arguments-and-executable-recreation).
+
+Unnamed arguments and default alignment across OUT/INOUT arguments also have
+XML/recreation/execution coverage on both engines. The latest ordinary regression
+has 2,721 passes and one optional external case skipped; the preceding full YSQL
+regression has 55 passes per engine, followed by six focused routine matrix passes
+after the final unnamed-argument correction. Detailed validation scope is recorded
+in the compatibility notes linked above.
+
+Routine EXECUTE privileges now have reader/XML/GRANT/REVOKE coverage for zero-input
+and array overloads, custom quoted types, procedures, PUBLIC and grant options.
+Local NOLOGIN-role tests verify execution denial after revoke and success after
+restoration. Grantor context and automatic ACL replay limitations are documented
+in [compatibility notes](../docs/compatibility.md#routine-execute-privilege-round-trip).
+
+The privilege batch's final regression passed 876 ordinary tests (one optional
+external case skipped) and all 57 compatibility tests per local YSQL engine
+(114 real-engine passes). There were no failures/errors; see the linked notes
+for grantor-context, visibility and automatic ACL replay limits.

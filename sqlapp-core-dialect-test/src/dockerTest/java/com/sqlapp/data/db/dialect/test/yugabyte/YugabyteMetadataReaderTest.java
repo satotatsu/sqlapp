@@ -937,6 +937,178 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void recreatesRoutineDefaultsQuotedNamesOutputVariadicAndTableResults() throws Exception {
+		String schemaName = "ysql_routine_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TYPE " + schemaName + ".\"State.Type\" AS ENUM ('new','done')");
+				statement.execute("CREATE FUNCTION " + schemaName + ".defaults(\"first, value\" text DEFAULT concat('a,b', ',c'), items integer[] DEFAULT ARRAY[1,2]) RETURNS text LANGUAGE SQL AS $$ SELECT \"first, value\" || ':' || array_length(items,1) $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".outputs(IN value integer, OUT \"result value\" integer) LANGUAGE SQL AS $$ SELECT value + 1 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".only_output(OUT \"result value\" integer) LANGUAGE SQL AS $$ SELECT 7 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".inout_value(INOUT value integer) LANGUAGE SQL AS $$ SELECT value + 2 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".variadic_values(VARIADIC items integer[]) RETURNS integer LANGUAGE SQL AS $$ SELECT cardinality(items) $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".rows() RETURNS TABLE(\"a,b\" numeric, states " + schemaName + ".\"State.Type\"[]) LANGUAGE SQL AS $$ SELECT 12.34::numeric, ARRAY['done']::" + schemaName + ".\"State.Type\"[] $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".series() RETURNS SETOF integer LANGUAGE SQL AS $$ SELECT generate_series(1,3) $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".custom_arg(states " + schemaName + ".\"State.Type\"[]) RETURNS text LANGUAGE SQL AS $$ SELECT states[1]::text $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"() RETURNS text LANGUAGE SQL AS $body$ SELECT '$$ $sqlapp$ $sqlapp_0$' $body$");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName);
+				statement.execute("SET search_path TO " + schemaName + ", pg_catalog");
+				var functions = reader.getAllFull(connection); assertEquals(9, functions.size());
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var function : functions) {
+					function.setRemarks("routine 'comment' " + function.getName());
+					for (var operation : registry.createSql(function, SqlType.DROP)) statement.execute(operation.getSqlText());
+				}
+				statement.execute("RESET search_path");
+				for (var function : functions) {
+					com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+					assertTrue(restored.getDefinition() == null || restored.getDefinition().isEmpty(), restored.asXml());
+					assertFalse(restored.getSpecificName().contains("OUT"), restored.getSpecificName());
+					if (restored.getName().equals("defaults")) {
+						assertEquals("first, value", restored.getArguments().get(0).getName());
+						assertFalse(restored.getArguments().get(0).getDefaultValue().startsWith("DEFAULT"));
+					}
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				var reread = reader.getAllFull(connection);
+				for (var function : reread) assertEquals("routine 'comment' " + function.getName(), function.getRemarks());
+				try (var rows = statement.executeQuery("SELECT " + schemaName + ".defaults(), " + schemaName + ".outputs(3), " + schemaName + ".only_output(), " + schemaName + ".inout_value(3), " + schemaName + ".variadic_values(1,2,3), (SELECT count(*) FROM " + schemaName + ".series()), " + schemaName + ".custom_arg(ARRAY['done']::" + schemaName + ".\"State.Type\"[])")) {
+					assertTrue(rows.next()); assertEquals("a,b,c:2", rows.getString(1)); assertEquals(4, rows.getInt(2));
+					assertEquals(7, rows.getInt(3)); assertEquals(5, rows.getInt(4)); assertEquals(3, rows.getInt(5)); assertEquals(3, rows.getInt(6)); assertEquals("done", rows.getString(7));
+				}
+				try (var rows = statement.executeQuery("SELECT " + schemaName + ".\"f.name\"()")) { assertTrue(rows.next()); assertEquals("$$ $sqlapp$ $sqlapp_0$", rows.getString(1)); }
+				try (var rows = statement.executeQuery("SELECT \"a,b\",states[1]::text FROM " + schemaName + ".rows()")) {
+					assertTrue(rows.next()); assertEquals(new BigDecimal("12.34"), rows.getBigDecimal(1)); assertEquals("done", rows.getString(2));
+				}
+			} finally { statement.execute("RESET search_path"); statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void recreatesProcedureAndFunctionLocalSettingsFromExecutableDefinition() throws Exception {
+		String schemaName = "ysql_routine_ddl_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TABLE " + schemaName + ".events(value text)");
+				statement.execute("CREATE PROCEDURE " + schemaName + ".record_event(value text DEFAULT 'a,b') LANGUAGE SQL SET search_path TO " + schemaName + ", pg_catalog AS $$ INSERT INTO events VALUES(value) $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".event_count() RETURNS bigint LANGUAGE SQL SET search_path TO " + schemaName + ", pg_catalog AS $$ SELECT count(*) FROM events $$");
+				statement.execute("COMMENT ON PROCEDURE " + schemaName + ".record_event(text) IS 'procedure comment'");
+				statement.execute("COMMENT ON FUNCTION " + schemaName + ".event_count() IS 'function comment'");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName);
+				var routines = reader.getAllFull(connection); assertEquals(2, routines.size());
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var routine : routines) for (var operation : registry.createSql(routine, SqlType.DROP)) statement.execute(operation.getSqlText());
+				for (var routine : routines) {
+					com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(routine.asXml()));
+					assertFalse(restored.getDefinition().isEmpty(), restored.asXml());
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				for (var routine : reader.getAllFull(connection)) assertEquals(routine.getName().equals("record_event") ? "procedure comment" : "function comment", routine.getRemarks());
+				statement.execute("CALL " + schemaName + ".record_event()");
+				assertEquals(1, scalar(connection, "SELECT " + schemaName + ".event_count()"));
+				try (var rows = statement.executeQuery("SELECT value FROM " + schemaName + ".events")) { assertTrue(rows.next()); assertEquals("a,b", rows.getString(1)); }
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void recreatesUnnamedAndInterleavedDefaultArguments() throws Exception {
+		String schemaName = "ysql_unnamed_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE FUNCTION " + schemaName + ".unnamed(integer, text DEFAULT 'x,y') RETURNS text LANGUAGE SQL AS $$ SELECT $1::text || ':' || $2 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".mixed(value integer, OUT answer integer, amount integer DEFAULT 2) LANGUAGE SQL AS $$ SELECT value + amount $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".inout_default(INOUT \"in out\" integer DEFAULT 4) LANGUAGE SQL AS $$ SELECT \"in out\" + 2 $$");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName);
+				var functions = reader.getAllFull(connection); assertEquals(3, functions.size());
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var function : functions) {
+					com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+					if (function.getName().equals("unnamed")) {
+						assertEquals("true", restored.getArguments().get(0).getSpecifics().get("UNNAMED_ARGUMENT"));
+						assertNotNull(restored.getArguments().get(1).getDefaultValue());
+					}
+					for (var operation : registry.createSql(restored, SqlType.DROP)) statement.execute(operation.getSqlText());
+					for (var operation : registry.createSql(restored, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				}
+				try (var rows = statement.executeQuery("SELECT " + schemaName + ".unnamed(3), " + schemaName + ".mixed(3), " + schemaName + ".inout_default()")) {
+					assertTrue(rows.next()); assertEquals("3:x,y", rows.getString(1)); assertEquals(5, rows.getInt(2)); assertEquals(6, rows.getInt(3));
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void preservesRoutinePrivilegesAndExecutesGeneratedGrantRevoke() throws Exception {
+		String suffix = UUID.randomUUID().toString().replace("-", "");
+		String schemaName = "ysql_privilege_" + suffix;
+		String roleName = "Role." + suffix;
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE ROLE \"" + roleName + "\" NOLOGIN");
+				statement.execute("GRANT USAGE ON SCHEMA " + schemaName + " TO \"" + roleName + "\"");
+				statement.execute("CREATE TYPE " + schemaName + ".\"State.Type\" AS ENUM ('new','done')");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"() RETURNS integer LANGUAGE SQL AS $$ SELECT 1 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"(uuid[]) RETURNS integer LANGUAGE SQL AS $$ SELECT 2 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"(states " + schemaName + ".\"State.Type\"[], OUT result integer) LANGUAGE SQL AS $$ SELECT 3 $$");
+				statement.execute("CREATE PROCEDURE " + schemaName + ".p(value integer) LANGUAGE SQL AS $$ SELECT value $$");
+				String[] signatures = {"\"f.name\"()", "\"f.name\"(uuid[])", "\"f.name\"(" + schemaName + ".\"State.Type\"[])", "p(integer)"};
+				for (int i = 0; i < signatures.length; i++) statement.execute("REVOKE EXECUTE ON " + (i == 3 ? "PROCEDURE " : "FUNCTION ") + schemaName + "." + signatures[i] + " FROM PUBLIC");
+				statement.execute("GRANT EXECUTE ON FUNCTION " + schemaName + ".\"f.name\"() TO \"" + roleName + "\"");
+				statement.execute("GRANT EXECUTE ON FUNCTION " + schemaName + ".\"f.name\"(" + schemaName + ".\"State.Type\"[]) TO \"" + roleName + "\" WITH GRANT OPTION");
+				statement.execute("GRANT EXECUTE ON FUNCTION " + schemaName + ".\"f.name\"(uuid[]) TO PUBLIC");
+				statement.execute("GRANT EXECUTE ON PROCEDURE " + schemaName + ".p(integer) TO \"" + roleName + "\"");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getRoutinePrivilegeReader();
+				var context = new com.sqlapp.data.parameter.ParametersContext(); context.put("schemaName", schemaName);
+				var privileges = reader.getAllFull(connection, context).stream().filter(pv -> roleName.equals(pv.getGranteeName()) || "PUBLIC".equals(pv.getGranteeName())).toList();
+				assertEquals(4, privileges.size());
+				var catalog = new com.sqlapp.data.schemas.Catalog(); catalog.getRoutinePrivileges().addAll(privileges);
+				com.sqlapp.data.schemas.Catalog restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(catalog.asXml()));
+				assertEquals(4, restored.getRoutinePrivileges().size());
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var privilege : restored.getRoutinePrivileges()) {
+					assertNotNull(privilege.getGrantorName()); assertEquals("EXECUTE", privilege.getPrivilege());
+					assertNotNull(privilege.getSpecifics().get("ROUTINE_KIND"));
+					for (var operation : registry.createSql(privilege, SqlType.REVOKE)) statement.execute(operation.getSqlText());
+				}
+				assertEquals(0, scalar(connection, "SELECT count(*) FROM information_schema.routine_privileges WHERE routine_schema='" + schemaName + "' AND grantee IN ('" + roleName + "','PUBLIC')"));
+				statement.execute("SET ROLE \"" + roleName + "\"");
+				try {
+					SQLException denied = assertThrows(SQLException.class, () -> statement.executeQuery("SELECT " + schemaName + ".\"f.name\"()"));
+					assertEquals("42501", denied.getSQLState());
+				} finally { statement.execute("RESET ROLE"); }
+				for (var privilege : restored.getRoutinePrivileges()) for (var operation : registry.createSql(privilege, SqlType.GRANT)) statement.execute(operation.getSqlText());
+				statement.execute("SET ROLE \"" + roleName + "\"");
+				try {
+					try (var rows = statement.executeQuery("SELECT " + schemaName + ".\"f.name\"(), " + schemaName + ".\"f.name\"(NULL::uuid[]), " + schemaName + ".\"f.name\"(ARRAY['done']::" + schemaName + ".\"State.Type\"[])")) {
+						assertTrue(rows.next()); assertEquals(1, rows.getInt(1)); assertEquals(2, rows.getInt(2)); assertEquals(3, rows.getInt(3));
+					}
+					statement.execute("CALL " + schemaName + ".p(1)");
+				} finally { statement.execute("RESET ROLE"); }
+				var reread = reader.getAllFull(connection, context).stream().filter(pv -> roleName.equals(pv.getGranteeName()) || "PUBLIC".equals(pv.getGranteeName())).toList();
+				assertEquals(4, reread.size());
+				assertTrue(reread.stream().anyMatch(pv -> "f.name()".equals(pv.getSpecificName()) && !pv.isGrantable()));
+				assertTrue(reread.stream().anyMatch(pv -> pv.getSpecificName().contains("State.Type") && pv.isGrantable()));
+				assertTrue(reread.stream().anyMatch(pv -> "PROCEDURE".equals(pv.getSpecifics().get("ROUTINE_KIND"))));
+				try (var rows = statement.executeQuery("SELECT has_function_privilege('" + roleName + "','" + schemaName + ".\"f.name\"()','EXECUTE'), has_function_privilege('" + roleName + "','" + schemaName + ".p(integer)','EXECUTE')")) {
+					assertTrue(rows.next()); assertTrue(rows.getBoolean(1)); assertTrue(rows.getBoolean(2));
+				}
+			} finally {
+				statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+				statement.execute("DROP ROLE IF EXISTS \"" + roleName + "\"");
+			}
+		}
+	}
+
+	@Test
 	void recreatesCompositeTypeDefinitionAttributesCollationAndComments() throws Exception {
 		String schemaName = "ysql_composite_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

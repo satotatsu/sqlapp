@@ -1106,3 +1106,180 @@ failures/errors. No external or production database was accessed. No public API,
 configuration format, XML attributes or dependency versions changed; no generated
 files were manually edited. Historical PostgreSQL and PostgreSQL 18 real engines
 and the performance impact of uncached type lookup remain unverified.
+
+
+## Routine catalog arguments and executable recreation
+
+PostgreSQL 8.4+ function readers now obtain argument type OIDs, names and modes
+from pg_proc arrays instead of splitting pg_get_function_arguments at commas.
+This preserves quoted names containing spaces/commas, unnamed arguments, OUT,
+INOUT, VARIADIC, TABLE output columns and schema-qualified custom array types.
+Only input/INOUT/variadic types contribute to overload identity. Zero-input
+functions still read OUT and TABLE arguments. The defaults list is deparsed with
+pg_get_expr and split at top-level commas while respecting parentheses, array
+brackets, SQL quotes, escaped E strings and dollar quotes. Defaults attach to the
+last N input arguments, and the Schema value excludes the DEFAULT keyword.
+
+PostgreSQL SQL generation quotes argument names, emits direction once, preserves
+VARIADIC and DEFAULT, and recreates RETURNS TABLE and RETURNS SETOF. Body dollar
+quote tags use valid identifiers and advance past collisions, avoiding the
+previous non-incrementing delimiter loop. Executable definition takes precedence
+over statement generation. Local SET clauses and external library bindings are
+retained through definition because the shared model cannot represent them.
+PostgreSQL 11+ procedures returned by the existing function reader also retain
+CREATE PROCEDURE in definition; no new procedure collection/API is introduced.
+The prokind-dependent branch remains in the PostgreSQL 11 reader.
+
+The shared Routine model no longer treats a period in a signature's qualified
+type name as a schema separator. Dots inside quoted routine names and signatures
+prefixed by the known routine name are also retained. Existing schema-qualified
+specific names and null fallback remain supported. Function XML and Procedure
+identity tests cover this shared correction. No public signatures, XML attributes, configuration
+formats, dependency versions or module dependencies are changed. PostgreSQL 11+
+procedure metadata adds ROUTINE_KIND=PROCEDURE within the existing vendor-specific
+properties so comment and DROP generation retain object kind across XML.
+
+Routine comments are now read through obj_description. PostgreSQL function DROP
+and COMMENT identities are generated from modeled input/INOUT/variadic types,
+including arrays and custom quoted types; OUT arguments are excluded. The
+registry selects a PostgreSQL-specific DROP factory. Procedure metadata uses
+COMMENT ON PROCEDURE and DROP PROCEDURE. The old function-comment fixture omitted
+the required input signature and was corrected; argument-list spacing remains
+compatible with the existing CREATE fixture.
+
+The real-engine matrix drops nine original functions, round-trips the models
+through XML, recreates them and invokes defaults, OUT-only/INOUT, variadic,
+TABLE/SETOF, custom array arguments and a dotted quoted function name with colliding
+body dollar tags. A separate case drops and recreates a procedure and function
+with local search_path settings, then verifies their effects on a disposable table.
+The final expanded cases use generated DROP operations and verify routine comments
+after XML recreation, including the procedure comment.
+All objects reside in UUID-named local container schemas removed in finally blocks.
+
+Limitations: historical PostgreSQL and PostgreSQL 18 are not verified on real
+engines. External C library loading is not tested. Search-path-dependent names
+inside deparsed default expressions and routine bodies are not rewritten; callers
+must preserve their resolution context. Aggregate/window function regeneration,
+routine grants and ALTER PROCEDURE generation are outside this batch.
+Definition-backed procedures remain represented by the existing function reader.
+
+Catalog field/mode/default alignment follows [PostgreSQL 11 pg_proc](https://www.postgresql.org/docs/11/catalog-pg-proc.html), and generation follows
+[CREATE FUNCTION](https://www.postgresql.org/docs/11/sql-createfunction.html).
+
+
+Validation on 2026-10-09: focused cases passed on local YSQL 11/15 after correcting
+TABLE type rendering and shared qualified-signature handling. The expanded cases
+verified generated DROP, function/procedure comments, SET settings and invocation.
+An initial wide run found only CREATE argument-list whitespace in an existing
+fixture; this was corrected and the comment fixture now includes its required
+input signature. A later focused compilation error was corrected before the
+successful expanded runs. The complete regression then ran core, all retained
+dialect test tasks, command/plugin tests, Yugabyte assemble and both full YSQL
+tasks: BUILD SUCCESSFUL in 7m 48s, 2,720 ordinary passes with one optional external
+case skipped, and 55 passes on each engine (110 real-engine passes), zero failures.
+
+A final review identified that the shared collection assigns synthetic $N names
+to unnamed arguments. PostgreSQL metadata now retains UNNAMED_ARGUMENT=true in
+existing vendor-specific properties and generation omits that synthetic name.
+The final boundary cases cover unnamed arguments with defaults, defaults after
+interleaved OUT arguments, and an INOUT default. This supplements the complete
+regression above; final boundary revalidation is recorded below.
+
+
+Final boundary revalidation: the unnamed/interleaved/INOUT-default cases passed
+on both engines. After that last PostgreSQL-local change, all ordinary core,
+retained dialect, command and plugin test tasks plus Yugabyte assemble were
+selected again, and all three routine matrix cases ran on both engines:
+BUILD SUCCESSFUL in 1m 59s. Results were 2,721 ordinary passes, one optional
+external-database case skipped and six real-engine matrix passes, with zero
+failures/errors. The preceding complete YSQL regression covered 110 cases; the
+last unnamed-argument branch was rechecked with the focused six-case matrix,
+not by repeating the unrelated full YSQL suite again. No external/production
+database was accessed. No generated files were manually edited. Documentation
+and the intentional function-comment SQL fixture were updated; public signatures,
+configuration formats, XML attributes and dependencies remain unchanged.
+
+
+## Routine EXECUTE privilege round-trip
+
+PostgreSQL routine privilege readers now always retain the full input signature,
+including f() for zero-input functions. They retain FUNCTION/PROCEDURE kind in the
+existing ROUTINE_KIND vendor property. The namespace join ties the pg_proc object
+to the information_schema routine schema. The PostgreSQL 11 catalog reader selects
+a version-specific privilege reader/query for prokind; the legacy query has no
+prokind dependency. Input type OIDs continue to use the existing type resolver, so
+array and schema-qualified custom type signatures remain exact.
+
+The PostgreSQL registry now supports RoutinePrivilege with SqlType.GRANT and
+SqlType.REVOKE. These operations grant/revoke EXECUTE on the exact signature and
+preserve WITH GRANT OPTION when granting. An omitted privilege means EXECUTE,
+the only routine privilege; explicitly unsupported privileges, DENY/conflicting
+states, missing signatures/grantees, unknown kinds, pre-11 procedures and a PUBLIC
+grant option fail with actionable errors. Names are quoted with embedded double
+quotes escaped; PUBLIC remains the SQL recipient keyword. The generic hierarchy
+flag has no PostgreSQL routine meaning and does not affect these operations.
+REVOKE removes EXECUTE, uses PostgreSQL's default RESTRICT behavior, and does not
+silently add CASCADE or turn grantable into a grant-option-only action.
+
+The common entry point remains the existing reader and SQL registry:
+
+```java
+var reader = dialect.getCatalogReader().getRoutinePrivilegeReader();
+var context = new com.sqlapp.data.parameter.ParametersContext();
+context.put("schemaName", "app");
+var privileges = reader.getAllFull(connection, context);
+var registry = dialect.createSqlFactoryRegistry();
+registry.getOptions().setDecorateSchemaName(true);
+for (var privilege : privileges) {
+    var grantOperations = registry.createSql(privilege, SqlType.GRANT);
+    // Review or execute operation.getSqlText() in the intended grantor context.
+}
+```
+
+This is an explicit privilege-operation path. CREATE FUNCTION/CREATE SCHEMA does
+not automatically reset or replay ACLs. Default PUBLIC EXECUTE, schema/type USAGE,
+role membership and existing grants still affect effective access. Metadata retains
+the information_schema visibility rules: only grants involving currently enabled
+roles are visible; this is not a privileged dump of all ACLs. Grantor name
+is retained in the model/XML, but generated operations run as the caller and do
+not switch roles or impersonate the original grantor. Restoring a particular grant
+chain therefore requires the correct execution role and order. The tests use the
+original owning session; cross-grantor/delegation-chain restoration is unverified.
+
+The local YSQL matrix covers three overloaded dotted-name functions (zero inputs,
+uuid[], and a quoted custom enum[] plus OUT), a procedure, a quoted NOLOGIN role,
+PUBLIC and grant option. A Catalog XML round-trip retains signatures, object kind,
+grantor/grantee and grantability. Generated REVOKE removes all selected grants;
+role-switched execution is denied with SQLSTATE 42501. Generated GRANT restores
+ACLs and allows all three functions and the procedure to execute as that role.
+A separate schema USAGE grant supports name lookup; this is not inferred from
+EXECUTE. Every object and temporary role is removed in finally blocks. Unit tests
+also cover embedded identifier quotes and PostgreSQL 8.3/10/11/15/18 boundaries.
+
+Public signatures, configuration formats, XML attributes and dependencies remain
+unchanged. The new registry support and factories are additive and local to the
+PostgreSQL module; Yugabyte inherits them through its existing 11/15 dialects.
+Historical PostgreSQL and PostgreSQL 18 real engines are unverified. ALTER routine
+operations and automatic catalog ACL replay remain outside this batch.
+
+References: [PostgreSQL 11 GRANT](https://www.postgresql.org/docs/11/sql-grant.html)
+and [REVOKE](https://www.postgresql.org/docs/11/sql-revoke.html); metadata visibility
+follows [routine_privileges](https://www.postgresql.org/docs/15/infoschema-routine-privileges.html).
+
+
+Validation on 2026-10-09: initial focused tests exposed test setup assumptions
+(the catalog-level reader uses ParametersContext, generic hierarchy defaults are
+not meaningful for routines, and quote assertions must set schema-decoration
+options explicitly). These were corrected before final validation. Four focused
+unit tests and the privilege round-trip/execution matrix passed on both engines.
+The final regression ran :sqlapp-core-postgres:test, :sqlapp-core-yugabyte:test,
+:sqlapp-command:test, :sqlapp-gradle-plugin:test, :sqlapp-core-yugabyte:assemble,
+and both complete yugabyte11CompatibilityTest/yugabyte15CompatibilityTest tasks:
+BUILD SUCCESSFUL in 7m 50s. Results were 876 ordinary passes, one optional external
+YSQL test skipped, and 57 passes on each engine (114 real-engine passes), with
+zero failures/errors. Only disposable local YSQL containers were accessed;
+temporary schema/NOLOGIN-role objects were removed. No external/production
+database, dependency/version, public API signature or configuration format was
+changed, and no generated files were manually edited. New routine privilege
+factory/reader support is additive. Historical PostgreSQL and PostgreSQL 18 real
+engines and cross-grantor delegation-chain restoration remain unverified.

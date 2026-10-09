@@ -32,11 +32,17 @@ public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory
 
 	@Override
 	protected void addCreateObject(final Function obj, PostgresSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
 		builder.create().or().replace();
 		builder.function();
 		builder.name(obj, getOptions().isDecorateSchemaName());
 		builder.space().arguments(obj.getArguments());
 		builder.lineBreak().returns();
+		if (obj.getReturning().getTable() == null
+				&& obj.getFunctionType() == com.sqlapp.data.schemas.FunctionType.Table) builder.space()._add("SETOF");
 		builder.space()._add(obj.getReturning());
 		String quate = getQuate(obj);
 		builder.lineBreak();
@@ -82,13 +88,13 @@ public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory
 		if (!text.contains("$$")) {
 			return "$$";
 		}
-		String name = "$" + obj.getName() + "$";
+		String name = "$sqlapp$";
 		if (!text.contains(name)) {
 			return name;
 		}
 		int i = 0;
 		while (true) {
-			name = "$" + i + "$";
+			name = "$sqlapp_" + i++ + "$";
 			if (!text.contains(name)) {
 				return name;
 			}
@@ -99,7 +105,10 @@ public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory
 	protected void addOptions(final Function obj, List<SqlOperation> sqlList) {
 		if (obj.getRemarks() != null) {
 			PostgresSqlBuilder builder = this.createSqlBuilder();
-			builder.comment().on().function().space().specificName(obj, this.getOptions().isDecorateSchemaName()).is()
+			builder.comment().on();
+			if ("PROCEDURE".equals(obj.getSpecifics().get("ROUTINE_KIND"))) builder.procedure();
+			else builder.function();
+			builder.space().specificName(obj, this.getOptions().isDecorateSchemaName()).is()
 					.sqlChar(obj.getRemarks());
 			addSql(sqlList, builder, SqlType.SET_COMMENT, obj);
 		}

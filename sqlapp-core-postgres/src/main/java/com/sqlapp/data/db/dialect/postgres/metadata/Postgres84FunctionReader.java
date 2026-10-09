@@ -19,9 +19,6 @@
 
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
-import static com.sqlapp.util.CommonUtils.split;
-import static com.sqlapp.util.CommonUtils.unwrap;
-
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -65,10 +62,12 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 		if (proretset != null && proretset.booleanValue()) {
 			obj.setFunctionType(FunctionType.Table);
 		}
-		String function_result = rs.getString("function_result");
-		if (function_result != null && function_result.startsWith("TABLE(")) {
-			setReturningRecordType(rs, obj);
-		}
+		if (rs.getInt("pronargs") == 0) setArguments(rs, obj);
+		String result = rs.getString("function_result");
+		if (result != null && result.startsWith("TABLE(")) setReturningRecordType(rs, obj);
+		// The model cannot represent local SET clauses or external library bindings.
+		if (rs.getString("proconfig") != null
+				|| rs.getString("probin") != null) obj.setDefinition(rs.getString("functiondef"));
 		return obj;
 	}
 
@@ -78,94 +77,59 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 		return node;
 	}
 
+	@Override
+	protected void setArguments(ExResultSet rs, Function obj) throws SQLException {
+		Object[] types = array(rs, "proallargtypes");
+		if (types == null) {
+			String text = rs.getString("proargtypes");
+			types = CommonUtils.isEmpty(text) ? new String[0] : text.trim().split(" +");
+		}
+		Object[] names = array(rs, "proargnames");
+		Object[] modes = array(rs, "proargmodes");
+		var defaults = PostgresRoutineExpressions.split(rs.getString("argument_defaults"));
+		int inputCount = rs.getInt("pronargs");
+		int inputIndex = 0;
+		SeparatedStringBuilder identity = new SeparatedStringBuilder(",");
+		for (int i = 0; i < types.length; i++) {
+			NamedArgument argument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(),
+					getDialect(), types[i].toString());
+			String mode = modes == null ? "i" : modes[i].toString();
+			argument.setName(names == null || names[i] == null || names[i].toString().isEmpty() ? null : names[i].toString());
+			if (argument.getName() == null) argument.getSpecifics().put("UNNAMED_ARGUMENT", true);
+			argument.setDirection("o".equals(mode) || "t".equals(mode) ? ParameterDirection.Output
+					: "b".equals(mode) ? ParameterDirection.Inout : ParameterDirection.Input);
+			boolean input = argument.getDirection() != ParameterDirection.Output;
+			if (input) {
+				int defaultIndex = inputIndex++ - (inputCount - defaults.size());
+				if (defaultIndex >= 0) argument.setDefaultValue(defaults.get(defaultIndex));
+				identity.add(PostgresUtils.typeName(argument));
+			}
+			if ("v".equals(mode)) argument.getSpecifics().put("VARIADIC", true);
+			if (!"t".equals(mode)) obj.getArguments().add(argument);
+		}
+		obj.setSpecificName(obj.getName() + "(" + identity.toString() + ")");
+	}
+
 	protected void setReturningRecordType(ExResultSet rs, Function obj) throws SQLException {
-		String function_result = rs.getString("function_result");
-		function_result = function_result.substring(6, function_result.length() - 1);
-		String[] args = function_result.split(",");
+		Object[] types = array(rs, "proallargtypes");
+		Object[] names = array(rs, "proargnames");
+		Object[] modes = array(rs, "proargmodes");
 		obj.getReturning().toTable();
-		for (String arg : args) {
-			arg = CommonUtils.trim(arg);
-			if (CommonUtils.isEmpty(arg)) {
-				continue;
-			}
-			int pos = arg.indexOf(' ');
-			String name;
-			String dataTypeName;
-			if (pos >= 0) {
-				name = CommonUtils.trim(arg.substring(0, pos));
-				dataTypeName = CommonUtils.trim(arg.substring(pos));
-			} else {
-				name = null;
-				dataTypeName = arg;
-			}
-			obj.getReturning().getTable().getColumns().add(name, c -> {
-				c.setDataTypeName(dataTypeName);
+		for (int i = 0; types != null && i < types.length; i++) {
+			if (!"t".equals(modes[i].toString())) continue;
+			NamedArgument argument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(), getDialect(), types[i].toString());
+			obj.getReturning().getTable().getColumns().add(names[i].toString(), column -> {
+				column.setDataType(argument.getDataType()).setDataTypeName(argument.getDataTypeName())
+						.setLength(argument.getLength()).setScale(argument.getScale()).setArrayDimension(argument.getArrayDimension());
 			});
 		}
 		obj.setFunctionType(FunctionType.Table);
 	}
 
-	@Override
-	protected void setArguments(ExResultSet rs, Function obj) throws SQLException {
-		String function_arguments = rs.getString("function_arguments");
-		String function_identity_arguments = rs.getString("function_identity_arguments");
-		String[] args = function_arguments.split(",");
-		String[] argWithoutDefaults = function_identity_arguments.split(",");
-		String allArgNames = unwrap(rs.getString("proargnames"), "{", "}");
-		String[] argNameArray = split(allArgNames, "[, ]");
-		SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-		for (int i = 0; i < args.length; i++) {
-			String arg = argWithoutDefaults[i];
-			String argDefault = args[i];
-			String defaultValue = getDefaultValue(argDefault, arg);
-			String argName = null;
-			if (!CommonUtils.isEmpty(argNameArray)) {
-				argName = CommonUtils.trim(argNameArray[i]);
-			}
-			arg = CommonUtils.trim(arg);
-			if (CommonUtils.isEmpty(arg)) {
-				continue;
-			}
-			boolean[] variadic = new boolean[] { false };
-			ParameterDirection[] diretion = new ParameterDirection[] { ParameterDirection.Input };
-			if (arg.startsWith("INOUT")) {
-				diretion[0] = ParameterDirection.Inout;
-				arg = CommonUtils.trim(arg.substring(5));
-			} else if (arg.startsWith("OUT")) {
-				diretion[0] = ParameterDirection.Output;
-				arg = CommonUtils.trim(arg.substring(3));
-				if (arg.startsWith("VARIADIC")) {
-					arg = CommonUtils.trim(arg.substring(8));
-					variadic[0] = true;
-				}
-			} else if (arg.startsWith("IN ")) {
-				arg = CommonUtils.trim(arg.substring(3));
-			}
-			if (!CommonUtils.isEmpty(argName)) {
-				arg = CommonUtils.trim(arg.substring(argName.length()));
-			}
-			String dataTypeName = arg;
-			obj.getArguments().add(CommonUtils.trim(argName), argument -> {
-				argument.setDataTypeName(dataTypeName);
-				argument.setDirection(diretion[0]);
-				argument.setDefaultValue(defaultValue);
-				setVariadic(variadic[0], argument);
-				builder.add(PostgresUtils.typeName(argument));
-			});
-		}
-		obj.setSpecificName(obj.getName() + "(" + builder.toString() + ")");
-	}
-
-	private String getDefaultValue(String arg, String argWithoutDefault) {
-		if (arg.length() == argWithoutDefault.length()) {
-			return null;
-		}
-		return CommonUtils.trim(arg.substring(argWithoutDefault.length()));
-	}
-
-	private void setVariadic(boolean variadic, NamedArgument argument) {
-		if (variadic) {
-			argument.getSpecifics().put("VARIADIC", variadic);
-		}
+	private Object[] array(ExResultSet rs, String name) throws SQLException {
+		java.sql.Array array = rs.getArray(name);
+		if (array == null) return null;
+		try { return (Object[]) array.getArray(); }
+		finally { array.free(); }
 	}
 }
