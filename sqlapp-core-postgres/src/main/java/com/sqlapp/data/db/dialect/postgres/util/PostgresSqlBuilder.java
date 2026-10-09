@@ -58,6 +58,11 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	@Override
 	public PostgresSqlBuilder specificName(Routine<?> routine, boolean withSchemaName) {
 		if (!(routine instanceof Function function)) return super.specificName(routine, withSchemaName);
+		String specificName = function.getSpecificName();
+		if (function.getArguments().isEmpty() && specificName != null
+				&& specificName.startsWith(function.getName() + "(") && specificName.endsWith(")")) {
+			return name(routine, withSchemaName)._add(specificName.substring(function.getName().length()));
+		}
 		name(routine, withSchemaName)._add("(");
 		boolean first = true;
 		for (NamedArgument argument : function.getArguments()) {

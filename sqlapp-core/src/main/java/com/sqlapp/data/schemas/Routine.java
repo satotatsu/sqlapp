@@ -96,7 +96,7 @@ public abstract class Routine<T extends Routine<T>> extends
 			this.specificName = specificName;
 			return instance();
 		}
-		if (getName() != null && specificName.startsWith(getName() + "(")) {
+		if (getName() != null && (specificName.equals(getName()) || specificName.startsWith(getName() + "("))) {
 			this.specificName = specificName;
 			return instance();
 		}

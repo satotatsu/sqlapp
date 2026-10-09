@@ -1283,3 +1283,91 @@ database, dependency/version, public API signature or configuration format was
 changed, and no generated files were manually edited. New routine privilege
 factory/reader support is additive. Historical PostgreSQL and PostgreSQL 18 real
 engines and cross-grantor delegation-chain restoration remain unverified.
+
+
+## Explicit PostgreSQL routine identities without argument models
+
+PostgreSQL and YSQL DROP and COMMENT identity generation preserves an explicit
+`Function.specificName` such as `f(uuid[])` when the argument collection is empty.
+This supports identity-only models and their Schema XML round-trips without
+accidentally targeting the zero-argument overload. The specific name must start
+with the model's function name followed by `(` and end with `)`; use the unquoted
+model name and SQL type expressions inside the parentheses. Schema decoration
+continues to follow the existing SQL factory option. When arguments are modeled,
+the modeled input, INOUT and variadic types remain authoritative, excluding OUT
+arguments. Public APIs and Schema XML formats are unchanged.
+
+Unit coverage exercises PostgreSQL 8.3, 11, 15 and 18 SQL generation. Disposable
+local YSQL 11 and 15 coverage creates three overloads with no arguments, UUID
+arrays and schema-qualified custom enum arrays, drops the two array overloads
+from XML-restored identity-only models, and verifies the zero-argument function
+still executes. This change does not add routine ALTER or automatic ACL replay.
+
+
+## PostgreSQL and YSQL routine attribute differences
+
+The existing SQL registry now accepts function model differences for routine
+attribute changes:
+
+```java
+Function target = original.clone()
+    .setDeterministic(null).setStable(true)
+    .setOnNullCall(OnNullCall.ReturnsNullOnNullInput)
+    .setSqlSecurity(SqlSecurity.Invoker)
+    .setRemarks(null);
+List<SqlOperation> operations = registry.createSql(original.diff(target));
+```
+
+Function differences support volatility (IMMUTABLE, STABLE, VOLATILE), null-input
+behavior, SECURITY INVOKER/DEFINER, and remarks. A null remarks value explicitly
+clears an existing comment using `IS NULL`. Clearing null-input or security
+attributes selects PostgreSQL defaults (CALLED ON NULL INPUT, SECURITY INVOKER).
+Volatility follows the existing CREATE generator: a non-null deterministic flag
+selects IMMUTABLE or VOLATILE; otherwise stable=true selects STABLE and the
+remaining case selects VOLATILE. Clear deterministic when selecting STABLE.
+
+PostgreSQL 11+ and PostgreSQL 15-based YSQL procedures support security and
+comment differences. The tested PostgreSQL 11-based YSQL engine rejects ALTER
+PROCEDURE, so its dialect rejects security changes before returning SQL;
+procedure comment differences remain supported. Procedure volatility and
+null-input attributes are invalid. Older PostgreSQL dialects reject procedure
+changes. Aggregate changes require an explicit migration.
+
+ALTER uses the original routine's input identity and existing schema decoration
+option. It does not replay executable definitions, replace the body, drop the
+routine or restore ACLs. Definition-backed routines can therefore change these
+attributes without resetting local SET options or external-language settings.
+Re-read metadata after applying changes to refresh a stored executable definition.
+
+Changes outside this supported set (including body, executable definition,
+arguments, return type, name, schema, language, owner and vendor specifics) fail
+before any operations are returned. A direct ALTER request with only a target
+model also fails with guidance to supply original.diff(target). These cases
+require an explicit migration; this is not a general routine replacement planner.
+Existing CREATE/DROP behavior and Schema XML formats are unchanged. The newly
+registered ALTER path makes unsupported modifications explicit instead of leaving
+function changes without a PostgreSQL-specific implementation.
+
+Disposable local YSQL 11 and 15 tests change and reverse function attributes and
+exercise dependent views and null inputs. They assert preservation of OID,
+owner, ACL, body, local SET options and custom COST. Procedure security is tested
+on YSQL 15; YSQL 11 verifies the capability boundary and comment changes. Unit
+coverage checks PostgreSQL 8.3/11/15/18 generation, comment removal, reverse
+changes, and rejection of signature/body changes. The shared Routine model also
+preserves a dotted routine name when cloning an identity with no explicit input
+signature, avoiding an invented schema qualification during difference creation.
+
+See PostgreSQL's [ALTER FUNCTION](https://www.postgresql.org/docs/11/sql-alterfunction.html)
+and [ALTER PROCEDURE](https://www.postgresql.org/docs/11/sql-alterprocedure.html)
+references for the attribute operations. No external or production database is
+used by these tests.
+
+
+Final regression for this batch passed 2,731 ordinary tests across the shared
+core, retained dialects, command and Gradle plugin modules; one optional external
+database test was skipped. Both local YSQL compatibility tasks passed all 59
+cases each (118 real-engine passes), and the Yugabyte assembly succeeded. The
+initial focused YSQL 11 run exposed its unsupported ALTER PROCEDURE operation;
+the final version-specific factory and tests account for that boundary. No
+production/external databases were accessed, and no generated files were
+intentionally edited.

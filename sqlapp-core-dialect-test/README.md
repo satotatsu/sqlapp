@@ -256,3 +256,12 @@ The privilege batch's final regression passed 876 ordinary tests (one optional
 external case skipped) and all 57 compatibility tests per local YSQL engine
 (114 real-engine passes). There were no failures/errors; see the linked notes
 for grantor-context, visibility and automatic ACL replay limits.
+
+
+Routine difference generation now supports volatility, null-input behavior,
+security and comment changes without replacing functions. YSQL 15 also supports
+procedure security changes; YSQL 11 rejects those before SQL generation while
+supporting procedure comments. Local tests verify identity, ACL, body, settings,
+custom COST and dependent-view preservation through changes and reverse changes.
+Body/signature changes require an explicit migration. See the
+[routine attribute compatibility notes](../docs/compatibility.md#postgresql-and-ysql-routine-attribute-differences).

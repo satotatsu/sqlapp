@@ -94,6 +94,7 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		//
 		registerSqlFactory(Function.class, SqlType.CREATE, PostgresCreateFunctionFactory.class);
 		registerSqlFactory(Function.class, SqlType.DROP, PostgresDropFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.ALTER, PostgresAlterFunctionFactory.class);
 		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, PostgresGrantRoutinePrivilegeFactory.class);
 		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, PostgresRevokeRoutinePrivilegeFactory.class);
 		//

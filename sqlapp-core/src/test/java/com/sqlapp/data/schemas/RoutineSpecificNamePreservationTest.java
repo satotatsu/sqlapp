@@ -4,6 +4,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class RoutineSpecificNamePreservationTest {
+	@Test
+	void clonesDottedRoutineNameWithoutInventingSchemaQualification() throws Exception {
+		Function function = new Function("f.name").setSchemaName("original");
+		Function clone = function.clone();
+		assertEquals("original", clone.getSchemaName());
+		assertEquals("f.name", clone.getSpecificName());
+		assertFalse(function.diff(clone).getState().isChanged());
+		Procedure procedure = new Procedure("p.name").setSchemaName("original");
+		assertEquals("original", procedure.clone().getSchemaName());
+		assertEquals("p.name", procedure.clone().getSpecificName());
+	}
+
 	@Test void preservesSignatureTypeQualifiersAndQuotedRoutineNames() throws Exception {
 		Function function = new Function("f").setSchemaName("original");
 		String signature = "f(other.\"State.Type\"[])";

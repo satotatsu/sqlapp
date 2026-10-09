@@ -38,6 +38,8 @@ public class Yugabyte11 extends Postgres110 {
 			@Override
 			protected void initializeAllSqls() {
 				super.initializeAllSqls();
+				registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.ALTER,
+						com.sqlapp.data.db.dialect.yugabyte.sql.Yugabyte11AlterFunctionFactory.class);
 				registerSqlFactory(Table.class, SqlType.MERGE,
 						YugabyteMergeFactory.class);
 			}

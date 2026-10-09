@@ -11,6 +11,22 @@ import com.sqlapp.data.schemas.SchemaUtils;
 
 class PostgresFunctionArrayPreservationTest {
 	@Test
+	void preservesExplicitIdentityWhenArgumentsAreNotModeled() throws Exception {
+		for (int major : new int[] { 8, 11, 15, 18 }) {
+			var registry = DialectResolver.getInstance().getDialect("postgres", major, major == 8 ? 3 : 0, null)
+					.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			Function function = new Function("f.name").setSchemaName("Other Schema")
+					.setSpecificName("f.name(uuid[], \"Types\".\"State\"[])");
+			Function restored = SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+			assertEquals("DROP FUNCTION \"Other Schema\".\"f.name\"(uuid[], \"Types\".\"State\"[])",
+					registry.createSql(restored, SqlType.DROP).get(0).getSqlText());
+			restored.getArguments().add(new NamedArgument("value").setDataType(DataType.INT));
+			assertTrue(registry.createSql(restored, SqlType.DROP).get(0).getSqlText().endsWith("(INT)"));
+		}
+	}
+
+	@Test
 	void omitsCatalogUnnamedArgumentNamesAfterXmlRoundTrip() throws Exception {
 		Function function = new Function("unnamed").setLanguage("sql").setStatement("SELECT $1");
 		function.getReturning().setDataType(DataType.INT);

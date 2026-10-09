@@ -21,6 +21,16 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 
 class YugabyteDialectResolverTest {
+	@Test
+	void separatesProcedureAlterCapabilityByYsqlEngine() {
+		var procedure = new com.sqlapp.data.schemas.Function("p");
+		procedure.getSpecifics().put("ROUTINE_KIND", "PROCEDURE");
+		var target = procedure.clone().setSqlSecurity(com.sqlapp.data.schemas.SqlSecurity.Definer);
+		assertThrows(UnsupportedOperationException.class, () -> new Yugabyte11().createSqlFactoryRegistry().createSql(procedure.diff(target)));
+		assertTrue(new Yugabyte15().createSqlFactoryRegistry().createSql(procedure.diff(target)).get(0).getSqlText().startsWith("ALTER PROCEDURE "));
+		assertTrue(new Yugabyte11().createSqlFactoryRegistry().createSql(procedure.diff(procedure.clone().setRemarks("comment"))).get(0).getSqlText().startsWith("COMMENT ON PROCEDURE "));
+	}
+
 	private DatabaseMetaData metadata(String name, String version, int major) {
 		return (DatabaseMetaData) Proxy.newProxyInstance(DatabaseMetaData.class.getClassLoader(),
 				new Class<?>[] { DatabaseMetaData.class }, (proxy, method, args) -> switch (method.getName()) {

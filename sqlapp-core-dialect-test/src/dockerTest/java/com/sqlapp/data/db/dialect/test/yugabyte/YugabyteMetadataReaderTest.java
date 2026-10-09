@@ -1045,6 +1045,82 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void altersRoutineAttributesPreservingIdentityAclBodySettingsAndDependencies() throws Exception {
+		String schemaName = "ysql_alter_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"(value integer) RETURNS integer LANGUAGE SQL VOLATILE COST 123 SET search_path=pg_catalog AS $$ SELECT value + 1 $$");
+				statement.execute("CREATE PROCEDURE " + schemaName + ".\"p.name\"() LANGUAGE SQL SET search_path=pg_catalog AS $$ SELECT 1 $$");
+				statement.execute("COMMENT ON FUNCTION " + schemaName + ".\"f.name\"(integer) IS 'before'");
+				statement.execute("REVOKE EXECUTE ON FUNCTION " + schemaName + ".\"f.name\"(integer) FROM PUBLIC");
+				statement.execute("CREATE VIEW " + schemaName + ".dependent AS SELECT " + schemaName + ".\"f.name\"(1) AS value");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader();
+				reader.setSchemaName(schemaName);
+				var routines = reader.getAllFull(connection);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				for (var original : routines) {
+					assertNotNull(original.getDefinition());
+					String invariantQuery = "SELECT p.oid::text || ':' || p.proowner::text || ':' || coalesce(p.proacl::text,'') || ':' || p.prosrc || ':' || coalesce(p.proconfig::text,'') || ':' || p.procost::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='" + schemaName + "' AND p.proname='" + original.getName() + "'";
+					String before;
+					try (var result = statement.executeQuery(invariantQuery)) { assertTrue(result.next()); before = result.getString(1); }
+					boolean oldProcedure = original.getName().equals("p.name")
+							&& dialect instanceof com.sqlapp.data.db.dialect.yugabyte.Yugabyte11;
+					if (oldProcedure) assertThrows(UnsupportedOperationException.class, () -> registry.createSql(
+							original.diff(original.clone().setSqlSecurity(com.sqlapp.data.schemas.SqlSecurity.Definer))));
+					var target = original.clone().setSqlSecurity(com.sqlapp.data.schemas.SqlSecurity.Definer).setRemarks(null);
+					if (oldProcedure) target.setSqlSecurity(original.getSqlSecurity()).setRemarks("procedure comment");
+					if (original.getName().equals("f.name")) target.setDeterministic(null).setStable(true).setOnNullCall(com.sqlapp.data.schemas.OnNullCall.ReturnsNullOnNullInput);
+					for (var operation : registry.createSql(original.diff(target))) statement.execute(operation.getSqlText());
+					try (var result = statement.executeQuery(invariantQuery)) { assertTrue(result.next()); assertEquals(before, result.getString(1)); }
+					try (var result = statement.executeQuery("SELECT prosecdef, provolatile, proisstrict, obj_description(p.oid,'pg_proc') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='" + schemaName + "' AND p.proname='" + original.getName() + "'")) {
+						assertTrue(result.next()); assertEquals(!oldProcedure, result.getBoolean(1));
+						if (original.getName().equals("f.name")) { assertEquals("s", result.getString(2)); assertTrue(result.getBoolean(3)); assertNull(result.getString(4)); }
+					}
+					if (original.getName().equals("f.name")) {
+						try (var result = statement.executeQuery("SELECT " + schemaName + ".\"f.name\"(NULL::integer), value FROM " + schemaName + ".dependent")) {
+							assertTrue(result.next()); assertNull(result.getObject(1)); assertEquals(2, result.getInt(2));
+						}
+					} else statement.execute("CALL " + schemaName + ".\"p.name\"()");
+					for (var operation : registry.createSql(target.diff(original))) statement.execute(operation.getSqlText());
+					try (var result = statement.executeQuery(invariantQuery)) { assertTrue(result.next()); assertEquals(before, result.getString(1)); }
+				}
+				assertEquals(2, routines.size());
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
+	void dropsExplicitRoutineIdentityWithoutRemovingOtherOverloads() throws Exception {
+		String schemaName = "ysql_identity_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE TYPE " + schemaName + ".\"State.Type\" AS ENUM ('new')");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"() RETURNS integer LANGUAGE SQL AS $$ SELECT 1 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"(uuid[]) RETURNS integer LANGUAGE SQL AS $$ SELECT 2 $$");
+				statement.execute("CREATE FUNCTION " + schemaName + ".\"f.name\"(" + schemaName + ".\"State.Type\"[]) RETURNS integer LANGUAGE SQL AS $$ SELECT 3 $$");
+				var registry = DialectResolver.getInstance().getDialect(connection).createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (String types : new String[] { "uuid[]", schemaName + ".\"State.Type\"[]" }) {
+					var function = new com.sqlapp.data.schemas.Function("f.name").setSchemaName(schemaName)
+							.setSpecificName("f.name(" + types + ")");
+					com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(
+							new java.io.StringReader(function.asXml()));
+					for (var operation : registry.createSql(restored, SqlType.DROP)) statement.execute(operation.getSqlText());
+					try (var result = statement.executeQuery("SELECT " + schemaName + ".\"f.name\"()")) {
+						assertTrue(result.next()); assertEquals(1, result.getInt(1));
+					}
+				}
+				try (var result = statement.executeQuery("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='" + schemaName + "' AND p.proname='f.name'")) {
+					assertTrue(result.next()); assertEquals(1, result.getInt(1));
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void preservesRoutinePrivilegesAndExecutesGeneratedGrantRevoke() throws Exception {
 		String suffix = UUID.randomUUID().toString().replace("-", "");
 		String schemaName = "ysql_privilege_" + suffix;
