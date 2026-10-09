@@ -263,5 +263,13 @@ security and comment changes without replacing functions. YSQL 15 also supports
 procedure security changes; YSQL 11 rejects those before SQL generation while
 supporting procedure comments. Local tests verify identity, ACL, body, settings,
 custom COST and dependent-view preservation through changes and reverse changes.
-Body/signature changes require an explicit migration. See the
+Signature changes require an explicit migration; verified catalog-backed SQL/PLpgSQL body changes are supported. See the
 [routine attribute compatibility notes](../docs/compatibility.md#postgresql-and-ysql-routine-attribute-differences).
+
+
+Catalog-backed SQL/PLpgSQL routine statements can be replaced through model
+differences while preserving clauses such as local SET and custom COST. YSQL
+11/15 function tests cover XML round-trips, dependent views, re-reading/reversing
+bodies, and multiline PLpgSQL. YSQL 15 procedure bodies are covered; YSQL 11
+procedures require an explicit migration. See the
+[verified body replacement limits](../docs/compatibility.md#verified-postgresql-and-ysql-routine-body-replacement).

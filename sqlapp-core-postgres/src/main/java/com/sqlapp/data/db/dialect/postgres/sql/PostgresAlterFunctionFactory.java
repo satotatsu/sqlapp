@@ -17,12 +17,12 @@ import com.sqlapp.data.schemas.OnNullCall;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SqlSecurity;
 
-/** Changes routine attributes without replacing its body, identity or ACL. */
+/** Changes attributes or a verified catalog body without dropping the routine or its ACL. */
 public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, PostgresSqlBuilder> {
 	private static final Set<String> SUPPORTED = Set.of(
 			SchemaProperties.DETERMINISTIC.getLabel(), SchemaProperties.STABLE.getLabel(),
 			SchemaProperties.ON_NULL_CALL.getLabel(), SchemaProperties.SQL_SECURITY.getLabel(),
-			SchemaProperties.REMARKS.getLabel());
+			SchemaProperties.REMARKS.getLabel(), SchemaProperties.STATEMENT.getLabel());
 
 	protected boolean supportsProcedureSecurityAlter() { return true; }
 
@@ -37,6 +37,12 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 				|| !(difference.getTarget() instanceof Function target))
 			throw new IllegalArgumentException("Routine ALTER requires both original and target functions");
 		var changed = difference.getChangedProperties();
+		// A refreshed catalog template is supplemental, not an independently alterable attribute.
+		var originalSpecifics = new java.util.HashMap<>(original.getSpecifics());
+		var targetSpecifics = new java.util.HashMap<>(target.getSpecifics());
+		originalSpecifics.remove("POSTGRES_ROUTINE_DDL_BASE64");
+		targetSpecifics.remove("POSTGRES_ROUTINE_DDL_BASE64");
+		if (originalSpecifics.equals(targetSpecifics)) changed.remove(SchemaProperties.SPECIFICS.getLabel());
 		var unsupported = changed.keySet().stream().filter(key -> !SUPPORTED.contains(key)).toList();
 		if (!unsupported.isEmpty()) throw new UnsupportedOperationException(
 				"Routine ALTER does not support changes to " + unsupported
@@ -50,15 +56,22 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 			throw new UnsupportedOperationException("Procedures require PostgreSQL 11 or a compatible dialect");
 		if (original.getFunctionType() == FunctionType.Aggregate)
 			throw new UnsupportedOperationException("Aggregate ALTER requires an explicit migration");
-		boolean volatility = changed.containsKey(SchemaProperties.DETERMINISTIC.getLabel())
+		boolean body = changed.containsKey(SchemaProperties.STATEMENT.getLabel());
+		boolean volatility = body && !procedure || changed.containsKey(SchemaProperties.DETERMINISTIC.getLabel())
 				|| changed.containsKey(SchemaProperties.STABLE.getLabel());
-		boolean nullCall = changed.containsKey(SchemaProperties.ON_NULL_CALL.getLabel());
-		boolean security = changed.containsKey(SchemaProperties.SQL_SECURITY.getLabel());
+		boolean nullCall = body && !procedure || changed.containsKey(SchemaProperties.ON_NULL_CALL.getLabel());
+		boolean security = body || changed.containsKey(SchemaProperties.SQL_SECURITY.getLabel());
 		if (procedure && (volatility || nullCall))
 			throw new IllegalArgumentException("Procedures do not support volatility or null-input attributes");
 		if (procedure && security && !supportsProcedureSecurityAlter())
 			throw new UnsupportedOperationException("This dialect does not support ALTER PROCEDURE SECURITY; provide an explicit migration");
 		List<SqlOperation> result = new ArrayList<>();
+		if (body) {
+			PostgresSqlBuilder name = createSqlBuilder();
+			name.name(original, true);
+			String ddl = PostgresRoutineBodyReplacement.replace(original, target, name.toString().trim(), procedure);
+			addSql(result, createSqlBuilder()._add(ddl), SqlType.ALTER, target);
+		}
 		if (volatility || nullCall || security) {
 			PostgresSqlBuilder builder = createSqlBuilder();
 			builder.alter()._add(procedure ? " PROCEDURE " : " FUNCTION ")

@@ -1334,16 +1334,18 @@ null-input attributes are invalid. Older PostgreSQL dialects reject procedure
 changes. Aggregate changes require an explicit migration.
 
 ALTER uses the original routine's input identity and existing schema decoration
-option. It does not replay executable definitions, replace the body, drop the
-routine or restore ACLs. Definition-backed routines can therefore change these
+option. Attribute-only changes do not replay executable definitions, replace the
+body, drop the routine or restore ACLs. Body changes use the separate verified
+replacement path described below. Definition-backed routines can therefore change these
 attributes without resetting local SET options or external-language settings.
 Re-read metadata after applying changes to refresh a stored executable definition.
 
-Changes outside this supported set (including body, executable definition,
+Changes outside this attribute set (including executable definition,
 arguments, return type, name, schema, language, owner and vendor specifics) fail
 before any operations are returned. A direct ALTER request with only a target
 model also fails with guidance to supply original.diff(target). These cases
-require an explicit migration; this is not a general routine replacement planner.
+require an explicit migration. Body changes are supported only by the verified
+catalog replacement path below; this is not a general routine replacement planner.
 Existing CREATE/DROP behavior and Schema XML formats are unchanged. The newly
 registered ALTER path makes unsupported modifications explicit instead of leaving
 function changes without a PostgreSQL-specific implementation.
@@ -1371,3 +1373,74 @@ initial focused YSQL 11 run exposed its unsupported ALTER PROCEDURE operation;
 the final version-specific factory and tests account for that boundary. No
 production/external databases were accessed, and no generated files were
 intentionally edited.
+
+
+## Verified PostgreSQL and YSQL routine body replacement
+
+A metadata-read SQL or PLpgSQL routine can now change its statement through the
+existing difference entry point:
+
+```java
+Function target = original.clone().setStatement("SELECT value + 10");
+List<SqlOperation> operations = registry.createSql(original.diff(target));
+```
+
+PostgreSQL 8.4+ readers retain `pg_get_functiondef` as supplemental vendor metadata
+under `POSTGRES_ROUTINE_DDL_BASE64`. The value encodes UTF-8 DDL to preserve
+newlines through the existing Schema XML specifics representation. No XML format
+or configuration changes are required. Historical models can use a complete
+executable definition as a fallback. PostgreSQL 8.3 models without a suitable
+catalog definition require an explicit migration.
+
+The generator verifies a matching schema-qualified CREATE OR REPLACE identity,
+SQL/PLpgSQL language, and a dollar-quoted body matching the original statement.
+It permits only whitespace or a terminator after the closing body delimiter.
+Outer body whitespace is ignored for comparison; interior text remains exact.
+Only the body and its delimiter are replaced. A collision-free dollar tag is
+selected for the target body. COST, ROWS, PARALLEL, LEAKPROOF, local SET and other
+clauses present in the catalog DDL are retained rather than regenerated from an
+incomplete model. Target volatility, null-input and security attributes are then
+reapplied using ALTER, including when they are unchanged in the difference.
+This prevents a previous attribute-only model edit from being reset by the
+stored catalog template. Comment differences use the existing separate operation.
+
+The replacement DDL uses the catalog's explicit schema even when schema decoration
+is disabled, as executable definitions already do. The original model must be a
+fresh, unchanged snapshot of the intended target database; clone it to create the
+target. Re-read metadata before another body change or reversing a body change,
+since the original body must match the stored template. Execute the returned
+operations using the caller's existing transaction/error handling. Generation
+does not provide transaction guarantees or validate the target routine body.
+
+PostgreSQL 11+ and tested PostgreSQL 15-based YSQL procedures use this path as
+well. PostgreSQL 11-based YSQL procedures are rejected before returning SQL
+because this path requires the unsupported ALTER PROCEDURE attribute step.
+External-language bindings, SQL-standard parsed bodies without a dollar-quoted
+body, mismatched/stale templates and identity/signature/return/language changes
+require an explicit migration. Complete definition changes remain unsupported.
+A supplemental template-only difference generates no SQL; changes to other
+vendor specifics still fail. This is not an ACL, owner or COST migration planner.
+
+Disposable local YSQL 11 and 15 tests replace SQL function bodies after Schema
+XML round-trip, verify changed results through an existing dependent view,
+re-read and reverse the body, and assert OID/owner/ACL/local SET/custom COST
+preservation. They also execute multiline PLpgSQL body changes with dollar-tag
+collisions. YSQL 15 additionally replaces and invokes a procedure body; YSQL 11
+asserts the capability boundary. Older PostgreSQL real engines are unverified.
+
+The preservation approach follows PostgreSQL's
+[CREATE FUNCTION rules](https://www.postgresql.org/docs/11/sql-createfunction.html)
+and [CREATE PROCEDURE rules](https://www.postgresql.org/docs/15/sql-createprocedure.html):
+replacement preserves ownership and grants while other attributes follow the
+specified definition. The retained catalog DDL is therefore necessary to keep
+attributes that the shared routine model does not independently represent.
+
+
+Final body-replacement regression: PostgreSQL, Yugabyte, command and Gradle plugin
+unit suites passed 884 tests with one optional external database case skipped.
+Both local YSQL 11/15 compatibility tasks passed all 60 cases each (120 real-engine
+passes), with no failures/errors; Yugabyte assembly also succeeded. Initial
+focused failures exposed the statement/definition List representation and XML
+specifics newline normalization; the final implementation and XML regression
+coverage account for both. No external/production databases were accessed, and
+no generated files were intentionally edited.

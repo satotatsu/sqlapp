@@ -47,6 +47,9 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 	@Override
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = super.createFunction(rs);
+		String sourceDdl = rs.getString("functiondef");
+		if (sourceDdl != null) obj.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64",
+				java.util.Base64.getEncoder().encodeToString(sourceDdl.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 		if (this.getReaderOptions().isReadDefinition()) {
 			obj.setDefinition(rs.getString("functiondef"));
 		}

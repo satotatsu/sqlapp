@@ -1045,6 +1045,53 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void replacesRoutineBodiesPreservingAclSettingsCostAndDependentViews() throws Exception {
+		String schemaName = "ysql_body_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				statement.execute("CREATE FUNCTION " + schemaName + ".f(value integer) RETURNS integer LANGUAGE SQL STABLE COST 123 SET search_path=pg_catalog AS $$ SELECT value + 1 $$");
+				statement.execute("REVOKE EXECUTE ON FUNCTION " + schemaName + ".f(integer) FROM PUBLIC");
+				statement.execute("CREATE VIEW " + schemaName + ".dependent AS SELECT " + schemaName + ".f(1) AS value");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName); reader.setObjectName("f");
+				var original = reader.getAllFull(connection).get(0);
+				com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+				var target = restored.clone().setStatement(" SELECT value + 10 /* $sqlapp_body$ */ ");
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				String invariant = "SELECT p.oid::text || ':' || p.proowner::text || ':' || coalesce(p.proacl::text,'') || ':' || coalesce(p.proconfig::text,'') || ':' || p.procost::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='" + schemaName + "' AND p.proname='f'";
+				String before;
+				try (var result = statement.executeQuery(invariant)) { assertTrue(result.next()); before = result.getString(1); }
+				for (var operation : registry.createSql(restored.diff(target))) statement.execute(operation.getSqlText());
+				try (var result = statement.executeQuery(invariant)) { assertTrue(result.next()); assertEquals(before, result.getString(1)); }
+				try (var result = statement.executeQuery("SELECT value FROM " + schemaName + ".dependent")) { assertTrue(result.next()); assertEquals(11, result.getInt(1)); }
+				var updated = reader.getAllFull(connection).get(0);
+				var reversed = updated.clone().setStatement(original.getStatement());
+				for (var operation : registry.createSql(updated.diff(reversed))) statement.execute(operation.getSqlText());
+				try (var result = statement.executeQuery(invariant)) { assertTrue(result.next()); assertEquals(before, result.getString(1)); }
+				try (var result = statement.executeQuery("SELECT value FROM " + schemaName + ".dependent")) { assertTrue(result.next()); assertEquals(2, result.getInt(1)); }
+				statement.execute("CREATE FUNCTION " + schemaName + ".g() RETURNS integer LANGUAGE plpgsql AS $$ BEGIN RETURN 1; END $$");
+				reader.setObjectName("g");
+				var plpgsql = reader.getAllFull(connection).get(0);
+				for (var operation : registry.createSql(plpgsql.diff(plpgsql.clone().setStatement("BEGIN\n RETURN 42; -- $sqlapp_body$\nEND")))) statement.execute(operation.getSqlText());
+				try (var result = statement.executeQuery("SELECT " + schemaName + ".g()")) { assertTrue(result.next()); assertEquals(42, result.getInt(1)); }
+				statement.execute("CREATE TABLE " + schemaName + ".effects(value integer)");
+				statement.execute("CREATE PROCEDURE " + schemaName + ".p() LANGUAGE SQL AS $$ INSERT INTO " + schemaName + ".effects VALUES (1) $$");
+				reader.setObjectName("p"); var procedure = reader.getAllFull(connection).get(0);
+				var changedProcedure = procedure.clone().setStatement("INSERT INTO " + schemaName + ".effects VALUES (2)");
+				if (dialect instanceof com.sqlapp.data.db.dialect.yugabyte.Yugabyte11) {
+					assertThrows(UnsupportedOperationException.class, () -> registry.createSql(procedure.diff(changedProcedure)));
+				} else {
+					for (var operation : registry.createSql(procedure.diff(changedProcedure))) statement.execute(operation.getSqlText());
+					statement.execute("CALL " + schemaName + ".p()");
+					try (var result = statement.executeQuery("SELECT value FROM " + schemaName + ".effects")) { assertTrue(result.next()); assertEquals(2, result.getInt(1)); }
+				}
+
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void altersRoutineAttributesPreservingIdentityAclBodySettingsAndDependencies() throws Exception {
 		String schemaName = "ysql_alter_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {
