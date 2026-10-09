@@ -1045,6 +1045,66 @@ class YugabyteMetadataReaderTest {
 	}
 
 	@Test
+	void migratesBetweenIndependentRoutineSnapshotsAndRejectsMixedCostChanges() throws Exception {
+		String schemaName = "ysql_snapshot_" + UUID.randomUUID().toString().replace("-", "");
+		try (var connection = connect(); var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA " + schemaName);
+			try {
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader(); reader.setSchemaName(schemaName);
+				var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+				statement.execute("CREATE TABLE " + schemaName + ".effects(value integer)");
+				for (String name : new String[] { "f", "g", "p" }) {
+					boolean procedure = name.equals("p");
+					String beforeBody = procedure ? "INSERT INTO " + schemaName + ".effects VALUES (1)" : name.equals("g") ? "BEGIN RETURN 1; END" : "SELECT 1";
+					String afterBody = procedure ? "INSERT INTO " + schemaName + ".effects VALUES (2)" : name.equals("g") ? "BEGIN RETURN 2; END" : "SELECT 2";
+					String prefix = "CREATE OR REPLACE " + (procedure ? "PROCEDURE " : "FUNCTION ") + schemaName + "." + name + "() "
+							+ (procedure ? "" : "RETURNS integer ") + "LANGUAGE " + (name.equals("g") ? "plpgsql " : "sql ")
+							+ (name.equals("f") ? "COST 123 SET search_path=pg_catalog " : "");
+					statement.execute(prefix + "AS $before$" + beforeBody + "$before$");
+					statement.execute("REVOKE EXECUTE ON " + (procedure ? "PROCEDURE " : "FUNCTION ") + schemaName + "." + name + "() FROM PUBLIC");
+					reader.setObjectName(name);
+					com.sqlapp.data.schemas.Function original = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(reader.getAllFull(connection).get(0).asXml()));
+					statement.execute(prefix + "AS $after$" + afterBody + "$after$");
+					com.sqlapp.data.schemas.Function target = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(reader.getAllFull(connection).get(0).asXml()));
+					String invariantQuery = "SELECT p.oid::text || ':' || p.proowner::text || ':' || coalesce(p.proacl::text,'') || ':' || coalesce(p.proconfig::text,'') || ':' || p.procost::text FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='" + schemaName + "' AND p.proname='" + name + "'";
+					String invariant;
+					try (var result = statement.executeQuery(invariantQuery)) { assertTrue(result.next()); invariant = result.getString(1); }
+					statement.execute(prefix + "AS $before$" + beforeBody + "$before$");
+					if (procedure && dialect instanceof com.sqlapp.data.db.dialect.yugabyte.Yugabyte11) {
+						assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target)));
+						continue;
+					}
+					for (var operation : registry.createSql(original.diff(target))) statement.execute(operation.getSqlText());
+					if (procedure) {
+						statement.execute("CALL " + schemaName + ".p()");
+						try (var result = statement.executeQuery("SELECT value FROM " + schemaName + ".effects")) { assertTrue(result.next()); assertEquals(2, result.getInt(1)); }
+					} else {
+						try (var result = statement.executeQuery("SELECT " + schemaName + "." + name + "()")) { assertTrue(result.next()); assertEquals(2, result.getInt(1)); }
+					}
+					for (var operation : registry.createSql(target.diff(original))) statement.execute(operation.getSqlText());
+					try (var result = statement.executeQuery(invariantQuery)) { assertTrue(result.next()); assertEquals(invariant, result.getString(1)); }
+					if (procedure) {
+						statement.execute("TRUNCATE TABLE " + schemaName + ".effects");
+						statement.execute("CALL " + schemaName + ".p()");
+						try (var result = statement.executeQuery("SELECT value FROM " + schemaName + ".effects")) { assertTrue(result.next()); assertEquals(1, result.getInt(1)); }
+					} else {
+						try (var result = statement.executeQuery("SELECT " + schemaName + "." + name + "()")) { assertTrue(result.next()); assertEquals(1, result.getInt(1)); }
+					}
+					if (name.equals("f")) {
+						statement.execute(prefix.replace("COST 123", "COST 999") + "AS $$" + afterBody + "$$");
+						var mixed = reader.getAllFull(connection).get(0);
+						assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(mixed)));
+						statement.execute(prefix.replace("search_path=pg_catalog", "search_path=public") + "AS $$" + afterBody + "$$");
+						var mixedSettings = reader.getAllFull(connection).get(0);
+						assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(mixedSettings)));
+					}
+				}
+			} finally { statement.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+		}
+	}
+
+	@Test
 	void replacesRoutineBodiesPreservingAclSettingsCostAndDependentViews() throws Exception {
 		String schemaName = "ysql_body_" + UUID.randomUUID().toString().replace("-", "");
 		try (var connection = connect(); var statement = connection.createStatement()) {

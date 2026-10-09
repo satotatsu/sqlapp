@@ -43,6 +43,18 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 		originalSpecifics.remove("POSTGRES_ROUTINE_DDL_BASE64");
 		targetSpecifics.remove("POSTGRES_ROUTINE_DDL_BASE64");
 		if (originalSpecifics.equals(targetSpecifics)) changed.remove(SchemaProperties.SPECIFICS.getLabel());
+		boolean body = changed.containsKey(SchemaProperties.STATEMENT.getLabel());
+		boolean definition = changed.containsKey(SchemaProperties.DEFINITION.getLabel());
+		boolean refreshedTemplate = !java.util.Objects.equals(
+				original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64"),
+				target.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64"));
+		if (body && (definition || refreshedTemplate)) {
+			PostgresSqlBuilder name = createSqlBuilder(); name.name(original, true);
+			if (!PostgresRoutineBodyReplacement.sameHeader(original, target, name.toString().trim(),
+					"PROCEDURE".equals(original.getSpecifics().get("ROUTINE_KIND"))))
+				throw new UnsupportedOperationException("Routine body snapshots differ outside their body; migrate definition attributes separately");
+			changed.remove(SchemaProperties.DEFINITION.getLabel());
+		}
 		var unsupported = changed.keySet().stream().filter(key -> !SUPPORTED.contains(key)).toList();
 		if (!unsupported.isEmpty()) throw new UnsupportedOperationException(
 				"Routine ALTER does not support changes to " + unsupported
@@ -56,7 +68,6 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 			throw new UnsupportedOperationException("Procedures require PostgreSQL 11 or a compatible dialect");
 		if (original.getFunctionType() == FunctionType.Aggregate)
 			throw new UnsupportedOperationException("Aggregate ALTER requires an explicit migration");
-		boolean body = changed.containsKey(SchemaProperties.STATEMENT.getLabel());
 		boolean volatility = body && !procedure || changed.containsKey(SchemaProperties.DETERMINISTIC.getLabel())
 				|| changed.containsKey(SchemaProperties.STABLE.getLabel());
 		boolean nullCall = body && !procedure || changed.containsKey(SchemaProperties.ON_NULL_CALL.getLabel());

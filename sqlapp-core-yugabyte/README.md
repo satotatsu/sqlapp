@@ -268,3 +268,11 @@ differences while preserving clauses such as local SET and custom COST. YSQL
 bodies, and multiline PLpgSQL. YSQL 15 procedure bodies are covered; YSQL 11
 procedures require an explicit migration. See the
 [verified body replacement limits](../docs/compatibility.md#verified-postgresql-and-ysql-routine-body-replacement).
+
+
+Verified body differences also accept independently read/XML-restored before and
+after routine snapshots, including definition-backed functions. Matching headers
+are required; mixed COST/SET or signature changes are rejected. Forward/reverse
+SQL and PLpgSQL function results are tested on both YSQL engines, with procedure
+results on YSQL 15. See the
+[independent snapshot limits](../docs/compatibility.md#independent-routine-snapshots-for-body-differences).

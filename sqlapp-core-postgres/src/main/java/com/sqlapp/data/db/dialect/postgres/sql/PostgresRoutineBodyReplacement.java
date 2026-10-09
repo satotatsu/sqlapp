@@ -38,6 +38,23 @@ final class PostgresRoutineBodyReplacement {
 		throw unsupported();
 	}
 
+	static boolean sameHeader(Function original, Function target, String qualifiedName, boolean procedure) {
+		// Both catalog snapshots must describe their own modeled body, not a stale clone template.
+		Function marker = new Function().setStatement("sqlapp_body_comparison");
+		String before = replace(original, marker, qualifiedName, procedure);
+		String after = replace(target, marker, qualifiedName, procedure);
+		if (!target.getDefinition().isEmpty()) {
+			String encoded = target.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64");
+			if (encoded != null) {
+				String ddl;
+				try { ddl = new String(java.util.Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8); }
+				catch (IllegalArgumentException invalid) { throw unsupported(); }
+				if (!ddl.strip().equals(String.join("\n", target.getDefinition()).strip())) return false;
+			}
+		}
+		return before.strip().equals(after.strip());
+	}
+
 	private static UnsupportedOperationException unsupported() {
 		return new UnsupportedOperationException("Routine body replacement requires a matching catalog CREATE OR REPLACE DDL, SQL/PLpgSQL language and original statement; re-read metadata or provide an explicit migration");
 	}

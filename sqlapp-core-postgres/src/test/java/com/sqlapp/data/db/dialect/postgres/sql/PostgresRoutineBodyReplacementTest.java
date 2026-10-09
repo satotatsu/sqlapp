@@ -33,6 +33,32 @@ class PostgresRoutineBodyReplacementTest {
 	}
 
 	@Test
+	void comparesFreshDefinitionSnapshotsAndRejectsUnmodeledHeaderChanges() {
+		Function original = original();
+		String before = new String(java.util.Base64.getDecoder().decode(original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64")), java.nio.charset.StandardCharsets.UTF_8);
+		original.setDefinition(before);
+		String after = before.replace("SELECT 1", "SELECT 2").replace("$function$", "$different$");
+		Function target = original.clone().setStatement(" SELECT 2 ").setDefinition(after);
+		target.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode(after));
+		var registry = DialectResolver.getInstance().getDialect("postgres", 15, 0, null).createSqlFactoryRegistry();
+		assertEquals(2, registry.createSql(original.diff(target)).size());
+		assertEquals(2, registry.createSql(target.diff(original)).size());
+		Function cost = target.clone().setDefinition(after.replace("COST 123", "COST 999"));
+		cost.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode(after.replace("COST 123", "COST 999")));
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(cost)));
+		Function settings = target.clone().setDefinition(after.replace("pg_catalog", "public"));
+		settings.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode(after.replace("pg_catalog", "public")));
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(settings)));
+		Function inconsistent = target.clone().setDefinition(before);
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(inconsistent)));
+		Function noDefinition = target.clone().setDefinition((String) null);
+		Function originalNoDefinition = original.clone().setDefinition((String) null);
+		assertEquals(2, registry.createSql(originalNoDefinition.diff(noDefinition)).size());
+		cost.setDefinition((String) null);
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(originalNoDefinition.diff(cost)));
+	}
+
+	@Test
 	void ignoresOnlySupplementalTemplateDifferencesAndRejectsOtherVendorChanges() {
 		Function original = original(); Function target = original.clone();
 		target.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode("refreshed"));

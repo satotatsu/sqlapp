@@ -1417,7 +1417,9 @@ well. PostgreSQL 11-based YSQL procedures are rejected before returning SQL
 because this path requires the unsupported ALTER PROCEDURE attribute step.
 External-language bindings, SQL-standard parsed bodies without a dollar-quoted
 body, mismatched/stale templates and identity/signature/return/language changes
-require an explicit migration. Complete definition changes remain unsupported.
+require an explicit migration. Independent catalog snapshots may include definition changes only when verified
+to describe the same header and the modeled body change, as described below.
+Other complete definition changes remain unsupported.
 A supplemental template-only difference generates no SQL; changes to other
 vendor specifics still fail. This is not an ACL, owner or COST migration planner.
 
@@ -1444,3 +1446,55 @@ focused failures exposed the statement/definition List representation and XML
 specifics newline normalization; the final implementation and XML regression
 coverage account for both. No external/production databases were accessed, and
 no generated files were intentionally edited.
+
+
+## Independent routine snapshots for body differences
+
+The body-difference path now accepts independently read original and target
+routine models, including Schema XML snapshots. When a body change also changes
+the executable definition or supplemental catalog DDL, both snapshots must
+verify their own modeled body against their own catalog definition. Their
+headers are compared after replacing the body and its dollar tag with a common
+marker. A target executable definition must also agree with its supplemental
+catalog DDL when both are present.
+
+If these checks succeed, the definition change is treated as part of the body
+change and the existing replacement generator retains the original header.
+This supports SQL and PLpgSQL functions with or without a separately stored
+executable definition, and supported PostgreSQL/YSQL 15 procedures. A known
+pair of verified before/after snapshots can generate both forward and reverse
+body operations without re-reading between those operations. The actual target
+must still match the original snapshot for the chosen direction; there is no
+live drift detection or execution transaction guarantee.
+
+Header comparison is deliberately exact after body/tag replacement and outer
+whitespace normalization. COST, SET, signature, language and other header
+changes mixed into the body change fail before any SQL is returned. Even modeled
+attribute changes that change the catalog header should be migrated separately
+when using independent snapshots. This path does not interpret arbitrary CREATE
+DDL or merge unrelated definition edits. Existing clone-and-edit body changes
+continue to use their unchanged original catalog template.
+
+Local YSQL 11/15 tests independently read and XML-round-trip before and after
+SQL/PLpgSQL function states, generate forward and reverse SQL, invoke the
+resulting routines, and verify OID/owner/ACL/SET/COST preservation. YSQL 15 also
+invokes a procedure after both directions; YSQL 11 asserts its procedure boundary.
+Actual catalog snapshots mixing a body change with COST or search_path changes
+are rejected. Unit tests additionally reject a target definition inconsistent
+with its supplemental DDL and cover bodies without a separate definition.
+Public APIs, configuration and Schema XML formats are unchanged; implementation
+changes are confined to the PostgreSQL dialect module and shared local YSQL tests.
+
+
+Final snapshot-difference regression passed 885 ordinary tests (one optional
+external database case skipped) and all 61 compatibility cases per local YSQL
+engine (122 real-engine passes), with zero failures/errors. Yugabyte assembly
+also succeeded. The initial real-engine failure was a test fixture replacing a
+digit in a UUID schema name, corrected before final regression. No external or
+production database was accessed, and no generated files were intentionally edited.
+
+Executed final command:
+
+```powershell
+.\gradlew.bat :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
+```
