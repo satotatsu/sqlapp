@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.sqlapp.data.db.dialect.symfoware.resolver.DialectResolverTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-08T02:01:18.116Z" hostname="DESKTOP-KFUI26G" time="0.304">
-  <properties/>
-  <testcase name="testServiceLoader()" classname="com.sqlapp.data.db.dialect.symfoware.resolver.DialectResolverTest" time="0.01"/>
-  <testcase name="testGetDialect()" classname="com.sqlapp.data.db.dialect.symfoware.resolver.DialectResolverTest" time="0.292"/>
-  <system-out><![CDATA[Symfoware
-]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

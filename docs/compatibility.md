@@ -2002,3 +2002,31 @@ integration-test scaffolding, settings/publication aggregation and guides.
 Existing public APIs and configuration formats are preserved. The remaining
 cloud/columnar/vector/snapshot-execution/performance/failover limitations are
 retained in the AlloyDB guide.
+
+
+### AlloyDB Omni SCD2 follow-up (2026-10-10)
+
+The inherited set-based snapshot executor is now exercised against official
+Omni 15.17.0, 16.8.0 and 17.9.0, plus PostgreSQL 17.9 as the control. The new
+shared case creates its history table through the Schema model and CREATE
+factory, and verifies inserts, changed/missing-row expiration, unchanged rows,
+history timestamps and current flags. Caller rollback, a commit-time guard
+failure and duplicate source rejection are followed by successful retries.
+No runtime implementation or public API changes were needed.
+
+Executed with Java 21 and the repository wrapper:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*snapshotHistoryAndFailureRespectTransactionBoundaries' --console=plain
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-dialect-test:alloydbCompatibilityTest --console=plain
+```
+
+The final aggregate was BUILD SUCCESSFUL: all 9 cases on each Omni image
+(27 total), all 9 PostgreSQL control cases, and the 7 AlloyDB module tests.
+An initial attempt could not locate the stopped local Docker daemon; Rancher
+Desktop was started and the tests rerun. An initial fixture with unspecified
+LONGVARCHAR length generated invalid varchar(0); using explicit VARCHAR(100)
+keeps this snapshot test independent of that separate PostgreSQL generator
+follow-up. Managed AlloyDB/external database tests were not executed.
+Columnar/ScaNN behavior and other vendor-specific scope remain deferred in the
+[AlloyDB guide](../sqlapp-core-alloydb/README.md).

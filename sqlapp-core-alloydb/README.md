@@ -68,8 +68,10 @@ UPSERT and rollback, COPY failure rollback, and atomic checkpoint failure /
 resume. Omni-specific tests exercise identification with columnar disabled
 and a non-superuser login. Ordinary PostgreSQL controls guard against false
 identification, including an unregistered custom setting placeholder.
-Snapshot provider registration is unit-tested; snapshot execution is not
-qualified by this suite.
+Snapshot execution tests also cover SCD2 inserts, changed and missing-row
+expiration, unchanged rows, historical timestamps/current flags, caller rollback,
+commit-time guard failure and duplicate-source rejection followed by retry.
+The history table is created through the shared Schema model and SQL factory.
 
 Columnar population/cache state, automatic columnarization, ScaNN/vector
 extensions, Google ML integrations, physical placement, cloud IAM/proxies,
@@ -137,3 +139,14 @@ resource is created, changed or deleted by the test task.
 - [Official container installation](https://docs.cloud.google.com/alloydb/omni/containers/17.9.0/docs/quickstart)
 - [AlloyDB columnar flags](https://docs.cloud.google.com/alloydb/docs/reference/columnar-engine-flags)
 - [Container architecture and managed-service differences](https://docs.cloud.google.com/alloydb/omni/containers/current/docs/overview)
+
+## Follow-up qualification
+
+The SCD2 follow-up passed all 9 cases per Omni image (27 total), all 9
+PostgreSQL control cases and 7 module tests on 2026-10-10.
+
+The local SCD2 test uses an explicit `VARCHAR(100)` model column. An initial
+fixture using `LONGVARCHAR` without a length produced `varchar(0)` and was
+rejected by Omni 16. This PostgreSQL SQL-generation issue remains a separate
+follow-up; this qualification does not establish unbounded string generation.
+Columnar and ScaNN metadata/DDL remain deferred as described above.

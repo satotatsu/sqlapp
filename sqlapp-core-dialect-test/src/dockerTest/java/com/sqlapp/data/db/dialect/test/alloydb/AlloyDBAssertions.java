@@ -315,4 +315,84 @@ abstract class AlloyDBAssertions {
 		}
 	}
 
+
+	@Test
+	void snapshotHistoryAndFailureRespectTransactionBoundaries() throws Exception {
+		try (var connection = connect()) {
+			String schema = schema();
+			try {
+				var history = new Table("History").setSchemaName(schema);
+				history.getColumns().add("Id", c -> c.setDataType(DataType.INT));
+				history.getColumns().add("value", c -> c.setDataType(DataType.VARCHAR).setLength(100));
+				history.getColumns().add("valid_from", c -> c.setDataType(DataType.TIMESTAMP));
+				history.getColumns().add("valid_to", c -> c.setDataType(DataType.TIMESTAMP));
+				history.getColumns().add("current", c -> c.setDataType(DataType.BOOLEAN));
+				var dialect = dialect(connection);
+				try (var statement = connection.createStatement()) {
+					statement.execute("CREATE SCHEMA " + schema);
+					com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+							.getSqlFactory(history, SqlType.CREATE);
+					for (var sql : factory.createSql(history)) statement.execute(sql.getSqlText());
+				}
+				var definition = new com.sqlapp.data.schemas.migration.MigrationSnapshotDefinition(
+						"history", schema + ".History", java.util.List.of("Id"), java.util.List.of("value"),
+						"valid_from", "valid_to", "current", true);
+				var executor = SetBasedMigrationSnapshotResolver.resolve(dialect);
+				var first = java.time.Instant.parse("2026-01-01T00:00:00Z");
+				var second = first.plusSeconds(3600);
+				var original = java.util.List.of(java.util.Map.<String, Object>of("Id", 1, "value", "before"),
+						java.util.Map.<String, Object>of("Id", 2, "value", "missing"));
+				assertEquals(new MigrationSnapshotExecutionResult(0, 2, 0),
+						executor.execute(connection, history, definition, first, original, 1));
+				assertTrue(connection.getAutoCommit());
+				var changed = java.util.List.of(java.util.Map.<String, Object>of("Id", 1, "value", "after"),
+						java.util.Map.<String, Object>of("Id", 3, "value", "new"));
+				connection.setAutoCommit(false);
+				assertEquals(new MigrationSnapshotExecutionResult(2, 2, 0),
+						executor.execute(connection, history, definition, second, changed, 1));
+				assertFalse(connection.getAutoCommit());
+				connection.rollback();
+				connection.setAutoCommit(true);
+				assertEquals(new MigrationSnapshotExecutionResult(0, 0, 2),
+						executor.execute(connection, history, definition, second, original, 2));
+				assertThrows(java.sql.SQLException.class, () -> executor.execute(connection, history, definition,
+						second, changed, 1, () -> { throw new java.sql.SQLException("guard rejected"); }));
+				assertTrue(connection.getAutoCommit());
+				assertEquals(new MigrationSnapshotExecutionResult(0, 0, 2),
+						executor.execute(connection, history, definition, second, original, 2));
+				assertThrows(java.sql.SQLException.class, () -> executor.execute(connection, history, definition,
+						second, java.util.List.of(changed.get(0), changed.get(0)), 1));
+				assertEquals(new MigrationSnapshotExecutionResult(2, 2, 0),
+						executor.execute(connection, history, definition, second, changed, 1));
+				try (var statement = connection.createStatement(); var rows = statement.executeQuery(
+						"SELECT \"Id\", value, valid_from, valid_to, \"current\" FROM " + schema
+						+ ".\"History\" ORDER BY \"Id\", valid_from")) {
+					assertTrue(rows.next());
+					assertEquals("before", rows.getString("value"));
+					assertEquals(first, rows.getTimestamp("valid_from").toInstant());
+					assertEquals(second, rows.getTimestamp("valid_to").toInstant());
+					assertFalse(rows.getBoolean("current"));
+					assertTrue(rows.next());
+					assertEquals("after", rows.getString("value"));
+					assertNull(rows.getTimestamp("valid_to"));
+					assertTrue(rows.getBoolean("current"));
+					assertTrue(rows.next());
+					assertEquals(2, rows.getInt("Id"));
+					assertEquals(second, rows.getTimestamp("valid_to").toInstant());
+					assertFalse(rows.getBoolean("current"));
+					assertTrue(rows.next());
+					assertEquals(3, rows.getInt("Id"));
+					assertTrue(rows.getBoolean("current"));
+					assertFalse(rows.next());
+				}
+			} finally {
+				if (!connection.getAutoCommit()) {
+					connection.rollback();
+					connection.setAutoCommit(true);
+				}
+				drop(connection, schema);
+			}
+		}
+	}
+
 }
