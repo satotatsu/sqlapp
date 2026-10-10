@@ -36,7 +36,7 @@ include(
 , 'sqlapp-core-mariadb'
 , 'sqlapp-core-oracle'
 , 'sqlapp-core-postgres'
-, 'sqlapp-core-aurora'
+, 'sqlapp-core-aurora-postgres'
 , 'sqlapp-core-alloydb'
 , 'sqlapp-core-yugabyte'
 , 'sqlapp-core-cockroach'

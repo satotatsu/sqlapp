@@ -192,7 +192,7 @@ recommended.
 | Oracle Database | `sqlapp-core-oracle` | None |
 | Apache Phoenix | `sqlapp-core-phoenix` | None |
 | AlloyDB / AlloyDB Omni | `sqlapp-core-alloydb` | Reuses `sqlapp-core-postgres`; no additional driver; [managed-service verification pending](../sqlapp-core-alloydb/README.md) |
-| Aurora PostgreSQL (experimental) | `sqlapp-core-aurora` | Reuses `sqlapp-core-postgres`; no additional driver; [Aurora execution unverified](../sqlapp-core-aurora/README.md) |
+| Aurora PostgreSQL (experimental) | `sqlapp-core-aurora-postgres` | Reuses `sqlapp-core-postgres`; no additional driver; [Aurora execution unverified](../sqlapp-core-aurora-postgres/README.md) |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | Reuses `sqlapp-core-postgres`; no additional driver |
 | CockroachDB | `sqlapp-core-cockroach` | Reuses `sqlapp-core-postgres`; no additional driver |
 | PostgreSQL | `sqlapp-core-postgres` | PostgreSQL JDBC driver |

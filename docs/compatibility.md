@@ -54,7 +54,7 @@ release checklist must record which integration suites were actually run.
 | Oracle Database | `sqlapp-core-oracle` | 10g, 11g, 11g R2, 12c, 18c, 19c, 21c, 23ai, 26ai | Oracle Database Free 23ai image; optional pinned 26ai image | Oracle 26ai reports product version `23.26.x`; older branches are not all container-tested. Dialect support does not imply that the current test JDBC driver is certified for every server version; verify the exact driver/JDK/database combination for legacy sources. |
 | Apache Phoenix | `sqlapp-core-phoenix` | Generic resolver plus a 5.3.1 feature boundary | Module SQL, resolver, and sequence-block tests | Phoenix 5.3.1 multi-row UPSERT still requires verification against a real cluster. |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | PostgreSQL engine 11 and 15 baselines | Module tests and local containers 2024.2.11.0-b36 / 2026.1.2.0-b137 | Supported relational compatibility scope: schema recreation, COPY/upsert, checkpoint/resume and conflict handling verified on both baselines. Physical/distributed extensions and multi-node failover excluded; see [scope and limits](../sqlapp-core-yugabyte/README.md). |
-| Aurora PostgreSQL | `sqlapp-core-aurora` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora/README.md). |
+| Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
 | PostgreSQL | `sqlapp-core-postgres` | Explicit branches from 8.2 through 18 | PostgreSQL 14 and 18.4 test images | Historical branches are preserved, but current containers do not rerun every major release. |
 | SAP HANA | `sqlapp-core-saphana` | Platform and HANA Cloud split | SAP HANA Express 2.0 (`2.00.088`) image | HANA Cloud vector-index and fuzzy-search catalog behavior requires a HANA Cloud tenant. |
 | Google Cloud Spanner | `sqlapp-core-spanner` | Generic Cloud Spanner resolver | Cloud Spanner emulator | Search/vector index, locality/storage, and some service-only metadata require a real service environment. |
@@ -105,7 +105,7 @@ are not a declaration that applications must use exactly these versions.
 | MariaDB | `org.mariadb.jdbc:mariadb-java-client:3.5.9` |
 | MySQL | `com.mysql:mysql-connector-j:9.7.0` |
 | Oracle | `com.oracle.database.jdbc:ojdbc11:23.26.2.0.0` |
-| Aurora PostgreSQL | `sqlapp-core-aurora` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora/README.md). |
+| Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
 | PostgreSQL | `org.postgresql:postgresql:42.7.11` |
 | SAP HANA | `com.sap.cloud.db.jdbc:ngdbc:2.29.7` |
 | Cloud Spanner | `com.google.cloud:google-cloud-spanner-jdbc:2.41.0` |
@@ -1905,14 +1905,14 @@ The local matrix checks upstream PostgreSQL SQL and JDBC behavior only, not
 Aurora. The optional `auroraExternalTest` is excluded from all default/Docker
 and matrix tasks, requires explicit destructive-test opt-in, and was not run.
 No external database or AWS resource was accessed. See the
-[Aurora guide](../sqlapp-core-aurora/README.md) for remaining qualification work.
+[Aurora guide](../sqlapp-core-aurora-postgres/README.md) for remaining qualification work.
 
 Executed Aurora-dialect validation (2026-10-10, Java 21 / repository wrapper):
 
 ```shell
-./gradlew :sqlapp-core-aurora:test --tests '*AuroraDialectTest' --console=plain
+./gradlew :sqlapp-core-aurora-postgres:test --tests '*AuroraDialectTest' --console=plain
 ./gradlew :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest --continue --console=plain
-./gradlew :sqlapp-core-aurora:test :sqlapp-core-aurora:assemble :sqlapp-core-postgres:test --continue --console=plain
+./gradlew :sqlapp-core-aurora-postgres:test :sqlapp-core-aurora-postgres:assemble :sqlapp-core-postgres:test --continue --console=plain
 ./gradlew :sqlapp-core-postgres:test --rerun :sqlapp-core-dialect-test:compileDockerTestJava --console=plain
 ```
 
@@ -1927,7 +1927,7 @@ compiled after adding validation of Aurora identity before any schema writes.
 No external Aurora execution is claimed. New Javadoc reports missing-comment
 warnings; existing Gradle deprecation warnings remain.
 
-The change adds `sqlapp-core-aurora`, integration test scaffolding, settings /
+The change adds `sqlapp-core-aurora-postgres`, integration test scaffolding, settings /
 publication aggregation and documentation. Existing shared production code,
 JDBC dependency versions and configuration formats remain unchanged. Local
 PostgreSQL test containers were disposable. Tracked Cockroach build output
@@ -1937,7 +1937,7 @@ prior Cockroach and PostgreSQL source changes were preserved.
 Local POM and Gradle module metadata generation also passed:
 
 ```shell
-./gradlew :sqlapp-core-aurora:generatePomFileForMavenJavaPublication :sqlapp-core-aurora:generateMetadataFileForMavenJavaPublication --console=plain
+./gradlew :sqlapp-core-aurora-postgres:generatePomFileForMavenJavaPublication :sqlapp-core-aurora-postgres:generateMetadataFileForMavenJavaPublication --console=plain
 ```
 
 The POM exposes core and PostgreSQL dependencies at the existing project
@@ -1953,7 +1953,7 @@ wrapper on Windows (commands shown with the portable wrapper name):
 ./gradlew :sqlapp-core-alloydb:test --tests '*AlloyDBDialectTest' --console=plain
 ./gradlew :sqlapp-core-alloydb:test :sqlapp-core-dialect-test:alloydb16CompatibilityTest --continue --console=plain
 ./gradlew :sqlapp-core-postgres:test --tests '*PostgresDropTableRegistrationTest' :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*generatedAlterAndDropExecute' --tests '*metadataAndGeneratedDdlRecreateTable' --continue --console=plain
-./gradlew :sqlapp-core-postgres:test :sqlapp-core-alloydb:test :sqlapp-core-aurora:test :sqlapp-core-yugabyte:test :sqlapp-core-cockroach:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-alloydb:assemble :sqlapp-core-alloydb:generatePomFileForMavenJavaPublication :sqlapp-core-alloydb:generateMetadataFileForMavenJavaPublication :sqlapp-core-dialect-test:alloydbCompatibilityTest --continue --console=plain
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-alloydb:test :sqlapp-core-aurora-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-cockroach:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-alloydb:assemble :sqlapp-core-alloydb:generatePomFileForMavenJavaPublication :sqlapp-core-alloydb:generateMetadataFileForMavenJavaPublication :sqlapp-core-dialect-test:alloydbCompatibilityTest --continue --console=plain
 ```
 
 The broad run was repeated after correcting the numeric-array test's API

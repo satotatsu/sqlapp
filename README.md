@@ -255,7 +255,7 @@ For AlloyDB / AlloyDB Omni 15–17, see the [usage and verification scope](sqlap
 Managed Google Cloud AlloyDB remains unverified.
 
 For Aurora PostgreSQL 14–17 (experimental; Aurora execution unverified), see the
-[usage and verification boundary](sqlapp-core-aurora/README.md).
+[usage and verification boundary](sqlapp-core-aurora-postgres/README.md).
 
 For CockroachDB 24.3/25.4, see the [usage, verified scope and limits](sqlapp-core-cockroach/README.md).
 

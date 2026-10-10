@@ -230,7 +230,7 @@ establish Aurora service compatibility. Individual tasks are named
 disposable Aurora database. It is excluded from `dockerTest` and compatibility
 aggregates. It requires target/credential environment variables plus
 `SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true`, writes rows, and creates/drops
-UUID schemas with CASCADE. See the [Aurora guide](../sqlapp-core-aurora/README.md)
+UUID schemas with CASCADE. See the [Aurora guide](../sqlapp-core-aurora-postgres/README.md)
 for connection requirements, cleanup and unverified behavior. No external
 Aurora test was run as part of adding this module.
 

@@ -101,7 +101,7 @@ dependencies {
 	implementation project(':sqlapp-core-mysql')
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
-	implementation project(':sqlapp-core-aurora')
+	implementation project(':sqlapp-core-aurora-postgres')
 	implementation project(':sqlapp-core-alloydb')
 	implementation project(':sqlapp-core-yugabyte')
 	implementation project(':sqlapp-core-cockroach')
@@ -225,7 +225,7 @@ tasks.register('cockroachCompatibilityTest') {
 		testClassesDirs = sourceSets.dockerTest.output.classesDirs
 		classpath = sourceSets.dockerTest.runtimeClasspath
 		useJUnitPlatform()
-		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.AuroraPostgresCompatibilityTest'
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.postgres.AuroraPostgresCompatibilityTest'
 		systemProperty 'sqlapp.test.aurora.postgresImage', image
 		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
 			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
@@ -240,14 +240,14 @@ tasks.register('auroraPostgresCompatibilityTest') {
 	description = 'Runs upstream PostgreSQL 14-17 checks for the Aurora dialect. Does not connect to Aurora.'
 	dependsOn tasks.named('auroraPostgres14CompatibilityTest'), tasks.named('auroraPostgres15CompatibilityTest'), tasks.named('auroraPostgres16CompatibilityTest'), tasks.named('auroraPostgres17CompatibilityTest')
 }
-tasks.named('dockerTest') { exclude '**/aurora/AuroraExternalTest.class' }
+tasks.named('dockerTest') { exclude '**/aurora/postgres/AuroraExternalTest.class' }
 tasks.register('auroraExternalTest', Test) {
 	group = 'verification'
 	description = 'Opt-in destructive checks against an explicitly authorized disposable Aurora database.'
 	testClassesDirs = sourceSets.dockerTest.output.classesDirs
 	classpath = sourceSets.dockerTest.runtimeClasspath
 	useJUnitPlatform()
-	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.AuroraExternalTest'
+	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.postgres.AuroraExternalTest'
 	outputs.upToDateWhen { false }
 	doFirst {
 		if (System.getenv('SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS') != 'true') {
