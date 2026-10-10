@@ -4,6 +4,8 @@ module com.sqlapp.core.alloydb {
 	requires com.sqlapp.core;
 	requires com.sqlapp.core.postgres;
 	exports com.sqlapp.data.db.dialect.alloydb;
+	exports com.sqlapp.data.db.dialect.alloydb.sql;
+	exports com.sqlapp.data.db.dialect.alloydb.metadata;
 	exports com.sqlapp.data.db.dialect.alloydb.resolver;
 	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
 			com.sqlapp.data.db.dialect.alloydb.bulk.AlloyDBBulkInsertProvider;

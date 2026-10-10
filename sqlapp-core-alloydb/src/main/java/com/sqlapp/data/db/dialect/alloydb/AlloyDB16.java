@@ -21,4 +21,14 @@ public class AlloyDB16 extends Postgres160 implements AlloyDB {
 	public String getSimpleName() {
 		return "alloydb";
 	}
+	@Override
+	public com.sqlapp.data.db.metadata.CatalogReader getCatalogReader() {
+		return new com.sqlapp.data.db.dialect.alloydb.metadata.AlloyDB16CatalogReader(this);
+	}
+
+	@Override
+	public com.sqlapp.data.db.sql.SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new com.sqlapp.data.db.dialect.alloydb.sql.AlloyDB16SqlFactoryRegistry(this);
+	}
+
 }

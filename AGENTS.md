@@ -110,6 +110,12 @@ For `sqlapp-core-{db}` changes:
 - Check `DialectResolver` and preserve older supported behavior.
 - Inherit from the nearest compatible version and override only differences.
 - Keep vendor catalog queries in the dialect module.
+- Avoid N+1 SELECTs in metadata readers across all dialects. Fetch metadata for
+  the requested object set with joins, catalog queries or batched queries;
+  do not issue an additional SELECT per object, column or index. Use per-object
+  queries only when set-based retrieval is exceptionally difficult or the
+  database provides no practical bulk alternative. Document the concrete
+  limitation and reason for the exception, and test query counts where practical.
 - Consider identifiers, quoting, case, data types and version boundaries.
 - Separate metadata-reading changes from SQL-generation changes.
 - Prefer a body or query in `statement` plus separately modeled components such

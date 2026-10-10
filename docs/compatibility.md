@@ -2065,3 +2065,135 @@ one pre-existing skipped case, CockroachDB 16, command 543 and Gradle plugin
 passed 668 local links and 59 reachable pages.
 No external/cloud database tests or real YSQL/CockroachDB engine matrices
 were run. Columnar/ScaNN work remains deferred; this is a character DDL fix.
+
+
+### AlloyDB ScaNN table indexes and set-based metadata (2026-10-10)
+
+`sqlapp-core-alloydb` now supplies version-compatible catalog/schema/table
+reader paths and index CREATE factories for engines 15/16/17. ScaNN keys,
+schema-qualified operator classes and creation options survive Index specifics
+and Schema XML; shared IndexType.Vector and vectorDistanceType are populated.
+New vector indexes need only a column and supported distance; SQL specifics
+are optional advanced overrides. Ordinary indexes continue through PostgreSQL
+factories. No existing API or configuration was removed, and no PostgreSQL
+reader/resolver was changed. New reader/factory classes are additive exports.
+
+The initial supplemental reader performed per-index SELECTs. It was replaced
+before completion with one set-based vendor catalog query scoped by the same
+schema/table/index filters as the base reader. An actual JDBC statement-count
+test checks two SELECTs for one and six indexes, and one SELECT for a regular
+B-tree-only selection. AGENTS.md now requires all dialect metadata readers to
+avoid N+1 SELECTs, with documented exceptions only for exceptionally difficult
+or unavailable bulk retrieval. This adds a repository-wide rule; it does not
+claim a full audit/refactor of every pre-existing dialect reader.
+
+The official disposable Omni fixture installs vector/alloydb_scann locally,
+creates cosine/L2/dot-product indexes, a typed expression/partial index with
+FLAT quantization and an index generated from the shared model. It reads
+metadata, round-trips XML, executes generated DROP/CREATE and compares
+pg_get_indexdef before/after. Ordinary B-tree metadata is a control. Runtime
+readers and SQL factories do not install extensions or change server flags.
+See the [AlloyDB guide](../sqlapp-core-alloydb/README.md) for specifics and limits.
+
+Targeted ScaNN unit and Omni 16 tests were run before the full matrix. Initial
+test harness compilation errors (collection/reader APIs) and a missing
+ReaderOptions on a standalone test reader were corrected before rerunning.
+No failures were silently ignored.
+
+Final validation commands (Java 21, repository Gradle Wrapper):
+
+```shell
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-alloydb:assemble :sqlapp-core-dialect-test:alloydbCompatibilityTest :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+python docs/development/check_documentation.py
+```
+
+Managed AlloyDB, external databases, materialized-view ScaNN metadata, named
+tablespace execution, vector performance/recall and columnar configuration
+were not qualified by this batch. The manually started ScaNN probe container
+is disposable and removed with its anonymous volume after verification.
+
+
+The final confirmation was BUILD SUCCESSFUL in 2m 10s: all 10 AlloyDB module
+cases, all 11 cases on each of the three Omni images (33 total), and all
+10 PostgreSQL control cases passed with zero failures/skips. AlloyDB assembly,
+sources/Javadoc and packaged scannIndexes.sql were verified. Command and Gradle
+plugin regression tasks were UP-TO-DATE (their prior results remain 543 and 81
+passed); they were not re-executed in this batch. Documentation validation
+passed 669 local links, 59 reachable pages and closed code fences.
+
+The first final-matrix attempt found that Omni 15 requires 10,000 or more rows
+for the new-model index with default ScaNN options; the 200-row fixture was
+insufficient. The fixture was increased to 10,000 rows, engine defaults were
+left intact and the complete matrix was rerun successfully. This boundary is
+recorded in the guide. Explicit num_leaves=1 test indexes also work with smaller
+populations. No server error is suppressed or converted to a silent fallback.
+
+
+### AlloyDB Omni persistent columnar target configuration (2026-10-10)
+
+`AlloyDBColumnarConfiguration` uses the canonical Catalog/Table model to read,
+edit and plan persistent google_columnar_engine.relations settings. AlloyDB
+15/16/17 catalog readers enrich Table specifics from the existing batch-read
+Catalog.settings: this adds zero SELECTs and no per-table metadata queries.
+Engine enablement, memory and auto-columnarization flags remain in the inherited
+settings model/XML. Runtime column-store cache contents are not exported as
+configuration. The public API addition does not remove existing API/configuration
+and introduces no dependencies or changes to PostgreSQL itself.
+
+Table specifics alloydb.columnar.columns stores named columns, '*' for all
+columns or '-' for explicit removal. The nonempty removal marker is necessary
+because existing Schema XML omits empty specifics values. An absent key preserves
+the original instance selection. Planning requires a captured instance-wide
+baseline, merges modeled changes while preserving unmodeled tables/other
+schemas/databases, and returns original/desired relations and explicit SQL
+operations. Ordinary CREATE TABLE does not apply instance settings. Generation
+never executes SQL or enables/restarts an instance. See the
+[AlloyDB guide](../sqlapp-core-alloydb/README.md) for usage and boundaries.
+
+The SQL application path targets explicitly administered Omni single servers:
+ALTER SYSTEM for the relations flag and pg_reload_conf, outside transactions.
+Managed cloud flag management, orchestrator provisioning and automatic
+configuration execution are not implemented. Re-read the baseline before
+application; generated SQL is not an optimistic concurrency lock. The tested
+flag grammar accepts case-sensitive ASCII letters/digits/underscores, but
+rejects SQL quotes and punctuation. A disposable Omni 16 probe demonstrated
+that a quoted flag is stored but rejected by the background population parser;
+this library fails clearly instead of emitting such unsupported names.
+
+The dedicated integration fixture enables columnar processing with 128 MiB
+memory only in an owned disposable container, reads a filtered Catalog,
+retains an unread table, round-trips XML and executes generated settings SQL.
+It restarts that container and verifies three selected columns across both
+tables. Docker/Testcontainers inspect metadata is refreshed after restart
+because dynamic published ports can change; the initial cached-port test
+attempt failed to reconnect even though the columns had populated, and the
+fixture was corrected before the matrix was rerun.
+
+The new matrix also exposed an older ScaNN test assumption: approximate search
+can return a different first row. Index DDL equivalence remains checked for all
+five ScaNN variants; the exact nearest-neighbor result control now disables
+index/bitmap scans instead of asserting exact recall from an ANN index.
+
+Validation commands (Java 21, repository wrapper):
+
+```shell
+./gradlew :sqlapp-core-alloydb:test --tests '*AlloyDBColumnarConfigurationTest' --console=plain
+./gradlew :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*persistentColumnarSelectionSurvivesXmlAndRestart' --console=plain
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-alloydb:assemble :sqlapp-core-dialect-test:alloydbCompatibilityTest :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+python docs/development/check_documentation.py
+```
+
+No external or managed database was accessed; no host settings, production
+configuration, dependency versions or ordinary Omni fixture flags were changed.
+Materialized-view target enrichment, arbitrary quoted/Unicode identifiers,
+cache removal/refresh behavior, unsupported-type qualification, performance
+and managed-cloud execution remain outside the qualified scope.
+
+Final verification: the aggregate build passed in 3m 5s. AlloyDB module tests
+passed 16/16; official Omni 15.17.0, 16.8.0 and 17.9.0 each passed 12/12
+(36 container tests); the PostgreSQL control passed 10/10, with no failures
+or skips. Command and Gradle plugin test tasks were UP-TO-DATE in this run.
+The targeted columnar unit class passed 6/6 after the XML clear marker fix:
+empty specifics values are omitted by XML, so explicit removal uses `-`.
+Documentation validation passed: 670 local links and 59 current pages.
+Only disposable local databases were used and the owned probe was removed.
