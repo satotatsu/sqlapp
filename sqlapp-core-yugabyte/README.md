@@ -207,3 +207,9 @@ PostgreSQL servers and other YugabyteDB releases were not verified by this matri
 See the [integration guide](../sqlapp-core-dialect-test/README.md#yugabytedb-ysql-compatibility)
 for engine-specific and focused commands. Detailed prior batch evidence remains
 in [compatibility notes](../docs/compatibility.md).
+
+Placement metadata for the requested tables and indexes is fetched in one
+set-based query, including range-split boundaries. Sequence configuration uses
+the shared single-query PostgreSQL reader on both YSQL engine baselines.
+See the [metadata audit fixes](../docs/compatibility.md#postgresql-family-metadata-audit-fixes-2026-10-11)
+for query-count coverage and preserved HASH grouping behavior.

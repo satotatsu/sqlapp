@@ -16,22 +16,25 @@ public class CockroachSequenceReader extends SequenceReader {
 	@Override
 	protected List<Sequence> doGetAll(Connection c, ParametersContext context, ProductVersionInfo version) {
 		var result = new ArrayList<Sequence>();
-		try (var sql = c.createStatement();
+		try {
+			var definitions = CockroachMetadata.definitions(c, "SEQUENCE", context);
+			try (var sql = c.createStatement();
 				var rows = sql.executeQuery(
 						"SELECT sequence_schema,sequence_name,start_value,minimum_value,maximum_value,increment,cycle_option FROM information_schema.sequences WHERE sequence_catalog=current_database() ORDER BY sequence_schema,sequence_name")) {
-			while (rows.next()) {
-				String schema = rows.getString(1), name = rows.getString(2);
-				if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
-						|| !CockroachMetadata.matches(context, "sequenceName", name))
-					continue;
-				var object = new Sequence(name).setSchemaName(schema)
-						.setStartValue(new java.math.BigInteger(rows.getString(3)))
-						.setMinValue(new java.math.BigInteger(rows.getString(4)))
-						.setMaxValue(new java.math.BigInteger(rows.getString(5)))
-						.setIncrementBy(new java.math.BigInteger(rows.getString(6)))
-						.setCycle("YES".equals(rows.getString(7)));
-				object.setDefinition(CockroachMetadata.definition(c, "SEQUENCE", schema, name));
-				result.add(object);
+				while (rows.next()) {
+					String schema = rows.getString(1), name = rows.getString(2);
+					if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
+							|| !CockroachMetadata.matches(context, "sequenceName", name))
+						continue;
+					var object = new Sequence(name).setSchemaName(schema)
+							.setStartValue(new java.math.BigInteger(rows.getString(3)))
+							.setMinValue(new java.math.BigInteger(rows.getString(4)))
+							.setMaxValue(new java.math.BigInteger(rows.getString(5)))
+							.setIncrementBy(new java.math.BigInteger(rows.getString(6)))
+							.setCycle("YES".equals(rows.getString(7)));
+					object.setDefinition(CockroachMetadata.definition(definitions, schema, name));
+					result.add(object);
+				}
 			}
 		} catch (SQLException e) {
 			throw new IllegalStateException("Cannot read CockroachDB Sequence metadata", e);

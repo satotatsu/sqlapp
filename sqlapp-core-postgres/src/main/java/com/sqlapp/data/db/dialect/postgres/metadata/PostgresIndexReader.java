@@ -100,6 +100,7 @@ public class PostgresIndexReader extends IndexReader {
 					String remarks = getString(rs, "remarks");
 					String indexprs = getString(rs, "indexprs");
 					String definition = getString(rs, "definition");
+					readDefinition(index, definition);
 					IndexType indexType = null;
 					if (!isEmpty(indexprs)) {
 						indexType = IndexType.Function;
@@ -129,6 +130,23 @@ public class PostgresIndexReader extends IndexReader {
 						index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
 					}
 					index.setRemarks(remarks);
+					index.setTableSpaceName(getString(rs, "index_tablespace"));
+					index.getSpecifics().put(PostgresCreateIndexFactory.METHOD, type);
+					java.sql.Array options = rs.getArray("index_options");
+					if (options != null) {
+						try {
+							var optionSql = new java.util.ArrayList<String>();
+							for (Object option : (Object[]) options.getArray()) {
+								String text = option.toString();
+								int equal = text.indexOf('=');
+								if (equal < 1) throw new SQLException("Malformed PostgreSQL index option: " + text);
+								index.getSpecifics().put(text.substring(0, equal), text.substring(equal + 1));
+								optionSql.add(getDialect().quote(text.substring(0, equal)) + "='"
+										+ text.substring(equal + 1).replace("'", "''") + "'");
+							}
+						index.getSpecifics().put(PostgresCreateIndexFactory.OPTIONS, String.join(", ", optionSql));
+						} finally { options.free(); }
+					}
 					map.put(schema_name, table_name, index_name, index);
 					result.add(index);
 				}
@@ -137,6 +155,10 @@ public class PostgresIndexReader extends IndexReader {
 					index.getIncludes().add(columnName);
 					return;
 				}
+				String keySql = getString(rs, "key_sql");
+				String previousKeys = index.getSpecifics().get(PostgresCreateIndexFactory.KEYS);
+				index.getSpecifics().put(PostgresCreateIndexFactory.KEYS,
+						previousKeys == null ? keySql : previousKeys + ", " + keySql);
 				if (catalogDetails) {
 					index.getColumns().add(columnName, rs.getBoolean("is_desc") ? Order.Desc : Order.Asc);
 					boolean nullsFirst = rs.getBoolean("nulls_first");
@@ -159,6 +181,9 @@ public class PostgresIndexReader extends IndexReader {
 		return result;
 	}
 
+	/** Optional vendor hook using the definition already returned by the bulk query. */
+	protected void readDefinition(Index index, String definition) { }
+
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 15) {
@@ -168,6 +193,10 @@ public class PostgresIndexReader extends IndexReader {
 				&& productVersionInfo.getMajorVersion() >= 11) {
 			return getSqlNodeCache().getString("indexes110.sql");
 		}
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 9 || productVersionInfo.getMajorVersion() == 9
+					&& productVersionInfo.getMinorVersion() != null && productVersionInfo.getMinorVersion() >= 1))
+			return getSqlNodeCache().getString("indexes91.sql");
 		return getSqlNodeCache().getString("indexes.sql");
 	}
 

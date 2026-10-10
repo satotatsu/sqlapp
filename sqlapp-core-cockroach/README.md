@@ -209,3 +209,8 @@ For table renames, generate `originalTable.diff(targetTable)` explicitly. A
 Schema diff matches names; a delete/add pair retaining the same table ID is
 rejected to avoid accidental data loss. Without stable IDs, review delete/add
 operations explicitly: a Schema diff cannot infer rename intent.
+
+Metadata reads use one query per table/view/sequence definition set and one
+joined ENUM query; index definitions reuse the ordinary index query.
+Query-count regression tests cover growing object sets. See the
+[metadata audit fixes](../docs/compatibility.md#postgresql-family-metadata-audit-fixes-2026-10-11).

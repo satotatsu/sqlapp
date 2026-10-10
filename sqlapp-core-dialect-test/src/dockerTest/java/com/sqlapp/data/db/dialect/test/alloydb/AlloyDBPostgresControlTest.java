@@ -41,4 +41,11 @@ class AlloyDBPostgresControlTest extends AlloyDBAssertions {
 		}
 	}
 
+
+    @org.junit.jupiter.api.Test
+    void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
+        try (var c = connect()) {
+            com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c, com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(c));
+        }
+    }
 }

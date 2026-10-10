@@ -42,6 +42,9 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
+	public static final String METHOD = "postgres.index.method";
+	public static final String OPTIONS = "postgres.index.options";
+	public static final String KEYS = "postgres.index.keys";
 	public static final String NULLS_NOT_DISTINCT = "nullsNotDistinct";
 
 	@Override
@@ -54,11 +57,25 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 
 	@Override
 	public void addObjectDetail(final Index obj, final Table table, final PostgresSqlBuilder builder) {
-		super.addObjectDetail(obj, table, builder);
+		String keys = catalogKeys(obj);
+		if (keys == null) {
+			super.addObjectDetail(obj, table, builder);
+		} else {
+			String method = obj.getSpecifics().get(METHOD);
+			if (table == null || keys.isBlank() || method == null || method.isBlank())
+				throw new IllegalArgumentException("Catalog index keys require a table and access method");
+			addUnique(obj, table, builder);
+			builder.name(obj, false).on().name(table, getOptions().isDecorateSchemaName())
+					.space()._add("USING ").name(method).space()._add("(")._add(keys)._add(")");
+		}
 		addObjectDetailAfter(obj, table, builder);
 		addWith(obj, table, builder);
+		if (obj.getTableSpaceName() != null)
+			builder.space()._add("TABLESPACE ").name(obj.getTableSpaceName());
 		addFilter(obj, table, builder);
 	}
+
+	protected String catalogKeys(Index index) { return index.getSpecifics().get(KEYS); }
 
 	protected void addObjectDetailAfter(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 		addIncludes(obj, table, builder);
@@ -72,6 +89,12 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 	}
 
 	protected void addWith(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+		String options = obj.getSpecifics().get(OPTIONS);
+		if (options != null) {
+			if (options.isBlank()) throw new IllegalArgumentException("Empty PostgreSQL index options");
+			builder.space()._add("WITH (")._add(options)._add(")");
+			return;
+		}
 		Map<String, String> map = createIndexWithOption(obj, table);
 		if (map.isEmpty()) {
 			return;

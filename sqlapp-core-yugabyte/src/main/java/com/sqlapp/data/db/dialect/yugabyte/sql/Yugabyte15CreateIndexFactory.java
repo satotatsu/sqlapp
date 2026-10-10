@@ -10,6 +10,12 @@ import com.sqlapp.data.schemas.Order;
 
 public class Yugabyte15CreateIndexFactory extends Postgres150CreateIndexFactory {
 	@Override
+	protected String catalogKeys(Index index) {
+		// Multi-column HASH grouping is modeled by the YSQL placement reader.
+		return YugabytePlacement.hashColumns(index.getSpecifics()) >= 0 ? null : super.catalogKeys(index);
+	}
+
+	@Override
 	protected void addColumn(ReferenceColumn column, PostgresSqlBuilder builder) {
 		Index index = column.getParent() == null ? null : column.getParent().getIndex();
 		int hash = index == null ? -1 : YugabytePlacement.hashColumns(index.getSpecifics());
@@ -38,7 +44,6 @@ public class Yugabyte15CreateIndexFactory extends Postgres150CreateIndexFactory 
 
 	@Override
 	protected void addFilter(Index index, Table table, PostgresSqlBuilder builder) {
-		YugabytePlacement.tablespace(index.getTableSpaceName(), builder);
 		YugabytePlacement.split(index.getSpecifics(), builder);
 		super.addFilter(index, table, builder);
 	}

@@ -953,4 +953,45 @@ class CockroachMetadataReaderTest {
 			assertNotNull(read(c, name).getTypes().get("crdb_internal_region"));
 		});
 	}
+
+    @Test
+    void metadataQueryCountsDoNotGrowWithObjects() throws Exception {
+        String schema = schema();
+        try (var c = connect(); var sql = c.createStatement()) {
+            sql.execute("CREATE SCHEMA " + schema);
+            try {
+                for (int stage=0;stage<2;stage++) {
+                    sql.execute("CREATE TABLE " + schema + ".t" + stage + " (id int PRIMARY KEY, value text)");
+                    sql.execute("CREATE INDEX ix" + stage + " ON " + schema + ".t" + stage + " (value)");
+                    sql.execute("CREATE TYPE " + schema + ".e" + stage + " AS ENUM ('a','b''c')");
+                    sql.execute("CREATE SEQUENCE " + schema + ".s" + stage);
+                    sql.execute("CREATE VIEW " + schema + ".v" + stage + " AS SELECT id FROM " + schema + ".t" + stage);
+                    var definitions = new java.util.concurrent.atomic.AtomicInteger();
+                    var enums = new java.util.concurrent.atomic.AtomicInteger();
+                    var counted = com.sqlapp.data.db.dialect.test.CountingJdbc.wrap(c, text -> {
+                        if (text.contains("crdb_internal.create_statements")) definitions.incrementAndGet();
+                        if (text.contains("pg_catalog.pg_enum")) enums.incrementAndGet();
+                        assertFalse(text.startsWith("SHOW CREATE"), "Definitions must be read in bulk");
+                        return false;
+                    }, new java.util.concurrent.atomic.AtomicInteger());
+                    Schema read = read(counted, schema);
+                    assertEquals(stage+1, read.getTables().size());
+                    assertEquals(stage+1, read.getTypes().size());
+                    assertEquals(stage+1, read.getSequences().size());
+                    assertEquals(stage+1, read.getViews().size());
+                    assertTrue(String.join("\n", read.getTypes().get("e"+stage).getDefinition()).contains("'b''c'"));
+                    assertEquals(3, definitions.get(), "One definition query per table/view/sequence reader");
+                    assertEquals(1, enums.get(), "One joined enum query");
+                    var indexes = new com.sqlapp.data.db.dialect.cockroach.metadata.CockroachIndexReader(new CockroachDB());
+                    indexes.setSchemaName(schema);
+                    indexes.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+                    var count = new java.util.concurrent.atomic.AtomicInteger();
+                    var countedIndexes = com.sqlapp.data.db.dialect.test.CountingJdbc.wrap(c,
+                            text -> true, count);
+                    assertFalse(indexes.getAllFull(countedIndexes).isEmpty());
+                    assertEquals(1, count.get(), "Index definitions come from the existing query");
+                }
+            } finally { sql.execute("DROP SCHEMA " + schema + " CASCADE"); }
+        }
+    }
 }

@@ -18,7 +18,6 @@ public class Yugabyte11TableReader extends Postgres110TableReader {
 	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> tables)
 			throws SQLException {
 		super.setMetadataDetail(connection, context, tables);
-		for (Table table : tables)
-			YugabytePlacementReader.read(connection, table);
+		YugabytePlacementReader.readAll(connection, tables);
 	}
 }

@@ -197,4 +197,11 @@ class Postgres140MetadataReaderTest {
 				 INSERT INTO metadata_test_14.metadata_audit(child_id) VALUES (NEW.id)
 				""");
 	}
+
+    @org.junit.jupiter.api.Test
+    void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
+        try (var c = POSTGRES.createConnection("")) {
+            com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c, com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(c));
+        }
+    }
 }

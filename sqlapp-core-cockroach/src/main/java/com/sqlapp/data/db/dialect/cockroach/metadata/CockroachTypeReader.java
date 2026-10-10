@@ -25,7 +25,7 @@ public class CockroachTypeReader extends TypeReader {
 		}
 		try (var sql = c.createStatement();
 				var rows = sql.executeQuery(
-						"SELECT n.nspname,t.typname,t.oid FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON n.oid=t.typnamespace WHERE t.typtype='e' ORDER BY n.nspname,t.typname")) {
+						"SELECT n.nspname,t.typname,t.oid,e.enumlabel FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON n.oid=t.typnamespace LEFT JOIN pg_catalog.pg_enum e ON e.enumtypid=t.oid WHERE t.typtype='e' ORDER BY n.nspname,t.typname,e.enumsortorder")) {
 			while (rows.next()) {
 				String schema = rows.getString(1), name = rows.getString(2);
 				// PRIMARY REGION creates this engine-owned type; replaying CREATE TYPE
@@ -35,21 +35,20 @@ public class CockroachTypeReader extends TypeReader {
 				if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
 						|| !CockroachMetadata.matches(context, "typeName", name))
 					continue;
-				var object = new Type(name).setSchemaName(schema);
-				var labels = new ArrayList<String>();
-				try (var enumSql = c.prepareStatement(
-						"SELECT enumlabel FROM pg_catalog.pg_enum WHERE enumtypid=?::oid ORDER BY enumsortorder")) {
-					enumSql.setString(1, rows.getString(3));
-					try (var values = enumSql.executeQuery()) {
-						while (values.next())
-							labels.add("'" + values.getString(1).replace("'", "''") + "'");
-					}
+				Type object;
+				if (!result.isEmpty() && name.equals(result.get(result.size()-1).getName())
+						&& schema.equals(result.get(result.size()-1).getSchemaName())) {
+					object = result.get(result.size()-1);
+				} else {
+					object = new Type(name).setSchemaName(schema);
+					object.setDefinition("CREATE TYPE " + CockroachMetadata.fullName(schema, name) + " AS ENUM ()");
+					result.add(object);
 				}
-				if (labels.isEmpty())
-					throw new SQLException("CockroachDB enum has no labels: " + name);
-				object.setDefinition("CREATE TYPE " + CockroachMetadata.fullName(schema, name) + " AS ENUM ("
-						+ String.join(",", labels) + ")");
-				result.add(object);
+				String label = rows.getString(4);
+				if (label == null) throw new SQLException("CockroachDB enum has no labels: " + name);
+				String ddl = String.join("\n", object.getDefinition());
+				String prefix = ddl.substring(0, ddl.length()-1);
+				object.setDefinition(prefix + (prefix.endsWith("(") ? "" : ",") + "'" + label.replace("'", "''") + "')");
 			}
 		} catch (SQLException e) {
 			throw new IllegalStateException("Cannot read CockroachDB Type metadata", e);

@@ -3785,4 +3785,35 @@ class YugabyteMetadataReaderTest {
 		}
 	}
 
+
+    @Test
+    void metadataPlacementAndSequenceQueriesAreSetBased() throws Exception {
+        String schemaName = "ysql_batch_" + UUID.randomUUID().toString().replace("-", "");
+        try (var c = connect(); var sql = c.createStatement()) {
+            sql.execute("CREATE SCHEMA " + schemaName);
+            try {
+                for (int stage=0;stage<2;stage++) {
+                    sql.execute("CREATE TABLE " + schemaName + ".t" + stage + " (id int PRIMARY KEY, value text) SPLIT INTO 2 TABLETS");
+                    sql.execute("CREATE INDEX ix" + stage + " ON " + schemaName + ".t" + stage + " (value)");
+                    sql.execute("CREATE SEQUENCE " + schemaName + ".s" + stage + " AS integer START 10 INCREMENT 3 CACHE 5");
+                    var placement = new java.util.concurrent.atomic.AtomicInteger();
+                    var sequences = new java.util.concurrent.atomic.AtomicInteger();
+                    var counted = com.sqlapp.data.db.dialect.test.CountingJdbc.wrap(c, text -> {
+                        if (text.contains("yb_table_properties")) placement.incrementAndGet();
+                        if (text.contains("pg_catalog.pg_sequence")) sequences.incrementAndGet();
+                        return false;
+                    }, new java.util.concurrent.atomic.AtomicInteger());
+                    var reader = DialectResolver.getInstance().getDialect(c).getCatalogReader().getSchemaReader();
+                    reader.setSchemaName(schemaName);
+                    var read = reader.getAllFull(counted).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+                    assertEquals(stage+1, read.getTables().size());
+                    assertEquals(stage+1, read.getSequences().size());
+                    assertEquals("2", read.getTables().get("t"+stage).getSpecifics().get("YSQL_SPLIT_INTO"));
+                    assertEquals(3, read.getSequences().get("s"+stage).getIncrementBy().intValueExact());
+                    assertEquals(1, placement.get());
+                    assertEquals(1, sequences.get());
+                }
+            } finally { sql.execute("DROP SCHEMA " + schemaName + " CASCADE"); }
+        }
+    }
 }

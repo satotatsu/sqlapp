@@ -17,6 +17,7 @@ SELECT
 , pg_get_indexdef(ci.oid) AS definition
 , obj_description(i.indexrelid, 'pg_class')
   AS remarks, pg_get_indexdef(ci.oid,a.attnum,false)
+ || COALESCE((SELECT ' COLLATE ' || quote_ident(ns.nspname) || '.' || quote_ident(co.collname) FROM pg_catalog.pg_collation co JOIN pg_catalog.pg_namespace ns ON ns.oid=co.collnamespace WHERE co.oid=i.indcollation[a.attnum-1]),'')
  || COALESCE((SELECT ' ' || quote_ident(ns.nspname) || '.' || quote_ident(op.opcname)
      FROM pg_catalog.pg_opclass op JOIN pg_catalog.pg_namespace ns ON ns.oid=op.opcnamespace
      WHERE op.oid=i.indclass[a.attnum-1]),'')

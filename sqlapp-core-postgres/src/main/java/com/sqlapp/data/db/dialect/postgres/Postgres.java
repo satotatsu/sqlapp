@@ -756,6 +756,28 @@ public class Postgres extends Dialect {
 		return new PostgresSqlSplitter(this);
 	}
 
+	// Reserved and identifier-sensitive PostgreSQL grammar words. Quoting a word
+	// that became reserved in a newer release is also valid on older servers.
+	private static final java.util.Set<String> IDENTIFIER_KEYWORDS = java.util.Set.of(
+			"all", "analyse", "analyze", "and", "any", "array", "as", "asc", "asymmetric", "authorization",
+			"binary", "both", "case", "cast", "check", "collate", "collation", "column", "concurrently",
+			"constraint", "create", "cross", "current_catalog", "current_date", "current_role", "current_schema",
+			"current_time", "current_timestamp", "current_user", "default", "deferrable", "desc", "distinct", "do",
+			"else", "end", "except", "false", "fetch", "for", "foreign", "freeze", "from", "full", "grant",
+			"group", "having", "ilike", "in", "initially", "inner", "intersect", "into", "is", "isnull", "join",
+			"lateral", "leading", "left", "like", "limit", "localtime", "localtimestamp", "natural", "not",
+			"notnull", "null", "offset", "on", "only", "or", "order", "outer", "overlaps", "placing", "primary",
+			"references", "returning", "right", "select", "session_user", "similar", "some", "symmetric", "table",
+			"tablesample", "then", "to", "trailing", "true", "union", "unique", "user", "using", "variadic",
+			"verbose", "when", "where", "window", "with");
+
+	@Override
+	public boolean needQuote(String target) {
+		if (target == null || target.isEmpty() || isQuoted(target)) return false;
+		return IDENTIFIER_KEYWORDS.contains(target.toLowerCase(java.util.Locale.ROOT))
+				|| Character.isDigit(target.charAt(0)) || super.needQuote(target);
+	}
+
 	@Override
 	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);

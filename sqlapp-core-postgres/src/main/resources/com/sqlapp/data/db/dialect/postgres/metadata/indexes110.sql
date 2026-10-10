@@ -6,7 +6,15 @@ SELECT current_database() AS catalog_name,n.nspname AS schema_name,
  CASE WHEN am.amname IN ('btree','lsm') THEN (i.indoption[a.attnum-1] & 1)=1 ELSE false END AS is_desc,
  CASE WHEN am.amname IN ('btree','lsm') THEN (i.indoption[a.attnum-1] & 2)=2 ELSE NULL END AS nulls_first,
  am.amname AS index_type,a.attnum AS num,pg_get_indexdef(ci.oid) AS definition,
- obj_description(i.indexrelid,'pg_class') AS remarks
+ obj_description(i.indexrelid,'pg_class') AS remarks, pg_get_indexdef(ci.oid,a.attnum,false)
+ || COALESCE((SELECT ' COLLATE ' || quote_ident(ns.nspname) || '.' || quote_ident(co.collname) FROM pg_catalog.pg_collation co JOIN pg_catalog.pg_namespace ns ON ns.oid=co.collnamespace WHERE co.oid=i.indcollation[a.attnum-1]),'')
+ || COALESCE((SELECT ' ' || quote_ident(ns.nspname) || '.' || quote_ident(op.opcname)
+     FROM pg_catalog.pg_opclass op JOIN pg_catalog.pg_namespace ns ON ns.oid=op.opcnamespace
+     WHERE op.oid=i.indclass[a.attnum-1]),'')
+ || CASE WHEN am.amname IN ('btree','lsm') AND a.attnum <= i.indnkeyatts THEN
+      CASE WHEN (i.indoption[a.attnum-1] & 1)=1 THEN ' DESC' ELSE ' ASC' END
+   || CASE WHEN (i.indoption[a.attnum-1] & 2)=2 THEN ' NULLS FIRST' ELSE ' NULLS LAST' END ELSE '' END AS key_sql, ci.reloptions AS index_options,
+ (SELECT spcname FROM pg_catalog.pg_tablespace WHERE oid=ci.reltablespace) AS index_tablespace
 FROM pg_catalog.pg_index i
 JOIN pg_catalog.pg_class ci ON i.indexrelid=ci.oid
 JOIN pg_catalog.pg_class ti ON i.indrelid=ti.oid

@@ -33,7 +33,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
-import com.sqlapp.jdbc.sql.SqlParser;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
@@ -61,57 +61,64 @@ public class PostgresSequenceReader extends SequenceReader {
 				sequence.setCatalogName(getString(rs, "SEQUENCE_CATALOG"));
 				sequence.setSchemaName(getString(rs, "SEQUENCE_SCHEMA"));
 				sequence.setDialect(dbDialact);
+				sequence.setRemarks(getString(rs, "remarks"));
+				if (modern(productVersionInfo)) {
+					sequence.setDataType(switch (getString(rs, "sequence_type")) {
+					case "smallint" -> DataType.SMALLINT;
+					case "integer" -> DataType.INT;
+					default -> DataType.BIGINT;
+					});
+					sequence.setStartValue(rs.getBigDecimal("start_value"));
+					sequence.setMinValue(rs.getBigDecimal("min_value"));
+					sequence.setMaxValue(rs.getBigDecimal("max_value"));
+					sequence.setIncrementBy(rs.getBigDecimal("increment_by"));
+					sequence.setCacheSize(rs.getBigDecimal("cache_size"));
+					sequence.setCycle(rs.getBoolean("cycle"));
+					sequence.setLastValue(rs.getBigDecimal("last_value"));
+				}
 				result.add(sequence);
 			}
 		});
 		return result;
 	}
 
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("sequences.sql");
+	protected SqlNode getSqlSqlNode(ProductVersionInfo version) {
+		return getSqlNodeCache().getString(modern(version) ? "sequences100.sql" : "sequences.sql");
 	}
 
-	/**
-	 * PostgresでINFORMATION_SCHEMAから取得できない情報を設定
-	 * 
-	 * @param connection DBコネクション
-	 * @param sequence   シーケンスオブジェクト
-	 */
+	private static boolean modern(ProductVersionInfo version) {
+		return version != null && version.getMajorVersion() != null && version.getMajorVersion() >= 10;
+	}
+
 	@Override
-	protected void setMetadataDetail(Connection connection, final Sequence sequence) throws SQLException {
-		StringBuilder tableName = new StringBuilder(64);
-		if (!isEmpty(sequence.getSchemaName())) {
-			if (!isEmpty(sequence.getCatalogName())) {
-				tableName.append(sequence.getCatalogName());
-				tableName.append(".");
-				tableName.append(sequence.getSchemaName());
-				tableName.append(".");
-			} else {
-				if (!"public".equalsIgnoreCase(sequence.getSchemaName())) {
-					tableName.append(sequence.getSchemaName());
-					tableName.append(".");
-				}
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Sequence> sequences)
+			throws SQLException {
+		if (sequences.isEmpty() || sequences.get(0).getStartValue() != null) return;
+		// Pre-10 configuration lives in each sequence relation. Batch the dynamic
+		// relation names into one query; never interpolate an unquoted identifier.
+		var parts = new java.util.ArrayList<String>();
+		for (int i = 0; i < sequences.size(); i++) {
+			Sequence sequence = sequences.get(i);
+			String name = getDialect().quote(sequence.getName());
+			if (!isEmpty(sequence.getSchemaName())) name = getDialect().quote(sequence.getSchemaName()) + "." + name;
+			parts.add("SELECT " + i + " AS position,min_value,max_value,start_value,last_value,increment_by,cache_value,is_cycled FROM " + name);
+		}
+		try (var sql = connection.createStatement(); var rows = sql.executeQuery(String.join(" UNION ALL ", parts))) {
+			while (rows.next()) {
+				Sequence sequence = sequences.get(rows.getInt("position"));
+				sequence.setMinValue(rows.getBigDecimal("min_value"));
+				sequence.setMaxValue(rows.getBigDecimal("max_value"));
+				sequence.setStartValue(rows.getBigDecimal("start_value"));
+				sequence.setLastValue(rows.getBigDecimal("last_value"));
+				sequence.setIncrementBy(rows.getBigDecimal("increment_by"));
+				sequence.setCacheSize(rows.getBigDecimal("cache_value"));
+				sequence.setCycle(rows.getBoolean("is_cycled"));
 			}
 		}
-		tableName.append(sequence.getName());
-		StringBuilder sql = new StringBuilder("SELECT * ");
-		sql.append("FROM " + tableName.toString());
-		SqlNode node = SqlParser.getInstance().parse(this.getDialect(), sql.toString());
-		ParametersContext context = newParametersContext(connection, null, null);
-		final Dialect dialact = this.getDialect();
-		execute(connection, node, context, new ResultSetNextHandler() {
-			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				sequence.setMinValue(rs.getBigDecimal("min_value"));
-				sequence.setMaxValue(rs.getBigDecimal("max_value"));
-				sequence.setStartValue(rs.getBigDecimal("start_value"));
-				sequence.setLastValue(rs.getBigDecimal("last_value"));
-				sequence.setIncrementBy(rs.getBigDecimal("increment_by"));
-				sequence.setCacheSize(rs.getBigDecimal("cache_value"));
-				sequence.setCycle("t".equalsIgnoreCase(getString(rs, "is_cycled")));
-				sequence.setDialect(dialact);
-			}
-		});
 	}
 
+	@Override
+	protected void setMetadataDetail(Connection connection, Sequence sequence) throws SQLException {
+		// All detail is populated in the set-based read above.
+	}
 }

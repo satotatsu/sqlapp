@@ -2197,3 +2197,131 @@ The targeted columnar unit class passed 6/6 after the XML clear marker fix:
 empty specifics values are omitted by XML, so explicit removal uses `-`.
 Documentation validation passed: 670 local links and 59 current pages.
 Only disposable local databases were used and the owned probe was removed.
+
+### PostgreSQL-family metadata audit fixes (2026-10-11)
+
+The audit fixes stay in `sqlapp-core-postgres`, `sqlapp-core-yugabyte` and
+`sqlapp-core-cockroach`; regression tests also cover the directly inheriting
+Aurora PostgreSQL and AlloyDB dialects. Shared Schema APIs, XML format,
+dependencies and product resolver ranges are unchanged.
+
+PostgreSQL 10+ sequence configuration is now read from `pg_catalog.pg_sequences`
+in one filtered query, including integer type, bounds, increment, cache, cycle,
+comments and nullable last value. The previously unused `sequences100.sql`
+contained `pg.sequences`; it is corrected and selected at the 10 boundary.
+YSQL 11/15 uses this common query instead of a detail query per sequence.
+Before PostgreSQL 10, configuration remains in individual sequence relations:
+the listing plus one UNION ALL query over quoted relation identifiers reads
+all requested sequences, preserving the old catalog representation without
+N+1 round trips. The current connection selects the database; schema and
+sequence identifiers are quoted individually. An unavailable last value is
+not inferred or used as a verified migration high-water mark. See the
+[PostgreSQL 10 sequence catalog change](https://www.postgresql.org/docs/10/release-10.html)
+and [pg_sequences semantics](https://www.postgresql.org/docs/17/view-pg-sequences.html).
+
+The PostgreSQL 9.3-9.6 column reader accidentally selected the 10+ identity SQL.
+It now selects the pre-10 query; legacy serial lookup also qualifies and quotes
+both schema and table instead of relying on search_path. The common PostgreSQL
+identifier quoter now handles reserved/identifier-sensitive grammar words and
+leading digits, including a real `unique` index recreation regression.
+
+Index metadata now retains table space, access method, deparsed key expressions,
+operator classes, collations, key ordering/null ordering, and relation options
+in the existing single catalog query. Collation catalogs are isolated to 9.1+;
+INCLUDE stays 11+, and NULLS NOT DISTINCT stays 15+. Vendor options survive
+Schema XML. `postgres.index.keys` and `postgres.index.method` are authoritative
+catalog SQL fragments for exact recreation; `postgres.index.options` retains
+all catalog options as SQL. Applications changing modeled keys or individual
+option specifics must remove/update the corresponding raw fragment first.
+Ordinary newly authored indexes need none of these keys. Table identity,
+index name, includes, uniqueness, predicate, tablespace and comments remain
+separate modeled fields. YSQL multi-column HASH grouping continues to use its
+placement-aware key generator, and tablespace is emitted only once.
+ScaNN retains its existing vendor-specific key/options generation.
+
+CockroachDB index definitions now reuse the definition in the original catalog
+query, adding zero queries. ENUM labels are joined into the type query.
+Table/view/sequence CREATE definitions are read once per requested object kind
+from `crdb_internal.create_statements`, filtered to the current database and
+requested schema/name set, rather than issuing SHOW CREATE per object.
+Complete executable definitions continue to preserve vendor DDL and locality.
+YSQL placement now batches the requested non-partitioned table OIDs and their
+indexes in one query, including table properties, tablespaces and conditional
+range-split deparsing. Primary-key storage inheritance is preserved. The public
+single-table placement reader delegates to the added `readAll` method.
+No per-object-query exception was introduced.
+
+Regression coverage compares complete index definitions after XML/recreation
+(pattern operator class, expression/collation, GIN options, INCLUDE, unique
+index and an actual tablespace). It tests quoted sequence names and comments,
+configuration and the PostgreSQL 9.6/10 boundary. Executed-SQL counters verify
+that sequence, CockroachDB definition/ENUM/index and YSQL placement query
+counts stay constant when the object set grows. Only owned local disposable
+containers are used; cloud/external database tasks remain unexecuted.
+
+The full real-engine/dependent-module build passed in 21m 23s:
+
+| Task | Tests |
+| --- | ---: |
+| `dockerTest` | 7 |
+| `yugabyte11CompatibilityTest` | 65 |
+| `yugabyte15CompatibilityTest` | 65 |
+| `cockroach24CompatibilityTest` | 32 |
+| `cockroach25CompatibilityTest` | 32 |
+| `auroraPostgres14CompatibilityTest` | 5 |
+| `auroraPostgres15CompatibilityTest` | 5 |
+| `auroraPostgres16CompatibilityTest` | 5 |
+| `auroraPostgres17CompatibilityTest` | 5 |
+| `alloydb15CompatibilityTest` | 13 |
+| `alloydb16CompatibilityTest` | 13 |
+| `alloydb17CompatibilityTest` | 13 |
+| `alloydbPostgresControlTest` | 11 |
+
+All listed container cases passed without skips. The Aurora row uses ordinary
+PostgreSQL containers for inherited compatibility, not AWS Aurora. The Omni
+rows use official Omni engines, not managed Google Cloud AlloyDB.
+
+Full matrix command:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.postgres.*Metadata*' :sqlapp-core-dialect-test:yugabyteCompatibilityTest :sqlapp-core-dialect-test:cockroachCompatibilityTest :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest :sqlapp-core-dialect-test:alloydbCompatibilityTest :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+The final assertion-strengthening run passed in 4m 40s: 17 focused container
+cases passed across the same version matrix. These additionally compare all
+recreated sequence configuration fields and count every executed statement
+in the focused PostgreSQL sequence/CockroachDB index readers (including
+ordinary statements, not just prepared statements). The YSQL sequence counter
+also catches singular pg_sequence detail queries. The full matrix above
+contains 271 passing cases; focused rechecks are overlapping coverage.
+
+Final unit/dependent results:
+
+| Module | Passed | Skipped |
+| --- | ---: | ---: |
+| `sqlapp-core-postgres` | 265 | 0 |
+| `sqlapp-core-yugabyte` | 10 | 1 |
+| `sqlapp-core-cockroach` | 16 | 0 |
+| `sqlapp-core-aurora-postgres` | 7 | 0 |
+| `sqlapp-core-alloydb` | 16 | 0 |
+| `sqlapp-command` | 543 | 0 |
+| `sqlapp-gradle-plugin` | 81 | 0 |
+
+The dialect/command results contain 857 passing cases. Gradle plugin results
+retain 81 passing cases, with the plugin task UP-TO-DATE in the final run;
+these are not claimed as 81 newly executed tests. The one skipped case is the
+existing explicitly opt-in external YSQL round-trip test; no external database
+was accessed. Java 21 and the repository wrapper were used. The final run
+included the five dialect module test tasks plus command/plugin tests; focused
+container filters were `preservesSequenceAndAdvancedIndexMetadata`,
+`preservesExplicitIndexTablespace`, `PostgresLegacyMetadataRegressionTest`,
+`metadataPlacementAndSequenceQueriesAreSetBased` and
+`metadataQueryCountsDoNotGrowWithObjects` on the matrix tasks listed above.
+Documentation validation passed (670 local links, 59 reachable current pages),
+and diff whitespace checks passed. Earlier exploratory attempts exposed the
+pre-10 column-reader mismatch and keyword quoting problem and were repaired
+before the successful matrix. The bare `postgres:10.23` tag was unavailable;
+the qualified legacy test uses the verified official `postgres:10.23-bullseye`.
+No dependency versions, production settings or external database configuration
+were modified. Tracked CockroachDB build output regenerated by verification
+is restored to the pre-existing index state; no generated-file change is intended.

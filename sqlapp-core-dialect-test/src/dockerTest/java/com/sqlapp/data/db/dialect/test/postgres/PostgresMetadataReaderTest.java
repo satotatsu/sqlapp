@@ -236,4 +236,24 @@ class PostgresMetadataReaderTest {
 				 INSERT INTO metadata_test.metadata_audit(child_id) VALUES (NEW.id)
 				""");
 	}
+
+    @org.junit.jupiter.api.Test
+    void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
+        try (var c = POSTGRES.createConnection("")) {
+            com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c, DialectResolver.getInstance().getDialect(c));
+        }
+    }
+
+    @Test
+    void preservesExplicitIndexTablespace() throws Exception {
+        String space = "audit_space_" + java.util.UUID.randomUUID().toString().replace("-", "");
+        String directory = "/tmp/" + space;
+        assertEquals(0, POSTGRES.execInContainer("mkdir", directory).getExitCode());
+        assertEquals(0, POSTGRES.execInContainer("chown", "postgres:postgres", directory).getExitCode());
+        try (var c = POSTGRES.createConnection(""); var sql = c.createStatement()) {
+            sql.execute("CREATE TABLESPACE " + space + " LOCATION '" + directory + "'");
+            try { PostgresMetadataRegressionAssertions.verify(c, DialectResolver.getInstance().getDialect(c), space); }
+            finally { sql.execute("DROP TABLESPACE " + space); }
+        }
+    }
 }

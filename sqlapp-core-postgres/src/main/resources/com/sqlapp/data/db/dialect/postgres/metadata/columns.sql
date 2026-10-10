@@ -18,7 +18,7 @@ SELECT
 	,t.typtype
 	,case
 	 when (c.relkind::varchar IN ('r', 'p') and n.nspname not in ('information_schema', 'pgagent')) 
-	      then pg_get_serial_sequence(concat('"', c.relname, '"'), a.attname)
+	      then pg_get_serial_sequence(quote_ident(n.nspname) || '.' || quote_ident(c.relname), a.attname)
 	      else null
 	 end  AS sequence_name
 	,case when (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042, 1043) /*CHAR,VARCHAR*/

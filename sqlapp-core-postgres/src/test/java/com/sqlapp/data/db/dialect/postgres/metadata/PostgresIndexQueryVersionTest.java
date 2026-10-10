@@ -19,4 +19,17 @@ class PostgresIndexQueryVersionTest {
 			assertEquals(major >= 15, sql.contains("i.indnullsnotdistinct,"));
 		}
 	}
+
+	@Test
+	void isolatesCollationCatalogsTo91AndRetainsIndexDetailsInAllQueries() {
+		for (int[] version : new int[][] {{8,4},{9,0},{9,1},{9,6},{10,0},{11,0},{15,0},{18,0}}) {
+			var dialect = DialectResolver.getInstance().getDialect("postgres",version[0],version[1],null);
+			var reader = new PostgresIndexReader(dialect);
+			String sql = reader.getSqlSqlNode(new ProductVersionInfo().setMajorVersion(version[0]).setMinorVersion(version[1])).toString();
+			assertEquals(version[0]>9 || version[0]==9 && version[1]>=1, sql.contains("pg_catalog.pg_collation"));
+			assertTrue(sql.contains("AS key_sql"));
+			assertTrue(sql.contains("AS index_options"));
+			assertTrue(sql.contains("AS index_tablespace"));
+		}
+	}
 }

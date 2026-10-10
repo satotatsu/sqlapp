@@ -17,17 +17,20 @@ public class CockroachViewReader extends PostgresViewReader {
 	@Override
 	protected List<Table> doGetAll(Connection c, ParametersContext context, ProductVersionInfo version) {
 		var result = new ArrayList<Table>();
-		try (var sql = c.createStatement();
+		try {
+			var definitions = CockroachMetadata.definitions(c, "VIEW", context);
+			try (var sql = c.createStatement();
 				var rows = sql.executeQuery(
 						"SELECT table_schema,table_name FROM information_schema.tables WHERE table_catalog=current_database() AND table_type='VIEW' ORDER BY table_schema,table_name")) {
-			while (rows.next()) {
-				String schema = rows.getString(1), name = rows.getString(2);
-				if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
-						|| !CockroachMetadata.matches(context, "viewName", name))
-					continue;
-				var object = new View(name).setSchemaName(schema);
-				object.setDefinition(CockroachMetadata.definition(c, "VIEW", schema, name));
-				result.add(object);
+				while (rows.next()) {
+					String schema = rows.getString(1), name = rows.getString(2);
+					if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
+							|| !CockroachMetadata.matches(context, "viewName", name))
+						continue;
+					var object = new View(name).setSchemaName(schema);
+					object.setDefinition(CockroachMetadata.definition(definitions, schema, name));
+					result.add(object);
+				}
 			}
 		} catch (SQLException e) {
 			throw new IllegalStateException("Cannot read CockroachDB View metadata", e);
