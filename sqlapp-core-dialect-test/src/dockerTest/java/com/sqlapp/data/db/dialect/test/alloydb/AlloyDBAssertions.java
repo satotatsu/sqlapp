@@ -323,7 +323,7 @@ abstract class AlloyDBAssertions {
 			try {
 				var history = new Table("History").setSchemaName(schema);
 				history.getColumns().add("Id", c -> c.setDataType(DataType.INT));
-				history.getColumns().add("value", c -> c.setDataType(DataType.VARCHAR).setLength(100));
+				history.getColumns().add("value", c -> c.setDataType(DataType.LONGVARCHAR));
 				history.getColumns().add("valid_from", c -> c.setDataType(DataType.TIMESTAMP));
 				history.getColumns().add("valid_to", c -> c.setDataType(DataType.TIMESTAMP));
 				history.getColumns().add("current", c -> c.setDataType(DataType.BOOLEAN));
@@ -390,6 +390,53 @@ abstract class AlloyDBAssertions {
 					connection.rollback();
 					connection.setAutoCommit(true);
 				}
+				drop(connection, schema);
+			}
+		}
+	}
+
+	@Test
+	void generatedUnboundedStringsPreserveLongValuesAndArrays() throws Exception {
+		try (var connection = connect()) {
+			String schema = schema();
+			try {
+				var strings = new Table("Strings").setSchemaName(schema);
+				strings.getColumns().add("plain", c -> c.setDataType(DataType.LONGVARCHAR));
+				strings.getColumns().add("items", c -> c.setDataType(DataType.LONGVARCHAR).setArrayDimension(1));
+				strings.getColumns().add("explicit_text", c -> c.setDataType(DataType.VARCHAR).setDataTypeName("text"));
+				var dialect = dialect(connection);
+				try (var statement = connection.createStatement()) {
+					statement.execute("CREATE SCHEMA " + schema);
+					com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
+							.getSqlFactory(strings, SqlType.CREATE);
+					for (var sql : factory.createSql(strings)) statement.execute(sql.getSqlText());
+				}
+				String value = "日本語".repeat(20000);
+				try (var statement = connection.prepareStatement("INSERT INTO " + schema
+						+ ".\"Strings\" VALUES (?, ?, ?)")) {
+					statement.setString(1, value);
+					var array = connection.createArrayOf("varchar", new String[] { value, "", null });
+					try {
+						statement.setArray(2, array);
+						statement.setString(3, value);
+						assertEquals(1, statement.executeUpdate());
+					} finally {
+						array.free();
+					}
+				}
+				try (var statement = connection.createStatement();
+						var rows = statement.executeQuery("SELECT * FROM " + schema + ".\"Strings\"")) {
+					assertTrue(rows.next());
+					assertEquals(value, rows.getString("plain"));
+					assertEquals(value, rows.getString("explicit_text"));
+					var array = rows.getArray("items");
+					try {
+						assertArrayEquals(new String[] { value, "", null }, (String[]) array.getArray());
+					} finally {
+						array.free();
+					}
+				}
+			} finally {
 				drop(connection, schema);
 			}
 		}

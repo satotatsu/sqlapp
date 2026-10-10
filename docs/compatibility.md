@@ -2030,3 +2030,38 @@ keeps this snapshot test independent of that separate PostgreSQL generator
 follow-up. Managed AlloyDB/external database tests were not executed.
 Columnar/ScaNN behavior and other vendor-specific scope remain deferred in the
 [AlloyDB guide](../sqlapp-core-alloydb/README.md).
+
+
+### PostgreSQL unbounded character DDL follow-up (2026-10-10)
+
+The PostgreSQL SQL builder now handles an unbounded `LONGVARCHAR` like the
+existing unbounded `VARCHAR` path, generating `VARCHAR` without a length.
+An explicit `text` name on either type generates `TEXT`, including arrays;
+explicit VARCHAR lengths retain the previous behavior. The fix is in the
+PostgreSQL dialect and inherited by compatible families; no resolver, reader,
+public API or configuration format changed. Unit cases cover PostgreSQL
+8/11/15/18 generation, lengths, TEXT, arrays and the public CREATE factory.
+See the [PostgreSQL character type specification](https://www.postgresql.org/docs/current/datatype-character.html).
+
+The SCD2 fixture was restored to its original length-free LONGVARCHAR model.
+A new shared integration case executes generated CREATE and stores/reads
+60,000-character Japanese values, unbounded VARCHAR arrays with empty/null
+elements and explicit TEXT on Omni 15.17.0/16.8.0/17.9.0 and PostgreSQL 17.9.
+The earlier varchar(0) follow-up is resolved for these model types.
+
+Validation commands (Java 21, repository wrapper):
+
+```shell
+./gradlew :sqlapp-core-postgres:test --tests '*PostgresCharacterTypeTest' --console=plain
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-alloydb:test :sqlapp-core-aurora-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-cockroach:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:alloydbCompatibilityTest --continue --console=plain
+python docs/development/check_documentation.py
+```
+
+The targeted class passed both cases. The real-engine matrix passed all
+10 cases per Omni image (30 total) and all 10 PostgreSQL controls. Module
+results: PostgreSQL 261 passed, AlloyDB 7, Aurora PostgreSQL 7, YSQL 10 with
+one pre-existing skipped case, CockroachDB 16, command 543 and Gradle plugin
+81. The aggregate was BUILD SUCCESSFUL in 4m 21s. Documentation validation
+passed 668 local links and 59 reachable pages.
+No external/cloud database tests or real YSQL/CockroachDB engine matrices
+were run. Columnar/ScaNN work remains deferred; this is a character DDL fix.

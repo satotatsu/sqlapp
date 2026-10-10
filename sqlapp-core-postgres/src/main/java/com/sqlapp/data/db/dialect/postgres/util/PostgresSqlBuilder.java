@@ -194,10 +194,13 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 				_add(column.getDataType().name() + "(" + precision + "," + resolvedScale + ")");
 				return this;
 			}
-			if (column.getDataType() == DataType.VARCHAR && column.getLength() == null
-					&& !"text".equalsIgnoreCase(column.getDataTypeName())) {
-				_add("VARCHAR");
-				return this;
+			if (column.getDataType() == DataType.VARCHAR || column.getDataType() == DataType.LONGVARCHAR) {
+				if ("text".equalsIgnoreCase(column.getDataTypeName())) {
+					return _add("TEXT");
+				}
+				if (column.getLength() == null) {
+					return _add("VARCHAR");
+				}
 			}
 			return super.typeDefinition(column);
 		}

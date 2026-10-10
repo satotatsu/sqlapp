@@ -145,8 +145,13 @@ resource is created, changed or deleted by the test task.
 The SCD2 follow-up passed all 9 cases per Omni image (27 total), all 9
 PostgreSQL control cases and 7 module tests on 2026-10-10.
 
-The local SCD2 test uses an explicit `VARCHAR(100)` model column. An initial
-fixture using `LONGVARCHAR` without a length produced `varchar(0)` and was
-rejected by Omni 16. This PostgreSQL SQL-generation issue remains a separate
-follow-up; this qualification does not establish unbounded string generation.
+The PostgreSQL builder now generates unconstrained `VARCHAR` for a
+`LONGVARCHAR` column without a length, including arrays, and preserves an
+explicit `text` type as `TEXT`. Explicit VARCHAR lengths retain their existing
+behavior. This fixes the initial invalid `varchar(0)` fixture; the SCD2 test
+again uses the original unbounded model. A separate generated-DDL case checks
+60,000-character Japanese strings, arrays with empty/null elements and TEXT.
+No public API, configuration or metadata representation changed. The final
+character-DDL regression passed all 10 cases per Omni image (30 total) and
+all 10 PostgreSQL controls.
 Columnar and ScaNN metadata/DDL remain deferred as described above.
