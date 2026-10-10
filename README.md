@@ -248,9 +248,12 @@ note explicitly states otherwise.
 The repository currently contains dialect modules for DB2, Firebird,
 H2, HSQLDB, Informix, Access/MDB, MariaDB, MySQL, Oracle, Phoenix,
 PostgreSQL, SAP HANA, Cloud Spanner, SQLite, SQL Server, Sybase ASE,
-Vertica, and YugabyteDB YSQL. Module presence does not by itself guarantee every feature on
+Vertica, YugabyteDB YSQL, and CockroachDB. Module presence does not by itself guarantee every feature on
 every server version; check the relevant dialect documentation and release
 notes before production use.
+For CockroachDB 24.3/25.4, see the [usage, verified scope and limits](sqlapp-core-cockroach/README.md).
+
+For YSQL 11/15, see the [usage, verified scope and limits](sqlapp-core-yugabyte/README.md).
 
 See [Published artifacts and dependency selection](docs/artifacts.md) for the
 complete artifact list, common dependency combinations, dialect artifact

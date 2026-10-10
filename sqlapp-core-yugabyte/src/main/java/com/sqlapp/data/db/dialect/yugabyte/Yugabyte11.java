@@ -15,7 +15,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres110SqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.yugabyte.sql.YugabyteMergeFactory;
 
-/** YSQL compatibility baseline for PostgreSQL 11. Vendor extensions are not modeled. */
+/** YSQL compatibility baseline for PostgreSQL 11. Placement metadata is preserved through specifics. */
 public class Yugabyte11 extends Postgres110 {
 	private static final long serialVersionUID = 1L;
 
@@ -38,6 +38,10 @@ public class Yugabyte11 extends Postgres110 {
 			@Override
 			protected void initializeAllSqls() {
 				super.initializeAllSqls();
+				registerSqlFactory(Table.class, SqlType.CREATE, com.sqlapp.data.db.dialect.yugabyte.sql.YugabyteCreateTableFactory.class);
+				registerSqlFactory(com.sqlapp.data.schemas.TableSpace.class, SqlType.CREATE, com.sqlapp.data.db.dialect.yugabyte.sql.YugabyteCreateTableSpaceFactory.class);
+				registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE, com.sqlapp.data.db.dialect.yugabyte.sql.Yugabyte11CreateUniqueConstraintFactory.class);
+				registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE, com.sqlapp.data.db.dialect.yugabyte.sql.Yugabyte11CreateIndexFactory.class);
 				registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.ALTER,
 						com.sqlapp.data.db.dialect.yugabyte.sql.Yugabyte11AlterFunctionFactory.class);
 				registerSqlFactory(Table.class, SqlType.MERGE,
@@ -50,8 +54,16 @@ public class Yugabyte11 extends Postgres110 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres110CatalogReader(this) {
 			@Override
+			protected com.sqlapp.data.db.metadata.TableSpaceReader newTableSpaceReader() {
+				return new com.sqlapp.data.db.dialect.yugabyte.metadata.YugabyteTableSpaceReader(getDialect());
+			}
+			@Override
 			protected SchemaReader newSchemaReader() {
 				return new Postgres110SchemaReader(getDialect()) {
+					@Override
+					protected com.sqlapp.data.db.metadata.TableReader newTableReader() {
+						return new com.sqlapp.data.db.dialect.yugabyte.metadata.Yugabyte11TableReader(getDialect());
+					}
 					@Override
 					protected SequenceReader newSequenceReader() {
 						return new YugabyteSequenceReader(getDialect());

@@ -102,6 +102,7 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-yugabyte')
+	implementation project(':sqlapp-core-cockroach')
 	implementation project(':sqlapp-core-saphana')
 	implementation project(':sqlapp-core-spanner')
 	implementation project(':sqlapp-core-sqlite')
@@ -187,4 +188,29 @@ tasks.register('yugabyteCompatibilityTest') {
 	description = 'Runs the fixed PostgreSQL 11 and 15 YSQL compatibility matrix in disposable containers.'
 	group = 'verification'
 	dependsOn tasks.named('yugabyte11CompatibilityTest'), tasks.named('yugabyte15CompatibilityTest')
+}
+
+// CockroachDB integration is opt-in and only uses owned disposable containers.
+['24': 'cockroachdb/cockroach:v24.3.0', '25': 'cockroachdb/cockroach:v25.4.0'].each { baseline, image ->
+	tasks.register("cockroach${baseline}CompatibilityTest", Test) {
+		description = "Verifies CockroachDB ${baseline} schema/XML/DDL and bulk compatibility."
+		group = 'verification'
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.cockroach.CockroachMetadataReaderTest'
+		systemProperty 'sqlapp.test.cockroach.image', image
+		systemProperty 'sqlapp.test.cockroach.expectedVersion', image.substring(image.lastIndexOf(':') + 1)
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+tasks.named('cockroach25CompatibilityTest') { mustRunAfter tasks.named('cockroach24CompatibilityTest') }
+tasks.register('cockroachCompatibilityTest') {
+	description = 'Runs the fixed CockroachDB 24.3/25.4 compatibility matrix in disposable containers.'
+	group = 'verification'
+	dependsOn tasks.named('cockroach24CompatibilityTest'), tasks.named('cockroach25CompatibilityTest')
 }

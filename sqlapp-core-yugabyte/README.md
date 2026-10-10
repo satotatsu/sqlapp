@@ -1,284 +1,209 @@
 # YugabyteDB YSQL
 
-Use `com.sqlapp:sqlapp-core-yugabyte` and a PostgreSQL-compatible JDBC driver.
-This artifact depends on core and PostgreSQL to reuse the Schema model,
-version-specific catalog readers, types, quoting and SQL factories. It adds no
-driver dependency. YCQL is not supported.
+`com.sqlapp:sqlapp-core-yugabyte` supports ordinary relational schema metadata,
+SQL recreation and bulk migration on the PostgreSQL **11 and 15 YSQL engines**.
+It reuses `sqlapp-core` and `sqlapp-core-postgres`; supply a PostgreSQL-compatible
+JDBC driver separately. YCQL is outside this scope.
 
-The usual entry point is `DialectResolver.getInstance().getDialect(connection)`.
-The resolver recognizes JDBC product `PostgreSQL` with a database version such
-as `11.2-YB-2.20.1.1-b0` or `15.2-YB-2025.1.0.0-b0`. No extra query is executed.
-The version must retain the `-YB-` marker; drivers stripping that marker cannot
-be automatically distinguished from PostgreSQL. Do not use a database name or
-JDBC URL as proof of product identity.
+## Getting started
+
+Use the usual resolver with the connected database:
+
+```java
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+
+class YsqlUsage {
+    static Schema readSchema(Connection connection, String schemaName) throws SQLException {
+        var dialect = DialectResolver.getInstance().getDialect(connection);
+        var reader = dialect.getCatalogReader().getSchemaReader();
+        reader.setSchemaName(schemaName);
+        return reader.getAllFull(connection).stream()
+                .filter(schema -> schemaName.equals(schema.getName()))
+                .findFirst().orElseThrow();
+    }
+
+    static long copyRows(Connection target, Table table) throws SQLException {
+        return BulkInsertResolver.execute(target, table, BulkOption.defaults());
+    }
+
+    static long upsertRows(Connection target, Table table) throws SQLException {
+        return BulkUpsertResolver.execute(target, table, BulkUpsertOption.defaults());
+    }
+}
+```
+
+Metadata reading does not load row data. Populate `table.getRows()` yourself,
+for example with `table.readData(resultSet)` from an explicitly chosen source
+query. The target table must already exist and match the supplied Schema model.
+UPSERT needs a modeled primary/unique conflict key; advanced options can choose
+keys, duplicate handling and insert/update actions. Use the shared
+[bulk migration workflow](../docs/migration/README.md) for checkpoint/resume,
+verification and repair rather than building those around the example methods.
+
+The resolver recognizes JDBC product `PostgreSQL` when its version retains the
+`-YB-` marker, such as `11.2-YB-2.20.1.1-b0` or `15.2-YB-2025.1.0.0-b0`.
+Identification uses JDBC metadata without an extra query. Drivers stripping the
+marker cannot be automatically distinguished from PostgreSQL; database names
+and JDBC URLs are not used as product evidence.
 
 For explicit resolution, `getDialect("YugabyteDB", 15, 2, null)` takes the
 **PostgreSQL engine version**, not the YugabyteDB release. Only engine majors
-11 and 15 are accepted. Unknown majors and ambiguous YugabyteDB release
-numbers fail with an actionable error. Existing PostgreSQL resolution stays
-unchanged. Metadata-specific matches are not cached under `PostgreSQL`.
+11 and 15 are accepted; unknown majors and ambiguous release numbers fail.
+Inspect the connected engine during upgrades. Ordinary PostgreSQL resolution
+and its cache remain separate from YSQL identification.
 
-YugabyteDB 2025.1+ is based on PostgreSQL 15; earlier stable releases use 11.2.
-Always inspect the connected engine, including during a major upgrade, rather
-than inferring the engine from the product release:
-https://docs.yugabyte.com/stable/faq/compatibility/
-https://docs.yugabyte.com/stable/manage/ysql-major-upgrade-yugabyted/
+## Supported and verified scope
 
-Support covers ordinary relational schema metadata/recreation and bulk data
-migration on the PostgreSQL 11 and 15 YSQL engines. YCQL and YugabyteDB physical
-placement/sharding extensions are outside this compatibility scope.
+| Area | Coverage on both YSQL baselines | Boundary |
+|---|---|---|
+| Schema | Tables, PK/FK/unique/check constraints, indexes, views, sequences, comments; metadata/XML/executable recreation | No arbitrary dependency graph or cyclic recreation guarantee |
+| Types | Common scalar types, enum/domain/composite types, numeric/length/temporal modifiers, bit/interval metadata, qualified quoted custom types | Advanced type dependency graphs and extension types are unverified |
+| Constraints/indexes | Composite keys, covering keys, partial/expression indexes, explicit null ordering, all FK actions, MATCH FULL/SIMPLE, deferred FKs, NOT VALID CHECK/FK | Deferred PRIMARY KEY/UNIQUE is unsupported; inheritance is outside scope |
+| Routines | Overload identity, complex/default/OUT/INOUT/VARIADIC/TABLE arguments, executable definitions, local SET, comments and EXECUTE privilege generation | No automatic owner/ACL replay; signature changes require explicit migration |
+| Routine differences | Volatility, null-input behavior, security and comments; verified catalog-backed SQL/PLpgSQL body replacement from cloned or independent XML snapshots | Mixed header/body edits are rejected; no live drift check |
+| Triggers/views | Trigger timing/state/WHEN, statement/TRUNCATE and INSTEAD OF view triggers; view CHECK OPTION/security_barrier and column comments | DDL transaction guarantees and RLS/predicate-leakproofness are outside scope |
+| Bulk | COPY, staging ON CONFLICT UPSERT, null/empty/Unicode/binary/decimal values, identities and tested arrays | Transaction ownership and array limits below apply |
+| Migration | Checkpoint/resume, composite keyset, generated parent/child keys, verification/repair, lease fencing, savepoints and write conflicts | Single-node functional qualification; no multi-node failover/performance claim |
+| Placement | Tablespace replica policy, table/index references, Colocation, grouped Hash keys, Range keys and split clauses through XML and CREATE | Target topology and colocated database must exist; no live node/tablet identity replay |
 
-## Bulk operations
+The whole-schema acceptance case reads metadata and rows, XML-round-trips them,
+drops and recreates the schema through the standard CREATE registry, copies
+parent then child rows, performs UPSERT and rechecks data and metadata. It
+executes recreated functions, a dependent view, triggers, FK and domain checks.
+See [acceptance evidence](../docs/compatibility.md#whole-schema-and-data-acceptance-on-ysql).
 
-`BulkInsertResolver.resolve(dialect)` selects PostgreSQL COPY through a YSQL
-transaction wrapper. YSQL can commit COPY batches separately in auto-commit
-mode; the wrapper starts one transaction, rolls back on failure and restores
-auto-commit. When the caller already owns a transaction, it neither commits
-nor rolls back that transaction. The caller must roll back after a failure.
+| Version-specific behavior | YSQL 11 | YSQL 15 |
+|---|---|---|
+| NULLS NOT DISTINCT option | Ignored; ordinary UNIQUE null semantics retained | Recreated and enforced |
+| security_invoker views | Ordinary owner-based behavior | Invoker base-table permission checks verified |
+| Negative/excess numeric scale | Unsupported syntax boundary verified | Rounding and overflow verified |
+| Procedure security/body changes | Rejected before SQL generation; comments supported | Generated and invoked successfully |
+| SQL MERGE | Generated merge uses ON CONFLICT | Generated merge uses ON CONFLICT |
 
-`BulkUpsertResolver.resolve(dialect)` reuses the PostgreSQL executor: COPY to a
-temporary staging table followed by `INSERT ... ON CONFLICT`. The existing
-options for conflict keys, duplicate policy, insert/update actions and identity
-values remain available. PostgreSQL providers retain their product checks;
-YSQL registers its own providers so ordinary PostgreSQL selection is unchanged.
-The PG15 YSQL SQL factory also uses ON CONFLICT instead of SQL MERGE, which YSQL
-does not implement. Merge generation requires a modeled primary/unique key.
+Routine body replacement requires verified catalog DDL and matching headers;
+COST, SET, signature or language edits mixed into a body change fail. Both
+snapshots must describe the expected state; execution provides no live drift
+or transaction guarantee. See [body replacement](../docs/compatibility.md#verified-postgresql-and-ysql-routine-body-replacement)
+and [independent snapshots](../docs/compatibility.md#independent-routine-snapshots-for-body-differences).
+Routine GRANT/REVOKE generation has explicit grantor-context and visibility
+limits; see [EXECUTE privileges](../docs/compatibility.md#routine-execute-privilege-round-trip).
 
-Set-based SCD2 snapshot acceleration is not enabled. Use the shared portable
-snapshot path. Distributed conflicts propagate as SQLExceptions; caller-owned
-transactions are not replayed. The database lease store retries 40001/40P01
-only within transactions it owns, after rollback, with a bounded retry count.
+## Bulk transactions and limits
 
-References: [COPY transaction behavior](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/cmd_copy/),
-[PG15 feature differences](https://docs.yugabyte.com/stable/api/ysql/pg15-features/).
+YSQL registers its own bulk providers. COPY uses the PostgreSQL implementation
+inside a YSQL transaction wrapper: on an auto-commit connection, one call owns
+one transaction, commits on success, rolls back on failure and restores
+auto-commit. Multiple calls do not form one transaction automatically. To make
+parent/child copies atomic together, the caller must own their transaction.
+When a transaction already exists, the executor neither commits nor rolls it
+back; after failure, the caller must roll back.
 
-The core metadata-identification extension is additive: existing product
-resolvers return null by default and retain ordinary name/version resolution.
-It is shared infrastructure for databases exposing another product's JDBC name;
-Yugabyte-specific detection stays in this module.
+UPSERT copies to a temporary staging table and executes `INSERT ... ON CONFLICT`.
+Generated merge SQL also uses ON CONFLICT and needs a modeled primary/unique key.
+Set-based SCD2 snapshot acceleration is not enabled; use the shared portable
+snapshot path. Distributed SQLExceptions propagate and caller transactions are
+not replayed. The lease store retries 40001/40P01 only in transactions it owns,
+after rollback and with a bounded retry count.
+
+Array tests cover nested integer/text, primitive-byte smallint arrays, one- and
+two-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays, and
+two-dimensional varchar arrays, including SQL NULL, empty arrays and null
+elements. Other element types, arbitrary dimensions and non-default lower
+bounds are unverified. Domains over builtin/enum scalar and array types are
+covered; arbitrary dependencies and domain collation/interval qualifiers are
+unverified. Multiple domain CHECKs combine into one expression without their
+individual names. Composite ALTER and dropped-attribute recreation are unverified.
+
+Sequence metadata preserves configuration, comments and bounds, not live
+position or ownership migration. Automatic role/owner/ACL replay, RLS,
+automatic topology translation, extension behavior,
+multi-node failover and performance qualification are outside this scope.
+DDL tests execute outside caller transactions and do not promise PostgreSQL
+transactional-DDL semantics. Validate the exact deployment separately.
+
+## Placement metadata and CREATE DDL
+
+YSQL readers retain placement settings in existing `specifics` maps and use the
+existing table/index `tableSpaceName` properties for references. No shared model
+or XML format change is required. The catalog reader supplies TableSpace objects;
+a Schema-only snapshot carries references but not their TableSpace definitions.
+Read the needed user tablespaces separately or through the Catalog model, and
+create them before tables. Builtin `pg_default`/`pg_global` are not creation targets.
+
+| Object | Specifics key | Meaning |
+|---|---|---|
+| TableSpace | `YSQL_REPLICA_PLACEMENT` | Catalog JSON placement policy, including replica/zone/leader preferences when present |
+| Table | `YSQL_COLOCATION` | Explicit `true` or `false` |
+| Table / Index | `YSQL_SPLIT_INTO` | Read-time hash tablet count, emitted as initial `SPLIT INTO` |
+| Table / Index | `YSQL_SPLIT_AT_BASE64` | UTF-8/base64 catalog `SPLIT AT VALUES` clause; preserves quoted/newline boundaries through XML |
+| Constraint / Index | `YSQL_HASH_COLUMNS` | Number of leading grouped Hash key columns; zero means explicit Range ordering |
+| UniqueConstraint | `YSQL_TABLESPACE` | Backing-index reference when independent of the table |
+
+Constraint snapshots also retain backing-index split settings so their CREATE
+path can build the placed unique index and attach it using `UNIQUE USING INDEX`.
+Primary keys share table storage and use the table's split/tablespace settings;
+no duplicate primary index is generated. Table-level hash counts read from the
+catalog are supplemental metadata; key DDL is driven by the Constraint/Index.
+
+For a different target topology, edit the Schema model before SQL generation:
+set `table.setTableSpaceName("target_space")`, update index/constraint references
+as needed, and set `tableSpace.getSpecifics().put("YSQL_REPLICA_PLACEMENT", targetJson)`
+with the desired target policy via `put`. No automatic region/zone mapping or
+cluster provisioning is performed. A user-created TableSpace requires its
+placement JSON; absent placement is an actionable generation error.
+
+A colocated table requires an already colocated target database. Its generated
+operations include a database precondition, so an incompatible target fails
+instead of silently ignoring `COLOCATION=true`. Colocated relations cannot have
+split clauses. Conflicting split settings, invalid booleans/counts and excess
+hash-key counts fail during generation. Preserve all returned operations.
+
+The split snapshot describes the layout when read, including splits that may
+have occurred automatically; it cannot recover the original CREATE's initial
+count. Restored counts/boundaries are initial conditions, not a promise of stable
+runtime placement. Live tablet IDs, node addresses, tablegroup/colocation IDs,
+automatic ALTER/movement of existing data and SQL-partitioned parent placement
+are outside this implementation. Colocation inherits target database/tablegroup
+behavior; distinct custom tablegroups are not reconstructed. No distributed
+performance or multi-node placement qualification is claimed.
+
+See [placement implementation and validation](../docs/compatibility.md#ysql-placement-metadata-and-create-ddl).
 
 ## Verification
 
-Module tests cover ServiceLoader resolution, engine boundaries, failure
-propagation, mixed PostgreSQL/YSQL use, provider selection and generated SQL.
-An optional external `YugabyteMetadataRoundTripTest` is skipped unless
-`SQLAPP_YSQL_JDBC_URL`, `SQLAPP_YSQL_USER` and `SQLAPP_YSQL_PASSWORD` are supplied.
-Only run that test against an explicitly authorized disposable database; it
-creates and drops its own randomly named schema.
+The placement regression passed **64 tests per local engine** (128 real-engine
+passes), with zero failures/errors. The Yugabyte module passed 10 ordinary tests
+with one optional external test skipped; PostgreSQL, command and Gradle plugin
+checks retained 880 passes (their unchanged tasks were up-to-date). Yugabyte
+assembly succeeded. See the [placement command and results](../docs/compatibility.md#ysql-placement-metadata-and-create-ddl).
+The preceding broader regression passed 2,738 ordinary tests; see its
+[whole-schema acceptance record](../docs/compatibility.md#whole-schema-and-data-acceptance-on-ysql).
 
-The reproducible local compatibility matrix is:
+The fixed baselines use PostgreSQL JDBC `42.7.11` and disposable single-node
+containers, without external credentials or host data volumes:
+
+- YSQL 11: `yugabytedb/yugabyte:2024.2.11.0-b36`.
+- YSQL 15: `yugabytedb/yugabyte:2026.1.2.0-b137`.
 
 ```shell
 ./gradlew :sqlapp-core-yugabyte:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest
 ```
 
-The configured JDBC driver is `org.postgresql:postgresql:42.7.11`.
-It starts fresh disposable single-node containers, without external database
-credentials or host data volumes, using these fixed images:
-
-- `yugabytedb/yugabyte:2024.2.11.0-b36` (PostgreSQL 11).
-- `yugabytedb/yugabyte:2026.1.2.0-b137` (PostgreSQL 15).
-
-On 2026-10-09, after the domain array/precision, qualified base type and shared
-quoted-type-name fixes, the full matrix passed all 46 tests on each image
-(92 real-engine tests). The core/all-retained-dialect/command/plugin regression
-passed 2,703 cases across the initial run and final rerun, with one optional
-external YSQL case skipped. Core and plugin results were reused as UP-TO-DATE
-in the final run; PostgreSQL/Yugabyte/command and both full engine matrices
-executed again after the final catalog SQL change. Yugabyte assemble was up to
-date. No external or production database was accessed.
-
-The matrix asserts the actual JDBC engine major and tests both engines for:
-
-- Schema-based table, PK/FK/unique/check constraint, index, view and sequence recreation.
-- Covering PRIMARY KEY/UNIQUE key/payload separation through Schema XML and regeneration;
-  quoted INCLUDE columns and NULLS NOT DISTINCT on the PostgreSQL 15 baseline.
-- All five FK ON UPDATE/DELETE actions, deferred NO ACTION versus immediate RESTRICT.
-- Composite MATCH FULL/SIMPLE recreation and partial-NULL behavior; CHECK literals and
-  period_id identifiers do not acquire PostgreSQL 18-only metadata flags.
-- Explicit 0A000 rejection of deferred PRIMARY KEY/UNIQUE constraints on both baselines;
-  these constraints are not part of the supported YSQL deferral scope.
-- Legacy and modern constraint-query execution with reversed composite key positions
-  on both current baselines; historical PostgreSQL servers themselves are unverified.
-- NO INHERIT CHECK state with NOT VALID, standalone constraint/backing-index comments,
-  and XML FK reference identity verified through actual constraint violations.
-  Child-table inheritance itself is not part of the YSQL compatibility scope.
-- NOT VALID CHECK/FK state, post-CREATE constraint addition, comments, legacy violations,
-  new-write enforcement and VALIDATE before/after repair (23514/23503).
-- Standalone TableReader recreation with quoted cross-schema composite FK references.
-- View LOCAL/CASCADED CHECK OPTION and security_barrier preservation, write rejection (44000).
-- YSQL 15 security_invoker base-table permission checking (42501) and YSQL 11 owner access.
-- Deferrable FKs in both initial modes, standalone ADD CONSTRAINT, child-before-parent
-  insertion and SET CONSTRAINTS checking with SQLSTATE 23503.
-- Sequence comments with Unicode/apostrophes, configuration and nextval checks.
-- Smallint/integer/bigint sequence types with ascending and descending increments.
-- Full signed type bounds, CYCLE wraparound and non-cycling SQLSTATE 2200H
-  after recreation, in a single session with CACHE 100.
-- Complete FK-bearing Schema recreation excluding internal implementation triggers.
-- Covering partial unique-index recreation with descending keys, unchanged catalog
-  definitions and conditional duplicate rejection.
-- Explicit NULLS FIRST/LAST and function-expression index recreation, including
-  case-insensitive expression uniqueness and nullable values.
-- PG15 NULLS NOT DISTINCT covering partial indexes and NULL duplicate rejection;
-  PG11 ignores the option and retains ordinary UNIQUE NULL semantics.
-- Generated parent/child identity alignment across root batches and final partial batches.
-- Composite JDBC keyset resume after a persisted cursor.
-- Quoted identifiers, identity, numeric, boolean, date/time, UUID, JSONB, bytea and text-array columns.
-- Enum/domain, function and trigger metadata and executable recreation.
-- Composite CREATE TYPE definitions, quoted attributes, collation, custom type/array
-  references and type/attribute comments, including a changed search_path.
-- Quoted view/column comments and recreated view query results.
-- Same-named FKs on different tables, composite key order, constant CHECKs and
-  table-constraint comments, with FK/check/unique rejection after recreation.
-- Enum label order after ALTER TYPE BEFORE/AFTER, Unicode/apostrophe labels and comments.
-- Multiple domain CHECK expressions, numeric precision/scale, defaults, NOT NULL and comments.
-- Array domains over numeric(12,3), varchar(7) and timestamp(3), plus scalar
-  timestamp(0), through XML and domain recreation; defaults, comments, NULL
-  elements, rounding and actual NOT NULL/CHECK rejection are verified.
-- Scalar/array domains over a quoted enum type in a quoted schema: read with
-  the schema on search_path and recreated after removing it; qualified base
-  names, defaults, cardinality checks and invalid enum rejection are verified.
-- Standalone and table-based index comments with preserved uniqueness.
-- INSTEAD OF trigger timing and INSERT/UPDATE/DELETE through a recreated
-  trigger on a view that cannot be automatically updated.
-- Disabled/ALWAYS/REPLICA trigger-state recreation, WHEN conditions, statement
-  triggers and TRUNCATE events in an ordinary session.
-- Table/view trigger-comment preservation, including Unicode and apostrophes.
-- COPY beyond the 20,000-row auto-commit boundary, atomic failure rollback,
-  Unicode, null/empty strings, decimals, binary, arrays and explicit identities.
-- Key-only generated upsert and bulk upsert, including duplicate no-op behavior.
-- Nested integer/text COPY and upsert, primitive-byte numeric arrays and bytea arrays.
-- UUID/numeric/boolean/date/timestamp arrays with SQL NULL, empty arrays and NULL elements.
-- Two-dimensional UUID/numeric/boolean/date/timestamp/bytea/varchar arrays through
-  XML and table recreation, COPY and upsert; element numeric precision/scale,
-  varchar length and timestamp precision are retained. NULL, empty and nonempty
-  values are exchanged between existing rows; binary/string escaping is checked.
-- Staging upsert, duplicate policies, insert/update-only actions, caller rollback
-  and temporary-table cleanup.
-- Chunked checkpoint atomicity, pause/resume, sustained loads, keyset verification
-  and repair, concurrent lease fencing, savepoints and snapshot write conflicts.
-
-## Limits
-
-The verified builds are compatibility baselines, not a claim that every
-PostgreSQL statement works on every YugabyteDB release. Sharding/colocation,
-hash/range physical index layout, placement/tablespaces, extensions, multi-node
-failover and performance tuning are not covered. COPY tests cover nested integer/text arrays, primitive-byte smallint arrays,
-and one- and two-dimensional bytea/UUID/numeric/boolean/date/timestamp arrays,
-plus two-dimensional varchar arrays. Other element types, arbitrary dimensions
-and non-default lower bounds remain unverified. Domain array metadata is covered
-for the builtin and enum cases listed above; arbitrary domain/type dependency
-graphs, domain collation and interval field qualifiers remain unverified.
-Multiple domain CHECKs are combined into one expression; their individual
-constraint names are not retained. Composite ALTER, extension-specific attribute types and arbitrary composite-type
-dependency graphs remain unverified. YSQL 11 rejects ALTER TYPE DROP ATTRIBUTE;
-real dropped-attribute recreation is not covered.
-Sequence metadata covers configuration, not live-position migration or ownership.
-FK recreation also covers standalone TableReader reads with quoted, cross-schema
-composite references. Referenced columns retain their parent-table owner even
-when the complete parent table is not loaded. View security/check options are covered as listed above. Role/GRANT migration,
-RLS policies and predicate-leakproofness guarantees are not covered. NOT VALID
-CHECK/FK state is preserved; domain/partition-specific validation and migration
-of legacy violating rows into a newly constrained target are outside this scope.
-
-DDL transaction guarantees and isolation behavior depend on YSQL version and
-server flags. DDL recreation tests execute outside caller transactions; they do
-not promise PostgreSQL transactional-DDL semantics. Test production topology,
-settings and load separately. See the
-[integration-test guide](../sqlapp-core-dialect-test/README.md#yugabytedb-ysql-compatibility).
-
-
-Additional numeric boundary coverage preserves unconstrained numeric/varchar
-columns, arrays and domains through XML and recreation, with 1,501-digit values,
-40,000-character Unicode strings and NULL array elements. The PostgreSQL 15
-baseline checks negative and excess numeric scale, rounding, domain defaults
-and overflow; the 11 baseline verifies the unsupported syntax boundary.
-See [compatibility details](../docs/compatibility.md#unconstrained-numeric-and-varchar-and-postgresql-15-numeric-scale).
-
-Latest validation on 2026-10-09 after these numeric boundary fixes: both full
-matrices passed 48 cases each (96 real-engine cases). PostgreSQL/Yugabyte/command
-regression passed 781 cases with one optional external YSQL test skipped;
-Yugabyte assemble and the final Gradle invocation succeeded. The earlier
-46-case/2,703-case totals above describe the preceding batch and are retained
-as historical evidence, not the scope executed for this update.
-
-
-Bit and interval preservation coverage now includes unlimited bit varying,
-fixed/bounded bit strings, empty/NULL array elements, and 20 interval
-field/precision declarations. Scalar/array columns and scalar/array domains
-(including defaults) are compared before and after Schema XML recreation.
-The shared model also retains interval precision in XML and comparison.
-See [bit/interval compatibility details](../docs/compatibility.md#bit-strings-and-interval-field-restrictions).
-
-Latest validation on 2026-10-09 after bit/interval and shared interval XML fixes:
-50 tests passed on each baseline (100 real-engine tests). Core/all-retained-
-dialect/command/plugin regression results total 2,711 passes and one optional
-external YSQL skip. The final invocation and Yugabyte assemble succeeded.
-The earlier totals above describe preceding batches. No external or production
-database was accessed; historical PostgreSQL and PostgreSQL 18 were not run.
-
-
-Routine type regression now covers independent OID lookups across connections,
-quoted enum renames, unsigned OID validation, UUID/custom-enum array returns,
-and scalar/array function overload identity and invocation after XML recreation.
-The PostgreSQL generator preserves routine array dimensions and honors schema
-qualification. Complex default/TABLE-return parsing is outside this new coverage.
-See [routine OID and array details](../docs/compatibility.md#routine-oid-isolation-and-array-type-identity).
-
-
-Routine recreation coverage also includes catalog-derived argument names/modes,
-complex defaults, OUT/INOUT/VARIADIC, TABLE/SETOF, custom array arguments, quoted
-dotted function names and colliding body delimiters. Procedure/local SET cases
-use executable definition and are verified after dropping the originals. The expanded
-cases use generated signature-aware DROP operations and verify restored function
-and procedure comments. See
-[compatibility details](../docs/compatibility.md#routine-catalog-arguments-and-executable-recreation).
-
-Unnamed arguments and default alignment across OUT/INOUT arguments also have
-XML/recreation/execution coverage on both engines. The latest ordinary regression
-has 2,721 passes and one optional external case skipped; the preceding full YSQL
-regression has 55 passes per engine, followed by six focused routine matrix passes
-after the final unnamed-argument correction. Detailed validation scope is recorded
-in the compatibility notes linked above.
-
-Routine EXECUTE privileges now have reader/XML/GRANT/REVOKE coverage for zero-input
-and array overloads, custom quoted types, procedures, PUBLIC and grant options.
-Local NOLOGIN-role tests verify execution denial after revoke and success after
-restoration. Grantor context and automatic ACL replay limitations are documented
-in [compatibility notes](../docs/compatibility.md#routine-execute-privilege-round-trip).
-
-The privilege batch's final regression passed 876 ordinary tests (one optional
-external case skipped) and all 57 compatibility tests per local YSQL engine
-(114 real-engine passes). There were no failures/errors; see the linked notes
-for grantor-context, visibility and automatic ACL replay limits.
-
-
-Routine difference generation now supports volatility, null-input behavior,
-security and comment changes without replacing functions. YSQL 15 also supports
-procedure security changes; YSQL 11 rejects those before SQL generation while
-supporting procedure comments. Local tests verify identity, ACL, body, settings,
-custom COST and dependent-view preservation through changes and reverse changes.
-Signature changes require an explicit migration; verified catalog-backed SQL/PLpgSQL body changes are supported. See the
-[routine attribute compatibility notes](../docs/compatibility.md#postgresql-and-ysql-routine-attribute-differences).
-
-
-Catalog-backed SQL/PLpgSQL routine statements can be replaced through model
-differences while preserving clauses such as local SET and custom COST. YSQL
-11/15 function tests cover XML round-trips, dependent views, re-reading/reversing
-bodies, and multiline PLpgSQL. YSQL 15 procedure bodies are covered; YSQL 11
-procedures require an explicit migration. See the
-[verified body replacement limits](../docs/compatibility.md#verified-postgresql-and-ysql-routine-body-replacement).
-
-
-Verified body differences also accept independently read/XML-restored before and
-after routine snapshots, including definition-backed functions. Matching headers
-are required; mixed COST/SET or signature changes are rejected. Forward/reverse
-SQL and PLpgSQL function results are tested on both YSQL engines, with procedure
-results on YSQL 15. See the
-[independent snapshot limits](../docs/compatibility.md#independent-routine-snapshots-for-body-differences).
-
-
-Whole-schema acceptance now exercises the standard CREATE registry and a
-metadata/XML/data/COPY/UPSERT round-trip with related tables, custom types,
-functions, a view, a trigger and comments on both supported YSQL engines.
-See the [acceptance scope and limits](../docs/compatibility.md#whole-schema-and-data-acceptance-on-ysql).
+Module tests cover SPI/resolution, engine boundaries, PostgreSQL/YSQL coexistence,
+provider selection and generated SQL. The optional external
+`YugabyteMetadataRoundTripTest` requires `SQLAPP_YSQL_JDBC_URL`, `SQLAPP_YSQL_USER`
+and `SQLAPP_YSQL_PASSWORD`; only run it against an explicitly authorized
+disposable database, as it creates and drops a random schema. Historical
+PostgreSQL servers and other YugabyteDB releases were not verified by this matrix.
+See the [integration guide](../sqlapp-core-dialect-test/README.md#yugabytedb-ysql-compatibility)
+for engine-specific and focused commands. Detailed prior batch evidence remains
+in [compatibility notes](../docs/compatibility.md).

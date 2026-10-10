@@ -64,6 +64,32 @@ release checklist must record which integration suites were actually run.
 
 The artifact name `sqlapp-core-virtica` retains its historical spelling.
 
+## YSQL completion scope
+
+The ordinary relational metadata/recreation and COPY/UPSERT migration scope is
+implemented and verified on the two fixed YSQL 11/15 baselines. Use the
+[consolidated YSQL guide](../sqlapp-core-yugabyte/README.md) for a minimal Java
+entry point, a version-specific behavior table, transaction ownership and limits;
+use the [integration guide](../sqlapp-core-dialect-test/README.md#yugabytedb-ysql-compatibility)
+for reproducible engine-specific commands.
+
+The latest full implementation run passed 2,738 ordinary tests (one optional
+external YSQL skip), 62 cases on each YSQL baseline and Yugabyte assembly.
+The [whole-schema acceptance record](#whole-schema-and-data-acceptance-on-ysql)
+contains its exact command and checks. The sections below retain historical
+batch evidence; their older counts do not replace this final scope.
+The subsequent documentation consolidation passed the offline checker (654 local
+links and 59 reachable pages), its four unit tests, and 11 additional local links
+in the two module READMEs. The YSQL README Java example compiled with Java 21
+against the existing core/PostgreSQL/Yugabyte classes. Unchanged database tests
+were not repeated; no production or external database was accessed.
+
+This completion claim excludes YCQL, arbitrary cyclic dependency reconstruction,
+automatic owner/ACL replay, sequence live-position migration, multi-node failover and performance qualification. Placement metadata/CREATE
+was added subsequently; see [its scope](#ysql-placement-metadata-and-create-ddl). Those
+would require separately scoped work and evidence. It does not mean every
+PostgreSQL feature or every YugabyteDB release is supported.
+
 ## JDBC versions in the current verification build
 
 These are test or implementation dependencies in the current checkout. They
@@ -1547,3 +1573,148 @@ Executed final command:
 ```powershell
 .\gradlew.bat :sqlapp-core:test :sqlapp-core-db2:test :sqlapp-core-firebird:test :sqlapp-core-h2:test :sqlapp-core-hsql:test :sqlapp-core-informix:test :sqlapp-core-mariadb:test :sqlapp-core-mdb:test :sqlapp-core-mysql:test :sqlapp-core-oracle:test :sqlapp-core-phoenix:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-saphana:test :sqlapp-core-spanner:test :sqlapp-core-sqlite:test :sqlapp-core-sqlserver:test :sqlapp-core-sybase:test :sqlapp-core-virtica:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
 ```
+
+
+## YSQL placement metadata and CREATE DDL
+
+The Yugabyte module now owns placement metadata readers and CREATE factories
+for YSQL 11/15. TableSpace replica-placement JSON and owner, table/index
+Tablespace references, explicit Colocation, grouped Hash and Range keys,
+read-time tablet counts and range boundaries survive XML and executable CREATE.
+The shared Schema model, PostgreSQL implementation, public configuration entry
+points and XML formats are unchanged; the new `YSQL_*` specifics are additive.
+See the [key reference and target overrides](../sqlapp-core-yugabyte/README.md#placement-metadata-and-create-ddl).
+
+Table/index properties come from `yb_table_properties`; range boundaries come
+from `yb_get_range_split_clause`. TableSpace options are read as JDBC arrays
+rather than split on commas inside JSON. Primary-key indexes share table storage,
+so their physical settings are obtained from the table rather than the virtual
+index relation. UNIQUE constraints with placement snapshots are created through
+a placed unique index followed by `ALTER TABLE ... UNIQUE USING INDEX`.
+This retains their independent split policy and normal constraint identity.
+Foreign keys follow those UNIQUE attachments, including self-references.
+Generation does not mutate the source model. PostgreSQL factory registration
+remains unchanged and YSQL version-specific factories inherit their nearest
+PostgreSQL counterparts to retain INCLUDE/NULLS NOT DISTINCT behavior.
+
+The generated colocated-table path checks that the target database is colocated.
+It fails explicitly on an incompatible target. User Tablespace creation requires
+placement JSON; invalid/mutually exclusive settings fail before returning SQL.
+Target regions/zones, owners and Tablespaces must exist as appropriate; callers
+can edit existing model references/specifics before generation. There is no
+cluster provisioning or automatic topology-name translation.
+
+Split counts and boundaries reflect read-time layout, not necessarily the
+original creation settings. Runtime node/tablet identities and distinct custom
+tablegroups are not replayed. SQL-partitioned parents have no DocDB storage and
+are excluded from these placement reads; partition hierarchy recreation and
+placement remain outside this new coverage. Automatic ALTER/movement, multi-node
+placement/failover and performance are not part of the implementation.
+
+Official syntax references: [CREATE TABLE](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_table/),
+[CREATE INDEX](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_index/),
+[CREATE TABLESPACE](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_tablespace/).
+Local tests use only owned disposable containers, UUID schemas/tablespaces and a
+UUID colocated database. No external/production database is accessed.
+
+Validation on 2026-10-10: YSQL 11 and 15 each passed all 64 real-engine cases
+(128 passes total). The two added cases cover placement XML/CREATE rereading,
+replica policies, key/split/index storage, UNIQUE attachment with a self-referencing
+foreign key, incompatible Colocation targets and explicit Colocation opt-out.
+The Yugabyte module passed 10 tests with one optional external test skipped.
+PostgreSQL (256), command (543) and Gradle plugin (81) test tasks were up-to-date;
+their retained results have zero failures/errors. Assembly succeeded. Initial
+focused runs exposed and resolved primary-index storage, TABLESPACE OWNER syntax,
+Range ASC defaults and UNIQUE backing-index creation issues before this final run.
+
+```powershell
+.\gradlew.bat :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
+```
+
+## YSQL follow-up backlog
+
+Recorded on 2026-10-10. The agreed YSQL 11/15 implementation scope is complete;
+the following are separate future work, not release blockers for that scope.
+The verified baseline remains the two documented single-node container builds.
+
+- Multi-node qualification: verify region/zone replica and leader placement,
+  node loss/failover, transaction retries and sustained COPY/UPSERT workloads.
+  Record topology, build versions, failure scenarios and measured results before
+  claiming distributed performance or availability guarantees.
+- Target placement mapping: optionally map source cloud/region/zone, Tablespace
+  and owner names to explicit target policies. Preserve the existing direct
+  Schema/Specifics editing path and reject ambiguous mappings.
+- Existing-object placement changes: plan ALTER/repartition or data movement
+  separately from CREATE, including supported version boundaries, operational
+  impact, failure recovery and post-change verification.
+- Advanced storage recreation: investigate SQL partition hierarchy/placement
+  and custom tablegroups/colocation groups. Runtime node/tablet identities must
+  not become portable schema settings.
+- Broader compatibility qualification: expand release coverage beyond the pinned
+  YSQL 11/15 builds when needed; automatic ACL/owner replay and transactional DDL
+  guarantees require their own design and verification.
+
+Resume with a separately selected scope and acceptance criteria. No external or
+production database access is implied by this backlog.
+
+## CockroachDB dedicated dialect
+
+Added `sqlapp-core-cockroach`, service and JPMS registration, publication
+aggregation and dedicated release resolution for CockroachDB 24.3+.
+The PostgreSQL JDBC product label is disambiguated using the release banner.
+No shared core implementation or Schema XML format change was required.
+
+Dedicated readers preserve complete CREATE definitions and supplementary model
+metadata. Tables, constraints, indexes, views, sequences, enum types and
+SQL/PLpgSQL functions round-trip through standard Schema XML/CREATE paths.
+Function overload identity uses argument signatures rather than runtime OIDs;
+recreation preserves these identities on both qualified releases.
+COPY reuses PostgreSQL streaming with owned-transaction rollback. UPSERT uses
+shared key planning and JDBC batching with ON CONFLICT, avoiding the unsupported
+PostgreSQL CTAS WITH NO DATA staging path. SQLSTATE 40001 remains visible without
+replaying a consumed input stream.
+
+Executed qualification:
+
+```shell
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-cockroach:assemble :sqlapp-core-cockroach:generatePomFileForMavenJavaPublication :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+Result: **7 module tests and 16 real-engine tests per baseline (32 real-engine
+passes)** on owned local `cockroachdb/cockroach:v24.3.0` and
+`cockroachdb/cockroach:v25.4.0` containers. Coverage includes typed Unicode,
+UUID, binary, decimal, JSON and built-in array COPY/UPSERT; hidden keys,
+hash sharding/families, enum escaping, function overloads, atomic failures,
+caller rollback, serialization failure, checkpoint/resume and chunked loads.
+No external or production database was accessed. Assembly and publication POM
+generation succeeded; artifact coordinates, required publication metadata and
+core/PostgreSQL dependencies were checked. Documentation validation passed
+659 local links and 59 reachable pages, plus four checker tests.
+
+Regression command:
+
+```shell
+./gradlew :sqlapp-core-cockroach:assemble :sqlapp-core-cockroach:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest --continue --console=plain
+```
+
+Result: YSQL 11/15 each passed 64 real-engine cases again (**128 passes**).
+The PostgreSQL (256), Yugabyte (10 plus one optional external skip), command
+(543) and Gradle plugin (81) module results remained successful through
+up-to-date tasks. Cockroach module tests passed seven cases. After switching
+function identities to argument signatures, assembly and the complete
+Cockroach matrix were rerun successfully (16 cases on each image).
+No external database test ran. Generated build/POM/test output is ignored;
+no generated artifact was added to source control.
+
+### CockroachDB follow-up backlog
+
+- Multi-node failover, contention, whole-transaction retries and performance.
+- Locality/region/zone configuration, placement metadata and target mapping.
+- ACL/owner replay, procedures/triggers/domains/materialized views and broader
+  catalog coverage; sequence high-water and user-defined-type array handling.
+- General ALTER/diff behavior, cyclic foreign-key recreation and transactional
+  DDL guarantees. Complete definitions currently take precedence over edited
+  supplementary fields; target identity changes require explicit SQL editing.
+- Additional release qualification beyond the two pinned single-node images.
+
+See [module usage and boundaries](../sqlapp-core-cockroach/README.md).

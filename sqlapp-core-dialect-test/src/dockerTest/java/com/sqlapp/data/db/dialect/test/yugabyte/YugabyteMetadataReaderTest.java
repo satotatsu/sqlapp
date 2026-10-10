@@ -79,6 +79,96 @@ class YugabyteMetadataReaderTest {
 				+ YSQL.getMappedPort(5433) + "/yugabyte?connectTimeout=5&socketTimeout=30", "yugabyte", "yugabyte");
 	}
 
+    @Test
+    void preservesPlacementTablespaceHashRangeAndIndexSplitsThroughXml() throws Exception {
+        String suffix = UUID.randomUUID().toString().replace("-", "");
+        String schemaName = "ysql_placement_" + suffix;
+        String space = "ysql_space_" + suffix;
+        try (var connection = connect(); var statement = connection.createStatement()) {
+            String placement;
+            try (var rows = statement.executeQuery("SELECT cloud,region,zone FROM yb_servers() LIMIT 1")) {
+                assertTrue(rows.next());
+                placement = "{\"num_replicas\":1,\"placement_blocks\":[{\"cloud\":\"" + rows.getString(1)
+                        + "\",\"region\":\"" + rows.getString(2) + "\",\"zone\":\"" + rows.getString(3) + "\",\"min_num_replicas\":1}]}";
+            }
+            statement.execute("CREATE TABLESPACE " + space + " WITH (replica_placement='" + placement + "')");
+            statement.execute("CREATE SCHEMA " + schemaName);
+            try {
+                statement.execute("CREATE TABLE " + schemaName + ".hashed (tenant int, id int, seq int, label text, parent_label text, PRIMARY KEY ((tenant,id) HASH,seq DESC)) WITH (COLOCATION=false) TABLESPACE " + space + " SPLIT INTO 3 TABLETS");
+                statement.execute("CREATE TABLE " + schemaName + ".ranged (id int, label text, PRIMARY KEY (id ASC)) TABLESPACE " + space + " SPLIT AT VALUES ((10),(20))");
+                statement.execute("CREATE INDEX ranged_label ON " + schemaName + ".ranged (label ASC) TABLESPACE " + space + " SPLIT AT VALUES (('a'),('z'))");
+                statement.execute("CREATE INDEX hashed_label ON " + schemaName + ".hashed ((tenant,id) HASH,label ASC) TABLESPACE " + space + " SPLIT INTO 2 TABLETS");
+                statement.execute("CREATE UNIQUE INDEX uq_label ON " + schemaName + ".hashed (label ASC) TABLESPACE " + space + " SPLIT AT VALUES (('m'))");
+                statement.execute("ALTER TABLE " + schemaName + ".hashed ADD CONSTRAINT uq_label UNIQUE USING INDEX uq_label");
+                statement.execute("ALTER TABLE " + schemaName + ".hashed ADD CONSTRAINT fk_label FOREIGN KEY (parent_label) REFERENCES " + schemaName + ".hashed(label)");
+                var dialect = DialectResolver.getInstance().getDialect(connection);
+                var spaceReader = dialect.getCatalogReader().getTableSpaceReader();
+                var originalSpace = spaceReader.getAllFull(connection).stream().filter(v -> space.equals(v.getName())).findFirst().orElseThrow();
+                assertEquals(placement, originalSpace.getSpecifics().get("YSQL_REPLICA_PLACEMENT"));
+                com.sqlapp.data.schemas.TableSpace restoredSpace = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(originalSpace.asXml()));
+                assertEquals(originalSpace.getSpecifics(),restoredSpace.getSpecifics());
+                var reader = dialect.getCatalogReader().getSchemaReader(); reader.setSchemaName(schemaName);
+                var original = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+                com.sqlapp.data.schemas.Schema restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+                assertEquals("2", restored.getTables().get("hashed").getConstraints().getPrimaryKeyConstraint().getSpecifics().get("YSQL_HASH_COLUMNS"));
+                assertEquals("3", restored.getTables().get("hashed").getSpecifics().get("YSQL_SPLIT_INTO"));
+                assertEquals("0", restored.getTables().get("ranged").getConstraints().getPrimaryKeyConstraint().getSpecifics().get("YSQL_HASH_COLUMNS"));
+                assertNotNull(restored.getTables().get("ranged").getSpecifics().get("YSQL_SPLIT_AT_BASE64"));
+                var incompatible = restored.getTables().get("ranged").clone();
+                incompatible.getSpecifics().put("YSQL_COLOCATION","true");
+                incompatible.getSpecifics().remove("YSQL_SPLIT_AT_BASE64");
+                var guardRegistry = dialect.createSqlFactoryRegistry();
+                var guard = guardRegistry.createSql(incompatible,SqlType.CREATE).get(0);
+                assertThrows(SQLException.class,()->statement.execute(guard.getSqlText()));
+                statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+                statement.execute("DROP TABLESPACE " + space);
+                var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+                for (var op : registry.createSql(restoredSpace,SqlType.CREATE)) { statement.execute(op.getSqlText()); }
+                for (var op : registry.createSql(restored,SqlType.CREATE)) { statement.execute(op.getSqlText()); }
+                var actual = reader.getAllFull(connection).stream().filter(v -> schemaName.equals(v.getName())).findFirst().orElseThrow();
+                for (String name : List.of("hashed","ranged")) {
+                    var expectedTable = restored.getTables().get(name); var actualTable = actual.getTables().get(name);
+                    assertEquals(space,actualTable.getTableSpaceName());
+                    for (String key : List.of("YSQL_COLOCATION","YSQL_HASH_COLUMNS","YSQL_SPLIT_INTO","YSQL_SPLIT_AT_BASE64")) assertEquals(expectedTable.getSpecifics().get(key), actualTable.getSpecifics().get(key),name+key);
+                    for (var index : expectedTable.getIndexes()) {
+                        assertEquals(space, actualTable.getIndexes().get(index.getName()).getTableSpaceName());
+                        for (String key : List.of("YSQL_HASH_COLUMNS","YSQL_SPLIT_INTO","YSQL_SPLIT_AT_BASE64")) assertEquals(index.getSpecifics().get(key),actualTable.getIndexes().get(index.getName()).getSpecifics().get(key),index.getName()+key);
+                    }
+                }
+                statement.execute("INSERT INTO " + schemaName + ".hashed VALUES (1,2,3,'ok',NULL)");
+                statement.execute("INSERT INTO " + schemaName + ".ranged VALUES (15,'middle')");
+                assertEquals(1,scalar(connection,"SELECT count(*) FROM " + schemaName + ".ranged WHERE id=15"));
+            } finally {
+                statement.execute("DROP SCHEMA IF EXISTS " + schemaName + " CASCADE");
+                statement.execute("DROP TABLESPACE IF EXISTS " + space);
+            }
+        }
+    }
+
+    @Test
+    void preservesColocationAndExplicitOptOutThroughXml() throws Exception {
+        String database = "ysql_colocated_" + UUID.randomUUID().toString().replace("-", "");
+        try (var admin = connect(); var statement = admin.createStatement()) {
+            statement.execute("CREATE DATABASE " + database + " WITH COLOCATION=true");
+            try {
+                try (var connection = DriverManager.getConnection("jdbc:postgresql://" + YSQL.getHost() + ":" + YSQL.getMappedPort(5433) + "/" + database + "?connectTimeout=5&socketTimeout=30", "yugabyte", "yugabyte"); var sql=connection.createStatement()) {
+                    sql.execute("CREATE TABLE public.grouped (id int PRIMARY KEY)");
+                    sql.execute("CREATE TABLE public.separate (id int, PRIMARY KEY (id HASH)) WITH (COLOCATION=false) SPLIT INTO 2 TABLETS");
+                    var dialect=DialectResolver.getInstance().getDialect(connection);
+                    var reader=dialect.getCatalogReader().getSchemaReader().getTableReader(); reader.setSchemaName("public");
+                    var registry=dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+                    for (var original : reader.getAllFull(connection)) {
+                        Table restored=com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+                        assertEquals(Boolean.toString("grouped".equals(restored.getName())),restored.getSpecifics().get("YSQL_COLOCATION"));
+                        sql.execute("DROP TABLE public." + restored.getName());
+                        for (var op:registry.createSql(restored,SqlType.CREATE)) sql.execute(op.getSqlText());
+                    }
+                    for (var actual:reader.getAllFull(connection)) assertEquals(Boolean.toString("grouped".equals(actual.getName())),actual.getSpecifics().get("YSQL_COLOCATION"));
+                }
+            } finally { statement.execute("DROP DATABASE " + database); }
+        }
+    }
+
 	@Test
 	void readsAndRecreatesTableFromSchemaModel() throws Exception {
 		String schemaName = "sqlapp_ysql_" + UUID.randomUUID().toString().replace("-", "");

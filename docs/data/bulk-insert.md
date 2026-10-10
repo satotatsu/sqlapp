@@ -173,6 +173,26 @@ locking options are rejected rather than silently ignored. PostgreSQL
 constraints and triggers retain their normal `COPY` behavior, and transaction
 boundaries remain controlled by the supplied JDBC connection.
 
+## YugabyteDB YSQL
+
+Add `sqlapp-core-yugabyte` and a PostgreSQL-compatible JDBC driver. The normal
+resolver selects YSQL providers for the PostgreSQL 11/15 engine baselines;
+COPY and staging `ON CONFLICT` UPSERT reuse PostgreSQL encoding and SQL.
+Use `BulkOption.defaults()` for the common path. PostgreSQL option validation
+still applies, including rejection of unsupported `batchSize`, timeout and
+`useTransaction` settings.
+
+COPY on an auto-commit connection is wrapped in one owned transaction per call,
+with rollback on failure and restoration of auto-commit. An existing caller
+transaction is neither committed nor rolled back by the executor. The caller
+must roll back after a failure and must own the transaction to make several
+parent/child calls atomic together. Distributed conflicts propagate; caller
+transactions are not automatically retried. Set-based SCD2 snapshot acceleration
+is disabled; use the portable shared migration path.
+
+See the [YSQL usage and version boundaries](../../sqlapp-core-yugabyte/README.md)
+for verified types, arrays, defaults and the single-node compatibility scope.
+
 ## Vertica
 
 The Vertica provider uses JDBC `VerticaCopyStream` and `COPY FROM STDIN`.
@@ -246,3 +266,12 @@ See [Multi-table migration jobs](../migration/jobs.md#multi-table-migration-jobs
 ## Type 2 snapshot execution
 
 See [Type 2 snapshot execution](../migration/snapshot.md#type-2-snapshot-execution).
+
+## CockroachDB
+
+Add `sqlapp-core-cockroach` and use the normal bulk entry points. COPY uses
+PostgreSQL streaming; UPSERT uses CockroachDB ON CONFLICT through shared JDBC
+batching and key/duplicate planning. No temporary staging table is created.
+Owned transactions roll back on failure; caller transactions stay caller-owned.
+SQLSTATE 40001 requires a caller-level whole-transaction retry with replayable
+input. See [options, verified types and limits](../../sqlapp-core-cockroach/README.md#data-and-transactions).
