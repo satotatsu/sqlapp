@@ -185,11 +185,51 @@ explicitly authorized disposable target.
 
 The tasks use owned disposable single-node containers for
 `cockroachdb/cockroach:v24.3.0` and `cockroachdb/cockroach:v25.4.0`.
-Each baseline passes 16 cases: product resolution, Schema/XML/DDL recreation,
+Each baseline passes 31 cases: product resolution, Schema/XML/DDL recreation,
 constraints, STORING/predicate indexes, sharded keys, families, hidden/generated
 columns, enums and quoted identifiers, overloaded SQL/PLpgSQL functions, typed
 COPY/UPSERT, caller rollback and atomic failure, serialization SQLSTATE,
-checkpoint/resume and sustained chunked loads. Seven module tests cover
+checkpoint/resume and sustained chunked loads. Twelve module tests cover
 resolution, SQL generation, provider selection and one-attempt retry propagation.
 See the [scope and limits](../sqlapp-core-cockroach/README.md).
 External databases and distributed performance are outside this matrix.
+
+The ALTER/DROP expansion also covers column/table renames with retained values,
+type/default/nullability changes, constraint/index changes, comments and comment
+clearing, exact function overload replacement/drop, enum additions/rename,
+sequence configuration without restart, view replacement with dependents, and
+whole-Schema addition/dependency-ordered deletion followed by metadata checks.
+The PostgreSQL comment regression checks that comment-only changes neither
+recreate objects nor mistake property values for their owners.
+
+Cockroach enum-array coverage includes quoted and built-in-colliding type
+names, references outside search_path, Schema XML, definition-backed and
+modeled table CREATE, COPY, UPSERT updates, empty/NULL arrays and elements,
+and rollback after invalid enum values.
+
+Cockroach placement coverage uses the same owned single-node images with
+`region=sqlapp-region,zone=sqlapp-zone`. It verifies Catalog region/survival
+specifics, GLOBAL / REGIONAL BY TABLE / REGIONAL BY ROW (including a quoted
+custom region column), XML and Catalog/Table DDL recreation, specificity
+override and ordinary database behavior. Additional regions, secondary-region
+execution and regional survival require separate multi-region
+qualification; generation tests cover their SQL and validation.
+
+## Aurora PostgreSQL: upstream compatibility and optional external tests
+
+```shell
+./gradlew :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest
+```
+
+This runs the Aurora dialect against disposable upstream PostgreSQL 14.22,
+15.17, 16.13 and 17.9 containers. These are **not Aurora images** and do not
+establish Aurora service compatibility. Individual tasks are named
+`auroraPostgres14CompatibilityTest` through `auroraPostgres17CompatibilityTest`.
+
+`auroraExternalTest` is a separate opt-in task for an explicitly authorized,
+disposable Aurora database. It is excluded from `dockerTest` and compatibility
+aggregates. It requires target/credential environment variables plus
+`SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true`, writes rows, and creates/drops
+UUID schemas with CASCADE. See the [Aurora guide](../sqlapp-core-aurora/README.md)
+for connection requirements, cleanup and unverified behavior. No external
+Aurora test was run as part of adding this module.

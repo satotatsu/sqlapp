@@ -193,6 +193,7 @@ recommended.
 | MySQL | `sqlapp-core-mysql` | MySQL Connector/J |
 | Oracle Database | `sqlapp-core-oracle` | None |
 | Apache Phoenix | `sqlapp-core-phoenix` | None |
+| Aurora PostgreSQL (experimental) | `sqlapp-core-aurora` | Reuses `sqlapp-core-postgres`; no additional driver; [Aurora execution unverified](../sqlapp-core-aurora/README.md) |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | Reuses `sqlapp-core-postgres`; no additional driver |
 | CockroachDB | `sqlapp-core-cockroach` | Reuses `sqlapp-core-postgres`; no additional driver |
 | PostgreSQL | `sqlapp-core-postgres` | PostgreSQL JDBC driver |

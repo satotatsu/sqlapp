@@ -70,6 +70,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-mariadb"))
 	nmcpAggregation(project(":sqlapp-core-oracle"))
 	nmcpAggregation(project(":sqlapp-core-postgres"))
+	nmcpAggregation(project(":sqlapp-core-aurora"))
 	nmcpAggregation(project(":sqlapp-core-yugabyte"))
 	nmcpAggregation(project(":sqlapp-core-cockroach"))
 	nmcpAggregation(project(":sqlapp-core-saphana"))

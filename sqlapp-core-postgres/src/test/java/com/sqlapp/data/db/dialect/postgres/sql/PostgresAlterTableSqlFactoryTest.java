@@ -228,4 +228,29 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		assertEquals(expected, operation.getSqlText());
 	}
 
+	@Test
+	public void changesAndClearsCommentsUsingPropertyOwners() {
+		Table original = new Table("items");
+		original.getColumns().add("id", column -> column.setDataType(DataType.INT));
+		original.getIndexes().add("by_id", original.getColumns().get("id"));
+		original.getConstraints().addCheckConstraint("positive", "id > 0");
+		Table target = original.clone().setRemarks("table note");
+		target.getColumns().get("id").setRemarks("column note");
+		target.getIndexes().get("by_id").setRemarks("index note");
+		target.getConstraints().get("positive").setRemarks("constraint note");
+		assertEquals(4, sqlFactory.createDiffSql(original.diff(target)).size());
+		var sql = sqlFactory.createDiffSql(original.diff(target)).stream()
+				.filter(operation -> operation.getSqlType() == com.sqlapp.data.db.sql.SqlType.SET_COMMENT)
+				.map(SqlOperation::getSqlText).toList();
+		assertEquals(4, sql.size());
+		org.junit.jupiter.api.Assertions.assertTrue(sql.stream().anyMatch(text -> text.contains("COLUMN") && text.contains("column note")));
+		assertEquals(4, sqlFactory.createDiffSql(target.diff(original)).size());
+		var cleared = sqlFactory.createDiffSql(target.diff(original)).stream()
+				.filter(operation -> operation.getSqlType() == com.sqlapp.data.db.sql.SqlType.SET_COMMENT)
+				.map(SqlOperation::getSqlText).toList();
+		assertEquals(4, cleared.size());
+		org.junit.jupiter.api.Assertions.assertTrue(cleared.stream().allMatch(text -> text.endsWith("IS NULL")));
+		org.junit.jupiter.api.Assertions.assertFalse(cleared.stream().anyMatch(text -> text.contains("IS IS")));
+	}
+
 }

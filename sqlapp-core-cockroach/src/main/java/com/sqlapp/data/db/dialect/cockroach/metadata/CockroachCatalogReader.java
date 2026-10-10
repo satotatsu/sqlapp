@@ -29,7 +29,23 @@ public class CockroachCatalogReader extends CatalogReader {
 	@Override protected List<Catalog> doGetAll(Connection c, ParametersContext context, ProductVersionInfo version) {
 		try {
 			String name=c.getCatalog();
-			return CockroachMetadata.matches(context,"catalogName",name) ? List.of(new Catalog(name)) : List.of();
+			if(!CockroachMetadata.matches(context,"catalogName",name)) return List.of();
+			var catalog=new Catalog(name);var regions=new ArrayList<String>();
+			try(var sql=c.createStatement();var rows=sql.executeQuery("SHOW REGIONS FROM DATABASE "+CockroachMetadata.quote(name))) {
+				while(rows.next()) {
+					String region=rows.getString("region");regions.add(region);
+					if(rows.getBoolean("primary")) catalog.getSpecifics().put("COCKROACH_PRIMARY_REGION",region);
+					if(rows.getBoolean("secondary")) catalog.getSpecifics().put("COCKROACH_SECONDARY_REGION",region);
+				}
+			}
+			if(!regions.isEmpty()) {
+				Collections.sort(regions);catalog.getSpecifics().put("COCKROACH_REGIONS",com.sqlapp.util.JsonUtils.toJsonString(regions));
+				try(var sql=c.createStatement();var rows=sql.executeQuery("SHOW SURVIVAL GOAL FROM DATABASE "+CockroachMetadata.quote(name))) {
+					if(!rows.next()) throw new SQLException("Missing CockroachDB survival goal");
+					catalog.getSpecifics().put("COCKROACH_SURVIVAL_GOAL",rows.getString("survival_goal").toUpperCase(Locale.ROOT));
+				}
+			}
+			return List.of(catalog);
 		} catch(SQLException e) { throw new IllegalStateException(e); }
 	}
 }

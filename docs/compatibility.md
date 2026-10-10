@@ -54,6 +54,7 @@ release checklist must record which integration suites were actually run.
 | Oracle Database | `sqlapp-core-oracle` | 10g, 11g, 11g R2, 12c, 18c, 19c, 21c, 23ai, 26ai | Oracle Database Free 23ai image; optional pinned 26ai image | Oracle 26ai reports product version `23.26.x`; older branches are not all container-tested. Dialect support does not imply that the current test JDBC driver is certified for every server version; verify the exact driver/JDK/database combination for legacy sources. |
 | Apache Phoenix | `sqlapp-core-phoenix` | Generic resolver plus a 5.3.1 feature boundary | Module SQL, resolver, and sequence-block tests | Phoenix 5.3.1 multi-row UPSERT still requires verification against a real cluster. |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | PostgreSQL engine 11 and 15 baselines | Module tests and local containers 2024.2.11.0-b36 / 2026.1.2.0-b137 | Supported relational compatibility scope: schema recreation, COPY/upsert, checkpoint/resume and conflict handling verified on both baselines. Physical/distributed extensions and multi-node failover excluded; see [scope and limits](../sqlapp-core-yugabyte/README.md). |
+| Aurora PostgreSQL | `sqlapp-core-aurora` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora/README.md). |
 | PostgreSQL | `sqlapp-core-postgres` | Explicit branches from 8.2 through 18 | PostgreSQL 14 and 18.4 test images | Historical branches are preserved, but current containers do not rerun every major release. |
 | SAP HANA | `sqlapp-core-saphana` | Platform and HANA Cloud split | SAP HANA Express 2.0 (`2.00.088`) image | HANA Cloud vector-index and fuzzy-search catalog behavior requires a HANA Cloud tenant. |
 | Google Cloud Spanner | `sqlapp-core-spanner` | Generic Cloud Spanner resolver | Cloud Spanner emulator | Search/vector index, locality/storage, and some service-only metadata require a real service environment. |
@@ -104,6 +105,7 @@ are not a declaration that applications must use exactly these versions.
 | MariaDB | `org.mariadb.jdbc:mariadb-java-client:3.5.9` |
 | MySQL | `com.mysql:mysql-connector-j:9.7.0` |
 | Oracle | `com.oracle.database.jdbc:ojdbc11:23.26.2.0.0` |
+| Aurora PostgreSQL | `sqlapp-core-aurora` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora/README.md). |
 | PostgreSQL | `org.postgresql:postgresql:42.7.11` |
 | SAP HANA | `com.sap.cloud.db.jdbc:ngdbc:2.29.7` |
 | Cloud Spanner | `com.google.cloud:google-cloud-spanner-jdbc:2.41.0` |
@@ -1703,18 +1705,243 @@ The PostgreSQL (256), Yugabyte (10 plus one optional external skip), command
 up-to-date tasks. Cockroach module tests passed seven cases. After switching
 function identities to argument signatures, assembly and the complete
 Cockroach matrix were rerun successfully (16 cases on each image).
-No external database test ran. Generated build/POM/test output is ignored;
-no generated artifact was added to source control.
+No external database test ran. No generated artifact was staged by this
+qualification.
 
 ### CockroachDB follow-up backlog
 
 - Multi-node failover, contention, whole-transaction retries and performance.
-- Locality/region/zone configuration, placement metadata and target mapping.
+- Cross-topology region mapping, arbitrary zone configurations and multi-region runtime qualification.
 - ACL/owner replay, procedures/triggers/domains/materialized views and broader
-  catalog coverage; sequence high-water and user-defined-type array handling.
-- General ALTER/diff behavior, cyclic foreign-key recreation and transactional
-  DDL guarantees. Complete definitions currently take precedence over edited
-  supplementary fields; target identity changes require explicit SQL editing.
+  catalog coverage; sequence high-water and arrays of types other than enums.
+- Advanced ALTER/diff and cross-object dependency planning, cyclic foreign-key
+  recreation and transactional DDL guarantees. See the following ALTER/DROP
+  qualification for the ordinary modeled changes now supported.
 - Additional release qualification beyond the two pinned single-node images.
 
 See [module usage and boundaries](../sqlapp-core-cockroach/README.md).
+
+## CockroachDB ALTER, DROP and Schema differences
+
+The dedicated 24.3+ registry now maps modified Schema, table, index, function,
+view, enum Type and sequence objects to dedicated ALTER factories. Public
+entry points and Schema XML remain unchanged. CREATE still prefers complete
+catalog definitions; table ALTER consumes modeled components, while function
+and view replacements consume complete target definitions.
+
+Qualified changes: ordinary column add/drop/type/default/nullability and
+quoted rename, table rename, CHECK/UNIQUE/FK constraints, table-scoped index
+replacement/drop/STORING, table/column/index comments and comment clearing,
+exact function overload replacement/drop, dependent view replacement, ordered
+enum additions and label rename, sequence configuration without restart, and
+whole-Schema additions/dependency-ordered deletions with metadata/data checks.
+The readers now retain column comments and sequence configuration fields.
+
+UNIQUE removal uses DROP INDEX on the owning table. No implicit CASCADE is
+added. Unsupported primary-key/storage/locality/schema moves, malformed or
+unsupported enum transformations, stale index definitions and sequence
+restart/CYCLE are rejected rather than silently ignored. Arbitrary dependency
+cycles and concurrent key/reference changes remain outside qualification.
+DDL can apply partially; execution errors must be surfaced and the Schema
+re-read before planning a retry.
+
+The shared PostgreSQL table ALTER comment handling was also corrected:
+property differences refer to their owning Column/Index/Constraint, comment
+clearing emits IS NULL once, and comment-only changes generate comments without
+unnecessary column ALTER or index/constraint drop/recreation. A regression
+covers all four comment kinds and their removal. No shared core or dependency
+version change was required.
+
+Executed focused/matrix command:
+
+```shell
+./gradlew :sqlapp-core-postgres:test --tests '*PostgresAlterTableSqlFactoryTest' :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+Result: **12 Cockroach module tests**, **9 PostgreSQL ALTER-table tests** and
+**27 real-engine cases on each pinned CockroachDB image (54 passes)** succeeded.
+The full matrix includes the preceding CREATE/COPY/UPSERT/checkpoint tests.
+Earlier compilation/test failures were corrected; final matrix execution used
+one Gradle invocation after overlapping invocations had conflicted over test
+result files. The engine checks used only owned disposable local containers.
+
+Final regression command:
+
+```shell
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-cockroach:assemble :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest --continue --console=plain
+```
+
+BUILD SUCCESSFUL. PostgreSQL: 257 passes; Yugabyte module: 10 passes and one
+optional external-database test skipped; command: 543 passes; Gradle plugin:
+81 passes. Yugabyte real-engine compatibility: 64 passes on each baseline
+(128 total). Cockroach assembly succeeded. Only owned local containers were used.
+
+A final rename safeguard rejects Schema delete/add pairs with the same table
+ID. Rename intentionally through `originalTable.diff(targetTable)`; without
+stable IDs, review name-based Schema deletion/addition plans explicitly.
+The added regression brings the Cockroach module suite to 13 passing tests.
+
+Final safeguard verification:
+
+```shell
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroachCompatibilityTest --console=plain
+```
+
+BUILD SUCCESSFUL: 13 module tests and 27 real-engine cases on each of 24.3.0
+and 25.4.0 (54 passes). Documentation validation passed: 659 local links,
+59 reachable pages, closed code fences, and four validator unit tests.
+Generated Cockroach build artifacts were restored after recording results.
+
+## CockroachDB enum arrays
+
+The 24.3+ column reader resolves enum scalar and array element identities
+through `pg_type.typelem` and namespace joins. It keeps fully quoted,
+schema-qualified type names and models enum elements as OTHER, preventing
+built-in type names such as `text` from overriding a user-defined enum.
+Built-in arrays retain their existing type mapping. This adds one catalog
+query per column-reader invocation rather than a query per column.
+
+Public APIs, dependencies and Schema XML format are unchanged. The owning
+Cockroach dialect and opt-in dialect-test module are the only code changes.
+The two new real-engine cases cover:
+
+- Quoted/underscore-prefixed enum names outside search_path, full Schema XML
+  and saved-definition recreation, plus model-only table CREATE.
+- COPY and UPSERT updates with comma, quote, Unicode, empty and literal NULL
+  labels, SQL NULL arrays, empty arrays and NULL elements.
+- Schema-qualified enums named like a built-in type, two schemas containing
+  the same enum name, and separation from ordinary TEXT arrays.
+- Invalid enum array data surfacing SQLExceptions, executor-owned rollback
+  and auto-commit restoration for COPY and UPSERT.
+
+Other user-defined type families and multidimensional arrays remain outside
+qualification. CockroachDB's [24.3 ARRAY reference](https://www.cockroachlabs.com/docs/v24.3/array)
+describes one-dimensional arrays and explicitly excludes nested arrays.
+
+Executed qualification:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*recreatesAndBulkLoadsQuotedEnumArraysOutsideSearchPath' --console=plain
+./gradlew :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*distinguishesEnumTypesWithBuiltinNamesAndRejectsInvalidArrayData' --console=plain
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+Both focused tests passed, followed by BUILD SUCCESSFUL for the full suite:
+13 module passes and 29 passes per pinned engine (58 real-engine passes).
+No test failed or was skipped. Tests used owned disposable local containers
+and UUID schemas only; no external database was accessed. No new shared-code
+changes were made in this batch, so PostgreSQL/YSQL/command/plugin regression
+results above were not re-run. Generated Cockroach build changes were restored;
+source changes from the preceding ALTER/DROP batch were preserved.
+
+Documentation validation passed (659 local links, 59 reachable pages, closed
+code fences and four validator unit tests), as did source/document whitespace
+checks.
+
+## CockroachDB placement qualification and completion boundary
+
+The 24.3+ dialect now reads Table `COCKROACH_LOCALITY` and Catalog primary,
+additional/secondary region and survival-goal specifics. Shared Schema XML
+retains them without a format change. Table CREATE honors explicit locality
+over saved LOCALITY only, retaining the body/comments; modeled CREATE appends
+the locality clause. Catalog CREATE configures an existing selected database
+before creating its contents. It does not create/select databases or remove
+existing regions. Region names are quoted; incomplete/invalid configuration
+fails with actionable errors. See the [specifics reference](../sqlapp-core-cockroach/README.md#placement-specifics).
+
+The engine-owned public region enum is recreated through PRIMARY REGION,
+not through duplicate CREATE TYPE. Non-regional user types remain visible.
+Cockroach Schema CREATE now honors the shared createIfNotExists option,
+allowing Catalog contents to reuse public while preserving strict mode.
+No shared module, dependency version or existing public method was changed.
+
+The requested baseline CockroachDB work is complete after this placement
+batch. Remaining work is deliberately separate: multi-node failover,
+contention/retry/performance, cross-topology translation, arbitrary zone
+configuration, multi-region execution of additional/secondary regions and
+REGION-failure goals, ACL/owner replay, broader object families, sequence
+high-water snapshots, advanced dependency/ALTER planning and general
+transactional DDL guarantees. These do not prevent normal use within the
+qualified CREATE/ALTER/DROP, metadata/XML and bulk/checkpoint scope.
+
+Executed placement qualification:
+
+```shell
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*CockroachDialectTest' --tests '*preservesDatabaseAndTablePlacement' --tests '*preservesOrdinaryCatalogAndUserTypeWithoutPlacement' --continue --console=plain
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-cockroach:assemble :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+The focused run passed 16 module tests and both placement/ordinary-database
+engine cases. The final full run was BUILD SUCCESSFUL: **16 module passes**,
+**31 real-engine passes on each pinned 24.3.0 and 25.4.0 image (62 total)**,
+and successful assembly. No final failures or skips. All database changes
+were confined to owned disposable containers, UUID databases/schemas and a
+single declared region/zone. No external database was accessed.
+
+The initial definition-list compilation mismatch, JDBC setCatalog test setup
+and duplicate engine-owned region-type replay were corrected. One intermediate
+container run failed with a transient wall-clock-offset error; the clean
+focused rerun and final matrix passed without changing clock safety settings.
+Additional-region/secondary/SURVIVE REGION SQL and invalid configuration are
+unit-tested; their multi-region execution is not claimed. Shared PostgreSQL,
+YSQL, command and plugin tests were not rerun because this batch changes only
+the Cockroach dialect and its opt-in engine tests.
+
+Documentation checks passed: 660 local links, 59 reachable pages, closed code
+fences and four validator unit tests. Source/doc whitespace checks passed.
+Tracked generated Cockroach build files were restored after recording results;
+prior source changes remain intact. CockroachDB baseline work is complete at
+the user's requested completion boundary, with the backlog above retained.
+
+## Aurora PostgreSQL implementation boundary
+
+The Aurora dialect uses PostgreSQL engine 14–17 readers and factories, with
+connection-specific AWS marker/function identification and dedicated bulk
+provider registration. Existing PostgreSQL, YSQL and Cockroach identities are
+preserved. No existing public API or configuration format is changed; the
+new artifact depends on PostgreSQL to avoid duplicating its implementation.
+
+The local matrix checks upstream PostgreSQL SQL and JDBC behavior only, not
+Aurora. The optional `auroraExternalTest` is excluded from all default/Docker
+and matrix tasks, requires explicit destructive-test opt-in, and was not run.
+No external database or AWS resource was accessed. See the
+[Aurora guide](../sqlapp-core-aurora/README.md) for remaining qualification work.
+
+Executed Aurora-dialect validation (2026-10-10, Java 21 / repository wrapper):
+
+```shell
+./gradlew :sqlapp-core-aurora:test --tests '*AuroraDialectTest' --console=plain
+./gradlew :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest --continue --console=plain
+./gradlew :sqlapp-core-aurora:test :sqlapp-core-aurora:assemble :sqlapp-core-postgres:test --continue --console=plain
+./gradlew :sqlapp-core-postgres:test --rerun :sqlapp-core-dialect-test:compileDockerTestJava --console=plain
+```
+
+Final results: **7 Aurora module passes**, **4 upstream compatibility passes
+on each PostgreSQL 14.22/15.17/16.13/17.9 image (16 total)**, successful Aurora
+JAR/sources/Javadoc assembly, **257 PostgreSQL regression passes** explicitly
+rerun, and successful compilation of the optional external-test fixture.
+No final failures or skips. The first matrix attempts exposed a Gradle task
+closure error and a checked-exception issue in the test fixture; both were
+corrected before the successful full matrix. The final external preflight was
+compiled after adding validation of Aurora identity before any schema writes.
+No external Aurora execution is claimed. New Javadoc reports missing-comment
+warnings; existing Gradle deprecation warnings remain.
+
+The change adds `sqlapp-core-aurora`, integration test scaffolding, settings /
+publication aggregation and documentation. Existing shared production code,
+JDBC dependency versions and configuration formats remain unchanged. Local
+PostgreSQL test containers were disposable. Tracked Cockroach build output
+regenerated as a compilation dependency was restored after recording results;
+prior Cockroach and PostgreSQL source changes were preserved.
+
+Local POM and Gradle module metadata generation also passed:
+
+```shell
+./gradlew :sqlapp-core-aurora:generatePomFileForMavenJavaPublication :sqlapp-core-aurora:generateMetadataFileForMavenJavaPublication --console=plain
+```
+
+The POM exposes core and PostgreSQL dependencies at the existing project
+version; no publication or upload was performed. Documentation validation
+passed (665 local links, 59 reachable pages, closed code fences), together
+with four documentation-validator unit tests. Source/doc whitespace checks
+passed; no generated build output is intentionally included in the change.

@@ -101,6 +101,7 @@ dependencies {
 	implementation project(':sqlapp-core-mysql')
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
+	implementation project(':sqlapp-core-aurora')
 	implementation project(':sqlapp-core-yugabyte')
 	implementation project(':sqlapp-core-cockroach')
 	implementation project(':sqlapp-core-saphana')
@@ -213,4 +214,43 @@ tasks.register('cockroachCompatibilityTest') {
 	description = 'Runs the fixed CockroachDB 24.3/25.4 compatibility matrix in disposable containers.'
 	group = 'verification'
 	dependsOn tasks.named('cockroach24CompatibilityTest'), tasks.named('cockroach25CompatibilityTest')
+}
+
+// These are upstream PostgreSQL checks, not Aurora engine emulation.
+['14': 'postgres:14.22', '15': 'postgres:15.17', '16': 'postgres:16.13', '17': 'postgres:17.9'].each { engine, image ->
+	tasks.register("auroraPostgres${engine}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Checks the Aurora dialect on upstream PostgreSQL ${engine}; no Aurora service verification."
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.AuroraPostgresCompatibilityTest'
+		systemProperty 'sqlapp.test.aurora.postgresImage', image
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+(15..17).each { engine -> tasks.named("auroraPostgres${engine}CompatibilityTest") { mustRunAfter tasks.named("auroraPostgres${engine - 1}CompatibilityTest") } }
+tasks.register('auroraPostgresCompatibilityTest') {
+	group = 'verification'
+	description = 'Runs upstream PostgreSQL 14-17 checks for the Aurora dialect. Does not connect to Aurora.'
+	dependsOn tasks.named('auroraPostgres14CompatibilityTest'), tasks.named('auroraPostgres15CompatibilityTest'), tasks.named('auroraPostgres16CompatibilityTest'), tasks.named('auroraPostgres17CompatibilityTest')
+}
+tasks.named('dockerTest') { exclude '**/aurora/AuroraExternalTest.class' }
+tasks.register('auroraExternalTest', Test) {
+	group = 'verification'
+	description = 'Opt-in destructive checks against an explicitly authorized disposable Aurora database.'
+	testClassesDirs = sourceSets.dockerTest.output.classesDirs
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	useJUnitPlatform()
+	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.AuroraExternalTest'
+	outputs.upToDateWhen { false }
+	doFirst {
+		if (System.getenv('SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS') != 'true') {
+			throw new GradleException('Explicit SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true is required for an authorized disposable Aurora database.')
+		}
+	}
 }

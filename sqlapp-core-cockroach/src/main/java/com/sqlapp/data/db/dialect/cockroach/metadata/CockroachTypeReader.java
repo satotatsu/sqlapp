@@ -10,9 +10,14 @@ public class CockroachTypeReader extends TypeReader {
 	public CockroachTypeReader(Dialect dialect) { super(dialect); }
 	@Override protected List<Type> doGetAll(Connection c,ParametersContext context,ProductVersionInfo version) {
 		var result=new ArrayList<Type>();
+		boolean multiRegion;
+		try(var sql=c.createStatement();var rows=sql.executeQuery("SHOW REGIONS FROM DATABASE "+CockroachMetadata.quote(c.getCatalog()))) {multiRegion=rows.next();}
+		catch(SQLException e) {throw new IllegalStateException("Cannot read CockroachDB database regions",e);}
 		try(var sql=c.createStatement(); var rows=sql.executeQuery("SELECT n.nspname,t.typname,t.oid FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON n.oid=t.typnamespace WHERE t.typtype='e' ORDER BY n.nspname,t.typname")) {
 			while(rows.next()) {
 				String schema=rows.getString(1),name=rows.getString(2);
+				// PRIMARY REGION creates this engine-owned type; replaying CREATE TYPE duplicates it.
+				if(multiRegion && "public".equals(schema) && "crdb_internal_region".equals(name)) continue;
 				if(!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context,"schemaName",schema) || !CockroachMetadata.matches(context,"typeName",name)) continue;
 				var object=new Type(name).setSchemaName(schema);
 				var labels=new ArrayList<String>();
@@ -30,4 +35,3 @@ public class CockroachTypeReader extends TypeReader {
 
 	@Override protected com.sqlapp.data.db.metadata.TypeColumnReader newColumnFactory() { return null; }
 }
-

@@ -24,6 +24,10 @@ public class CockroachTableReader extends PostgresTableReader {
 	}
 	@Override protected void setMetadataDetail(Connection c,ParametersContext context,List<Table> tables) throws SQLException {
 		super.setMetadataDetail(c,context,tables);
-		for(var table:tables) table.setDefinition(CockroachMetadata.definition(c,"TABLE",table.getSchemaName(),table.getName()));
+		for(var table:tables) {
+			table.setDefinition(CockroachMetadata.definition(c,"TABLE",table.getSchemaName(),table.getName()));
+			String locality=com.sqlapp.data.db.dialect.cockroach.util.CockroachPlacement.readLocality(String.join("\n",table.getDefinition()));
+			if(locality!=null) table.getSpecifics().put("COCKROACH_LOCALITY",locality);
+		}
 	}
 }

@@ -100,6 +100,7 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 	@Override
 	protected void addAlterColumn(Table originalTable, Table table, Column oldColumn, Column column,
 			DbObjectDifference diff, List<SqlOperation> result) {
+		if (commentOnly(diff)) return;
 		boolean changeNotNull = diff.getChangedProperties().containsKey(SchemaProperties.NOT_NULL.getLabel());
 		boolean changeDefault = diff.getChangedProperties().containsKey(SchemaProperties.DEFAULT_VALUE.getLabel());
 		String _default = column.getDefaultValue();
@@ -159,6 +160,24 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 		}
 	}
 
+	private boolean commentOnly(DbObjectDifference difference) {
+		return !difference.getChangedProperties().isEmpty()
+				&& difference.getChangedProperties().keySet().stream()
+						.allMatch(key -> key.equals(SchemaProperties.REMARKS.getLabel()));
+	}
+
+	@Override
+	protected void addIndexDefinition(Table original, Table table, Index oldIndex, Index index,
+			DbObjectDifference difference, List<SqlOperation> result) {
+		if (!commentOnly(difference)) super.addIndexDefinition(original, table, oldIndex, index, difference, result);
+	}
+
+	@Override
+	protected void addConstraintDefinition(Table original, Table table, Constraint oldConstraint, Constraint constraint,
+			DbObjectDifference difference, List<SqlOperation> result) {
+		if (!commentOnly(difference)) super.addConstraintDefinition(original, table, oldConstraint, constraint, difference, result);
+	}
+
 	@Override
 	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
 			List<SqlOperation> result) {
@@ -189,7 +208,7 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 		if (tableProp != null && tableProp.getState().isChanged()) {
 			PostgresSqlBuilder builder = this.createSqlBuilder();
 			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().$if(
-					table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.is().null_());
+					table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
@@ -198,11 +217,11 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 			List<DbObjectPropertyDifference> diffs = colsDiff.findModifiedProperties(this.getDialect(),
 					SchemaProperties.REMARKS.getLabel(), Column.class);
 			for (DbObjectPropertyDifference diff : diffs) {
-				Column obj = diff.getTarget(Column.class);
+				Column obj = (Column) diff.getTargetParent();
 				PostgresSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName())
 						.is().$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()),
-								() -> builder.is().null_());
+								() -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -212,10 +231,10 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 			List<DbObjectPropertyDifference> diffs = indexDiff.findModifiedProperties(this.getDialect(),
 					SchemaProperties.REMARKS.getLabel(), Index.class);
 			for (DbObjectPropertyDifference diff : diffs) {
-				Index obj = diff.getTarget(Index.class);
+				Index obj = (Index) diff.getTargetParent();
 				PostgresSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().index().space().name(obj, this.getOptions().isDecorateSchemaName()).is().$if(
-						obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.is().null_());
+						obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -225,11 +244,11 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 			List<DbObjectPropertyDifference> diffs = consDiff.findModifiedProperties(this.getDialect(),
 					SchemaProperties.REMARKS.getLabel(), Constraint.class);
 			for (DbObjectPropertyDifference diff : diffs) {
-				Constraint obj = diff.getTarget(Constraint.class);
+				Constraint obj = (Constraint) diff.getTargetParent();
 				PostgresSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().constraint().space().name(obj, this.getOptions().isDecorateSchemaName()).on()
 						.name(table, this.getOptions().isDecorateSchemaName()).is().$if(obj.getRemarks() != null,
-								() -> builder.sqlChar(obj.getRemarks()), () -> builder.is().null_());
+								() -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}

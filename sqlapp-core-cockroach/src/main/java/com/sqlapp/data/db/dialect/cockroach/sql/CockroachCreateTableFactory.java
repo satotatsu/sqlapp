@@ -17,8 +17,13 @@ public class CockroachCreateTableFactory extends PostgresCreateTableFactory {
 	@Override public List<SqlOperation> createSql(Table table) {
 		if (table.getDefinition() == null || table.getDefinition().isEmpty()) return super.createSql(table);
 		var result = new java.util.ArrayList<SqlOperation>();
-		var builder = createSqlBuilder(); builder._add(table.getDefinition());
+		var builder = createSqlBuilder(); builder._add(com.sqlapp.data.db.dialect.cockroach.util.CockroachPlacement.definition(table));
 		addSql(result,builder,SqlType.CREATE,table);
 		return result;
+	}
+	@Override protected void addOption(Table table,com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder builder) {
+		super.addOption(table,builder);
+		String locality=table.getSpecifics().get("COCKROACH_LOCALITY");
+		if(locality!=null) builder._add(" LOCALITY ")._add(com.sqlapp.data.db.dialect.cockroach.util.CockroachPlacement.locality(locality));
 	}
 }
