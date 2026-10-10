@@ -49,7 +49,8 @@ public class Postgres110SqlFactoryRegistry extends Postgres100SqlFactoryRegistry
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE, Postgres110CreateUniqueConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				Postgres110CreateUniqueConstraintFactory.class);
 		// Index
 		registerSqlFactory(Index.class, SqlType.CREATE, Postgres110CreateIndexFactory.class);
 	}

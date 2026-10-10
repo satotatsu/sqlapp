@@ -28,6 +28,7 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(check.contains("CHECK"), sql);
 		assertEquals(1, table.getColumns().get("tags").getArrayDimension());
 	}
+
 	@Test
 	void recreatesEnumAndDomainWithSchemaAndEscapedLabels() {
 		var registry = sqlFactoryRegistry;
@@ -47,6 +48,7 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(enumSql.contains("CREATE TYPE tenant.status AS ENUM"), enumSql);
 		assertTrue(enumSql.contains("'it''s new'"), enumSql);
 	}
+
 	@Test
 	void keyOnlyUpsertDoesNothingOnConflict() {
 		Table table = new Table("keys");
@@ -61,9 +63,10 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(update.contains("DO UPDATE"), update);
 		assertTrue(update.contains("SET label"), update);
 	}
+
 	@Test
 	void coveringPartialIndexPlacesIncludesBeforeStorageAndPredicate() {
-		for (int major : new int[] {11, 15}) {
+		for (int major : new int[] { 11, 15 }) {
 			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
 					.getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
 			Table table = new Table("items").setSchemaName("tenant");
@@ -112,11 +115,12 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		index.getIncludes().add("label");
 		index.setWhere("length(label) > 0");
 		index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
-		for (int major : new int[] {11, 14, 15, 18}) {
+		for (int major : new int[] { 11, 14, 15, 18 }) {
 			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
 					.getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
 			if (major < 15) {
-				assertFalse(registry.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
+				assertFalse(
+						registry.createSql(index, SqlType.CREATE).get(0).getSqlText().contains("NULLS NOT DISTINCT"));
 			} else {
 				String sql = registry.createSql(index, SqlType.CREATE).get(0).getSqlText();
 				assertTrue(sql.contains("CREATE UNIQUE INDEX"), sql);
@@ -136,14 +140,15 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 
 	@Test
 	void emitsTypedSequencesOnlyFromPostgres10() {
-		for (int major : new int[] {9, 10, 11, 15}) {
+		for (int major : new int[] { 9, 10, 11, 15 }) {
 			var registry = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
 					.getDialect("postgres", major, major == 9 ? 6 : 0, null).createSqlFactoryRegistry();
 			for (var type : java.util.List.of(DataType.SMALLINT, DataType.INT, DataType.BIGINT)) {
 				var sequence = new com.sqlapp.data.schemas.Sequence("typed_seq").setDataType(type);
 				String sql = registry.createSql(sequence, SqlType.CREATE).get(0).getSqlText();
 				assertEquals(major >= 10, sql.contains(" AS "), sql);
-				if (major >= 10) assertTrue(sql.contains("AS " + type.name()), sql);
+				if (major >= 10)
+					assertTrue(sql.contains("AS " + type.name()), sql);
 			}
 		}
 		var registry = com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL150.createSqlFactoryRegistry();
@@ -160,7 +165,8 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		for (DataType type : java.util.List.of(DataType.INT, DataType.ENUM)) {
 			var domain = new com.sqlapp.data.schemas.Domain("Commented type").setSchemaName("Tenant");
 			domain.setDataType(type).setRemarks("日本語 'note'");
-			if (type == DataType.ENUM) domain.getValues().add("value");
+			if (type == DataType.ENUM)
+				domain.getValues().add("value");
 			var operations = registry.createSql(domain, SqlType.CREATE);
 			assertEquals(2, operations.size());
 			String comment = operations.get(1).getSqlText();
@@ -197,9 +203,11 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		assertTrue(create.contains("CREATE TYPE \"Tenant\".\"Line item\" AS"), create);
 		assertTrue(create.contains("VARCHAR(20)"), create);
 		assertTrue(create.contains("INT[][]"), create);
-		assertTrue(operations.get(2).getSqlText().contains("COMMENT ON COLUMN \"Tenant\".\"Line item\".\"Description\""));
+		assertTrue(
+				operations.get(2).getSqlText().contains("COMMENT ON COLUMN \"Tenant\".\"Line item\".\"Description\""));
 		type.setDefinition("CREATE TYPE authoritative_type AS (label text COLLATE \"C\")");
-		assertEquals(String.join("\n", type.getDefinition()), sqlFactoryRegistry.createSql(type, SqlType.CREATE).get(0).getSqlText());
+		assertEquals(String.join("\n", type.getDefinition()),
+				sqlFactoryRegistry.createSql(type, SqlType.CREATE).get(0).getSqlText());
 	}
 
 	@Test
@@ -214,9 +222,11 @@ class PostgresSchemaRecreationTest extends AbstractPostgresSqlFactoryTest {
 		Table table = new Table("items").setSchemaName("Tenant");
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 		var check = new CheckConstraint("Positive id", "id > 0");
-		check.setSchemaName("Tenant"); check.setRemarks("制約 'comment'"); table.getConstraints().add(check);
-		String comment = sqlFactoryRegistry.createSql(table, SqlType.CREATE).stream()
-				.map(op -> op.getSqlText()).filter(sql -> sql.startsWith("COMMENT ON CONSTRAINT")).findFirst().orElseThrow();
+		check.setSchemaName("Tenant");
+		check.setRemarks("制約 'comment'");
+		table.getConstraints().add(check);
+		String comment = sqlFactoryRegistry.createSql(table, SqlType.CREATE).stream().map(op -> op.getSqlText())
+				.filter(sql -> sql.startsWith("COMMENT ON CONSTRAINT")).findFirst().orElseThrow();
 		assertTrue(comment.contains("CONSTRAINT \"Positive id\" ON \"Tenant\".items"), comment);
 	}
 

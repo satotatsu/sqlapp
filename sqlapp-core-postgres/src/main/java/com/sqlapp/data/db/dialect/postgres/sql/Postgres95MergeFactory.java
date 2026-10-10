@@ -71,9 +71,9 @@ public class Postgres95MergeFactory extends AbstractMergeFactory<PostgresSqlBuil
 			}
 		});
 		builder.lineBreak().on().conflict().on().constraint().name(constraint, false);
-		boolean hasUpdates = table.getColumns().stream().anyMatch(column ->
-				!constraint.getColumns().contains(column.getName())
-				&& !CommonUtils.isEmpty(getValueDefinitionForUpdate("EXCLUDED.", column)));
+		boolean hasUpdates = table.getColumns().stream()
+				.anyMatch(column -> !constraint.getColumns().contains(column.getName())
+						&& !CommonUtils.isEmpty(getValueDefinitionForUpdate("EXCLUDED.", column)));
 		if (!hasUpdates) {
 			builder.lineBreak().do_().space()._add("NOTHING");
 			addSql(sqlList, builder, SqlType.MERGE, table);

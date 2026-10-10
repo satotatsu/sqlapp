@@ -1,9 +1,0 @@
-graph sample1 {
-	graph [
-		bgcolor="azure"
-	];
-	"a" [
-		id="id_a"
-	];
-	layout=dot
-}

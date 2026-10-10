@@ -105,10 +105,11 @@ public class Postgres extends Dialect {
 	private static void registerIntervalMatcher(DbDataType<?> type) {
 		String name = type.getDataType().getTypeName();
 		boolean seconds = type.getDataType() == DataType.INTERVAL || name.endsWith("SECOND");
-		type.setColumnTypeMatcher(new RegexColumnTypeMatcher(name.replace(" ", "\\s+")
-				+ (seconds ? "(?:\\s*\\(\\s*(?<length>[0-9]+)\\s*\\))?" : ""),
+		type.setColumnTypeMatcher(new RegexColumnTypeMatcher(
+				name.replace(" ", "\\s+") + (seconds ? "(?:\\s*\\(\\s*(?<length>[0-9]+)\\s*\\))?" : ""),
 				(matcher, information) -> {
-					if (seconds && matcher.group("length") != null) information.setLength(matcher.group("length"));
+					if (seconds && matcher.group("length") != null)
+						information.setLength(matcher.group("length"));
 				}));
 	}
 

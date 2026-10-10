@@ -50,8 +50,9 @@ public class Postgres150 extends Postgres140 {
 	protected void registerDataType() {
 		super.registerDataType();
 		for (DataType dataType : new DataType[] { DataType.NUMERIC, DataType.DECIMAL }) {
-			getDbDataTypes().getDbType(dataType).addColumnTypeMatcher(columnTypeMatcherConverter.apply(
-					new RegexColumnTypeMatcher(dataType.name() + "\\s*\\(\\s*(?<length>[0-9]+)\\s*,\\s*(?<scale>-[0-9]+)\\s*\\)",
+			getDbDataTypes().getDbType(dataType)
+					.addColumnTypeMatcher(columnTypeMatcherConverter.apply(new RegexColumnTypeMatcher(
+							dataType.name() + "\\s*\\(\\s*(?<length>[0-9]+)\\s*,\\s*(?<scale>-[0-9]+)\\s*\\)",
 							(matcher, information) -> {
 								information.setLength(matcher.group("length"), null);
 								information.setScale(matcher.group("scale"));

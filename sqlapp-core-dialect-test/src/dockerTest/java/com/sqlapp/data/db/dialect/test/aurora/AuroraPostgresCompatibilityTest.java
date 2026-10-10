@@ -8,9 +8,26 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /** PostgreSQL compatibility only: this container does not emulate Aurora. */
 class AuroraPostgresCompatibilityTest extends AuroraPostgresAssertions {
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(System.getProperty("sqlapp.test.aurora.postgresImage", "postgres:17.9"));
-	@BeforeAll static void start() { POSTGRES.start(); }
-	@AfterAll static void stop() { POSTGRES.stop(); }
-	@Override Connection connect() throws Exception { return POSTGRES.createConnection(""); }
-	@Override boolean realAurora() { return false; }
+	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
+			System.getProperty("sqlapp.test.aurora.postgresImage", "postgres:17.9"));
+
+	@BeforeAll
+	static void start() {
+		POSTGRES.start();
+	}
+
+	@AfterAll
+	static void stop() {
+		POSTGRES.stop();
+	}
+
+	@Override
+	Connection connect() throws Exception {
+		return POSTGRES.createConnection("");
+	}
+
+	@Override
+	boolean realAurora() {
+		return false;
+	}
 }

@@ -233,3 +233,24 @@ aggregates. It requires target/credential environment variables plus
 UUID schemas with CASCADE. See the [Aurora guide](../sqlapp-core-aurora/README.md)
 for connection requirements, cleanup and unverified behavior. No external
 Aurora test was run as part of adding this module.
+
+## AlloyDB Omni and managed-service qualification
+
+```shell
+./gradlew :sqlapp-core-dialect-test:alloydbCompatibilityTest
+```
+
+The aggregate runs official `google/alloydbomni:15.17.0`, `16.8.0`, `17.9.0`
+images and an ordinary PostgreSQL 17.9 control. Individual tasks are
+`alloydb15CompatibilityTest`, `alloydb16CompatibilityTest`,
+`alloydb17CompatibilityTest` and `alloydbPostgresControlTest`.
+These exercise local Omni engines; managed Google Cloud AlloyDB is not part
+of this matrix. No columnar engine activation or cloud credentials are needed.
+
+`alloydbExternalTest` is explicitly opt-in, excluded from `dockerTest` and all
+compatibility aggregates, and was not executed. It requires an authorized
+disposable writable target, credential environment variables and
+`SQLAPP_ALLOYDB_ALLOW_DESTRUCTIVE_TESTS=true`. It creates/drops UUID schemas
+with CASCADE and writes test rows/checkpoints. See the
+[AlloyDB guide](../sqlapp-core-alloydb/README.md) for prerequisites and remaining
+cloud qualification work.

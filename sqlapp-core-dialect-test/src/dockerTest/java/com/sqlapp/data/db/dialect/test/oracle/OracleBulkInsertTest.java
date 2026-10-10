@@ -19,7 +19,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkInsertResolver;
 import com.sqlapp.jdbc.bulk.BulkOption;
 
-/** Exercises Oracle JDBC batching against the configured Oracle Database Free image. */
+/**
+ * Exercises Oracle JDBC batching against the configured Oracle Database Free
+ * image.
+ */
 class OracleBulkInsertTest {
 	private static final OracleContainer ORACLE = ReusableTestcontainers
 			.configure(new OracleContainer(OracleTestEnvironment.image()));

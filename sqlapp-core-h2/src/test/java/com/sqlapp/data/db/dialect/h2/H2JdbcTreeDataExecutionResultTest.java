@@ -34,7 +34,8 @@ class H2JdbcTreeDataExecutionResultTest {
 	@Test
 	void emptyExecutionDoesNotClaimACommit() throws Exception {
 		try (Connection connection = database()) {
-			var result = new JdbcTreeDataSession(connection, table(connection)).execute(active -> { });
+			var result = new JdbcTreeDataSession(connection, table(connection)).execute(active -> {
+			});
 			assertEquals(0, result.commits());
 			assertEquals(TransactionOutcome.NOT_REQUIRED, result.remainingTransaction());
 			assertTrue(result.operations().isEmpty());
@@ -77,7 +78,8 @@ class H2JdbcTreeDataExecutionResultTest {
 					() -> new JdbcTreeDataSession(connection, table).execute(active -> {
 						active.setRootBatchSize(1);
 						active.setCommitEveryRootBatches(2);
-						for (int i = 1; i <= 4; i++) active.newRow(table).put("ID", i);
+						for (int i = 1; i <= 4; i++)
+							active.newRow(table).put("ID", i);
 						throw failure;
 					})));
 			var result = JdbcTreeDataExecutionFailure.result(failure).orElseThrow();
@@ -161,10 +163,10 @@ class H2JdbcTreeDataExecutionResultTest {
 			JdbcTreeDataSession source = new JdbcTreeDataSession(connection, from);
 			source.setTableOperationMode(JdbcTreeDataSession.TableOperationMode.NONE);
 			source.select(from);
-			var result = new JdbcTreeDataCopySession(source, new JdbcTreeDataSession(connection, to))
-					.execute(copy -> {
-						while (copy.next(from)) copy.newCopy(copy.getRow(from), to);
-					});
+			var result = new JdbcTreeDataCopySession(source, new JdbcTreeDataSession(connection, to)).execute(copy -> {
+				while (copy.next(from))
+					copy.newCopy(copy.getRow(from), to);
+			});
 			assertEquals(1, result.source().commits());
 			assertEquals(1, result.target().commits());
 			assertEquals(SqlType.DELETE, result.source().operations().getFirst().operation());
@@ -180,16 +182,16 @@ class H2JdbcTreeDataExecutionResultTest {
 			Connection proxy = (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
 					new Class<?>[] { Connection.class }, (object, method, arguments) -> {
 						Object value = invoke(connection, method, arguments);
-						if (!(value instanceof PreparedStatement statement)) return value;
+						if (!(value instanceof PreparedStatement statement))
+							return value;
 						return Proxy.newProxyInstance(PreparedStatement.class.getClassLoader(),
 								new Class<?>[] { PreparedStatement.class }, (p, m, a) -> {
 									Object returned = invoke(statement, m, a);
-									return m.getName().equals("executeBatch")
-											? new int[] { Statement.SUCCESS_NO_INFO } : returned;
+									return m.getName().equals("executeBatch") ? new int[] { Statement.SUCCESS_NO_INFO }
+											: returned;
 								});
 					});
-			var result = new JdbcTreeDataSession(proxy, table)
-					.execute(active -> active.newRow(table).put("ID", 1));
+			var result = new JdbcTreeDataSession(proxy, table).execute(active -> active.newRow(table).put("ID", 1));
 			var insert = result.operations().getFirst();
 			assertEquals(0, insert.executed().knownAffectedRows());
 			assertEquals(1, insert.executed().unknownCounts());
@@ -198,8 +200,11 @@ class H2JdbcTreeDataExecutionResultTest {
 	}
 
 	private Object invoke(Object target, java.lang.reflect.Method method, Object[] arguments) throws Throwable {
-		try { return method.invoke(target, arguments); }
-		catch (InvocationTargetException failure) { throw failure.getCause(); }
+		try {
+			return method.invoke(target, arguments);
+		} catch (InvocationTargetException failure) {
+			throw failure.getCause();
+		}
 	}
 
 	private Connection database() throws SQLException {

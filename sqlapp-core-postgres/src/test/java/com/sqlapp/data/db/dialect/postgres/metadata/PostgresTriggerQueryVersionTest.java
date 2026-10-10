@@ -9,11 +9,12 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 class PostgresTriggerQueryVersionTest {
 	@Test
 	void excludesInternalTriggersOnlyOnCatalogsSupportingTheFlag() throws Exception {
-		for (int version : new int[] {8, 9, 11, 15}) {
+		for (int version : new int[] { 8, 9, 11, 15 }) {
 			var dialect = DialectResolver.getInstance().getDialect("postgres", version, version == 8 ? 4 : 0, null);
 			var reader = dialect.getCatalogReader().getSchemaReader().getTriggerReader();
 			assertEquals(version >= 9, reader instanceof Postgres90TriggerReader);
-			assertEquals(version >= 9, ((PostgresTriggerReader) reader).getSqlSqlNode(null).toString().contains("AND NOT t.tgisinternal"));
+			assertEquals(version >= 9,
+					((PostgresTriggerReader) reader).getSqlSqlNode(null).toString().contains("AND NOT t.tgisinternal"));
 		}
 		assertFalse(query("triggers.sql").contains("tgisinternal"));
 		assertTrue(query("triggers.sql").contains("obj_description(t.oid, 'pg_trigger')"));

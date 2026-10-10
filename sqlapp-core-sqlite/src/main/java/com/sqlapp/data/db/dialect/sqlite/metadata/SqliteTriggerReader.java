@@ -22,26 +22,22 @@ import com.sqlapp.data.schemas.Trigger;
 
 /** Reads SQLite triggers from the historical {@code sqlite_master} alias. */
 public class SqliteTriggerReader extends TriggerReader {
-	private static final Pattern EVENT_PATTERN = Pattern.compile(
-			"(?is)\\b(BEFORE|AFTER|INSTEAD\\s+OF)\\s+(INSERT|UPDATE|DELETE)\\b");
-	private static final Pattern BODY_PATTERN = Pattern.compile(
-			"(?is).*\\bBEGIN\\b(.*)\\bEND\\s*$");
+	private static final Pattern EVENT_PATTERN = Pattern
+			.compile("(?is)\\b(BEFORE|AFTER|INSTEAD\\s+OF)\\s+(INSERT|UPDATE|DELETE)\\b");
+	private static final Pattern BODY_PATTERN = Pattern.compile("(?is).*\\bBEGIN\\b(.*)\\bEND\\s*$");
 
 	public SqliteTriggerReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Trigger> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Trigger> result = list();
 		final String schemaName = getSchemaName() == null ? "main" : getSchemaName();
-		final String sql = "SELECT name, tbl_name, sql FROM "
-				+ quoteIdentifier(schemaName) + ".sqlite_master "
+		final String sql = "SELECT name, tbl_name, sql FROM " + quoteIdentifier(schemaName) + ".sqlite_master "
 				+ "WHERE type='trigger' ORDER BY name";
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
 				final Trigger trigger = new Trigger(resultSet.getString("name"));
 				trigger.setSchemaName(schemaName);
@@ -53,8 +49,7 @@ public class SqliteTriggerReader extends TriggerReader {
 				final String definition = resultSet.getString("sql");
 				final Matcher matcher = EVENT_PATTERN.matcher(definition);
 				if (matcher.find()) {
-					trigger.setActionTiming(matcher.group(1).replaceAll("\\s+", " ")
-							.toUpperCase(Locale.ROOT));
+					trigger.setActionTiming(matcher.group(1).replaceAll("\\s+", " ").toUpperCase(Locale.ROOT));
 					trigger.getEventManipulation().add(matcher.group(2));
 				}
 				if (getReaderOptions().isReadDefinition()) {
@@ -62,8 +57,7 @@ public class SqliteTriggerReader extends TriggerReader {
 				}
 				if (getReaderOptions().isReadStatement()) {
 					final Matcher bodyMatcher = BODY_PATTERN.matcher(definition);
-					trigger.setStatement(bodyMatcher.matches()
-							? bodyMatcher.group(1).trim() : definition);
+					trigger.setStatement(bodyMatcher.matches() ? bodyMatcher.group(1).trim() : definition);
 				}
 				result.add(trigger);
 			}

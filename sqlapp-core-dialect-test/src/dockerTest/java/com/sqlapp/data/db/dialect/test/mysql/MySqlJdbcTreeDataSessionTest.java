@@ -59,6 +59,7 @@ class MySqlJdbcTreeDataSessionTest {
 					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
 		}
 	}
+
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
 		try (Connection writer = MYSQL.createConnection(""); Connection observer = MYSQL.createConnection("")) {

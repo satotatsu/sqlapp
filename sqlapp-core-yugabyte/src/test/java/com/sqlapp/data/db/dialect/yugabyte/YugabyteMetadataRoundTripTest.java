@@ -14,7 +14,9 @@ import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 
-/** Opt-in real YSQL test: creates and drops only its own randomly named schema. */
+/**
+ * Opt-in real YSQL test: creates and drops only its own randomly named schema.
+ */
 @EnabledIfEnvironmentVariable(named = "SQLAPP_YSQL_JDBC_URL", matches = ".+")
 class YugabyteMetadataRoundTripTest {
 	@Test
@@ -35,8 +37,8 @@ class YugabyteMetadataRoundTripTest {
 				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 				reader.setSchemaName(schemaName);
 				reader.setObjectName("source_table");
-				Table table = reader.getAllFull(connection).stream()
-						.filter(t -> "source_table".equals(t.getName())).findFirst().orElseThrow();
+				Table table = reader.getAllFull(connection).stream().filter(t -> "source_table".equals(t.getName()))
+						.findFirst().orElseThrow();
 				assertNotNull(table.getColumns().get("id"));
 				assertTrue(table.getColumns().get("label").isNotNull());
 				assertNotNull(table.getConstraints().getPrimaryKeyConstraint());
@@ -48,7 +50,8 @@ class YugabyteMetadataRoundTripTest {
 					statement.execute(operation.getSqlText());
 				}
 				statement.execute("INSERT INTO " + schemaName + ".source_table VALUES (1, 'roundtrip')");
-				try (var rows = statement.executeQuery("SELECT label FROM " + schemaName + ".source_table WHERE id=1")) {
+				try (var rows = statement
+						.executeQuery("SELECT label FROM " + schemaName + ".source_table WHERE id=1")) {
 					assertTrue(rows.next());
 					assertEquals("roundtrip", rows.getString(1));
 				}

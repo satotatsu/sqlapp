@@ -64,8 +64,8 @@ class H2JdbcTreeDataSessionDeleteTest {
 	void leavesUnmarkedChildrenAndRollsBackEarlierDeletes() throws Exception {
 		try (Connection connection = database()) {
 			Schema schema = schema(connection);
-			assertThrows(SQLException.class, () -> new JdbcTreeDataSession(connection, schema.getTables())
-					.execute(session -> {
+			assertThrows(SQLException.class,
+					() -> new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
 						row(session, schema.getTables().get("P"), 1).delete();
 						row(session, schema.getTables().get("C"), 1).unchanged();
 						row(session, schema.getTables().get("G"), 1).delete();
@@ -128,8 +128,8 @@ class H2JdbcTreeDataSessionDeleteTest {
 		try (Connection connection = database()) {
 			Schema schema = schema(connection);
 			List<String> sql = new ArrayList<>();
-			assertThrows(SQLException.class, () -> new JdbcTreeDataSession(connection, schema.getTables())
-					.execute(session -> {
+			assertThrows(SQLException.class,
+					() -> new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
 						session.setSqlHandler((table, type, statement) -> {
 							sql.add(statement);
 							return statement;
@@ -190,8 +190,8 @@ class H2JdbcTreeDataSessionDeleteTest {
 	void periodicCommitSurvivesLaterBusinessFailure() throws Exception {
 		try (Connection connection = database()) {
 			Schema schema = schema(connection);
-			assertThrows(RuntimeException.class, () -> new JdbcTreeDataSession(connection, schema.getTables())
-					.execute(session -> {
+			assertThrows(RuntimeException.class,
+					() -> new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
 						session.setRootBatchSize(1);
 						session.setCommitEveryRootBatches(1);
 						row(session, schema.getTables().get("P"), 2);
@@ -224,7 +224,8 @@ class H2JdbcTreeDataSessionDeleteTest {
 			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
 			assertThrows(IllegalStateException.class, () -> session.execute(active -> {
 				row(active, schema.getTables().get("P"), 2);
-				active.execute(nested -> { });
+				active.execute(nested -> {
+				});
 			}));
 			assertEquals(1, count(connection, "P"));
 			assertThrows(IllegalStateException.class, () -> session.execute(active -> active.close()));
@@ -238,8 +239,8 @@ class H2JdbcTreeDataSessionDeleteTest {
 	void swallowedBatchFailureStillRollsBackExecution() throws Exception {
 		try (Connection connection = database()) {
 			Schema schema = schema(connection);
-			assertThrows(IllegalStateException.class, () -> new JdbcTreeDataSession(connection, schema.getTables())
-					.execute(session -> {
+			assertThrows(IllegalStateException.class,
+					() -> new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
 						session.setRootBatchSize(1);
 						row(session, schema.getTables().get("P"), 1).delete();
 						assertThrows(SQLException.class, () -> row(session, schema.getTables().get("P"), 2));
@@ -283,8 +284,10 @@ class H2JdbcTreeDataSessionDeleteTest {
 		try (Connection connection = database()) {
 			Schema schema = schema(connection);
 			connection.setAutoCommit(true);
-			assertThrows(IllegalStateException.class, () -> new JdbcTreeDataSession(connection, schema.getTables())
-					.execute(session -> { throw new AssertionError("must not run"); }));
+			assertThrows(IllegalStateException.class,
+					() -> new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
+						throw new AssertionError("must not run");
+					}));
 		}
 	}
 

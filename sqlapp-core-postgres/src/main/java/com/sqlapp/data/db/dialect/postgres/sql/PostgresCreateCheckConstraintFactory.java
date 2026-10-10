@@ -23,7 +23,6 @@ import java.util.List;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 
-
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
@@ -36,14 +35,15 @@ import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
  */
 public class PostgresCreateCheckConstraintFactory extends AbstractCreateCheckConstraintFactory<PostgresSqlBuilder> {
 
-	protected boolean supportsNotValid() { return false; }
+	protected boolean supportsNotValid() {
+		return false;
+	}
 
 	@Override
 	protected void addCheckConstraintAfter(CheckConstraint constraint, PostgresSqlBuilder builder) {
 		PostgresConstraintOptions.appendNoInherit(constraint, builder, supportsNotValid());
 		PostgresConstraintOptions.appendNotValid(constraint, builder, supportsNotValid());
 	}
-
 
 	@Override
 	public List<SqlOperation> createSql(CheckConstraint constraint) {

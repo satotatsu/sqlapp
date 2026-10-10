@@ -30,22 +30,17 @@ public class SqliteTableReader extends JdbcTableReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Table> tables = new ArrayList<>();
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
 		final String requestedTable = getObjectName(context);
-		final String sql = "SELECT name FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_master WHERE type='table' "
+		final String sql = "SELECT name FROM " + quoteIdentifier(schemaName) + ".sqlite_master WHERE type='table' "
 				+ "AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY name";
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
 				final String tableName = resultSet.getString("name");
-				if (requestedTable != null
-						&& !requestedTable.equalsIgnoreCase(tableName)) {
+				if (requestedTable != null && !requestedTable.equalsIgnoreCase(tableName)) {
 					continue;
 				}
 				final Table table = new Table(tableName);
@@ -86,9 +81,8 @@ public class SqliteTableReader extends JdbcTableReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> tables)
-			throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> tables) throws SQLException {
 		for (Table table : tables) {
 			table.setDialect(getDialect());
 			load(connection, table, getColumnReader());
@@ -100,10 +94,8 @@ public class SqliteTableReader extends JdbcTableReader {
 		}
 	}
 
-	private void loadTableOptions(final Connection connection, final Table table)
-			throws SQLException {
-		final String schemaName = table.getSchemaName() == null
-				? "main" : table.getSchemaName();
+	private void loadTableOptions(final Connection connection, final Table table) throws SQLException {
+		final String schemaName = table.getSchemaName() == null ? "main" : table.getSchemaName();
 		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
 				+ ".sqlite_master WHERE type='table' AND name=?";
 		try (var statement = connection.prepareStatement(sql)) {
@@ -118,8 +110,7 @@ public class SqliteTableReader extends JdbcTableReader {
 				}
 				final String normalized = definition.toUpperCase(Locale.ROOT);
 				final int closingParenthesis = normalized.lastIndexOf(')');
-				final String options = closingParenthesis < 0 ? ""
-						: normalized.substring(closingParenthesis + 1);
+				final String options = closingParenthesis < 0 ? "" : normalized.substring(closingParenthesis + 1);
 				if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*")) {
 					table.getSpecifics().put("without_rowid", Boolean.TRUE.toString());
 				}
@@ -134,8 +125,7 @@ public class SqliteTableReader extends JdbcTableReader {
 		return "\"" + value.replace("\"", "\"\"") + "\"";
 	}
 
-	private void load(final Connection connection, final Table table,
-			final TableObjectReader<?> reader) {
+	private void load(final Connection connection, final Table table, final TableObjectReader<?> reader) {
 		if (reader == null) {
 			return;
 		}

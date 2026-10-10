@@ -22,24 +22,22 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 /** Reads SQLite CHECK constraints from the stored CREATE TABLE statement. */
 public class SqliteCheckConstraintReader extends CheckConstraintReader {
 	private static final Pattern CHECK_PATTERN = Pattern.compile("(?i)\\bCHECK\\s*\\(");
-	private static final Pattern NAME_PATTERN = Pattern.compile(
-			"(?i)\\bCONSTRAINT\\s+(?:\"([^\"]+)\"|`([^`]+)`|\\[([^]]+)]|([^\\s]+))\\s+CHECK\\s*\\(");
+	private static final Pattern NAME_PATTERN = Pattern
+			.compile("(?i)\\bCONSTRAINT\\s+(?:\"([^\"]+)\"|`([^`]+)`|\\[([^]]+)]|([^\\s]+))\\s+CHECK\\s*\\(");
 
 	public SqliteCheckConstraintReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<CheckConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<CheckConstraint> result = list();
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return result;
 		}
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
 		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
 				+ ".sqlite_master WHERE type='table' AND name=?";
 		try (var statement = connection.prepareStatement(sql)) {
@@ -49,15 +47,12 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 					return result;
 				}
 				int sequence = 0;
-				for (String definition : SqliteColumnReader
-						.splitColumnDefinitions(resultSet.getString(1))) {
+				for (String definition : SqliteColumnReader.splitColumnDefinitions(resultSet.getString(1))) {
 					for (String expression : extractExpressions(definition)) {
 						sequence++;
 						final String declaredName = extractName(definition);
 						final CheckConstraint constraint = new CheckConstraint(
-								declaredName == null
-										? "sqlite_check_" + tableName + "_" + sequence
-										: declaredName,
+								declaredName == null ? "sqlite_check_" + tableName + "_" + sequence : declaredName,
 								expression);
 						constraint.setDialect(getDialect());
 						constraint.setCatalogName(getCatalogName(context));
@@ -95,8 +90,7 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 		for (int i = open + 1; i < text.length(); i++) {
 			final char current = text.charAt(i);
 			if (quote != 0) {
-				if (current == quote && (i + 1 >= text.length()
-						|| text.charAt(i + 1) != quote)) {
+				if (current == quote && (i + 1 >= text.length() || text.charAt(i + 1) != quote)) {
 					quote = 0;
 				} else if (current == quote) {
 					i++;

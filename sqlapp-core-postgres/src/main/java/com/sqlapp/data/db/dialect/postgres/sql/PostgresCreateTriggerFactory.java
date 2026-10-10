@@ -39,7 +39,8 @@ public class PostgresCreateTriggerFactory extends AbstractCreateTriggerFactory<P
 	@Override
 	protected void addOtherDefinitions(final Trigger obj, List<SqlOperation> sqlList) {
 		super.addOtherDefinitions(obj, sqlList);
-		if (obj.getRemarks() == null) return;
+		if (obj.getRemarks() == null)
+			return;
 		if (CommonUtils.isEmpty(obj.getTableName())) {
 			throw new IllegalArgumentException("Trigger comment requires tableName: " + obj.getName());
 		}

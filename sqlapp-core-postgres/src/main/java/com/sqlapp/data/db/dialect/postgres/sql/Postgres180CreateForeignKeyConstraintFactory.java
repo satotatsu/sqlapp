@@ -4,7 +4,6 @@ import java.util.List;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 
-
 import com.sqlapp.data.db.sql.AbstractCreateForeignKeyConstraintFactory;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
@@ -15,7 +14,8 @@ import com.sqlapp.util.CommonUtils;
  * PostgreSQL 18 temporal foreign key constraint.
  */
 public class Postgres180CreateForeignKeyConstraintFactory
-		extends AbstractCreateForeignKeyConstraintFactory<AbstractSqlBuilder<?>> implements PostgresConstraintOptions.NotValidFactory {
+		extends AbstractCreateForeignKeyConstraintFactory<AbstractSqlBuilder<?>>
+		implements PostgresConstraintOptions.NotValidFactory {
 	public static final String PERIOD = "period";
 
 	@Override
@@ -74,6 +74,7 @@ public class Postgres180CreateForeignKeyConstraintFactory
 		}
 		PostgresConstraintOptions.appendNotValid(constraint, builder, true);
 	}
+
 	@Override
 	protected void addDeferrability(ForeignKeyConstraint obj, AbstractSqlBuilder<?> builder) {
 		PostgresConstraintOptions.appendDeferrability(obj, builder);
@@ -90,7 +91,6 @@ public class Postgres180CreateForeignKeyConstraintFactory
 	protected void addCascadeRule(ForeignKeyConstraint obj, AbstractSqlBuilder<?> builder) {
 		PostgresConstraintOptions.appendCascadeRules(obj, builder);
 	}
-
 
 	@Override
 	public List<SqlOperation> createSql(ForeignKeyConstraint constraint) {

@@ -22,37 +22,29 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 
 /** Reads SQLite foreign keys from {@code PRAGMA foreign_key_list}. */
-public class SqliteForeignKeyConstraintReader
-		extends ForeignKeyConstraintReader {
+public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 	public SqliteForeignKeyConstraintReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return list();
 		}
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
-				+ ".foreign_key_list(" + quoteString(tableName) + ")";
-		final Map<Integer, ForeignKeyConstraint> constraints =
-				new LinkedHashMap<>();
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".foreign_key_list(" + quoteString(tableName)
+				+ ")";
+		final Map<Integer, ForeignKeyConstraint> constraints = new LinkedHashMap<>();
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
 				final int id = resultSet.getInt("id");
-				final ForeignKeyConstraint constraint = constraints.computeIfAbsent(
-						id, key -> createConstraint(context, schemaName, tableName,
-								key, getUnchecked(resultSet, "table"),
-								getUnchecked(resultSet, "on_update"),
-								getUnchecked(resultSet, "on_delete")));
-				constraint.getColumns().add(
-						new Column(resultSet.getString("from")));
+				final ForeignKeyConstraint constraint = constraints.computeIfAbsent(id,
+						key -> createConstraint(context, schemaName, tableName, key, getUnchecked(resultSet, "table"),
+								getUnchecked(resultSet, "on_update"), getUnchecked(resultSet, "on_delete")));
+				constraint.getColumns().add(new Column(resultSet.getString("from")));
 				constraint.getRelatedColumns().add(resultSet.getString("to"));
 			}
 			return List.copyOf(constraints.values());
@@ -61,12 +53,10 @@ public class SqliteForeignKeyConstraintReader
 		}
 	}
 
-	private ForeignKeyConstraint createConstraint(
-			final ParametersContext context, final String schemaName,
-			final String tableName, final int id, final String relatedTable,
-			final String updateRule, final String deleteRule) {
-		final ForeignKeyConstraint constraint = new ForeignKeyConstraint(
-				"sqlite_fk_" + tableName + "_" + id);
+	private ForeignKeyConstraint createConstraint(final ParametersContext context, final String schemaName,
+			final String tableName, final int id, final String relatedTable, final String updateRule,
+			final String deleteRule) {
+		final ForeignKeyConstraint constraint = new ForeignKeyConstraint("sqlite_fk_" + tableName + "_" + id);
 		constraint.setDialect(getDialect());
 		constraint.setCatalogName(getCatalogName(context));
 		constraint.setSchemaName(getSchemaName(context));
@@ -78,8 +68,7 @@ public class SqliteForeignKeyConstraintReader
 		return constraint;
 	}
 
-	private String getUnchecked(final java.sql.ResultSet resultSet,
-			final String name) {
+	private String getUnchecked(final java.sql.ResultSet resultSet, final String name) {
 		try {
 			return resultSet.getString(name);
 		} catch (SQLException e) {

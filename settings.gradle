@@ -37,6 +37,7 @@ include(
 , 'sqlapp-core-oracle'
 , 'sqlapp-core-postgres'
 , 'sqlapp-core-aurora'
+, 'sqlapp-core-alloydb'
 , 'sqlapp-core-yugabyte'
 , 'sqlapp-core-cockroach'
 , 'sqlapp-core-saphana'
@@ -48,6 +49,5 @@ include(
 , 'sqlapp-core-phoenix'
 , 'sqlapp-core-dialect-test'
 , 'sqlapp-core-hsql'
-, 'sqlapp-graphviz'
 , 'sqlapp-elk-svg'
 )

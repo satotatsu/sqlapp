@@ -33,16 +33,14 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Index> result = list();
 		try {
 			for (String tableName : tableNames(context)) {
 				final ParametersContext tableContext = context.clone();
 				tableContext.put(SchemaProperties.TABLE_NAME.getLabel(), tableName);
-				result.addAll(getAllIndex(connection.getMetaData(), tableContext,
-						false));
+				result.addAll(getAllIndex(connection.getMetaData(), tableContext, false));
 			}
 			loadPartialIndexPredicates(connection, result);
 			return result;
@@ -51,11 +49,10 @@ public class SqliteIndexReader extends JdbcIndexReader {
 		}
 	}
 
-	private void loadPartialIndexPredicates(final Connection connection,
-			final List<Index> indexes) throws SQLException {
+	private void loadPartialIndexPredicates(final Connection connection, final List<Index> indexes)
+			throws SQLException {
 		for (Index index : indexes) {
-			final String schemaName = index.getSchemaName() == null
-					? "main" : index.getSchemaName();
+			final String schemaName = index.getSchemaName() == null ? "main" : index.getSchemaName();
 			final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
 					+ ".sqlite_master WHERE type='index' AND name=?";
 			String definition = null;
@@ -72,34 +69,28 @@ public class SqliteIndexReader extends JdbcIndexReader {
 		}
 	}
 
-	private void loadColumnDetails(final Connection connection,
-			final String schemaName, final Index index,
+	private void loadColumnDetails(final Connection connection, final String schemaName, final Index index,
 			final String definition) throws SQLException {
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
-				+ ".index_xinfo(" + quoteString(index.getName()) + ")";
-		final List<String> definitions =
-				SqliteColumnReader.splitColumnDefinitions(definition);
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_xinfo(" + quoteString(index.getName())
+				+ ")";
+		final List<String> definitions = SqliteColumnReader.splitColumnDefinitions(definition);
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			final boolean hasDescending = hasColumn(resultSet, "desc");
 			final boolean hasKey = hasColumn(resultSet, "key");
 			index.getColumns().clear();
 			while (resultSet.next()) {
 				final String columnName = resultSet.getString("name");
 				final int columnId = resultSet.getInt("cid");
-				if (hasKey && !resultSet.getBoolean("key")
-						|| !hasKey && columnName == null && columnId != -2) {
+				if (hasKey && !resultSet.getBoolean("key") || !hasKey && columnName == null && columnId != -2) {
 					continue;
 				}
-				final Order order = hasDescending && resultSet.getBoolean("desc")
-						? Order.Desc : Order.Asc;
+				final Order order = hasDescending && resultSet.getBoolean("desc") ? Order.Desc : Order.Asc;
 				if (columnName != null) {
 					index.getColumns().add(new Column(columnName), order);
 				} else {
 					final int position = resultSet.getInt("seqno");
 					if (position < definitions.size()) {
-						index.getColumns().add(stripOrder(definitions.get(position)),
-								order);
+						index.getColumns().add(stripOrder(definitions.get(position)), order);
 					}
 				}
 			}
@@ -107,12 +98,10 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	}
 
 	static String stripOrder(final String definition) {
-		return definition.replaceFirst("(?is)\\s+(?:ASC|DESC)\\s*$", "")
-				.trim();
+		return definition.replaceFirst("(?is)\\s+(?:ASC|DESC)\\s*$", "").trim();
 	}
 
-	private boolean hasColumn(final java.sql.ResultSet resultSet,
-			final String name) throws SQLException {
+	private boolean hasColumn(final java.sql.ResultSet resultSet, final String name) throws SQLException {
 		for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 			if (name.equalsIgnoreCase(resultSet.getMetaData().getColumnLabel(i))) {
 				return true;

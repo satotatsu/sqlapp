@@ -42,7 +42,8 @@ public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory
 		builder.space().arguments(obj.getArguments());
 		builder.lineBreak().returns();
 		if (obj.getReturning().getTable() == null
-				&& obj.getFunctionType() == com.sqlapp.data.schemas.FunctionType.Table) builder.space()._add("SETOF");
+				&& obj.getFunctionType() == com.sqlapp.data.schemas.FunctionType.Table)
+			builder.space()._add("SETOF");
 		builder.space()._add(obj.getReturning());
 		String quate = getQuate(obj);
 		builder.lineBreak();
@@ -106,10 +107,11 @@ public class PostgresCreateFunctionFactory extends AbstractCreateFunctionFactory
 		if (obj.getRemarks() != null) {
 			PostgresSqlBuilder builder = this.createSqlBuilder();
 			builder.comment().on();
-			if ("PROCEDURE".equals(obj.getSpecifics().get("ROUTINE_KIND"))) builder.procedure();
-			else builder.function();
-			builder.space().specificName(obj, this.getOptions().isDecorateSchemaName()).is()
-					.sqlChar(obj.getRemarks());
+			if ("PROCEDURE".equals(obj.getSpecifics().get("ROUTINE_KIND")))
+				builder.procedure();
+			else
+				builder.function();
+			builder.space().specificName(obj, this.getOptions().isDecorateSchemaName()).is().sqlChar(obj.getRemarks());
 			addSql(sqlList, builder, SqlType.SET_COMMENT, obj);
 		}
 	}

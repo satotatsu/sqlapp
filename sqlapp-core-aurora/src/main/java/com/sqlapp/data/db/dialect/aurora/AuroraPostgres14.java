@@ -6,7 +6,18 @@ import com.sqlapp.data.db.dialect.postgres.Postgres140;
 /** Aurora PostgreSQL 14 engine baseline. */
 public class AuroraPostgres14 extends Postgres140 implements AuroraPostgreSQL {
 	private static final long serialVersionUID = 1L;
-	public AuroraPostgres14() { super(() -> null); }
-	@Override public String getProductName() { return "Aurora PostgreSQL"; }
-	@Override public String getSimpleName() { return "aurora-postgresql"; }
+
+	public AuroraPostgres14() {
+		super(() -> null);
+	}
+
+	@Override
+	public String getProductName() {
+		return "Aurora PostgreSQL";
+	}
+
+	@Override
+	public String getSimpleName() {
+		return "aurora-postgresql";
+	}
 }

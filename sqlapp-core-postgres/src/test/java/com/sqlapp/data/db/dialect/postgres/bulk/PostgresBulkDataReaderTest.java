@@ -61,13 +61,14 @@ class PostgresBulkDataReaderTest {
 		table.getColumns().add("matrix", c -> c.setDataType(DataType.INT).setArrayDimension(2));
 		table.getColumns().add("numbers", c -> c.setDataType(DataType.SMALLINT).setArrayDimension(1));
 		table.getRows().add(row -> {
-			row.put("matrix", new int[][] {{1,2},{3,4}});
-			row.put("numbers", new byte[] {5,6});
+			row.put("matrix", new int[][] { { 1, 2 }, { 3, 4 } });
+			row.put("numbers", new byte[] { 5, 6 });
 		});
 		try (var reader = new PostgresBulkDataReader(table, BulkOption.defaults())) {
 			var writer = new StringWriter();
 			reader.transferTo(writer);
-			assertEquals("\"{{\"\"1\"\",\"\"2\"\"},{\"\"3\"\",\"\"4\"\"}}\",\"{\"\"5\"\",\"\"6\"\"}\"\n", writer.toString());
+			assertEquals("\"{{\"\"1\"\",\"\"2\"\"},{\"\"3\"\",\"\"4\"\"}}\",\"{\"\"5\"\",\"\"6\"\"}\"\n",
+					writer.toString());
 		}
 	}
 

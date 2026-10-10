@@ -19,24 +19,31 @@ import com.sqlapp.jdbc.bulk.MigrationSnapshotExecutionResult;
 import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 
 class SqliteSetBasedMigrationSnapshotExecutorTest {
-	@Test void appliesSetBasedSnapshotWithNullSafeComparison() throws Exception {
+	@Test
+	void appliesSetBasedSnapshotWithNullSafeComparison() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:")) {
 			try (var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE CUSTOMER_HISTORY(ID INTEGER, NAME TEXT, VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
-				statement.execute("INSERT INTO CUSTOMER_HISTORY VALUES(1,NULL,'2026-01-01',NULL,1),(2,'old','2026-01-01',NULL,1),(3,'removed','2026-01-01',NULL,1)");
+				statement.execute(
+						"CREATE TABLE CUSTOMER_HISTORY(ID INTEGER, NAME TEXT, VALID_FROM TIMESTAMP NOT NULL, VALID_TO TIMESTAMP, IS_CURRENT BOOLEAN NOT NULL)");
+				statement.execute(
+						"INSERT INTO CUSTOMER_HISTORY VALUES(1,NULL,'2026-01-01',NULL,1),(2,'old','2026-01-01',NULL,1),(3,'removed','2026-01-01',NULL,1)");
 			}
 			final var definition = new MigrationSnapshotDefinition("customer", "CUSTOMER_HISTORY", List.of("ID"),
 					List.of("NAME"), "VALID_FROM", "VALID_TO", "IS_CURRENT", true);
-			final var result = SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(), definition,
-					Instant.parse("2026-09-16T00:00:00Z"), List.of(row(1, null), row(2, "new"), row(4, "added")), 2);
+			final var result = SetBasedMigrationSnapshotResolver.resolve(connection).execute(connection, table(),
+					definition, Instant.parse("2026-09-16T00:00:00Z"),
+					List.of(row(1, null), row(2, "new"), row(4, "added")), 2);
 			assertEquals(new MigrationSnapshotExecutionResult(2, 2, 1), result);
-			try (var statement = connection.createStatement(); var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE VALID_TO IS NULL")) {
-				rs.next(); assertEquals(3, rs.getInt(1));
+			try (var statement = connection.createStatement();
+					var rs = statement.executeQuery("SELECT COUNT(*) FROM CUSTOMER_HISTORY WHERE VALID_TO IS NULL")) {
+				rs.next();
+				assertEquals(3, rs.getInt(1));
 			}
 		}
 	}
 
-	@Test void preservesCallerOwnedTransactionBoundary() throws Exception {
+	@Test
+	void preservesCallerOwnedTransactionBoundary() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:")) {
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE TABLE CALLER_WORK(ID INTEGER)");
@@ -57,8 +64,8 @@ class SqliteSetBasedMigrationSnapshotExecutorTest {
 			assertFalse(connection.getAutoCommit());
 			connection.rollback();
 			try (var statement = connection.createStatement();
-					var rs = statement.executeQuery(
-							"SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
+					var rs = statement
+							.executeQuery("SELECT NAME, VALID_TO, IS_CURRENT FROM CUSTOMER_HISTORY WHERE ID=1")) {
 				assertTrue(rs.next());
 				assertEquals("old", rs.getString(1));
 				assertNull(rs.getObject(2));
@@ -72,6 +79,7 @@ class SqliteSetBasedMigrationSnapshotExecutorTest {
 			}
 		}
 	}
+
 	private static Table table() {
 		final Table table = new Table("CUSTOMER_HISTORY");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
@@ -81,7 +89,11 @@ class SqliteSetBasedMigrationSnapshotExecutorTest {
 		table.getColumns().add(new Column("IS_CURRENT").setDataType(DataType.BOOLEAN));
 		return table;
 	}
-	private static Map<String,Object> row(final int id, final String name) {
-		final Map<String,Object> row = new LinkedHashMap<>(); row.put("ID", id); row.put("NAME", name); return row;
+
+	private static Map<String, Object> row(final int id, final String name) {
+		final Map<String, Object> row = new LinkedHashMap<>();
+		row.put("ID", id);
+		row.put("NAME", name);
+		return row;
 	}
 }

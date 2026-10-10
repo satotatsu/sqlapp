@@ -7,13 +7,18 @@ import com.sqlapp.data.schemas.Index;
 
 /** Cockroach index names are scoped to their owning table. */
 public class CockroachDropIndexFactory extends AbstractDropNamedObjectFactory<Index, PostgresSqlBuilder> {
-	@Override protected void addDropObject(Index index, PostgresSqlBuilder builder) {
+	@Override
+	protected void addDropObject(Index index, PostgresSqlBuilder builder) {
 		builder.drop().index().space();
-		name(index,builder,getOptions().isDecorateSchemaName());
+		name(index, builder, getOptions().isDecorateSchemaName());
 	}
-	static void name(Index index,PostgresSqlBuilder builder,boolean schema) {
-		if(index.getTableName()==null) throw new IllegalArgumentException("CockroachDB index operation requires its owning table");
-		if(schema && index.getSchemaName()!=null) builder._add(builder.getDialect().quote(index.getSchemaName()))._add(".");
-		builder._add(builder.getDialect().quote(index.getTableName()))._add("@")._add(builder.getDialect().quote(index.getName()));
+
+	static void name(Index index, PostgresSqlBuilder builder, boolean schema) {
+		if (index.getTableName() == null)
+			throw new IllegalArgumentException("CockroachDB index operation requires its owning table");
+		if (schema && index.getSchemaName() != null)
+			builder._add(builder.getDialect().quote(index.getSchemaName()))._add(".");
+		builder._add(builder.getDialect().quote(index.getTableName()))._add("@")
+				._add(builder.getDialect().quote(index.getName()));
 	}
 }

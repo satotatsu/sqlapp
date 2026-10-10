@@ -23,16 +23,21 @@ class PostgresAlterFunctionFactoryTest {
 	@Test
 	void changesAttributesAndClearsCommentsThroughDifferenceRegistry() {
 		for (int major : new int[] { 8, 11, 15, 18 }) {
-			var registry = DialectResolver.getInstance().getDialect("postgres", major, major == 8 ? 3 : 0, null).createSqlFactoryRegistry();
+			var registry = DialectResolver.getInstance().getDialect("postgres", major, major == 8 ? 3 : 0, null)
+					.createSqlFactoryRegistry();
 			registry.getOptions().setDecorateSchemaName(true);
 			Function original = function();
 			Function target = original.clone().setDeterministic(null).setStable(true)
-					.setOnNullCall(OnNullCall.ReturnsNullOnNullInput).setSqlSecurity(SqlSecurity.Definer).setRemarks(null);
+					.setOnNullCall(OnNullCall.ReturnsNullOnNullInput).setSqlSecurity(SqlSecurity.Definer)
+					.setRemarks(null);
 			var operations = registry.createSql(original.diff(target));
 			assertEquals(2, operations.size());
-			assertEquals("ALTER FUNCTION \"Other Schema\".\"f.name\"(UUID[]) STABLE RETURNS NULL ON NULL INPUT SECURITY DEFINER", operations.get(0).getSqlText());
+			assertEquals(
+					"ALTER FUNCTION \"Other Schema\".\"f.name\"(UUID[]) STABLE RETURNS NULL ON NULL INPUT SECURITY DEFINER",
+					operations.get(0).getSqlText());
 			assertEquals(SqlType.ALTER, operations.get(0).getSqlType());
-			assertEquals("COMMENT ON FUNCTION \"Other Schema\".\"f.name\"(UUID[]) IS NULL", operations.get(1).getSqlText());
+			assertEquals("COMMENT ON FUNCTION \"Other Schema\".\"f.name\"(UUID[]) IS NULL",
+					operations.get(1).getSqlText());
 			var reverse = registry.createSql(target.diff(original));
 			assertTrue(reverse.get(0).getSqlText().endsWith("VOLATILE CALLED ON NULL INPUT SECURITY INVOKER"));
 			assertTrue(reverse.get(1).getSqlText().endsWith("'before'"));
@@ -44,12 +49,16 @@ class PostgresAlterFunctionFactoryTest {
 	void rejectsUnsupportedChangesBeforeReturningAnySql() {
 		var registry = DialectResolver.getInstance().getDialect("postgres", 15, 0, null).createSqlFactoryRegistry();
 		Function original = function();
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(original.clone().setStatement("SELECT 2").setRemarks("after"))));
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(original.clone().setName("renamed"))));
-		Function target = original.clone(); target.getReturning().setDataType(DataType.BIGINT);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(original.clone().setStatement("SELECT 2").setRemarks("after"))));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(original.clone().setName("renamed"))));
+		Function target = original.clone();
+		target.getReturning().setDataType(DataType.BIGINT);
 		Function changedReturning = target;
 		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(changedReturning)));
-		target = original.clone(); target.getArguments().get(0).setArrayDimension(0);
+		target = original.clone();
+		target.getArguments().get(0).setArrayDimension(0);
 		Function changedArguments = target;
 		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(changedArguments)));
 		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original, SqlType.ALTER));
@@ -65,7 +74,8 @@ class PostgresAlterFunctionFactoryTest {
 		var operations = registry.createSql(original.diff(target));
 		assertTrue(operations.get(0).getSqlText().startsWith("ALTER PROCEDURE "));
 		assertTrue(operations.get(1).getSqlText().startsWith("COMMENT ON PROCEDURE "));
-		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(original.clone().setDeterministic(true))));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(original.diff(original.clone().setDeterministic(true))));
 		var oldRegistry = DialectResolver.getInstance().getDialect("postgres", 10, 0, null).createSqlFactoryRegistry();
 		assertThrows(UnsupportedOperationException.class, () -> oldRegistry.createSql(original.diff(target)));
 	}

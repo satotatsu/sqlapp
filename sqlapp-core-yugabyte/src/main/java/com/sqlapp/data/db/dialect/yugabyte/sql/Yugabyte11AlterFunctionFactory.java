@@ -6,5 +6,7 @@ import com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterFunctionFactory;
 /** PostgreSQL 11-based YSQL does not implement ALTER PROCEDURE. */
 public class Yugabyte11AlterFunctionFactory extends PostgresAlterFunctionFactory {
 	@Override
-	protected boolean supportsProcedureSecurityAlter() { return false; }
+	protected boolean supportsProcedureSecurityAlter() {
+		return false;
+	}
 }

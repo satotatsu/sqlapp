@@ -14,7 +14,8 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 class PostgresTemporalConstraintMetadataTest {
 	@Test
 	void recognizesNoInheritWithoutMatchingQuotedSyntax() {
-		for (String suffix : new String[] {"NO INHERIT", "NO INHERIT NOT VALID", "NO INHERIT NOT ENFORCED NOT VALID"}) {
+		for (String suffix : new String[] { "NO INHERIT", "NO INHERIT NOT VALID",
+				"NO INHERIT NOT ENFORCED NOT VALID" }) {
 			var check = new CheckConstraint("ck", "id > 0");
 			PostgresTemporalConstraintMetadata.apply(check, "CHECK (id > 0) " + suffix);
 			assertEquals("true", check.getSpecifics().get("noInherit"));
@@ -23,6 +24,7 @@ class PostgresTemporalConstraintMetadataTest {
 		PostgresTemporalConstraintMetadata.apply(check, "CHECK (label <> 'NO INHERIT')");
 		assertNull(check.getSpecifics().get("noInherit"));
 	}
+
 	@Test
 	void ignoresSyntaxWordsInsideIdentifiersAndCheckLiterals() {
 		var fk = new ForeignKeyConstraint("fk");
@@ -79,19 +81,21 @@ class PostgresTemporalConstraintMetadataTest {
 		assertEquals("true", foreignKey.getSpecifics()
 				.get(com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateCheckConstraintFactory.NOT_ENFORCED));
 	}
+
 	@Test
 	void readsTerminalNotValidWithoutMatchingCheckLiterals() {
-		for (String definition : new String[] {"CHECK (id > 0) NOT VALID", "CHECK (id > 0) NOT ENFORCED NOT VALID", "CHECK (id > 0) NOT VALID NOT ENFORCED"}) {
-			var check = new CheckConstraint("positive","id > 0");
-			PostgresTemporalConstraintMetadata.apply(check,definition);
-			assertEquals("true",check.getSpecifics().get("notValid"));
+		for (String definition : new String[] { "CHECK (id > 0) NOT VALID", "CHECK (id > 0) NOT ENFORCED NOT VALID",
+				"CHECK (id > 0) NOT VALID NOT ENFORCED" }) {
+			var check = new CheckConstraint("positive", "id > 0");
+			PostgresTemporalConstraintMetadata.apply(check, definition);
+			assertEquals("true", check.getSpecifics().get("notValid"));
 		}
-		var check = new CheckConstraint("message","label <> 'NOT VALID'");
-		PostgresTemporalConstraintMetadata.apply(check,"CHECK (label <> 'NOT VALID')");
+		var check = new CheckConstraint("message", "label <> 'NOT VALID'");
+		PostgresTemporalConstraintMetadata.apply(check, "CHECK (label <> 'NOT VALID')");
 		assertNull(check.getSpecifics().get("notValid"));
 		var fk = new ForeignKeyConstraint("fk");
-		PostgresTemporalConstraintMetadata.apply(fk,"FOREIGN KEY (id) REFERENCES parent(id) NOT VALID");
-		assertEquals("true",fk.getSpecifics().get("notValid"));
+		PostgresTemporalConstraintMetadata.apply(fk, "FOREIGN KEY (id) REFERENCES parent(id) NOT VALID");
+		assertEquals("true", fk.getSpecifics().get("notValid"));
 	}
 
 }

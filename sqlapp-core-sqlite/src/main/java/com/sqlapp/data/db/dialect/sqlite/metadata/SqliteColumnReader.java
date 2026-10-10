@@ -26,8 +26,8 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 
 /** Reads SQLite columns from table-valued PRAGMA metadata. */
 public class SqliteColumnReader extends ColumnReader {
-	private static final Pattern SIZE_PATTERN = Pattern.compile(
-			"^\\s*([^()]+?)(?:\\s*\\(\\s*(\\d+)(?:\\s*,\\s*(\\d+))?\\s*\\))?\\s*$");
+	private static final Pattern SIZE_PATTERN = Pattern
+			.compile("^\\s*([^()]+?)(?:\\s*\\(\\s*(\\d+)(?:\\s*,\\s*(\\d+))?\\s*\\))?\\s*$");
 	private static final Pattern AS_PATTERN = Pattern.compile("(?i)\\bAS\\s*\\(");
 
 	public SqliteColumnReader(final Dialect dialect) {
@@ -35,8 +35,7 @@ public class SqliteColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		List<Column> result = readColumns(connection, context, "table_xinfo");
 		if (result.isEmpty()) {
@@ -45,21 +44,18 @@ public class SqliteColumnReader extends ColumnReader {
 		return result;
 	}
 
-	private List<Column> readColumns(final Connection connection,
-			final ParametersContext context, final String pragma) {
+	private List<Column> readColumns(final Connection connection, final ParametersContext context,
+			final String pragma) {
 		final List<Column> result = list();
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return result;
 		}
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + "."
-				+ pragma + "(" + quoteString(tableName) + ")";
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + "." + pragma + "(" + quoteString(tableName) + ")";
 		final Map<Column, Integer> primaryKeyPositions = new IdentityHashMap<>();
 		final Map<Column, Integer> hiddenKinds = new IdentityHashMap<>();
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			final boolean hasHidden = hasColumn(resultSet, "hidden");
 			while (resultSet.next()) {
 				final Column column = new Column(resultSet.getString("name"));
@@ -69,8 +65,7 @@ public class SqliteColumnReader extends ColumnReader {
 				column.setTableName(tableName);
 				setDataType(column, resultSet.getString("type"));
 				final int primaryKeyPosition = resultSet.getInt("pk");
-				column.setNullable(resultSet.getInt("notnull") == 0
-						&& primaryKeyPosition == 0);
+				column.setNullable(resultSet.getInt("notnull") == 0 && primaryKeyPosition == 0);
 				column.setDefaultValue(resultSet.getString("dflt_value"));
 				if (hasHidden) {
 					final int hidden = resultSet.getInt("hidden");
@@ -84,14 +79,11 @@ public class SqliteColumnReader extends ColumnReader {
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
-		final long primaryKeyColumns = primaryKeyPositions.values().stream()
-				.filter(position -> position > 0).count();
+		final long primaryKeyColumns = primaryKeyPositions.values().stream().filter(position -> position > 0).count();
 		if (primaryKeyColumns == 1) {
 			primaryKeyPositions.forEach((column, position) -> {
-				if (position > 0 && "INTEGER".equalsIgnoreCase(
-						column.getDataTypeName())
-						&& isRowIdAlias(connection, schemaName, tableName,
-								column.getName())) {
+				if (position > 0 && "INTEGER".equalsIgnoreCase(column.getDataTypeName())
+						&& isRowIdAlias(connection, schemaName, tableName, column.getName())) {
 					column.setIdentity(true);
 				}
 			});
@@ -100,8 +92,7 @@ public class SqliteColumnReader extends ColumnReader {
 		return result;
 	}
 
-	private boolean isRowIdAlias(final Connection connection,
-			final String schemaName, final String tableName,
+	private boolean isRowIdAlias(final Connection connection, final String schemaName, final String tableName,
 			final String columnName) {
 		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
 				+ ".sqlite_master WHERE type='table' AND name=?";
@@ -117,24 +108,20 @@ public class SqliteColumnReader extends ColumnReader {
 				}
 				final String normalized = definition.toUpperCase(Locale.ROOT);
 				final int closingParenthesis = normalized.lastIndexOf(')');
-				final String options = closingParenthesis < 0 ? ""
-						: normalized.substring(closingParenthesis + 1);
+				final String options = closingParenthesis < 0 ? "" : normalized.substring(closingParenthesis + 1);
 				if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*")) {
 					return false;
 				}
 				return splitColumnDefinitions(definition).stream()
-						.filter(item -> Objects.equals(columnName,
-								readIdentifier(item)))
-						.noneMatch(item -> item.matches(
-								"(?is).*\\bPRIMARY\\s+KEY\\s+DESC\\b.*"));
+						.filter(item -> Objects.equals(columnName, readIdentifier(item)))
+						.noneMatch(item -> item.matches("(?is).*\\bPRIMARY\\s+KEY\\s+DESC\\b.*"));
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	private void loadGeneratedExpressions(final Connection connection,
-			final String schemaName, final String tableName,
+	private void loadGeneratedExpressions(final Connection connection, final String schemaName, final String tableName,
 			final Map<Column, Integer> hiddenKinds) {
 		if (hiddenKinds.values().stream().noneMatch(kind -> kind == 2 || kind == 3)) {
 			return;
@@ -147,17 +134,14 @@ public class SqliteColumnReader extends ColumnReader {
 				if (!resultSet.next()) {
 					return;
 				}
-				final List<String> definitions = splitColumnDefinitions(
-						resultSet.getString(1));
+				final List<String> definitions = splitColumnDefinitions(resultSet.getString(1));
 				hiddenKinds.forEach((column, kind) -> {
 					if (kind != 2 && kind != 3) {
 						return;
 					}
 					definitions.stream()
-							.filter(definition -> Objects.equals(column.getName(),
-									readIdentifier(definition)))
-							.map(SqliteColumnReader::extractFormula)
-							.filter(Objects::nonNull).findFirst()
+							.filter(definition -> Objects.equals(column.getName(), readIdentifier(definition)))
+							.map(SqliteColumnReader::extractFormula).filter(Objects::nonNull).findFirst()
 							.ifPresent(column::setFormula);
 				});
 			}
@@ -182,8 +166,7 @@ public class SqliteColumnReader extends ColumnReader {
 			final char current = createSql.charAt(i);
 			if (quote != 0) {
 				if (current == quote || quote == ']' && current == ']') {
-					if (quote != ']' && i + 1 < createSql.length()
-							&& createSql.charAt(i + 1) == quote) {
+					if (quote != ']' && i + 1 < createSql.length() && createSql.charAt(i + 1) == quote) {
 						i++;
 					} else {
 						quote = 0;
@@ -222,8 +205,7 @@ public class SqliteColumnReader extends ColumnReader {
 		for (int i = open + 1; i < definition.length(); i++) {
 			final char current = definition.charAt(i);
 			if (quote != 0) {
-				if (current == quote && (i + 1 >= definition.length()
-						|| definition.charAt(i + 1) != quote)) {
+				if (current == quote && (i + 1 >= definition.length() || definition.charAt(i + 1) != quote)) {
 					quote = 0;
 				} else if (current == quote) {
 					i++;
@@ -256,8 +238,7 @@ public class SqliteColumnReader extends ColumnReader {
 		return whitespace < 0 ? value : value.substring(0, whitespace);
 	}
 
-	private boolean hasColumn(final java.sql.ResultSet resultSet,
-			final String name) throws SQLException {
+	private boolean hasColumn(final java.sql.ResultSet resultSet, final String name) throws SQLException {
 		for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 			if (name.equalsIgnoreCase(resultSet.getMetaData().getColumnLabel(i))) {
 				return true;
@@ -270,12 +251,9 @@ public class SqliteColumnReader extends ColumnReader {
 		final String typeName = declaredType == null ? "" : declaredType;
 		final Matcher matcher = SIZE_PATTERN.matcher(typeName);
 		final String baseType = matcher.matches() ? matcher.group(1).trim() : typeName;
-		final Long precision = matcher.matches() && matcher.group(2) != null
-				? Long.valueOf(matcher.group(2)) : null;
-		final Integer scale = matcher.matches() && matcher.group(3) != null
-				? Integer.valueOf(matcher.group(3)) : null;
-		getDialect().setDbType(toSqlType(baseType), baseType, precision, scale,
-				column);
+		final Long precision = matcher.matches() && matcher.group(2) != null ? Long.valueOf(matcher.group(2)) : null;
+		final Integer scale = matcher.matches() && matcher.group(3) != null ? Integer.valueOf(matcher.group(3)) : null;
+		getDialect().setDbType(toSqlType(baseType), baseType, precision, scale, column);
 	}
 
 	private int toSqlType(final String declaredType) {
@@ -283,15 +261,13 @@ public class SqliteColumnReader extends ColumnReader {
 		if (type.contains("INT")) {
 			return Types.BIGINT;
 		}
-		if (type.contains("CHAR") || type.contains("CLOB")
-				|| type.contains("TEXT")) {
+		if (type.contains("CHAR") || type.contains("CLOB") || type.contains("TEXT")) {
 			return Types.VARCHAR;
 		}
 		if (type.contains("BLOB") || type.isEmpty()) {
 			return Types.BLOB;
 		}
-		if (type.contains("REAL") || type.contains("FLOA")
-				|| type.contains("DOUB")) {
+		if (type.contains("REAL") || type.contains("FLOA") || type.contains("DOUB")) {
 			return Types.DOUBLE;
 		}
 		return Types.NUMERIC;

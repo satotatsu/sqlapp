@@ -69,18 +69,19 @@ class PostgresColumnPrecisionMetadataTest {
 		boolean[] wasNull = { false };
 		ResultSet rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
-			if (method.getName().equals("wasNull")) return wasNull[0];
-			Object value = values.get(args[0]);
-			wasNull[0] = value == null;
-			return switch (method.getName()) {
-				case "getString" -> value == null ? null : value.toString();
-				case "getLong" -> value == null ? 0L : ((Number) value).longValue();
-				case "getInt" -> value == null ? 0 : ((Number) value).intValue();
-				case "getBoolean" -> value == null ? false : (Boolean) value;
-				case "getObject" -> value;
-				default -> throw new UnsupportedOperationException(method.getName());
-			};
-		});
+					if (method.getName().equals("wasNull"))
+						return wasNull[0];
+					Object value = values.get(args[0]);
+					wasNull[0] = value == null;
+					return switch (method.getName()) {
+					case "getString" -> value == null ? null : value.toString();
+					case "getLong" -> value == null ? 0L : ((Number) value).longValue();
+					case "getInt" -> value == null ? 0 : ((Number) value).intValue();
+					case "getBoolean" -> value == null ? false : (Boolean) value;
+					case "getObject" -> value;
+					default -> throw new UnsupportedOperationException(method.getName());
+					};
+				});
 		Column column = new Column();
 		PostgresUtils.setColumnMetadata(rows, DialectHolder.postgreSQL150, column);
 		return column;

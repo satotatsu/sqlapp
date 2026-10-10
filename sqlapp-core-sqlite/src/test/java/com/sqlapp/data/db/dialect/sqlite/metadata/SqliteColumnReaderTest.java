@@ -21,18 +21,14 @@ class SqliteColumnReaderTest {
 				""");
 
 		assertEquals(3, definitions.size());
-		assertEquals("printf('%s,%s', first_name, last_name)",
-				SqliteColumnReader.extractFormula(definitions.get(1)));
-		assertEquals("(price + tax) * quantity",
-				SqliteColumnReader.extractFormula(definitions.get(2)));
+		assertEquals("printf('%s,%s', first_name, last_name)", SqliteColumnReader.extractFormula(definitions.get(1)));
+		assertEquals("(price + tax) * quantity", SqliteColumnReader.extractFormula(definitions.get(2)));
 	}
 
 	@Test
 	void stripsOnlyTheIndexKeyOrder() {
-		assertEquals("lower(code)",
-				SqliteIndexReader.stripOrder("lower(code) DESC"));
+		assertEquals("lower(code)", SqliteIndexReader.stripOrder("lower(code) DESC"));
 		assertEquals("CASE WHEN score > 0 THEN 'DESC' END",
-				SqliteIndexReader.stripOrder(
-						"CASE WHEN score > 0 THEN 'DESC' END ASC"));
+				SqliteIndexReader.stripOrder("CASE WHEN score > 0 THEN 'DESC' END ASC"));
 	}
 }

@@ -50,8 +50,10 @@ public class Postgres150SqlFactoryRegistry extends Postgres140SqlFactoryRegistry
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE, Postgres150CreateUniqueConstraintFactory.class);
-		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.CREATE, Postgres150CreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				Postgres150CreateUniqueConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Postgres150CreateViewFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.MERGE, Postgres150MergeFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, Postgres150CreateIndexFactory.class);

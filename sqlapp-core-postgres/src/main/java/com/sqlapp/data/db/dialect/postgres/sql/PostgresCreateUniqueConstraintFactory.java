@@ -24,7 +24,6 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
-
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateUniqueConstraintFactory;
 
@@ -35,7 +34,6 @@ import com.sqlapp.data.db.sql.AbstractCreateUniqueConstraintFactory;
  * 
  */
 public class PostgresCreateUniqueConstraintFactory extends AbstractCreateUniqueConstraintFactory<PostgresSqlBuilder> {
-
 
 	@Override
 	public List<SqlOperation> createSql(UniqueConstraint constraint) {

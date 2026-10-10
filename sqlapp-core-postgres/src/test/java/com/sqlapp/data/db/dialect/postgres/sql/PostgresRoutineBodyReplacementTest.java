@@ -9,12 +9,15 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.SchemaUtils;
 
 class PostgresRoutineBodyReplacementTest {
-	private String encode(String value) { return java.util.Base64.getEncoder().encodeToString(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+	private String encode(String value) {
+		return java.util.Base64.getEncoder().encodeToString(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+	}
 
 	private Function original() {
 		Function function = new Function("f").setSchemaName("s").setLanguage("sql").setStatement(" SELECT 1 ");
 		function.getReturning().setDataType(DataType.INT);
-		function.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode("CREATE OR REPLACE FUNCTION s.f()\n RETURNS integer\n LANGUAGE sql\n COST 123\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT 1 $function$\n"));
+		function.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode(
+				"CREATE OR REPLACE FUNCTION s.f()\n RETURNS integer\n LANGUAGE sql\n COST 123\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT 1 $function$\n"));
 		return function;
 	}
 
@@ -35,7 +38,9 @@ class PostgresRoutineBodyReplacementTest {
 	@Test
 	void comparesFreshDefinitionSnapshotsAndRejectsUnmodeledHeaderChanges() {
 		Function original = original();
-		String before = new String(java.util.Base64.getDecoder().decode(original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64")), java.nio.charset.StandardCharsets.UTF_8);
+		String before = new String(
+				java.util.Base64.getDecoder().decode(original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64")),
+				java.nio.charset.StandardCharsets.UTF_8);
 		original.setDefinition(before);
 		String after = before.replace("SELECT 1", "SELECT 2").replace("$function$", "$different$");
 		Function target = original.clone().setStatement(" SELECT 2 ").setDefinition(after);
@@ -60,7 +65,8 @@ class PostgresRoutineBodyReplacementTest {
 
 	@Test
 	void ignoresOnlySupplementalTemplateDifferencesAndRejectsOtherVendorChanges() {
-		Function original = original(); Function target = original.clone();
+		Function original = original();
+		Function target = original.clone();
 		target.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode("refreshed"));
 		var registry = DialectResolver.getInstance().getDialect("postgres", 15, 0, null).createSqlFactoryRegistry();
 		assertTrue(registry.createSql(original.diff(target)).isEmpty());
@@ -70,11 +76,21 @@ class PostgresRoutineBodyReplacementTest {
 
 	@Test
 	void rejectsStaleBodyWrongIdentityExternalLanguageAndExtraStatements() {
-		Function original = original(); Function target = original.clone().setStatement(" SELECT 2 ");
-		assertThrows(UnsupportedOperationException.class, () -> PostgresRoutineBodyReplacement.replace(original.clone().setStatement("different"), target, "s.f", false));
-		assertThrows(UnsupportedOperationException.class, () -> PostgresRoutineBodyReplacement.replace(original, target, "s.other", false));
-		assertThrows(UnsupportedOperationException.class, () -> PostgresRoutineBodyReplacement.replace(original.clone().setLanguage("c"), target, "s.f", false));
-		Function extra = original.clone(); extra.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", encode(new String(java.util.Base64.getDecoder().decode(original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64")), java.nio.charset.StandardCharsets.UTF_8) + "DROP TABLE victim;"));
-		assertThrows(UnsupportedOperationException.class, () -> PostgresRoutineBodyReplacement.replace(extra, target, "s.f", false));
+		Function original = original();
+		Function target = original.clone().setStatement(" SELECT 2 ");
+		assertThrows(UnsupportedOperationException.class, () -> PostgresRoutineBodyReplacement
+				.replace(original.clone().setStatement("different"), target, "s.f", false));
+		assertThrows(UnsupportedOperationException.class,
+				() -> PostgresRoutineBodyReplacement.replace(original, target, "s.other", false));
+		assertThrows(UnsupportedOperationException.class,
+				() -> PostgresRoutineBodyReplacement.replace(original.clone().setLanguage("c"), target, "s.f", false));
+		Function extra = original.clone();
+		extra.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64",
+				encode(new String(
+						java.util.Base64.getDecoder()
+								.decode(original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64")),
+						java.nio.charset.StandardCharsets.UTF_8) + "DROP TABLE victim;"));
+		assertThrows(UnsupportedOperationException.class,
+				() -> PostgresRoutineBodyReplacement.replace(extra, target, "s.f", false));
 	}
 }

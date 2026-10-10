@@ -6,16 +6,23 @@ import java.sql.DriverManager;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeAll;
 
-/** Explicitly authorized, disposable Aurora test database only. Never run in the Docker matrix. */
+/**
+ * Explicitly authorized, disposable Aurora test database only. Never run in the
+ * Docker matrix.
+ */
 class AuroraExternalTest extends AuroraPostgresAssertions {
-	@BeforeAll static void requireOptIn() throws Exception {
+	@BeforeAll
+	static void requireOptIn() throws Exception {
 		if (!"true".equals(System.getenv("SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS"))) {
-			throw new IllegalStateException("Set SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true only for an explicitly authorized disposable Aurora database.");
+			throw new IllegalStateException(
+					"Set SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true only for an explicitly authorized disposable Aurora database.");
 		}
-		for(String name:new String[]{"SQLAPP_AURORA_JDBC_URL","SQLAPP_AURORA_USER","SQLAPP_AURORA_PASSWORD"}) {
-			if(System.getenv(name)==null || System.getenv(name).isBlank()){throw new IllegalStateException("Required environment variable: " + name);}
+		for (String name : new String[] { "SQLAPP_AURORA_JDBC_URL", "SQLAPP_AURORA_USER", "SQLAPP_AURORA_PASSWORD" }) {
+			if (System.getenv(name) == null || System.getenv(name).isBlank()) {
+				throw new IllegalStateException("Required environment variable: " + name);
+			}
 		}
-		if(!System.getenv("SQLAPP_AURORA_JDBC_URL").startsWith("jdbc:postgresql://")) {
+		if (!System.getenv("SQLAPP_AURORA_JDBC_URL").startsWith("jdbc:postgresql://")) {
 			throw new IllegalStateException("SQLAPP_AURORA_JDBC_URL must use jdbc:postgresql://");
 		}
 		// Validate identity before any test can create a schema or write rows.
@@ -26,13 +33,22 @@ class AuroraExternalTest extends AuroraPostgresAssertions {
 			}
 		}
 	}
-	@Override Connection connect() throws Exception { return openConnection(); }
-	private static Connection openConnection() throws Exception {
-		Properties properties=new Properties();
-		properties.setProperty("user",System.getenv("SQLAPP_AURORA_USER"));
-		properties.setProperty("password",System.getenv("SQLAPP_AURORA_PASSWORD"));
-		properties.setProperty("sslmode","verify-full");
-		return DriverManager.getConnection(System.getenv("SQLAPP_AURORA_JDBC_URL"),properties);
+
+	@Override
+	Connection connect() throws Exception {
+		return openConnection();
 	}
-	@Override boolean realAurora() { return true; }
+
+	private static Connection openConnection() throws Exception {
+		Properties properties = new Properties();
+		properties.setProperty("user", System.getenv("SQLAPP_AURORA_USER"));
+		properties.setProperty("password", System.getenv("SQLAPP_AURORA_PASSWORD"));
+		properties.setProperty("sslmode", "verify-full");
+		return DriverManager.getConnection(System.getenv("SQLAPP_AURORA_JDBC_URL"), properties);
+	}
+
+	@Override
+	boolean realAurora() {
+		return true;
+	}
 }

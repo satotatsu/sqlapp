@@ -25,12 +25,12 @@ class SqliteFileLoaderTest {
 	@Test
 	void loadsMetadataAndRowsThroughExistingMetadataReader() throws Exception {
 		final Path file = tempDirectory.resolve("日本語.sqlite3");
-		try (var connection = DriverManager
-				.getConnection("jdbc:sqlite:" + file);
+		try (var connection = DriverManager.getConnection("jdbc:sqlite:" + file);
 				var statement = connection.createStatement()) {
 			statement.execute("PRAGMA foreign_keys = ON");
 			statement.execute("CREATE TABLE \"部署\" (\"部署ID\" INTEGER PRIMARY KEY, \"名称\" TEXT NOT NULL)");
-			statement.execute("CREATE TABLE \"社員\" (\"社員ID\" INTEGER PRIMARY KEY AUTOINCREMENT, \"氏名\" TEXT NOT NULL DEFAULT '未設定', \"部署ID\" INTEGER, CONSTRAINT \"FK_社員_部署\" FOREIGN KEY (\"部署ID\") REFERENCES \"部署\" (\"部署ID\"), CHECK (length(\"氏名\") > 0))");
+			statement.execute(
+					"CREATE TABLE \"社員\" (\"社員ID\" INTEGER PRIMARY KEY AUTOINCREMENT, \"氏名\" TEXT NOT NULL DEFAULT '未設定', \"部署ID\" INTEGER, CONSTRAINT \"FK_社員_部署\" FOREIGN KEY (\"部署ID\") REFERENCES \"部署\" (\"部署ID\"), CHECK (length(\"氏名\") > 0))");
 			statement.execute("CREATE INDEX \"IDX_社員_氏名\" ON \"社員\" (\"氏名\")");
 			statement.execute("CREATE VIEW \"社員一覧\" AS SELECT \"社員ID\", \"氏名\" FROM \"社員\"");
 			statement.execute("CREATE TRIGGER \"TRG_社員\" AFTER UPDATE ON \"社員\" BEGIN SELECT 1; END");
@@ -45,8 +45,7 @@ class SqliteFileLoaderTest {
 		assertNotNull(table.getColumns().get("氏名"));
 		assertNotNull(table.getIndexes().get("IDX_社員_氏名"));
 		assertTrue(table.getConstraints().stream()
-				.anyMatch(c -> c instanceof ForeignKeyConstraint fk
-						&& "部署".equals(fk.getRelatedTableName())));
+				.anyMatch(c -> c instanceof ForeignKeyConstraint fk && "部署".equals(fk.getRelatedTableName())));
 		assertNotNull(schema.getViews().get("社員一覧"));
 		assertNotNull(schema.getTriggers().get("TRG_社員"));
 		final var rows = table.getRows().iterator();
@@ -54,70 +53,59 @@ class SqliteFileLoaderTest {
 		assertEquals("山田", rows.next().get("氏名"));
 		assertFalse(rows.hasNext());
 
-		assertEquals("社員", SqliteFileLoader.loadTable(file, "社員")
-				.getName());
-		assertThrows(IllegalArgumentException.class,
-				() -> SqliteFileLoader.loadTable(file, "不存在"));
+		assertEquals("社員", SqliteFileLoader.loadTable(file, "社員").getName());
+		assertThrows(IllegalArgumentException.class, () -> SqliteFileLoader.loadTable(file, "不存在"));
 	}
 
 	@Test
 	void resolvesCommonSqliteExtensions() throws Exception {
-		for (final String extension : new String[] { ".db", ".sqlite",
-				".sqlite3" }) {
+		for (final String extension : new String[] { ".db", ".sqlite", ".sqlite3" }) {
 			final Path file = tempDirectory.resolve("sample" + extension);
-			try (var connection = DriverManager
-					.getConnection("jdbc:sqlite:" + file)) {
+			try (var connection = DriverManager.getConnection("jdbc:sqlite:" + file)) {
 				// Opening the connection creates a valid empty SQLite file.
 			}
-			assertTrue(SchemaFileLoaderResolver.resolve(file)
-					instanceof SqliteSchemaFileLoader);
+			assertTrue(SchemaFileLoaderResolver.resolve(file) instanceof SqliteSchemaFileLoader);
 		}
 	}
 
 	@Test
 	void resolvesAValidDatabaseWithAnArbitraryExtension() throws Exception {
 		final Path file = tempDirectory.resolve("database.data");
-		try (var connection = DriverManager
-				.getConnection("jdbc:sqlite:" + file);
+		try (var connection = DriverManager.getConnection("jdbc:sqlite:" + file);
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE sample (id INTEGER)");
 		}
-		assertTrue(SchemaFileLoaderResolver.resolve(file)
-				instanceof SqliteSchemaFileLoader);
+		assertTrue(SchemaFileLoaderResolver.resolve(file) instanceof SqliteSchemaFileLoader);
 	}
 
 	@Test
 	void loadsASelectedAttachedDatabaseAndItsRows() throws Exception {
 		final Path primary = tempDirectory.resolve("primary.db");
 		final Path attached = tempDirectory.resolve("archive.db");
-		try (var connection = DriverManager
-				.getConnection("jdbc:sqlite:" + primary)) {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite:" + primary)) {
 			// Create the primary file.
 		}
-		try (var connection = DriverManager
-				.getConnection("jdbc:sqlite:" + attached);
+		try (var connection = DriverManager.getConnection("jdbc:sqlite:" + attached);
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE history (id INTEGER PRIMARY KEY, value TEXT)");
 			statement.execute("INSERT INTO history VALUES (1, 'archived')");
 		}
 
-		final var schema = SqliteFileLoader.loadSchema(primary, "archive",
-				Map.of("archive", attached));
+		final var schema = SqliteFileLoader.loadSchema(primary, "archive", Map.of("archive", attached));
 		assertEquals("archive", schema.getName());
 		final var rows = schema.getTables().get("history").getRows().iterator();
 		assertTrue(rows.hasNext());
 		assertEquals("archived", rows.next().get("value"));
 		assertFalse(rows.hasNext());
-		assertEquals("history", SqliteFileLoader.loadTable(primary,
-				"archive", Map.of("archive", attached), "history").getName());
+		assertEquals("history",
+				SqliteFileLoader.loadTable(primary, "archive", Map.of("archive", attached), "history").getName());
 	}
 
 	@Test
 	void reportsEncryptedOrInvalidFilesClearly() throws Exception {
 		final Path file = tempDirectory.resolve("encrypted.db");
 		Files.writeString(file, "not a plain SQLite database");
-		final var exception = assertThrows(java.io.IOException.class,
-				() -> SqliteFileLoader.loadSchema(file));
+		final var exception = assertThrows(java.io.IOException.class, () -> SqliteFileLoader.loadSchema(file));
 		assertTrue(exception.getMessage().contains("may be encrypted"));
 	}
 }

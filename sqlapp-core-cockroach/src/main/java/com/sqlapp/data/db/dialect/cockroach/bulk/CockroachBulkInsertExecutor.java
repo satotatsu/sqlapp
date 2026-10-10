@@ -9,7 +9,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertTransaction;
 
-/** Reuses PostgreSQL COPY while preventing CockroachDB auto-commit COPY batch commits. */
+/**
+ * Reuses PostgreSQL COPY while preventing CockroachDB auto-commit COPY batch
+ * commits.
+ */
 public class CockroachBulkInsertExecutor extends PostgresBulkInsertExecutor {
 	public CockroachBulkInsertExecutor(Dialect dialect) {
 		super(dialect);

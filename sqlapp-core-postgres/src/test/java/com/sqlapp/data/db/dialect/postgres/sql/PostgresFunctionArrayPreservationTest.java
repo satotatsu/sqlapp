@@ -44,10 +44,12 @@ class PostgresFunctionArrayPreservationTest {
 	@Test
 	void generatesInputOnlyQualifiedSignaturesForDropAndComments() {
 		var dialect = DialectResolver.getInstance().getDialect("postgres", 15, 0, null);
-		var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+		var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
 		Function function = new Function("f.name").setSchemaName("Other Schema").setRemarks("comment");
 		function.getArguments().add(new NamedArgument("value").setDataType(DataType.UUID).setArrayDimension(1));
-		function.getArguments().add(new NamedArgument("result").setDataType(DataType.INT).setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Output));
+		function.getArguments().add(new NamedArgument("result").setDataType(DataType.INT)
+				.setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Output));
 		String sql = registry.createSql(function, SqlType.DROP).get(0).getSqlText();
 		assertEquals("DROP FUNCTION \"Other Schema\".\"f.name\"(UUID[])", sql);
 		function.getSpecifics().put("ROUTINE_KIND", "PROCEDURE");
@@ -59,7 +61,8 @@ class PostgresFunctionArrayPreservationTest {
 		var dialect = DialectResolver.getInstance().getDialect("postgres", 15, 0, null);
 		var registry = dialect.createSqlFactoryRegistry();
 		Function ddl = new Function("p").setDefinition("CREATE PROCEDURE p() LANGUAGE SQL AS 'SELECT 1'");
-		assertEquals("CREATE PROCEDURE p() LANGUAGE SQL AS 'SELECT 1'", registry.createSql(ddl, SqlType.CREATE).get(0).getSqlText());
+		assertEquals("CREATE PROCEDURE p() LANGUAGE SQL AS 'SELECT 1'",
+				registry.createSql(ddl, SqlType.CREATE).get(0).getSqlText());
 		Function function = new Function("bad name").setLanguage("sql").setStatement("SELECT '$$ $sqlapp$ $sqlapp_0$'");
 		function.getReturning().setDataType(DataType.VARCHAR);
 		String sql = registry.createSql(function, SqlType.CREATE).get(0).getSqlText();
@@ -75,7 +78,8 @@ class PostgresFunctionArrayPreservationTest {
 			function.getReturning().setDataType(DataType.UUID).setArrayDimension(2);
 			function.setLanguage("sql").setStatement("SELECT ARRAY[items]");
 			Function restored = SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
-			var registry = dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+			var registry = dialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
 			String sql = registry.createSql(restored, SqlType.CREATE).get(0).getSqlText();
 			assertTrue(sql.contains("\"Other Schema\".f"), sql);
 			assertTrue(sql.contains("items UUID[]"), sql);

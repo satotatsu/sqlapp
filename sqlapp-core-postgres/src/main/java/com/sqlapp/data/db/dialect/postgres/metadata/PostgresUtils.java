@@ -90,8 +90,7 @@ public class PostgresUtils extends ReaderUtils {
 		dialect.setDbType(productDataType, precision, numericScale, column);
 		String kind = rs.getString("typtype");
 		if ((column.getDataType() == com.sqlapp.data.db.datatype.DataType.OTHER && rs.getString("atttypid") != null)
-				|| "e".equals(kind) || "d".equals(kind) || "c".equals(kind)
-				|| "r".equals(kind) || "m".equals(kind)) {
+				|| "e".equals(kind) || "d".equals(kind) || "c".equals(kind) || "r".equals(kind) || "m".equals(kind)) {
 			NamedArgument type = getTypeInfoById(rs.getStatement().getConnection(), dialect, rs.getString("atttypid"));
 			column.setDataType(type.getDataType()).setDataTypeName(type.getDataTypeName());
 		}
@@ -109,10 +108,14 @@ public class PostgresUtils extends ReaderUtils {
 		column.setRemarks(rs.getString("remarks"));
 	}
 
-	static Long typePrecision(Long maxLength, Long numericPrecision, Integer datetimePrecision, Integer intervalPrecision) {
-		if (maxLength != null) return maxLength;
-		if (numericPrecision != null) return numericPrecision;
-		if (datetimePrecision != null) return datetimePrecision.longValue();
+	static Long typePrecision(Long maxLength, Long numericPrecision, Integer datetimePrecision,
+			Integer intervalPrecision) {
+		if (maxLength != null)
+			return maxLength;
+		if (numericPrecision != null)
+			return numericPrecision;
+		if (datetimePrecision != null)
+			return datetimePrecision.longValue();
 		return intervalPrecision == null ? null : intervalPrecision.longValue();
 	}
 
@@ -159,7 +162,8 @@ public class PostgresUtils extends ReaderUtils {
 	}
 
 	static String typeName(NamedArgument argument) {
-		String name = isEmpty(argument.getDataTypeName()) ? argument.getDataType().getTypeName() : argument.getDataTypeName();
+		String name = isEmpty(argument.getDataTypeName()) ? argument.getDataType().getTypeName()
+				: argument.getDataTypeName();
 		return name + "[]".repeat(argument.getArrayDimension());
 	}
 

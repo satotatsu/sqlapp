@@ -10,9 +10,10 @@ class PostgresRoutineTypeIdentityTest {
 	@Test
 	void includesArrayDimensionsAndQualifiedNamesInRoutineIdentity() {
 		assertEquals("INT", PostgresUtils.typeName(new NamedArgument().setDataType(DataType.INT)));
-		assertEquals("UUID[][]", PostgresUtils.typeName(new NamedArgument().setDataType(DataType.UUID).setArrayDimension(2)));
-		assertEquals("\"Other.Schema\".\"State.Type\"[]", PostgresUtils.typeName(new NamedArgument()
-				.setDataTypeName("\"Other.Schema\".\"State.Type\"").setArrayDimension(1)));
+		assertEquals("UUID[][]",
+				PostgresUtils.typeName(new NamedArgument().setDataType(DataType.UUID).setArrayDimension(2)));
+		assertEquals("\"Other.Schema\".\"State.Type\"[]", PostgresUtils
+				.typeName(new NamedArgument().setDataTypeName("\"Other.Schema\".\"State.Type\"").setArrayDimension(1)));
 	}
 
 	@Test

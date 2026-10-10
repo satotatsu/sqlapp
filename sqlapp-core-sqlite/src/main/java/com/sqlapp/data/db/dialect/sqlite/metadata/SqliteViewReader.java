@@ -23,8 +23,8 @@ import com.sqlapp.data.schemas.View;
 
 /** Reads SQLite views from each database's historical schema-table alias. */
 public class SqliteViewReader extends JdbcViewReader {
-	private static final Pattern STATEMENT_PATTERN = Pattern.compile(
-			"(?is)^\\s*CREATE\\s+(?:TEMP(?:ORARY)?\\s+)?VIEW\\s+.*?\\s+AS\\s+(.*)$");
+	private static final Pattern STATEMENT_PATTERN = Pattern
+			.compile("(?is)^\\s*CREATE\\s+(?:TEMP(?:ORARY)?\\s+)?VIEW\\s+.*?\\s+AS\\s+(.*)$");
 
 	public SqliteViewReader(final Dialect dialect) {
 		super(dialect);
@@ -36,21 +36,17 @@ public class SqliteViewReader extends JdbcViewReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Table> result = list();
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
 		final String requestedView = getObjectName(context);
 		final String sql = "SELECT name, sql FROM " + quoteIdentifier(schemaName)
 				+ ".sqlite_master WHERE type='view' ORDER BY name";
-		try (var statement = connection.createStatement();
-				var resultSet = statement.executeQuery(sql)) {
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
 				final String viewName = resultSet.getString("name");
-				if (requestedView != null
-						&& !requestedView.equalsIgnoreCase(viewName)) {
+				if (requestedView != null && !requestedView.equalsIgnoreCase(viewName)) {
 					continue;
 				}
 				final View view = new View(viewName);

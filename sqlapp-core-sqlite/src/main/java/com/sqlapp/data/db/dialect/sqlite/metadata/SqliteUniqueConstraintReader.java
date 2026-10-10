@@ -28,23 +28,18 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<UniqueConstraint> result = readPrimaryKeys(connection, context);
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return result;
 		}
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
-				+ ".index_list(" + quoteString(tableName) + ")";
-		try (var statement = connection.createStatement();
-				ResultSet indexes = statement.executeQuery(sql)) {
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_list(" + quoteString(tableName) + ")";
+		try (var statement = connection.createStatement(); ResultSet indexes = statement.executeQuery(sql)) {
 			while (indexes.next()) {
-				if (!indexes.getBoolean("unique")
-						|| !hasColumn(indexes, "origin")
+				if (!indexes.getBoolean("unique") || !hasColumn(indexes, "origin")
 						|| !"u".equalsIgnoreCase(indexes.getString("origin"))) {
 					continue;
 				}
@@ -63,20 +58,16 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 		}
 	}
 
-	private List<UniqueConstraint> readPrimaryKeys(final Connection connection,
-			final ParametersContext context) {
+	private List<UniqueConstraint> readPrimaryKeys(final Connection connection, final ParametersContext context) {
 		final List<UniqueConstraint> result = new ArrayList<>();
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return result;
 		}
-		final String schemaName = getSchemaName(context) == null
-				? "main" : getSchemaName(context);
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
-				+ ".table_info(" + quoteString(tableName) + ")";
+		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".table_info(" + quoteString(tableName) + ")";
 		final Map<Integer, String> columns = new TreeMap<>();
-		try (var statement = connection.createStatement();
-				ResultSet resultSet = statement.executeQuery(sql)) {
+		try (var statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(sql)) {
 			while (resultSet.next()) {
 				final int position = resultSet.getInt("pk");
 				if (position > 0) {
@@ -100,14 +91,11 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 		return result;
 	}
 
-	private void loadPrimaryKeyOrders(final Connection connection,
-			final String schemaName, final String tableName,
+	private void loadPrimaryKeyOrders(final Connection connection, final String schemaName, final String tableName,
 			final UniqueConstraint primaryKey) {
-		final String listSql = "PRAGMA " + quoteIdentifier(schemaName)
-				+ ".index_list(" + quoteString(tableName) + ")";
+		final String listSql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_list(" + quoteString(tableName) + ")";
 		String primaryKeyIndex = null;
-		try (var statement = connection.createStatement();
-				ResultSet resultSet = statement.executeQuery(listSql)) {
+		try (var statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(listSql)) {
 			final boolean hasOrigin = hasColumn(resultSet, "origin");
 			while (hasOrigin && resultSet.next()) {
 				if ("pk".equalsIgnoreCase(resultSet.getString("origin"))) {
@@ -118,8 +106,8 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 			if (primaryKeyIndex == null) {
 				return;
 			}
-			final String detailSql = "PRAGMA " + quoteIdentifier(schemaName)
-					+ ".index_xinfo(" + quoteString(primaryKeyIndex) + ")";
+			final String detailSql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_xinfo("
+					+ quoteString(primaryKeyIndex) + ")";
 			try (var detailStatement = connection.createStatement();
 					ResultSet details = detailStatement.executeQuery(detailSql)) {
 				if (!hasColumn(details, "desc")) {
@@ -127,11 +115,9 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 				}
 				while (details.next()) {
 					final String columnName = details.getString("name");
-					if (columnName != null
-							&& primaryKey.getColumns().get(columnName) != null) {
-						primaryKey.getColumns().get(columnName).setOrder(
-								details.getBoolean("desc")
-										? Order.Desc : Order.Asc);
+					if (columnName != null && primaryKey.getColumns().get(columnName) != null) {
+						primaryKey.getColumns().get(columnName)
+								.setOrder(details.getBoolean("desc") ? Order.Desc : Order.Asc);
 					}
 				}
 			}
@@ -140,21 +126,17 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 		}
 	}
 
-	private void loadColumns(final Connection connection,
-			final String schemaName, final String indexName,
+	private void loadColumns(final Connection connection, final String schemaName, final String indexName,
 			final UniqueConstraint constraint) throws SQLException {
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName)
-				+ ".index_info(" + quoteString(indexName) + ")";
-		try (var statement = connection.createStatement();
-				ResultSet columns = statement.executeQuery(sql)) {
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_info(" + quoteString(indexName) + ")";
+		try (var statement = connection.createStatement(); ResultSet columns = statement.executeQuery(sql)) {
 			while (columns.next()) {
 				constraint.getColumns().add(new Column(columns.getString("name")));
 			}
 		}
 	}
 
-	private boolean hasColumn(final ResultSet resultSet, final String name)
-			throws SQLException {
+	private boolean hasColumn(final ResultSet resultSet, final String name) throws SQLException {
 		for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 			if (name.equalsIgnoreCase(resultSet.getMetaData().getColumnLabel(i))) {
 				return true;

@@ -11,10 +11,13 @@ import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.yugabyte.Yugabyte11;
 import com.sqlapp.data.db.dialect.yugabyte.Yugabyte15;
 
-/** Resolves YSQL by PostgreSQL engine version, never by YugabyteDB release number. */
+/**
+ * Resolves YSQL by PostgreSQL engine version, never by YugabyteDB release
+ * number.
+ */
 public class YugabyteDialectResolver extends ProductNameDialectResolver {
-	private static final Pattern VERSION = Pattern.compile(
-			"^(?:PostgreSQL\\s+)?([0-9]+)\\.[0-9]+(?:\\.[0-9]+)?-YB-.*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern VERSION = Pattern.compile("^(?:PostgreSQL\\s+)?([0-9]+)\\.[0-9]+(?:\\.[0-9]+)?-YB-.*",
+			Pattern.CASE_INSENSITIVE);
 	private static final Dialect PG11 = new Yugabyte11();
 	private static final Dialect PG15 = new Yugabyte15();
 
@@ -44,8 +47,8 @@ public class YugabyteDialectResolver extends ProductNameDialectResolver {
 				return resolveEngine(Integer.parseInt(matcher.group(1)));
 			}
 			if (match(name)) {
-				throw new IllegalArgumentException("Cannot identify YSQL engine version from JDBC version: "
-						+ version + ". Expected a PostgreSQL engine version containing -YB-.");
+				throw new IllegalArgumentException("Cannot identify YSQL engine version from JDBC version: " + version
+						+ ". Expected a PostgreSQL engine version containing -YB-.");
 			}
 			return null;
 		} catch (SQLException e) {

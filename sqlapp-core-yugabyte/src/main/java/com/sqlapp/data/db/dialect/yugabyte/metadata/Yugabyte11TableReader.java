@@ -10,10 +10,15 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.parameter.ParametersContext;
 
 public class Yugabyte11TableReader extends Postgres110TableReader {
-	public Yugabyte11TableReader(Dialect dialect) { super(dialect); }
+	public Yugabyte11TableReader(Dialect dialect) {
+		super(dialect);
+	}
+
 	@Override
-	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> tables) throws SQLException {
-		super.setMetadataDetail(connection,context,tables);
-		for (Table table : tables) YugabytePlacementReader.read(connection,table);
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> tables)
+			throws SQLException {
+		super.setMetadataDetail(connection, context, tables);
+		for (Table table : tables)
+			YugabytePlacementReader.read(connection, table);
 	}
 }

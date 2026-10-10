@@ -36,7 +36,10 @@ import com.sqlapp.util.CommonUtils;
  */
 public class Postgres90CreateTriggerFactory extends PostgresCreateTriggerFactory {
 
-	/** Optional vendor attribute: ALWAYS or REPLICA; ordinary enabled triggers omit it. */
+	/**
+	 * Optional vendor attribute: ALWAYS or REPLICA; ordinary enabled triggers omit
+	 * it.
+	 */
 	public static final String FIRING_MODE = "TRIGGER_FIRING_MODE";
 
 	@Override
@@ -46,15 +49,16 @@ public class Postgres90CreateTriggerFactory extends PostgresCreateTriggerFactory
 		if (mode != null && !mode.equals("ALWAYS") && !mode.equals("REPLICA")) {
 			throw new IllegalArgumentException("TRIGGER_FIRING_MODE must be ALWAYS or REPLICA: " + mode);
 		}
-		if (obj.isEnable() && mode == null) return;
+		if (obj.isEnable() && mode == null)
+			return;
 		if (CommonUtils.isEmpty(obj.getTableName())) {
 			throw new IllegalArgumentException("Trigger state restoration requires tableName: " + obj.getName());
 		}
 		String schemaName = CommonUtils.notEmpty(obj.getTableSchemaName(), obj.getSchemaName());
 		Table table = new Table(obj.getTableName()).setSchemaName(schemaName);
 		PostgresSqlBuilder builder = createSqlBuilder();
-		builder.alter().table().space().name(table, getOptions().isDecorateSchemaName()
-				|| !CommonUtils.eq(schemaName, obj.getSchemaName()));
+		builder.alter().table().space().name(table,
+				getOptions().isDecorateSchemaName() || !CommonUtils.eq(schemaName, obj.getSchemaName()));
 		builder.space()._add(obj.isEnable() ? "ENABLE " + mode + " TRIGGER" : "DISABLE TRIGGER");
 		builder.space().name(obj, false);
 		addSql(sqlList, builder, SqlType.ALTER, obj);

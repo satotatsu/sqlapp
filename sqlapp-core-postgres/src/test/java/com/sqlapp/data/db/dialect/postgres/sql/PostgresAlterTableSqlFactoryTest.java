@@ -243,7 +243,8 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 				.filter(operation -> operation.getSqlType() == com.sqlapp.data.db.sql.SqlType.SET_COMMENT)
 				.map(SqlOperation::getSqlText).toList();
 		assertEquals(4, sql.size());
-		org.junit.jupiter.api.Assertions.assertTrue(sql.stream().anyMatch(text -> text.contains("COLUMN") && text.contains("column note")));
+		org.junit.jupiter.api.Assertions
+				.assertTrue(sql.stream().anyMatch(text -> text.contains("COLUMN") && text.contains("column note")));
 		assertEquals(4, sqlFactory.createDiffSql(target.diff(original)).size());
 		var cleared = sqlFactory.createDiffSql(target.diff(original)).stream()
 				.filter(operation -> operation.getSqlType() == com.sqlapp.data.db.sql.SqlType.SET_COMMENT)

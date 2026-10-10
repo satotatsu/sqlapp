@@ -31,27 +31,25 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 
 class SqliteBulkInsertTest {
 	@Test
-	void fencesJdbcJobLeaseOwnersAcrossFileConnections(
-			@TempDir final Path directory) throws Exception {
+	void fencesJdbcJobLeaseOwnersAcrossFileConnections(@TempDir final Path directory) throws Exception {
 		final String url = "jdbc:sqlite:" + directory.resolve("lease.db");
 		try (var firstConnection = DriverManager.getConnection(url);
 				var secondConnection = DriverManager.getConnection(url)) {
-			final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection,
-					"SQLAPP_BJL_SQLITE");
-			final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection,
-					"SQLAPP_BJL_SQLITE");
+			final var first = new JdbcBulkMigrationJobLeaseStore(firstConnection, "SQLAPP_BJL_SQLITE");
+			final var second = new JdbcBulkMigrationJobLeaseStore(secondConnection, "SQLAPP_BJL_SQLITE");
 			final String jobId = "sqlite-job";
 			final String fingerprint = "sqlite-plan";
 			final Instant now = Instant.parse("2026-01-01T00:00:00Z");
 			final Duration duration = Duration.ofMinutes(5);
-			assertTrue(first.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint,
-					"owner-first", now.plus(duration)), now));
-			assertFalse(second.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint,
-					"owner-second", now.plus(duration).plusSeconds(1)),
+			assertTrue(first
+					.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint, "owner-first", now.plus(duration)), now));
+			assertFalse(second.tryAcquire(
+					new BulkMigrationJobLease(jobId, fingerprint, "owner-second", now.plus(duration).plusSeconds(1)),
 					now.plusSeconds(1)));
 			final Instant takeoverAt = now.plus(duration).plusSeconds(1);
-			assertTrue(second.tryAcquire(new BulkMigrationJobLease(jobId, fingerprint,
-					"owner-second", takeoverAt.plus(duration)), takeoverAt));
+			assertTrue(second.tryAcquire(
+					new BulkMigrationJobLease(jobId, fingerprint, "owner-second", takeoverAt.plus(duration)),
+					takeoverAt));
 			first.release(jobId, "owner-first");
 			assertEquals("owner-second", first.load(jobId).orElseThrow().ownerId());
 			second.release(jobId, "owner-second");
@@ -62,15 +60,15 @@ class SqliteBulkInsertTest {
 			try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 				final var firstResult = executor.submit(() -> {
 					barrier.await();
-					return first.tryAcquire(new BulkMigrationJobLease(
-							concurrentJobId, fingerprint, "owner-first",
-							now.plus(duration)), now);
+					return first.tryAcquire(
+							new BulkMigrationJobLease(concurrentJobId, fingerprint, "owner-first", now.plus(duration)),
+							now);
 				});
 				final var secondResult = executor.submit(() -> {
 					barrier.await();
-					return second.tryAcquire(new BulkMigrationJobLease(
-							concurrentJobId, fingerprint, "owner-second",
-							now.plus(duration)), now);
+					return second.tryAcquire(
+							new BulkMigrationJobLease(concurrentJobId, fingerprint, "owner-second", now.plus(duration)),
+							now);
 				});
 				assertTrue(firstResult.get() ^ secondResult.get());
 			}
@@ -79,8 +77,7 @@ class SqliteBulkInsertTest {
 
 	@Test
 	void insertsRowsAndResolvesProvider() throws Exception {
-		assertInstanceOf(SqliteBulkInsertExecutor.class,
-				BulkInsertResolver.resolve(DialectHolder.defaultDialect));
+		assertInstanceOf(SqliteBulkInsertExecutor.class, BulkInsertResolver.resolve(DialectHolder.defaultDialect));
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE SQLAPP_BULK_SQLITE (ID INTEGER PRIMARY KEY, "
@@ -95,8 +92,7 @@ class SqliteBulkInsertTest {
 					row.put("PAYLOAD", new byte[] { 0, (byte) (0xfd + index) });
 				});
 			}
-			assertEquals(3, BulkInsertResolver.execute(connection, table,
-					BulkOption.builder().batchSize(2).build()));
+			assertEquals(3, BulkInsertResolver.execute(connection, table, BulkOption.builder().batchSize(2).build()));
 			final Table explicit = createTable();
 			explicit.getRows().add(row -> {
 				row.put("ID", 42);
@@ -104,10 +100,9 @@ class SqliteBulkInsertTest {
 				row.put("EMPTY_VALUE", "");
 				row.put("PAYLOAD", new byte[] { 1 });
 			});
-			assertEquals(1, BulkInsertResolver.execute(connection, explicit,
-					BulkOption.builder().keepIdentity(true).build()));
-			try (var resultSet = statement.executeQuery("SELECT * FROM SQLAPP_BULK_SQLITE "
-					+ "WHERE ID=1")) {
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, explicit, BulkOption.builder().keepIdentity(true).build()));
+			try (var resultSet = statement.executeQuery("SELECT * FROM SQLAPP_BULK_SQLITE " + "WHERE ID=1")) {
 				resultSet.next();
 				assertEquals("日本語-0\nline", resultSet.getString("TXT"));
 				assertNull(resultSet.getString("NULLABLE_VALUE"));
@@ -119,35 +114,61 @@ class SqliteBulkInsertTest {
 
 	@Test
 	void upsertsAndSupportsSingleActionModes() throws Exception {
-		assertInstanceOf(SqliteBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
-		try(var connection=DriverManager.getConnection("jdbc:sqlite::memory:");
-				var statement=connection.createStatement()){
+		assertInstanceOf(SqliteBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE SQLAPP_UPSERT_SQLITE (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
-					+"CODE TEXT UNIQUE, TXT TEXT, PAYLOAD BLOB)");
+					+ "CODE TEXT UNIQUE, TXT TEXT, PAYLOAD BLOB)");
 			statement.execute("INSERT INTO SQLAPP_UPSERT_SQLITE(CODE,TXT) VALUES('A','old')");
-			final Table both=upsertTable();
-			both.getRows().add(r->{r.put("CODE","A");r.put("TXT","更新後\nline");r.put("PAYLOAD",new byte[]{0,(byte)0xff});});
-			both.getRows().add(r->{r.put("CODE","B");r.put("TXT",null);});
-			assertEquals(2,BulkUpsertResolver.execute(connection,both,BulkUpsertOption.builder()
-					.bulkOption(BulkOption.builder().batchSize(1).build()).build()));
+			final Table both = upsertTable();
+			both.getRows().add(r -> {
+				r.put("CODE", "A");
+				r.put("TXT", "更新後\nline");
+				r.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
+			});
+			both.getRows().add(r -> {
+				r.put("CODE", "B");
+				r.put("TXT", null);
+			});
+			assertEquals(2, BulkUpsertResolver.execute(connection, both,
+					BulkUpsertOption.builder().bulkOption(BulkOption.builder().batchSize(1).build()).build()));
 
-			final Table updateOnly=upsertTable();
-			updateOnly.getRows().add(r->{r.put("CODE","A");r.put("TXT","update-only");});
-			updateOnly.getRows().add(r->{r.put("CODE","D");r.put("TXT","must-not-insert");});
-			assertEquals(1,BulkUpsertResolver.execute(connection,updateOnly,
+			final Table updateOnly = upsertTable();
+			updateOnly.getRows().add(r -> {
+				r.put("CODE", "A");
+				r.put("TXT", "update-only");
+			});
+			updateOnly.getRows().add(r -> {
+				r.put("CODE", "D");
+				r.put("TXT", "must-not-insert");
+			});
+			assertEquals(1, BulkUpsertResolver.execute(connection, updateOnly,
 					BulkUpsertOption.builder().insertWhenNotMatched(false).build()));
 
-			final Table insertOnly=upsertTable();
-			insertOnly.getRows().add(r->{r.put("CODE","A");r.put("TXT","must-not-update");});
-			insertOnly.getRows().add(r->{r.put("CODE","C");r.put("TXT","");r.put("PAYLOAD",new byte[]{2});});
-			assertEquals(1,BulkUpsertResolver.execute(connection,insertOnly,
+			final Table insertOnly = upsertTable();
+			insertOnly.getRows().add(r -> {
+				r.put("CODE", "A");
+				r.put("TXT", "must-not-update");
+			});
+			insertOnly.getRows().add(r -> {
+				r.put("CODE", "C");
+				r.put("TXT", "");
+				r.put("PAYLOAD", new byte[] { 2 });
+			});
+			assertEquals(1, BulkUpsertResolver.execute(connection, insertOnly,
 					BulkUpsertOption.builder().updateWhenMatched(false).build()));
 
-			try(var rs=statement.executeQuery("SELECT CODE,TXT,PAYLOAD FROM SQLAPP_UPSERT_SQLITE ORDER BY CODE")){
-				rs.next();assertEquals("A",rs.getString("CODE"));assertEquals("update-only",rs.getString("TXT"));
-				rs.next();assertEquals("B",rs.getString("CODE"));assertNull(rs.getString("TXT"));
-				rs.next();assertEquals("C",rs.getString("CODE"));assertEquals("",rs.getString("TXT"));assertArrayEquals(new byte[]{2},rs.getBytes("PAYLOAD"));
+			try (var rs = statement.executeQuery("SELECT CODE,TXT,PAYLOAD FROM SQLAPP_UPSERT_SQLITE ORDER BY CODE")) {
+				rs.next();
+				assertEquals("A", rs.getString("CODE"));
+				assertEquals("update-only", rs.getString("TXT"));
+				rs.next();
+				assertEquals("B", rs.getString("CODE"));
+				assertNull(rs.getString("TXT"));
+				rs.next();
+				assertEquals("C", rs.getString("CODE"));
+				assertEquals("", rs.getString("TXT"));
+				assertArrayEquals(new byte[] { 2 }, rs.getBytes("PAYLOAD"));
 			}
 		}
 	}
@@ -162,11 +183,15 @@ class SqliteBulkInsertTest {
 		return table;
 	}
 
-	private static Table upsertTable(){final Table t=new Table("SQLAPP_UPSERT_SQLITE");
-		final Column id=new Column("ID").setDataType(DataType.BIGINT).setIdentity(true);
-		final Column code=new Column("CODE").setDataType(DataType.VARCHAR);
-		t.getColumns().add(id);t.getColumns().add(code);
+	private static Table upsertTable() {
+		final Table t = new Table("SQLAPP_UPSERT_SQLITE");
+		final Column id = new Column("ID").setDataType(DataType.BIGINT).setIdentity(true);
+		final Column code = new Column("CODE").setDataType(DataType.VARCHAR);
+		t.getColumns().add(id);
+		t.getColumns().add(code);
 		t.getColumns().add(new Column("TXT").setDataType(DataType.VARCHAR));
 		t.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY));
-		t.setPrimaryKey("UQ_SQLAPP_UPSERT_SQLITE",code);return t;}
+		t.setPrimaryKey("UQ_SQLAPP_UPSERT_SQLITE", code);
+		return t;
+	}
 }

@@ -81,8 +81,9 @@ class H2JdbcTreeDataSessionCursorTest {
 				}
 			});
 			assertEquals(List.of(101, 201, 401), ids);
-			try (Statement statement = connection.createStatement(); var rows = statement.executeQuery(
-					"SELECT (SELECT COUNT(*) FROM B WHERE TXT='processed'), (SELECT COUNT(*) FROM A WHERE TXT='processed')")) {
+			try (Statement statement = connection.createStatement();
+					var rows = statement.executeQuery(
+							"SELECT (SELECT COUNT(*) FROM B WHERE TXT='processed'), (SELECT COUNT(*) FROM A WHERE TXT='processed')")) {
 				assertTrue(rows.next());
 				assertEquals(3, rows.getInt(1));
 				assertEquals(0, rows.getInt(2));

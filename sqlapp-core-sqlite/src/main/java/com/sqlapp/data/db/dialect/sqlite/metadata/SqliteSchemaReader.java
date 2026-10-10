@@ -25,7 +25,9 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Schema;
 
-/** Reads SQLite databases exposed as schemas by {@code PRAGMA database_list}. */
+/**
+ * Reads SQLite databases exposed as schemas by {@code PRAGMA database_list}.
+ */
 public class SqliteSchemaReader extends JdbcSchemaReader {
 	public SqliteSchemaReader(final Dialect dialect) {
 		super(dialect);
@@ -72,8 +74,7 @@ public class SqliteSchemaReader extends JdbcSchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Schema> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Schema> result = list();
 		final String requestedSchema = getSchemaName(context);
@@ -81,8 +82,7 @@ public class SqliteSchemaReader extends JdbcSchemaReader {
 				var resultSet = statement.executeQuery("PRAGMA database_list")) {
 			while (resultSet.next()) {
 				final String schemaName = resultSet.getString("name");
-				if (requestedSchema == null
-						|| requestedSchema.equalsIgnoreCase(schemaName)) {
+				if (requestedSchema == null || requestedSchema.equalsIgnoreCase(schemaName)) {
 					result.add(new Schema(schemaName));
 				}
 			}

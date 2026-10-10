@@ -55,6 +55,7 @@ class PostgresJdbcTreeDataSessionTest {
 					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
 		}
 	}
+
 	@Test
 	void testAlwaysIdentityRejectsExplicitValues() throws SQLException {
 		try (Connection connection = POSTGRES.createConnection("")) {

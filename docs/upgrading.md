@@ -7,6 +7,15 @@ XML and SQL even when application source still compiles.
 This guide describes consumer-side verification. It does not require a live
 production database and does not replace database-vendor upgrade guidance.
 
+## Legacy Graphviz renderer removal
+
+The legacy `sqlapp-graphviz` module has been removed from this source tree and
+will no longer be built or published by it. Applications importing
+`com.sqlapp.graphviz` must migrate their rendering code to `sqlapp-elk-svg`;
+the ELK API is not a drop-in replacement. Current HTML documentation and ER
+diagram commands already use ELK and require no renderer configuration change.
+Previously published Graphviz artifacts are not deleted by this change.
+
 ## 1. Record the current inputs
 
 Before changing versions, record:

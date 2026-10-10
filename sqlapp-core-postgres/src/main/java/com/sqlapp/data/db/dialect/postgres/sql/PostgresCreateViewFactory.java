@@ -39,7 +39,9 @@ public class PostgresCreateViewFactory extends AbstractCreateViewFactory<Postgre
 	public static final String CHECK_OPTION = "check_option";
 	public static final String SECURITY_INVOKER = "security_invoker";
 
-	protected boolean supportsViewOption(String name) { return false; }
+	protected boolean supportsViewOption(String name) {
+		return false;
+	}
 
 	@Override
 	protected void addCreateObject(View obj, PostgresSqlBuilder builder) {
@@ -51,9 +53,11 @@ public class PostgresCreateViewFactory extends AbstractCreateViewFactory<Postgre
 		var options = new java.util.ArrayList<String>();
 		for (String name : List.of(SECURITY_BARRIER, CHECK_OPTION, SECURITY_INVOKER)) {
 			String value = obj.getSpecifics().get(name);
-			if (value == null) continue;
+			if (value == null)
+				continue;
 			if (!supportsViewOption(name)) {
-				throw new IllegalArgumentException("View option " + name + " is unsupported by this PostgreSQL version.");
+				throw new IllegalArgumentException(
+						"View option " + name + " is unsupported by this PostgreSQL version.");
 			}
 			value = value.trim().toLowerCase(java.util.Locale.ROOT);
 			if (CHECK_OPTION.equals(name)) {
@@ -71,9 +75,8 @@ public class PostgresCreateViewFactory extends AbstractCreateViewFactory<Postgre
 			return;
 		}
 		createObject(obj, builder);
-		builder.name(obj, getOptions().isDecorateSchemaName()).space()
-				._add("WITH (")._add(String.join(", ", options))._add(")")
-				.lineBreak().as().lineBreak()._add(obj.getStatement());
+		builder.name(obj, getOptions().isDecorateSchemaName()).space()._add("WITH (")._add(String.join(", ", options))
+				._add(")").lineBreak().as().lineBreak()._add(obj.getStatement());
 	}
 
 	@Override
@@ -86,8 +89,8 @@ public class PostgresCreateViewFactory extends AbstractCreateViewFactory<Postgre
 		}
 		table.getColumns().stream().filter(c -> c.getRemarks() != null).forEach(column -> {
 			PostgresSqlBuilder builder = createSqlBuilder();
-			builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName())
-					._add(".").name(column).is().sqlChar(column.getRemarks());
+			builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName())._add(".")
+					.name(column).is().sqlChar(column.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, column);
 		});
 	}

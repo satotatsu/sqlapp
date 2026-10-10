@@ -10,9 +10,10 @@ import com.sqlapp.data.schemas.*;
 class PostgresCoveringConstraintTest {
 	@Test
 	void rendersCoveringAndNullOptionsAtVersionBoundaries() {
-		for (int major : new int[] {9, 10, 11, 14, 15, 18}) {
-			var registry = DialectResolver.getInstance().getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
-			for (boolean primary : new boolean[] {true, false}) {
+		for (int major : new int[] { 9, 10, 11, 14, 15, 18 }) {
+			var registry = DialectResolver.getInstance().getDialect("postgres", major, 0, null)
+					.createSqlFactoryRegistry();
+			for (boolean primary : new boolean[] { true, false }) {
 				Table table = new Table("items");
 				table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 				table.getColumns().add("Payload Value", c -> c.setDataType(DataType.INT));

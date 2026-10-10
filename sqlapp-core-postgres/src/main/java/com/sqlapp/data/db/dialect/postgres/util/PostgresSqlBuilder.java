@@ -57,7 +57,8 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 
 	@Override
 	public PostgresSqlBuilder specificName(Routine<?> routine, boolean withSchemaName) {
-		if (!(routine instanceof Function function)) return super.specificName(routine, withSchemaName);
+		if (!(routine instanceof Function function))
+			return super.specificName(routine, withSchemaName);
 		String specificName = function.getSpecificName();
 		if (function.getArguments().isEmpty() && specificName != null
 				&& specificName.startsWith(function.getName() + "(") && specificName.endsWith(")")) {
@@ -66,8 +67,10 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		name(routine, withSchemaName)._add("(");
 		boolean first = true;
 		for (NamedArgument argument : function.getArguments()) {
-			if (argument.getDirection() == ParameterDirection.Output) continue;
-			if (!first) _add(", ");
+			if (argument.getDirection() == ParameterDirection.Output)
+				continue;
+			if (!first)
+				_add(", ");
 			first = false;
 			typeDefinition(argument);
 		}
@@ -76,8 +79,10 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 
 	@Override
 	public PostgresSqlBuilder argument(NamedArgument argument) {
-		if (Boolean.parseBoolean(argument.getSpecifics().get("VARIADIC"))) _add("VARIADIC").space();
-		else argumentDirection(argument);
+		if (Boolean.parseBoolean(argument.getSpecifics().get("VARIADIC")))
+			_add("VARIADIC").space();
+		else
+			argumentDirection(argument);
 		if (argument.getName() != null && !Boolean.parseBoolean(argument.getSpecifics().get("UNNAMED_ARGUMENT"))) {
 			String name = argument.getName();
 			_add(isQuateObjectName() && getDialect().needQuote(name) ? getDialect().quote(name) : name).space();
@@ -94,7 +99,8 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 			_add("TABLE(");
 			boolean first = true;
 			for (Column column : returning.getTable().getColumns()) {
-				if (!first) _add(", ");
+				if (!first)
+					_add(", ");
 				first = false;
 				name(column.getName()).space();
 				typeDefinition(column);
@@ -151,7 +157,8 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 			if (column.getDataType() != null && column.getDataType().isInterval()) {
 				String typeName = column.getDataType().getTypeName();
 				_add(typeName);
-				if (column.getLength() != null && (column.getDataType() == DataType.INTERVAL || typeName.endsWith("SECOND"))) {
+				if (column.getLength() != null
+						&& (column.getDataType() == DataType.INTERVAL || typeName.endsWith("SECOND"))) {
 					if (column.getLength() < 0 || column.getLength() > 6) {
 						throw new IllegalArgumentException("PostgreSQL interval fractional precision must be 0..6.");
 					}
@@ -175,12 +182,14 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 				}
 				int resolvedScale = scale == null ? 0 : scale;
 				if (precision < 1 || precision > 1000 || resolvedScale < -1000 || resolvedScale > 1000) {
-					throw new IllegalArgumentException("PostgreSQL numeric precision must be 1..1000 and scale -1000..1000: "
-							+ precision + "," + resolvedScale);
+					throw new IllegalArgumentException(
+							"PostgreSQL numeric precision must be 1..1000 and scale -1000..1000: " + precision + ","
+									+ resolvedScale);
 				}
 				if ((resolvedScale < 0 || resolvedScale > precision)
 						&& getDialect().compareTo(postgresVersionResolver.getDialect(15, 0, 0)) < 0) {
-					throw new IllegalArgumentException("Negative numeric scale or scale greater than precision requires PostgreSQL 15 or later.");
+					throw new IllegalArgumentException(
+							"Negative numeric scale or scale greater than precision requires PostgreSQL 15 or later.");
 				}
 				_add(column.getDataType().name() + "(" + precision + "," + resolvedScale + ")");
 				return this;

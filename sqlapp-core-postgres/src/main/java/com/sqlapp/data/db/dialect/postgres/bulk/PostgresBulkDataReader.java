@@ -121,15 +121,15 @@ public class PostgresBulkDataReader extends Reader {
 	private String toArrayText(final Object value, final boolean binaryElements) {
 		final StringBuilder builder = new StringBuilder("{");
 		for (int i = 0; i < Array.getLength(value); i++) {
-			if (i > 0) builder.append(',');
+			if (i > 0)
+				builder.append(',');
 			final Object element = Array.get(value, i);
 			if (element == null) {
 				builder.append("NULL");
 			} else if (element.getClass().isArray() && !(binaryElements && element instanceof byte[])) {
 				builder.append(toArrayText(element, binaryElements));
 			} else {
-				builder.append('"').append(toText(element).replace("\\", "\\\\").replace("\"", "\\\""))
-						.append('"');
+				builder.append('"').append(toText(element).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
 			}
 		}
 		return builder.append('}').toString();

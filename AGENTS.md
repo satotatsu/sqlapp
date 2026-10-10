@@ -9,7 +9,6 @@ sqlapp is a Java 21 and Gradle multi-project database utility.
 - `sqlapp-gradle-plugin`: Gradle tasks backed by commands
 - `sqlapp-core-{db}`: database-specific dialects
 - `sqlapp-elk-svg`: current ELK-based SVG ER diagrams
-- `sqlapp-graphviz`: legacy Graphviz ER diagrams
 - `sqlapp-core-test`: shared test utilities
 
 Read the nearest module `AGENTS.md` in addition to this file.

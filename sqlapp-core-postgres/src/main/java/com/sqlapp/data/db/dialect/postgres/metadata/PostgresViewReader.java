@@ -77,7 +77,9 @@ public class PostgresViewReader extends ViewReader {
 						}
 					}
 				}
-			} finally { array.free(); }
+			} finally {
+				array.free();
+			}
 		}
 		return table;
 	}

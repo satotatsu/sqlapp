@@ -4,7 +4,6 @@ import java.util.List;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 
-
 import com.sqlapp.data.db.sql.AbstractCreateUniqueConstraintFactory;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ReferenceColumn;

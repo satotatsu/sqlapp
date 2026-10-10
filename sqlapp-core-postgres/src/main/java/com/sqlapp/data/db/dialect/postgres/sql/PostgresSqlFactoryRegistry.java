@@ -65,6 +65,7 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, PostgresCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, PostgresDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, PostgresCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, PostgresTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, PostgresAlterTableFactory.class);

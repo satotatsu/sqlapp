@@ -11,20 +11,26 @@ import com.sqlapp.data.schemas.RoutinePrivilege;
 
 /** EXECUTE grants from the existing routine privilege model. */
 public class PostgresGrantRoutinePrivilegeFactory extends SimpleSqlFactory<RoutinePrivilege, PostgresSqlBuilder> {
-	protected boolean isGrant() { return true; }
+	protected boolean isGrant() {
+		return true;
+	}
 
 	@Override
 	public List<SqlOperation> createSql(RoutinePrivilege privilege) {
 		if (privilege.getPrivilege() != null && !"EXECUTE".equalsIgnoreCase(privilege.getPrivilege()))
 			throw new IllegalArgumentException("PostgreSQL routine privilege must be EXECUTE");
-		if (privilege.getState() != null && privilege.getState() != (isGrant() ? PrivilegeState.Grant : PrivilegeState.Revoke))
+		if (privilege.getState() != null
+				&& privilege.getState() != (isGrant() ? PrivilegeState.Grant : PrivilegeState.Revoke))
 			throw new IllegalArgumentException("Routine privilege state conflicts with requested GRANT/REVOKE");
 		String name = privilege.getObjectName();
 		String signature = privilege.getSpecificName();
-		if (name == null || name.isBlank() || signature == null || !signature.startsWith(name + "(") || !signature.endsWith(")"))
-			throw new IllegalArgumentException("Routine privilege requires specificName with its full input signature, for example f(integer) or f()");
+		if (name == null || name.isBlank() || signature == null || !signature.startsWith(name + "(")
+				|| !signature.endsWith(")"))
+			throw new IllegalArgumentException(
+					"Routine privilege requires specificName with its full input signature, for example f(integer) or f()");
 		String grantee = privilege.getGranteeName();
-		if (grantee == null || grantee.isBlank()) throw new IllegalArgumentException("Routine privilege requires a grantee");
+		if (grantee == null || grantee.isBlank())
+			throw new IllegalArgumentException("Routine privilege requires a grantee");
 		if (isGrant() && "PUBLIC".equals(grantee) && privilege.isGrantable())
 			throw new IllegalArgumentException("PUBLIC cannot receive WITH GRANT OPTION");
 		String kind = privilege.getSpecifics().get("ROUTINE_KIND");
@@ -40,11 +46,13 @@ public class PostgresGrantRoutinePrivilegeFactory extends SimpleSqlFactory<Routi
 		builder._add(quoteIdentifier(name))._add(signature.substring(name.length()));
 		builder._add(isGrant() ? " TO " : " FROM ");
 		builder._add("PUBLIC".equals(grantee) ? "PUBLIC" : quoteIdentifier(grantee));
-		if (isGrant() && privilege.isGrantable()) builder._add(" WITH GRANT OPTION");
+		if (isGrant() && privilege.isGrantable())
+			builder._add(" WITH GRANT OPTION");
 		List<SqlOperation> operations = new ArrayList<>();
 		addSql(operations, builder, isGrant() ? SqlType.GRANT : SqlType.REVOKE, privilege);
 		return operations;
 	}
+
 	private String quoteIdentifier(String name) {
 		return "\"" + name.replace("\"", "\"\"") + "\"";
 	}

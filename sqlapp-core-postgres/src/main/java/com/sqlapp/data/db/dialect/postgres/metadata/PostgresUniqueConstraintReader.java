@@ -71,7 +71,9 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 					c.setRemarks(getString(rs, "remarks"));
 					c.setIndexName(getString(rs, "index_name"));
 					if (rs.getBoolean("nulls_not_distinct")) {
-						c.getSpecifics().put(com.sqlapp.data.db.dialect.postgres.sql.PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
+						c.getSpecifics().put(
+								com.sqlapp.data.db.dialect.postgres.sql.PostgresCreateIndexFactory.NULLS_NOT_DISTINCT,
+								"true");
 					}
 					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
@@ -93,13 +95,14 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
-			if (productVersionInfo.getMajorVersion() >= 15) return getSqlNodeCache().getString("uniqueConstraints150.sql");
-			if (productVersionInfo.getMajorVersion() >= 11) return getSqlNodeCache().getString("uniqueConstraints110.sql");
+			if (productVersionInfo.getMajorVersion() >= 15)
+				return getSqlNodeCache().getString("uniqueConstraints150.sql");
+			if (productVersionInfo.getMajorVersion() >= 11)
+				return getSqlNodeCache().getString("uniqueConstraints110.sql");
 		}
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& (productVersionInfo.getMajorVersion() > 8
-						|| productVersionInfo.getMajorVersion() == 8 && productVersionInfo.getMinorVersion() != null
-								&& productVersionInfo.getMinorVersion() >= 4)) {
+				&& (productVersionInfo.getMajorVersion() > 8 || productVersionInfo.getMajorVersion() == 8
+						&& productVersionInfo.getMinorVersion() != null && productVersionInfo.getMinorVersion() >= 4)) {
 			return getSqlNodeCache().getString("uniqueConstraints84.sql");
 		}
 		return getSqlNodeCache().getString("uniqueConstraints.sql");

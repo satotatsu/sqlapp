@@ -41,8 +41,10 @@ public class Postgres92SqlFactoryRegistry extends Postgres91SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, com.sqlapp.data.db.sql.SqlType.CREATE, Postgres92CreateCheckConstraintFactory.class);
-		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.CREATE, Postgres92CreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Postgres92CreateCheckConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Postgres92CreateViewFactory.class);
 	}
 
 }

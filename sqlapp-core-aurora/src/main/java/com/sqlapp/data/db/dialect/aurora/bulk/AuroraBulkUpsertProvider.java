@@ -7,5 +7,8 @@ import com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertProvider;
 
 /** Reuses PostgreSQL execution with Aurora product identity. */
 public class AuroraBulkUpsertProvider extends PostgresBulkUpsertProvider {
-	@Override public boolean supports(Dialect dialect) { return dialect instanceof AuroraPostgreSQL; }
+	@Override
+	public boolean supports(Dialect dialect) {
+		return dialect instanceof AuroraPostgreSQL;
+	}
 }

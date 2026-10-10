@@ -23,7 +23,6 @@ import java.util.List;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 
-
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateForeignKeyConstraintFactory;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
@@ -43,6 +42,7 @@ public class PostgresCreateForeignKeyConstraintFactory
 			builder.matchOption(obj);
 		}
 	}
+
 	@Override
 	protected void addCascadeRule(ForeignKeyConstraint obj, PostgresSqlBuilder builder) {
 		PostgresConstraintOptions.appendCascadeRules(obj, builder);
@@ -53,13 +53,14 @@ public class PostgresCreateForeignKeyConstraintFactory
 		PostgresConstraintOptions.appendDeferrability(obj, builder);
 	}
 
-	protected boolean supportsNotValid() { return false; }
+	protected boolean supportsNotValid() {
+		return false;
+	}
 
 	@Override
 	protected void addAfter(ForeignKeyConstraint constraint, PostgresSqlBuilder builder) {
 		PostgresConstraintOptions.appendNotValid(constraint, builder, supportsNotValid());
 	}
-
 
 	@Override
 	public List<SqlOperation> createSql(ForeignKeyConstraint constraint) {

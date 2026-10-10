@@ -18,8 +18,6 @@ Main modules:
   Database-specific dialect implementations.
 - sqlapp-elk-svg:
   ELK-based SVG ER diagram generation.
-- sqlapp-graphviz:
-  Legacy Graphviz-based ER diagram generation.
 
 ## General rules
 

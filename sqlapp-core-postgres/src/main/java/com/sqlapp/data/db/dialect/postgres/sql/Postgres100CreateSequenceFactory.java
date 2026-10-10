@@ -13,7 +13,8 @@ public class Postgres100CreateSequenceFactory extends PostgresCreateSequenceFact
 		DataType type = obj.getDataType();
 		if (type == null && obj.getDataTypeName() != null) {
 			Column column = new Column();
-			if (getDialect().setDbType(obj.getDataTypeName(), null, null, column)) type = column.getDataType();
+			if (getDialect().setDbType(obj.getDataTypeName(), null, null, column))
+				type = column.getDataType();
 		}
 		if (type == DataType.SMALLINT || type == DataType.INT || type == DataType.BIGINT) {
 			builder.as().space().typeDefinition(type, null, null, null);

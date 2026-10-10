@@ -8,7 +8,10 @@ import com.sqlapp.data.schemas.TableSpace;
 import com.sqlapp.jdbc.ExResultSet;
 
 public class YugabyteTableSpaceReader extends PostgresTableSpaceReader {
-	public YugabyteTableSpaceReader(Dialect dialect) { super(dialect); }
+	public YugabyteTableSpaceReader(Dialect dialect) {
+		super(dialect);
+	}
+
 	@Override
 	protected TableSpace createTableSpace(ExResultSet rs) throws SQLException {
 		TableSpace result = super.createTableSpace(rs);
@@ -18,9 +21,12 @@ public class YugabyteTableSpaceReader extends PostgresTableSpaceReader {
 				for (Object value : (Object[]) options.getArray()) {
 					String option = value.toString();
 					if (option.startsWith("replica_placement="))
-						result.getSpecifics().put("YSQL_REPLICA_PLACEMENT", option.substring("replica_placement=".length()));
+						result.getSpecifics().put("YSQL_REPLICA_PLACEMENT",
+								option.substring("replica_placement=".length()));
 				}
-			} finally { options.free(); }
+			} finally {
+				options.free();
+			}
 		}
 		return result;
 	}

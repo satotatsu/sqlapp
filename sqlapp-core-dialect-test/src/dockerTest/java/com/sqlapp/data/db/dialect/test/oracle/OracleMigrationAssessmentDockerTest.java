@@ -72,7 +72,8 @@ class OracleMigrationAssessmentDockerTest {
 					)
 					""");
 			statement.executeUpdate("CREATE INDEX IDX_MIGRATION_CHARSET_TEXT ON MIGRATION_CHARSET_TEST (TEXT_VALUE)");
-			statement.executeUpdate("CREATE INDEX IDX_MIGRATION_CHARSET_UPPER ON MIGRATION_CHARSET_TEST (UPPER(TEXT_VALUE))");
+			statement.executeUpdate(
+					"CREATE INDEX IDX_MIGRATION_CHARSET_UPPER ON MIGRATION_CHARSET_TEST (UPPER(TEXT_VALUE))");
 			statement.executeUpdate("""
 					INSERT INTO MIGRATION_CHARSET_TEST
 					  (ID, TEXT_VALUE, TEXT_CHAR_VALUE, NATIONAL_VALUE)
@@ -115,40 +116,38 @@ class OracleMigrationAssessmentDockerTest {
 			assertTrue(report.scanCharacterData());
 			assertTrue(report.assessment().findings().stream()
 					.anyMatch(finding -> finding.ruleId().equals("oracle.source.database-identity")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.source.jdbc-driver")
-							&& finding.reason().contains("Oracle JDBC driver")
-							&& finding.reason().contains("23.")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.database-settings")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.source.jdbc-driver")
+							&& finding.reason().contains("Oracle JDBC driver") && finding.reason().contains("23.")));
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.database-settings")
 							&& finding.reason().contains("NLS_CHARACTERSET=AL32UTF8")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.database-column")
-							&& finding.object().name().equals("TEXT_VALUE")
-							&& finding.reason().contains("CHAR_USED=B")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.database-column")
+							&& finding.object().name().equals("TEXT_VALUE") && finding.reason().contains("CHAR_USED=B")
 							&& finding.reason().contains("DATA_LENGTH=20")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.database-column")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.database-column")
 							&& finding.object().name().equals("TEXT_CHAR_VALUE")
 							&& finding.reason().contains("CHAR_USED=C")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.database-column")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.database-column")
 							&& finding.object().name().equals("NATIONAL_VALUE")
 							&& finding.reason().contains("dataType=NVARCHAR2")));
 			assertTrue(report.assessment().findings().stream()
 					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.indexed-byte-column")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.function-based-index")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.function-based-index")
 							&& finding.reason().contains("IDX_MIGRATION_CHARSET_UPPER")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.data-scan")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.data-scan")
 							&& finding.reason().contains("maximum converted bytes=9")
 							&& finding.reason().contains("overflow rows=0")));
 			assertFalse(report.assessment().findings().stream()
 					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.data-scan-failed")
 							|| finding.ruleId().equals("oracle.charset.data-scan-timeout")));
-			assertTrue(report.assessment().findings().stream().anyMatch(finding ->
-					finding.ruleId().equals("oracle.charset.online-coverage")
+			assertTrue(report.assessment().findings().stream()
+					.anyMatch(finding -> finding.ruleId().equals("oracle.charset.online-coverage")
 							&& finding.reason().contains("database character columns=3")
 							&& finding.reason().contains("scan candidates=1")
 							&& finding.reason().contains("successful scans=1")));
@@ -169,8 +168,8 @@ class OracleMigrationAssessmentDockerTest {
 		final var schema = new Schema(owner).setProductName("Oracle").setProductMajorVersion(10)
 				.setProductMinorVersion(2).setCharacterSet("JA16SJIS");
 		final var table = new Table("MIGRATION_CHARSET_TEST");
-		table.getColumns().add(new Column("TEXT_VALUE").setDataType(DataType.VARCHAR).setLength(20)
-				.setOctetLength(20).setCharacterSemantics(CharacterSemantics.Byte));
+		table.getColumns().add(new Column("TEXT_VALUE").setDataType(DataType.VARCHAR).setLength(20).setOctetLength(20)
+				.setCharacterSemantics(CharacterSemantics.Byte));
 		schema.getTables().add(table);
 		final var schemaFile = directory.resolve("oracle-10g-ja16sjis-source.xml").toFile();
 		schema.writeXml(schemaFile);
@@ -185,12 +184,11 @@ class OracleMigrationAssessmentDockerTest {
 			command.setDataSource(dataSource);
 			command.run();
 		}
-		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
-				finding.ruleId().equals("oracle.source.version-mismatch")
-						&& finding.reason().contains("version=10.2")
-						&& finding.reason().contains("version=23")));
-		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
-				finding.ruleId().equals("oracle.charset.source-mismatch")
+		assertTrue(command.getReport().assessment().findings().stream()
+				.anyMatch(finding -> finding.ruleId().equals("oracle.source.version-mismatch")
+						&& finding.reason().contains("version=10.2") && finding.reason().contains("version=23")));
+		assertTrue(command.getReport().assessment().findings().stream()
+				.anyMatch(finding -> finding.ruleId().equals("oracle.charset.source-mismatch")
 						&& finding.reason().contains("JA16SJIS")
 						&& finding.reason().contains("NLS_CHARACTERSET=AL32UTF8")));
 	}
@@ -207,25 +205,24 @@ class OracleMigrationAssessmentDockerTest {
 			command.setDataSource(dataSource);
 			command.run();
 		}
-		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
-				finding.ruleId().equals("oracle.charset.source-table-missing")
+		assertTrue(command.getReport().assessment().findings().stream()
+				.anyMatch(finding -> finding.ruleId().equals("oracle.charset.source-table-missing")
 						&& finding.reason().contains("not visible in ALL_TABLES")));
-		assertTrue(command.getReport().assessment().findings().stream().anyMatch(finding ->
-				finding.ruleId().equals("oracle.charset.online-coverage")
+		assertTrue(command.getReport().assessment().findings().stream()
+				.anyMatch(finding -> finding.ruleId().equals("oracle.charset.online-coverage")
 						&& finding.reason().contains("matched tables=0")
 						&& finding.reason().contains("missing tables=1")));
 	}
 
 	private static void assertSelectOnly(final HikariDataSource dataSource) throws SQLException {
 		try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement()) {
-			assertThrows(SQLException.class, () -> statement.executeUpdate(
-					"UPDATE " + ORACLE.getUsername() + ".MIGRATION_CHARSET_TEST SET TEXT_VALUE = 'changed' WHERE ID = 1"));
+			assertThrows(SQLException.class, () -> statement.executeUpdate("UPDATE " + ORACLE.getUsername()
+					+ ".MIGRATION_CHARSET_TEST SET TEXT_VALUE = 'changed' WHERE ID = 1"));
 		}
 	}
 
 	private static void assertSourceDataUnchanged(final Statement statement) throws SQLException {
-		try (ResultSet rs = statement.executeQuery(
-				"SELECT COUNT(*), MIN(TEXT_VALUE) FROM MIGRATION_CHARSET_TEST")) {
+		try (ResultSet rs = statement.executeQuery("SELECT COUNT(*), MIN(TEXT_VALUE) FROM MIGRATION_CHARSET_TEST")) {
 			assertTrue(rs.next());
 			assertEquals(1, rs.getInt(1));
 			assertEquals("日本語", rs.getString(2));

@@ -6,7 +6,9 @@ import com.sqlapp.data.db.dialect.postgres.sql.Postgres95MergeFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Table;
 
-/** Uses CockroachDB ON CONFLICT without falling back to unsupported SQL MERGE. */
+/**
+ * Uses CockroachDB ON CONFLICT without falling back to unsupported SQL MERGE.
+ */
 public class CockroachMergeFactory extends Postgres95MergeFactory {
 	@Override
 	public List<SqlOperation> createSql(final Table table) {

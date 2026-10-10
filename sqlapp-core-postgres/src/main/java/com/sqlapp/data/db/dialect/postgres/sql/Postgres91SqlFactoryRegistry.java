@@ -41,7 +41,8 @@ public class Postgres91SqlFactoryRegistry extends Postgres90SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, com.sqlapp.data.db.sql.SqlType.CREATE, Postgres91CreateForeignKeyConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Postgres91CreateForeignKeyConstraintFactory.class);
 	}
 
 }

@@ -9,8 +9,10 @@ public class PostgresDropFunctionFactory extends AbstractDropFunctionFactory<Pos
 	@Override
 	protected void addDropObject(Function function, PostgresSqlBuilder builder) {
 		builder.drop();
-		if ("PROCEDURE".equals(function.getSpecifics().get("ROUTINE_KIND"))) builder.procedure();
-		else builder.function();
+		if ("PROCEDURE".equals(function.getSpecifics().get("ROUTINE_KIND")))
+			builder.procedure();
+		else
+			builder.function();
 		builder.space().specificName(function, getOptions().isDecorateSchemaName());
 	}
 }

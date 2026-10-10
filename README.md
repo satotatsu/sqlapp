@@ -242,15 +242,17 @@ note explicitly states otherwise.
 | `sqlapp-gradle-plugin` | Gradle tasks backed by `sqlapp-command` |
 | `sqlapp-core-{db}` | Database-specific metadata readers, dialect resolution, data types, and SQL generation |
 | `sqlapp-elk-svg` | Current ELK-based SVG ER diagram rendering |
-| `sqlapp-graphviz` | Legacy Graphviz-based ER diagram rendering |
 | `sqlapp-core-test` | Shared test support; not required at application runtime |
 
 The repository currently contains dialect modules for DB2, Firebird,
 H2, HSQLDB, Informix, Access/MDB, MariaDB, MySQL, Oracle, Phoenix,
-PostgreSQL, Aurora PostgreSQL (experimental), SAP HANA, Cloud Spanner, SQLite, SQL Server, Sybase ASE,
+PostgreSQL, AlloyDB / AlloyDB Omni, Aurora PostgreSQL (experimental), SAP HANA, Cloud Spanner, SQLite, SQL Server, Sybase ASE,
 Vertica, YugabyteDB YSQL, and CockroachDB. Module presence does not by itself guarantee every feature on
 every server version; check the relevant dialect documentation and release
 notes before production use.
+
+For AlloyDB / AlloyDB Omni 15–17, see the [usage and verification scope](sqlapp-core-alloydb/README.md).
+Managed Google Cloud AlloyDB remains unverified.
 
 For Aurora PostgreSQL 14–17 (experimental; Aurora execution unverified), see the
 [usage and verification boundary](sqlapp-core-aurora/README.md).

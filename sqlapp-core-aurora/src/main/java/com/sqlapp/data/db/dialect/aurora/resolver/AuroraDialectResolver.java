@@ -10,13 +10,17 @@ import com.sqlapp.data.db.dialect.aurora.AuroraPostgres16;
 import com.sqlapp.data.db.dialect.aurora.AuroraPostgres17;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
-/** Identifies Aurora without invoking missing functions on ordinary PostgreSQL. */
+/**
+ * Identifies Aurora without invoking missing functions on ordinary PostgreSQL.
+ */
 public class AuroraDialectResolver extends ProductNameDialectResolver {
-	private static final Dialect[] ENGINES = { new AuroraPostgres14(), new AuroraPostgres15(),
-			new AuroraPostgres16(), new AuroraPostgres17() };
+	private static final Dialect[] ENGINES = { new AuroraPostgres14(), new AuroraPostgres15(), new AuroraPostgres16(),
+			new AuroraPostgres17() };
+
 	public AuroraDialectResolver() {
 		super("(?:Amazon )?Aurora PostgreSQL|aurora-postgresql", (major, minor, revision) -> engine(major));
 	}
+
 	private static Dialect engine(int major) {
 		if (major < 14 || major > 17) {
 			throw new IllegalArgumentException("Unsupported Aurora PostgreSQL engine major: " + major
@@ -24,10 +28,12 @@ public class AuroraDialectResolver extends ProductNameDialectResolver {
 		}
 		return ENGINES[major - 14];
 	}
+
 	@Override
 	protected int order() {
 		return -20;
 	}
+
 	@Override
 	public Dialect resolveDatabaseMetaData(DatabaseMetaData metadata) {
 		try {
@@ -44,22 +50,27 @@ public class AuroraDialectResolver extends ProductNameDialectResolver {
 			}
 			var connection = metadata.getConnection();
 			if (connection == null) {
-				throw new IllegalStateException("Aurora identification requires a JDBC connection; use an explicit product name for offline resolution.");
+				throw new IllegalStateException(
+						"Aurora identification requires a JDBC connection; use an explicit product name for offline resolution.");
 			}
-			// AWS pg-collector uses this setting to guard aurora_version(). No missing-function error
-			// may abort a caller-owned transaction on ordinary PostgreSQL or RDS PostgreSQL.
-			try (var statement = connection.createStatement(); var rows = statement.executeQuery(
-					"SELECT 1 FROM pg_catalog.pg_settings WHERE name = 'rds.extensions' "
-					+ "AND setting LIKE '%aurora_stat_utils%'")) {
+			// AWS pg-collector uses this setting to guard aurora_version(). No
+			// missing-function error
+			// may abort a caller-owned transaction on ordinary PostgreSQL or RDS
+			// PostgreSQL.
+			try (var statement = connection.createStatement();
+					var rows = statement
+							.executeQuery("SELECT 1 FROM pg_catalog.pg_settings WHERE name = 'rds.extensions' "
+									+ "AND setting LIKE '%aurora_stat_utils%'")) {
 				if (!rows.next()) {
 					return null;
 				}
 			}
 			String namespace;
-			try (var statement = connection.createStatement(); var rows = statement.executeQuery(
-					"SELECT n.nspname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace "
-					+ "WHERE p.proname = 'aurora_version' AND p.pronargs = 0 AND n.nspname IN ('pg_catalog', 'public') "
-					+ "ORDER BY n.nspname = 'pg_catalog' DESC")) {
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery(
+							"SELECT n.nspname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace "
+									+ "WHERE p.proname = 'aurora_version' AND p.pronargs = 0 AND n.nspname IN ('pg_catalog', 'public') "
+									+ "ORDER BY n.nspname = 'pg_catalog' DESC")) {
 				if (!rows.next()) {
 					throw new IllegalStateException("Aurora marker exists but aurora_version() is unavailable.");
 				}
@@ -68,8 +79,8 @@ public class AuroraDialectResolver extends ProductNameDialectResolver {
 			if (!"pg_catalog".equals(namespace) && !"public".equals(namespace)) {
 				throw new IllegalStateException("Unexpected Aurora function namespace");
 			}
-			try (var statement = connection.createStatement(); var rows = statement.executeQuery(
-					"SELECT " + namespace + ".aurora_version()")) {
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery("SELECT " + namespace + ".aurora_version()")) {
 				if (!rows.next() || rows.getString(1) == null || rows.getString(1).isBlank()) {
 					throw new IllegalStateException("aurora_version() returned no version");
 				}

@@ -58,6 +58,7 @@ class OracleJdbcTreeDataSessionTest {
 					schema.getTables().get("PARENT_TABLE"), schema.getTables().get("CHILD_TABLE"));
 		}
 	}
+
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
 		try (Connection writer = ORACLE.createConnection(""); Connection observer = ORACLE.createConnection("")) {

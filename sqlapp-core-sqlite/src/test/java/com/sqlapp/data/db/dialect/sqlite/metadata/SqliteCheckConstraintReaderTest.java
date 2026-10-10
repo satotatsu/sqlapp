@@ -13,12 +13,10 @@ class SqliteCheckConstraintReaderTest {
 	@Test
 	void extractsNestedAndMultipleCheckExpressions() {
 		var expressions = SqliteCheckConstraintReader.extractExpressions(
-				"value TEXT CHECK (length(value) > 1) "
-				+ "CHECK (value <> ')' AND instr(value, '(') >= 0)");
+				"value TEXT CHECK (length(value) > 1) " + "CHECK (value <> ')' AND instr(value, '(') >= 0)");
 
 		assertEquals(2, expressions.size());
 		assertEquals("length(value) > 1", expressions.get(0));
-		assertEquals("value <> ')' AND instr(value, '(') >= 0",
-				expressions.get(1));
+		assertEquals("value <> ')' AND instr(value, '(') >= 0", expressions.get(1));
 	}
 }

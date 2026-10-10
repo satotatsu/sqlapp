@@ -11,7 +11,8 @@ class PostgresTableQueryVersionTest {
 	void insertVacuumSettingsStartAtPostgres13() throws Exception {
 		String legacy = query("tables100.sql");
 		String modern = query("tables130.sql");
-		for (String column : java.util.List.of("autovacuum_vacuum_insert_threshold", "autovacuum_vacuum_insert_scale_factor")) {
+		for (String column : java.util.List.of("autovacuum_vacuum_insert_threshold",
+				"autovacuum_vacuum_insert_scale_factor")) {
 			assertFalse(legacy.contains(column), column);
 			assertTrue(modern.contains(column), column);
 		}

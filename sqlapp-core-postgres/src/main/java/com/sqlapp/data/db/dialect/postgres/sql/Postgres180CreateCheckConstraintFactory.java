@@ -4,7 +4,6 @@ import java.util.List;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 
-
 import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -12,8 +11,8 @@ import com.sqlapp.util.AbstractSqlBuilder;
 /**
  * PostgreSQL 18 CHECK constraint enforcement state.
  */
-public class Postgres180CreateCheckConstraintFactory
-		extends AbstractCreateCheckConstraintFactory<AbstractSqlBuilder<?>> implements PostgresConstraintOptions.NotValidFactory {
+public class Postgres180CreateCheckConstraintFactory extends AbstractCreateCheckConstraintFactory<AbstractSqlBuilder<?>>
+		implements PostgresConstraintOptions.NotValidFactory {
 	public static final String NOT_ENFORCED = "notEnforced";
 
 	@Override

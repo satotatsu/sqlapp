@@ -12,7 +12,9 @@ import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateDomainFactory;
 import com.sqlapp.data.schemas.Domain;
 
-/** Recreates PostgreSQL domains and enum types represented by Schema domains. */
+/**
+ * Recreates PostgreSQL domains and enum types represented by Schema domains.
+ */
 public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<PostgresSqlBuilder> {
 	@Override
 	protected void addCreateObject(final Domain obj, final PostgresSqlBuilder builder) {
@@ -26,7 +28,8 @@ public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<Pos
 			builder._add("ENUM (");
 			boolean first = true;
 			for (String value : obj.getValues()) {
-				if (!first) builder._add(", ");
+				if (!first)
+					builder._add(", ");
 				builder._add("'" + value.replace("'", "''") + "'");
 				first = false;
 			}
@@ -38,15 +41,21 @@ public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<Pos
 			} else {
 				builder.typeDefinition(obj.getDataType(), obj.getDataTypeName(), obj.getLength(), obj.getScale());
 			}
-			if (obj.getArrayDimension() > 0) builder._add("[]".repeat(obj.getArrayDimension()));
-			if (!isEmpty(obj.getDefaultValue())) builder.space()._add("DEFAULT ")._add(obj.getDefaultValue());
-			if (obj.isNotNull()) builder.space()._add("NOT NULL");
-			if (!isEmpty(obj.getCheck())) builder.space()._add("CHECK (")._add(obj.getCheck())._add(")");
+			if (obj.getArrayDimension() > 0)
+				builder._add("[]".repeat(obj.getArrayDimension()));
+			if (!isEmpty(obj.getDefaultValue()))
+				builder.space()._add("DEFAULT ")._add(obj.getDefaultValue());
+			if (obj.isNotNull())
+				builder.space()._add("NOT NULL");
+			if (!isEmpty(obj.getCheck()))
+				builder.space()._add("CHECK (")._add(obj.getCheck())._add(")");
 		}
 	}
+
 	@Override
 	protected void addOptions(final Domain obj, List<SqlOperation> sqlList) {
-		if (obj.getRemarks() == null) return;
+		if (obj.getRemarks() == null)
+			return;
 		PostgresSqlBuilder builder = createSqlBuilder();
 		builder.comment().on().space()._add(obj.getDataType() == DataType.ENUM ? "TYPE" : "DOMAIN");
 		builder.space().name(obj, getOptions().isDecorateSchemaName()).is().sqlChar(obj.getRemarks());

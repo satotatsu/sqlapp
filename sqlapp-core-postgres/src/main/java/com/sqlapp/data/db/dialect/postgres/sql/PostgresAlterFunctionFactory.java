@@ -17,14 +17,19 @@ import com.sqlapp.data.schemas.OnNullCall;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SqlSecurity;
 
-/** Changes attributes or a verified catalog body without dropping the routine or its ACL. */
+/**
+ * Changes attributes or a verified catalog body without dropping the routine or
+ * its ACL.
+ */
 public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, PostgresSqlBuilder> {
-	private static final Set<String> SUPPORTED = Set.of(
-			SchemaProperties.DETERMINISTIC.getLabel(), SchemaProperties.STABLE.getLabel(),
-			SchemaProperties.ON_NULL_CALL.getLabel(), SchemaProperties.SQL_SECURITY.getLabel(),
-			SchemaProperties.REMARKS.getLabel(), SchemaProperties.STATEMENT.getLabel());
+	private static final Set<String> SUPPORTED = Set.of(SchemaProperties.DETERMINISTIC.getLabel(),
+			SchemaProperties.STABLE.getLabel(), SchemaProperties.ON_NULL_CALL.getLabel(),
+			SchemaProperties.SQL_SECURITY.getLabel(), SchemaProperties.REMARKS.getLabel(),
+			SchemaProperties.STATEMENT.getLabel());
 
-	protected boolean supportsProcedureSecurityAlter() { return true; }
+	protected boolean supportsProcedureSecurityAlter() {
+		return true;
+	}
 
 	@Override
 	public List<SqlOperation> createSql(Function function) {
@@ -37,29 +42,34 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 				|| !(difference.getTarget() instanceof Function target))
 			throw new IllegalArgumentException("Routine ALTER requires both original and target functions");
 		var changed = difference.getChangedProperties();
-		// A refreshed catalog template is supplemental, not an independently alterable attribute.
+		// A refreshed catalog template is supplemental, not an independently alterable
+		// attribute.
 		var originalSpecifics = new java.util.HashMap<>(original.getSpecifics());
 		var targetSpecifics = new java.util.HashMap<>(target.getSpecifics());
 		originalSpecifics.remove("POSTGRES_ROUTINE_DDL_BASE64");
 		targetSpecifics.remove("POSTGRES_ROUTINE_DDL_BASE64");
-		if (originalSpecifics.equals(targetSpecifics)) changed.remove(SchemaProperties.SPECIFICS.getLabel());
+		if (originalSpecifics.equals(targetSpecifics))
+			changed.remove(SchemaProperties.SPECIFICS.getLabel());
 		boolean body = changed.containsKey(SchemaProperties.STATEMENT.getLabel());
 		boolean definition = changed.containsKey(SchemaProperties.DEFINITION.getLabel());
 		boolean refreshedTemplate = !java.util.Objects.equals(
 				original.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64"),
 				target.getSpecifics().get("POSTGRES_ROUTINE_DDL_BASE64"));
 		if (body && (definition || refreshedTemplate)) {
-			PostgresSqlBuilder name = createSqlBuilder(); name.name(original, true);
+			PostgresSqlBuilder name = createSqlBuilder();
+			name.name(original, true);
 			if (!PostgresRoutineBodyReplacement.sameHeader(original, target, name.toString().trim(),
 					"PROCEDURE".equals(original.getSpecifics().get("ROUTINE_KIND"))))
-				throw new UnsupportedOperationException("Routine body snapshots differ outside their body; migrate definition attributes separately");
+				throw new UnsupportedOperationException(
+						"Routine body snapshots differ outside their body; migrate definition attributes separately");
 			changed.remove(SchemaProperties.DEFINITION.getLabel());
 		}
 		var unsupported = changed.keySet().stream().filter(key -> !SUPPORTED.contains(key)).toList();
-		if (!unsupported.isEmpty()) throw new UnsupportedOperationException(
-				"Routine ALTER does not support changes to " + unsupported
-				+ "; provide an explicit migration for body, identity or signature changes");
-		if (changed.isEmpty()) return List.of();
+		if (!unsupported.isEmpty())
+			throw new UnsupportedOperationException("Routine ALTER does not support changes to " + unsupported
+					+ "; provide an explicit migration for body, identity or signature changes");
+		if (changed.isEmpty())
+			return List.of();
 		String kind = original.getSpecifics().get("ROUTINE_KIND");
 		boolean procedure = "PROCEDURE".equals(kind);
 		if (kind != null && !procedure && !"FUNCTION".equals(kind))
@@ -75,7 +85,8 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 		if (procedure && (volatility || nullCall))
 			throw new IllegalArgumentException("Procedures do not support volatility or null-input attributes");
 		if (procedure && security && !supportsProcedureSecurityAlter())
-			throw new UnsupportedOperationException("This dialect does not support ALTER PROCEDURE SECURITY; provide an explicit migration");
+			throw new UnsupportedOperationException(
+					"This dialect does not support ALTER PROCEDURE SECURITY; provide an explicit migration");
 		List<SqlOperation> result = new ArrayList<>();
 		if (body) {
 			PostgresSqlBuilder name = createSqlBuilder();
@@ -85,22 +96,29 @@ public class PostgresAlterFunctionFactory extends SimpleSqlFactory<Function, Pos
 		}
 		if (volatility || nullCall || security) {
 			PostgresSqlBuilder builder = createSqlBuilder();
-			builder.alter()._add(procedure ? " PROCEDURE " : " FUNCTION ")
-					.specificName(original, getOptions().isDecorateSchemaName());
-			if (volatility) builder.space()._add(Boolean.TRUE.equals(target.getDeterministic()) ? "IMMUTABLE"
-					: target.getDeterministic() == null && Boolean.TRUE.equals(target.getStable()) ? "STABLE" : "VOLATILE");
-			if (nullCall) builder.space()._add(target.getOnNullCall() == null
-					? OnNullCall.CalledOnNullInput : target.getOnNullCall());
-			if (security) builder.space()._add(target.getSqlSecurity() == null
-					? SqlSecurity.Invoker : target.getSqlSecurity());
+			builder.alter()._add(procedure ? " PROCEDURE " : " FUNCTION ").specificName(original,
+					getOptions().isDecorateSchemaName());
+			if (volatility)
+				builder.space()
+						._add(Boolean.TRUE.equals(target.getDeterministic()) ? "IMMUTABLE"
+								: target.getDeterministic() == null && Boolean.TRUE.equals(target.getStable())
+										? "STABLE"
+										: "VOLATILE");
+			if (nullCall)
+				builder.space()
+						._add(target.getOnNullCall() == null ? OnNullCall.CalledOnNullInput : target.getOnNullCall());
+			if (security)
+				builder.space()._add(target.getSqlSecurity() == null ? SqlSecurity.Invoker : target.getSqlSecurity());
 			addSql(result, builder, SqlType.ALTER, target);
 		}
 		if (changed.containsKey(SchemaProperties.REMARKS.getLabel())) {
 			PostgresSqlBuilder builder = createSqlBuilder();
 			builder.comment().on()._add(procedure ? " PROCEDURE " : " FUNCTION ")
 					.specificName(original, getOptions().isDecorateSchemaName()).is().space();
-			if (target.getRemarks() == null) builder._add("NULL");
-			else builder.sqlChar(target.getRemarks());
+			if (target.getRemarks() == null)
+				builder._add("NULL");
+			else
+				builder.sqlChar(target.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, target);
 		}
 		return result;

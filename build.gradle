@@ -71,6 +71,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-oracle"))
 	nmcpAggregation(project(":sqlapp-core-postgres"))
 	nmcpAggregation(project(":sqlapp-core-aurora"))
+	nmcpAggregation(project(":sqlapp-core-alloydb"))
 	nmcpAggregation(project(":sqlapp-core-yugabyte"))
 	nmcpAggregation(project(":sqlapp-core-cockroach"))
 	nmcpAggregation(project(":sqlapp-core-saphana"))
@@ -82,7 +83,6 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-phoenix"))
 //	nmcpAggregation(project(":sqlapp-core-dialect-test"))
 	nmcpAggregation(project(":sqlapp-core-hsql"))
-	nmcpAggregation(project(":sqlapp-graphviz"))
 	nmcpAggregation(project(":sqlapp-gradle-plugin"))
 	nmcpAggregation(project(":sqlapp-elk-svg"))
 }

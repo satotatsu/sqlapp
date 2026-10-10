@@ -41,8 +41,8 @@ final class PostgresTemporalConstraintMetadata {
 	}
 
 	private static void applyEnforcement(Constraint constraint, String definition) {
-		if (definition != null && definition.toUpperCase(Locale.ROOT).trim()
-				.matches("(?s).*\\sNOT VALID(?:\\s+NOT ENFORCED)?")) {
+		if (definition != null
+				&& definition.toUpperCase(Locale.ROOT).trim().matches("(?s).*\\sNOT VALID(?:\\s+NOT ENFORCED)?")) {
 			constraint.getSpecifics().put(PostgresConstraintOptions.NOT_VALID, "true");
 		}
 		if (matches(definition, "\\sNOT ENFORCED(?:\\s+NOT VALID)?\\s*$")) {
@@ -53,7 +53,8 @@ final class PostgresTemporalConstraintMetadata {
 	}
 
 	private static boolean matches(String definition, String expression) {
-		if (definition == null) return false;
+		if (definition == null)
+			return false;
 		// pg_get_constraintdef quotes identifiers and string literals. Mask both
 		// before looking for syntax, retaining a placeholder for quoted columns.
 		String syntax = definition.replaceAll("'(''|[^'])*'|\"(\"\"|[^\"])*\"", "_quoted_");

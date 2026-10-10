@@ -1945,3 +1945,60 @@ version; no publication or upload was performed. Documentation validation
 passed (665 local links, 59 reachable pages, closed code fences), together
 with four documentation-validator unit tests. Source/doc whitespace checks
 passed; no generated build output is intentionally included in the change.
+
+AlloyDB validation commands were executed with Java 21 and the repository
+wrapper on Windows (commands shown with the portable wrapper name):
+
+```shell
+./gradlew :sqlapp-core-alloydb:test --tests '*AlloyDBDialectTest' --console=plain
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-dialect-test:alloydb16CompatibilityTest --continue --console=plain
+./gradlew :sqlapp-core-postgres:test --tests '*PostgresDropTableRegistrationTest' :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*generatedAlterAndDropExecute' --tests '*metadataAndGeneratedDdlRecreateTable' --continue --console=plain
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-alloydb:test :sqlapp-core-aurora:test :sqlapp-core-yugabyte:test :sqlapp-core-cockroach:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-alloydb:assemble :sqlapp-core-alloydb:generatePomFileForMavenJavaPublication :sqlapp-core-alloydb:generateMetadataFileForMavenJavaPublication :sqlapp-core-dialect-test:alloydbCompatibilityTest --continue --console=plain
+```
+
+The broad run was repeated after correcting the numeric-array test's API
+usage. The implementation did not change between the successful Omni matrix
+and that final confirmation. No external AlloyDB or Aurora test was executed.
+The local probe container and its anonymous volume were removed. The new
+module ignores its generated output; tracked Cockroach build output regenerated
+by dependency compilation/tests is restored after recording test counts.
+Existing staged/unstaged source work is preserved; no publication/upload,
+commit, dependency-version or local-setting change is performed.
+
+Final AlloyDB confirmation was **BUILD SUCCESSFUL** (2026-10-10):
+
+| Verification | Passed | Skipped | Failures |
+|---|---:|---:|---:|
+| AlloyDB unit/module | 7 | 0 | 0 |
+| Official Omni 15.17.0 | 8 | 0 | 0 |
+| Official Omni 16.8.0 | 8 | 0 | 0 |
+| Official Omni 17.9.0 | 8 | 0 | 0 |
+| Upstream PostgreSQL 17.9 control | 8 | 0 | 0 |
+| PostgreSQL module regression | 259 | 0 | 0 |
+| Aurora module regression | 7 | 0 | 0 |
+| YSQL module regression | 10 | 1 | 0 |
+| Cockroach module regression | 16 | 0 | 0 |
+| Command regression | 543 | 0 | 0 |
+| Gradle plugin regression | 81 | 0 | 0 |
+
+The one existing YSQL skip is
+`YugabyteMetadataRoundTripTest.readsAndRecreatesTableFromSchemaModel`; YSQL and
+Cockroach real-engine matrices were not rerun in this batch. The final broad
+confirmation reuses unchanged successful Gradle task results where applicable.
+Omni/ordinary-PostgreSQL tests were also rerun successfully in that final build.
+Aurora/managed AlloyDB real-service execution remains unverified.
+
+AlloyDB assembly, JAR/source/Javadoc attachments, local publication POM and
+Gradle module metadata generation passed. The JAR contains four SPI descriptors
+and no deferred PostgreSQL 18 class. The POM exposes core and PostgreSQL at the
+existing project version. Documentation link/reachability/fence checks and four
+validator unit tests passed; source/doc whitespace checks passed. Existing
+Gradle deprecation warnings remain. No generated build output is intentionally
+included in this change.
+
+Modified production modules are `sqlapp-core-alloydb` (new) and
+`sqlapp-core-postgres` (one DROP factory registration). The other changes are
+integration-test scaffolding, settings/publication aggregation and guides.
+Existing public APIs and configuration formats are preserved. The remaining
+cloud/columnar/vector/snapshot-execution/performance/failover limitations are
+retained in the AlloyDB guide.

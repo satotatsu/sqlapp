@@ -19,7 +19,6 @@ flowchart TD
     COMMAND --> CORE
     COMMAND --> ELK[sqlapp-elk-svg]
     ELK --> CORE
-    GRAPHVIZ[sqlapp-graphviz] --> CORE
 
     DIALECT[sqlapp-core-db modules] --> CORE
     CORE -. ServiceLoader .-> DIALECT
@@ -111,9 +110,6 @@ Task names and properties form a user-facing compatibility surface. See the
 `sqlapp-elk-svg` is the current SVG ER-diagram implementation used by command
 and documentation workflows. Layout and SVG rendering belong in this module,
 while the tables and relationships being rendered remain Schema model objects.
-
-`sqlapp-graphviz` is the legacy renderer. It remains a separate artifact so
-applications using the current ELK path do not need to configure Graphviz.
 
 ## Test modules
 

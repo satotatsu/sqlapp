@@ -60,13 +60,12 @@ class SqliteJdbcTreeDataSessionTest {
 
 			assertEquals(2, statements.size());
 			assertEquals(4, executions.get());
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, p.txt, c.parent_id, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, p.txt, c.parent_id, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (long i = 1; i <= 6; i++) {
 					assertTrue(resultSet.next());
 					assertEquals(i, resultSet.getLong(1));

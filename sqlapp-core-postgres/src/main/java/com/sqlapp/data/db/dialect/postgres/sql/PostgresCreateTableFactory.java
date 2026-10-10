@@ -80,18 +80,22 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 	}
 
 	private boolean separateNotValid(Constraint constraint) {
-		if (!(constraint instanceof CheckConstraint)
-				&& !(constraint instanceof ForeignKeyConstraint)) return false;
-		if (!PostgresConstraintOptions.isNotValid(constraint)) return false;
-		if (!(getSqlFactoryRegistry().getSqlFactory(constraint, SqlType.CREATE) instanceof PostgresConstraintOptions.NotValidFactory)) {
-			throw new IllegalArgumentException("NOT VALID is unsupported for this constraint on the target PostgreSQL version.");
+		if (!(constraint instanceof CheckConstraint) && !(constraint instanceof ForeignKeyConstraint))
+			return false;
+		if (!PostgresConstraintOptions.isNotValid(constraint))
+			return false;
+		if (!(getSqlFactoryRegistry().getSqlFactory(constraint,
+				SqlType.CREATE) instanceof PostgresConstraintOptions.NotValidFactory)) {
+			throw new IllegalArgumentException(
+					"NOT VALID is unsupported for this constraint on the target PostgreSQL version.");
 		}
 		return true;
 	}
 
 	@Override
 	protected void addConstraintDefinition(Constraint constraint, PostgresSqlBuilder builder) {
-		if (!separateNotValid(constraint)) super.addConstraintDefinition(constraint, builder);
+		if (!separateNotValid(constraint))
+			super.addConstraintDefinition(constraint, builder);
 	}
 
 }

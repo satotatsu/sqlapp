@@ -22,6 +22,7 @@ class PostgresNumericBoundaryTest {
 			}
 		}
 	}
+
 	private PostgresSqlBuilder builder(int major) {
 		return new PostgresSqlBuilder(DialectResolver.getInstance().getDialect("postgres", major, 0, null));
 	}
@@ -33,7 +34,8 @@ class PostgresNumericBoundaryTest {
 				assertEquals(type.name(), builder(major).typeDefinition(type, null, null, null).toString());
 				for (int dimension : new int[] { 0, 1, 2 }) {
 					Column column = new Column("value").setDataType(type).setArrayDimension(dimension);
-					assertEquals(type.name() + "[]".repeat(dimension), builder(major).typeDefinition(column).toString());
+					assertEquals(type.name() + "[]".repeat(dimension),
+							builder(major).typeDefinition(column).toString());
 				}
 			}
 		}
@@ -42,24 +44,27 @@ class PostgresNumericBoundaryTest {
 	@Test
 	void preservesExtendedScaleAndRejectsUnsupportedOrInvalidDeclarations() {
 		for (int major : new int[] { 15, 18 }) {
-			assertEquals("NUMERIC(2,-3)[]", builder(major).typeDefinition(new Column("value")
-					.setDataType(DataType.NUMERIC).setLength(2L).setScale(-3).setArrayDimension(1)).toString());
-			assertEquals("NUMERIC(3,5)", builder(major).typeDefinition(new Column("value")
-					.setDataType(DataType.NUMERIC).setLength(3L).setScale(5)).toString());
+			assertEquals("NUMERIC(2,-3)[]", builder(major).typeDefinition(
+					new Column("value").setDataType(DataType.NUMERIC).setLength(2L).setScale(-3).setArrayDimension(1))
+					.toString());
+			assertEquals("NUMERIC(3,5)",
+					builder(major)
+							.typeDefinition(new Column("value").setDataType(DataType.NUMERIC).setLength(3L).setScale(5))
+							.toString());
 		}
 		for (int scale : new int[] { -3, 5 }) {
-			assertThrows(IllegalArgumentException.class, () -> builder(11).typeDefinition(new Column("value")
-					.setDataType(DataType.NUMERIC).setLength(2L).setScale(scale)));
+			assertThrows(IllegalArgumentException.class, () -> builder(11)
+					.typeDefinition(new Column("value").setDataType(DataType.NUMERIC).setLength(2L).setScale(scale)));
 		}
 		for (long precision : new long[] { 0, 1001 }) {
-			assertThrows(IllegalArgumentException.class, () -> builder(15).typeDefinition(new Column("value")
-					.setDataType(DataType.NUMERIC).setLength(precision)));
+			assertThrows(IllegalArgumentException.class, () -> builder(15)
+					.typeDefinition(new Column("value").setDataType(DataType.NUMERIC).setLength(precision)));
 		}
 		for (int scale : new int[] { -1001, 1001 }) {
-			assertThrows(IllegalArgumentException.class, () -> builder(15).typeDefinition(new Column("value")
-					.setDataType(DataType.NUMERIC).setLength(2L).setScale(scale)));
+			assertThrows(IllegalArgumentException.class, () -> builder(15)
+					.typeDefinition(new Column("value").setDataType(DataType.NUMERIC).setLength(2L).setScale(scale)));
 		}
-		assertThrows(IllegalArgumentException.class, () -> builder(15).typeDefinition(new Column("value")
-				.setDataType(DataType.NUMERIC).setScale(3)));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder(15).typeDefinition(new Column("value").setDataType(DataType.NUMERIC).setScale(3)));
 	}
 }

@@ -35,7 +35,10 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
  */
 class JdbcTreeDataSessionOrderExampleTest {
 
-	/** The application logic: SQL selects work; ordinary loops process each hierarchy. */
+	/**
+	 * The application logic: SQL selects work; ordinary loops process each
+	 * hierarchy.
+	 */
 	private JdbcTreeDataExecutionResult processOrders(Connection connection) throws SQLException {
 		var schema = SchemaUtils.getSchema(connection, "PUBLIC", "ORDER_HEADER", "ORDER_LINE").orElseThrow();
 		Table orders = schema.getTables().get("ORDER_HEADER");
@@ -143,7 +146,8 @@ class JdbcTreeDataSessionOrderExampleTest {
 	private void assertCount(JdbcTreeDataExecutionResult result, String table, SqlType type, long executed,
 			long committed) {
 		var operation = result.operations().stream()
-				.filter(value -> table.equals(value.table().table()) && type == value.operation()).findFirst().orElseThrow();
+				.filter(value -> table.equals(value.table().table()) && type == value.operation()).findFirst()
+				.orElseThrow();
 		assertEquals(executed, operation.executed().knownAffectedRows());
 		assertEquals(committed, operation.committed().knownAffectedRows());
 	}

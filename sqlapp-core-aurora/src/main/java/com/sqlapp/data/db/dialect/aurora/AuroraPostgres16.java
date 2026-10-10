@@ -6,7 +6,18 @@ import com.sqlapp.data.db.dialect.postgres.Postgres160;
 /** Aurora PostgreSQL 16 engine baseline. */
 public class AuroraPostgres16 extends Postgres160 implements AuroraPostgreSQL {
 	private static final long serialVersionUID = 1L;
-	public AuroraPostgres16() { super(() -> null); }
-	@Override public String getProductName() { return "Aurora PostgreSQL"; }
-	@Override public String getSimpleName() { return "aurora-postgresql"; }
+
+	public AuroraPostgres16() {
+		super(() -> null);
+	}
+
+	@Override
+	public String getProductName() {
+		return "Aurora PostgreSQL";
+	}
+
+	@Override
+	public String getSimpleName() {
+		return "aurora-postgresql";
+	}
 }

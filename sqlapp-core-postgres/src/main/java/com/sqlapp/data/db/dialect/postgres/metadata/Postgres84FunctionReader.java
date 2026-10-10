@@ -48,8 +48,9 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = super.createFunction(rs);
 		String sourceDdl = rs.getString("functiondef");
-		if (sourceDdl != null) obj.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64",
-				java.util.Base64.getEncoder().encodeToString(sourceDdl.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+		if (sourceDdl != null)
+			obj.getSpecifics().put("POSTGRES_ROUTINE_DDL_BASE64", java.util.Base64.getEncoder()
+					.encodeToString(sourceDdl.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 		if (this.getReaderOptions().isReadDefinition()) {
 			obj.setDefinition(rs.getString("functiondef"));
 		}
@@ -65,12 +66,14 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 		if (proretset != null && proretset.booleanValue()) {
 			obj.setFunctionType(FunctionType.Table);
 		}
-		if (rs.getInt("pronargs") == 0) setArguments(rs, obj);
+		if (rs.getInt("pronargs") == 0)
+			setArguments(rs, obj);
 		String result = rs.getString("function_result");
-		if (result != null && result.startsWith("TABLE(")) setReturningRecordType(rs, obj);
+		if (result != null && result.startsWith("TABLE("))
+			setReturningRecordType(rs, obj);
 		// The model cannot represent local SET clauses or external library bindings.
-		if (rs.getString("proconfig") != null
-				|| rs.getString("probin") != null) obj.setDefinition(rs.getString("functiondef"));
+		if (rs.getString("proconfig") != null || rs.getString("probin") != null)
+			obj.setDefinition(rs.getString("functiondef"));
 		return obj;
 	}
 
@@ -94,21 +97,26 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 		int inputIndex = 0;
 		SeparatedStringBuilder identity = new SeparatedStringBuilder(",");
 		for (int i = 0; i < types.length; i++) {
-			NamedArgument argument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(),
-					getDialect(), types[i].toString());
+			NamedArgument argument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(), getDialect(),
+					types[i].toString());
 			String mode = modes == null ? "i" : modes[i].toString();
-			argument.setName(names == null || names[i] == null || names[i].toString().isEmpty() ? null : names[i].toString());
-			if (argument.getName() == null) argument.getSpecifics().put("UNNAMED_ARGUMENT", true);
+			argument.setName(
+					names == null || names[i] == null || names[i].toString().isEmpty() ? null : names[i].toString());
+			if (argument.getName() == null)
+				argument.getSpecifics().put("UNNAMED_ARGUMENT", true);
 			argument.setDirection("o".equals(mode) || "t".equals(mode) ? ParameterDirection.Output
 					: "b".equals(mode) ? ParameterDirection.Inout : ParameterDirection.Input);
 			boolean input = argument.getDirection() != ParameterDirection.Output;
 			if (input) {
 				int defaultIndex = inputIndex++ - (inputCount - defaults.size());
-				if (defaultIndex >= 0) argument.setDefaultValue(defaults.get(defaultIndex));
+				if (defaultIndex >= 0)
+					argument.setDefaultValue(defaults.get(defaultIndex));
 				identity.add(PostgresUtils.typeName(argument));
 			}
-			if ("v".equals(mode)) argument.getSpecifics().put("VARIADIC", true);
-			if (!"t".equals(mode)) obj.getArguments().add(argument);
+			if ("v".equals(mode))
+				argument.getSpecifics().put("VARIADIC", true);
+			if (!"t".equals(mode))
+				obj.getArguments().add(argument);
 		}
 		obj.setSpecificName(obj.getName() + "(" + identity.toString() + ")");
 	}
@@ -119,11 +127,14 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 		Object[] modes = array(rs, "proargmodes");
 		obj.getReturning().toTable();
 		for (int i = 0; types != null && i < types.length; i++) {
-			if (!"t".equals(modes[i].toString())) continue;
-			NamedArgument argument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(), getDialect(), types[i].toString());
+			if (!"t".equals(modes[i].toString()))
+				continue;
+			NamedArgument argument = PostgresUtils.getTypeInfoById(rs.getStatement().getConnection(), getDialect(),
+					types[i].toString());
 			obj.getReturning().getTable().getColumns().add(names[i].toString(), column -> {
 				column.setDataType(argument.getDataType()).setDataTypeName(argument.getDataTypeName())
-						.setLength(argument.getLength()).setScale(argument.getScale()).setArrayDimension(argument.getArrayDimension());
+						.setLength(argument.getLength()).setScale(argument.getScale())
+						.setArrayDimension(argument.getArrayDimension());
 			});
 		}
 		obj.setFunctionType(FunctionType.Table);
@@ -131,8 +142,12 @@ public class Postgres84FunctionReader extends PostgresFunctionReader {
 
 	private Object[] array(ExResultSet rs, String name) throws SQLException {
 		java.sql.Array array = rs.getArray(name);
-		if (array == null) return null;
-		try { return (Object[]) array.getArray(); }
-		finally { array.free(); }
+		if (array == null)
+			return null;
+		try {
+			return (Object[]) array.getArray();
+		} finally {
+			array.free();
+		}
 	}
 }

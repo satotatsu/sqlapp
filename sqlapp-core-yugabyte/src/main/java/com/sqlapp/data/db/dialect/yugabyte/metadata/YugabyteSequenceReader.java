@@ -8,7 +8,9 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.postgres.metadata.PostgresSequenceReader;
 import com.sqlapp.data.schemas.Sequence;
 
-/** Reads configuration from pg_sequence on both supported YSQL engine majors. */
+/**
+ * Reads configuration from pg_sequence on both supported YSQL engine majors.
+ */
 public class YugabyteSequenceReader extends PostgresSequenceReader {
 	public YugabyteSequenceReader(Dialect dialect) {
 		super(dialect);
@@ -24,15 +26,18 @@ public class YugabyteSequenceReader extends PostgresSequenceReader {
 			statement.setString(1, sequence.getSchemaName());
 			statement.setString(2, sequence.getName());
 			try (var rows = statement.executeQuery()) {
-				if (!rows.next()) throw new SQLException("Sequence metadata missing: " + sequence.getSchemaName() + "." + sequence.getName());
+				if (!rows.next())
+					throw new SQLException(
+							"Sequence metadata missing: " + sequence.getSchemaName() + "." + sequence.getName());
 				String typeName = rows.getString("sequence_type");
 				sequence.setDataType(switch (typeName) {
-					case "smallint" -> DataType.SMALLINT;
-					case "integer" -> DataType.INT;
-					case "bigint" -> DataType.BIGINT;
-					default -> null;
+				case "smallint" -> DataType.SMALLINT;
+				case "integer" -> DataType.INT;
+				case "bigint" -> DataType.BIGINT;
+				default -> null;
 				});
-				if (sequence.getDataType() == null) sequence.setDataTypeName(typeName);
+				if (sequence.getDataType() == null)
+					sequence.setDataTypeName(typeName);
 				sequence.setStartValue(rows.getBigDecimal("seqstart"));
 				sequence.setIncrementBy(rows.getBigDecimal("seqincrement"));
 				sequence.setMinValue(rows.getBigDecimal("seqmin"));

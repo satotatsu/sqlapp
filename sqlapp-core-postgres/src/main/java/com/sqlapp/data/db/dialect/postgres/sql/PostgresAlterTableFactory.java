@@ -100,7 +100,8 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 	@Override
 	protected void addAlterColumn(Table originalTable, Table table, Column oldColumn, Column column,
 			DbObjectDifference diff, List<SqlOperation> result) {
-		if (commentOnly(diff)) return;
+		if (commentOnly(diff))
+			return;
 		boolean changeNotNull = diff.getChangedProperties().containsKey(SchemaProperties.NOT_NULL.getLabel());
 		boolean changeDefault = diff.getChangedProperties().containsKey(SchemaProperties.DEFAULT_VALUE.getLabel());
 		String _default = column.getDefaultValue();
@@ -161,21 +162,22 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 	}
 
 	private boolean commentOnly(DbObjectDifference difference) {
-		return !difference.getChangedProperties().isEmpty()
-				&& difference.getChangedProperties().keySet().stream()
-						.allMatch(key -> key.equals(SchemaProperties.REMARKS.getLabel()));
+		return !difference.getChangedProperties().isEmpty() && difference.getChangedProperties().keySet().stream()
+				.allMatch(key -> key.equals(SchemaProperties.REMARKS.getLabel()));
 	}
 
 	@Override
 	protected void addIndexDefinition(Table original, Table table, Index oldIndex, Index index,
 			DbObjectDifference difference, List<SqlOperation> result) {
-		if (!commentOnly(difference)) super.addIndexDefinition(original, table, oldIndex, index, difference, result);
+		if (!commentOnly(difference))
+			super.addIndexDefinition(original, table, oldIndex, index, difference, result);
 	}
 
 	@Override
 	protected void addConstraintDefinition(Table original, Table table, Constraint oldConstraint, Constraint constraint,
 			DbObjectDifference difference, List<SqlOperation> result) {
-		if (!commentOnly(difference)) super.addConstraintDefinition(original, table, oldConstraint, constraint, difference, result);
+		if (!commentOnly(difference))
+			super.addConstraintDefinition(original, table, oldConstraint, constraint, difference, result);
 	}
 
 	@Override
@@ -207,8 +209,8 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 		Difference<?> tableProp = allDiff.get(SchemaProperties.REMARKS.getLabel());
 		if (tableProp != null && tableProp.getState().isChanged()) {
 			PostgresSqlBuilder builder = this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().$if(
-					table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.null_());
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
+					.$if(table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
@@ -220,8 +222,8 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 				Column obj = (Column) diff.getTargetParent();
 				PostgresSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName())
-						.is().$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()),
-								() -> builder.null_());
+						.is()
+						.$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -233,8 +235,8 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 			for (DbObjectPropertyDifference diff : diffs) {
 				Index obj = (Index) diff.getTargetParent();
 				PostgresSqlBuilder builder = this.createSqlBuilder();
-				builder.comment().on().index().space().name(obj, this.getOptions().isDecorateSchemaName()).is().$if(
-						obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
+				builder.comment().on().index().space().name(obj, this.getOptions().isDecorateSchemaName()).is()
+						.$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -247,8 +249,8 @@ public class PostgresAlterTableFactory extends AbstractAlterTableFactory<Postgre
 				Constraint obj = (Constraint) diff.getTargetParent();
 				PostgresSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().constraint().space().name(obj, this.getOptions().isDecorateSchemaName()).on()
-						.name(table, this.getOptions().isDecorateSchemaName()).is().$if(obj.getRemarks() != null,
-								() -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
+						.name(table, this.getOptions().isDecorateSchemaName()).is()
+						.$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}

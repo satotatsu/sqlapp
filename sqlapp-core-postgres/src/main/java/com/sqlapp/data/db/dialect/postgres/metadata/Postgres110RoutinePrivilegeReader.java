@@ -6,7 +6,10 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** Procedure kind is available from PostgreSQL 11. */
 public class Postgres110RoutinePrivilegeReader extends PostgresRoutinePrivilegeReader {
-	protected Postgres110RoutinePrivilegeReader(Dialect dialect) { super(dialect); }
+	protected Postgres110RoutinePrivilegeReader(Dialect dialect) {
+		super(dialect);
+	}
+
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo version) {
 		return getSqlNodeCache().getString("routinePrivileges110.sql");

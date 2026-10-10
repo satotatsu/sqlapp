@@ -59,6 +59,7 @@ class MariadbJdbcTreeDataSessionTest {
 					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
 		}
 	}
+
 	@Test
 	void testBatchGeneratedKeysPropagateToMatchingChildren() throws SQLException {
 		try (Connection connection = MARIADB.createConnection("")) {

@@ -21,7 +21,6 @@ version.
 | Invoke file, HTML, data, or migration commands from Java | `sqlapp-command` plus the required dialect and JDBC driver |
 | Use Gradle tasks | Apply `com.sqlapp.db`, then add the required dialect and JDBC driver to the task runtime classpath |
 | Generate current ELK-based ER diagrams directly | `sqlapp-elk-svg` |
-| Use legacy Graphviz rendering | `sqlapp-graphviz` |
 | Reuse sqlapp test helpers | `sqlapp-core-test` in the test configuration only |
 
 `sqlapp-command` exposes `sqlapp-core` and `sqlapp-elk-svg` transitively.
@@ -164,7 +163,6 @@ application runtime classpath.
 | `sqlapp-command` | File handling, HTML, data, generation, synchronization, and migration commands | `sqlapp-core`, `sqlapp-elk-svg` |
 | `sqlapp-gradle-plugin` | Plugin implementation for ID `com.sqlapp.db` | `sqlapp-command`; also includes MDB and SQLite dialects |
 | `sqlapp-elk-svg` | Current ELK-based SVG ER renderer | `sqlapp-core` |
-| `sqlapp-graphviz` | Legacy Graphviz ER renderer | Uses `sqlapp-core` internally |
 | `sqlapp-core-test` | Shared test fixtures and utilities | `sqlapp-core` |
 
 The Gradle plugin should normally be applied with the `plugins` block. A direct
@@ -193,6 +191,7 @@ recommended.
 | MySQL | `sqlapp-core-mysql` | MySQL Connector/J |
 | Oracle Database | `sqlapp-core-oracle` | None |
 | Apache Phoenix | `sqlapp-core-phoenix` | None |
+| AlloyDB / AlloyDB Omni | `sqlapp-core-alloydb` | Reuses `sqlapp-core-postgres`; no additional driver; [managed-service verification pending](../sqlapp-core-alloydb/README.md) |
 | Aurora PostgreSQL (experimental) | `sqlapp-core-aurora` | Reuses `sqlapp-core-postgres`; no additional driver; [Aurora execution unverified](../sqlapp-core-aurora/README.md) |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | Reuses `sqlapp-core-postgres`; no additional driver |
 | CockroachDB | `sqlapp-core-cockroach` | Reuses `sqlapp-core-postgres`; no additional driver |

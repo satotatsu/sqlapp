@@ -9,7 +9,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 class PostgresIndexQueryVersionTest {
 	@Test
 	void isolatesCatalogPredicateAndSortFieldsToModernQueries() {
-		for (int major : new int[] {10, 11, 14, 15}) {
+		for (int major : new int[] { 10, 11, 14, 15 }) {
 			var dialect = DialectResolver.getInstance().getDialect("postgres", major, 0, null);
 			var reader = new PostgresIndexReader(dialect);
 			String sql = reader.getSqlSqlNode(new ProductVersionInfo().setMajorVersion(major)).toString();

@@ -26,9 +26,13 @@ class YugabyteDialectResolverTest {
 		var procedure = new com.sqlapp.data.schemas.Function("p");
 		procedure.getSpecifics().put("ROUTINE_KIND", "PROCEDURE");
 		var target = procedure.clone().setSqlSecurity(com.sqlapp.data.schemas.SqlSecurity.Definer);
-		assertThrows(UnsupportedOperationException.class, () -> new Yugabyte11().createSqlFactoryRegistry().createSql(procedure.diff(target)));
-		assertTrue(new Yugabyte15().createSqlFactoryRegistry().createSql(procedure.diff(target)).get(0).getSqlText().startsWith("ALTER PROCEDURE "));
-		assertTrue(new Yugabyte11().createSqlFactoryRegistry().createSql(procedure.diff(procedure.clone().setRemarks("comment"))).get(0).getSqlText().startsWith("COMMENT ON PROCEDURE "));
+		assertThrows(UnsupportedOperationException.class,
+				() -> new Yugabyte11().createSqlFactoryRegistry().createSql(procedure.diff(target)));
+		assertTrue(new Yugabyte15().createSqlFactoryRegistry().createSql(procedure.diff(target)).get(0).getSqlText()
+				.startsWith("ALTER PROCEDURE "));
+		assertTrue(new Yugabyte11().createSqlFactoryRegistry()
+				.createSql(procedure.diff(procedure.clone().setRemarks("comment"))).get(0).getSqlText()
+				.startsWith("COMMENT ON PROCEDURE "));
 	}
 
 	private DatabaseMetaData metadata(String name, String version, int major) {
@@ -70,9 +74,11 @@ class YugabyteDialectResolverTest {
 	@Test
 	void surfacesMetadataFailure() {
 		DatabaseMetaData broken = (DatabaseMetaData) Proxy.newProxyInstance(DatabaseMetaData.class.getClassLoader(),
-				new Class<?>[] { DatabaseMetaData.class }, (proxy, method, args) -> { throw new SQLException("broken"); });
-		assertInstanceOf(SQLException.class,
-				assertThrows(IllegalStateException.class, () -> new YugabyteDialectResolver().resolveDatabaseMetaData(broken)).getCause());
+				new Class<?>[] { DatabaseMetaData.class }, (proxy, method, args) -> {
+					throw new SQLException("broken");
+				});
+		assertInstanceOf(SQLException.class, assertThrows(IllegalStateException.class,
+				() -> new YugabyteDialectResolver().resolveDatabaseMetaData(broken)).getCause());
 	}
 
 	@Test
@@ -84,8 +90,8 @@ class YugabyteDialectResolverTest {
 					com.sqlapp.jdbc.bulk.BulkInsertResolver.resolve(dialect));
 			assertInstanceOf(com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertExecutor.class,
 					com.sqlapp.jdbc.bulk.BulkUpsertResolver.resolve(dialect));
-			assertTrue(dialect.getCatalogReader().getSchemaReader().getSequenceReader()
-					instanceof com.sqlapp.data.db.dialect.yugabyte.metadata.YugabyteSequenceReader);
+			assertTrue(dialect.getCatalogReader().getSchemaReader()
+					.getSequenceReader() instanceof com.sqlapp.data.db.dialect.yugabyte.metadata.YugabyteSequenceReader);
 			assertFalse(new PostgresBulkInsertProvider().supports(dialect));
 			assertFalse(new PostgresBulkUpsertProvider().supports(dialect));
 			assertFalse(new PostgresSetBasedMigrationSnapshotProvider().supports(dialect));

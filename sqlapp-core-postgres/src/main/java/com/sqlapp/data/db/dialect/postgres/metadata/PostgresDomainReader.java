@@ -90,7 +90,8 @@ public class PostgresDomainReader extends DomainReader {
 		Domain obj = new Domain(getString(rs, "domain_name"));
 		obj.setNullable(!rs.getBoolean("typnotnull"));
 		getDialect().setDbType(productDataType,
-				PostgresUtils.typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale), numericScale, obj);
+				PostgresUtils.typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale), numericScale,
+				obj);
 		obj.setId(getString(rs, "oid"));
 		// obj.setCatalogName(getString(rs, "domain_catalog"));
 		obj.setSchemaName(getString(rs, "domain_schema"));

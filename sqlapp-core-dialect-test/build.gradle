@@ -102,6 +102,7 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-aurora')
+	implementation project(':sqlapp-core-alloydb')
 	implementation project(':sqlapp-core-yugabyte')
 	implementation project(':sqlapp-core-cockroach')
 	implementation project(':sqlapp-core-saphana')
@@ -251,6 +252,61 @@ tasks.register('auroraExternalTest', Test) {
 	doFirst {
 		if (System.getenv('SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS') != 'true') {
 			throw new GradleException('Explicit SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true is required for an authorized disposable Aurora database.')
+		}
+	}
+}
+
+// Official Omni engines. Managed Google Cloud AlloyDB is outside this matrix.
+['15': 'google/alloydbomni:15.17.0', '16': 'google/alloydbomni:16.8.0', '17': 'google/alloydbomni:17.9.0'].each { engine, image ->
+	tasks.register("alloydb${engine}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Verifies the official AlloyDB Omni ${engine} engine in a disposable container."
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.alloydb.AlloyDBOmniCompatibilityTest'
+		systemProperty 'sqlapp.test.alloydb.image', image
+		systemProperty 'sqlapp.test.alloydb.expectedEngineMajor', engine
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+tasks.named('alloydb16CompatibilityTest') { mustRunAfter tasks.named('alloydb15CompatibilityTest') }
+tasks.named('alloydb17CompatibilityTest') { mustRunAfter tasks.named('alloydb16CompatibilityTest') }
+tasks.register('alloydbPostgresControlTest', Test) {
+	group = 'verification'
+	testClassesDirs = sourceSets.dockerTest.output.classesDirs
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	useJUnitPlatform()
+	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.alloydb.AlloyDBPostgresControlTest'
+	if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+		environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+	}
+	jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+	testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	mustRunAfter tasks.named('alloydb17CompatibilityTest')
+}
+tasks.register('alloydbCompatibilityTest') {
+	group = 'verification'
+	description = 'Runs the official Omni 15/16/17 matrix and ordinary PostgreSQL identification control.'
+	dependsOn tasks.named('alloydb15CompatibilityTest'), tasks.named('alloydb16CompatibilityTest'), tasks.named('alloydb17CompatibilityTest'), tasks.named('alloydbPostgresControlTest')
+}
+
+tasks.named('dockerTest') { exclude '**/alloydb/AlloyDBExternalTest.class' }
+tasks.register('alloydbExternalTest', Test) {
+	group = 'verification'
+	description = 'Opt-in destructive checks on an explicitly authorized disposable managed AlloyDB database.'
+	testClassesDirs = sourceSets.dockerTest.output.classesDirs
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	useJUnitPlatform()
+	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.alloydb.AlloyDBExternalTest'
+	outputs.upToDateWhen { false }
+	doFirst {
+		if (System.getenv('SQLAPP_ALLOYDB_ALLOW_DESTRUCTIVE_TESTS') != 'true') {
+			throw new GradleException('Explicit SQLAPP_ALLOYDB_ALLOW_DESTRUCTIVE_TESTS=true is required for an authorized disposable AlloyDB database.')
 		}
 	}
 }
