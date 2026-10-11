@@ -5,6 +5,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.schemas.Sequence;
 
 /** SQL factory registry for Informix-specific syntax. */
 public class InformixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
@@ -15,6 +16,7 @@ public class InformixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Sequence.class, SqlType.CREATE, InformixCreateSequenceFactory.class);
 		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, InformixCreateUniqueConstraintFactory.class);
 	}
 }

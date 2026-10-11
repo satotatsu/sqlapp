@@ -83,7 +83,7 @@ public class HsqlSequenceReader extends SequenceReader {
 			sequence.setPrecision(rs.getInt("NUMERIC_PRECISION"));
 		}
 		String cycle = getString(rs, "CYCLE_OPTION");// Y,N
-		if ("Y".equalsIgnoreCase(cycle)) {
+		if ("YES".equalsIgnoreCase(cycle) || "Y".equalsIgnoreCase(cycle)) {
 			sequence.setCycle(true);
 		} else {
 			sequence.setCycle(false);

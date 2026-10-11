@@ -22,6 +22,8 @@ package com.sqlapp.data.db.dialect.firebird.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.PackageBody;
+import com.sqlapp.data.schemas.Package;
+import com.sqlapp.data.schemas.Sequence;
 
 public class Firebird30SqlRegistryFactory extends Firebird25SqlFactoryRegistry {
 
@@ -32,6 +34,7 @@ public class Firebird30SqlRegistryFactory extends Firebird25SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Sequence.class, SqlType.CREATE, Firebird30CreateSequenceFactory.class);
 		//
 		registerSqlFactory(Package.class, SqlType.CREATE, Firebird30CreatePackageFactory.class);
 		//

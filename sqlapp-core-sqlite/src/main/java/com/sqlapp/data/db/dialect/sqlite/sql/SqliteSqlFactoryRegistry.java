@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Index;
 
 public class SqliteSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -34,6 +35,7 @@ public class SqliteSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 
+		registerSqlFactory(Index.class, SqlType.CREATE, SqliteCreateIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SqliteCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, SqliteTruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SqliteTruncateTemporaryTableFactory.class);

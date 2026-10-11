@@ -49,6 +49,13 @@ class Db2MetadataReaderTest {
 	}
 
 	@Test
+	void sequenceConfigurationSurvivesXmlAndDdl() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.Db2HanaSequenceAuditAssertions.verify(connection, true);
+		}
+	}
+
+	@Test
 	void testReadsRepresentativeSchemaObjectsFromLatestDb2() throws SQLException {
 		try (Connection connection = DB2.createConnection("")) {
 			createSchemaObjects(connection);

@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.h2.sql;
 
 import com.sqlapp.data.db.dialect.h2.util.H2SqlBuilder;
+import com.sqlapp.data.db.dialect.h2.H2_200;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
@@ -32,18 +33,46 @@ public class H2CreateSequenceFactory extends AbstractCreateSequenceFactory<H2Sql
 
 	@Override
 	protected void addMaxValue(final Sequence obj, H2SqlBuilder builder) {
+		if (getDialect() instanceof H2_200) {
+			super.addMaxValue(obj, builder);
+		}
 	}
 
 	@Override
 	protected void addMinValue(final Sequence obj, H2SqlBuilder builder) {
+		if (getDialect() instanceof H2_200) {
+			super.addMinValue(obj, builder);
+		}
 	}
 
 	@Override
 	protected void addCycle(final Sequence obj, H2SqlBuilder builder) {
+		if (getDialect() instanceof H2_200) {
+			super.addCycle(obj, builder);
+		}
+	}
+
+	@Override
+	protected void addCache(final Sequence obj, H2SqlBuilder builder) {
+		if (obj.getCacheSize() < 0) {
+			throw new IllegalArgumentException("Sequence cache size must not be negative");
+		}
+		if (!obj.isCache() || obj.getCacheSize() <= 1) {
+			builder.space()._add("NO CACHE");
+		} else {
+			super.addCache(obj, builder);
+		}
 	}
 
 	@Override
 	protected void addOrder(final Sequence obj, H2SqlBuilder builder) {
+	}
+
+	@Override
+	protected void addOptions(final Sequence obj, H2SqlBuilder builder) {
+		if (!obj.isCache() && obj.getCacheSize() == null) {
+			builder.space()._add("NO CACHE");
+		}
 	}
 
 }

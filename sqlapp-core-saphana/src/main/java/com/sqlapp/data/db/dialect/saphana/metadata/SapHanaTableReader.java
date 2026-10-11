@@ -66,6 +66,9 @@ public class SapHanaTableReader extends TableReader {
 				result.add(table);
 			}
 		});
+		if (result.isEmpty()) {
+			return result;
+		}
 		SqlNode partNode = getPartitionSqlSqlNode(productVersionInfo);
 		ParametersContext ccontext = context.clone();
 		ccontext.put(SCHEMA_NAME, tableMap.keySet());
@@ -76,6 +79,9 @@ public class SapHanaTableReader extends TableReader {
 				String schemaName = this.getString(rs, SCHEMA_NAME);
 				String tableName = this.getString(rs, TABLE_NAME);
 				Table table = tableMap.get(schemaName, tableName);
+				if (table == null) {
+					return;
+				}
 				table.toPartitioning();
 				String level1Expression = this.getString(rs, "LEVEL_1_EXPRESSION");
 				if (table.getPartitioning().getPartitioningColumns().isEmpty()) {
@@ -100,7 +106,7 @@ public class SapHanaTableReader extends TableReader {
 				}
 				if (table.getPartitioning().getPartitioningType() == null) {
 					int level1Count = this.getInteger(rs, "LEVEL_1_COUNT");
-					// int level2Count=this.getInteger(rs, "LEVEL_2_COUNT");
+					int level2Count = this.getInteger(rs, "LEVEL_2_COUNT");
 					String level1Type = this.getString(rs, "LEVEL_1_TYPE");
 					String level2Type = this.getString(rs, "LEVEL_2_TYPE");
 					table.getPartitioning().setPartitioningType(PartitioningType.parse(level1Type));
@@ -110,7 +116,7 @@ public class SapHanaTableReader extends TableReader {
 					}
 					if (table.getPartitioning().getSubPartitioningType() != null
 							&& table.getPartitioning().getSubPartitioningType().isSizePartitioning()) {
-						table.getPartitioning().setSubPartitionSize(level1Count);
+						table.getPartitioning().setSubPartitionSize(level2Count);
 					}
 					setStatistics(rs, "EXTENDED_STORAGE_ENABLE_DELTA", table.getPartitioning());
 				}

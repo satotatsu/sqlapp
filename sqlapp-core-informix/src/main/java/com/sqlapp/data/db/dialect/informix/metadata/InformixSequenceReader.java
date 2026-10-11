@@ -43,6 +43,7 @@ public class InformixSequenceReader extends SequenceReader {
 				sequence.setMaxValue(rs.getLong("maximum_value"));
 				sequence.setCycle(rs.getInt("cycle_option") != 0);
 				sequence.setCacheSize(rs.getLong("cache_size"));
+				sequence.setCache(sequence.getCacheSize() > 0);
 				result.add(sequence);
 			}
 		});

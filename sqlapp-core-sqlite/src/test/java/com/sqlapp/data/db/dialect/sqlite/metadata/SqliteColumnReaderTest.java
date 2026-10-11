@@ -11,6 +11,12 @@ import org.junit.jupiter.api.Test;
 
 class SqliteColumnReaderTest {
 	@Test
+	void ignoresParenthesesInQuotedObjectNames() {
+		assertEquals(java.util.List.of("lower(value) DESC", "id"), SqliteColumnReader.splitColumnDefinitions(
+				"CREATE INDEX \"ix(quoted\" ON \"table(quoted\" (lower(value) DESC, id) WHERE id>0"));
+	}
+
+	@Test
 	void splitsDefinitionsWithoutSplittingExpressionsOrStrings() {
 		var definitions = SqliteColumnReader.splitColumnDefinitions("""
 				CREATE TABLE sample (

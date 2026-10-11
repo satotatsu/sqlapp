@@ -20,7 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.tripleKeyMap;
+import static com.sqlapp.util.CommonUtils.quadKeyMap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -37,7 +37,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.TripleKeyMap;
+import com.sqlapp.util.QuadKeyMap;
 
 /**
  * MySqlのインデックス読み込みクラス
@@ -56,28 +56,29 @@ public class MySqlIndexReader extends IndexReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
-		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
+		final QuadKeyMap<String, String, String, String, Index> map = quadKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String catalog_name = getString(rs, TABLE_CATALOG);
 				String schema_name = getString(rs, TABLE_SCHEMA);
 				String name = getString(rs, INDEX_NAME);
+				String tableName = getString(rs, TABLE_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
 				String expression = getString(rs, "EXPRESSION");
 				String indexType = getString(rs, "INDEX_TYPE");
-				Index index = map.get(catalog_name, schema_name, name);
+				Index index = map.get(catalog_name, schema_name, tableName, name);
 				Long subPart = getLong(rs, "SUB_PART");
 				if (index == null) {
 					index = new Index(name);
 					index.setCatalogName(catalog_name);
 					index.setSchemaName(schema_name);
-					index.setTableName(getString(rs, TABLE_NAME));
-					index.setRemarks(getString(rs, "COMMENT"));
+					index.setTableName(tableName);
+					index.setRemarks(getString(rs, "INDEX_COMMENT"));
 					index.setIndexType(IndexType.parse(indexType));
 					index.setUnique(rs.getInt("NON_UNIQUE") == 0);
 					result.add(index);
-					map.put(catalog_name, schema_name, name, index);
+					map.put(catalog_name, schema_name, tableName, name, index);
 				}
 				String visible = getString(rs, "IS_VISIBLE");
 				if (visible != null) {

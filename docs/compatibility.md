@@ -2430,3 +2430,182 @@ filtered INCLUDE/DESC indexes, and enabled change tracking with column tracking.
 Only owned temporary schemas/tables and databases in disposable local containers
 were modified. No external or production database was accessed. No generated
 build artifacts are intentionally retained in the source diff.
+
+
+### Db2, SQLite and SAP HANA metadata audit (2026-10-11)
+
+This audit strengthens the existing dialects without changing public APIs, dependencies,
+configuration formats or the Schema XML format. Changes are owned by `sqlapp-core-db2`,
+`sqlapp-core-sqlite` and `sqlapp-core-saphana`; local integration coverage is in
+`sqlapp-core-dialect-test`.
+
+- **Db2 LUW:** sequence metadata recognizes catalog `CACHE=1` as `NO CACHE`.
+  Generation retains `ORDER` and emits `NO CACHE` for disabled caching and catalog
+  sentinel values instead of invalid `CACHE 0`/`CACHE 1`. Decimal sequence types retain
+  their precision with scale zero; nonzero scale is rejected. Bulk partition readers
+  skip rows outside the exact selected schema/table pairs and skip an empty selection.
+  The resolver and supported older catalog branches are unchanged. This is LUW coverage,
+  not a claim about Db2 for z/OS or IBM i.
+- **SQLite:** on 3.16 and newer, table-valued PRAGMAs batch column, index, primary key,
+  UNIQUE, CHECK and foreign-key metadata across the selected tables. Table options are
+  fetched together. Table detail takes six statements for either one or eight tables,
+  with no additional SELECT per index or column. Table enumeration is separate.
+  `table_xinfo` is used from 3.26; earlier versions retain `table_info`. Views remain
+  eligible for column reads. Schema parameters keep attached databases isolated.
+  Index generation now retains partial predicates and uses SQLite's index-schema / unqualified
+  table syntax, automatically qualifying attached schemas. The optional `sqlite.index.keys` specifics preserves complete key SQL, including
+  COLLATE, expressions and sort order. It takes precedence over modeled key columns; callers
+  editing those columns must update or remove it. SQLite-created autoindexes are not emitted
+  as independent CREATE INDEX statements. Expression-index sort order and partial predicates
+  are retained, and `WHERE` inside
+  a quoted identifier, expression string or comment is not mistaken for the predicate.
+  Before 3.16, the legacy per-object PRAGMA/JDBC path remains: these releases lack
+  table-valued PRAGMAs, so there is no equivalent catalog join for column/index/FK detail.
+- **SAP HANA:** sequence reads retain decimal start numbers beyond Java `long`, cache
+  size/state and creation time. The locally verified `CACHE_SIZE=1` representation
+  is treated as no caching. Generation retains `NO CACHE` and the existing optional
+  `RESET_BY_QUERY` specifics as `RESET BY <query>`. Partition reads skip empty selections
+  and rows outside the requested schema/table pairs. Hash subpartition size uses the
+  second-level count rather than repeating the first-level count. Existing HANA Platform
+  and HANA Cloud resolver boundaries remain unchanged.
+
+Tests cover SQLite in-memory databases, constant query counts, attached schemas,
+generated columns and rowid keys; mocked metadata checks cover large sequence starts,
+partition routing and empty selections. Local disposable database tests cover Db2
+11.5.8 / 12.1.5 and SAP HANA Express 2.00.088, including sequence XML → DDL → reread.
+No external or production database is used. Schema recreation tests verify configuration,
+not a live sequence migration high-water mark. Older Db2/HANA instances and managed HANA
+Cloud are not qualified by these local tests; specialized storage, security and advanced
+DDL features still require focused coverage.
+
+Verification uses Java 21 and the repository wrapper:
+
+```powershell
+.\gradlew.bat :sqlapp-core-db2:test :sqlapp-core-sqlite:test :sqlapp-core-saphana:test --continue --console=plain
+.\gradlew.bat :sqlapp-core-db2:test :sqlapp-core-sqlite:test :sqlapp-core-saphana:test :sqlapp-core-dialect-test:dockerTest --tests '*db2.*MetadataReaderTest' --tests '*saphana.SapHanaMetadataReaderTest' --tests '*sqlite.SqliteMetadataReaderTest' :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+The final focused module run passed **128 tests** (Db2 40, SQLite 61, HANA 27),
+with no failures, errors or skips. The local database/dependent-module matrix was
+**BUILD SUCCESSFUL** (10m15s), and the final module/dependent verification after the
+last SQLite default-schema fix was **BUILD SUCCESSFUL** (48s). Combined final results
+are **758 passing tests**, with zero failures, errors or skips:
+
+| Scope | Tests |
+| --- | ---: |
+| Db2 unit | 40 |
+| SQLite unit / in-memory integration | 61 |
+| HANA unit | 27 |
+| Db2 11.5 / 12.1, HANA Express, SQLite metadata integration | 6 |
+| command | 543 |
+| Gradle plugin | 81 |
+
+The last dependent verification command was:
+
+```powershell
+.\gradlew.bat :sqlapp-core-db2:test :sqlapp-core-sqlite:test :sqlapp-core-saphana:test :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+Documentation link/fence validation also passed. No generated files are intentionally
+retained; only this audit's temporary logs and tracked build-output changes were cleaned up.
+ Development runs caught and corrected catalog no-cache
+sentinels and test-fixture assumptions about Schema numeric types and reader parentage;
+those failed development runs are not counted as successful verification.
+
+Primary references: [SQLite PRAGMA functions](https://www.sqlite.org/pragma.html#pragfunc),
+[SQLite 3.26 table_xinfo boundary](https://sqlite.org/releaselog/3_26_0.html),
+[Db2 LUW CREATE SEQUENCE](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-create-sequence),
+[HANA SEQUENCES catalog](https://help.sap.com/docs/SAP_HANA_PLATFORM/4fe29514fd584807ac9f2a04f6754767/20cf0e79751910149462bf9e7d571ab8.html),
+and [HANA RESET BY / cache syntax](https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-database-sql-reference-guide/alter-sequence-statement-data-definition).
+
+
+## Remaining dialect metadata and sequence audit (2026-10)
+
+This batch changes MySQL (and inherited MariaDB), Firebird, H2, HSQLDB,
+Informix, SAP ASE (`sqlapp-core-sybase`) and Vertica (`sqlapp-core-virtica`).
+Public APIs, Schema XML formats and dependency versions are unchanged.
+MDB remains available for migration. Phoenix and Spanner are included in the
+module regression scope; this does not imply new server/cluster coverage.
+
+- MySQL/MariaDB indexes are grouped by catalog, schema, **table and index**.
+  Tables may use the same index name without their columns being merged. Index
+  remarks come from `INDEX_COMMENT`, rather than the internal `COMMENT` status.
+  Set-based retrieval is retained; integration tests assert one statistics SELECT
+  for a multi-table read. The fix is shared by supported MySQL/MariaDB readers.
+- HSQLDB sequences recognize the catalog's `YES` cycle flag, while retaining
+  compatibility with `Y`. In-memory tests recreate both cyclic and non-cyclic
+  sequences and compare start, increment and bounds.
+- H2 2.x sequence CREATE DDL retains MINVALUE, MAXVALUE and CYCLE. Its reader also
+  retains the declared data type and numeric metadata. H2 1.x keeps its existing
+  clause selection and catalog query. Cache sizes 0/1 or an explicitly disabled
+  cache generate NO CACHE; negative sizes fail clearly. In-memory recreation
+  checks INTEGER type, bounds, cycle and no-cache behavior.
+- Firebird 3.0+ sequence CREATE DDL retains START WITH and INCREMENT BY. Firebird
+  2.x factory behavior is unchanged. START WITH is preserved as catalog metadata;
+  Firebird 3's first generated value remains start + increment, according to its
+  server semantics. Package CREATE registration now uses the Schema Package
+  class rather than `java.lang.Package`. Unit tests cover 2.5/3.0/5.0 selection.
+- Informix has a dialect-owned sequence CREATE factory. It omits unsupported AS
+  type syntax, emits NOCACHE for a disabled/zero cache, and rejects negative or
+  enabled size-one caches (Informix requires at least two cached values). The
+  sequence reader reflects whether catalog caching is enabled.
+- Vertica sequence CREATE/ALTER honors disabled caching and sizes 0/1 as NO CACHE;
+  negative sizes fail clearly. Its reader reflects cache enablement. The sequence
+  catalog has no original START value: CURRENT_VALUE is distribution state and
+  is not treated as the original start or as a safe migration high-water mark.
+- ASE normal and unique index readers also include table identity when grouping
+  rows. Synthetic catalog tests cover same-named indexes on distinct tables.
+
+Local disposable integration coverage for this batch: MySQL 5.7/8.0/8.4,
+MariaDB 10.5/11.4/11.8, Firebird 3.0, Informix 14.10 and Vertica CE 25.1.
+Embedded coverage uses the repository's H2 and HSQLDB drivers. External services
+and production databases are not accessed. Older server releases, Firebird 5
+live sequence recreation, ASE live same-name metadata and Phoenix clusters
+remain outside this batch's real-server verification. Vertica projections,
+segmentation and KSAFE remain separate work.
+
+References: [H2 sequence grammar](https://h2database.github.io/html/grammar.html),
+[HSQLDB sequences](https://hsqldb.org/doc/guide/databaseobjects-chapt.html),
+[Firebird 3 sequence semantics](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref30/fblangref30-ddl-sequence.html),
+[Informix cache rules](https://www.ibm.com/docs/en/informix-servers/12.10.0?topic=css-cache-nocache-option),
+[Vertica sequence syntax](https://docs.vertica.com/11.1.x/en/sql-reference/statements/create-statements/create-sequence/),
+and [Vertica sequence catalog](https://docs.vertica.com/11.1.x/en/sql-reference/system-tables/v-catalog-schema/sequences/).
+
+
+Verification commands for this audit (Java 21, repository wrapper):
+
+```powershell
+.\gradlew.bat :sqlapp-core-mysql:test :sqlapp-core-mariadb:test :sqlapp-core-firebird:test :sqlapp-core-h2:test :sqlapp-core-hsql:test :sqlapp-core-informix:test :sqlapp-core-sybase:test :sqlapp-core-virtica:test :sqlapp-core-mdb:test :sqlapp-core-phoenix:test :sqlapp-core-spanner:test :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*mysql.*MetadataReaderTest' --tests '*mariadb.*MetadataReaderTest' --tests '*firebird.Firebird30MetadataReaderTest' --tests '*informix.InformixBulkInsertTest.recreatesUncachedSequence' --tests '*virtica.VirticaBulkInsertTest.recreatesUncachedSequence' --console=plain
+```
+
+Development verification caught two test-compilation errors (a protected reader
+accessor and a constraint fluent setter's return type); both were corrected.
+These intermediate failed runs are not counted as passing verification.
+Cache disabling also works without a size (`cache=false`, absent `cacheSize`),
+covered by SQL factory regression tests; default caching remains unchanged.
+
+
+Final verification: **1,017 passing tests**, zero failures, errors or skips.
+The final module/dependent command succeeded in 18s (previous full run plus
+incremental final checks); the disposable database matrix succeeded in 3m05s.
+
+| Scope | Tests |
+| --- | ---: |
+| `sqlapp-core-mysql` | 78 |
+| `sqlapp-core-mariadb` | 34 |
+| `sqlapp-core-firebird` | 13 |
+| `sqlapp-core-h2` | 48 |
+| `sqlapp-core-hsql` | 46 |
+| `sqlapp-core-informix` | 9 |
+| `sqlapp-core-sybase` | 30 |
+| `sqlapp-core-virtica` | 30 |
+| `sqlapp-core-mdb` | 42 |
+| `sqlapp-core-phoenix` | 7 |
+| `sqlapp-core-spanner` | 40 |
+| `sqlapp-command` | 543 |
+| `sqlapp-gradle-plugin` | 81 |
+| Disposable database matrix | 16 |
+
+Documentation validation passed (670 local links, 59 reachable current pages,
+closed code fences). No generated files are intentionally retained.

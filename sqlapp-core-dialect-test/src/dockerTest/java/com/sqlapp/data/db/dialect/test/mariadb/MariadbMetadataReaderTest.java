@@ -51,6 +51,13 @@ class MariadbMetadataReaderTest {
 	}
 
 	@Test
+	void keepsSameNamedIndexesOnDifferentTablesSeparate() throws SQLException {
+		try (Connection connection = DriverManager.getConnection(MARIADB.getJdbcUrl(), "root", ROOT_PASSWORD)) {
+			com.sqlapp.data.db.dialect.test.MySqlIndexAuditAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void testReadsRepresentativeSchemaObjectsFromMariaDb118() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(MARIADB.getJdbcUrl(), "root", ROOT_PASSWORD);
 				Statement statement = connection.createStatement()) {

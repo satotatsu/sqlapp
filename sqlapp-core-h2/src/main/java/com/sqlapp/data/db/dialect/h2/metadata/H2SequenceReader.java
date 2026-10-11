@@ -79,8 +79,12 @@ public class H2SequenceReader extends SequenceReader {
 		obj.setLastValue(rs.getBigDecimal("CURRENT_VALUE"));
 		obj.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 		obj.setCacheSize(rs.getBigDecimal("CACHE"));
+		obj.setCache(obj.getCacheSize() != null && obj.getCacheSize() > 1);
 		this.setStatistics(rs, "IS_GENERATED", obj);
 		if (modern) {
+			obj.setDataTypeName(getString(rs, "DATA_TYPE"));
+			obj.setPrecision(getInteger(rs, "NUMERIC_PRECISION"));
+			obj.setScale(getInteger(rs, "NUMERIC_SCALE"));
 			obj.setStartValue(rs.getBigDecimal("START_VALUE"));
 			obj.setMinValue(rs.getBigDecimal("MINIMUM_VALUE"));
 			obj.setMaxValue(rs.getBigDecimal("MAXIMUM_VALUE"));

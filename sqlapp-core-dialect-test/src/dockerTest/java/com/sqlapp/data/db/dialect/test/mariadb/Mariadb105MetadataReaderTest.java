@@ -43,6 +43,13 @@ class Mariadb105MetadataReaderTest {
 	}
 
 	@Test
+	void keepsSameNamedIndexesOnDifferentTablesSeparate() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlIndexAuditAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void readsCoreSchemaObjectsWithThe105Reader() throws SQLException {
 		try (Connection connection = MARIADB.createConnection(""); Statement statement = connection.createStatement()) {
 			createObjects(statement);

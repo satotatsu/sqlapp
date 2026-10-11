@@ -110,6 +110,9 @@ public class Db2TableReader extends TableReader {
 	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
 			final List<Table> tableList) throws SQLException {
+		if (tableList.isEmpty()) {
+			return;
+		}
 		super.setMetadataDetail(connection, context, tableList);
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitionExpression(connection, tables);
@@ -160,7 +163,9 @@ public class Db2TableReader extends TableReader {
 				final String schemaName = getString(rs, SCHEMA_NAME);
 				final String tableName = getString(rs, TABLE_NAME);
 				final Table table = tables.get(schemaName, tableName);
-				readPartitionExrepssion(rs, table);
+				if (table != null) {
+					readPartitionExrepssion(rs, table);
+				}
 			}
 		});
 	}
@@ -207,7 +212,9 @@ public class Db2TableReader extends TableReader {
 				final String schemaName = getString(rs, SCHEMA_NAME);
 				final String tableName = getString(rs, TABLE_NAME);
 				final Table table = tables.get(schemaName, tableName);
-				readPartition(rs, table);
+				if (table != null) {
+					readPartition(rs, table);
+				}
 			}
 		});
 	}

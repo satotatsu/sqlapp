@@ -73,7 +73,7 @@ class SapHanaMetadataReaderTest {
 	}
 
 	@Test
-	void testReadsRepresentativeSchemaObjectsFromHana2() throws SQLException {
+	void testReadsRepresentativeSchemaObjectsFromHana2() throws Exception {
 		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
 			try {
 				createObjects(statement);
@@ -134,6 +134,7 @@ class SapHanaMetadataReaderTest {
 				assertEquals(10L, sequence.getMinValue().longValue());
 				assertEquals(1000L, sequence.getMaxValue().longValue());
 				assertTrue(sequence.isCycle());
+				com.sqlapp.data.db.dialect.test.Db2HanaSequenceAuditAssertions.verify(connection, false);
 				var view = schema.getViews().get("METADATA_VIEW");
 				assertNotNull(view);
 				assertTrue(view.getDefinition().toString().contains("METADATA_CHILD"));

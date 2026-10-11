@@ -49,6 +49,13 @@ class MySqlMetadataReaderTest {
 	}
 
 	@Test
+	void keepsSameNamedIndexesOnDifferentTablesSeparate() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlIndexAuditAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void testReadsRepresentativeSchemaObjectsFromMySql84() throws SQLException {
 		try (Connection connection = MYSQL.createConnection(""); Statement statement = connection.createStatement()) {
 			createObjects(statement);

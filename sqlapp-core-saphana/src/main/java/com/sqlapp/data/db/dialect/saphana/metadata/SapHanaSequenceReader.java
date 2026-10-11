@@ -71,7 +71,10 @@ public class SapHanaSequenceReader extends SequenceReader {
 		sequence.setId("" + rs.getLong("SEQUENCE_OID"));
 		sequence.setMinValue(rs.getBigDecimal("MIN_VALUE"));
 		sequence.setMaxValue(rs.getBigDecimal("MAX_VALUE"));
-		sequence.setStartValue(rs.getLong("START_NUMBER"));
+		sequence.setStartValue(rs.getBigDecimal("START_NUMBER"));
+		sequence.setCacheSize(rs.getInt("CACHE_SIZE"));
+		sequence.setCache(sequence.getCacheSize() > 1);
+		sequence.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT_BY"));
 		sequence.setCycle("TRUE".equalsIgnoreCase(rs.getString("IS_CYCLED")));
 		setSpecifics(rs, "RESET_BY_QUERY", sequence);

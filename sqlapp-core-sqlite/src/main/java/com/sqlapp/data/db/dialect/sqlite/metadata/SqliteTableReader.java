@@ -83,15 +83,55 @@ public class SqliteTableReader extends JdbcTableReader {
 	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
 			final List<Table> tables) throws SQLException {
+		if (tables.isEmpty()) return;
+		final ParametersContext bulkContext = context.clone();
+		bulkContext.put("tableName", tables.stream().map(Table::getName).toList());
+		if (SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo()
+				.setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
+				.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion()))) {
+			var columns = getColumnReader().getAllFull(connection, bulkContext);
+			var indexes = getIndexReader().getAllFull(connection, bulkContext);
+			var uniques = getUniqueConstraintReader().getAllFull(connection, bulkContext);
+			var checks = getCheckConstraintReader().getAllFull(connection, bulkContext);
+			var foreignKeys = getForeignKeyConstraintReader().getAllFull(connection, bulkContext);
+			var tableMap = tables.stream().collect(java.util.stream.Collectors.toMap(Table::getName, table -> table));
+			columns.forEach(o -> tableMap.get(o.getTableName()).getColumns().add(o));
+			indexes.forEach(o -> tableMap.get(o.getTableName()).getIndexes().add(o));
+			uniques.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
+			checks.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
+			foreignKeys.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
+			try (var statement = SqliteMetadataQueries.prepare(connection, bulkContext, "m.name", "", "");
+					var rs = statement.executeQuery()) {
+				while (rs.next()) {
+					Table table = tableMap.get(rs.getString("table_name"));
+					setTableOptions(table, rs.getString("table_sql"));
+				}
+			}
+			return;
+		}
+
+		final ParametersContext indexContext = context.clone();
+		indexContext.put("tableName", tables.stream().map(Table::getName).toList());
+		final var indexes = tables.isEmpty() ? List.<com.sqlapp.data.schemas.Index>of()
+				: getIndexReader().getAllFull(connection, indexContext);
 		for (Table table : tables) {
 			table.setDialect(getDialect());
+			indexes.stream().filter(index -> table.getName().equals(index.getTableName()))
+					.forEach(table.getIndexes()::add);
 			load(connection, table, getColumnReader());
-			load(connection, table, getIndexReader());
 			load(connection, table, getUniqueConstraintReader());
 			load(connection, table, getCheckConstraintReader());
 			load(connection, table, getForeignKeyConstraintReader());
 			loadTableOptions(connection, table);
 		}
+	}
+
+	private void setTableOptions(Table table, String definition) {
+		if (definition == null) return;
+		String normalized = definition.toUpperCase(Locale.ROOT);
+		String options = normalized.substring(normalized.lastIndexOf(')') + 1);
+		if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*")) table.getSpecifics().put("without_rowid", "true");
+		if (options.matches("(?s).*\\bSTRICT\\b.*")) table.getSpecifics().put("strict", "true");
 	}
 
 	private void loadTableOptions(final Connection connection, final Table table) throws SQLException {
@@ -104,19 +144,7 @@ public class SqliteTableReader extends JdbcTableReader {
 				if (!resultSet.next()) {
 					return;
 				}
-				final String definition = resultSet.getString(1);
-				if (definition == null) {
-					return;
-				}
-				final String normalized = definition.toUpperCase(Locale.ROOT);
-				final int closingParenthesis = normalized.lastIndexOf(')');
-				final String options = closingParenthesis < 0 ? "" : normalized.substring(closingParenthesis + 1);
-				if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*")) {
-					table.getSpecifics().put("without_rowid", Boolean.TRUE.toString());
-				}
-				if (options.matches("(?s).*\\bSTRICT\\b.*")) {
-					table.getSpecifics().put("strict", Boolean.TRUE.toString());
-				}
+				setTableOptions(table, resultSet.getString(1));
 			}
 		}
 	}

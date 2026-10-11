@@ -30,6 +30,7 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 	@Override
 	protected List<ForeignKeyConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) return readBulk(connection, context);
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return list();
@@ -51,6 +52,27 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private List<ForeignKeyConstraint> readBulk(Connection connection, ParametersContext context) {
+		Map<String, ForeignKeyConstraint> constraints = new LinkedHashMap<>();
+		String schema = getSchemaName(context) == null ? "main" : getSchemaName(context);
+		try (var statement = SqliteMetadataQueries.prepare(connection, context, "p.*",
+				"JOIN pragma_foreign_key_list(m.name, ?) p", ", p.id, p.seq"); var rs = statement.executeQuery()) {
+			while (rs.next()) {
+				String table = rs.getString("table_name");
+				String key = table + "\u0000" + rs.getInt("id");
+				var constraint = constraints.get(key);
+				if (constraint == null) {
+					constraint = createConstraint(context, schema, table, rs.getInt("id"), rs.getString("table"),
+							rs.getString("on_update"), rs.getString("on_delete"));
+					constraints.put(key, constraint);
+				}
+				constraint.getColumns().add(new Column(rs.getString("from")));
+				constraint.getRelatedColumns().add(rs.getString("to"));
+			}
+		} catch (SQLException e) { throw new RuntimeException(e); }
+		return List.copyOf(constraints.values());
 	}
 
 	private ForeignKeyConstraint createConstraint(final ParametersContext context, final String schemaName,

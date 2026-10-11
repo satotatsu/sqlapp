@@ -37,11 +37,61 @@ public class SqliteColumnReader extends ColumnReader {
 	@Override
 	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) {
+			return readBulkColumns(connection, context, productVersionInfo);
+		}
 		List<Column> result = readColumns(connection, context, "table_xinfo");
 		if (result.isEmpty()) {
 			result = readColumns(connection, context, "table_info");
 		}
 		return result;
+	}
+
+	private List<Column> readBulkColumns(Connection connection, ParametersContext context, ProductVersionInfo version) {
+		List<Column> result = list();
+		String pragma = version.getMajorVersion() > 3 || version.getMinorVersion() >= 26 ? "table_xinfo" : "table_info";
+		Map<String, List<Column>> primaryKeys = new java.util.LinkedHashMap<>();
+		Map<String, String> definitions = new java.util.LinkedHashMap<>();
+		try (var statement = SqliteMetadataQueries.prepare(connection, context, "p.*",
+				"JOIN pragma_" + pragma + "(m.name, ?) p", ", p.cid", true); var rs = statement.executeQuery()) {
+			while (rs.next()) {
+				String table = rs.getString("table_name");
+				String definition = rs.getString("table_sql");
+				definitions.put(table, definition);
+				Column column = new Column(rs.getString("name"));
+				column.setDialect(getDialect());
+				column.setCatalogName(getCatalogName(context));
+				column.setSchemaName(getSchemaName(context));
+				column.setTableName(table);
+				setDataType(column, rs.getString("type"));
+				int pk = rs.getInt("pk");
+				column.setNullable(rs.getInt("notnull") == 0 && pk == 0);
+				column.setDefaultValue(rs.getString("dflt_value"));
+				if (pk > 0) primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
+				int hidden = pragma.equals("table_xinfo") ? rs.getInt("hidden") : 0;
+				column.setHidden(hidden == 1);
+				column.setFormulaPersisted(hidden == 3);
+				if (hidden == 2 || hidden == 3) {
+					splitColumnDefinitions(definition).stream().filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
+							.map(SqliteColumnReader::extractFormula).filter(Objects::nonNull).findFirst().ifPresent(column::setFormula);
+				}
+				result.add(column);
+			}
+		} catch (SQLException e) { throw new RuntimeException(e); }
+		primaryKeys.forEach((table, keys) -> {
+			if (keys.size() == 1 && "INTEGER".equalsIgnoreCase(keys.get(0).getDataTypeName())
+					&& isRowIdAlias(definitions.get(table), keys.get(0).getName())) keys.get(0).setIdentity(true);
+		});
+		return result;
+	}
+
+	private static boolean isRowIdAlias(String definition, String column) {
+		if (definition == null) return true;
+		String normalized = definition.toUpperCase(Locale.ROOT);
+		String options = normalized.substring(normalized.lastIndexOf(')') + 1);
+		return !options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*") && splitColumnDefinitions(definition).stream()
+				.filter(item -> Objects.equals(column, readIdentifier(item)))
+				.noneMatch(item -> item.matches("(?is).*\\bPRIMARY\\s+KEY\\s+DESC\\b.*"));
 	}
 
 	private List<Column> readColumns(final Connection connection, final ParametersContext context,
@@ -155,7 +205,7 @@ public class SqliteColumnReader extends ColumnReader {
 		if (createSql == null) {
 			return result;
 		}
-		final int start = createSql.indexOf('(');
+		final int start = openingParenthesis(createSql);
 		if (start < 0) {
 			return result;
 		}
@@ -192,6 +242,28 @@ public class SqliteColumnReader extends ColumnReader {
 			}
 		}
 		return result;
+	}
+
+	private static int openingParenthesis(String sql) {
+		char quote = 0;
+		for (int i = 0; i < sql.length(); i++) {
+			char c = sql.charAt(i);
+			if (quote != 0) {
+				if (c == quote) {
+					if (quote != ']' && i + 1 < sql.length() && sql.charAt(i + 1) == quote) i++;
+					else quote = 0;
+				}
+			} else if (c == '\'' || c == '"' || c == '`' || c == '[') {
+				quote = c == '[' ? ']' : c;
+			} else if (c == '-' && i + 1 < sql.length() && sql.charAt(i + 1) == '-') {
+				int end = sql.indexOf('\n', i + 2);
+				i = end < 0 ? sql.length() : end;
+			} else if (c == '/' && i + 1 < sql.length() && sql.charAt(i + 1) == '*') {
+				int end = sql.indexOf("*/", i + 2);
+				i = end < 0 ? sql.length() : end + 1;
+			} else if (c == '(') return i;
+		}
+		return -1;
 	}
 
 	static String extractFormula(final String definition) {
@@ -231,11 +303,21 @@ public class SqliteColumnReader extends ColumnReader {
 		final char first = value.charAt(0);
 		if (first == '"' || first == '`' || first == '[') {
 			final char end = first == '[' ? ']' : first;
-			final int endIndex = value.indexOf(end, 1);
-			return endIndex < 0 ? value : value.substring(1, endIndex);
+			StringBuilder identifier = new StringBuilder();
+			for (int i = 1; i < value.length(); i++) {
+				char current = value.charAt(i);
+				if (current == end) {
+					if (end != ']' && i + 1 < value.length() && value.charAt(i + 1) == end) i++;
+					else return identifier.toString();
+				}
+				identifier.append(current);
+			}
+			return value;
 		}
-		final int whitespace = value.indexOf(' ');
-		return whitespace < 0 ? value : value.substring(0, whitespace);
+		for (int i = 0; i < value.length(); i++) {
+			if (Character.isWhitespace(value.charAt(i))) return value.substring(0, i);
+		}
+		return value;
 	}
 
 	private boolean hasColumn(final java.sql.ResultSet resultSet, final String name) throws SQLException {

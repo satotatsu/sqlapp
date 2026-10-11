@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.sybase.metadata;
 
-import static com.sqlapp.util.CommonUtils.tripleKeyMap;
+import static com.sqlapp.util.CommonUtils.quadKeyMap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -35,7 +35,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.TripleKeyMap;
+import com.sqlapp.util.QuadKeyMap;
 /**
  * SqlServerのインデックス作成クラス
  * 
@@ -53,17 +53,18 @@ public class SybaseIndexReader extends IndexReader {
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
+		final QuadKeyMap<String, String, String, String, Index> map = quadKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String catalog_name = getString(rs, CATALOG_NAME);
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String name = getString(rs, INDEX_NAME);
-				Index index = map.get(catalog_name, schema_name, name);
+				String tableName = getString(rs, TABLE_NAME);
+				Index index = map.get(catalog_name, schema_name, tableName, name);
 				if (index == null) {
 					index = createIndex(rs);
-					map.put(catalog_name, schema_name, name, index);
+					map.put(catalog_name, schema_name, tableName, name, index);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
 				if (rs.getInt("is_descending") == 1) {

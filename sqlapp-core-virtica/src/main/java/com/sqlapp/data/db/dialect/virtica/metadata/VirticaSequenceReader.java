@@ -73,6 +73,7 @@ public class VirticaSequenceReader extends SequenceReader {
 		obj.setMaxValue(rs.getLong("MAXIMUM"));
 		obj.setIncrementBy(rs.getLong("INCREMENT_BY"));
 		obj.setCacheSize(rs.getLong("SESSION_CACHE_COUNT"));
+		obj.setCache(obj.getCacheSize() > 1);
 		obj.setLastValue(rs.getLong("CURRENT_VALUE"));
 		obj.setCycle(rs.getBoolean("ALLOW_CYCLE"));
 		obj.setId(rs.getString("SEQUENCE_ID"));

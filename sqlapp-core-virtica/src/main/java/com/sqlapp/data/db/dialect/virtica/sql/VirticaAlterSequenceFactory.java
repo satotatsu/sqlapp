@@ -30,7 +30,17 @@ public class VirticaAlterSequenceFactory extends AbstractAlterSequenceFactory<Vi
 			builder.space()._add("RESTART").with().space()._add(obj.getStartValue());
 		}
 		if (obj.getCacheSize() != null) {
-			builder.cache().space()._add(obj.getCacheSize());
+			if (obj.getCacheSize() < 0) {
+				throw new IllegalArgumentException("Sequence cache size must not be negative");
+			}
+			if (!obj.isCache() || obj.getCacheSize() <= 1) {
+				builder.space()._add("NO CACHE");
+			} else {
+				builder.cache().space()._add(obj.getCacheSize());
+			}
+		}
+		if (!obj.isCache() && obj.getCacheSize() == null) {
+			builder.space()._add("NO CACHE");
 		}
 		if (obj.isCycle()) {
 			builder.cycle();

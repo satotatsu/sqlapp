@@ -42,6 +42,13 @@ class MySql80MetadataReaderTest {
 	}
 
 	@Test
+	void keepsSameNamedIndexesOnDifferentTablesSeparate() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlIndexAuditAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void readsVersionSpecificSchemaObjectsWithThe80Reader() throws SQLException {
 		try (Connection connection = MYSQL.createConnection(""); Statement statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE metadata80_table (" + "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, "

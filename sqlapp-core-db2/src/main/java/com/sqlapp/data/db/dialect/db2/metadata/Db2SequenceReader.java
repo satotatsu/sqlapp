@@ -79,6 +79,7 @@ public class Db2SequenceReader extends SequenceReader {
 		sequence.setMaxValue(rs.getBigDecimal("MAXVALUE"));
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 		sequence.setCacheSize(cacheSize);
+		sequence.setCache(cacheSize != null && cacheSize.compareTo(BigDecimal.ONE) > 0);
 		sequence.setLastValue(rs.getBigDecimal("NEXTCACHEFIRSTVALUE"));
 		sequence.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		sequence.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));

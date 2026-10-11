@@ -30,6 +30,7 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 	@Override
 	protected List<UniqueConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) return readBulk(connection, context);
 		final List<UniqueConstraint> result = readPrimaryKeys(connection, context);
 		final String tableName = getTableName(context);
 		if (tableName == null) {
@@ -56,6 +57,44 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private List<UniqueConstraint> readBulk(Connection connection, ParametersContext context) {
+		Map<String, UniqueConstraint> constraints = new java.util.LinkedHashMap<>();
+		try (var statement = SqliteMetadataQueries.prepare(connection, context,
+				"p.name AS column_name, p.pk, il.name AS index_name, il.origin, x.desc AS descending, "
+				+ "NOT EXISTS (SELECT 1 FROM pragma_index_list(m.name, ?) z WHERE z.origin='pk') AS rowid_pk",
+				"JOIN pragma_table_info(m.name, ?) p LEFT JOIN pragma_index_list(m.name, ?) il ON il.origin IN ('pk','u') "
+				+ "LEFT JOIN pragma_index_xinfo(il.name, ?) x ON x.name=p.name AND x.key=1",
+				", il.name, CASE WHEN il.origin='u' THEN x.seqno ELSE p.pk END"); var rs = statement.executeQuery()) {
+			while (rs.next()) {
+				String table = rs.getString("table_name");
+				String origin = rs.getString("origin");
+				boolean primary = rs.getInt("pk") > 0;
+				boolean matched = rs.getObject("descending") != null;
+				if (primary && (rs.getBoolean("rowid_pk") || "pk".equals(origin) && matched)) {
+					addBulkColumn(constraints, context, table, null, true, rs.getString("column_name"), rs.getBoolean("descending"));
+				}
+				if ("u".equals(origin) && matched) {
+					addBulkColumn(constraints, context, table, rs.getString("index_name"), false, rs.getString("column_name"), rs.getBoolean("descending"));
+				}
+			}
+		} catch (SQLException e) { throw new RuntimeException(e); }
+		return List.copyOf(constraints.values());
+	}
+
+	private void addBulkColumn(Map<String, UniqueConstraint> constraints, ParametersContext context, String table,
+			String name, boolean primary, String column, boolean descending) {
+		String key = table + "\u0000" + (primary ? "pk" : name);
+		UniqueConstraint constraint = constraints.computeIfAbsent(key, ignored -> {
+			var value = new UniqueConstraint(name, primary);
+			value.setDialect(getDialect());
+			value.setCatalogName(getCatalogName(context));
+			value.setSchemaName(getSchemaName(context));
+			value.setTableName(table);
+			return value;
+		});
+		if (constraint.getColumns().get(column) == null) constraint.getColumns().add(new Column(column), descending ? Order.Desc : Order.Asc);
 	}
 
 	private List<UniqueConstraint> readPrimaryKeys(final Connection connection, final ParametersContext context) {

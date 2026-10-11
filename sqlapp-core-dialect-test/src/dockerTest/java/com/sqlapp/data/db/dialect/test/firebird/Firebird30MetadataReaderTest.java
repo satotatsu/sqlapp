@@ -50,6 +50,34 @@ class Firebird30MetadataReaderTest {
 	}
 
 	@Test
+	void recreatesSequenceStartAndIncrement() throws SQLException {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			try {
+				statement.execute("CREATE SEQUENCE AUDIT_SEQUENCE START WITH 50 INCREMENT BY 5");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
+				reader.setObjectName("AUDIT_SEQUENCE");
+				var original = reader.getAll(connection).get(0);
+				assertEquals(50, original.getStartValue().intValue());
+				assertEquals(5, original.getIncrementBy().intValue());
+				statement.execute("DROP SEQUENCE AUDIT_SEQUENCE");
+				for (var sql : dialect.createSqlFactoryRegistry().createSql(original, com.sqlapp.data.db.sql.SqlType.CREATE)) {
+					statement.execute(sql.getSqlText());
+				}
+				var recreated = reader.getAll(connection).get(0);
+				assertEquals(original.getStartValue(), recreated.getStartValue());
+				assertEquals(original.getIncrementBy(), recreated.getIncrementBy());
+				try (var rs = statement.executeQuery("SELECT NEXT VALUE FOR AUDIT_SEQUENCE FROM RDB$DATABASE")) {
+					rs.next();
+					assertEquals(55, rs.getLong(1)); // Firebird 3 uses START WITH as the current value.
+				}
+			} finally {
+				statement.execute("DROP SEQUENCE AUDIT_SEQUENCE");
+			}
+		}
+	}
+
+	@Test
 	void readsCoreSchemaObjectsWithThe30Reader() throws SQLException {
 		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
 			createObjects(statement);

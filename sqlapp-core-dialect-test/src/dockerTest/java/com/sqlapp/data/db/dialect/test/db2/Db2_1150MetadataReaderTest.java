@@ -45,6 +45,13 @@ class Db2_1150MetadataReaderTest {
 	}
 
 	@Test
+	void sequenceConfigurationSurvivesXmlAndDdl() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.Db2HanaSequenceAuditAssertions.verify(connection, true);
+		}
+	}
+
+	@Test
 	void testMetadataReaderOperatesOnDb2_11_5() throws SQLException {
 		try (Connection connection = DB2.createConnection(""); Statement statement = connection.createStatement()) {
 			drop(statement, "DROP VIEW METADATA_COMPAT_VIEW");
