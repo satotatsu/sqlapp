@@ -94,7 +94,16 @@ public class GenerateHtmlDocsCommandTest {
 		command.setMultiThread(true);
 		command.run();
 		assertMermaidDownloads(outputDir.toPath());
-		assertTableDetailsHaveDdlAndNoRelations(outputDir.toPath());
+		assertTableDetailsHaveDdlAndRelations(outputDir.toPath());
+		String local = Files.readString(outputDir.toPath().resolve(
+				"diagrams/" + HtmlUtils.objectFullPath(schema.getTables().get("ACCOUNTS_RECEIVABLE")) + ".mmd"));
+		assertTrue(local.contains("ACCOUNTS_RECEIVABLE"));
+		assertTrue(local.contains("CUSTOMERS"));
+		assertFalse(local.contains("PRODUCTS"));
+		String svg = Files.readString(outputDir.toPath().resolve(
+				"diagrams/" + HtmlUtils.objectFullPath(schema.getTables().get("ACCOUNTS_RECEIVABLE")) + ".svg"));
+		assertTrue(
+				svg.contains("../tables/" + HtmlUtils.objectFullPath(schema.getTables().get("CUSTOMERS")) + ".html"));
 	}
 
 	@Test
@@ -129,7 +138,7 @@ public class GenerateHtmlDocsCommandTest {
 		String tableHtml = java.nio.file.Files.readString(invoicePath);
 		assertTrue(tableHtml.contains("href=\"#DDL\""));
 		assertTrue(tableHtml.contains("CREATE"));
-		assertFalse(tableHtml.contains("id=\"Relationships\""));
+		assertTrue(tableHtml.contains("id=\"Relationships\""));
 		assertFalse(tableHtml.contains("id=\"Viewpoints\""));
 		assertFalse(tableHtml.contains("viewpoint-sales.svg"));
 		String relationshipsHtml = java.nio.file.Files.readString(new File(outputDir, "relationships.html").toPath());
@@ -187,11 +196,18 @@ public class GenerateHtmlDocsCommandTest {
 			assertTrue(all.contains(": \"inherits\""));
 			assertTrue(all.contains(": \"partition of\""));
 		}
-		assertTableDetailsHaveDdlAndNoRelations(output);
+		assertTableDetailsHaveDdlAndRelations(output);
 		String parentHtml = Files.readString(output.resolve("tables/" + HtmlUtils.objectFullPath(parent) + ".html"));
 		assertTrue(parentHtml.contains("&lt;unsafe&gt;"));
 		assertFalse(parentHtml.contains("<unsafe>"));
-		assertFalse(Files.exists(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + ".svg")));
+		assertTrue(Files.exists(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + ".svg")));
+		for (String suffix : java.util.List.of("", "_logical")) {
+			String local = Files
+					.readString(output.resolve("diagrams/" + HtmlUtils.objectFullPath(parent) + suffix + ".mmd"));
+			assertTrue(local.contains(": \"inherits\""));
+			assertTrue(local.contains(": \"partition of\""));
+			assertFalse(local.contains("OTHER_BASE"));
+		}
 	}
 
 	@Test
@@ -212,14 +228,19 @@ public class GenerateHtmlDocsCommandTest {
 		assertTrue(ddl.contains("PRIMARY KEY"));
 	}
 
-	private void assertTableDetailsHaveDdlAndNoRelations(Path output) throws IOException {
+	private void assertTableDetailsHaveDdlAndRelations(Path output) throws IOException {
 		try (var paths = Files.list(output.resolve("tables"))) {
 			for (Path html : paths.filter(path -> path.toString().endsWith(".html")).toList()) {
 				String content = Files.readString(html);
 				assertTrue(content.contains("href=\"#DDL\""), html.toString());
 				assertTrue(content.contains("<div id=\"DDL\">"), html.toString());
 				assertTrue(content.contains("CREATE"), html.toString());
-				assertFalse(content.contains("id=\"Relationships\""), html.toString());
+				assertTrue(content.contains("href=\"#Relationships\""), html.toString());
+				assertTrue(content.contains("id=\"Relationships\""), html.toString());
+				String diagramName = html.getFileName().toString().replace(".html", "");
+				assertTrue(content.contains("src=\"../diagrams/" + diagramName + ".svg\""), html.toString());
+				assertTrue(Files.exists(output.resolve("diagrams/" + diagramName + ".svg")));
+				assertTrue(Files.exists(output.resolve("diagrams/" + diagramName + ".mmd")));
 				assertFalse(content.contains("id=\"Viewpoints\""), html.toString());
 			}
 		}

@@ -626,6 +626,14 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		outputMenuDetails(catalog, context.clone(), rootMenu.clone(), MenuDefinition.Tables, list, (con, obj) -> {
 			Table val = (Table) obj;
 			con.put("ddl", tableDdl.get(val));
+			RelationImageHolder holder = createTableRelationImage(val, catalog, false, "../tables/");
+			if (holder != null) {
+				con.put("relations", holder);
+			}
+			holder = createTableRelationImage(val, catalog, true, "../tables/");
+			if (holder != null) {
+				con.put("relations_logical", holder);
+			}
 		}, futures);
 	}
 
@@ -738,6 +746,65 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		} catch (Exception e) {
 			throw new RuntimeException("template=" + renderer.getTemplateResource(), e);
 		}
+	}
+
+	private RelationImageHolder createTableRelationImage(Table table, Catalog catalog, boolean logical, String path) {
+		Set<Table> tables = new java.util.LinkedHashSet<>();
+		tables.add(table);
+		tables.addAll(table.getInherits());
+		tables.addAll(getInheritanceChildren(table, catalog));
+		table.getChildRelations().forEach(fk -> {
+			tables.add(fk.getTable());
+		});
+		table.getConstraints().getForeignKeyConstraints().forEach(fk -> {
+			tables.add(fk.getRelatedTable());
+		});
+		setParentPartitionTables(table, tables);
+		setChildPartitionTables(table, tables);
+		if (logical) {
+			if (!hasDisplayName(tables)) {
+				return null;
+			}
+		}
+		Consumer<TableNode> cons = (tNode -> {
+			if (tNode.getTable() == table) {
+				SVGDrawMode.NORMAL.reset(tNode);
+			}
+		});
+		if (logical) {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.LOGICAL, path, cons);
+			return createImage(HtmlUtils.objectFullPath(table) + "_logical", tables, svgCreator);
+		} else {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.NORMAL, path, cons);
+			return createImage(HtmlUtils.objectFullPath(table), tables, svgCreator);
+		}
+	}
+
+	private void setParentPartitionTables(Table table, Set<Table> tables) {
+		if (table == null) {
+			return;
+		}
+		if (table.getPartitionParent() == null) {
+			return;
+		}
+		tables.add(table.getPartitionParent().getTable());
+		setParentPartitionTables(table.getPartitionParent().getTable(), tables);
+	}
+
+	private void setChildPartitionTables(Table table, Set<Table> tables) {
+		if (table == null) {
+			return;
+		}
+		if (table.getPartitioning() != null && !CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
+			table.getPartitioning().getPartitionTables().forEach(t -> {
+				tables.add(t);
+			});
+		}
+	}
+
+	private List<Table> getInheritanceChildren(Table table, Catalog catalog) {
+		return catalog.getSchemas().stream().flatMap(schema -> schema.getTables().stream())
+				.filter(child -> child.getInherits().stream().anyMatch(parent -> parent == table)).toList();
 	}
 
 	private RelationImageHolder createSchemaRelation(Schema schema, boolean logical) {
