@@ -89,19 +89,24 @@ public class OracleMetadataUtils {
 	/** Reads ordered keys for an entire table/index set in one catalog query. */
 	static void setPartitionKeys(Connection connection, String objectType,
 			DoubleKeyMap<String, String, Partitioning> objects, boolean subpartition) {
-		if (objects.toList().isEmpty()) return;
+		if (objects.toList().isEmpty())
+			return;
 		ParametersContext context = new ParametersContext();
 		context.put("schemaName", objects.keySet());
 		context.put("objectName", objects.secondKeySet());
 		context.put("objectType", objectType);
-		SqlNode node = getSqlNodeCache().getString(subpartition ? "subpartitionKeyColumns.sql" : "partitionKeyColumns.sql");
+		SqlNode node = getSqlNodeCache()
+				.getString(subpartition ? "subpartitionKeyColumns.sql" : "partitionKeyColumns.sql");
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Partitioning partitioning = objects.get(rs.getString("OWNER"), rs.getString("NAME"));
-				if (partitioning == null) return;
-				if (subpartition) partitioning.getSubPartitioningColumns().add(rs.getString("COLUMN_NAME"));
-				else partitioning.getPartitioningColumns().add(rs.getString("COLUMN_NAME"));
+				if (partitioning == null)
+					return;
+				if (subpartition)
+					partitioning.getSubPartitioningColumns().add(rs.getString("COLUMN_NAME"));
+				else
+					partitioning.getPartitioningColumns().add(rs.getString("COLUMN_NAME"));
 			}
 		});
 	}

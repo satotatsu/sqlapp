@@ -37,8 +37,10 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 	public void addObjectDetail(Index index, Table table, OracleSqlBuilder builder) {
 		builder.unique(index.isUnique());
 		if ((index.getIndexType() != null && index.getIndexType().isBitMap())
-				|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap"))) builder.space()._add("BITMAP");
-		builder.index().ifNotExists(table != null && this.getOptions().isCreateIfNotExists()).space().name(index, false).on();
+				|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
+			builder.space()._add("BITMAP");
+		builder.index().ifNotExists(table != null && this.getOptions().isCreateIfNotExists()).space().name(index, false)
+				.on();
 		builder.name(table, this.getOptions().isDecorateSchemaName()
 				|| (index.getSchemaName() != null && !index.getSchemaName().equals(table.getSchemaName())));
 		builder.space()._add("(");
@@ -74,13 +76,19 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 		} else if (index.getPartitioning() != null) {
 			builder.space()._add("GLOBAL");
 			var detail = this.getAddObjectDetail(index.getPartitioning(), SqlType.CREATE);
-			if (detail != null) detail.addObjectDetail(index.getPartitioning(), builder);
+			if (detail != null)
+				detail.addObjectDetail(index.getPartitioning(), builder);
 		}
-		if (index.getTableSpaceName() != null) builder.space()._add("TABLESPACE").space().name(index.getTableSpaceName());
-		if (index.isCompression()) builder.space()._add("COMPRESS");
+		if (index.getTableSpaceName() != null)
+			builder.space()._add("TABLESPACE").space().name(index.getTableSpaceName());
+		if (index.isCompression())
+			builder.space()._add("COMPRESS");
 	}
+
 	private void addStorage(com.sqlapp.data.schemas.AbstractPartition<?> partition, OracleSqlBuilder builder) {
-		if (partition.getTableSpaceName() != null) builder.space()._add("TABLESPACE").space().name(partition.getTableSpaceName());
-		if (partition.isCompression()) builder.space()._add("COMPRESS");
+		if (partition.getTableSpaceName() != null)
+			builder.space()._add("TABLESPACE").space().name(partition.getTableSpaceName());
+		if (partition.isCompression())
+			builder.space()._add("COMPRESS");
 	}
 }

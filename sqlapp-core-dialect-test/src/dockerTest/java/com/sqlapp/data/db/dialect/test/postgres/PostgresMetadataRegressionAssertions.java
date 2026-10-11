@@ -13,10 +13,13 @@ import com.sqlapp.data.db.dialect.test.CountingJdbc;
 
 /** Shared real-engine regression assertions; no external credentials. */
 public final class PostgresMetadataRegressionAssertions {
-	private PostgresMetadataRegressionAssertions() { }
+	private PostgresMetadataRegressionAssertions() {
+	}
+
 	public static void verify(Connection connection, Dialect dialect) throws Exception {
 		verify(connection, dialect, null);
 	}
+
 	public static void verify(Connection connection, Dialect dialect, String tablespace) throws Exception {
 		String schema = "Audit " + UUID.randomUUID().toString().replace("-", "");
 		String quoted = dialect.quote(schema);
@@ -26,8 +29,9 @@ public final class PostgresMetadataRegressionAssertions {
 		try (var sql = connection.createStatement()) {
 			sql.execute("CREATE SCHEMA " + quoted);
 			try {
-				for (int i=0;i<3;i++) {
-					sql.execute("CREATE SEQUENCE " + quoted + ".\"Seq '" + i + "\"" + (major >= 10 ? " AS integer" : "") + " START 10 INCREMENT 3 MINVALUE 1 MAXVALUE 1000 CACHE 5 CYCLE");
+				for (int i = 0; i < 3; i++) {
+					sql.execute("CREATE SEQUENCE " + quoted + ".\"Seq '" + i + "\"" + (major >= 10 ? " AS integer" : "")
+							+ " START 10 INCREMENT 3 MINVALUE 1 MAXVALUE 1000 CACHE 5 CYCLE");
 					sql.execute("COMMENT ON SEQUENCE " + quoted + ".\"Seq '" + i + "\" IS 'sequence comment'");
 				}
 				var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
@@ -51,15 +55,18 @@ public final class PostgresMetadataRegressionAssertions {
 					assertEquals(5, sequence.getCacheSize());
 					assertTrue(sequence.isCycle());
 					assertEquals("sequence comment", sequence.getRemarks());
-					if (major >= 10) assertEquals(com.sqlapp.data.db.datatype.DataType.INT, sequence.getDataType());
+					if (major >= 10)
+						assertEquals(com.sqlapp.data.db.datatype.DataType.INT, sequence.getDataType());
 					Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
 					sql.execute("DROP SEQUENCE " + quoted + "." + dialect.quote(sequence.getName()));
-					for (var operation : registry.createSql(restored, SqlType.CREATE)) sql.execute(operation.getSqlText());
+					for (var operation : registry.createSql(restored, SqlType.CREATE))
+						sql.execute(operation.getSqlText());
 				}
 				var recreated = reader.getAllFull(connection);
 				assertEquals(3, recreated.size());
 				for (var original : sequences) {
-					var after = recreated.stream().filter(v -> v.getName().equals(original.getName())).findFirst().orElseThrow();
+					var after = recreated.stream().filter(v -> v.getName().equals(original.getName())).findFirst()
+							.orElseThrow();
 					assertEquals(original.getDataType(), after.getDataType());
 					assertEquals(original.getStartValue(), after.getStartValue());
 					assertEquals(original.getMinValue(), after.getMinValue());
@@ -70,31 +77,46 @@ public final class PostgresMetadataRegressionAssertions {
 					assertEquals(original.getRemarks(), after.getRemarks());
 				}
 				sql.execute("CREATE TABLE " + quoted + ".\"Data\" (id integer, value text, note text)");
-				var definitions = new LinkedHashMap<String,String>();
+				var definitions = new LinkedHashMap<String, String>();
 				String[] names = { "pattern", "expression", "gin", "unique" };
-				sql.execute("CREATE INDEX pattern ON " + quoted + ".\"Data\" (value text_pattern_ops DESC NULLS LAST)" + include + " WITH (fillfactor=72)" + space + " WHERE id>0");
-				sql.execute("CREATE INDEX expression ON " + quoted + ".\"Data\" (lower(value) COLLATE \"C\" text_pattern_ops)");
-				sql.execute("CREATE INDEX gin ON " + quoted + ".\"Data\" USING gin (to_tsvector('simple',value)) WITH (fastupdate=off)");
+				sql.execute("CREATE INDEX pattern ON " + quoted + ".\"Data\" (value text_pattern_ops DESC NULLS LAST)"
+						+ include + " WITH (fillfactor=72)" + space + " WHERE id>0");
+				sql.execute("CREATE INDEX expression ON " + quoted
+						+ ".\"Data\" (lower(value) COLLATE \"C\" text_pattern_ops)");
+				sql.execute("CREATE INDEX gin ON " + quoted
+						+ ".\"Data\" USING gin (to_tsvector('simple',value)) WITH (fastupdate=off)");
 				sql.execute("CREATE UNIQUE INDEX \"unique\" ON " + quoted + ".\"Data\" (id)" + include + "");
-				for (var name : names) definitions.put(name, definition(connection, schema, name));
+				for (var name : names)
+					definitions.put(name, definition(connection, schema, name));
 				var tableReader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 				tableReader.setSchemaName(schema);
 				tableReader.setObjectName("Data");
-				var table = tableReader.getAllFull(connection).stream().filter(t -> t.getName().equals("Data")).findFirst().orElseThrow();
+				var table = tableReader.getAllFull(connection).stream().filter(t -> t.getName().equals("Data"))
+						.findFirst().orElseThrow();
 				Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
-				if (tablespace != null) assertEquals(tablespace, restored.getIndexes().get("pattern").getTableSpaceName());
+				if (tablespace != null)
+					assertEquals(tablespace, restored.getIndexes().get("pattern").getTableSpaceName());
 				for (var name : names) {
 					sql.execute("DROP INDEX " + quoted + "." + dialect.quote(name));
-					for (var operation : registry.createSql(restored.getIndexes().get(name), SqlType.CREATE)) sql.execute(operation.getSqlText());
+					for (var operation : registry.createSql(restored.getIndexes().get(name), SqlType.CREATE))
+						sql.execute(operation.getSqlText());
 					assertEquals(definitions.get(name), definition(connection, schema, name), name);
 				}
-			} finally { sql.execute("DROP SCHEMA " + quoted + " CASCADE"); }
+			} finally {
+				sql.execute("DROP SCHEMA " + quoted + " CASCADE");
+			}
 		}
 	}
+
 	private static String definition(Connection c, String schema, String name) throws Exception {
-		try (var sql = c.prepareStatement("SELECT pg_get_indexdef(c.oid) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relname=?")) {
-			sql.setString(1, schema); sql.setString(2, name);
-			try (var rows = sql.executeQuery()) { assertTrue(rows.next()); return rows.getString(1); }
+		try (var sql = c.prepareStatement(
+				"SELECT pg_get_indexdef(c.oid) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relname=?")) {
+			sql.setString(1, schema);
+			sql.setString(2, name);
+			try (var rows = sql.executeQuery()) {
+				assertTrue(rows.next());
+				return rows.getString(1);
+			}
 		}
 	}
 }

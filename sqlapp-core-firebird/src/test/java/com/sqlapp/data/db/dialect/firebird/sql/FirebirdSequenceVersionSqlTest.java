@@ -11,10 +11,12 @@ class FirebirdSequenceVersionSqlTest {
 	@Test
 	void isolatesSequenceOptionsToVersionThreeAndLater() {
 		var sequence = new Sequence("audit_seq").setStartValue(50).setIncrementBy(5);
-		var legacy = DialectHolder.defaultDialect25.createSqlFactoryRegistry().createSql(sequence, SqlType.CREATE).get(0).getSqlText();
+		var legacy = DialectHolder.defaultDialect25.createSqlFactoryRegistry().createSql(sequence, SqlType.CREATE)
+				.get(0).getSqlText();
 		assertFalse(legacy.contains("START WITH"));
 		assertFalse(legacy.contains("INCREMENT BY"));
-		for (var dialect : new com.sqlapp.data.db.dialect.Dialect[] {DialectHolder.defaultDialect30, DialectHolder.defaultDialect50}) {
+		for (var dialect : new com.sqlapp.data.db.dialect.Dialect[] { DialectHolder.defaultDialect30,
+				DialectHolder.defaultDialect50 }) {
 			var registry = dialect.createSqlFactoryRegistry();
 			var sql = registry.createSql(sequence, SqlType.CREATE).get(0).getSqlText();
 			assertTrue(sql.contains("START WITH 50"), sql);

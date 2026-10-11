@@ -28,15 +28,20 @@ public class OracleCreateSequenceFactory extends AbstractCreateSequenceFactory<O
 	@Override
 	protected void addDataType(final Sequence obj, OracleSqlBuilder builder) {
 	}
+
 	@Override
 	protected void addCache(final Sequence sequence, OracleSqlBuilder builder) {
-		if (sequence.getCacheSize() == 0) builder.space()._add("NOCACHE");
-		else super.addCache(sequence, builder);
+		if (sequence.getCacheSize() == 0)
+			builder.space()._add("NOCACHE");
+		else
+			super.addCache(sequence, builder);
 	}
 
 	@Override
 	protected void addOptions(final Sequence sequence, OracleSqlBuilder builder) {
-		if (!sequence.isCache() && sequence.getCacheSize() == null) builder.space()._add("NOCACHE");
-		if (sequence.isOrder()) builder.space()._add("ORDER");
+		if (!sequence.isCache() && sequence.getCacheSize() == null)
+			builder.space()._add("NOCACHE");
+		if (sequence.isOrder())
+			builder.space()._add("ORDER");
 	}
 }

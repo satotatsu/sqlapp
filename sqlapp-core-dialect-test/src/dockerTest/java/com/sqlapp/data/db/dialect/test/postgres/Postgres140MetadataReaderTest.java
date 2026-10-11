@@ -198,10 +198,11 @@ class Postgres140MetadataReaderTest {
 				""");
 	}
 
-    @org.junit.jupiter.api.Test
-    void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
-        try (var c = POSTGRES.createConnection("")) {
-            com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c, com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(c));
-        }
-    }
+	@org.junit.jupiter.api.Test
+	void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
+		try (var c = POSTGRES.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c,
+					com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(c));
+		}
+	}
 }

@@ -47,8 +47,11 @@ class InformixBulkInsertTest {
 
 	@Test
 	void recreatesUncachedSequence() throws Exception {
-		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix", "in4mix"); var statement = connection.createStatement()) {
-			statement.execute("CREATE SEQUENCE sqlapp_cache_audit START WITH 50 INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000 NOCACHE");
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
+				"in4mix"); var statement = connection.createStatement()) {
+			statement.execute(
+					"CREATE SEQUENCE sqlapp_cache_audit START WITH 50 INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000 NOCACHE");
 			try {
 				var dialect = com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(connection);
 				var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
@@ -56,7 +59,8 @@ class InformixBulkInsertTest {
 				var sequence = reader.getAll(connection).get(0);
 				org.junit.jupiter.api.Assertions.assertFalse(sequence.isCache());
 				statement.execute("DROP SEQUENCE sqlapp_cache_audit");
-				for (var sql : dialect.createSqlFactoryRegistry().createSql(sequence, com.sqlapp.data.db.sql.SqlType.CREATE)) {
+				for (var sql : dialect.createSqlFactoryRegistry().createSql(sequence,
+						com.sqlapp.data.db.sql.SqlType.CREATE)) {
 					statement.execute(sql.getSqlText());
 				}
 				var recreated = reader.getAll(connection).get(0);

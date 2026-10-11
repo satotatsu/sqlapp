@@ -7,7 +7,10 @@ import com.sqlapp.data.db.metadata.*;
 
 /** PostgreSQL 16 readers with AlloyDB index metadata. */
 public class AlloyDB16CatalogReader extends Postgres160CatalogReader {
-	public AlloyDB16CatalogReader(Dialect dialect) { super(dialect); }
+	public AlloyDB16CatalogReader(Dialect dialect) {
+		super(dialect);
+	}
+
 	@Override
 	protected SchemaReader newSchemaReader() {
 		return new Postgres160SchemaReader(getDialect()) {
@@ -15,11 +18,14 @@ public class AlloyDB16CatalogReader extends Postgres160CatalogReader {
 			protected TableReader newTableReader() {
 				return new Postgres130TableReader(getDialect()) {
 					@Override
-					protected IndexReader newIndexReader() { return new AlloyDBIndexReader(getDialect()); }
+					protected IndexReader newIndexReader() {
+						return new AlloyDBIndexReader(getDialect());
+					}
 				};
 			}
 		};
 	}
+
 	@Override
 	protected void setCommonAfter(java.sql.Connection connection, com.sqlapp.data.schemas.Catalog catalog) {
 		super.setCommonAfter(connection, catalog);

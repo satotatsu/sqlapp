@@ -10,9 +10,14 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
-/** XML/DDL/reread assertions for sequence configuration, not migration high-water marks. */
+/**
+ * XML/DDL/reread assertions for sequence configuration, not migration
+ * high-water marks.
+ */
 public final class SequenceMetadataAuditAssertions {
-	private SequenceMetadataAuditAssertions() { }
+	private SequenceMetadataAuditAssertions() {
+	}
+
 	public static void verify(Connection connection, boolean oracle) throws Exception {
 		var dialect = DialectResolver.getInstance().getDialect(connection);
 		String owner = oracle ? connection.getMetaData().getUserName().toUpperCase(Locale.ROOT) : "dbo";
@@ -24,7 +29,8 @@ public final class SequenceMetadataAuditAssertions {
 					String type = oracle ? "" : i == 0 ? " AS decimal(20,0)" : " AS int";
 					String cache = i == 0 ? " CACHE 7" : oracle ? " NOCACHE" : " NO CACHE";
 					sql.execute("CREATE SEQUENCE " + owner + "." + prefix + i + type
-							+ " START WITH 10 INCREMENT BY 3 MINVALUE 1 MAXVALUE 1000 CYCLE" + cache + (oracle ? " ORDER" : ""));
+							+ " START WITH 10 INCREMENT BY 3 MINVALUE 1 MAXVALUE 1000 CYCLE" + cache
+							+ (oracle ? " ORDER" : ""));
 					existing.add(prefix + i);
 				}
 				var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
@@ -36,7 +42,8 @@ public final class SequenceMetadataAuditAssertions {
 				assertEquals(1, count.get());
 				count.set(0);
 				reader.setObjectName(null);
-				var sequences = reader.getAllFull(counted).stream().filter(s -> s.getName().startsWith(prefix)).toList();
+				var sequences = reader.getAllFull(counted).stream().filter(s -> s.getName().startsWith(prefix))
+						.toList();
 				assertEquals(3, sequences.size());
 				assertEquals(1, count.get());
 				var registry = dialect.createSqlFactoryRegistry();
@@ -46,8 +53,11 @@ public final class SequenceMetadataAuditAssertions {
 					sql.execute("DROP SEQUENCE " + owner + "." + original.getName());
 					existing.remove(original.getName());
 					for (var operation : registry.createSql(restored, SqlType.CREATE)) {
-						try { sql.execute(operation.getSqlText()); }
-						catch (java.sql.SQLException e) { throw new AssertionError(operation.getSqlText(), e); }
+						try {
+							sql.execute(operation.getSqlText());
+						} catch (java.sql.SQLException e) {
+							throw new AssertionError(operation.getSqlText(), e);
+						}
 					}
 					existing.add(original.getName());
 					reader.setObjectName(original.getName());
@@ -66,7 +76,8 @@ public final class SequenceMetadataAuditAssertions {
 					}
 				}
 			} finally {
-				for (String name : existing) sql.execute("DROP SEQUENCE " + owner + "." + name);
+				for (String name : existing)
+					sql.execute("DROP SEQUENCE " + owner + "." + name);
 			}
 		}
 	}

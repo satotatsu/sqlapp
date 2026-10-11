@@ -26,7 +26,8 @@ import com.sqlapp.data.schemas.Sequence;
 public class SapHanaCreateSequenceFactory extends AbstractCreateSequenceFactory<SapHanaSqlBuilder> {
 	@Override
 	protected void addCache(final Sequence obj, SapHanaSqlBuilder builder) {
-		if (obj.getCacheSize() < 0) throw new IllegalArgumentException("SAP HANA sequence cache size must not be negative");
+		if (obj.getCacheSize() < 0)
+			throw new IllegalArgumentException("SAP HANA sequence cache size must not be negative");
 		if (!obj.isCache() || obj.getCacheSize() <= 1) {
 			builder.no().cache();
 		} else {

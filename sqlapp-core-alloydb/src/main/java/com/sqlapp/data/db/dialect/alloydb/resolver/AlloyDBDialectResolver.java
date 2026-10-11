@@ -10,7 +10,10 @@ import com.sqlapp.data.db.dialect.alloydb.AlloyDB16;
 import com.sqlapp.data.db.dialect.alloydb.AlloyDB17;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
-/** Resolves AlloyDB by PostgreSQL engine version without changing the connection. */
+/**
+ * Resolves AlloyDB by PostgreSQL engine version without changing the
+ * connection.
+ */
 public class AlloyDBDialectResolver extends ProductNameDialectResolver {
 	private static final Dialect[] ENGINES = { new AlloyDB15(), new AlloyDB16(), new AlloyDB17() };
 
@@ -48,12 +51,14 @@ public class AlloyDBDialectResolver extends ProductNameDialectResolver {
 			}
 			var connection = metadata.getConnection();
 			if (connection == null) {
-				throw new IllegalStateException("AlloyDB identification requires a JDBC connection; use an explicit product name for offline resolution.");
+				throw new IllegalStateException(
+						"AlloyDB identification requires a JDBC connection; use an explicit product name for offline resolution.");
 			}
 			// The registered columnar-engine flag exists even when the engine is disabled.
 			// Do not invoke vendor functions or change settings to identify the product.
-			try (var statement = connection.createStatement(); var rows = statement.executeQuery(
-					"SELECT 1 FROM pg_catalog.pg_settings WHERE name = 'google_columnar_engine.enabled'")) {
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery(
+							"SELECT 1 FROM pg_catalog.pg_settings WHERE name = 'google_columnar_engine.enabled'")) {
 				if (!rows.next()) {
 					return null;
 				}

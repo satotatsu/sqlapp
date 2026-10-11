@@ -7,7 +7,10 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
 
 public class AlloyDB16SqlFactoryRegistry extends Postgres160SqlFactoryRegistry {
-	public AlloyDB16SqlFactoryRegistry(Dialect dialect) { super(dialect); }
+	public AlloyDB16SqlFactoryRegistry(Dialect dialect) {
+		super(dialect);
+	}
+
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();

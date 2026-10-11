@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -61,7 +60,8 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 				String catalog_name = getString(rs, CATALOG_NAME);
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String name = getString(rs, INDEX_NAME);
-				List<String> identity = java.util.Arrays.asList(catalog_name, schema_name, getString(rs, TABLE_NAME), name);
+				List<String> identity = java.util.Arrays.asList(catalog_name, schema_name, getString(rs, TABLE_NAME),
+						name);
 				Index index = map.get(identity);
 				if (index == null) {
 					index = createIndex(rs);
@@ -71,13 +71,16 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 				boolean included = getBoolean(rs, "is_included_column");
 				String scheme = getString(rs, "partition_scheme");
 				if (scheme != null) {
-					if (index.getPartitioning() == null) index.setPartitioning(new com.sqlapp.data.schemas.Partitioning());
+					if (index.getPartitioning() == null)
+						index.setPartitioning(new com.sqlapp.data.schemas.Partitioning());
 					index.getPartitioning().setPartitionSchemeName(scheme);
-					if (rs.getInt("partition_ordinal") > 0) index.getPartitioning().getPartitioningColumns().add(columnName);
+					if (rs.getInt("partition_ordinal") > 0)
+						index.getPartitioning().getPartitioningColumns().add(columnName);
 				}
 				// Implicit partitioning columns have key ordinal zero and are not index keys.
 				if (!included && rs.getInt("key_ordinal") == 0 && !index.getIndexType().isColumnStore()
-						&& rs.getInt("partition_ordinal") > 0) return;
+						&& rs.getInt("partition_ordinal") > 0)
+					return;
 				if (included && !index.getIndexType().isColumnStore()) {
 					index.getIncludes().add(new Column(columnName));
 				} else {

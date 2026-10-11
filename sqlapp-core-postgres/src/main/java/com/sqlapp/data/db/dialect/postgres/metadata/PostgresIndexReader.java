@@ -139,13 +139,16 @@ public class PostgresIndexReader extends IndexReader {
 							for (Object option : (Object[]) options.getArray()) {
 								String text = option.toString();
 								int equal = text.indexOf('=');
-								if (equal < 1) throw new SQLException("Malformed PostgreSQL index option: " + text);
+								if (equal < 1)
+									throw new SQLException("Malformed PostgreSQL index option: " + text);
 								index.getSpecifics().put(text.substring(0, equal), text.substring(equal + 1));
 								optionSql.add(getDialect().quote(text.substring(0, equal)) + "='"
 										+ text.substring(equal + 1).replace("'", "''") + "'");
 							}
-						index.getSpecifics().put(PostgresCreateIndexFactory.OPTIONS, String.join(", ", optionSql));
-						} finally { options.free(); }
+							index.getSpecifics().put(PostgresCreateIndexFactory.OPTIONS, String.join(", ", optionSql));
+						} finally {
+							options.free();
+						}
 					}
 					map.put(schema_name, table_name, index_name, index);
 					result.add(index);
@@ -181,8 +184,11 @@ public class PostgresIndexReader extends IndexReader {
 		return result;
 	}
 
-	/** Optional vendor hook using the definition already returned by the bulk query. */
-	protected void readDefinition(Index index, String definition) { }
+	/**
+	 * Optional vendor hook using the definition already returned by the bulk query.
+	 */
+	protected void readDefinition(Index index, String definition) {
+	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
@@ -195,7 +201,7 @@ public class PostgresIndexReader extends IndexReader {
 		}
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& (productVersionInfo.getMajorVersion() > 9 || productVersionInfo.getMajorVersion() == 9
-					&& productVersionInfo.getMinorVersion() != null && productVersionInfo.getMinorVersion() >= 1))
+						&& productVersionInfo.getMinorVersion() != null && productVersionInfo.getMinorVersion() >= 1))
 			return getSqlNodeCache().getString("indexes91.sql");
 		return getSqlNodeCache().getString("indexes.sql");
 	}

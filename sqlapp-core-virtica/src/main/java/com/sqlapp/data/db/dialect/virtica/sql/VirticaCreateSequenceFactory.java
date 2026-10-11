@@ -40,6 +40,7 @@ public class VirticaCreateSequenceFactory extends AbstractCreateSequenceFactory<
 	protected void addOrder(final Sequence obj, final VirticaSqlBuilder builder) {
 		// ORDER/NO ORDER is not part of Vertica CREATE SEQUENCE.
 	}
+
 	@Override
 	protected void addOptions(final Sequence obj, VirticaSqlBuilder builder) {
 		if (!obj.isCache() && obj.getCacheSize() == null) {

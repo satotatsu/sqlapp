@@ -19,7 +19,9 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /** Preserves ScaNN metadata with one set-based supplemental catalog query. */
 public class AlloyDBIndexReader extends PostgresIndexReader {
-	public AlloyDBIndexReader(Dialect dialect) { super(dialect); }
+	public AlloyDBIndexReader(Dialect dialect) {
+		super(dialect);
+	}
 
 	@Override
 	protected List<Index> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
@@ -30,13 +32,15 @@ public class AlloyDBIndexReader extends PostgresIndexReader {
 					|| index.getIndexType() == IndexType.Vector)
 				candidates.put(List.of(index.getSchemaName(), index.getTableName(), index.getName()), index);
 		}
-		if (candidates.isEmpty()) return indexes;
+		if (candidates.isEmpty())
+			return indexes;
 		execute(connection, getSqlNodeCache().getString("scannIndexes.sql"), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rows) throws SQLException {
 				var index = candidates.get(List.of(rows.getString("schema_name"), rows.getString("table_name"),
 						rows.getString("index_name")));
-				if (index == null) return;
+				if (index == null)
+					return;
 				index.setIndexType(IndexType.Vector);
 				index.setVectorDistanceType(switch (rows.getString("distance")) {
 				case "cosine" -> VectorDistanceType.Cosine;
@@ -48,7 +52,8 @@ public class AlloyDBIndexReader extends PostgresIndexReader {
 				index.getSpecifics().put(AlloyDBCreateIndexFactory.METHOD, "scann");
 				index.getSpecifics().put(AlloyDBCreateIndexFactory.KEYS, rows.getString("keys"));
 				String options = rows.getString("options");
-				if (options != null) index.getSpecifics().put(AlloyDBCreateIndexFactory.OPTIONS, options);
+				if (options != null)
+					index.getSpecifics().put(AlloyDBCreateIndexFactory.OPTIONS, options);
 			}
 		});
 		return indexes;

@@ -139,12 +139,14 @@ public class OracleTableReader extends TableReader {
 				String schemaName = getString(rs, SCHEMA_NAME);
 				String tableName = getString(rs, TABLE_NAME);
 				Table table = tables.get(schemaName, tableName);
-				if (table != null) setPartition(connection, rs, table);
+				if (table != null)
+					setPartition(connection, rs, table);
 			}
 		});
 		DoubleKeyMap<String, String, Partitioning> objects = CommonUtils.doubleKeyMap();
 		for (Table table : tables.toList()) {
-			if (table.getPartitioning() != null) objects.put(table.getSchemaName(), table.getName(), table.getPartitioning());
+			if (table.getPartitioning() != null)
+				objects.put(table.getSchemaName(), table.getName(), table.getPartitioning());
 		}
 		OracleMetadataUtils.setPartitionKeys(connection, "TABLE", objects, false);
 		OracleMetadataUtils.setPartitionKeys(connection, "TABLE", objects, true);
@@ -153,9 +155,11 @@ public class OracleTableReader extends TableReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Table table = tables.get(rs.getString("TABLE_OWNER"), rs.getString("TABLE_NAME"));
-				if (table == null || table.getPartitioning() == null) return;
+				if (table == null || table.getPartitioning() == null)
+					return;
 				Partition parent = table.getPartitioning().getPartitions().get(rs.getString("PARTITION_NAME"));
-				if (parent != null) addSubPartition(rs, parent);
+				if (parent != null)
+					addSubPartition(rs, parent);
 			}
 		});
 	}

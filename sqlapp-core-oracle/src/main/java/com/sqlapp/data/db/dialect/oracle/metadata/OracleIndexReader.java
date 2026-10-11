@@ -80,7 +80,8 @@ public class OracleIndexReader extends IndexReader {
 					index.setSchemaName(getString(rs, "OWNER"));
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setIndexType(dialact.getIndexType(indexType));
-					if ("BITMAP".equalsIgnoreCase(indexType)) index.getSpecifics().put("oracle.index.bitmap", true);
+					if ("BITMAP".equalsIgnoreCase(indexType))
+						index.getSpecifics().put("oracle.index.bitmap", true);
 					setIndexType(rs, index, indexType);
 					if ("UNIQUE".equals(uniqueness)) {
 						index.setUnique(true);
@@ -142,7 +143,8 @@ public class OracleIndexReader extends IndexReader {
 			}
 			index.getSpecifics().remove(this.getDialect(), PARTTITIONED_KEY);
 		}
-		if (objects.toList().isEmpty()) return;
+		if (objects.toList().isEmpty())
+			return;
 		ParametersContext context = new ParametersContext();
 		context.put("schemaName", objects.keySet());
 		context.put("indexName", objects.secondKeySet());
@@ -150,13 +152,15 @@ public class OracleIndexReader extends IndexReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Index index = objects.get(rs.getString("INDEX_OWNER"), rs.getString("INDEX_NAME"));
-				if (index == null) return;
+				if (index == null)
+					return;
 				if (index.getPartitioning() == null) {
 					index.getSpecifics().put("oracle.index.locality", rs.getString("LOCALITY"));
 					Partitioning info = new Partitioning();
 					info.setPartitioningType(rs.getString("PARTITIONING_TYPE"));
 					String subType = rs.getString("SUBPARTITIONING_TYPE");
-					if (!"NONE".equalsIgnoreCase(subType)) info.setSubPartitioningType(subType);
+					if (!"NONE".equalsIgnoreCase(subType))
+						info.setSubPartitioningType(subType);
 					index.setPartitioning(info);
 				}
 				addIndexPartition(rs, index.getPartitioning());
@@ -164,7 +168,8 @@ public class OracleIndexReader extends IndexReader {
 		});
 		DoubleKeyMap<String, String, Partitioning> partitionings = doubleKeyMap();
 		for (Index index : objects.toList()) {
-			if (index.getPartitioning() != null) partitionings.put(index.getSchemaName(), index.getName(), index.getPartitioning());
+			if (index.getPartitioning() != null)
+				partitionings.put(index.getSchemaName(), index.getName(), index.getPartitioning());
 		}
 		OracleMetadataUtils.setPartitionKeys(connection, "INDEX", partitionings, false);
 		OracleMetadataUtils.setPartitionKeys(connection, "INDEX", partitionings, true);
@@ -172,9 +177,11 @@ public class OracleIndexReader extends IndexReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Index index = objects.get(rs.getString("INDEX_OWNER"), rs.getString("INDEX_NAME"));
-				if (index == null || index.getPartitioning() == null) return;
+				if (index == null || index.getPartitioning() == null)
+					return;
 				Partition parent = index.getPartitioning().getPartitions().get(rs.getString("PARTITION_NAME"));
-				if (parent == null) return;
+				if (parent == null)
+					return;
 				SubPartition sub = new SubPartition(rs.getString("SUBPARTITION_NAME"));
 				sub.setHighValue(rs.getString("HIGH_VALUE"));
 				sub.setCompression("ENABLED".equalsIgnoreCase(rs.getString("COMPRESSION")));

@@ -24,7 +24,9 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SchemaProperties;
 
-/** Uses table-valued PRAGMAs on SQLite 3.16+, retaining the legacy JDBC path. */
+/**
+ * Uses table-valued PRAGMAs on SQLite 3.16+, retaining the legacy JDBC path.
+ */
 public class SqliteIndexReader extends JdbcIndexReader {
 
 	public SqliteIndexReader(final Dialect dialect) {
@@ -52,9 +54,8 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	}
 
 	static boolean supportsBulkIndexes(final ProductVersionInfo version) {
-		return version.getMajorVersion() != null && (version.getMajorVersion() > 3
-				|| version.getMajorVersion() == 3 && version.getMinorVersion() != null
-						&& version.getMinorVersion() >= 16);
+		return version.getMajorVersion() != null && (version.getMajorVersion() > 3 || version.getMajorVersion() == 3
+				&& version.getMinorVersion() != null && version.getMinorVersion() >= 16);
 	}
 
 	private List<Index> readBulkIndexes(final Connection connection, final ParametersContext context)
@@ -65,19 +66,21 @@ public class SqliteIndexReader extends JdbcIndexReader {
 		final String schema = getSchemaName(context) == null ? "main" : getSchemaName(context);
 		final String sql = "SELECT m.name AS table_name, il.name AS index_name, il.\"unique\" AS is_unique, "
 				+ "d.sql AS definition, x.* FROM " + quoteIdentifier(schema) + ".sqlite_master m "
-				+ "JOIN pragma_index_list(m.name, ?) il JOIN pragma_index_xinfo(il.name, ?) x "
-				+ "LEFT JOIN " + quoteIdentifier(schema) + ".sqlite_master d ON d.type='index' AND d.name=il.name "
+				+ "JOIN pragma_index_list(m.name, ?) il JOIN pragma_index_xinfo(il.name, ?) x " + "LEFT JOIN "
+				+ quoteIdentifier(schema) + ".sqlite_master d ON d.type='index' AND d.name=il.name "
 				+ "WHERE m.type='table' AND x.key=1"
-				+ (tables.isEmpty() ? "" : " AND m.name IN (" + String.join(",", java.util.Collections.nCopies(tables.size(), "?")) + ")")
-				+ (requestedIndex == null ? "" : " AND il.name=?")
-				+ " ORDER BY m.name, il.name, x.seqno";
+				+ (tables.isEmpty() ? ""
+						: " AND m.name IN (" + String.join(",", java.util.Collections.nCopies(tables.size(), "?"))
+								+ ")")
+				+ (requestedIndex == null ? "" : " AND il.name=?") + " ORDER BY m.name, il.name, x.seqno";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, schema);
 			statement.setString(2, schema);
 			for (int i = 0; i < tables.size(); i++) {
 				statement.setString(i + 3, tables.get(i));
 			}
-			if (requestedIndex != null) statement.setString(tables.size() + 3, requestedIndex);
+			if (requestedIndex != null)
+				statement.setString(tables.size() + 3, requestedIndex);
 			try (var rs = statement.executeQuery()) {
 				while (rs.next()) {
 					final String name = rs.getString("index_name");
@@ -158,7 +161,8 @@ public class SqliteIndexReader extends JdbcIndexReader {
 
 	private void retainKeys(Index index, String definition) {
 		List<String> keys = SqliteColumnReader.splitColumnDefinitions(definition);
-		if (!keys.isEmpty()) index.getSpecifics().put("sqlite.index.keys", String.join(", ", keys));
+		if (!keys.isEmpty())
+			index.getSpecifics().put("sqlite.index.keys", String.join(", ", keys));
 	}
 
 	static String stripOrder(final String definition) {
@@ -203,8 +207,8 @@ public class SqliteIndexReader extends JdbcIndexReader {
 			} else if (c == ')') {
 				depth--;
 			} else if (depth == 0 && i > 0 && !Character.isJavaIdentifierPart(sql.charAt(i - 1))
-					&& sql.regionMatches(true, i, "WHERE", 0, 5)
-					&& i + 5 < sql.length() && !Character.isJavaIdentifierPart(sql.charAt(i + 5))) {
+					&& sql.regionMatches(true, i, "WHERE", 0, 5) && i + 5 < sql.length()
+					&& !Character.isJavaIdentifierPart(sql.charAt(i + 5))) {
 				return sql.substring(i + 5).trim();
 			}
 		}

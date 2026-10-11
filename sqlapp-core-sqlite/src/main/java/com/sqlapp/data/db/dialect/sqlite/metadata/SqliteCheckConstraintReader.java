@@ -32,7 +32,8 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 	@Override
 	protected List<CheckConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) return readBulk(connection, context);
+		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo))
+			return readBulk(connection, context);
 		final List<CheckConstraint> result = list();
 		final String tableName = getTableName(context);
 		if (tableName == null) {
@@ -80,7 +81,8 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 					for (String expression : extractExpressions(definition)) {
 						sequence++;
 						String declared = extractName(definition);
-						var constraint = new CheckConstraint(declared == null ? "sqlite_check_" + table + "_" + sequence : declared, expression);
+						var constraint = new CheckConstraint(
+								declared == null ? "sqlite_check_" + table + "_" + sequence : declared, expression);
 						constraint.setDialect(getDialect());
 						constraint.setCatalogName(getCatalogName(context));
 						constraint.setSchemaName(getSchemaName(context));
@@ -89,7 +91,9 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 					}
 				}
 			}
-		} catch (SQLException e) { throw new RuntimeException(e); }
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 		return result;
 	}
 

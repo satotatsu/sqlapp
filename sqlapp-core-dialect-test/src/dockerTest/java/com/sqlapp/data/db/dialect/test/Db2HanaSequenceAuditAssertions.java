@@ -13,7 +13,9 @@ import com.sqlapp.data.schemas.SchemaUtils;
 
 /** Local disposable database sequence XML/DDL round trips. */
 public final class Db2HanaSequenceAuditAssertions {
-	private Db2HanaSequenceAuditAssertions() { }
+	private Db2HanaSequenceAuditAssertions() {
+	}
+
 	public static void verify(Connection connection, boolean db2) throws Exception {
 		var dialect = DialectResolver.getInstance().getDialect(connection);
 		String owner = db2 ? connection.getMetaData().getUserName().toUpperCase(Locale.ROOT) : "METADATA_TEST";
@@ -22,31 +24,36 @@ public final class Db2HanaSequenceAuditAssertions {
 		try (var statement = connection.createStatement()) {
 			try {
 				for (int i = 0; i < 3; i++) {
-					statement.execute("CREATE SEQUENCE " + owner + "." + prefix + i
-							+ (db2 && i == 2 ? " AS DECIMAL(20,0)" : "")
-							+ " START WITH 50 INCREMENT BY 3 MINVALUE 1 MAXVALUE 1000 CYCLE"
-							+ (i == 0 ? " CACHE 7" : " NO CACHE") + (db2 ? " ORDER" : ""));
+					statement.execute(
+							"CREATE SEQUENCE " + owner + "." + prefix + i + (db2 && i == 2 ? " AS DECIMAL(20,0)" : "")
+									+ " START WITH 50 INCREMENT BY 3 MINVALUE 1 MAXVALUE 1000 CYCLE"
+									+ (i == 0 ? " CACHE 7" : " NO CACHE") + (db2 ? " ORDER" : ""));
 					existing.add(prefix + i);
 				}
 				var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
 				reader.setSchemaName(owner);
 				var count = new AtomicInteger();
 				var counted = CountingJdbc.wrap(connection, text -> true, count);
-				var sequences = reader.getAllFull(counted).stream().filter(s -> s.getName().startsWith(prefix)).toList();
+				var sequences = reader.getAllFull(counted).stream().filter(s -> s.getName().startsWith(prefix))
+						.toList();
 				assertEquals(3, sequences.size());
 				assertEquals(1, count.get());
 				var registry = dialect.createSqlFactoryRegistry();
 				registry.getOptions().setDecorateSchemaName(true);
 				for (var original : sequences) {
-					assertEquals(original.getName().endsWith("0"), original.isCache(), "cache size=" + original.getCacheSize());
+					assertEquals(original.getName().endsWith("0"), original.isCache(),
+							"cache size=" + original.getCacheSize());
 					assertEquals(original.getName().endsWith("0") ? 7 : 1, original.getCacheSize());
 					assertEquals(db2, original.isOrder());
 					Sequence restored = SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
 					statement.execute("DROP SEQUENCE " + owner + "." + original.getName());
 					existing.remove(original.getName());
 					for (var operation : registry.createSql(restored, SqlType.CREATE)) {
-						try { statement.execute(operation.getSqlText()); }
-						catch (java.sql.SQLException e) { throw new AssertionError(operation.getSqlText(), e); }
+						try {
+							statement.execute(operation.getSqlText());
+						} catch (java.sql.SQLException e) {
+							throw new AssertionError(operation.getSqlText(), e);
+						}
 					}
 					existing.add(original.getName());
 					reader.setObjectName(original.getName());
@@ -63,7 +70,8 @@ public final class Db2HanaSequenceAuditAssertions {
 					assertEquals(original.isCycle(), after.isCycle());
 				}
 			} finally {
-				for (String name : existing) statement.execute("DROP SEQUENCE " + owner + "." + name);
+				for (String name : existing)
+					statement.execute("DROP SEQUENCE " + owner + "." + name);
 			}
 		}
 	}

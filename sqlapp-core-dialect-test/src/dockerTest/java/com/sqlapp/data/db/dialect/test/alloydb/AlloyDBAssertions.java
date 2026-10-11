@@ -315,7 +315,6 @@ abstract class AlloyDBAssertions {
 		}
 	}
 
-
 	@Test
 	void snapshotHistoryAndFailureRespectTransactionBoundaries() throws Exception {
 		try (var connection = connect()) {
@@ -332,11 +331,12 @@ abstract class AlloyDBAssertions {
 					statement.execute("CREATE SCHEMA " + schema);
 					com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 							.getSqlFactory(history, SqlType.CREATE);
-					for (var sql : factory.createSql(history)) statement.execute(sql.getSqlText());
+					for (var sql : factory.createSql(history))
+						statement.execute(sql.getSqlText());
 				}
-				var definition = new com.sqlapp.data.schemas.migration.MigrationSnapshotDefinition(
-						"history", schema + ".History", java.util.List.of("Id"), java.util.List.of("value"),
-						"valid_from", "valid_to", "current", true);
+				var definition = new com.sqlapp.data.schemas.migration.MigrationSnapshotDefinition("history",
+						schema + ".History", java.util.List.of("Id"), java.util.List.of("value"), "valid_from",
+						"valid_to", "current", true);
 				var executor = SetBasedMigrationSnapshotResolver.resolve(dialect);
 				var first = java.time.Instant.parse("2026-01-01T00:00:00Z");
 				var second = first.plusSeconds(3600);
@@ -355,8 +355,10 @@ abstract class AlloyDBAssertions {
 				connection.setAutoCommit(true);
 				assertEquals(new MigrationSnapshotExecutionResult(0, 0, 2),
 						executor.execute(connection, history, definition, second, original, 2));
-				assertThrows(java.sql.SQLException.class, () -> executor.execute(connection, history, definition,
-						second, changed, 1, () -> { throw new java.sql.SQLException("guard rejected"); }));
+				assertThrows(java.sql.SQLException.class,
+						() -> executor.execute(connection, history, definition, second, changed, 1, () -> {
+							throw new java.sql.SQLException("guard rejected");
+						}));
 				assertTrue(connection.getAutoCommit());
 				assertEquals(new MigrationSnapshotExecutionResult(0, 0, 2),
 						executor.execute(connection, history, definition, second, original, 2));
@@ -364,9 +366,10 @@ abstract class AlloyDBAssertions {
 						second, java.util.List.of(changed.get(0), changed.get(0)), 1));
 				assertEquals(new MigrationSnapshotExecutionResult(2, 2, 0),
 						executor.execute(connection, history, definition, second, changed, 1));
-				try (var statement = connection.createStatement(); var rows = statement.executeQuery(
-						"SELECT \"Id\", value, valid_from, valid_to, \"current\" FROM " + schema
-						+ ".\"History\" ORDER BY \"Id\", valid_from")) {
+				try (var statement = connection.createStatement();
+						var rows = statement
+								.executeQuery("SELECT \"Id\", value, valid_from, valid_to, \"current\" FROM " + schema
+										+ ".\"History\" ORDER BY \"Id\", valid_from")) {
 					assertTrue(rows.next());
 					assertEquals("before", rows.getString("value"));
 					assertEquals(first, rows.getTimestamp("valid_from").toInstant());
@@ -409,11 +412,12 @@ abstract class AlloyDBAssertions {
 					statement.execute("CREATE SCHEMA " + schema);
 					com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 							.getSqlFactory(strings, SqlType.CREATE);
-					for (var sql : factory.createSql(strings)) statement.execute(sql.getSqlText());
+					for (var sql : factory.createSql(strings))
+						statement.execute(sql.getSqlText());
 				}
 				String value = "日本語".repeat(20000);
-				try (var statement = connection.prepareStatement("INSERT INTO " + schema
-						+ ".\"Strings\" VALUES (?, ?, ?)")) {
+				try (var statement = connection
+						.prepareStatement("INSERT INTO " + schema + ".\"Strings\" VALUES (?, ?, ?)")) {
 					statement.setString(1, value);
 					var array = connection.createArrayOf("varchar", new String[] { value, "", null });
 					try {

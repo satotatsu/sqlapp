@@ -36,19 +36,21 @@ public class CockroachTypeReader extends TypeReader {
 						|| !CockroachMetadata.matches(context, "typeName", name))
 					continue;
 				Type object;
-				if (!result.isEmpty() && name.equals(result.get(result.size()-1).getName())
-						&& schema.equals(result.get(result.size()-1).getSchemaName())) {
-					object = result.get(result.size()-1);
+				if (!result.isEmpty() && name.equals(result.get(result.size() - 1).getName())
+						&& schema.equals(result.get(result.size() - 1).getSchemaName())) {
+					object = result.get(result.size() - 1);
 				} else {
 					object = new Type(name).setSchemaName(schema);
 					object.setDefinition("CREATE TYPE " + CockroachMetadata.fullName(schema, name) + " AS ENUM ()");
 					result.add(object);
 				}
 				String label = rows.getString(4);
-				if (label == null) throw new SQLException("CockroachDB enum has no labels: " + name);
+				if (label == null)
+					throw new SQLException("CockroachDB enum has no labels: " + name);
 				String ddl = String.join("\n", object.getDefinition());
-				String prefix = ddl.substring(0, ddl.length()-1);
-				object.setDefinition(prefix + (prefix.endsWith("(") ? "" : ",") + "'" + label.replace("'", "''") + "')");
+				String prefix = ddl.substring(0, ddl.length() - 1);
+				object.setDefinition(
+						prefix + (prefix.endsWith("(") ? "" : ",") + "'" + label.replace("'", "''") + "')");
 			}
 		} catch (SQLException e) {
 			throw new IllegalStateException("Cannot read CockroachDB Type metadata", e);

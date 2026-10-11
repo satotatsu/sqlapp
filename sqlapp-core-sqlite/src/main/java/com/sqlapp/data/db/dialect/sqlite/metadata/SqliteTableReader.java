@@ -83,12 +83,13 @@ public class SqliteTableReader extends JdbcTableReader {
 	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
 			final List<Table> tables) throws SQLException {
-		if (tables.isEmpty()) return;
+		if (tables.isEmpty())
+			return;
 		final ParametersContext bulkContext = context.clone();
 		bulkContext.put("tableName", tables.stream().map(Table::getName).toList());
-		if (SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo()
-				.setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
-				.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion()))) {
+		if (SqliteIndexReader.supportsBulkIndexes(
+				new ProductVersionInfo().setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
+						.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion()))) {
 			var columns = getColumnReader().getAllFull(connection, bulkContext);
 			var indexes = getIndexReader().getAllFull(connection, bulkContext);
 			var uniques = getUniqueConstraintReader().getAllFull(connection, bulkContext);
@@ -127,11 +128,14 @@ public class SqliteTableReader extends JdbcTableReader {
 	}
 
 	private void setTableOptions(Table table, String definition) {
-		if (definition == null) return;
+		if (definition == null)
+			return;
 		String normalized = definition.toUpperCase(Locale.ROOT);
 		String options = normalized.substring(normalized.lastIndexOf(')') + 1);
-		if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*")) table.getSpecifics().put("without_rowid", "true");
-		if (options.matches("(?s).*\\bSTRICT\\b.*")) table.getSpecifics().put("strict", "true");
+		if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*"))
+			table.getSpecifics().put("without_rowid", "true");
+		if (options.matches("(?s).*\\bSTRICT\\b.*"))
+			table.getSpecifics().put("strict", "true");
 	}
 
 	private void loadTableOptions(final Connection connection, final Table table) throws SQLException {

@@ -12,19 +12,24 @@ class SqlServerMetadataVersionBoundaryTest {
 			return new String(input.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
+
 	@Test
 	void changeTrackingIsProjectedAsBooleanInsteadOfObjectId() throws Exception {
-		for (String version : new String[]{"2008", "2012", "2014", "2016", "2019", "2022"}) {
+		for (String version : new String[] { "2008", "2012", "2014", "2016", "2019", "2022" }) {
 			String query = resource("tables" + version + ".sql");
-			assertTrue(query.contains("CAST(CASE WHEN ctt.object_id IS NULL THEN 0 ELSE 1 END AS bit) AS has_change_tracking"));
+			assertTrue(query
+					.contains("CAST(CASE WHEN ctt.object_id IS NULL THEN 0 ELSE 1 END AS bit) AS has_change_tracking"));
 		}
 	}
 
 	@Test
 	void compressionDelayOnlyReferencesCatalogColumnFrom2016() throws Exception {
-		for (String version : new String[]{"2008", "2012", "2014"}) assertFalse(resource("tables" + version + ".sql").contains("idx.compression_delay"));
-		for (String version : new String[]{"2016", "2019", "2022"}) assertTrue(resource("tables" + version + ".sql").contains("idx.compression_delay"));
+		for (String version : new String[] { "2008", "2012", "2014" })
+			assertFalse(resource("tables" + version + ".sql").contains("idx.compression_delay"));
+		for (String version : new String[] { "2016", "2019", "2022" })
+			assertTrue(resource("tables" + version + ".sql").contains("idx.compression_delay"));
 	}
+
 	@Test
 	void partitionStatisticsDoNotIncludeSecondaryIndexesOrLoseLobStorage() throws Exception {
 		String query = resource("partitions2005.sql");

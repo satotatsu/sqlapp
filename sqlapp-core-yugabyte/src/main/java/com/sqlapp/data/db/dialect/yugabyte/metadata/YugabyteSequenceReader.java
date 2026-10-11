@@ -5,7 +5,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.metadata.PostgresSequenceReader;
 
 /**
- * Uses the shared set-based PostgreSQL sequence reader on both YSQL engine majors.
+ * Uses the shared set-based PostgreSQL sequence reader on both YSQL engine
+ * majors.
  */
 public class YugabyteSequenceReader extends PostgresSequenceReader {
 	public YugabyteSequenceReader(Dialect dialect) {

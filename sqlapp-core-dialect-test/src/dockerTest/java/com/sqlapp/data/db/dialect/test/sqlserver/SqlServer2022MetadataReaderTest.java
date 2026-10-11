@@ -51,8 +51,8 @@ class SqlServer2022MetadataReaderTest {
 	@Test
 	void partitionMetadataRoundTripAndQueryCounts() throws Exception {
 		try (Connection connection = DriverManager.getConnection(
-				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME,
-				SQL_SERVER.getUsername(), SQL_SERVER.getPassword())) {
+				SQL_SERVER.getJdbcUrl() + ";databaseName=" + DATABASE_NAME, SQL_SERVER.getUsername(),
+				SQL_SERVER.getPassword())) {
 			SqlServerMetadataAuditAssertions.verify(connection);
 			com.sqlapp.data.db.dialect.test.SequenceMetadataAuditAssertions.verify(connection, false);
 		}

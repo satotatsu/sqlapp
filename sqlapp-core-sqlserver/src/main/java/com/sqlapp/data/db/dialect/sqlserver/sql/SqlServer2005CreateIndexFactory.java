@@ -77,8 +77,10 @@ public class SqlServer2005CreateIndexFactory extends SqlServerCreateIndexFactory
 				addObjectDetail.addObjectDetail(obj.getPartitioning(), builder);
 			}
 		} else {
-			String filegroup = obj.getSpecifics().get(com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.FILE_GROUP_NAME);
-			if (!CommonUtils.isEmpty(filegroup)) builder.on()._add("[")._add(filegroup.replace("]", "]]"))._add("]");
+			String filegroup = obj.getSpecifics()
+					.get(com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.FILE_GROUP_NAME);
+			if (!CommonUtils.isEmpty(filegroup))
+				builder.on()._add("[")._add(filegroup.replace("]", "]]"))._add("]");
 		}
 
 	}

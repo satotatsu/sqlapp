@@ -73,14 +73,16 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	}
 
 	private void readVectorDetails(Connection connection, List<Index> indexes, boolean hybrid) {
-		if (hybrid ? hybridVectorIndexDetailUnavailable : vectorIndexDetailUnavailable) return;
+		if (hybrid ? hybridVectorIndexDetailUnavailable : vectorIndexDetailUnavailable)
+			return;
 		DoubleKeyMap<String, String, Index> selected = new DoubleKeyMap<>();
 		for (Index index : indexes) {
 			if (index.getIndexType() == (hybrid ? IndexType.Domain : IndexType.Vector)) {
 				selected.put(index.getSchemaName(), index.getName(), index);
 			}
 		}
-		if (selected.toList().isEmpty()) return;
+		if (selected.toList().isEmpty())
+			return;
 		ParametersContext context = new ParametersContext();
 		context.put("schemaName", selected.keySet());
 		context.put("indexName", selected.secondKeySet());
@@ -90,7 +92,8 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 				@Override
 				public void handleResultSetNext(ExResultSet rs) throws SQLException {
 					Index index = selected.get(rs.getString("OWNER"), rs.getString("INDEX_NAME"));
-					if (index == null) return;
+					if (index == null)
+						return;
 					if (!hybrid) {
 						applyVectorIndexParameters(index, rs.getString("IDX_PARAMS"));
 						return;
@@ -99,13 +102,17 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 					index.getSpecifics().put(Oracle23aiCreateIndexFactory.HYBRID, true);
 					String key = rs.getString("IXO_CLASS");
 					String value = rs.getString("IXO_OBJECT");
-					if (key != null && value != null) index.getSpecifics().put(key, value);
+					if (key != null && value != null)
+						index.getSpecifics().put(key, value);
 				}
 			});
 		} catch (RuntimeException e) {
-			if (!isVectorIndexDetailUnavailable(e)) throw e;
-			if (hybrid) hybridVectorIndexDetailUnavailable = true;
-			else vectorIndexDetailUnavailable = true;
+			if (!isVectorIndexDetailUnavailable(e))
+				throw e;
+			if (hybrid)
+				hybridVectorIndexDetailUnavailable = true;
+			else
+				vectorIndexDetailUnavailable = true;
 			logger.warn("Oracle vector detail catalog is unavailable or not permitted; basic index metadata retained. "
 					+ sqlExceptionMessage(e));
 		}

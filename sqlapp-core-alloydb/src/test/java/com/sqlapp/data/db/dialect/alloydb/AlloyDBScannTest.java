@@ -13,11 +13,11 @@ class AlloyDBScannTest {
 		var table = new Table("Vectors").setSchemaName("Mixed Schema");
 		table.getColumns().add("Embedding", c -> c.setDataTypeName("vector(3)"));
 		var i = new Index("Scann Index");
-			i.getColumns().add("Embedding");
-			i.setIndexType(IndexType.Vector);
-			i.getSpecifics().put(AlloyDBCreateIndexFactory.METHOD, "scann");
-			i.getSpecifics().put(AlloyDBCreateIndexFactory.KEYS, "\"Embedding\" public.cosine");
-			i.getSpecifics().put(AlloyDBCreateIndexFactory.OPTIONS, "num_leaves='1'");
+		i.getColumns().add("Embedding");
+		i.setIndexType(IndexType.Vector);
+		i.getSpecifics().put(AlloyDBCreateIndexFactory.METHOD, "scann");
+		i.getSpecifics().put(AlloyDBCreateIndexFactory.KEYS, "\"Embedding\" public.cosine");
+		i.getSpecifics().put(AlloyDBCreateIndexFactory.OPTIONS, "num_leaves='1'");
 		table.getIndexes().add(i);
 		return table;
 	}
@@ -28,7 +28,8 @@ class AlloyDBScannTest {
 			var dialect = DialectResolver.getInstance().getDialect("AlloyDB", major, 0, null);
 			Table table = SchemaUtils.readXml(new java.io.StringReader(table().asXml()));
 			var index = table.getIndexes().get("Scann Index");
-			com.sqlapp.data.db.sql.SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index, SqlType.CREATE);
+			com.sqlapp.data.db.sql.SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index,
+					SqlType.CREATE);
 			String sql = factory.createSql(index).get(0).getSqlText();
 			assertTrue(sql.contains("USING scann (\"Embedding\" public.cosine)"), sql);
 			assertTrue(sql.contains("num_leaves='1'"), sql);
@@ -42,19 +43,22 @@ class AlloyDBScannTest {
 	void rejectsIncompleteAndUnsupportedConfiguration() {
 		var dialect = new AlloyDB16();
 		var index = table().getIndexes().get(0);
-		com.sqlapp.data.db.sql.SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index, SqlType.CREATE);
+		com.sqlapp.data.db.sql.SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index,
+				SqlType.CREATE);
 		index.getSpecifics().remove(AlloyDBCreateIndexFactory.KEYS);
 		assertThrows(IllegalArgumentException.class, () -> factory.createSql(index));
 		index.getSpecifics().put(AlloyDBCreateIndexFactory.METHOD, "unknown");
 		assertThrows(IllegalArgumentException.class, () -> factory.createSql(index));
 	}
+
 	@Test
 	void createsNewVectorIndexFromColumnsAndDistanceWithoutSqlSpecifics() {
 		var dialect = new AlloyDB16();
 		var index = table().getIndexes().get(0);
 		index.getSpecifics().clear();
 		index.setVectorDistanceType(VectorDistanceType.Euclidean);
-		com.sqlapp.data.db.sql.SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index, SqlType.CREATE);
+		com.sqlapp.data.db.sql.SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index,
+				SqlType.CREATE);
 		assertTrue(factory.createSql(index).get(0).getSqlText().contains("USING scann (\"Embedding\" l2)"));
 		index.setTableSpaceName("Index Space");
 		assertTrue(factory.createSql(index).get(0).getSqlText().contains("TABLESPACE \"Index Space\""));

@@ -31,16 +31,14 @@ class Oracle23aiIndexReaderTest {
 
 	@Test
 	void vectorDetailsAreBatchedAndRoutedByOwnerAndName() throws Exception {
-		for (IndexType type : List.of(
-				IndexType.Vector, IndexType.Domain)) {
+		for (IndexType type : List.of(IndexType.Vector, IndexType.Domain)) {
 			var queries = new AtomicInteger();
 			var reader = new Oracle23aiIndexReader(DialectHolder.oracle23aiDialect) {
 				@Override
-				protected JdbcQueryHandler execute(Connection connection,
-						SqlNode node, ParametersContext context,
+				protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
 						ResultSetNextHandler handler) {
 					queries.incrementAndGet();
-					assertEquals(2, ((Collection<?>)context.get("schemaName")).size());
+					assertEquals(2, ((Collection<?>) context.get("schemaName")).size());
 					for (String owner : List.of("A", "B", "UNREQUESTED")) {
 						try {
 							handler.handleResultSetNext(new ExResultSet(null) {
@@ -56,7 +54,9 @@ class Oracle23aiIndexReaderTest {
 									};
 								}
 							});
-						} catch (SQLException e) { throw new RuntimeException(e); }
+						} catch (SQLException e) {
+							throw new RuntimeException(e);
+						}
 					}
 					return null;
 				}

@@ -24,9 +24,10 @@ class H2SequenceRoundTripTest {
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
 			reader.setSchemaName("PUBLIC");
-			for (boolean cycle : new boolean[] {true, false}) {
-				statement.execute("CREATE SEQUENCE AUDIT_SEQ AS INTEGER START WITH 50 INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000 "
-						+ (cycle ? "CYCLE" : "NO CYCLE") + " CACHE 1");
+			for (boolean cycle : new boolean[] { true, false }) {
+				statement.execute(
+						"CREATE SEQUENCE AUDIT_SEQ AS INTEGER START WITH 50 INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000 "
+								+ (cycle ? "CYCLE" : "NO CYCLE") + " CACHE 1");
 				var sequence = reader.getAll(connection).get(0);
 				assertEquals(com.sqlapp.data.db.datatype.DataType.INT, sequence.getDataType());
 				assertEquals(cycle, sequence.isCycle());

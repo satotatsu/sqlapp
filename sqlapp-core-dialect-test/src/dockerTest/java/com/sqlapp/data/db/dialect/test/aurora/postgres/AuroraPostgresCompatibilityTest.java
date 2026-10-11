@@ -31,10 +31,12 @@ class AuroraPostgresCompatibilityTest extends AuroraPostgresAssertions {
 		return false;
 	}
 
-    @org.junit.jupiter.api.Test
-    void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
-        try (var c = connect()) {
-            com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c, com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("aurora-postgresql", c.getMetaData().getDatabaseMajorVersion(), 0, null));
-        }
-    }
+	@org.junit.jupiter.api.Test
+	void preservesSequenceAndAdvancedIndexMetadata() throws Exception {
+		try (var c = connect()) {
+			com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataRegressionAssertions.verify(c,
+					com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("aurora-postgresql",
+							c.getMetaData().getDatabaseMajorVersion(), 0, null));
+		}
+	}
 }

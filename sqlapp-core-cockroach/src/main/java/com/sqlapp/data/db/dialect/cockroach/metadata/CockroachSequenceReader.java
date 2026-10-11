@@ -19,11 +19,12 @@ public class CockroachSequenceReader extends SequenceReader {
 		try {
 			var definitions = CockroachMetadata.definitions(c, "SEQUENCE", context);
 			try (var sql = c.createStatement();
-				var rows = sql.executeQuery(
-						"SELECT sequence_schema,sequence_name,start_value,minimum_value,maximum_value,increment,cycle_option FROM information_schema.sequences WHERE sequence_catalog=current_database() ORDER BY sequence_schema,sequence_name")) {
+					var rows = sql.executeQuery(
+							"SELECT sequence_schema,sequence_name,start_value,minimum_value,maximum_value,increment,cycle_option FROM information_schema.sequences WHERE sequence_catalog=current_database() ORDER BY sequence_schema,sequence_name")) {
 				while (rows.next()) {
 					String schema = rows.getString(1), name = rows.getString(2);
-					if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
+					if (!CockroachMetadata.userSchema(schema)
+							|| !CockroachMetadata.matches(context, "schemaName", schema)
 							|| !CockroachMetadata.matches(context, "sequenceName", name))
 						continue;
 					var object = new Sequence(name).setSchemaName(schema)

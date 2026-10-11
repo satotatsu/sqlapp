@@ -30,7 +30,8 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 	@Override
 	protected List<ForeignKeyConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) return readBulk(connection, context);
+		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo))
+			return readBulk(connection, context);
 		final String tableName = getTableName(context);
 		if (tableName == null) {
 			return list();
@@ -71,7 +72,9 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 				constraint.getColumns().add(new Column(rs.getString("from")));
 				constraint.getRelatedColumns().add(rs.getString("to"));
 			}
-		} catch (SQLException e) { throw new RuntimeException(e); }
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 		return List.copyOf(constraints.values());
 	}
 

@@ -10,13 +10,14 @@ import com.sqlapp.data.schemas.Sequence;
 class SapHanaSequenceMetadataDdlTest extends AbstractSapHanaSqlFactoryTest {
 	@Test
 	void zeroAndDisabledCacheUseNoCache() {
-		for (Sequence sequence : java.util.List.of(new Sequence("S").setCacheSize(0),
-				new Sequence("S").setCache(false), new Sequence("S").setCache(false).setCacheSize(20))) {
+		for (Sequence sequence : java.util.List.of(new Sequence("S").setCacheSize(0), new Sequence("S").setCache(false),
+				new Sequence("S").setCache(false).setCacheSize(20))) {
 			String text = sql(sequence);
 			assertTrue(text.contains("NO CACHE"), text);
 			assertFalse(text.contains("CACHE 0"), text);
 		}
 	}
+
 	@Test
 	void retainsPositiveCacheSize() {
 		assertTrue(sql(new Sequence("S").setCacheSize(7)).contains("CACHE 7"));
@@ -30,7 +31,8 @@ class SapHanaSequenceMetadataDdlTest extends AbstractSapHanaSqlFactoryTest {
 	}
 
 	private String sql(Sequence sequence) {
-		com.sqlapp.data.db.sql.SqlFactory<Sequence> factory = sqlFactoryRegistry.getSqlFactory(sequence, SqlType.CREATE);
+		com.sqlapp.data.db.sql.SqlFactory<Sequence> factory = sqlFactoryRegistry.getSqlFactory(sequence,
+				SqlType.CREATE);
 		return factory.createSql(sequence).get(0).getSqlText();
 	}
 }

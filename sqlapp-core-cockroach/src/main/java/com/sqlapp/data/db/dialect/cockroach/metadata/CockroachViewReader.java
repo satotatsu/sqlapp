@@ -20,11 +20,12 @@ public class CockroachViewReader extends PostgresViewReader {
 		try {
 			var definitions = CockroachMetadata.definitions(c, "VIEW", context);
 			try (var sql = c.createStatement();
-				var rows = sql.executeQuery(
-						"SELECT table_schema,table_name FROM information_schema.tables WHERE table_catalog=current_database() AND table_type='VIEW' ORDER BY table_schema,table_name")) {
+					var rows = sql.executeQuery(
+							"SELECT table_schema,table_name FROM information_schema.tables WHERE table_catalog=current_database() AND table_type='VIEW' ORDER BY table_schema,table_name")) {
 				while (rows.next()) {
 					String schema = rows.getString(1), name = rows.getString(2);
-					if (!CockroachMetadata.userSchema(schema) || !CockroachMetadata.matches(context, "schemaName", schema)
+					if (!CockroachMetadata.userSchema(schema)
+							|| !CockroachMetadata.matches(context, "schemaName", schema)
 							|| !CockroachMetadata.matches(context, "viewName", name))
 						continue;
 					var object = new View(name).setSchemaName(schema);

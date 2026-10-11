@@ -18,7 +18,10 @@ class AlloyDBColumnarConfigurationTest {
 		schema.getTables().add(table);
 		return catalog;
 	}
-	private Table table(Catalog catalog) { return catalog.getSchemas().get("Mixed").getTables().get("Items"); }
+
+	private Table table(Catalog catalog) {
+		return catalog.getSchemas().get("Mixed").getTables().get("Items");
+	}
 
 	@Test
 	void readsSettingsWithoutJdbcAndPreservesUnmodeledRelations() throws Exception {
@@ -32,9 +35,11 @@ class AlloyDBColumnarConfigurationTest {
 		assertEquals("other.public.keep(id),db.Mixed.Items(Id,value),db.hidden.keep", plan.relations());
 		assertEquals(2, plan.sqlOperations().size());
 		assertTrue(plan.requiresAutoCommit());
-		assertTrue(plan.sqlOperations().get(0).getSqlText().startsWith("ALTER SYSTEM SET google_columnar_engine.relations"));
+		assertTrue(plan.sqlOperations().get(0).getSqlText()
+				.startsWith("ALTER SYSTEM SET google_columnar_engine.relations"));
 		assertEquals("SELECT pg_catalog.pg_reload_conf()", plan.sqlOperations().get(1).getSqlText());
-		assertEquals(catalog.getSettings().get(AlloyDBColumnarConfiguration.RELATIONS).getValue(), plan.originalRelations());
+		assertEquals(catalog.getSettings().get(AlloyDBColumnarConfiguration.RELATIONS).getValue(),
+				plan.originalRelations());
 	}
 
 	@Test
@@ -55,9 +60,12 @@ class AlloyDBColumnarConfigurationTest {
 	void rejectsMissingBaselineAndInvalidModelColumnsOrNames() {
 		var catalog = catalog("");
 		assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.setColumns(table(catalog)));
-		assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.setColumns(table(catalog), "missing"));
-		assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.setColumns(table(catalog), "id"));
-		assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.setColumns(table(catalog), "Id", "Id"));
+		assertThrows(IllegalArgumentException.class,
+				() -> AlloyDBColumnarConfiguration.setColumns(table(catalog), "missing"));
+		assertThrows(IllegalArgumentException.class,
+				() -> AlloyDBColumnarConfiguration.setColumns(table(catalog), "id"));
+		assertThrows(IllegalArgumentException.class,
+				() -> AlloyDBColumnarConfiguration.setColumns(table(catalog), "Id", "Id"));
 		AlloyDBColumnarConfiguration.setAllColumns(table(catalog).setName("Odd.Table"));
 		assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.plan(catalog));
 		catalog.getSettings().clear();
@@ -69,7 +77,8 @@ class AlloyDBColumnarConfigurationTest {
 		for (String value : new String[] { "db.Mixed.Items(", "db.Mixed.Items()", "db.Mixed.Items(Id,,value)",
 				"db.Mixed.Items(Id,Id)", "db.Mixed.Items,db.Mixed.Items", "db.Mixed.Items,", "Mixed.Items",
 				"db.\"Mixed Schema\".Items(Id)", "db.Mixed.Items(Id))", "db.Mixed.Items((Id))" }) {
-			assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.read(catalog(value)), value);
+			assertThrows(IllegalArgumentException.class, () -> AlloyDBColumnarConfiguration.read(catalog(value)),
+					value);
 		}
 	}
 
@@ -80,6 +89,7 @@ class AlloyDBColumnarConfigurationTest {
 		assertDoesNotThrow(() -> AlloyDBColumnarConfiguration.read(catalog));
 		assertFalse(table(catalog).getSpecifics().containsKey(AlloyDBColumnarConfiguration.COLUMNS));
 	}
+
 	@Test
 	void explicitClearSurvivesXmlAndOrdinaryCreateNeverAppliesInstanceSettings() throws Exception {
 		var catalog = catalog("db.Mixed.Items(Id)");

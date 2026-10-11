@@ -20,8 +20,11 @@ class SapHanaPartitionRoutingTest {
 	void skipsEmptySelections() {
 		var count = new AtomicInteger();
 		var reader = new SapHanaTableReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
-				count.incrementAndGet(); return null;
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				count.incrementAndGet();
+				return null;
 			}
 		};
 		assertTrue(reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo()).isEmpty());
@@ -32,20 +35,28 @@ class SapHanaPartitionRoutingTest {
 	void skipsSchemaTableCrossProductRows() {
 		var count = new AtomicInteger();
 		var reader = new SapHanaTableReader(DialectHolder.defaultDialect) {
-			@Override protected Table createTable(ExResultSet rs) throws SQLException {
+			@Override
+			protected Table createTable(ExResultSet rs) throws SQLException {
 				return new Table(rs.getString("table_name")).setSchemaName(rs.getString("schema_name"));
 			}
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				int query = count.incrementAndGet();
 				try {
 					for (String schema : query == 1 ? java.util.List.of("A", "B") : java.util.List.of("A")) {
 						handler.handleResultSetNext(new ExResultSet(null) {
-							@Override public String getString(String name) {
-								return name.equals("schema_name") ? schema : query == 1 && schema.equals("A") ? "T1" : "T2";
+							@Override
+							public String getString(String name) {
+								return name.equals("schema_name") ? schema
+										: query == 1 && schema.equals("A") ? "T1" : "T2";
 							}
 						});
 					}
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};

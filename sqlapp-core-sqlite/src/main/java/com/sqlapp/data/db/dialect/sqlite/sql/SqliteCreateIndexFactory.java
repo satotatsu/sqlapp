@@ -31,6 +31,7 @@ public class SqliteCreateIndexFactory extends AbstractCreateIndexFactory<SqliteS
 			}
 		}
 		builder._add(")");
-		if (index.getWhere() != null && !index.getWhere().isBlank()) builder.where().space()._add(index.getWhere());
+		if (index.getWhere() != null && !index.getWhere().isBlank())
+			builder.where().space()._add(index.getWhere());
 	}
 }

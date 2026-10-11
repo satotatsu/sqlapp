@@ -32,7 +32,8 @@ class OracleIndexPlacementRegressionTest {
 		partition.getSubPartitions().add(new SubPartition("ISP1").setTableSpaceName("USERS"));
 		partitioning.getPartitions().add(partition);
 		index.setPartitioning(partitioning);
-		var registry = new com.sqlapp.data.db.dialect.oracle.resolver.OracleDialectResolver().getDialect(10, 0).createSqlFactoryRegistry();
+		var registry = new com.sqlapp.data.db.dialect.oracle.resolver.OracleDialectResolver().getDialect(10, 0)
+				.createSqlFactoryRegistry();
 		String sql = registry.createSql(index, SqlType.CREATE).get(0).getSqlText();
 		assertTrue(sql.contains("LOCAL"));
 		assertTrue(sql.contains("PARTITION IP1 TABLESPACE USERS"));

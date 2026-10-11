@@ -27,11 +27,15 @@ class SqliteIndexMetadataAuditTest {
 			statement.execute("CREATE INDEX other.ix_a ON a(value)");
 			var queries = new AtomicInteger();
 			Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
-					new Class<?>[] {Connection.class}, (proxy, method, args) -> {
-				if (method.getName().equals("prepareStatement")) queries.incrementAndGet();
-				try { return method.invoke(raw, args); }
-				catch (InvocationTargetException e) { throw e.getCause(); }
-			});
+					new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+						if (method.getName().equals("prepareStatement"))
+							queries.incrementAndGet();
+						try {
+							return method.invoke(raw, args);
+						} catch (InvocationTargetException e) {
+							throw e.getCause();
+						}
+					});
 			var context = new ParametersContext();
 			context.put("schemaName", "main");
 			context.put("tableName", List.of("a", "b"));
@@ -60,20 +64,24 @@ class SqliteIndexMetadataAuditTest {
 
 	@Test
 	void indexXmlAndDdlRetainCollationPredicateAndAttachedSchema() throws Exception {
-		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:"); var statement = connection.createStatement()) {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
 			statement.execute("ATTACH ':memory:' AS other");
 			statement.execute("CREATE TABLE other.t (value TEXT, active INT)");
-			statement.execute("CREATE UNIQUE INDEX other.ix ON t(value COLLATE NOCASE DESC, lower(value)) WHERE(active=1)");
+			statement.execute(
+					"CREATE UNIQUE INDEX other.ix ON t(value COLLATE NOCASE DESC, lower(value)) WHERE(active=1)");
 			var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
 			reader.setSchemaName("other");
 			reader.setObjectName("t");
 			var table = reader.getAllFull(connection).get(0);
-			com.sqlapp.data.schemas.Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			com.sqlapp.data.schemas.Table restored = com.sqlapp.data.schemas.SchemaUtils
+					.readXml(new java.io.StringReader(table.asXml()));
 			var index = restored.getIndexes().get("ix");
 			assertEquals("(active=1)", index.getWhere());
 			statement.execute("DROP INDEX other.ix");
 			var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
-			for (var operation : registry.createSql(index, com.sqlapp.data.db.sql.SqlType.CREATE)) statement.execute(operation.getSqlText());
+			for (var operation : registry.createSql(index, com.sqlapp.data.db.sql.SqlType.CREATE))
+				statement.execute(operation.getSqlText());
 			statement.execute("INSERT INTO other.t VALUES ('a',1)");
 			assertThrows(java.sql.SQLException.class, () -> statement.execute("INSERT INTO other.t VALUES ('A',1)"));
 			statement.execute("INSERT INTO other.t VALUES ('A',0)");
@@ -87,16 +95,21 @@ class SqliteIndexMetadataAuditTest {
 	void fullTableMetadataUsesConstantQueries() throws Exception {
 		try (var raw = DriverManager.getConnection("jdbc:sqlite::memory:"); var statement = raw.createStatement()) {
 			for (int i = 0; i < 8; i++) {
-				statement.execute("CREATE TABLE t" + i + " (a INTEGER PRIMARY KEY, b TEXT UNIQUE, c TEXT AS (lower(b)) STORED, CHECK(length(b)>0), FOREIGN KEY(a) REFERENCES t0(a))");
+				statement.execute("CREATE TABLE t" + i
+						+ " (a INTEGER PRIMARY KEY, b TEXT UNIQUE, c TEXT AS (lower(b)) STORED, CHECK(length(b)>0), FOREIGN KEY(a) REFERENCES t0(a))");
 				statement.execute("CREATE INDEX ix" + i + " ON t" + i + "(lower(b) DESC) WHERE a>0");
 			}
 			var queries = new AtomicInteger();
 			Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
-					new Class<?>[] {Connection.class}, (proxy, method, args) -> {
-				if (method.getName().equals("prepareStatement")) queries.incrementAndGet();
-				try { return method.invoke(raw, args); }
-				catch (InvocationTargetException e) { throw e.getCause(); }
-			});
+					new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+						if (method.getName().equals("prepareStatement"))
+							queries.incrementAndGet();
+						try {
+							return method.invoke(raw, args);
+						} catch (InvocationTargetException e) {
+							throw e.getCause();
+						}
+					});
 			var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
 			reader.setSchemaName("main");
 			reader.setObjectName("t0");
@@ -125,8 +138,10 @@ class SqliteIndexMetadataAuditTest {
 
 	@Test
 	void bulkPragmaStartsAt316() {
-		assertFalse(SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo().setMajorVersion(3).setMinorVersion(15)));
-		assertTrue(SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo().setMajorVersion(3).setMinorVersion(16)));
+		assertFalse(
+				SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo().setMajorVersion(3).setMinorVersion(15)));
+		assertTrue(
+				SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo().setMajorVersion(3).setMinorVersion(16)));
 		assertFalse(SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo()));
 	}
 }

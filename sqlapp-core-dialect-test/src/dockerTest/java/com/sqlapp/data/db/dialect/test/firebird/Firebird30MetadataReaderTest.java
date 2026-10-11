@@ -61,7 +61,8 @@ class Firebird30MetadataReaderTest {
 				assertEquals(50, original.getStartValue().intValue());
 				assertEquals(5, original.getIncrementBy().intValue());
 				statement.execute("DROP SEQUENCE AUDIT_SEQUENCE");
-				for (var sql : dialect.createSqlFactoryRegistry().createSql(original, com.sqlapp.data.db.sql.SqlType.CREATE)) {
+				for (var sql : dialect.createSqlFactoryRegistry().createSql(original,
+						com.sqlapp.data.db.sql.SqlType.CREATE)) {
 					statement.execute(sql.getSqlText());
 				}
 				var recreated = reader.getAll(connection).get(0);

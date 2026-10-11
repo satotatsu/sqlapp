@@ -10,6 +10,7 @@ public class Firebird30CreateSequenceFactory extends Firebird20CreateSequenceFac
 	protected void addStartWith(final Sequence obj, FirebirdSqlBuilder builder) {
 		builder.start().with().space()._add(obj.getStartValue());
 	}
+
 	@Override
 	protected void addIncrementBy(final Sequence obj, FirebirdSqlBuilder builder) {
 		builder.increment().by().space()._add(obj.getIncrementBy());

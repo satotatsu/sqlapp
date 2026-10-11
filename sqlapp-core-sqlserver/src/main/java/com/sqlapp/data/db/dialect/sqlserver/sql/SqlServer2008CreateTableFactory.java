@@ -85,13 +85,15 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 					._add(escalation.toUpperCase(Locale.ROOT))._add(")");
 			add(result, createOperation(builder.toString(), SqlType.ALTER, table));
 		}
-		Boolean tracking = Converters.getDefault().convertObject(table.getSpecifics().get("HAS_CHANGE_TRACKING"), Boolean.class);
+		Boolean tracking = Converters.getDefault().convertObject(table.getSpecifics().get("HAS_CHANGE_TRACKING"),
+				Boolean.class);
 		if (Boolean.TRUE.equals(tracking)) {
 			SqlServerSqlBuilder builder = createSqlBuilder();
 			builder.alter().table().space().name(table).space();
 			builder.enable().changeTracking();
 			Boolean columns = table.getSpecifics().get("is_track_columns_updated_on", Boolean.class);
-			if (columns != null) builder._add(" WITH (TRACK_COLUMNS_UPDATED = ")._add(columns ? "ON" : "OFF")._add(")");
+			if (columns != null)
+				builder._add(" WITH (TRACK_COLUMNS_UPDATED = ")._add(columns ? "ON" : "OFF")._add(")");
 			add(result, createOperation(builder.toString(), SqlType.ALTER, table));
 		}
 		String largeValues = table.getSpecifics().get("large_value_types_out_of_row");
@@ -99,15 +101,16 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			addTableOption(table, result, "large value types out of row", "ON");
 		}
 		String textLimit = table.getSpecifics().get("text_in_row_limit");
-		if (textLimit != null && Integer.parseInt(textLimit) > 0) addTableOption(table, result, "text in row", textLimit);
+		if (textLimit != null && Integer.parseInt(textLimit) > 0)
+			addTableOption(table, result, "text in row", textLimit);
 		return result;
 	}
 
 	private void addTableOption(Table table, List<SqlOperation> result, String option, String value) {
 		SqlServerSqlBuilder name = createSqlBuilder();
 		name.name(table, true);
-		String sql = "EXEC sys.sp_tableoption N'" + name.toString().replace("'", "''") + "', N'"
-				+ option + "', N'" + value.replace("'", "''") + "'";
+		String sql = "EXEC sys.sp_tableoption N'" + name.toString().replace("'", "''") + "', N'" + option + "', N'"
+				+ value.replace("'", "''") + "'";
 		add(result, createOperation(sql, SqlType.ALTER, table));
 	}
 
@@ -118,7 +121,8 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			String key = k.toLowerCase(Locale.ROOT);
 			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v)))
 					|| (key.equals("temporal_type") && ("0".equals(v) || "NON_TEMPORAL_TABLE".equals(v)))
-					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v)))) return;
+					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v))))
+				return;
 			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k) || "LOCK_ESCALATION".equalsIgnoreCase(k)
 					|| "text_in_row_limit".equalsIgnoreCase(k) || "is_track_columns_updated_on".equalsIgnoreCase(k)
 					|| "large_value_types_out_of_row".equalsIgnoreCase(k) || "has_var_decimal".equalsIgnoreCase(k)) {

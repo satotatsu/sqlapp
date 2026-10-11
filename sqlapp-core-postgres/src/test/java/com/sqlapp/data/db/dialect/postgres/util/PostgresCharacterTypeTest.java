@@ -32,8 +32,8 @@ class PostgresCharacterTypeTest {
 		var dialect = DialectResolver.getInstance().getDialect("postgres", 15, 0, null);
 		var table = new Table("strings");
 		table.getColumns().add("value", c -> c.setDataType(DataType.LONGVARCHAR));
-		com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
-				.getSqlFactory(table, SqlType.CREATE);
+		com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.CREATE);
 		String sql = factory.createSql(table).get(0).getSqlText().toUpperCase();
 		assertTrue(sql.contains("VARCHAR"), sql);
 		assertFalse(sql.contains("VARCHAR("), sql);

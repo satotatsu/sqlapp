@@ -21,6 +21,7 @@ public class AlloyDB17 extends Postgres170 implements AlloyDB {
 	public String getSimpleName() {
 		return "alloydb";
 	}
+
 	@Override
 	public com.sqlapp.data.db.metadata.CatalogReader getCatalogReader() {
 		return new com.sqlapp.data.db.dialect.alloydb.metadata.AlloyDB17CatalogReader(this);

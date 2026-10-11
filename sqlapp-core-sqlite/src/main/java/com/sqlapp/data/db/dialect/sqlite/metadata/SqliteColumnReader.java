@@ -67,26 +67,33 @@ public class SqliteColumnReader extends ColumnReader {
 				int pk = rs.getInt("pk");
 				column.setNullable(rs.getInt("notnull") == 0 && pk == 0);
 				column.setDefaultValue(rs.getString("dflt_value"));
-				if (pk > 0) primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
+				if (pk > 0)
+					primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
 				int hidden = pragma.equals("table_xinfo") ? rs.getInt("hidden") : 0;
 				column.setHidden(hidden == 1);
 				column.setFormulaPersisted(hidden == 3);
 				if (hidden == 2 || hidden == 3) {
-					splitColumnDefinitions(definition).stream().filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
-							.map(SqliteColumnReader::extractFormula).filter(Objects::nonNull).findFirst().ifPresent(column::setFormula);
+					splitColumnDefinitions(definition).stream()
+							.filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
+							.map(SqliteColumnReader::extractFormula).filter(Objects::nonNull).findFirst()
+							.ifPresent(column::setFormula);
 				}
 				result.add(column);
 			}
-		} catch (SQLException e) { throw new RuntimeException(e); }
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 		primaryKeys.forEach((table, keys) -> {
 			if (keys.size() == 1 && "INTEGER".equalsIgnoreCase(keys.get(0).getDataTypeName())
-					&& isRowIdAlias(definitions.get(table), keys.get(0).getName())) keys.get(0).setIdentity(true);
+					&& isRowIdAlias(definitions.get(table), keys.get(0).getName()))
+				keys.get(0).setIdentity(true);
 		});
 		return result;
 	}
 
 	private static boolean isRowIdAlias(String definition, String column) {
-		if (definition == null) return true;
+		if (definition == null)
+			return true;
 		String normalized = definition.toUpperCase(Locale.ROOT);
 		String options = normalized.substring(normalized.lastIndexOf(')') + 1);
 		return !options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*") && splitColumnDefinitions(definition).stream()
@@ -250,8 +257,10 @@ public class SqliteColumnReader extends ColumnReader {
 			char c = sql.charAt(i);
 			if (quote != 0) {
 				if (c == quote) {
-					if (quote != ']' && i + 1 < sql.length() && sql.charAt(i + 1) == quote) i++;
-					else quote = 0;
+					if (quote != ']' && i + 1 < sql.length() && sql.charAt(i + 1) == quote)
+						i++;
+					else
+						quote = 0;
 				}
 			} else if (c == '\'' || c == '"' || c == '`' || c == '[') {
 				quote = c == '[' ? ']' : c;
@@ -261,7 +270,8 @@ public class SqliteColumnReader extends ColumnReader {
 			} else if (c == '/' && i + 1 < sql.length() && sql.charAt(i + 1) == '*') {
 				int end = sql.indexOf("*/", i + 2);
 				i = end < 0 ? sql.length() : end + 1;
-			} else if (c == '(') return i;
+			} else if (c == '(')
+				return i;
 		}
 		return -1;
 	}
@@ -307,15 +317,18 @@ public class SqliteColumnReader extends ColumnReader {
 			for (int i = 1; i < value.length(); i++) {
 				char current = value.charAt(i);
 				if (current == end) {
-					if (end != ']' && i + 1 < value.length() && value.charAt(i + 1) == end) i++;
-					else return identifier.toString();
+					if (end != ']' && i + 1 < value.length() && value.charAt(i + 1) == end)
+						i++;
+					else
+						return identifier.toString();
 				}
 				identifier.append(current);
 			}
 			return value;
 		}
 		for (int i = 0; i < value.length(); i++) {
-			if (Character.isWhitespace(value.charAt(i))) return value.substring(0, i);
+			if (Character.isWhitespace(value.charAt(i)))
+				return value.substring(0, i);
 		}
 		return value;
 	}

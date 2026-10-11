@@ -93,15 +93,19 @@ public class PostgresSequenceReader extends SequenceReader {
 	@Override
 	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Sequence> sequences)
 			throws SQLException {
-		if (sequences.isEmpty() || sequences.get(0).getStartValue() != null) return;
+		if (sequences.isEmpty() || sequences.get(0).getStartValue() != null)
+			return;
 		// Pre-10 configuration lives in each sequence relation. Batch the dynamic
 		// relation names into one query; never interpolate an unquoted identifier.
 		var parts = new java.util.ArrayList<String>();
 		for (int i = 0; i < sequences.size(); i++) {
 			Sequence sequence = sequences.get(i);
 			String name = getDialect().quote(sequence.getName());
-			if (!isEmpty(sequence.getSchemaName())) name = getDialect().quote(sequence.getSchemaName()) + "." + name;
-			parts.add("SELECT " + i + " AS position,min_value,max_value,start_value,last_value,increment_by,cache_value,is_cycled FROM " + name);
+			if (!isEmpty(sequence.getSchemaName()))
+				name = getDialect().quote(sequence.getSchemaName()) + "." + name;
+			parts.add("SELECT " + i
+					+ " AS position,min_value,max_value,start_value,last_value,increment_by,cache_value,is_cycled FROM "
+					+ name);
 		}
 		try (var sql = connection.createStatement(); var rows = sql.executeQuery(String.join(" UNION ALL ", parts))) {
 			while (rows.next()) {

@@ -19,16 +19,20 @@ final class SqlServerMetadataAuditAssertions {
 			sql.execute("CREATE PARTITION SCHEME " + prefix + "_PS AS PARTITION " + prefix + "_PF ALL TO ([PRIMARY])");
 			try {
 				for (int i = 0; i < 2; i++) {
-					sql.execute("CREATE TABLE dbo." + prefix + i + "(ID int NOT NULL, NOTE nvarchar(max)) ON " + prefix + "_PS(ID)");
+					sql.execute("CREATE TABLE dbo." + prefix + i + "(ID int NOT NULL, NOTE nvarchar(max)) ON " + prefix
+							+ "_PS(ID)");
 					sql.execute("CREATE INDEX IX_SHARED ON dbo." + prefix + i + "(ID)");
-					sql.execute("CREATE INDEX IX_FILTERED ON dbo." + prefix + i + "(ID DESC) INCLUDE(NOTE) WHERE ID > 0 ON [PRIMARY]");
-					sql.execute("INSERT INTO dbo." + prefix + i + " VALUES (1,N'a'),(100,N'b'),(200,REPLICATE(CAST(N'x' AS nvarchar(max)),6000))");
+					sql.execute("CREATE INDEX IX_FILTERED ON dbo." + prefix + i
+							+ "(ID DESC) INCLUDE(NOTE) WHERE ID > 0 ON [PRIMARY]");
+					sql.execute("INSERT INTO dbo." + prefix + i
+							+ " VALUES (1,N'a'),(100,N'b'),(200,REPLICATE(CAST(N'x' AS nvarchar(max)),6000))");
 				}
 				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 				reader.setSchemaName("dbo");
 				reader.setCatalogName(connection.getCatalog());
 				AtomicInteger count = new AtomicInteger();
-				var counted = CountingJdbc.wrap(connection, text -> text.contains("sys.partition_schemes") || text.contains("sys.allocation_units"), count);
+				var counted = CountingJdbc.wrap(connection,
+						text -> text.contains("sys.partition_schemes") || text.contains("sys.allocation_units"), count);
 				reader.setObjectName(prefix + "0");
 				assertEquals(1, reader.getAllFull(counted).size());
 				int single = count.get();
@@ -50,26 +54,33 @@ final class SqlServerMetadataAuditAssertions {
 					assertEquals(Order.Desc, restored.getIndexes().get("IX_FILTERED").getColumns().get(0).getOrder());
 					assertEquals("NOTE", restored.getIndexes().get("IX_FILTERED").getIncludes().get(0).getName());
 					assertNotNull(restored.getIndexes().get("IX_FILTERED").getWhere());
-					assertEquals(prefix + "_PS", restored.getIndexes().get("IX_SHARED").getPartitioning().getPartitionSchemeName());
+					assertEquals(prefix + "_PS",
+							restored.getIndexes().get("IX_SHARED").getPartitioning().getPartitionSchemeName());
 					for (var part : restored.getPartitioning().getPartitions()) {
-						assertEquals(1L, ((Number)Statistics.ROWS.getValue(part)).longValue());
+						assertEquals(1L, ((Number) Statistics.ROWS.getValue(part)).longValue());
 						assertTrue(Long.parseLong(part.getStatistics().get("total_space")) > 0);
 					}
 					sql.execute("DROP TABLE dbo." + name);
 					for (var operation : registry.createSql(restored, SqlType.CREATE)) {
-						try { sql.execute(operation.getSqlText()); }
-						catch (java.sql.SQLException e) { throw new AssertionError(operation.getSqlText(), e); }
+						try {
+							sql.execute(operation.getSqlText());
+						} catch (java.sql.SQLException e) {
+							throw new AssertionError(operation.getSqlText(), e);
+						}
 					}
 					reader.setObjectName(name);
 					var after = reader.getAllFull(connection).get(0);
 					assertEquals(1, after.getPartitioning().getPartitioningColumns().size());
 					assertEquals(3, after.getPartitioning().getPartitions().size());
-					assertEquals(restored.getIndexes().get("IX_FILTERED").getWhere(), after.getIndexes().get("IX_FILTERED").getWhere());
+					assertEquals(restored.getIndexes().get("IX_FILTERED").getWhere(),
+							after.getIndexes().get("IX_FILTERED").getWhere());
 					assertEquals(Order.Desc, after.getIndexes().get("IX_FILTERED").getColumns().get(0).getOrder());
-					assertEquals("PRIMARY", after.getIndexes().get("IX_FILTERED").getSpecifics().get("FILE_GROUP_NAME"));
+					assertEquals("PRIMARY",
+							after.getIndexes().get("IX_FILTERED").getSpecifics().get("FILE_GROUP_NAME"));
 				}
 			} finally {
-				for (int i = 0; i < 2; i++) sql.execute("DROP TABLE IF EXISTS dbo." + prefix + i);
+				for (int i = 0; i < 2; i++)
+					sql.execute("DROP TABLE IF EXISTS dbo." + prefix + i);
 				sql.execute("DROP PARTITION SCHEME " + prefix + "_PS");
 				sql.execute("DROP PARTITION FUNCTION " + prefix + "_PF");
 			}
@@ -79,7 +90,8 @@ final class SqlServerMetadataAuditAssertions {
 
 	private static void verifyChangeTracking(Connection connection, String name) throws Exception {
 		try (var sql = connection.createStatement()) {
-			sql.execute("ALTER DATABASE CURRENT SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 2 DAYS, AUTO_CLEANUP = ON)");
+			sql.execute(
+					"ALTER DATABASE CURRENT SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 2 DAYS, AUTO_CLEANUP = ON)");
 			sql.execute("CREATE TABLE dbo." + name + " (ID int NOT NULL PRIMARY KEY, VALUE int)");
 			try {
 				sql.execute("ALTER TABLE dbo." + name + " ENABLE CHANGE_TRACKING WITH (TRACK_COLUMNS_UPDATED = ON)");
@@ -94,8 +106,11 @@ final class SqlServerMetadataAuditAssertions {
 				var registry = dialect.createSqlFactoryRegistry();
 				registry.getOptions().setDecorateSchemaName(true);
 				for (var operation : registry.createSql(restored, SqlType.CREATE)) {
-					try { sql.execute(operation.getSqlText()); }
-					catch (java.sql.SQLException e) { throw new AssertionError(operation.getSqlText(), e); }
+					try {
+						sql.execute(operation.getSqlText());
+					} catch (java.sql.SQLException e) {
+						throw new AssertionError(operation.getSqlText(), e);
+					}
 				}
 				var after = reader.getAllFull(connection).get(0);
 				assertEquals(Boolean.TRUE, after.getSpecifics().get("has_change_tracking", Boolean.class));

@@ -116,7 +116,8 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	}
 
 	protected void setPartitions(final Connection connection, final DoubleKeyMap<String, String, Table> tableMap) {
-		if (tableMap.toList().isEmpty()) return;
+		if (tableMap.toList().isEmpty())
+			return;
 		final SqlNode node = getPartitionsSqlNode();
 		final ParametersContext context = new ParametersContext();
 		context.put(SCHEMA_NAME, tableMap.keySet());
@@ -125,7 +126,8 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 				Table table = tableMap.get(rs.getString(SCHEMA_NAME), rs.getString(TABLE_NAME));
-				if (table == null) return;
+				if (table == null)
+					return;
 				Partition partition = new Partition(Integer.toString(rs.getInt("partition_number")));
 				Statistics.ROWS.setValue(rs, "rows", partition);
 				setStatistics(rs, "total_space", partition);
