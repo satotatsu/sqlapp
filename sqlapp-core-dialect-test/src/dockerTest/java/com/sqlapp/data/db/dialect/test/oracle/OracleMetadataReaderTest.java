@@ -50,6 +50,14 @@ class OracleMetadataReaderTest {
 	}
 
 	@Test
+	void partitionMetadataUsesConstantQueryCounts() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			OracleMetadataAuditAssertions.verify(connection);
+			com.sqlapp.data.db.dialect.test.SequenceMetadataAuditAssertions.verify(connection, true);
+		}
+	}
+
+	@Test
 	void testReadsRepresentativeSchemaObjectsFromLatestOracle() throws SQLException {
 		try (Connection connection = ORACLE.createConnection("")) {
 			grantDirectoryAccess();
@@ -81,6 +89,7 @@ class OracleMetadataReaderTest {
 			assertNotNull(child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
 			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
+			assertTrue(foreignKey.isEnable());
 			assertEquals("PARENT_ID", foreignKey.getColumns().get(0).getName());
 			assertEquals("ID", foreignKey.getRelatedColumns().get(0).getName());
 
@@ -149,6 +158,7 @@ class OracleMetadataReaderTest {
 			assertTrue(String.join("\n", view.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var mview = schema.getMviews().get("METADATA_MVIEW");
 			assertNotNull(mview);
+			assertEquals("Materialized audit comment", mview.getRemarks());
 			assertNotNull(mview.getStatement());
 			assertTrue(mview.getStatement().toString().contains("METADATA_PARENT"));
 			var mviewLog = schema.getMviewLogs().stream()
@@ -298,6 +308,7 @@ class OracleMetadataReaderTest {
 					 BUILD IMMEDIATE REFRESH COMPLETE ON DEMAND AS
 					 SELECT ID, REGION, NAME FROM METADATA_PARENT
 					""");
+			statement.execute("COMMENT ON MATERIALIZED VIEW METADATA_MVIEW IS 'Materialized audit comment'");
 			statement.execute("""
 					CREATE VIEW METADATA_VIEW AS
 					SELECT ID, CODE, TOTAL FROM METADATA_CHILD

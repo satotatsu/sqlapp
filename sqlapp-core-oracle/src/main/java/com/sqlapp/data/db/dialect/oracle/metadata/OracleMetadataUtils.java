@@ -86,6 +86,26 @@ public class OracleMetadataUtils {
 		});
 	}
 
+	/** Reads ordered keys for an entire table/index set in one catalog query. */
+	static void setPartitionKeys(Connection connection, String objectType,
+			DoubleKeyMap<String, String, Partitioning> objects, boolean subpartition) {
+		if (objects.toList().isEmpty()) return;
+		ParametersContext context = new ParametersContext();
+		context.put("schemaName", objects.keySet());
+		context.put("objectName", objects.secondKeySet());
+		context.put("objectType", objectType);
+		SqlNode node = getSqlNodeCache().getString(subpartition ? "subpartitionKeyColumns.sql" : "partitionKeyColumns.sql");
+		execute(connection, node, context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				Partitioning partitioning = objects.get(rs.getString("OWNER"), rs.getString("NAME"));
+				if (partitioning == null) return;
+				if (subpartition) partitioning.getSubPartitioningColumns().add(rs.getString("COLUMN_NAME"));
+				else partitioning.getPartitioningColumns().add(rs.getString("COLUMN_NAME"));
+			}
+		});
+	}
+
 	protected static JdbcQueryHandler execute(final Connection connection, SqlNode node,
 			final ParametersContext context, ResultSetNextHandler handler) {
 		JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
@@ -328,7 +348,7 @@ public class OracleMetadataUtils {
 		if ("DEFERRABLE".equalsIgnoreCase(deferrable)) {
 			if ("IMMEDIATE".equalsIgnoreCase(deferred)) {
 				return Deferrability.InitiallyImmediate;
-			} else if ("DEFERRED".equalsIgnoreCase(deferrable)) {
+			} else if ("DEFERRED".equalsIgnoreCase(deferred)) {
 				return Deferrability.InitiallyDeferred;
 			}
 		} else if ("NOT DEFERRABLE".equalsIgnoreCase(deferrable)) {

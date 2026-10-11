@@ -80,6 +80,7 @@ public class OracleIndexReader extends IndexReader {
 					index.setSchemaName(getString(rs, "OWNER"));
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setIndexType(dialact.getIndexType(indexType));
+					if ("BITMAP".equalsIgnoreCase(indexType)) index.getSpecifics().put("oracle.index.bitmap", true);
 					setIndexType(rs, index, indexType);
 					if ("UNIQUE".equals(uniqueness)) {
 						index.setUnique(true);
@@ -132,42 +133,53 @@ public class OracleIndexReader extends IndexReader {
 	private static final String PARTTITIONED_KEY = "PARTITIONED";
 
 	@Override
-	protected void setMetadataDetail(final Connection connection, final Index index) throws SQLException {
-		String value = index.getSpecifics().get(PARTTITIONED_KEY);
-		if (!eq(Boolean.TRUE.toString(), value)) {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext originalContext,
+			final List<Index> indexes) throws SQLException {
+		final DoubleKeyMap<String, String, Index> objects = doubleKeyMap();
+		for (Index index : indexes) {
+			if (eq(Boolean.TRUE.toString(), index.getSpecifics().get(PARTTITIONED_KEY))) {
+				objects.put(index.getSchemaName(), index.getName(), index);
+			}
 			index.getSpecifics().remove(this.getDialect(), PARTTITIONED_KEY);
-			return;
 		}
-		SqlNode node = getSqlNodeCache().getString("indexPartitions.sql");
-		ParametersContext context = newParametersContext(connection, null, index.getSchemaName());
-		context.put("indexName", nativeCaseString(connection, index.getName()));
-		index.setPartitioning(null);
-		execute(connection, node, context, new ResultSetNextHandler() {
+		if (objects.toList().isEmpty()) return;
+		ParametersContext context = new ParametersContext();
+		context.put("schemaName", objects.keySet());
+		context.put("indexName", objects.secondKeySet());
+		execute(connection, getSqlNodeCache().getString("indexPartitions.sql"), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String partitioningType = getString(rs, "PARTITIONING_TYPE");
-				String subPartitioningType = getString(rs, "SUBPARTITIONING_TYPE");
-				// int defSubpartitionCount=rs.getInt("DEF_SUBPARTITION_COUNT");
-				Partitioning partitionInfo = null;
-				Partition partition = null;
-				if (index.getPartitioning() != null) {
-					partitionInfo = index.getPartitioning();
-					partition = addIndexPartition(rs, partitionInfo);
-				} else {
-					partitionInfo = new Partitioning();
-					partitionInfo.setPartitioningType(partitioningType);
-					index.setPartitioning(partitionInfo);
-					partition = addIndexPartition(rs, partitionInfo);
-					setPartitionColumnInfo(connection, index.getSchemaName(), index.getName(), partitionInfo);
-					if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
-						partitionInfo.setSubPartitioningType(subPartitioningType);
-						setSubPartitionColumnInfo(connection, index.getSchemaName(), index.getName(), partitionInfo);
-					}
+				Index index = objects.get(rs.getString("INDEX_OWNER"), rs.getString("INDEX_NAME"));
+				if (index == null) return;
+				if (index.getPartitioning() == null) {
+					index.getSpecifics().put("oracle.index.locality", rs.getString("LOCALITY"));
+					Partitioning info = new Partitioning();
+					info.setPartitioningType(rs.getString("PARTITIONING_TYPE"));
+					String subType = rs.getString("SUBPARTITIONING_TYPE");
+					if (!"NONE".equalsIgnoreCase(subType)) info.setSubPartitioningType(subType);
+					index.setPartitioning(info);
 				}
-				if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
-					setIndexSubPartitionInfo(connection, index.getSchemaName(), index.getName(), partition,
-							PartitioningType.parse(subPartitioningType));
-				}
+				addIndexPartition(rs, index.getPartitioning());
+			}
+		});
+		DoubleKeyMap<String, String, Partitioning> partitionings = doubleKeyMap();
+		for (Index index : objects.toList()) {
+			if (index.getPartitioning() != null) partitionings.put(index.getSchemaName(), index.getName(), index.getPartitioning());
+		}
+		OracleMetadataUtils.setPartitionKeys(connection, "INDEX", partitionings, false);
+		OracleMetadataUtils.setPartitionKeys(connection, "INDEX", partitionings, true);
+		execute(connection, getSqlNodeCache().getString("indexSubPartitions.sql"), context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				Index index = objects.get(rs.getString("INDEX_OWNER"), rs.getString("INDEX_NAME"));
+				if (index == null || index.getPartitioning() == null) return;
+				Partition parent = index.getPartitioning().getPartitions().get(rs.getString("PARTITION_NAME"));
+				if (parent == null) return;
+				SubPartition sub = new SubPartition(rs.getString("SUBPARTITION_NAME"));
+				sub.setHighValue(rs.getString("HIGH_VALUE"));
+				sub.setCompression("ENABLED".equalsIgnoreCase(rs.getString("COMPRESSION")));
+				sub.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
+				parent.getSubPartitions().add(sub);
 			}
 		});
 	}
@@ -181,6 +193,7 @@ public class OracleIndexReader extends IndexReader {
 		if (!"DISABLED".equalsIgnoreCase(compression)) {
 			partition.setCompression(true);
 		}
+		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
 		partitionInfo.getPartitions().add(partition);
 		return partition;
 	}

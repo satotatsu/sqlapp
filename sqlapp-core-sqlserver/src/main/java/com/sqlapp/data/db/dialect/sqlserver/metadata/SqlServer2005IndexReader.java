@@ -19,11 +19,13 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
@@ -35,7 +37,6 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.TripleKeyMap;
 
 /**
  * SqlServer2005のインデックス作成クラス
@@ -53,20 +54,30 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
+		final Map<List<String>, Index> map = new LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String catalog_name = getString(rs, CATALOG_NAME);
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String name = getString(rs, INDEX_NAME);
-				Index index = map.get(catalog_name, schema_name, name);
+				List<String> identity = java.util.Arrays.asList(catalog_name, schema_name, getString(rs, TABLE_NAME), name);
+				Index index = map.get(identity);
 				if (index == null) {
 					index = createIndex(rs);
-					map.put(catalog_name, schema_name, name, index);
+					map.put(identity, index);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
 				boolean included = getBoolean(rs, "is_included_column");
+				String scheme = getString(rs, "partition_scheme");
+				if (scheme != null) {
+					if (index.getPartitioning() == null) index.setPartitioning(new com.sqlapp.data.schemas.Partitioning());
+					index.getPartitioning().setPartitionSchemeName(scheme);
+					if (rs.getInt("partition_ordinal") > 0) index.getPartitioning().getPartitioningColumns().add(columnName);
+				}
+				// Implicit partitioning columns have key ordinal zero and are not index keys.
+				if (!included && rs.getInt("key_ordinal") == 0 && !index.getIndexType().isColumnStore()
+						&& rs.getInt("partition_ordinal") > 0) return;
 				if (included && !index.getIndexType().isColumnStore()) {
 					index.getIncludes().add(new Column(columnName));
 				} else {
@@ -78,7 +89,7 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 				}
 			}
 		});
-		List<Index> result = map.toList();
+		List<Index> result = new ArrayList<>(map.values());
 		List<Index> fullTextResult = getMetadataFullTextIndex(connection, context, productVersionInfo);
 		result.addAll(fullTextResult);
 		return result;

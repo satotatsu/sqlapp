@@ -76,7 +76,8 @@ public class OracleUniqueConstraintReader extends UniqueConstraintReader {
 					String deferrable = getString(rs, "DEFERRABLE");
 					String deferred = getString(rs, "DEFERRED");
 					c.setDeferrability(OracleMetadataUtils.getDeferrability(deferrable, deferred));
-					c.setEnable("INVALID".equalsIgnoreCase(getString(rs, "INVALID")));
+					c.setEnable("ENABLED".equalsIgnoreCase(getString(rs, "STATUS")));
+					c.setValid(!"INVALID".equalsIgnoreCase(getString(rs, "INVALID")));
 					setSpecifics(rs, "GENERATED", c);
 					result.add(c);
 					colMap.put(schema_name, constraint_name, columnList);

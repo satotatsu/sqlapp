@@ -84,6 +84,7 @@ public class OracleSequenceReader extends SequenceReader {
 		sequence.setMaxValue(rs.getBigDecimal("MAX_VALUE"));
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT_BY"));
 		sequence.setCacheSize(cacheSize);
+		sequence.setCache(cacheSize != null && cacheSize.signum() > 0);
 		sequence.setLastValue(lastNumber);
 		if ("Y".equalsIgnoreCase(cycle)) {
 			sequence.setCycle(true);

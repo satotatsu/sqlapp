@@ -139,7 +139,23 @@ public class OracleTableReader extends TableReader {
 				String schemaName = getString(rs, SCHEMA_NAME);
 				String tableName = getString(rs, TABLE_NAME);
 				Table table = tables.get(schemaName, tableName);
-				setPartition(connection, rs, table);
+				if (table != null) setPartition(connection, rs, table);
+			}
+		});
+		DoubleKeyMap<String, String, Partitioning> objects = CommonUtils.doubleKeyMap();
+		for (Table table : tables.toList()) {
+			if (table.getPartitioning() != null) objects.put(table.getSchemaName(), table.getName(), table.getPartitioning());
+		}
+		OracleMetadataUtils.setPartitionKeys(connection, "TABLE", objects, false);
+		OracleMetadataUtils.setPartitionKeys(connection, "TABLE", objects, true);
+		SqlNode subNode = getSqlNodeCache().getString("tableSubPartitions.sql");
+		execute(connection, subNode, context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				Table table = tables.get(rs.getString("TABLE_OWNER"), rs.getString("TABLE_NAME"));
+				if (table == null || table.getPartitioning() == null) return;
+				Partition parent = table.getPartitioning().getPartitions().get(rs.getString("PARTITION_NAME"));
+				if (parent != null) addSubPartition(rs, parent);
 			}
 		});
 	}
@@ -159,16 +175,8 @@ public class OracleTableReader extends TableReader {
 			partitioning.setPartitioningType(partitioningType);
 		}
 		Partition partition = addPartition(rs, partitioning);
-		if (initializePartitioning) {
-			setPartitionColumnInfo(connection, table.getSchemaName(), table.getName(), partitioning);
-			if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
-				partitioning.setSubPartitioningType(subPartitioningType);
-				setSubPartitionColumnInfo(connection, table.getSchemaName(), table.getName(), partitioning);
-			}
-		}
-		if (!"NONE".equalsIgnoreCase(subPartitioningType)) {
-			setTableSubPartitionInfo(connection, table.getSchemaName(), table.getName(), partition,
-					PartitioningType.parse(subPartitioningType));
+		if (initializePartitioning && !"NONE".equalsIgnoreCase(subPartitioningType)) {
+			partitioning.setSubPartitioningType(subPartitioningType);
 		}
 	}
 

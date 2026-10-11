@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.oracle.metadata;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.JsonUtils;
+import com.sqlapp.util.DoubleKeyMap;
 
 public class Oracle23aiIndexReader extends OracleIndexReader {
 
@@ -58,63 +60,54 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection, final Index index) throws SQLException {
-		super.setMetadataDetail(connection, index);
-		if (index.getIndexType() == IndexType.Domain) {
-			setHybridVectorIndexDetail(connection, index);
-			return;
-		}
-		if (index.getIndexType() != IndexType.Vector || vectorIndexDetailUnavailable) {
-			return;
-		}
-		final SqlNode node = getSqlNodeCache().getString("vectorIndexDetails.sql");
-		final ParametersContext context = newParametersContext(connection, null, index.getSchemaName());
-		context.put("indexName", nativeCaseString(connection, index.getName()));
-		try {
-			execute(connection, node, context, new ResultSetNextHandler() {
-				@Override
-				public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-					applyVectorIndexParameters(index, getString(rs, "IDX_PARAMS"));
-				}
-			});
-		} catch (final RuntimeException e) {
-			if (!isVectorIndexDetailUnavailable(e)) {
-				throw e;
-			}
-			vectorIndexDetailUnavailable = true;
-			logger.warn("Oracle VECTOR index detail metadata is unavailable or not permitted; "
-					+ "skipping VECSYS.VECTOR$INDEX details. Basic ALL_INDEXES metadata is retained. "
-					+ sqlExceptionMessage(e));
-		}
+	protected void setMetadataDetail(final Connection connection, final ParametersContext originalContext,
+			final List<Index> indexes) throws SQLException {
+		super.setMetadataDetail(connection, originalContext, indexes);
+		readVectorDetails(connection, indexes, false);
+		readVectorDetails(connection, indexes, true);
 	}
 
-	private void setHybridVectorIndexDetail(final Connection connection, final Index index) {
-		if (hybridVectorIndexDetailUnavailable) {
-			return;
+	@Override
+	protected void setMetadataDetail(final Connection connection, final Index index) throws SQLException {
+		// Detail metadata is populated once by the collection hook.
+	}
+
+	private void readVectorDetails(Connection connection, List<Index> indexes, boolean hybrid) {
+		if (hybrid ? hybridVectorIndexDetailUnavailable : vectorIndexDetailUnavailable) return;
+		DoubleKeyMap<String, String, Index> selected = new DoubleKeyMap<>();
+		for (Index index : indexes) {
+			if (index.getIndexType() == (hybrid ? IndexType.Domain : IndexType.Vector)) {
+				selected.put(index.getSchemaName(), index.getName(), index);
+			}
 		}
-		final SqlNode node = getSqlNodeCache().getString("hybridVectorIndexDetails.sql");
-		final ParametersContext context = newParametersContext(connection, null, index.getSchemaName());
-		context.put("indexName", nativeCaseString(connection, index.getName()));
+		if (selected.toList().isEmpty()) return;
+		ParametersContext context = new ParametersContext();
+		context.put("schemaName", selected.keySet());
+		context.put("indexName", selected.secondKeySet());
+		SqlNode node = getSqlNodeCache().getString(hybrid ? "hybridVectorIndexDetails.sql" : "vectorIndexDetails.sql");
 		try {
 			execute(connection, node, context, new ResultSetNextHandler() {
 				@Override
-				public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				public void handleResultSetNext(ExResultSet rs) throws SQLException {
+					Index index = selected.get(rs.getString("OWNER"), rs.getString("INDEX_NAME"));
+					if (index == null) return;
+					if (!hybrid) {
+						applyVectorIndexParameters(index, rs.getString("IDX_PARAMS"));
+						return;
+					}
 					index.setIndexType(IndexType.Vector);
 					index.getSpecifics().put(Oracle23aiCreateIndexFactory.HYBRID, true);
-					final String key = getString(rs, "IXO_CLASS");
-					final String value = getString(rs, "IXO_OBJECT");
-					if (key != null && value != null) {
-						index.getSpecifics().put(key, value);
-					}
+					String key = rs.getString("IXO_CLASS");
+					String value = rs.getString("IXO_OBJECT");
+					if (key != null && value != null) index.getSpecifics().put(key, value);
 				}
 			});
-		} catch (final RuntimeException e) {
-			if (!isVectorIndexDetailUnavailable(e)) {
-				throw e;
-			}
-			hybridVectorIndexDetailUnavailable = true;
-			logger.warn("Oracle hybrid vector index metadata is unavailable "
-					+ "or not permitted; basic domain-index metadata is " + "retained. " + sqlExceptionMessage(e));
+		} catch (RuntimeException e) {
+			if (!isVectorIndexDetailUnavailable(e)) throw e;
+			if (hybrid) hybridVectorIndexDetailUnavailable = true;
+			else vectorIndexDetailUnavailable = true;
+			logger.warn("Oracle vector detail catalog is unavailable or not permitted; basic index metadata retained. "
+					+ sqlExceptionMessage(e));
 		}
 	}
 

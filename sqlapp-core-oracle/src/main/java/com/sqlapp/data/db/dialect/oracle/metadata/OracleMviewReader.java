@@ -78,8 +78,9 @@ public class OracleMviewReader extends MviewReader {
 	protected Mview createTable(ExResultSet rs) throws SQLException {
 		Mview table = createTable(getString(rs, "MVIEW_NAME"));
 		table.setSchemaName(getString(rs, "OWNER"));
-		table.setRemarks("COMMENTS");
+		// Consume the LONG query before accessing columns that follow it in the result.
 		table.setStatement(getString(rs, "QUERY"));
+		table.setRemarks(getString(rs, "COMMENTS"));
 		setSpecifics(rs, "REFRESH_MODE", table);
 		setSpecifics(rs, "REFRESH_METHOD", table);
 		setSpecifics(rs, "BUILD_MODE", table);

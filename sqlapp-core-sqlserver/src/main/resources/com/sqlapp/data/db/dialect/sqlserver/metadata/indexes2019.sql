@@ -4,6 +4,8 @@ SELECT
   , i.name AS index_name
   , o.name AS table_name
   , i.index_id
+  , ps.name AS partition_scheme
+  , ic.partition_ordinal
   , ic.key_ordinal
   , c.user_type_id
   , i.object_id
@@ -53,6 +55,7 @@ INNER JOIN sys.data_spaces dsidx
 LEFT OUTER JOIN sys.spatial_index_tessellations sit
   ON (i.object_id=sit.object_id
   AND i.index_id=sit.index_id)
+LEFT JOIN sys.partition_schemes ps ON ps.data_space_id = i.data_space_id
 WHERE i.type IN (1, 2, 3, 4, 5, 6, 9)
   AND i.is_unique_constraint = 0 
   AND i.is_primary_key = 0 
@@ -67,4 +70,4 @@ WHERE i.type IN (1, 2, 3, 4, 5, 6, 9)
   /*if isNotEmpty(tableName) */
   AND o.name IN /*tableName;type=NVARCHAR*/('%')
   /*end*/
-ORDER BY SCHEMA_NAME(o.schema_id), i.Name, ic.key_ordinal
+ORDER BY SCHEMA_NAME(o.schema_id), o.name, i.name, ic.key_ordinal, ic.index_column_id

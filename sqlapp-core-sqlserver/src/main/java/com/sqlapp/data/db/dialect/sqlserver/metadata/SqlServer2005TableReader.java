@@ -33,6 +33,8 @@ import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.Partition;
+import com.sqlapp.data.schemas.Statistics;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableSpace;
@@ -114,24 +116,21 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	}
 
 	protected void setPartitions(final Connection connection, final DoubleKeyMap<String, String, Table> tableMap) {
+		if (tableMap.toList().isEmpty()) return;
 		final SqlNode node = getPartitionsSqlNode();
 		final ParametersContext context = new ParametersContext();
 		context.put(SCHEMA_NAME, tableMap.keySet());
 		context.put(TABLE_NAME, tableMap.secondKeySet());
-		final DoubleKeyMap<String, String, Table> partTableMap = CommonUtils.doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-				final String schemaName = rs.getString(SCHEMA_NAME);
-				final String tableName = rs.getString(TABLE_NAME);
-				final String columnName = rs.getString(COLUMN_NAME);
-				final Table table = tableMap.get(schemaName, tableName);
-				if (table != null) {
-					final Column column = table.getColumns().get(columnName);
-					final ReferenceColumn rcolumn = new ReferenceColumn(column);
-					table.getPartitioning().getPartitioningColumns().add(rcolumn);
-					partTableMap.put(schemaName, tableName, table);
-				}
+				Table table = tableMap.get(rs.getString(SCHEMA_NAME), rs.getString(TABLE_NAME));
+				if (table == null) return;
+				Partition partition = new Partition(Integer.toString(rs.getInt("partition_number")));
+				Statistics.ROWS.setValue(rs, "rows", partition);
+				setStatistics(rs, "total_space", partition);
+				setStatistics(rs, "used_space", partition);
+				table.getPartitioning().getPartitions().add(partition);
 			}
 		});
 	}
